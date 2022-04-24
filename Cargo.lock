@@ -626,10 +626,12 @@ dependencies = [
  "bifrost-salp",
  "bifrost-salp-lite",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-slp",
  "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
+ "bifrost-vtoken-minting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -983,6 +985,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-slp"
+version = "0.8.0"
+dependencies = [
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-utility",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "bifrost-token-issuer"
 version = "0.8.0"
 dependencies = [
@@ -1054,6 +1084,28 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-vtoken-minting"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5578,7 +5630,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.32"
+version = "0.9.40"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -9141,8 +9193,10 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-slp",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
+ "bifrost-vtoken-minting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -9186,6 +9240,7 @@ dependencies = [
  "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-staking",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-tips",

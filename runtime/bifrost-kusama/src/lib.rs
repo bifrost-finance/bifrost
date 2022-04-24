@@ -28,6 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -41,8 +42,10 @@ pub use frame_support::{
 	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+use node_primitives::AssetIdMapping;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use pallet_xcm::QueryStatus;
 pub use parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -75,6 +78,7 @@ use bifrost_runtime_common::{
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
+use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -85,8 +89,9 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::CheckSubAccount, AccountId, Amount, AssetIdMapping, Balance, BlockNumber, CurrencyId,
-	ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
+	traits::{CheckSubAccount, VtokenMintingOperator},
+	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
+	PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -135,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 932,
+	spec_version: 940,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -295,6 +300,8 @@ parameter_types! {
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 }
 
 impl frame_system::Config for Runtime {
@@ -1339,6 +1346,7 @@ parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 vKSM
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
@@ -1362,7 +1370,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
 			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
-			.eq(a)
+			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a)
 	}
 }
 
@@ -1511,6 +1520,13 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
 		}),
 	)
+}
+
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert(sub_account_index: u16) -> MultiLocation {
+		create_x2_multilocation(sub_account_index)
+	}
 }
 
 parameter_types! {
@@ -1674,6 +1690,53 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResponseManager {
+	fn get_query_response_record(query_id: QueryId) -> bool {
+		if let Some(QueryStatus::Ready { .. }) = PolkadotXcm::query(query_id) {
+			true
+		} else {
+			false
+		}
+	}
+
+	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
+		PolkadotXcm::new_query(responder.clone(), timeout)
+		// for xcm v3 version see the following
+		// PolkadotXcm::new_query(responder, timeout, Here)
+	}
+
+	fn remove_query_record(query_id: QueryId) -> bool {
+		// Temporarily banned. Querries from pallet_xcm cannot be removed unless it is in ready
+		// status. And we are not allowed to mannually change query status.
+		// So in the manual mode, it is not possible to remove the query at all.
+		// PolkadotXcm::take_response(query_id).is_some()
+
+		PolkadotXcm::take_response(query_id);
+		true
+	}
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = SelfParaChainId;
+	type XcmRouter = XcmRouter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
+}
+
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -1744,6 +1807,24 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
+
+parameter_types! {
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account();
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = SlpEntrancePalletId;
+	type ExitAccount = SlpExitPalletId;
+	type FeeAccount = BifrostFeeAccount;
+	type WeightInfo = ();
+}
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -1880,6 +1961,8 @@ construct_runtime! {
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 	}

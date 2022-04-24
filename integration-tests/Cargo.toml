@@ -6,12 +6,15 @@ edition = "2021"
 
 [dependencies]
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+	"max-encoded-len",
+] }
 log = { version = "0.4.16", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", default-features = false, optional = true }
-hex-literal = { version = "0.3.4"}
+hex-literal = { version = "0.3.4" }
 smallvec = "1.7.0"
 
 # primitives
@@ -27,12 +30,12 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
-sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18",  default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # frame dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false, optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false, optional = true  }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false, optional = true }
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
@@ -57,6 +60,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+pallet-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.18" }
@@ -86,7 +90,9 @@ bifrost-liquidity-mining = { path = "../pallets/liquidity-mining", default-featu
 bifrost-runtime-common = { path = "../runtime/common", default-features = false }
 bifrost-salp = { path = "../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../pallets/salp/rpc/runtime-api", default-features = false }
+bifrost-slp = { path = "../pallets/slp", default-features = false }
 bifrost-vsbond-auction = { path = "../pallets/vsbond-auction", default-features = false }
+bifrost-vtoken-minting = { path = "../pallets/vtoken-minting", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", default-features = false }
 bifrost-kusama-runtime = { path = "../runtime/bifrost-kusama", default-features = false }
 bifrost-polkadot-runtime = { path = "../runtime/bifrost-polkadot", default-features = false }
@@ -123,16 +129,12 @@ westmint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "po
 [features]
 default = ["std"]
 no_std = []
-with-bifrost-runtime=[
+with-bifrost-runtime = [
 	"node-service/with-bifrost-kusama-runtime",
-	"node-service/with-bifrost-polkadot-runtime"
+	"node-service/with-bifrost-polkadot-runtime",
 ]
-with-bifrost-kusama-runtime=[
-	"node-service/with-bifrost-kusama-runtime"
-]
-with-bifrost-polkadot-runtime=[
-	"node-service/with-bifrost-polkadot-runtime"
-]
+with-bifrost-kusama-runtime = ["node-service/with-bifrost-kusama-runtime"]
+with-bifrost-polkadot-runtime = ["node-service/with-bifrost-polkadot-runtime"]
 std = [
 	"codec/std",
 	"log/std",
@@ -193,7 +195,9 @@ std = [
 	"bifrost-runtime-common/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
+	"bifrost-slp/std",
 	"bifrost-vsbond-auction/std",
+	"bifrost-vtoken-minting/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
@@ -203,5 +207,5 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"bifrost-kusama-runtime/std",
-	"bifrost-polkadot-runtime/std"
+	"bifrost-polkadot-runtime/std",
 ]

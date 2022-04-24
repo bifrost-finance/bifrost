@@ -197,6 +197,46 @@ where
 	}
 }
 
+/// The interface to call VtokenMinting module functions.
+pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
+	/// Get the currency tokenpool amount.
+	fn get_token_pool(currency_id: CurrencyId) -> Balance;
+
+	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
+	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
+	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	/// Update the ongoing era for a CurrencyId.
+	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
+
+	/// Get the current era of a CurrencyId.
+	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
+
+	/// Get the the unlocking records of a certain time unit.
+	fn get_unlock_records(
+		currency_id: CurrencyId,
+		time_unit: TimeUnit,
+	) -> Option<(Balance, Vec<u32>)>;
+
+	/// Revise the currency indexed unlocking record by some amount.
+	fn deduct_unlock_amount(
+		currency_id: CurrencyId,
+		index: u32,
+		deduct_amount: Balance,
+	) -> DispatchResult;
+
+	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
+	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
+
+	/// Get the token_unlock_ledger storage info to refund to the due era unlocking users.
+	fn get_token_unlock_ledger(
+		currency_id: CurrencyId,
+		index: u32,
+	) -> Option<(AccountId, Balance, TimeUnit)>;
+}
+
 /// A mapping between AssetId and AssetMetadata.
 pub trait AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata> {
 	/// Returns the AssetMetadata associated with a given ForeignAssetId.

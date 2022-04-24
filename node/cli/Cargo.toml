@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.9.32"
+version = "0.9.40"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -37,7 +37,7 @@ node-primitives = { path = "../primitives" }
 # CLI-specific dependencies
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true  }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true }
 node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", optional = true }
 
@@ -65,22 +65,13 @@ cli = [
 	"sc-service",
 	"substrate-build-script-utils",
 ]
-runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
+runtime-benchmarks = ["node-service/runtime-benchmarks"]
 with-bifrost-runtime = [
 	"node-service/with-bifrost-kusama-runtime",
 	"node-service/with-bifrost-polkadot-runtime",
 ]
-with-bifrost-kusama-runtime = [
-	"node-service/with-bifrost-kusama-runtime",
-]
-with-bifrost-polkadot-runtime = [
-	"node-service/with-bifrost-polkadot-runtime",
-]
-with-all-runtime = [
-	"with-bifrost-runtime",
-]
-try-runtime = [
-	"node-service/try-runtime",
-	"try-runtime-cli",
-]
-fast-runtime = [ "node-service/fast-runtime" ]
+with-bifrost-kusama-runtime = ["node-service/with-bifrost-kusama-runtime"]
+with-bifrost-polkadot-runtime = ["node-service/with-bifrost-polkadot-runtime"]
+with-all-runtime = ["with-bifrost-runtime"]
+try-runtime = ["node-service/try-runtime", "try-runtime-cli"]
+fast-runtime = ["node-service/fast-runtime"]
