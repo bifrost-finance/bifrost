@@ -1807,7 +1807,8 @@ pub type ZenlinkLocationToAccountId = (
 );
 
 parameter_types! {
-	pub const MaximumUnlockId: u32 = 1_000;
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
 	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
@@ -1815,7 +1816,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type MaximumUnlockId = MaximumUnlockId;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = SlpEntrancePalletId;
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
