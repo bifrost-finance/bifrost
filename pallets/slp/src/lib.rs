@@ -1601,13 +1601,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<(), Error<T>> {
 			match origin.clone().into() {
-				Ok(RawOrigin::Root) => Ok(()),
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
 					Ok(()),
-				Ok(RawOrigin::Signed(_)) => T::ControlOrigin::ensure_origin(origin)
-					.map(|_| ())
-					.map_err(|_| Error::<T>::NotAuthorized),
+				Ok(_) if T::ControlOrigin::ensure_origin(origin).is_ok() => Ok(()),
 				_ => Err(Error::<T>::NotAuthorized),
 			}
 		}
