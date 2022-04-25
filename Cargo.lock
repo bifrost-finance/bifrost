@@ -558,6 +558,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-farming"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
@@ -620,6 +642,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-farming",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",

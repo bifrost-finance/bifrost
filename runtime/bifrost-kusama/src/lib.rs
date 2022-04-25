@@ -1752,6 +1752,15 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl bifrost_farming::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type VsbondAccount = BifrostVsbondPalletId;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1971,6 +1980,7 @@ construct_runtime! {
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 	}
 }
 

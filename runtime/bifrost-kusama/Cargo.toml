@@ -103,6 +103,7 @@ bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-featur
 
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
+bifrost-farming = { path = "../../pallets/farming", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
