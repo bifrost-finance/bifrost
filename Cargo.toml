@@ -7,6 +7,7 @@ members = [
 	"node/service",
 	"pallets/asset-registry",
 	"pallets/flexible-fee",
+	"pallets/farming",
 	"pallets/lightening-redeem",
 	"pallets/liquidity-mining",
 	"pallets/salp",
