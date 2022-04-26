@@ -29,11 +29,15 @@ mod tests;
 mod benchmarking;
 
 pub mod primitives;
+pub mod rewards;
 pub mod weights;
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{AccountIdConversion, CheckedSub},
+	sp_runtime::{
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub},
+		FixedPointOperand,
+	},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -41,8 +45,9 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
-use sp_arithmetic::per_things::Percent;
-use sp_std::vec::Vec;
+pub use rewards::*;
+// use sp_arithmetic::per_things::Percent;
+use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, vec::Vec};
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -57,12 +62,21 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
+pub enum PoolState {
+	UnCharged,
+	Charged,
+	Ongoing,
+	Dead,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -81,16 +95,34 @@ pub mod pallet {
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
+
+		/// The share type of pool.
+		type Share: Parameter
+			+ Member
+			+ AtLeast32BitUnsigned
+			+ Default
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Debug
+			+ FixedPointOperand;
+
+		/// The reward balance type.
+		type Balance: Parameter
+			+ Member
+			+ AtLeast32BitUnsigned
+			+ Default
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Debug
+			+ FixedPointOperand;
+
+		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		FarmingPoolCreated {},
-		ExchangeFeeSet { exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>> },
-		ExchangeRateSet { lease: i32, exchange_rate: VstokenConversionExchangeRate },
-		PolkadotLeaseSet { lease: u32 },
-		KusamaLeaseSet { lease: u32 },
 	}
 
 	#[pallet::error]
@@ -98,26 +130,37 @@ pub mod pallet {
 		NotEnoughBalance,
 		NotSupportTokenType,
 		CalculationOverflow,
+		PoolDoesNotExist,
 	}
 
+	/// Record reward pool info.
+	///
+	/// map PoolId => PoolInfo
 	#[pallet::storage]
-	#[pallet::getter(fn kusama_lease)]
-	pub type KusamaLease<T: Config> = StorageValue<_, u32, ValueQuery>;
+	#[pallet::getter(fn pool_infos)]
+	pub type PoolInfos<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		PoolId,
+		PoolInfo<T::Share, T::Balance, T::CurrencyId>,
+		ValueQuery,
+	>;
 
+	/// Record share amount, reward currency and withdrawn reward amount for
+	/// specific `AccountId` under `PoolId`.
+	///
+	/// double_map (PoolId, AccountId) => (Share, BTreeMap<CurrencyId, Balance>)
 	#[pallet::storage]
-	#[pallet::getter(fn polkadot_lease)]
-	pub type PolkadotLease<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn exchange_rate)]
-	pub type ExchangeRate<T: Config> =
-		StorageMap<_, Twox64Concat, i32, VstokenConversionExchangeRate, ValueQuery>;
-
-	/// exchange fee
-	#[pallet::storage]
-	#[pallet::getter(fn exchange_fee)]
-	pub type ExchangeFee<T: Config> =
-		StorageValue<_, VstokenConversionExchangeFee<BalanceOf<T>>, ValueQuery>;
+	#[pallet::getter(fn shares_and_withdrawn_rewards)]
+	pub type SharesAndWithdrawnRewards<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		PoolId,
+		Twox64Concat,
+		T::AccountId,
+		(T::Share, BTreeMap<T::CurrencyId, T::Balance>),
+		ValueQuery,
+	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -138,14 +181,14 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
-			// tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
-			// basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
-			gauge_token: Option<CurrencyIdOf<T>>,
-			charge_account: AccountIdOf<T>,
-			#[pallet::compact] min_deposit_to_start: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
-			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
-			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+			/* tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
+			 * basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
+			 * gauge_token: Option<CurrencyIdOf<T>>,
+			 * charge_account: AccountIdOf<T>,
+			 * #[pallet::compact] min_deposit_to_start: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			 * #[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			 * #[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
+			 * #[pallet::compact] claim_limit_time: BlockNumberFor<T>, */
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
