@@ -88,28 +88,6 @@ pub mod pallet {
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
-		/// The share type of pool.
-		type Share: Parameter
-			+ Member
-			+ AtLeast32BitUnsigned
-			+ Default
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ Debug
-			+ FixedPointOperand;
-
-		/// The reward balance type.
-		type Balance: Parameter
-			+ Member
-			+ AtLeast32BitUnsigned
-			+ Default
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ Debug
-			+ FixedPointOperand;
-
-		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord;
-
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -127,6 +105,7 @@ pub mod pallet {
 		NotSupportTokenType,
 		CalculationOverflow,
 		PoolDoesNotExist,
+		PoolKeeperNotExist,
 		PoolStateError,
 	}
 
@@ -143,7 +122,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		PoolId,
-		PoolInfo<T::Share, BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
+		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -159,7 +138,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		(T::Share, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>),
+		(BalanceOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>),
 		ValueQuery,
 	>;
 
@@ -167,11 +146,44 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[transactional]
 		#[pallet::weight(10000)]
-		pub fn deposit(origin: OriginFor<T>, pid: PoolId, add_amount: T::Share) -> DispatchResult {
+		pub fn deposit(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			add_amount: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			Self::add_share(&exchanger, pid, add_amount);
+			let pool_info = Self::pool_infos(&pid);
+			ensure!(
+				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
+				Error::<T>::PoolStateError
+			);
+
+			let values: Vec<BalanceOf<T>> = add_amount.values().cloned().collect();
+			Self::add_share(&exchanger, pid, values[0]);
+			// match add_amount.values().0 {
+			// 	None => return Err(Error::<T>::PoolStateError.into()),
+			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
+			// }
+
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+
+			let pool_info = Self::pool_infos(&pid);
+			// ensure!(
+			// 	pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
+			// 	Error::<T>::PoolStateError
+			// );
+
+			Self::claim_rewards(&exchanger, pid);
+
 			Ok(())
 		}
 
@@ -193,7 +205,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			// let mut d = Asset::<T, I>::get(tokens.keys).ok_or(Error::<T, I>::Unknown)?;
 
-			let mut pid = Self::pool_next_id();
+			let pid = Self::pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
 			let pool_info = PoolInfo::new(keeper, tokens, basic_reward);
 			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_reward };
@@ -215,8 +227,8 @@ pub mod pallet {
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::PoolStateError);
 			match pool_info.keeper {
-				None => return Err(Error::<T>::PoolStateError.into()),
-				Some(keeper) => {
+				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
+				Some(ref keeper) => {
 					pool_info.rewards.iter().for_each(
 						|(reward_currency, (total_reward, total_withdrawn_reward))| {
 							T::MultiCurrency::transfer(
@@ -227,15 +239,10 @@ pub mod pallet {
 							);
 						},
 					);
-					return Ok(());
 				},
 			}
 			pool_info.state = PoolState::Charged;
-			PoolInfos::<T>::insert(&pid, &pool_info);
-			// PoolInfos::<T>::mutate(&pid, |pool_info_origin| -> DispatchResult {
-			// 	pool_info_origin = pool_info;
-			// 	Ok(())
-			// })?;
+			PoolInfos::<T>::insert(&pid, pool_info);
 
 			Ok(())
 		}
