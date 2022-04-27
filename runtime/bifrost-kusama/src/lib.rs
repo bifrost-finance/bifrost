@@ -1759,6 +1759,7 @@ impl bifrost_farming::Config for Runtime {
 	type Share = Balance;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type PalletId = LiquidityMiningPalletId;
 }
 
 // Bifrost modules end

@@ -36,7 +36,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub},
-		FixedPointOperand,
+		ArithmeticError, FixedPointOperand,
 	},
 	transactional, PalletId,
 };
@@ -61,14 +61,6 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 #[allow(type_alias_bounds)]
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
-pub enum PoolState {
-	UnCharged,
-	Charged,
-	Ongoing,
-	Dead,
-}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -117,6 +109,10 @@ pub mod pallet {
 			+ FixedPointOperand;
 
 		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord;
+
+		/// ModuleID for creating sub account
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::event]
@@ -131,7 +127,12 @@ pub mod pallet {
 		NotSupportTokenType,
 		CalculationOverflow,
 		PoolDoesNotExist,
+		PoolStateError,
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn pool_next_id)]
+	pub type PoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	/// Record reward pool info.
 	///
@@ -142,7 +143,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		PoolId,
-		PoolInfo<T::Share, T::Balance, T::CurrencyId>,
+		PoolInfo<T::Share, BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -158,7 +159,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		(T::Share, BTreeMap<T::CurrencyId, T::Balance>),
+		(T::Share, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>),
 		ValueQuery,
 	>;
 
@@ -166,21 +167,20 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[transactional]
 		#[pallet::weight(10000)]
-		pub fn deposit(
-			origin: OriginFor<T>,
-			pid: CurrencyIdOf<T>,
-			vsdot_amount: BalanceOf<T>,
-			minimum_vsbond: BalanceOf<T>,
-		) -> DispatchResult {
+		pub fn deposit(origin: OriginFor<T>, pid: PoolId, add_amount: T::Share) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
+			Self::add_share(&exchanger, pid, add_amount);
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
+			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			basic_reward: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
 			/* tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
 			 * basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
 			 * gauge_token: Option<CurrencyIdOf<T>>,
@@ -191,8 +191,52 @@ pub mod pallet {
 			 * #[pallet::compact] claim_limit_time: BlockNumberFor<T>, */
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+			// let mut d = Asset::<T, I>::get(tokens.keys).ok_or(Error::<T, I>::Unknown)?;
 
-			// Self::deposit_event(Event::FarmingPoolCreated {  });
+			let mut pid = Self::pool_next_id();
+			let keeper = T::PalletId::get().into_sub_account(pid);
+			let pool_info = PoolInfo::new(keeper, tokens, basic_reward);
+			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_reward };
+			PoolInfos::<T>::insert(pid, &pool_info);
+			PoolNextId::<T>::mutate(|id| -> DispatchResult {
+				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::FarmingPoolCreated {});
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+
+			let mut pool_info = Self::pool_infos(&pid);
+			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::PoolStateError);
+			match pool_info.keeper {
+				None => return Err(Error::<T>::PoolStateError.into()),
+				Some(keeper) => {
+					pool_info.rewards.iter().for_each(
+						|(reward_currency, (total_reward, total_withdrawn_reward))| {
+							T::MultiCurrency::transfer(
+								*reward_currency,
+								&exchanger,
+								&keeper,
+								*total_reward,
+							);
+						},
+					);
+					return Ok(());
+				},
+			}
+			pool_info.state = PoolState::Charged;
+			PoolInfos::<T>::insert(&pid, &pool_info);
+			// PoolInfos::<T>::mutate(&pid, |pool_info_origin| -> DispatchResult {
+			// 	pool_info_origin = pool_info;
+			// 	Ok(())
+			// })?;
+
 			Ok(())
 		}
 
