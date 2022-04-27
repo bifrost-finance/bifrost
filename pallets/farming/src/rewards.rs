@@ -40,22 +40,21 @@ use crate::*;
 
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct PoolInfo<Share: HasCompact, BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
+pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
 	/// Total shares amount
 	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Total shares amount
-	pub total_shares: Share,
+	pub total_shares: BalanceOf,
 	/// Reward infos <reward_currency, (total_reward, total_withdrawn_reward)>
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
 	pub keeper: Option<AccountIdOf>,
 }
 
-impl<Share, BalanceOf, CurrencyIdOf, AccountIdOf> Default
-	for PoolInfo<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
+impl<BalanceOf, CurrencyIdOf, AccountIdOf> Default
+	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf>
 where
-	Share: Default + HasCompact,
-	BalanceOf: HasCompact,
+	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
 {
 	fn default() -> Self {
@@ -69,11 +68,9 @@ where
 	}
 }
 
-impl<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
-	PoolInfo<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
+impl<BalanceOf, CurrencyIdOf, AccountIdOf> PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf>
 where
-	Share: Default + HasCompact,
-	BalanceOf: HasCompact,
+	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
 {
 	pub fn new(
@@ -88,6 +85,15 @@ where
 			state: PoolState::UnCharged,
 			keeper: Some(keeper),
 		}
+	}
+
+	pub fn reset(
+		keeper: AccountIdOf,
+		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
+		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		state: PoolState,
+	) -> Self {
+		Self { tokens, total_shares: Default::default(), rewards, state, keeper: Some(keeper) }
 	}
 }
 
@@ -126,7 +132,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn add_share(who: &T::AccountId, pool: PoolId, add_amount: T::Share) {
+	pub fn add_share(who: &T::AccountId, pool: PoolId, add_amount: BalanceOf<T>) {
 		if add_amount.is_zero() {
 			return;
 		}
@@ -174,7 +180,7 @@ impl<T: Config> Pallet<T> {
 		});
 	}
 
-	pub fn remove_share(who: &T::AccountId, pool: PoolId, remove_amount: T::Share) {
+	pub fn remove_share(who: &T::AccountId, pool: PoolId, remove_amount: BalanceOf<T>) {
 		if remove_amount.is_zero() {
 			return;
 		}
@@ -241,7 +247,7 @@ impl<T: Config> Pallet<T> {
 		});
 	}
 
-	pub fn set_share(who: &T::AccountId, pool: PoolId, new_share: T::Share) {
+	pub fn set_share(who: &T::AccountId, pool: PoolId, new_share: BalanceOf<T>) {
 		let (share, _) = Self::shares_and_withdrawn_rewards(pool, who);
 
 		if new_share > share {
@@ -293,6 +299,14 @@ impl<T: Config> Pallet<T> {
 
 							// pay reward to `who`
 							// T::Handler::payout(who, pool, *reward_currency, reward_to_withdraw);
+							if let Some(ref keeper) = pool_info.keeper {
+								T::MultiCurrency::transfer(
+									*reward_currency,
+									&keeper,
+									&who,
+									reward_to_withdraw,
+								);
+							}
 						},
 					);
 				});

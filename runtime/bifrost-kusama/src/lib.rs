@@ -1759,9 +1759,6 @@ impl bifrost_farming::Config for Runtime {
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type WeightInfo = ();
-	type Share = Balance;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
 	type PalletId = LiquidityMiningPalletId;
 }
 

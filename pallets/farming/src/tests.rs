@@ -27,91 +27,32 @@ use sp_arithmetic::per_things::Percent;
 use crate::{mock::*, *};
 
 #[test]
-fn vsksm_convert_to_vsbond() {
+fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		const EXCHANGE_FEE: VstokenConversionExchangeFee<BalanceOf<Runtime>> =
-			VstokenConversionExchangeFee {
-				vsksm_exchange_fee: 10,
-				vsdot_exchange_fee: 10,
-				vsbond_exchange_fee_of_vsksm: 10,
-				vsbond_exchange_fee_of_vsdot: 10,
-			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
-		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
-		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
-			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
-			vsbond_convert_to_vsksm: EXCHANGE_RATE_PERCENTAGE,
-			vsksm_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
-			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
-		};
-		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1));
-		assert_noop!(
-			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 1000, 1),
-			Error::<Runtime>::NotEnoughBalance
-		);
-		assert_noop!(
-			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
-			Error::<Runtime>::CalculationOverflow
-		);
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
-		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
-		assert_noop!(
-			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
-			orml_tokens::Error::<Runtime>::BalanceTooLow
-		);
-		assert_noop!(
-			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), KSM, 100, 1),
-			Error::<Runtime>::NotSupportTokenType
-		);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsBond, &vsbond_account, 10000));
-		assert_ok!(VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 0);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 8200);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 1900);
+		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		tokens.entry(KSM).or_insert(1000);
+		let mut basic_reward =
+			BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new();
+		let _ = basic_reward.entry(KSM).or_insert((1000, 0));
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsKSM, &BOB, 1000));
-		pub const EXCHANGE_RATE_PERCENTAGE_0: Percent = Percent::from_percent(100);
-		const EXCHANGE_RATE_0: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
-			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE_0,
-			vsbond_convert_to_vsksm: EXCHANGE_RATE_PERCENTAGE_0,
-			vsksm_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE_0,
-			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE_0,
-		};
-		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 11));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 0, EXCHANGE_RATE_0));
-		assert_ok!(VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 900);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 8110);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 1990);
-	});
-}
+		assert_ok!(Farming::create_farming_pool(
+			Origin::signed(ALICE),
+			tokens.clone(),
+			basic_reward.clone()
+		));
 
-#[test]
-fn vsbond_convert_to_vsksm() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		const EXCHANGE_FEE: VstokenConversionExchangeFee<BalanceOf<Runtime>> =
-			VstokenConversionExchangeFee {
-				vsksm_exchange_fee: 10,
-				vsdot_exchange_fee: 10,
-				vsbond_exchange_fee_of_vsksm: 10,
-				vsbond_exchange_fee_of_vsdot: 10,
-			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
-		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
-		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
-			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
-			vsbond_convert_to_vsksm: EXCHANGE_RATE_PERCENTAGE,
-			vsksm_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
-			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
-		};
-		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
-		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
-		assert_ok!(VstokenConversion::vsbond_convert_to_vsksm(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 104);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 100);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 0);
+		let pid = 0;
+		assert_ok!(Farming::charge(Origin::signed(BOB), pid));
+		let keeper = <Runtime as Config>::PalletId::get().into_sub_account(pid);
+		let pool_info =
+			PoolInfo::reset(keeper, tokens.clone(), basic_reward.clone(), PoolState::Charged);
+
+		assert_eq!(Farming::pool_infos(pid), pool_info);
+
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone()));
+		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
 	});
 }

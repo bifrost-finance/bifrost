@@ -63,7 +63,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
-		VstokenConversion: bifrost_farming::{Pallet, Call, Storage, Event<T>}
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>}
 	}
 );
 
@@ -166,6 +166,7 @@ impl bifrost_farming::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VsbondAccount = BifrostVsbondAccount;
 	type WeightInfo = ();
+	type PalletId = BifrostVsbondAccount;
 }
 
 pub struct ExtBuilder {
@@ -192,7 +193,7 @@ impl ExtBuilder {
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 100),
 			(BOB, vsKSM, 100),
-			(BOB, KSM, 100),
+			(BOB, KSM, 1000),
 			(BOB, vsBond, 100),
 		])
 	}
