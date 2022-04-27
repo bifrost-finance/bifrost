@@ -9,7 +9,7 @@ env:
 jobs:
   bench:
     if: "!contains(github.event.commits[0].message, '[skip ci]')"
-    runs-on: [self-hosted, bench]
+    runs-on: [self-hosted]
     steps:
       - name: Check to latest commit
         uses: actions/checkout@v2
