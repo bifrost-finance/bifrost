@@ -23,6 +23,7 @@
 // mod tests;
 use codec::{FullCodec, HasCompact};
 use frame_support::pallet_prelude::*;
+use node_primitives::CurrencyId;
 use orml_traits::RewardHandler;
 use scale_info::TypeInfo;
 use sp_core::U256;
@@ -39,36 +40,73 @@ use crate::*;
 
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct PoolInfo<Share: HasCompact, Balance: HasCompact, CurrencyId: Ord> {
+pub struct PoolInfo<Share: HasCompact, BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
+	/// Total shares amount
+	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Total shares amount
 	pub total_shares: Share,
 	/// Reward infos <reward_currency, (total_reward, total_withdrawn_reward)>
-	pub rewards: BTreeMap<CurrencyId, (Balance, Balance)>,
+	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+	pub state: PoolState,
+	pub keeper: Option<AccountIdOf>,
 }
 
-impl<Share, Balance, CurrencyId> Default for PoolInfo<Share, Balance, CurrencyId>
+impl<Share, BalanceOf, CurrencyIdOf, AccountIdOf> Default
+	for PoolInfo<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
 where
 	Share: Default + HasCompact,
-	Balance: HasCompact,
-	CurrencyId: Ord,
+	BalanceOf: HasCompact,
+	CurrencyIdOf: Ord,
 {
 	fn default() -> Self {
-		Self { total_shares: Default::default(), rewards: BTreeMap::new() }
+		Self {
+			tokens: BTreeMap::new(),
+			total_shares: Default::default(),
+			rewards: BTreeMap::new(),
+			state: PoolState::UnCharged,
+			keeper: None,
+		}
 	}
 }
 
-/// PoolId for various rewards pools
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum PoolId {
-	/// Rewards and shares pool for DEX makers who stake LP token(LPCurrencyId)
-	Dex(CurrencyId),
+impl<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
+	PoolInfo<Share, BalanceOf, CurrencyIdOf, AccountIdOf>
+where
+	Share: Default + HasCompact,
+	BalanceOf: HasCompact,
+	CurrencyIdOf: Ord,
+{
+	pub fn new(
+		keeper: AccountIdOf,
+		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
+		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+	) -> Self {
+		Self {
+			tokens,
+			total_shares: Default::default(),
+			rewards,
+			state: PoolState::UnCharged,
+			keeper: Some(keeper),
+		}
+	}
 }
+
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum PoolState {
+	UnCharged,
+	Charged,
+	Ongoing,
+	Dead,
+}
+
+pub type PoolId = u32;
+// pub type PoolId = Vec<CurrencyId>;
 
 impl<T: Config> Pallet<T> {
 	pub fn accumulate_reward(
 		pool: PoolId,
-		reward_currency: T::CurrencyId,
-		reward_increment: T::Balance,
+		reward_currency: CurrencyIdOf<T>,
+		reward_increment: BalanceOf<T>,
 	) -> DispatchResult {
 		if reward_increment.is_zero() {
 			return Ok(());
@@ -97,7 +135,7 @@ impl<T: Config> Pallet<T> {
 			let initial_total_shares = pool_info.total_shares;
 			pool_info.total_shares = pool_info.total_shares.saturating_add(add_amount);
 
-			let mut withdrawn_inflation = Vec::<(T::CurrencyId, T::Balance)>::new();
+			let mut withdrawn_inflation = Vec::<(CurrencyIdOf<T>, BalanceOf<T>)>::new();
 
 			pool_info.rewards.iter_mut().for_each(
 				|(reward_currency, (total_reward, total_withdrawn_reward))| {
@@ -162,7 +200,7 @@ impl<T: Config> Pallet<T> {
 						// update withdrawn rewards for each reward currency
 						withdrawn_rewards.iter_mut().for_each(
 							|(reward_currency, withdrawn_reward)| {
-								let withdrawn_reward_to_remove: T::Balance = removing_share
+								let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
 									.saturating_mul(
 										withdrawn_reward.to_owned().saturated_into::<u128>().into(),
 									)
@@ -228,7 +266,7 @@ impl<T: Config> Pallet<T> {
 							let withdrawn_reward =
 								withdrawn_rewards.get(reward_currency).copied().unwrap_or_default();
 
-							let total_reward_proportion: T::Balance =
+							let total_reward_proportion: BalanceOf<T> =
 								U256::from(share.to_owned().saturated_into::<u128>())
 									.saturating_mul(U256::from(
 										total_reward.to_owned().saturated_into::<u128>(),
