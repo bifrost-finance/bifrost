@@ -38,6 +38,22 @@ use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prel
 
 use crate::*;
 
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord> {
+	pub share: BalanceOf,
+	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
+}
+
+impl<BalanceOf, CurrencyIdOf> Default for ShareInfo<BalanceOf, CurrencyIdOf>
+where
+	BalanceOf: Default + HasCompact,
+	CurrencyIdOf: Ord,
+{
+	fn default() -> Self {
+		Self { share: Default::default(), withdrawn_rewards: BTreeMap::new() }
+	}
+}
+
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
@@ -165,18 +181,25 @@ impl<T: Config> Pallet<T> {
 				},
 			);
 
-			SharesAndWithdrawnRewards::<T>::mutate(pool, who, |(share, withdrawn_rewards)| {
-				*share = share.saturating_add(add_amount);
-				// update withdrawn inflation for each reward currency
-				withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
-					withdrawn_rewards
-						.entry(reward_currency)
-						.and_modify(|withdrawn_reward| {
-							*withdrawn_reward = withdrawn_reward.saturating_add(reward_inflation);
-						})
-						.or_insert(reward_inflation);
-				});
-			});
+			SharesAndWithdrawnRewards::<T>::mutate(
+				pool,
+				who,
+				|ShareInfo { share, withdrawn_rewards }| {
+					*share = share.saturating_add(add_amount);
+					// update withdrawn inflation for each reward currency
+					withdrawn_inflation.into_iter().for_each(
+						|(reward_currency, reward_inflation)| {
+							withdrawn_rewards
+								.entry(reward_currency)
+								.and_modify(|withdrawn_reward| {
+									*withdrawn_reward =
+										withdrawn_reward.saturating_add(reward_inflation);
+								})
+								.or_insert(reward_inflation);
+						},
+					);
+				},
+			);
 		});
 	}
 
@@ -189,7 +212,8 @@ impl<T: Config> Pallet<T> {
 		Self::claim_rewards(who, pool);
 
 		SharesAndWithdrawnRewards::<T>::mutate_exists(pool, who, |share_info| {
-			if let Some((mut share, mut withdrawn_rewards)) = share_info.take() {
+			if let Some(ShareInfo { mut share, mut withdrawn_rewards }) = share_info.take() {
+				// (mut share, mut withdrawn_rewards)S
 				let remove_amount = remove_amount.min(share);
 
 				if remove_amount.is_zero() {
@@ -241,14 +265,14 @@ impl<T: Config> Pallet<T> {
 
 				share = share.saturating_sub(remove_amount);
 				if !share.is_zero() {
-					*share_info = Some((share, withdrawn_rewards));
+					*share_info = Some(ShareInfo { share, withdrawn_rewards });
 				}
 			}
 		});
 	}
 
 	pub fn set_share(who: &T::AccountId, pool: PoolId, new_share: BalanceOf<T>) {
-		let (share, _) = Self::shares_and_withdrawn_rewards(pool, who);
+		let ShareInfo { share, withdrawn_rewards } = Self::shares_and_withdrawn_rewards(pool, who);
 
 		if new_share > share {
 			Self::add_share(who, pool, new_share.saturating_sub(share));
@@ -259,7 +283,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn claim_rewards(who: &T::AccountId, pool: PoolId) {
 		SharesAndWithdrawnRewards::<T>::mutate_exists(pool, who, |maybe_share_withdrawn| {
-			if let Some((share, withdrawn_rewards)) = maybe_share_withdrawn {
+			if let Some(ShareInfo { share, withdrawn_rewards }) = maybe_share_withdrawn {
 				if share.is_zero() {
 					return;
 				}

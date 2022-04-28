@@ -144,7 +144,7 @@ pub mod pallet {
 	/// Record share amount, reward currency and withdrawn reward amount for
 	/// specific `AccountId` under `PoolId`.
 	///
-	/// double_map (PoolId, AccountId) => (Share, BTreeMap<CurrencyId, Balance>)
+	/// double_map (PoolId, AccountId) => ShareInfo
 	#[pallet::storage]
 	#[pallet::getter(fn shares_and_withdrawn_rewards)]
 	pub type SharesAndWithdrawnRewards<T: Config> = StorageDoubleMap<
@@ -153,7 +153,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		(BalanceOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>),
+		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>>,
 		ValueQuery,
 	>;
 
