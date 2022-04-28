@@ -1,21 +1,24 @@
 # Basic
+edition = "2021"
 hard_tabs = true
+max_width = 100
 use_small_heuristics = "Max"
 # Imports
-group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
 reorder_imports = true
 # Consistency
 newline_style = "Unix"
-normalize_comments = true
-normalize_doc_attributes = true
-# Misc
+# Format comments
 comment_width = 100
-chain_width = 80
 wrap_comments = true
-match_arm_leading_pipes = "Preserve"
-match_arm_blocks = false
-match_block_trailing_comma = true
-use_field_init_shorthand = true
+# Misc
 binop_separator = "Back"
+chain_width = 80
+match_arm_blocks = false
+match_arm_leading_pipes = "Preserve"
+match_block_trailing_comma = true
+reorder_impl_items = false
+spaces_around_ranges = false
+trailing_comma = "Vertical"
+use_field_init_shorthand = true
 license_template_path = "HEADER-GPL3"
