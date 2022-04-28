@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod gauge;
 pub mod primitives;
 pub mod rewards;
 pub mod weights;
@@ -41,6 +42,7 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
+pub use gauge::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -106,7 +108,7 @@ pub mod pallet {
 		CalculationOverflow,
 		PoolDoesNotExist,
 		PoolKeeperNotExist,
-		PoolStateError,
+		InvalidPoolState,
 	}
 
 	#[pallet::storage]
@@ -123,6 +125,19 @@ pub mod pallet {
 		Twox64Concat,
 		PoolId,
 		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
+		ValueQuery,
+	>;
+
+	/// Record gauge farming pool info.
+	///
+	/// map PoolId => GaugePoolInfo
+	#[pallet::storage]
+	#[pallet::getter(fn gauge_pool_infos)]
+	pub type GaugePoolInfos<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		PoolId,
+		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -157,13 +172,13 @@ pub mod pallet {
 			let pool_info = Self::pool_infos(&pid);
 			ensure!(
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
-				Error::<T>::PoolStateError
+				Error::<T>::InvalidPoolState
 			);
 
 			let values: Vec<BalanceOf<T>> = add_amount.values().cloned().collect();
 			Self::add_share(&exchanger, pid, values[0]);
 			// match add_amount.values().0 {
-			// 	None => return Err(Error::<T>::PoolStateError.into()),
+			// 	None => return Err(Error::<T>::InvalidPoolState.into()),
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
 			// }
 
@@ -179,7 +194,7 @@ pub mod pallet {
 			let pool_info = Self::pool_infos(&pid);
 			// ensure!(
 			// 	pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
-			// 	Error::<T>::PoolStateError
+			// 	Error::<T>::InvalidPoolState
 			// );
 
 			Self::claim_rewards(&exchanger, pid);
@@ -225,7 +240,7 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid);
-			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::PoolStateError);
+			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
 			match pool_info.keeper {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 				Some(ref keeper) => {
