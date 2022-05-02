@@ -83,7 +83,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.17
+git checkout release-v0.9.19
 cargo build --release
 cd -
 ```
@@ -122,7 +122,7 @@ cd ./output
 docker-compose up -d --build
 ```
 
-## Run full node with docker
+## Run full node
 
 ### Create `bifrost-fullnode` directory, generate `node-key` and get `bifrost.json`
 
@@ -131,7 +131,7 @@ mkdir -p ~/node-key
 subkey generate-node-key --file ~/node-key/bifrost.key
 ```
 
-### Start the node with docker
+### Start full node
 
 Replace your-fullnode-name
 ```sh

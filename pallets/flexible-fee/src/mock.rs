@@ -27,7 +27,7 @@ use frame_support::{
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
 	traits::{Contains, Nothing},
-	weights::IdentityFee,
+	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
 use frame_system as system;
@@ -119,9 +119,9 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Test {
 	type FeeMultiplierUpdate = ();
+	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }
 
