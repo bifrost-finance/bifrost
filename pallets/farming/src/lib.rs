@@ -153,7 +153,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>>,
+		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>, //, BlockNumberFor<T>
 		ValueQuery,
 	>;
 
@@ -177,6 +177,11 @@ pub mod pallet {
 
 			let values: Vec<BalanceOf<T>> = add_amount.values().cloned().collect();
 			Self::add_share(&exchanger, pid, values[0]);
+			match pool_info.gauge {
+				Some(gauge) => Self::gauge_add(exchanger, pid, gauge),
+				None => Ok(()),
+			};
+
 			// match add_amount.values().0 {
 			// 	None => return Err(Error::<T>::InvalidPoolState.into()),
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),

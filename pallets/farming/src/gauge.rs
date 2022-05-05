@@ -62,3 +62,17 @@ where
 		}
 	}
 }
+
+impl<T: Config> Pallet<T> {
+	pub fn gauge_add(who: AccountIdOf<T>, pool: PoolId, gauge: PoolId) -> DispatchResult {
+		SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| {});
+		GaugePoolInfos::<T>::mutate(gauge, |gauge_info| {});
+		Ok(())
+	}
+
+	pub fn gauge_cal_rewards(gauge_amount: BalanceOf<T>, gauge_last_block: BlockNumberFor<T>) -> DispatchResult {
+		// SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| {});
+		// GaugePoolInfos::<T>::mutate(gauge, |gauge_info| {});
+		Ok(())
+	}
+}
