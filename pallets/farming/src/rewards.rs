@@ -44,7 +44,7 @@ pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
 	pub share_total: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub gauge_amount: BalanceOf,
-	pub gauge_time_factor: BalanceOf,
+	pub gauge_time_factor: u128,
 	pub gauge_start_block: BlockNumberFor,
 	pub gauge_last_block: BlockNumberFor,
 }
@@ -80,6 +80,7 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
 	pub keeper: Option<AccountIdOf>,
+	/// Gauge pool id
 	pub gauge: Option<PoolId>,
 }
 
@@ -126,6 +127,7 @@ where
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 		state: PoolState,
+		gauge: Option<PoolId>,
 	) -> Self {
 		Self {
 			tokens,
@@ -133,7 +135,7 @@ where
 			rewards,
 			state,
 			keeper: Some(keeper),
-			gauge: None,
+			gauge,
 		}
 	}
 }

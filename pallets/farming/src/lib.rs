@@ -43,7 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{Balance, BlockNumber, CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
@@ -109,11 +109,16 @@ pub mod pallet {
 		PoolDoesNotExist,
 		PoolKeeperNotExist,
 		InvalidPoolState,
+		GaugePoolNotExist,
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_next_id)]
 	pub type PoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn gauge_pool_next_id)]
+	pub type GaugePoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	/// Record reward pool info.
 	///
@@ -137,7 +142,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		PoolId,
-		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>>,
+		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>,
 		ValueQuery,
 	>;
 
@@ -153,18 +158,23 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>, //, BlockNumberFor<T>
+		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>,
 		ValueQuery,
 	>;
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		BlockNumberFor<T>: Into<u128>,
+		BalanceOf<T>: Into<u128>,
+	{
 		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			add_amount: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			gauge_value: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -175,14 +185,20 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let values: Vec<BalanceOf<T>> = add_amount.values().cloned().collect();
+			let values: Vec<BalanceOf<T>> = add_value.values().cloned().collect();
 			Self::add_share(&exchanger, pid, values[0]);
-			match pool_info.gauge {
-				Some(gauge) => Self::gauge_add(exchanger, pid, gauge),
+
+			match gauge_value {
+				Some(gauge_value) => Self::gauge_add(
+					exchanger,
+					pid,
+					gauge_value,
+					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
+				),
 				None => Ok(()),
 			};
 
-			// match add_amount.values().0 {
+			// match add_value.values().0 {
 			// 	None => return Err(Error::<T>::InvalidPoolState.into()),
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
 			// }
@@ -213,6 +229,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			basic_reward: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
+			gauge_token: Option<CurrencyIdOf<T>>,
 			/* tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
 			 * basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
 			 * gauge_token: Option<CurrencyIdOf<T>>,
@@ -227,8 +244,14 @@ pub mod pallet {
 
 			let pid = Self::pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
-			let pool_info = PoolInfo::new(keeper, tokens, basic_reward);
+			let mut pool_info = PoolInfo::new(keeper, tokens, basic_reward);
 			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_reward };
+
+			match gauge_token {
+				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
+				None => Ok(()),
+			};
+
 			PoolInfos::<T>::insert(pid, &pool_info);
 			PoolNextId::<T>::mutate(|id| -> DispatchResult {
 				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
