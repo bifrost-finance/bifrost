@@ -38,18 +38,24 @@ fn claim() {
 		assert_ok!(Farming::create_farming_pool(
 			Origin::signed(ALICE),
 			tokens.clone(),
-			basic_reward.clone()
+			basic_reward.clone(),
+			Some(KSM)
 		));
 
 		let pid = 0;
 		assert_ok!(Farming::charge(Origin::signed(BOB), pid));
 		let keeper = <Runtime as Config>::PalletId::get().into_sub_account(pid);
-		let pool_info =
-			PoolInfo::reset(keeper, tokens.clone(), basic_reward.clone(), PoolState::Charged);
+		let pool_info = PoolInfo::reset(
+			keeper,
+			tokens.clone(),
+			basic_reward.clone(),
+			PoolState::Charged,
+			Some(0),
+		);
 
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 
-		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone()));
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
