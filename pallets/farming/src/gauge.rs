@@ -36,13 +36,13 @@ use crate::*;
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
-	pid: PoolId,
-	token: CurrencyIdOf,
-	gauge_amount: BalanceOf,
-	gauge_time_factor: u128,
-	gauge_state: GaugeState,
-	gauge_start_block: BlockNumberFor,
-	gauge_last_block: BlockNumberFor,
+	pub pid: PoolId,
+	pub token: CurrencyIdOf,
+	pub gauge_amount: BalanceOf,
+	pub gauge_time_factor: u128,
+	pub gauge_state: GaugeState,
+	pub gauge_start_block: BlockNumberFor,
+	pub gauge_last_block: BlockNumberFor,
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -77,7 +77,7 @@ where
 	CurrencyIdOf: Ord + Default,
 	BlockNumberFor: Clone,
 {
-	fn new(pid: PoolId, token: CurrencyIdOf, current_block_number: BlockNumberFor) -> Self {
+	pub fn new(pid: PoolId, token: CurrencyIdOf, current_block_number: BlockNumberFor) -> Self {
 		Self {
 			pid,
 			token,
@@ -95,6 +95,7 @@ where
 	BlockNumberFor<T>: Into<u128>,
 	BalanceOf<T>: Into<u128>,
 {
+	#[transactional]
 	pub fn create_gauge_pool(
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
@@ -113,9 +114,10 @@ where
 		Ok(())
 	}
 
+	#[transactional]
 	pub fn gauge_add(
-		who: AccountIdOf<T>,
-		pool: PoolId,
+		who: &AccountIdOf<T>,
+		pid: PoolId,
 		gauge_value: BalanceOf<T>,
 		gauge: PoolId,
 	) -> DispatchResult {
@@ -136,7 +138,7 @@ where
 				.gauge_amount
 				.checked_add(&gauge_value)
 				.ok_or(ArithmeticError::Overflow)?;
-			SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| -> DispatchResult {
+			SharesAndWithdrawnRewards::<T>::mutate(pid, who, |share_info| -> DispatchResult {
 				let user_interval_block = current_block_number - share_info.gauge_last_block;
 				// let time_factor: u128 = user_interval_block.into() *
 				// share_info.gauge_amount.into();
@@ -156,13 +158,25 @@ where
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(())
 			})?;
+			// let pool_info = Self::pool_infos(&pid);
+			// if let Some(ref keeper) = pool_info.keeper {
+			// 	T::MultiCurrency::transfer(gauge_info.token, who, &keeper, gauge_value)?;
+			// } else {
+			// }
+			let pool_info = Self::pool_infos(&pid);
+			T::MultiCurrency::transfer(
+				gauge_info.token,
+				who,
+				&pool_info.keeper.ok_or(Error::<T>::KeeperNotExist)?,
+				gauge_value,
+			)?;
 			Ok(())
-		});
+		})?;
 		Ok(())
 	}
 
 	pub fn gauge_remove(
-		who: AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		pool: PoolId,
 		gauge_value: BalanceOf<T>,
 		gauge: PoolId,
