@@ -99,6 +99,12 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		FarmingPoolCreated {},
+		Deposited {
+			who: AccountIdOf<T>,
+			pool: PoolId,
+			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			gauge_value: Option<BalanceOf<T>>,
+		},
 	}
 
 	#[pallet::error]
@@ -110,6 +116,8 @@ pub mod pallet {
 		PoolKeeperNotExist,
 		InvalidPoolState,
 		GaugePoolNotExist,
+		/// The keeper in the farming pool does not exist
+		KeeperNotExist,
 	}
 
 	#[pallet::storage]
@@ -189,13 +197,15 @@ pub mod pallet {
 			Self::add_share(&exchanger, pid, values[0]);
 
 			match gauge_value {
-				Some(gauge_value) => Self::gauge_add(
-					exchanger,
-					pid,
-					gauge_value,
-					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
-				),
-				None => Ok(()),
+				Some(gauge_value) => {
+					Self::gauge_add(
+						&exchanger,
+						pid,
+						gauge_value,
+						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
+					)?;
+				},
+				None => (),
 			};
 
 			// match add_value.values().0 {
@@ -203,6 +213,12 @@ pub mod pallet {
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
 			// }
 
+			Self::deposit_event(Event::Deposited {
+				who: exchanger,
+				pool: pid,
+				add_value,
+				gauge_value,
+			});
 			Ok(())
 		}
 
@@ -243,8 +259,9 @@ pub mod pallet {
 			// let mut d = Asset::<T, I>::get(tokens.keys).ok_or(Error::<T, I>::Unknown)?;
 
 			let pid = Self::pool_next_id();
+			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
-			let mut pool_info = PoolInfo::new(keeper, tokens, basic_reward);
+			let mut pool_info = PoolInfo::new(keeper, tokens, basic_reward, Some(gid));
 			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_reward };
 
 			match gauge_token {

@@ -111,6 +111,7 @@ where
 		keeper: AccountIdOf,
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		gauge: Option<PoolId>,
 	) -> Self {
 		Self {
 			tokens,
@@ -118,7 +119,7 @@ where
 			rewards,
 			state: PoolState::UnCharged,
 			keeper: Some(keeper),
-			gauge: None,
+			gauge,
 		}
 	}
 

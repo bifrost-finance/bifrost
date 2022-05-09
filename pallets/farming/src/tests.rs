@@ -54,11 +54,69 @@ fn claim() {
 		);
 
 		assert_eq!(Farming::pool_infos(pid), pool_info);
-
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
-		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
 	});
+}
+
+#[test]
+fn deposit() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		tokens.entry(KSM).or_insert(1000);
+		let mut basic_reward =
+			BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new();
+		let _ = basic_reward.entry(KSM).or_insert((1000, 0));
+
+		assert_ok!(Farming::create_farming_pool(
+			Origin::signed(ALICE),
+			tokens.clone(),
+			basic_reward.clone(),
+			Some(KSM)
+		));
+
+		let pid = 0;
+		assert_ok!(Farming::charge(Origin::signed(BOB), pid));
+		let keeper = <Runtime as Config>::PalletId::get().into_sub_account(pid);
+		let pool_info = PoolInfo::reset(
+			keeper,
+			tokens.clone(),
+			basic_reward.clone(),
+			PoolState::Charged,
+			Some(0),
+		);
+
+		assert_eq!(Farming::pool_infos(pid), pool_info);
+
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some(100)));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 900);
+		// let current_block_number = frame_system::Pallet::<Runtime>::block_number();
+		// let mut gauge_pool_info = GaugePoolInfo::new(pid, KSM, current_block_number);
+		let gauge_pool_info = GaugePoolInfo {
+			pid,
+			token: KSM,
+			gauge_amount: 100,
+			gauge_time_factor: Default::default(),
+			gauge_start_block: System::block_number(),
+			gauge_last_block: System::block_number(),
+			gauge_state: GaugeState::Bonded,
+		};
+		assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info);
+		System::set_block_number(System::block_number() + 1);
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some(100)));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
+		let gauge_pool_info2 = GaugePoolInfo {
+			pid,
+			token: KSM,
+			gauge_amount: 200,
+			gauge_time_factor: 100,
+			gauge_start_block: System::block_number() - 1,
+			gauge_last_block: System::block_number(),
+			gauge_state: GaugeState::Bonded,
+		};
+		assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info2);
+	})
 }
