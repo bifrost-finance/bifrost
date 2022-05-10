@@ -76,12 +76,14 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
 	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,
+	pub basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	/// Reward infos <reward_currency, (total_reward, total_withdrawn_reward)>
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
 	pub keeper: Option<AccountIdOf>,
 	/// Gauge pool id
 	pub gauge: Option<PoolId>,
+	pub starting_token_values: Vec<BalanceOf>,
 }
 
 impl<BalanceOf, CurrencyIdOf, AccountIdOf> Default
@@ -94,10 +96,12 @@ where
 		Self {
 			tokens: BTreeMap::new(),
 			total_shares: Default::default(),
+			basic_rewards: BTreeMap::new(),
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
 			keeper: None,
 			gauge: None,
+			starting_token_values: Default::default(),
 		}
 	}
 }
@@ -110,33 +114,39 @@ where
 	pub fn new(
 		keeper: AccountIdOf,
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
-		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
 	) -> Self {
 		Self {
 			tokens,
 			total_shares: Default::default(),
-			rewards,
+			basic_rewards,
+			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
 			keeper: Some(keeper),
 			gauge,
+			starting_token_values,
 		}
 	}
 
 	pub fn reset(
 		keeper: AccountIdOf,
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
-		rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 		state: PoolState,
+		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
 	) -> Self {
 		Self {
 			tokens,
 			total_shares: Default::default(),
-			rewards,
+			basic_rewards,
+			rewards: BTreeMap::new(),
 			state,
 			keeper: Some(keeper),
 			gauge,
+			starting_token_values,
 		}
 	}
 }

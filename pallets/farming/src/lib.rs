@@ -34,6 +34,7 @@ pub mod rewards;
 pub mod weights;
 
 use frame_support::{
+	log,
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub},
@@ -170,6 +171,38 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_initialize(_n: T::BlockNumber) -> Weight {
+			// Self::handle_on_initialize().map_err(|e| {
+			// 	log::error!(
+			// 		target: "runtime::vtoken-minting",
+			// 		"Received invalid justification for {:?}",
+			// 		e,
+			// 	);
+			// 	e
+			// });
+			for (pool_id, pool_info) in PoolInfos::<T>::iter() {
+				for (reward_currency_id, (reward_amount, _)) in pool_info.rewards.iter() {
+					let _ = Self::accumulate_reward(
+						pool_id,
+						*reward_currency_id,
+						*reward_amount,
+					)
+					.map_err(|e| {
+						log::error!(
+							target: "incentives",
+							"accumulate_reward: failed to accumulate reward to non-existen pool {:?}, reward_currency_id {:?}, reward_amount {:?}: {:?}",
+							pool_id, reward_currency_id, reward_amount, e
+						);
+					});
+				}
+			}
+
+			T::WeightInfo::on_initialize()
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
@@ -244,7 +277,7 @@ pub mod pallet {
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			basic_reward: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
+			basic_rewards: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			/* tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
 			 * basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
@@ -261,8 +294,16 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
-			let mut pool_info = PoolInfo::new(keeper, tokens, basic_reward, Some(gid));
-			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_reward };
+			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
+			// let sum =starting_token_values.iter().sum();
+			// let starting_token_values: Vec<BalanceOf<T>> =
+			// starting_token_values.mut_iter().for_each(|value|{
+
+			// });
+
+			let mut pool_info =
+				PoolInfo::new(keeper, tokens, basic_rewards, starting_token_values, Some(gid));
+			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_rewards };
 
 			match gauge_token {
 				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
@@ -289,7 +330,7 @@ pub mod pallet {
 			match pool_info.keeper {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 				Some(ref keeper) => {
-					pool_info.rewards.iter().for_each(
+					pool_info.basic_rewards.iter().for_each(
 						|(reward_currency, (total_reward, total_withdrawn_reward))| {
 							T::MultiCurrency::transfer(
 								*reward_currency,
