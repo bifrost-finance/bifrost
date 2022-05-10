@@ -99,12 +99,29 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FarmingPoolCreated {},
+		FarmingPoolCreated {
+			pid: PoolId,
+		},
+		Charged {
+			who: AccountIdOf<T>,
+			pid: PoolId,
+			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		},
 		Deposited {
 			who: AccountIdOf<T>,
-			pool: PoolId,
+			pid: PoolId,
 			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_value: Option<BalanceOf<T>>,
+		},
+		Withdrew {
+			who: AccountIdOf<T>,
+			pid: PoolId,
+			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			gauge_value: Option<BalanceOf<T>>,
+		},
+		Claimed {
+			who: AccountIdOf<T>,
+			pid: PoolId,
 		},
 	}
 
@@ -215,6 +232,79 @@ pub mod pallet {
 		BalanceOf<T>: Into<u128>,
 	{
 		#[transactional]
+		#[pallet::weight(0)]
+		pub fn create_farming_pool(
+			origin: OriginFor<T>,
+			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			basic_rewards: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
+			gauge_token: Option<CurrencyIdOf<T>>,
+			// charge_account: AccountIdOf<T>,
+			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let pid = Self::pool_next_id();
+			let gid = Self::gauge_pool_next_id();
+			let keeper = T::PalletId::get().into_sub_account(pid);
+			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
+
+			let mut pool_info = PoolInfo::new(
+				keeper,
+				tokens,
+				basic_rewards,
+				starting_token_values,
+				Some(gid),
+				min_deposit_to_start,
+				after_block_to_start,
+				withdraw_limit_time,
+				claim_limit_time,
+			);
+
+			match gauge_token {
+				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
+				None => Ok(()),
+			};
+
+			PoolInfos::<T>::insert(pid, &pool_info);
+			PoolNextId::<T>::mutate(|id| -> DispatchResult {
+				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::FarmingPoolCreated { pid });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn charge(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+
+			let mut pool_info = Self::pool_infos(&pid);
+			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
+			match pool_info.keeper {
+				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
+				Some(ref keeper) => {
+					rewards.iter().for_each(|(reward_currency, reward)| {
+						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward);
+					});
+				},
+			}
+			pool_info.state = PoolState::Charged;
+			PoolInfos::<T>::insert(&pid, pool_info);
+
+			Self::deposit_event(Event::Charged { who: exchanger, pid, rewards });
+			Ok(())
+		}
+
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -251,12 +341,43 @@ pub mod pallet {
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
 			// }
 
-			Self::deposit_event(Event::Deposited {
-				who: exchanger,
-				pool: pid,
-				add_value,
-				gauge_value,
-			});
+			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_value });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn withdraw(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			gauge_value: Option<BalanceOf<T>>,
+		) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+
+			let pool_info = Self::pool_infos(&pid);
+			ensure!(
+				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
+				Error::<T>::InvalidPoolState
+			);
+
+			let values: Vec<BalanceOf<T>> = remove_value.values().cloned().collect();
+			Self::remove_share(&exchanger, pid, values[0]);
+
+			match gauge_value {
+				Some(gauge_value) => {
+					Self::gauge_remove(
+						&exchanger,
+						pid,
+						gauge_value,
+						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
+					)?;
+				},
+				None => (),
+			};
+
+			Self::deposit_event(Event::Withdrew { who: exchanger, pid, remove_value, gauge_value });
 			Ok(())
 		}
 
@@ -267,92 +388,11 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let pool_info = Self::pool_infos(&pid);
-			// ensure!(
-			// 	pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
-			// 	Error::<T>::InvalidPoolState
-			// );
+			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 
 			Self::claim_rewards(&exchanger, pid);
 
-			Ok(())
-		}
-
-		#[transactional]
-		#[pallet::weight(0)]
-		pub fn create_farming_pool(
-			origin: OriginFor<T>,
-			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			basic_rewards: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
-			gauge_token: Option<CurrencyIdOf<T>>,
-			// charge_account: AccountIdOf<T>,
-			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
-			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
-			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
-		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-			// let mut d = Asset::<T, I>::get(tokens.keys).ok_or(Error::<T, I>::Unknown)?;
-
-			let pid = Self::pool_next_id();
-			let gid = Self::gauge_pool_next_id();
-			let keeper = T::PalletId::get().into_sub_account(pid);
-			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
-			// let sum =starting_token_values.iter().sum();
-			// let starting_token_values: Vec<BalanceOf<T>> =
-			// starting_token_values.mut_iter().for_each(|value|{
-
-			// });
-
-			let mut pool_info = PoolInfo::new(
-				keeper,
-				tokens,
-				basic_rewards,
-				starting_token_values,
-				Some(gid),
-				min_deposit_to_start,
-				after_block_to_start,
-				withdraw_limit_time,
-				claim_limit_time,
-			);
-			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_rewards };
-
-			match gauge_token {
-				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
-				None => Ok(()),
-			};
-
-			PoolInfos::<T>::insert(pid, &pool_info);
-			PoolNextId::<T>::mutate(|id| -> DispatchResult {
-				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-				Ok(())
-			})?;
-
-			Self::deposit_event(Event::FarmingPoolCreated {});
-			Ok(())
-		}
-
-		#[transactional]
-		#[pallet::weight(0)]
-		pub fn charge(
-			origin: OriginFor<T>,
-			pid: PoolId,
-			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-		) -> DispatchResult {
-			let exchanger = ensure_signed(origin)?;
-
-			let mut pool_info = Self::pool_infos(&pid);
-			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
-			match pool_info.keeper {
-				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-				Some(ref keeper) => {
-					rewards.iter().for_each(|(reward_currency, reward)| {
-						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward);
-					});
-				},
-			}
-			pool_info.state = PoolState::Charged;
-			PoolInfos::<T>::insert(&pid, pool_info);
-
+			Self::deposit_event(Event::Claimed { who: exchanger, pid });
 			Ok(())
 		}
 
