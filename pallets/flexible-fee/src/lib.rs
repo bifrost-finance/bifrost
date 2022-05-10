@@ -196,7 +196,6 @@ impl<T: Config> Pallet<T> {
 impl<T> OnChargeTransaction<T> for Pallet<T>
 where
 	T: Config,
-	T::TransactionByteFee: Get<PalletBalanceOf<T>>,
 	T::Currency: Currency<<T as frame_system::Config>::AccountId>,
 	PositiveImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = NegativeImbalanceOf<T>>,
 	NegativeImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = PositiveImbalanceOf<T>>,

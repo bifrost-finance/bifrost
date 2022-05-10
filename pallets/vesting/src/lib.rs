@@ -1077,7 +1077,7 @@ mod tests {
 				Vesting::set_vesting_per_block(RawOrigin::Root.into(), 1, 256),
 				Err(DispatchError::Module(ModuleError {
 					index: 2,
-					error: 3,
+					error: [3, 0, 0, 0],
 					message: Some("SamePerBlock")
 				})),
 			);
@@ -1103,7 +1103,7 @@ mod tests {
 				Vesting::set_vesting_per_block(Origin::root(), 1, 20),
 				Err(DispatchError::Module(ModuleError {
 					index: 2,
-					error: 0,
+					error: [0, 0, 0, 0],
 					message: Some("NotVesting")
 				})),
 			);

@@ -33,7 +33,7 @@ use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
-	latest::*,
+	latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm},
 	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
 };
 
@@ -1728,7 +1728,7 @@ pub mod pallet {
 		/// **************************************/
 		/// ****** XCM confirming Functions ******/
 		/// **************************************/
-		#[transactional]
+		// #[transactional]
 		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
 			let mut counter = 0u32;
 
