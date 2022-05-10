@@ -174,16 +174,8 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			// Self::handle_on_initialize().map_err(|e| {
-			// 	log::error!(
-			// 		target: "runtime::vtoken-minting",
-			// 		"Received invalid justification for {:?}",
-			// 		e,
-			// 	);
-			// 	e
-			// });
 			for (pool_id, pool_info) in PoolInfos::<T>::iter() {
-				for (reward_currency_id, (reward_amount, _)) in pool_info.rewards.iter() {
+				for (reward_currency_id, (reward_amount, _)) in pool_info.basic_rewards.iter() {
 					let _ = Self::accumulate_reward(
 						pool_id,
 						*reward_currency_id,
@@ -191,7 +183,7 @@ pub mod pallet {
 					)
 					.map_err(|e| {
 						log::error!(
-							target: "incentives",
+							target: "farming",
 							"accumulate_reward: failed to accumulate reward to non-existen pool {:?}, reward_currency_id {:?}, reward_amount {:?}: {:?}",
 							pool_id, reward_currency_id, reward_amount, e
 						);
@@ -322,7 +314,11 @@ pub mod pallet {
 
 		#[transactional]
 		#[pallet::weight(0)]
-		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+		pub fn charge(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid);
@@ -330,16 +326,9 @@ pub mod pallet {
 			match pool_info.keeper {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 				Some(ref keeper) => {
-					pool_info.basic_rewards.iter().for_each(
-						|(reward_currency, (total_reward, total_withdrawn_reward))| {
-							T::MultiCurrency::transfer(
-								*reward_currency,
-								&exchanger,
-								&keeper,
-								*total_reward,
-							);
-						},
-					);
+					rewards.iter().for_each(|(reward_currency, reward)| {
+						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward);
+					});
 				},
 			}
 			pool_info.state = PoolState::Charged;
