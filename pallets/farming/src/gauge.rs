@@ -98,7 +98,7 @@ where
 	#[transactional]
 	pub fn create_gauge_pool(
 		pid: PoolId,
-		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
+		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		gauge_token: CurrencyIdOf<T>,
 	) -> DispatchResult {
 		let gid = Self::gauge_pool_next_id();
