@@ -39,7 +39,11 @@ fn claim() {
 			Origin::signed(ALICE),
 			tokens.clone(),
 			basic_rewards.clone(),
-			Some(KSM)
+			Some(KSM),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
 		));
 
 		let pid = 0;
@@ -57,11 +61,18 @@ fn claim() {
 			PoolState::Charged,
 			starting_token_values,
 			Some(0),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
 		);
 
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
+		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
 		Farming::on_initialize(0);
@@ -83,7 +94,11 @@ fn deposit() {
 			Origin::signed(ALICE),
 			tokens.clone(),
 			basic_rewards.clone(),
-			Some(KSM)
+			Some(KSM),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
 		));
 
 		let pid = 0;
@@ -99,6 +114,10 @@ fn deposit() {
 			PoolState::Charged,
 			starting_token_values,
 			Some(0),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
 		);
 
 		assert_eq!(Farming::pool_infos(pid), pool_info);

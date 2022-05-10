@@ -37,7 +37,7 @@ use frame_support::{
 	log,
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Saturating, Zero},
 		ArithmeticError, FixedPointOperand,
 	},
 	transactional, PalletId,
@@ -138,7 +138,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		PoolId,
-		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>>,
+		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		ValueQuery,
 	>;
 
@@ -172,24 +172,37 @@ pub mod pallet {
 	>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			for (pool_id, pool_info) in PoolInfos::<T>::iter() {
-				for (reward_currency_id, (reward_amount, _)) in pool_info.basic_rewards.iter() {
-					let _ = Self::accumulate_reward(
-						pool_id,
-						*reward_currency_id,
-						*reward_amount,
-					)
-					.map_err(|e| {
-						log::error!(
-							target: "farming",
-							"accumulate_reward: failed to accumulate reward to non-existen pool {:?}, reward_currency_id {:?}, reward_amount {:?}: {:?}",
-							pool_id, reward_currency_id, reward_amount, e
-						);
-					});
-				}
-			}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			PoolInfos::<T>::iter().for_each(|(pid, mut pool_info)| match pool_info.state {
+				PoolState::Ongoing => {
+					pool_info.basic_rewards.clone().iter().for_each(
+						|(reward_currency_id, (reward_amount, _))| {
+							pool_info
+								.rewards
+								.entry(*reward_currency_id)
+								.and_modify(|(total_reward, _)| {
+									*total_reward = total_reward.saturating_add(*reward_amount);
+								})
+								.or_insert((*reward_amount, Zero::zero()));
+						},
+					);
+					PoolInfos::<T>::insert(pid, &pool_info);
+				},
+				PoolState::Charged => {
+					let min_deposit_to_start_value: Vec<BalanceOf<T>> =
+						pool_info.min_deposit_to_start.values().cloned().collect();
+
+					if n >= pool_info.after_block_to_start ||
+						pool_info.total_shares >= min_deposit_to_start_value[0]
+					{
+						pool_info.block_startup = Some(n);
+						pool_info.state = PoolState::Ongoing;
+					}
+					PoolInfos::<T>::insert(pid, &pool_info);
+				},
+				PoolState::UnCharged | PoolState::Dead => (),
+			});
 
 			T::WeightInfo::on_initialize()
 		}
@@ -271,14 +284,11 @@ pub mod pallet {
 			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
 			gauge_token: Option<CurrencyIdOf<T>>,
-			/* tokens: BoundedVec<(CurrencyIdOf<T>, u32)>,
-			 * basic_reward: BoundedVec<(CurrencyIdOf<T>, Balance)>,
-			 * gauge_token: Option<CurrencyIdOf<T>>,
-			 * charge_account: AccountIdOf<T>,
-			 * #[pallet::compact] min_deposit_to_start: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			 * #[pallet::compact] after_block_to_start: BlockNumberFor<T>,
-			 * #[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
-			 * #[pallet::compact] claim_limit_time: BlockNumberFor<T>, */
+			// charge_account: AccountIdOf<T>,
+			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			// let mut d = Asset::<T, I>::get(tokens.keys).ok_or(Error::<T, I>::Unknown)?;
@@ -293,8 +303,17 @@ pub mod pallet {
 
 			// });
 
-			let mut pool_info =
-				PoolInfo::new(keeper, tokens, basic_rewards, starting_token_values, Some(gid));
+			let mut pool_info = PoolInfo::new(
+				keeper,
+				tokens,
+				basic_rewards,
+				starting_token_values,
+				Some(gid),
+				min_deposit_to_start,
+				after_block_to_start,
+				withdraw_limit_time,
+				claim_limit_time,
+			);
 			// PoolInfo { tokens, total_shares: Default::default(), rewards: basic_rewards };
 
 			match gauge_token {

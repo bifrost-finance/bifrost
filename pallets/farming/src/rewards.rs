@@ -71,7 +71,7 @@ where
 
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
+pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	/// Total shares amount
 	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Total shares amount
@@ -83,14 +83,20 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf> {
 	pub keeper: Option<AccountIdOf>,
 	/// Gauge pool id
 	pub gauge: Option<PoolId>,
+	pub block_startup: Option<BlockNumberFor>,
 	pub starting_token_values: Vec<BalanceOf>,
+	pub min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
+	pub after_block_to_start: BlockNumberFor,
+	pub withdraw_limit_time: BlockNumberFor,
+	pub claim_limit_time: BlockNumberFor,
 }
 
-impl<BalanceOf, CurrencyIdOf, AccountIdOf> Default
-	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf>
+impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor> Default
+	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
 where
 	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
+	BlockNumberFor: Default,
 {
 	fn default() -> Self {
 		Self {
@@ -101,12 +107,18 @@ where
 			state: PoolState::UnCharged,
 			keeper: None,
 			gauge: None,
+			block_startup: None,
 			starting_token_values: Default::default(),
+			min_deposit_to_start: BTreeMap::new(),
+			after_block_to_start: Default::default(),
+			withdraw_limit_time: Default::default(),
+			claim_limit_time: Default::default(),
 		}
 	}
 }
 
-impl<BalanceOf, CurrencyIdOf, AccountIdOf> PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf>
+impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
+	PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
 where
 	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
@@ -117,6 +129,10 @@ where
 		basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
+		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
+		after_block_to_start: BlockNumberFor,
+		withdraw_limit_time: BlockNumberFor,
+		claim_limit_time: BlockNumberFor,
 	) -> Self {
 		Self {
 			tokens,
@@ -126,7 +142,12 @@ where
 			state: PoolState::UnCharged,
 			keeper: Some(keeper),
 			gauge,
+			block_startup: None,
 			starting_token_values,
+			min_deposit_to_start,
+			after_block_to_start,
+			withdraw_limit_time,
+			claim_limit_time,
 		}
 	}
 
@@ -137,6 +158,10 @@ where
 		state: PoolState,
 		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
+		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
+		after_block_to_start: BlockNumberFor,
+		withdraw_limit_time: BlockNumberFor,
+		claim_limit_time: BlockNumberFor,
 	) -> Self {
 		Self {
 			tokens,
@@ -146,7 +171,12 @@ where
 			state,
 			keeper: Some(keeper),
 			gauge,
+			block_startup: None,
 			starting_token_values,
+			min_deposit_to_start,
+			after_block_to_start,
+			withdraw_limit_time,
+			claim_limit_time,
 		}
 	}
 }
