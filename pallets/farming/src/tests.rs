@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok};
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 use sp_arithmetic::per_things::Percent;
 
@@ -70,8 +70,7 @@ fn claim() {
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
-		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
+		assert_err!(Farming::claim(Origin::signed(ALICE), pid), Error::<Runtime>::InvalidPoolState);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
