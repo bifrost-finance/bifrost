@@ -76,8 +76,12 @@ fn claim() {
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		Farming::on_initialize(0);
 		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
+		Farming::on_initialize(0);
+		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
 	});
 }
 

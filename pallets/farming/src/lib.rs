@@ -273,6 +273,10 @@ pub mod pallet {
 				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 				Ok(())
 			})?;
+			GaugePoolNextId::<T>::mutate(|id| -> DispatchResult {
+				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::FarmingPoolCreated { pid });
 			Ok(())
@@ -398,15 +402,16 @@ pub mod pallet {
 
 		#[transactional]
 		#[pallet::weight(0)]
-		pub fn force_retire_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
+		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool_info = Self::pool_infos(&pid);
 			let keeper = pool_info.keeper.ok_or(Error::<T>::GaugePoolNotExist)?;
-
+			/// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
 					let who = share_info.who.ok_or(Error::<T>::GaugePoolNotExist)?;
+					Self::claim_rewards(&who, pid);
 					share_info.share_total.iter().try_for_each(
 						|(currency, share)| -> DispatchResult {
 							if !share.is_zero() {
@@ -421,29 +426,85 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(0)]
-		pub fn close_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
+		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mut pool_info = Self::pool_infos(&pid);
+			// ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
+			let gid = pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?;
+			let mut gauge_info = Self::gauge_pool_infos(gid);
+			gauge_info.gauge_state = GaugeState::Unbond;
+			GaugePoolInfos::<T>::insert(&gid, gauge_info);
+			pool_info.state = PoolState::Dead;
+			pool_info.gauge = None;
+			PoolInfos::<T>::insert(&pid, pool_info);
+
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn reset_pool(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			gauge_token: Option<CurrencyIdOf<T>>,
+			// charge_account: AccountIdOf<T>,
+			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
+			let gid = Self::gauge_pool_next_id();
+			let keeper = T::PalletId::get().into_sub_account(pid);
+			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
+
+			let mut pool_info = PoolInfo::new(
+				keeper,
+				tokens,
+				basic_rewards,
+				starting_token_values,
+				Some(gid),
+				min_deposit_to_start,
+				after_block_to_start,
+				withdraw_limit_time,
+				claim_limit_time,
+			);
+
+			match gauge_token {
+				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
+				None => Ok(()),
+			};
+
+			PoolInfos::<T>::insert(pid, &pool_info);
+			PoolNextId::<T>::mutate(|id| -> DispatchResult {
+				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+			GaugePoolNextId::<T>::mutate(|id| -> DispatchResult {
+				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::FarmingPoolCreated { pid });
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
-		pub fn reset_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			Ok(())
-		}
-
-		#[pallet::weight(0)]
-		pub fn kill_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			Ok(())
-		}
-
-		#[pallet::weight(0)]
-		pub fn edit_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
+		pub fn edit_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			Ok(())
