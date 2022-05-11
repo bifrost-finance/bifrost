@@ -31,9 +31,8 @@ fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		tokens.entry(KSM).or_insert(1000);
-		let mut basic_rewards =
-			BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new();
-		let _ = basic_rewards.entry(KSM).or_insert((1000, 0));
+		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		let _ = basic_rewards.entry(KSM).or_insert(1000);
 
 		assert_ok!(Farming::create_farming_pool(
 			Origin::signed(ALICE),
@@ -77,6 +76,8 @@ fn claim() {
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
 	});
 }
 
@@ -85,9 +86,8 @@ fn deposit() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		tokens.entry(KSM).or_insert(1000);
-		let mut basic_rewards =
-			BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new();
-		let _ = basic_rewards.entry(KSM).or_insert((1000, 0));
+		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		let _ = basic_rewards.entry(KSM).or_insert(1000);
 
 		assert_ok!(Farming::create_farming_pool(
 			Origin::signed(ALICE),
