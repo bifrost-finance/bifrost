@@ -102,6 +102,9 @@ pub mod pallet {
 		FarmingPoolCreated {
 			pid: PoolId,
 		},
+		FarmingPoolReset {
+			pid: PoolId,
+		},
 		Charged {
 			who: AccountIdOf<T>,
 			pid: PoolId,
@@ -405,7 +408,8 @@ pub mod pallet {
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid);
+			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let keeper = pool_info.keeper.ok_or(Error::<T>::GaugePoolNotExist)?;
 			/// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
@@ -422,7 +426,9 @@ pub mod pallet {
 					)
 				},
 			);
-			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
+
+			pool_info.state = PoolState::Retired;
+			PoolInfos::<T>::insert(&pid, pool_info);
 			Ok(())
 		}
 
@@ -432,7 +438,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid);
-			// ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
+			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 			let gid = pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?;
 			let mut gauge_info = Self::gauge_pool_infos(gid);
 			gauge_info.gauge_state = GaugeState::Unbond;
@@ -460,7 +466,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
+			let pool_info_origin = Self::pool_infos(&pid);
+			ensure!(pool_info_origin.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
 			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
@@ -492,13 +499,19 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::FarmingPoolCreated { pid });
+			Self::deposit_event(Event::FarmingPoolReset { pid });
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(0)]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+
+			let pool_info = Self::pool_infos(&pid);
+			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
+			PoolInfos::<T>::remove(pid);
 
 			Ok(())
 		}

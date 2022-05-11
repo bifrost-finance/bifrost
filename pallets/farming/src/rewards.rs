@@ -189,6 +189,7 @@ pub enum PoolState {
 	Charged,
 	Ongoing,
 	Dead,
+	Retired,
 }
 
 pub type PoolId = u32;
