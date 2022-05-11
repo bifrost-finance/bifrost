@@ -184,7 +184,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>,
+		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -194,7 +194,7 @@ pub mod pallet {
 			PoolInfos::<T>::iter().for_each(|(pid, mut pool_info)| match pool_info.state {
 				PoolState::Ongoing => {
 					pool_info.basic_rewards.clone().iter().for_each(
-						|(reward_currency_id, (reward_amount, _))| {
+						|(reward_currency_id, reward_amount)| {
 							pool_info
 								.rewards
 								.entry(*reward_currency_id)
@@ -236,7 +236,7 @@ pub mod pallet {
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			basic_rewards: BTreeMap<CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>)>,
+			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
 			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
@@ -322,7 +322,7 @@ pub mod pallet {
 			);
 
 			let values: Vec<BalanceOf<T>> = add_value.values().cloned().collect();
-			Self::add_share(&exchanger, pid, values[0]);
+			Self::add_share(&exchanger, pid, values[0], &add_value);
 
 			match gauge_value {
 				Some(gauge_value) => {
@@ -396,10 +396,28 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(0)]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			let pool_info = Self::pool_infos(&pid);
+			let keeper = pool_info.keeper.ok_or(Error::<T>::GaugePoolNotExist)?;
+
+			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
+				|share_info| -> DispatchResult {
+					let who = share_info.who.ok_or(Error::<T>::GaugePoolNotExist)?;
+					share_info.share_total.iter().try_for_each(
+						|(currency, share)| -> DispatchResult {
+							if !share.is_zero() {
+								T::MultiCurrency::transfer(*currency, &keeper, &who, *share)?
+							}
+							Ok(())
+						},
+					)
+				},
+			);
+			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			Ok(())
 		}
 

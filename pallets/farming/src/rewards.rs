@@ -39,7 +39,8 @@ use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prel
 use crate::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
+pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor, AccountIdOf> {
+	pub who: Option<AccountIdOf>,
 	pub share: BalanceOf,
 	pub share_total: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -49,8 +50,8 @@ pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
 	pub gauge_last_block: BlockNumberFor,
 }
 
-impl<BalanceOf, CurrencyIdOf, BlockNumberFor> Default
-	for ShareInfo<BalanceOf, CurrencyIdOf, BlockNumberFor>
+impl<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf> Default
+	for ShareInfo<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf>
 where
 	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
@@ -58,6 +59,7 @@ where
 {
 	fn default() -> Self {
 		Self {
+			who: None,
 			share: Default::default(),
 			share_total: BTreeMap::new(),
 			withdrawn_rewards: BTreeMap::new(),
@@ -76,7 +78,7 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,
-	pub basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 	/// Reward infos <reward_currency, (total_reward, total_withdrawn_reward)>
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
@@ -126,7 +128,7 @@ where
 	pub fn new(
 		keeper: AccountIdOf,
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
-		basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -154,7 +156,7 @@ where
 	pub fn reset(
 		keeper: AccountIdOf,
 		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
-		basic_rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		state: PoolState,
 		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
@@ -216,7 +218,12 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn add_share(who: &T::AccountId, pool: PoolId, add_amount: BalanceOf<T>) {
+	pub fn add_share(
+		who: &T::AccountId,
+		pool: PoolId,
+		add_amount: BalanceOf<T>,
+		add_value: &BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+	) {
 		if add_amount.is_zero() {
 			return;
 		}
@@ -250,6 +257,8 @@ impl<T: Config> Pallet<T> {
 			);
 
 			SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| {
+				share_info.who = Some(who.clone());
+				share_info.share_total = add_value.clone();
 				share_info.share = share_info.share.saturating_add(add_amount);
 				// update withdrawn inflation for each reward currency
 				withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
@@ -333,15 +342,15 @@ impl<T: Config> Pallet<T> {
 		});
 	}
 
-	pub fn set_share(who: &T::AccountId, pool: PoolId, new_share: BalanceOf<T>) {
-		let share_info = Self::shares_and_withdrawn_rewards(pool, who);
+	// pub fn set_share(who: &T::AccountId, pool: PoolId, new_share: BalanceOf<T>) {
+	// 	let share_info = Self::shares_and_withdrawn_rewards(pool, who);
 
-		if new_share > share_info.share {
-			Self::add_share(who, pool, new_share.saturating_sub(share_info.share));
-		} else {
-			Self::remove_share(who, pool, share_info.share.saturating_sub(new_share));
-		}
-	}
+	// 	if new_share > share_info.share {
+	// 		Self::add_share(who, pool, new_share.saturating_sub(share_info.share));
+	// 	} else {
+	// 		Self::remove_share(who, pool, share_info.share.saturating_sub(new_share));
+	// 	}
+	// }
 
 	pub fn claim_rewards(who: &T::AccountId, pool: PoolId) {
 		SharesAndWithdrawnRewards::<T>::mutate_exists(pool, who, |maybe_share_withdrawn| {
