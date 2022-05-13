@@ -42,6 +42,7 @@ pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
 	pub latest_time_factor: u128,
+	pub claimed_time_factor: u128,
 	pub gauge_start_block: BlockNumberFor,
 	pub gauge_stop_block: BlockNumberFor,
 	pub gauge_last_block: BlockNumberFor,
@@ -63,6 +64,7 @@ where
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			latest_time_factor: Default::default(),
+			claimed_time_factor: Default::default(),
 			gauge_start_block: Default::default(),
 			gauge_stop_block: Default::default(),
 			gauge_last_block: Default::default(),
@@ -268,15 +270,25 @@ where
 	pub fn gauge_claim(
 		who: &AccountIdOf<T>,
 		gid: PoolId,
-		gauge_amount: BalanceOf<T>,
-		gauge_last_block: BlockNumberFor<T>,
+		/* gauge_value: BalanceOf<T>,
+		 * gauge_last_block: BlockNumberFor<T>, */
 	) -> DispatchResult {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		let gauge_pool_info = GaugePoolInfos::<T>::get(gid);
+		let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
 		let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
 		GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
+			ensure!(gauge_info.gauge_start_block < current_block_number, Error::<T>::CanNotClaim);
+
+			let latest_claimed_time_factor = gauge_info.latest_time_factor +
+				gauge_info
+					.gauge_amount
+					.saturated_into::<u128>()
+					.checked_mul((current_block_number - gauge_info.gauge_last_block).into())
+					.ok_or(ArithmeticError::Overflow)?;
+			// let latest_claimed_time_factor = gauge_info.latest_time_factor +
+			// 	gauge_info.gauge_amount * (current_block_number - gauge_info.gauge_last_block);
 			let gauge_rate = Permill::from_rational(
-				gauge_info.total_time_factor,
+				latest_claimed_time_factor - gauge_info.claimed_time_factor,
 				gauge_pool_info.total_time_factor,
 			);
 			let interval_block_rate =
@@ -300,6 +312,23 @@ where
 				},
 			);
 			gauge_info.last_claim_block = current_block_number;
+			gauge_info.claimed_time_factor = latest_claimed_time_factor;
+			if gauge_info.gauge_stop_block <= current_block_number {
+				if let Some(ref keeper) = pool_info.keeper {
+					T::MultiCurrency::transfer(
+						gauge_pool_info.token,
+						&keeper,
+						&who,
+						gauge_info.gauge_amount,
+					)?;
+					GaugeInfos::<T>::remove(gid, who);
+					gauge_pool_info.total_time_factor = gauge_pool_info
+						.total_time_factor
+						.checked_sub(gauge_info.total_time_factor)
+						.ok_or(ArithmeticError::Overflow)?;
+					GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+				}
+			};
 
 			Ok(())
 		})?;
