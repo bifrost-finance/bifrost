@@ -76,12 +76,12 @@ fn claim() {
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
-		Farming::on_initialize(0);
-		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
-		Farming::on_initialize(0);
-		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
+		// Farming::on_initialize(0);
+		// assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		// assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
+		// Farming::on_initialize(0);
+		// assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		// assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
 	});
 }
 
@@ -125,7 +125,7 @@ fn deposit() {
 
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 
-		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some(100)));
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 900);
 		// let current_block_number = frame_system::Pallet::<Runtime>::block_number();
 		// let mut gauge_pool_info = GaugePoolInfo::new(pid, KSM, current_block_number);
@@ -140,7 +140,7 @@ fn deposit() {
 		};
 		assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info);
 		System::set_block_number(System::block_number() + 1);
-		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some(100)));
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,

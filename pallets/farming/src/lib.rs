@@ -114,13 +114,12 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			gauge_value: Option<BalanceOf<T>>,
+			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		},
 		Withdrew {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			gauge_value: Option<BalanceOf<T>>,
 		},
 		Claimed {
 			who: AccountIdOf<T>,
@@ -175,6 +174,18 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn gauge_infos)]
+	pub type GaugeInfos<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		PoolId,
+		Twox64Concat,
+		T::AccountId,
+		GaugeInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
+		ValueQuery,
+	>;
+
 	/// Record share amount, reward currency and withdrawn reward amount for
 	/// specific `AccountId` under `PoolId`.
 	///
@@ -221,7 +232,7 @@ pub mod pallet {
 					}
 					PoolInfos::<T>::insert(pid, &pool_info);
 				},
-				PoolState::UnCharged | PoolState::Dead => (),
+				_ => (),
 			});
 
 			T::WeightInfo::on_initialize()
@@ -231,8 +242,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
-		BlockNumberFor<T>: Into<u128>,
-		BalanceOf<T>: Into<u128>,
+		BlockNumberFor<T>: Into<BalanceOf<T>>,
+		// BalanceOf<T>: From<BlockNumberFor<T>>,
 	{
 		#[transactional]
 		#[pallet::weight(0)]
@@ -317,7 +328,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pid: PoolId,
 			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			gauge_value: Option<BalanceOf<T>>,
+			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
+			// gauge_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -331,13 +343,14 @@ pub mod pallet {
 			let values: Vec<BalanceOf<T>> = add_value.values().cloned().collect();
 			Self::add_share(&exchanger, pid, values[0], &add_value);
 
-			match gauge_value {
-				Some(gauge_value) => {
+			match gauge_info {
+				Some((gauge_value, gauge_block)) => {
 					Self::gauge_add(
 						&exchanger,
 						pid,
-						gauge_value,
 						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
+						gauge_value,
+						gauge_block,
 					)?;
 				},
 				None => (),
@@ -348,7 +361,7 @@ pub mod pallet {
 			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
 			// }
 
-			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_value });
+			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_info });
 			Ok(())
 		}
 
@@ -358,7 +371,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pid: PoolId,
 			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			gauge_value: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -372,19 +384,7 @@ pub mod pallet {
 			let values: Vec<BalanceOf<T>> = remove_value.values().cloned().collect();
 			Self::remove_share(&exchanger, pid, values[0]);
 
-			match gauge_value {
-				Some(gauge_value) => {
-					Self::gauge_remove(
-						&exchanger,
-						pid,
-						gauge_value,
-						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
-					)?;
-				},
-				None => (),
-			};
-
-			Self::deposit_event(Event::Withdrew { who: exchanger, pid, remove_value, gauge_value });
+			Self::deposit_event(Event::Withdrew { who: exchanger, pid, remove_value });
 			Ok(())
 		}
 
@@ -410,7 +410,7 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
-			let keeper = pool_info.keeper.ok_or(Error::<T>::GaugePoolNotExist)?;
+			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::GaugePoolNotExist)?;
 			/// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
