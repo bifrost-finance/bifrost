@@ -139,6 +139,7 @@ pub mod pallet {
 		KeeperNotExist,
 		GaugePoolNotExist,
 		LastGaugeNotClaim,
+		CanNotClaim,
 	}
 
 	#[pallet::storage]
