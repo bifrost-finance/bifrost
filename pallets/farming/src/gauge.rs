@@ -34,36 +34,35 @@ use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prel
 use crate::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct GaugeInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor, AccountIdOf> {
+pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
 	pub who: Option<AccountIdOf>,
-	pub share: BalanceOf,
-	pub share_total: BTreeMap<CurrencyIdOf, BalanceOf>,
-	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
+	// pub share: BalanceOf,
+	// pub share_total: BTreeMap<CurrencyIdOf, BalanceOf>,
+	// pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub gauge_amount: BalanceOf,
-	pub gauge_time_factor: BalanceOf,
-	pub last_time_factor: BalanceOf,
+	pub total_time_factor: u128,
+	pub latest_time_factor: u128,
 	pub gauge_start_block: BlockNumberFor,
 	pub gauge_stop_block: BlockNumberFor,
 	pub gauge_last_block: BlockNumberFor,
 	pub last_claim_block: BlockNumberFor,
 }
 
-impl<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf> Default
-	for GaugeInfo<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf>
+impl<BalanceOf, BlockNumberFor, AccountIdOf> Default
+	for GaugeInfo<BalanceOf, BlockNumberFor, AccountIdOf>
 where
 	BalanceOf: Default + HasCompact,
-	CurrencyIdOf: Ord,
 	BlockNumberFor: Default,
 {
 	fn default() -> Self {
 		Self {
 			who: None,
-			share: Default::default(),
-			share_total: BTreeMap::new(),
-			withdrawn_rewards: BTreeMap::new(),
+			// share: Default::default(),
+			// share_total: BTreeMap::new(),
+			// withdrawn_rewards: BTreeMap::new(),
 			gauge_amount: Default::default(),
-			gauge_time_factor: Default::default(),
-			last_time_factor: Default::default(),
+			total_time_factor: Default::default(),
+			latest_time_factor: Default::default(),
 			gauge_start_block: Default::default(),
 			gauge_stop_block: Default::default(),
 			gauge_last_block: Default::default(),
@@ -78,7 +77,7 @@ pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFo
 	pub pid: PoolId,
 	pub token: CurrencyIdOf,
 	pub gauge_amount: BalanceOf,
-	pub gauge_time_factor: BalanceOf,
+	pub total_time_factor: u128,
 	pub gauge_state: GaugeState,
 	pub gauge_start_block: BlockNumberFor,
 	pub gauge_last_block: BlockNumberFor,
@@ -102,7 +101,7 @@ where
 			pid: Default::default(),
 			token: Default::default(),
 			gauge_amount: Default::default(),
-			gauge_time_factor: Default::default(),
+			total_time_factor: Default::default(),
 			gauge_start_block: Default::default(),
 			gauge_last_block: Default::default(),
 			gauge_state: GaugeState::Unbond,
@@ -121,7 +120,7 @@ where
 			pid,
 			token,
 			gauge_amount: Default::default(),
-			gauge_time_factor: Default::default(),
+			total_time_factor: Default::default(),
 			gauge_start_block: current_block_number.clone(),
 			gauge_last_block: current_block_number,
 			gauge_state: GaugeState::Bonded,
@@ -131,7 +130,8 @@ where
 
 impl<T: Config> Pallet<T>
 where
-	BlockNumberFor<T>: Into<BalanceOf<T>>,
+	BlockNumberFor<T>: Into<u128> + Into<BalanceOf<T>>,
+	BalanceOf<T>: Into<u128>,
 	/* BlockNumberFor<T>: Into<u128>,
 	 * BalanceOf<T>: From<BlockNumberFor<T>>,
 	 * BalanceOf<T>: From<<T as frame_system::Config>::BlockNumber>, */
@@ -165,45 +165,89 @@ where
 	) -> DispatchResult {
 		let current_block_number = frame_system::Pallet::<T>::block_number();
 		GaugePoolInfos::<T>::mutate(gid, |gauge_pool_info| -> DispatchResult {
-			let interval_block = current_block_number - gauge_pool_info.gauge_last_block;
-			let total_time_factor = interval_block
-				.into()
-				.checked_mul(&gauge_pool_info.gauge_amount)
-				.ok_or(ArithmeticError::Overflow)?;
+			let interval_block: u128 =
+				(current_block_number - gauge_pool_info.gauge_last_block).into();
+			// let total_time_factor: u128 = interval_block
+			// 	.checked_mul(gauge_pool_info.gauge_amount.into())
+			// 	.ok_or(ArithmeticError::Overflow)?;
 
 			gauge_pool_info.gauge_last_block = current_block_number;
-			gauge_pool_info.gauge_time_factor = gauge_pool_info
-				.gauge_time_factor
-				.checked_add(&total_time_factor)
-				.ok_or(ArithmeticError::Overflow)?;
+			// gauge_pool_info.total_time_factor = gauge_pool_info
+			// 	.total_time_factor
+			// 	.checked_add(total_time_factor)
+			// 	.ok_or(ArithmeticError::Overflow)?;
 			gauge_pool_info.gauge_amount = gauge_pool_info
 				.gauge_amount
 				.checked_add(&gauge_value)
 				.ok_or(ArithmeticError::Overflow)?;
-			GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
-				if gauge_info.gauge_start_block.is_zero() {
-					gauge_info.gauge_start_block = current_block_number;
-					gauge_info.last_claim_block = current_block_number;
-					gauge_info.gauge_stop_block = current_block_number + gauge_block;
+			let incease_total_time_factor =
+				GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> Result<u128, DispatchError> {
+					ensure!(
+						gauge_info.gauge_stop_block >= current_block_number,
+						Error::<T>::LastGaugeNotClaim
+					);
+					let incease_total_time_factor = if gauge_info.gauge_start_block.is_zero() {
+						gauge_info.gauge_start_block = current_block_number;
+						gauge_info.last_claim_block = current_block_number;
+						// gauge_info.gauge_stop_block = gauge_info.gauge_stop_block + gauge_block;
+						gauge_info.total_time_factor = gauge_block
+							.saturated_into::<u128>()
+							.checked_mul(gauge_value.into())
+							.ok_or(ArithmeticError::Overflow)?;
+						gauge_info.total_time_factor
 					// return Ok(());
-				}
-				let user_interval_block = current_block_number - gauge_info.gauge_last_block;
-				let time_factor = user_interval_block
-					.into()
-					.checked_mul(&gauge_info.gauge_amount)
-					.ok_or(ArithmeticError::Overflow)?;
+					} else {
+						let time_factor_a = gauge_value
+							.saturated_into::<u128>()
+							.checked_mul(
+								(gauge_info.gauge_stop_block - current_block_number).into(),
+							)
+							.ok_or(ArithmeticError::Overflow)?;
+						let time_factor_b = gauge_block
+							.saturated_into::<u128>()
+							.checked_mul((gauge_value + gauge_info.gauge_amount).into())
+							.ok_or(ArithmeticError::Overflow)?;
+						let incease_total_time_factor = time_factor_a + time_factor_b;
+						gauge_info.total_time_factor = gauge_info
+							.total_time_factor
+							.checked_add(incease_total_time_factor)
+							.ok_or(ArithmeticError::Overflow)?;
+						/// latest_time_factor only increases in not first gauge_deposit
+						let increase_latest_time_factor = gauge_info
+							.gauge_amount
+							.saturated_into::<u128>()
+							.checked_mul(
+								(current_block_number - gauge_info.gauge_last_block).into(),
+							)
+							.ok_or(ArithmeticError::Overflow)?;
+						gauge_info.latest_time_factor = gauge_info
+							.latest_time_factor
+							.checked_add(increase_latest_time_factor)
+							.ok_or(ArithmeticError::Overflow)?;
+						incease_total_time_factor
+					};
+					// let user_interval_block = current_block_number - gauge_info.gauge_last_block;
+					// let time_factor: u128 = user_interval_block
+					// 	.saturated_into::<u128>()
+					// 	.checked_mul(gauge_info.gauge_amount.into())
+					// 	.ok_or(ArithmeticError::Overflow)?;
 
-				gauge_info.gauge_last_block = current_block_number;
-				gauge_info.gauge_time_factor = gauge_info
-					.gauge_time_factor
-					.checked_add(&time_factor)
-					.ok_or(ArithmeticError::Overflow)?;
-				gauge_info.gauge_amount = gauge_info
-					.gauge_amount
-					.checked_add(&gauge_value)
-					.ok_or(ArithmeticError::Overflow)?;
-				Ok(())
-			})?;
+					gauge_info.gauge_last_block = current_block_number;
+					// gauge_info.total_time_factor = gauge_info
+					// 	.total_time_factor
+					// 	.checked_add(time_factor)
+					// 	.ok_or(ArithmeticError::Overflow)?;
+					gauge_info.gauge_amount = gauge_info
+						.gauge_amount
+						.checked_add(&gauge_value)
+						.ok_or(ArithmeticError::Overflow)?;
+					gauge_info.gauge_stop_block = gauge_info.gauge_stop_block + gauge_block;
+					Ok(incease_total_time_factor)
+				})?;
+			gauge_pool_info.total_time_factor = gauge_pool_info
+				.total_time_factor
+				.checked_add(incease_total_time_factor)
+				.ok_or(ArithmeticError::Overflow)?;
 			// let pool_info = Self::pool_infos(&pid);
 			// if let Some(ref keeper) = pool_info.keeper {
 			// 	T::MultiCurrency::transfer(gauge_info.token, who, &keeper, gauge_value)?;
@@ -232,8 +276,8 @@ where
 		let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
 		GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
 			let gauge_rate = Permill::from_rational(
-				gauge_info.gauge_time_factor,
-				gauge_pool_info.gauge_time_factor,
+				gauge_info.total_time_factor,
+				gauge_pool_info.total_time_factor,
 			);
 			let interval_block_rate =
 				gauge_rate * (current_block_number - gauge_info.last_claim_block);

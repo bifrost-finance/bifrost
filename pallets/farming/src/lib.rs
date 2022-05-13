@@ -135,9 +135,10 @@ pub mod pallet {
 		PoolDoesNotExist,
 		PoolKeeperNotExist,
 		InvalidPoolState,
-		GaugePoolNotExist,
 		/// The keeper in the farming pool does not exist
 		KeeperNotExist,
+		GaugePoolNotExist,
+		LastGaugeNotClaim,
 	}
 
 	#[pallet::storage]
@@ -182,7 +183,7 @@ pub mod pallet {
 		PoolId,
 		Twox64Concat,
 		T::AccountId,
-		GaugeInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
+		GaugeInfo<BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -242,8 +243,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
-		BlockNumberFor<T>: Into<BalanceOf<T>>,
-		// BalanceOf<T>: From<BlockNumberFor<T>>,
+		BlockNumberFor<T>: Into<u128> + Into<BalanceOf<T>>,
+		BalanceOf<T>: Into<u128>,
 	{
 		#[transactional]
 		#[pallet::weight(0)]
