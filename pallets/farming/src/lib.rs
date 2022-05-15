@@ -400,6 +400,9 @@ pub mod pallet {
 			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 
 			Self::claim_rewards(&exchanger, pid);
+			if let Some(ref gid) = pool_info.gauge {
+				Self::gauge_claim(&exchanger, *gid);
+			}
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
 			Ok(())
@@ -430,7 +433,14 @@ pub mod pallet {
 			);
 
 			pool_info.state = PoolState::Retired;
+			pool_info.gauge = None;
+			if let Some(ref gid) = pool_info.gauge {
+				let mut gauge_info = Self::gauge_pool_infos(gid);
+				gauge_info.gauge_state = GaugeState::Unbond;
+				GaugePoolInfos::<T>::insert(&gid, gauge_info);
+			}
 			PoolInfos::<T>::insert(&pid, pool_info);
+
 			Ok(())
 		}
 
@@ -441,12 +451,7 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
-			let gid = pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?;
-			let mut gauge_info = Self::gauge_pool_infos(gid);
-			gauge_info.gauge_state = GaugeState::Unbond;
-			GaugePoolInfos::<T>::insert(&gid, gauge_info);
 			pool_info.state = PoolState::Dead;
-			pool_info.gauge = None;
 			PoolInfos::<T>::insert(&pid, pool_info);
 
 			Ok(())
