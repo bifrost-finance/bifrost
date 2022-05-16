@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -v
+
 ## EXAMPLE
 ##
 ## Generate the weightInfo files of `bifrost-runtimes`;
@@ -13,12 +15,13 @@ for runtime in "${runtimes[@]}"
 do
     chain="${runtime}-local"
     echo $chain
-    target/release/bifrost benchmark --chain=$chain --list | sed -n '2,$p' | grep -Eio "^\w+" | uniq |
+    target/release/bifrost benchmark pallet --chain=$chain --list | sed -n '2,$p' | grep -Eio "^\w+" | uniq |
         while IFS= read -r line
         do
             pallet=$line;
             if [ "$pallet" != "parachain_staking" ]; then
-                target/release/bifrost benchmark --chain=$chain \
+                echo "benchmark pallet ${pallet}"
+                target/release/bifrost benchmark pallet --chain=$chain \
                 --steps=50 \
                 --repeat=20 \
                 --pallet=$pallet \
