@@ -121,6 +121,10 @@ pub mod pallet {
 			pid: PoolId,
 			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		},
+		WithdrewAll {
+			who: AccountIdOf<T>,
+			pid: PoolId,
+		},
 		Claimed {
 			who: AccountIdOf<T>,
 			pid: PoolId,
@@ -384,7 +388,7 @@ pub mod pallet {
 			);
 
 			let values: Vec<BalanceOf<T>> = remove_value.values().cloned().collect();
-			Self::remove_share(&exchanger, pid, values[0]);
+			Self::remove_share(&exchanger, pid, Some(values[0]))?;
 
 			Self::deposit_event(Event::Withdrew { who: exchanger, pid, remove_value });
 			Ok(())
@@ -399,7 +403,7 @@ pub mod pallet {
 			let pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 
-			Self::claim_rewards(&exchanger, pid);
+			Self::claim_rewards(&exchanger, pid)?;
 			if let Some(ref gid) = pool_info.gauge {
 				Self::gauge_claim(&exchanger, *gid)?;
 			}
@@ -420,7 +424,7 @@ pub mod pallet {
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
 					let who = share_info.who.ok_or(Error::<T>::GaugePoolNotExist)?;
-					Self::claim_rewards(&who, pid);
+					Self::claim_rewards(&who, pid)?;
 					share_info.share_total.iter().try_for_each(
 						|(currency, share)| -> DispatchResult {
 							if !share.is_zero() {
@@ -528,6 +532,24 @@ pub mod pallet {
 		pub fn edit_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn withdraw_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+
+			let pool_info = Self::pool_infos(&pid);
+			ensure!(
+				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
+				Error::<T>::InvalidPoolState
+			);
+
+			Self::remove_share(&exchanger, pid, None)?;
+
+			Self::deposit_event(Event::WithdrewAll { who: exchanger, pid });
 			Ok(())
 		}
 	}
