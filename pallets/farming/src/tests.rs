@@ -70,6 +70,7 @@ fn claim() {
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
 		assert_err!(Farming::claim(Origin::signed(ALICE), pid), Error::<Runtime>::InvalidPoolState);
+		System::set_block_number(System::block_number() + 100);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
@@ -149,11 +150,92 @@ fn deposit() {
 			pid,
 			token: KSM,
 			gauge_amount: 200,
-			total_time_factor: 20000,
+			total_time_factor: 39900,
 			gauge_start_block: System::block_number() - 1,
 			gauge_last_block: System::block_number(),
 			gauge_state: GaugeState::Bonded,
 		};
 		assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info2);
+		Farming::on_initialize(0);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 1000);
+		// let gauge_info = GaugeInfo {
+		// 	// gauge_amount: 200,
+		// 	// total_time_factor: 20000,
+		// 	// gauge_start_block: System::block_number() - 1,
+		// 	// gauge_last_block: System::block_number(),
+		// 	who: None,
+		// 	gauge_amount: Default::default(),
+		// 	total_time_factor: Default::default(),
+		// 	latest_time_factor: Default::default(),
+		// 	claimed_time_factor: Default::default(),
+		// 	gauge_start_block: Default::default(),
+		// 	gauge_stop_block: Default::default(),
+		// 	gauge_last_block: Default::default(),
+		// 	last_claim_block: Default::default(),
+		// };
+		// // assert_eq!(Farming::gauge_infos(0, ALICE), gauge_info);
+		// assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		// assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		// assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info2);
+	})
+}
+
+#[test]
+fn gauge() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		tokens.entry(KSM).or_insert(1000);
+		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		let _ = basic_rewards.entry(KSM).or_insert(1000);
+
+		assert_ok!(Farming::create_farming_pool(
+			Origin::signed(ALICE),
+			tokens.clone(),
+			basic_rewards.clone(),
+			Some(KSM),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
+		));
+
+		let pid = 0;
+		let mut charge_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		let _ = charge_rewards.entry(KSM).or_insert(3000);
+		assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
+		let keeper = <Runtime as Config>::PalletId::get().into_sub_account(pid);
+		let starting_token_values: Vec<BalanceOf<Runtime>> = tokens.values().cloned().collect();
+		let pool_info = PoolInfo::reset(
+			keeper,
+			tokens.clone(),
+			basic_rewards.clone(),
+			PoolState::Charged,
+			starting_token_values,
+			Some(0),
+			BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new(),
+			0,
+			0,
+			0,
+		);
+
+		assert_eq!(Farming::pool_infos(pid), pool_info);
+
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 900);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 10);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 10);
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1800);
+		System::set_block_number(System::block_number() + 1000);
+		assert_err!(
+			Farming::claim(Origin::signed(ALICE), pid),
+			orml_tokens::Error::<Runtime>::BalanceTooLow
+		);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1800);
 	})
 }
