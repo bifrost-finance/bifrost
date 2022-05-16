@@ -311,11 +311,11 @@ pub mod pallet {
 			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
 			match pool_info.keeper {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-				Some(ref keeper) => {
-					rewards.iter().for_each(|(reward_currency, reward)| {
-						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward);
-					});
-				},
+				Some(ref keeper) =>
+					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
+						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward)?;
+						Ok(())
+					})?,
 			}
 			pool_info.state = PoolState::Charged;
 			PoolInfos::<T>::insert(&pid, pool_info);
@@ -401,7 +401,7 @@ pub mod pallet {
 
 			Self::claim_rewards(&exchanger, pid);
 			if let Some(ref gid) = pool_info.gauge {
-				Self::gauge_claim(&exchanger, *gid);
+				Self::gauge_claim(&exchanger, *gid)?;
 			}
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
@@ -424,13 +424,14 @@ pub mod pallet {
 					share_info.share_total.iter().try_for_each(
 						|(currency, share)| -> DispatchResult {
 							if !share.is_zero() {
-								T::MultiCurrency::transfer(*currency, &keeper, &who, *share)?
+								T::MultiCurrency::transfer(*currency, &keeper, &who, *share)?;
 							}
 							Ok(())
 						},
-					)
+					)?;
+					Ok(())
 				},
-			);
+			)?;
 
 			pool_info.state = PoolState::Retired;
 			pool_info.gauge = None;
