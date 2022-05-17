@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_ok};
 
 use crate::{mock::*, *};
 
