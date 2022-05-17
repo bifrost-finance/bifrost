@@ -129,6 +129,13 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 		},
+		GaugeClaimed {
+			who: AccountIdOf<T>,
+			gid: PoolId,
+		},
+		ForceGaugeClaimed {
+			gid: PoolId,
+		},
 	}
 
 	#[pallet::error]
@@ -405,7 +412,7 @@ pub mod pallet {
 
 			Self::claim_rewards(&exchanger, pid)?;
 			if let Some(ref gid) = pool_info.gauge {
-				Self::gauge_claim(&exchanger, *gid)?;
+				Self::gauge_claim_inner(&exchanger, *gid)?;
 			}
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
@@ -419,11 +426,11 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
-			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::GaugePoolNotExist)?;
+			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::KeeperNotExist)?;
 			/// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
-					let who = share_info.who.ok_or(Error::<T>::GaugePoolNotExist)?;
+					let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
 					Self::claim_rewards(&who, pid)?;
 					share_info.share_total.iter().try_for_each(
 						|(currency, share)| -> DispatchResult {
@@ -550,6 +557,34 @@ pub mod pallet {
 			Self::remove_share(&exchanger, pid, None)?;
 
 			Self::deposit_event(Event::WithdrewAll { who: exchanger, pid });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+
+			Self::gauge_claim_inner(&exchanger, gid)?;
+
+			Self::deposit_event(Event::GaugeClaimed { who: exchanger, gid });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn force_gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
+			// Check origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			GaugeInfos::<T>::iter_prefix_values(&gid).try_for_each(
+				|gauge_info| -> DispatchResult {
+					Self::gauge_claim_inner(&gauge_info.who.ok_or(Error::<T>::KeeperNotExist)?, gid)
+				},
+			)?;
+
+			Self::deposit_event(Event::ForceGaugeClaimed { gid });
 			Ok(())
 		}
 	}
