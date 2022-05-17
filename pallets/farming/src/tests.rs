@@ -138,7 +138,6 @@ fn deposit() {
 			token: KSM,
 			gauge_amount: 100,
 			total_time_factor: 10000,
-			gauge_start_block: System::block_number(),
 			gauge_last_block: System::block_number(),
 			gauge_state: GaugeState::Bonded,
 		};
@@ -151,7 +150,6 @@ fn deposit() {
 			token: KSM,
 			gauge_amount: 200,
 			total_time_factor: 39900,
-			gauge_start_block: System::block_number() - 1,
 			gauge_last_block: System::block_number(),
 			gauge_state: GaugeState::Bonded,
 		};
