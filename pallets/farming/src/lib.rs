@@ -29,7 +29,6 @@ mod tests;
 mod benchmarking;
 
 pub mod gauge;
-pub mod primitives;
 pub mod rewards;
 pub mod weights;
 
@@ -38,7 +37,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Saturating, Zero},
-		ArithmeticError, FixedPointOperand,
+		ArithmeticError, FixedPointOperand, Permill,
 	},
 	transactional, PalletId,
 };
@@ -47,7 +46,6 @@ pub use gauge::*;
 use node_primitives::{Balance, BlockNumber, CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 pub use rewards::*;
 // use sp_arithmetic::per_things::Percent;
 use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, vec::Vec};
@@ -262,7 +260,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
-			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
@@ -276,13 +274,11 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
-			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
 				tokens,
 				basic_rewards,
-				starting_token_values,
 				Some(gid),
 				min_deposit_to_start,
 				after_block_to_start,
@@ -474,7 +470,7 @@ pub mod pallet {
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
@@ -489,13 +485,11 @@ pub mod pallet {
 			ensure!(pool_info_origin.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
-			let starting_token_values: Vec<BalanceOf<T>> = tokens.values().cloned().collect();
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
 				tokens,
 				basic_rewards,
-				starting_token_values,
 				Some(gid),
 				min_deposit_to_start,
 				after_block_to_start,
