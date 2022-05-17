@@ -270,7 +270,7 @@ where
 	}
 
 	#[transactional]
-	pub fn gauge_claim(who: &AccountIdOf<T>, gid: PoolId) -> DispatchResult {
+	pub fn gauge_claim_inner(who: &AccountIdOf<T>, gid: PoolId) -> DispatchResult {
 		if !GaugeInfos::<T>::contains_key(gid, who) {
 			return Ok(());
 		}
