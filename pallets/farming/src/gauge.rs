@@ -16,20 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::{FullCodec, HasCompact};
+use codec::HasCompact;
 use frame_support::pallet_prelude::*;
-use node_primitives::{BlockNumber, CurrencyId};
-use orml_traits::RewardHandler;
 use scale_info::TypeInfo;
-use sp_core::U256;
 use sp_runtime::{
-	traits::{
-		AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating, UniqueSaturatedInto,
-		Zero, *,
-	},
-	ArithmeticError, FixedPointOperand, Permill, RuntimeDebug, SaturatedConversion,
+	traits::{Zero, *},
+	ArithmeticError, Permill, RuntimeDebug, SaturatedConversion,
 };
-use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
+use sp_std::prelude::*;
 
 use crate::*;
 
@@ -135,7 +129,7 @@ where
 		let gid = Self::gauge_pool_next_id();
 		pool_info.gauge = Some(gid);
 		let current_block_number = frame_system::Pallet::<T>::block_number();
-		let mut gauge_pool_info = GaugePoolInfo::new(pid, gauge_token, current_block_number);
+		let gauge_pool_info = GaugePoolInfo::new(pid, gauge_token, current_block_number);
 
 		GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 		GaugePoolNextId::<T>::mutate(|id| -> DispatchResult {
@@ -191,7 +185,7 @@ where
 							.total_time_factor
 							.checked_add(incease_total_time_factor)
 							.ok_or(ArithmeticError::Overflow)?;
-						/// latest_time_factor only increases in not first gauge_deposit
+						// latest_time_factor only increases in not first gauge_deposit
 						let increase_latest_time_factor = gauge_info
 							.gauge_amount
 							.saturated_into::<u128>()
@@ -294,17 +288,6 @@ where
 			};
 			Ok(())
 		})?;
-		Ok(())
-	}
-
-	pub fn gauge_remove(
-		who: &AccountIdOf<T>,
-		pool: PoolId,
-		gauge_value: BalanceOf<T>,
-		gauge: PoolId,
-	) -> DispatchResult {
-		let current_block_number = frame_system::Pallet::<T>::block_number();
-
 		Ok(())
 	}
 }

@@ -43,7 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::{Balance, BlockNumber, CurrencyId, TokenSymbol};
+use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
@@ -287,8 +287,8 @@ pub mod pallet {
 			);
 
 			match gauge_token {
-				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
-				None => Ok(()),
+				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge)?,
+				None => (),
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);
@@ -338,7 +338,6 @@ pub mod pallet {
 			pid: PoolId,
 			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
-			// gauge_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -364,11 +363,6 @@ pub mod pallet {
 				},
 				None => (),
 			};
-
-			// match add_value.values().0 {
-			// 	None => return Err(Error::<T>::InvalidPoolState.into()),
-			// 	Some(entry) => Self::add_share(&exchanger, pid, *entry.get()),
-			// }
 
 			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_info });
 			Ok(())
@@ -423,7 +417,7 @@ pub mod pallet {
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::KeeperNotExist)?;
-			/// TODO: gauge
+			// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
 					let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
@@ -498,8 +492,8 @@ pub mod pallet {
 			);
 
 			match gauge_token {
-				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge),
-				None => Ok(()),
+				Some(gauge) => Self::create_gauge_pool(pid, &mut pool_info, gauge)?,
+				None => (),
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);

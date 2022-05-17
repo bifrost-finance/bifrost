@@ -21,20 +21,15 @@
 
 // mod mock;
 // mod tests;
-use codec::{FullCodec, HasCompact};
+use codec::HasCompact;
 use frame_support::pallet_prelude::*;
-use node_primitives::CurrencyId;
-use orml_traits::RewardHandler;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{
-		AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating, UniqueSaturatedInto,
-		Zero,
-	},
-	FixedPointOperand, RuntimeDebug, SaturatedConversion,
+	traits::{Saturating, UniqueSaturatedInto, Zero},
+	RuntimeDebug, SaturatedConversion,
 };
-use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
+use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, prelude::*};
 
 use crate::*;
 
@@ -341,14 +336,14 @@ impl<T: Config> Pallet<T> {
 										withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
 									Ok(())
 								},
-							);
+							)?;
 
 							if !pool_info.total_shares.is_zero() {
 								*maybe_pool_info = Some(pool_info);
 							}
 						}
 						Ok(())
-					});
+					})?;
 
 					share_info.share = share_info.share.saturating_sub(remove_amount);
 					if !share_info.share.is_zero() {
@@ -431,9 +426,9 @@ impl<T: Config> Pallet<T> {
 								};
 								Ok(())
 							},
-						);
+						)?;
 						Ok(())
-					});
+					})?;
 				};
 				Ok(())
 			},
