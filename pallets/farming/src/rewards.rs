@@ -75,7 +75,7 @@ where
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	/// Total shares amount
-	pub tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
+	pub tokens: BTreeMap<CurrencyIdOf, Permill>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -86,7 +86,6 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	/// Gauge pool id
 	pub gauge: Option<PoolId>,
 	pub block_startup: Option<BlockNumberFor>,
-	pub starting_token_values: Vec<BalanceOf>,
 	pub min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub after_block_to_start: BlockNumberFor,
 	pub withdraw_limit_time: BlockNumberFor,
@@ -110,7 +109,6 @@ where
 			keeper: None,
 			gauge: None,
 			block_startup: None,
-			starting_token_values: Default::default(),
 			min_deposit_to_start: BTreeMap::new(),
 			after_block_to_start: Default::default(),
 			withdraw_limit_time: Default::default(),
@@ -127,9 +125,8 @@ where
 {
 	pub fn new(
 		keeper: AccountIdOf,
-		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
+		tokens: BTreeMap<CurrencyIdOf, Permill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
-		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
 		after_block_to_start: BlockNumberFor,
@@ -145,7 +142,6 @@ where
 			keeper: Some(keeper),
 			gauge,
 			block_startup: None,
-			starting_token_values,
 			min_deposit_to_start,
 			after_block_to_start,
 			withdraw_limit_time,
@@ -155,10 +151,9 @@ where
 
 	pub fn reset(
 		keeper: AccountIdOf,
-		tokens: BTreeMap<CurrencyIdOf, BalanceOf>,
+		tokens: BTreeMap<CurrencyIdOf, Permill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		state: PoolState,
-		starting_token_values: Vec<BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
 		after_block_to_start: BlockNumberFor,
@@ -174,7 +169,6 @@ where
 			keeper: Some(keeper),
 			gauge,
 			block_startup: None,
-			starting_token_values,
 			min_deposit_to_start,
 			after_block_to_start,
 			withdraw_limit_time,
