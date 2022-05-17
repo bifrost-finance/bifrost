@@ -18,9 +18,6 @@ jobs:
     if: "!contains(github.event.commits[0].message, '[skip ci]')"
     runs-on: [self-hosted, normal]
     steps:
-      - name: clean runner workspace
-        uses: colpal/actions-clean@v1
-        if: ${{ always() }}
       - name: Check to latest commit
         uses: actions/checkout@v3
         with:
@@ -47,5 +44,5 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}
       - name: clean runner workspace
-        uses: colpal/actions-clean@v1
-        if: ${{ always() }}
+        run: |
+          rm -r *
