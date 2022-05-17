@@ -15,7 +15,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 log = { version = "0.4.16", default-features = false }
-serde = { version = "1.0.126", optional = true, features = ["derive"] }
+serde = { version = "1.0.137", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
