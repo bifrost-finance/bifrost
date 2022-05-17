@@ -417,7 +417,6 @@ pub mod pallet {
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::KeeperNotExist)?;
-			// TODO: gauge
 			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
 				|share_info| -> DispatchResult {
 					let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
@@ -524,8 +523,26 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub fn edit_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+		pub fn edit_pool(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
+			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mut pool_info = Self::pool_infos(&pid);
+			pool_info.tokens = tokens;
+			pool_info.basic_rewards = basic_rewards;
+			pool_info.min_deposit_to_start = min_deposit_to_start;
+			pool_info.after_block_to_start = after_block_to_start;
+			pool_info.withdraw_limit_time = withdraw_limit_time;
+			pool_info.claim_limit_time = claim_limit_time;
+			PoolInfos::<T>::insert(pid, &pool_info);
 
 			Ok(())
 		}
