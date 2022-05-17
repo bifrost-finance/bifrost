@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"]
 # third-party dependencies
 clap = { version = "3.1", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0" }
-log = "0.4.16"
+log = "0.4.17"
 
 # primitives
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
