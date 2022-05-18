@@ -212,7 +212,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		pool: PoolId,
 		add_amount: BalanceOf<T>,
-		add_value: &BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		// add_value: &BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 	) {
 		if add_amount.is_zero() {
 			return;
@@ -248,7 +248,7 @@ impl<T: Config> Pallet<T> {
 
 			SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| {
 				share_info.who = Some(who.clone());
-				share_info.share_total = add_value.clone();
+				// share_info.share_total = add_value.clone();
 				share_info.share = share_info.share.saturating_add(add_amount);
 				// update withdrawn inflation for each reward currency
 				withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
@@ -284,7 +284,7 @@ impl<T: Config> Pallet<T> {
 			|share_info_old| -> DispatchResult {
 				if let Some(mut share_info) = share_info_old.take() {
 					// (mut share, mut withdrawn_rewards)S
-					let mut remove_amount;
+					let remove_amount;
 					if let Some(remove_amount_input) = remove_amount_input {
 						remove_amount = remove_amount_input.min(share_info.share);
 					} else {
