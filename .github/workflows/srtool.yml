@@ -25,7 +25,7 @@ jobs:
         chain: ["bifrost"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.ref }}
           fetch-depth: 0
