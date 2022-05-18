@@ -157,11 +157,13 @@ where
 			let incease_total_time_factor =
 				GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> Result<u128, DispatchError> {
 					ensure!(
-						gauge_info.gauge_stop_block >= current_block_number,
+						gauge_info.gauge_stop_block >= current_block_number ||
+							gauge_info.gauge_stop_block == Default::default(),
 						Error::<T>::LastGaugeNotClaim
 					);
 
 					let incease_total_time_factor = if gauge_info.gauge_amount.is_zero() {
+						gauge_info.gauge_stop_block = current_block_number;
 						gauge_info.gauge_start_block = current_block_number;
 						gauge_info.last_claim_block = current_block_number;
 						gauge_info.total_time_factor = gauge_block
