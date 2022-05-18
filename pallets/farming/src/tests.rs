@@ -29,8 +29,9 @@ fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let mut tokens_proportion = BTreeMap::<CurrencyIdOf<Runtime>, Permill>::new();
 		tokens_proportion.entry(KSM).or_insert(Permill::from_percent(100));
-		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
-		tokens.entry(KSM).or_insert(1000);
+		// let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		// tokens.entry(KSM).or_insert(1000);
+		let tokens = 1000;
 		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		let _ = basic_rewards.entry(KSM).or_insert(1000);
 
@@ -73,10 +74,10 @@ fn claim() {
 		System::set_block_number(System::block_number() + 100);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1000);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::close_pool(Origin::signed(ALICE), pid));
 		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
@@ -94,8 +95,9 @@ fn deposit() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let mut tokens_proportion = BTreeMap::<CurrencyIdOf<Runtime>, Permill>::new();
 		tokens_proportion.entry(KSM).or_insert(Permill::from_percent(100));
-		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
-		tokens.entry(KSM).or_insert(1000);
+		// let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		// tokens.entry(KSM).or_insert(1000);
+		let tokens = 1000;
 		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		let _ = basic_rewards.entry(KSM).or_insert(1000);
 
@@ -130,7 +132,7 @@ fn deposit() {
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 900);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
 		// let current_block_number = frame_system::Pallet::<Runtime>::block_number();
 		// let mut gauge_pool_info = GaugePoolInfo::new(pid, KSM, current_block_number);
 		let gauge_pool_info = GaugePoolInfo {
@@ -165,8 +167,9 @@ fn gauge() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let mut tokens_proportion = BTreeMap::<CurrencyIdOf<Runtime>, Permill>::new();
 		tokens_proportion.entry(KSM).or_insert(Permill::from_percent(100));
-		let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
-		tokens.entry(KSM).or_insert(1000);
+		// let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		// tokens.entry(KSM).or_insert(1000);
+		let tokens = 1000;
 		let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		let _ = basic_rewards.entry(KSM).or_insert(1000);
 
@@ -202,11 +205,11 @@ fn gauge() {
 		assert_eq!(Farming::pool_infos(pid), pool_info);
 
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 900);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 10);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2900);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 10);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));

@@ -33,11 +33,10 @@ pub mod rewards;
 pub mod weights;
 
 use frame_support::{
-	log,
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Saturating, Zero},
-		ArithmeticError, FixedPointOperand, Permill,
+		traits::{AccountIdConversion, Saturating, Zero},
+		ArithmeticError, Permill,
 	},
 	transactional, PalletId,
 };
@@ -48,7 +47,7 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
 // use sp_arithmetic::per_things::Percent;
-use sp_std::{collections::btree_map::BTreeMap, fmt::Debug, vec::Vec};
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -111,15 +110,16 @@ pub mod pallet {
 		Deposited {
 			who: AccountIdOf<T>,
 			pid: PoolId,
-			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			// add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			add_value: BalanceOf<T>,
 			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		},
-		Withdrew {
+		Withdrawn {
 			who: AccountIdOf<T>,
 			pid: PoolId,
-			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			remove_value: BalanceOf<T>,
 		},
-		WithdrewAll {
+		WithdrawnAll {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 		},
@@ -336,7 +336,8 @@ pub mod pallet {
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			// add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			add_value: BalanceOf<T>,
 			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			// Check origin
@@ -348,8 +349,18 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let values: Vec<BalanceOf<T>> = add_value.values().cloned().collect();
-			Self::add_share(&exchanger, pid, values[0], &add_value);
+			pool_info.tokens.iter().try_for_each(|(token, proportion)| -> DispatchResult {
+				if let Some(ref keeper) = pool_info.keeper {
+					T::MultiCurrency::transfer(
+						*token,
+						&exchanger,
+						&keeper,
+						*proportion * add_value,
+					)?
+				};
+				Ok(())
+			})?;
+			Self::add_share(&exchanger, pid, add_value);
 
 			match gauge_info {
 				Some((gauge_value, gauge_block)) => {
@@ -373,7 +384,7 @@ pub mod pallet {
 		pub fn withdraw(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			remove_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			remove_value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -384,10 +395,20 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let values: Vec<BalanceOf<T>> = remove_value.values().cloned().collect();
-			Self::remove_share(&exchanger, pid, Some(values[0]))?;
+			pool_info.tokens.iter().try_for_each(|(token, proportion)| -> DispatchResult {
+				if let Some(ref keeper) = pool_info.keeper {
+					T::MultiCurrency::transfer(
+						*token,
+						&keeper,
+						&exchanger,
+						*proportion * remove_value,
+					)?
+				};
+				Ok(())
+			})?;
+			Self::remove_share(&exchanger, pid, Some(remove_value))?;
 
-			Self::deposit_event(Event::Withdrew { who: exchanger, pid, remove_value });
+			Self::deposit_event(Event::Withdrawn { who: exchanger, pid, remove_value });
 			Ok(())
 		}
 
@@ -561,7 +582,7 @@ pub mod pallet {
 
 			Self::remove_share(&exchanger, pid, None)?;
 
-			Self::deposit_event(Event::WithdrewAll { who: exchanger, pid });
+			Self::deposit_event(Event::WithdrawnAll { who: exchanger, pid });
 			Ok(())
 		}
 
