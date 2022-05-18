@@ -149,6 +149,7 @@ pub mod pallet {
 		GaugePoolNotExist,
 		LastGaugeNotClaim,
 		CanNotClaim,
+		CanNotWithdraw,
 	}
 
 	#[pallet::storage]
@@ -260,7 +261,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
-			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
+			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
@@ -277,7 +278,7 @@ pub mod pallet {
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
-				tokens,
+				tokens_proportion,
 				basic_rewards,
 				Some(gid),
 				min_deposit_to_start,
@@ -349,17 +350,19 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			pool_info.tokens.iter().try_for_each(|(token, proportion)| -> DispatchResult {
-				if let Some(ref keeper) = pool_info.keeper {
-					T::MultiCurrency::transfer(
-						*token,
-						&exchanger,
-						&keeper,
-						*proportion * add_value,
-					)?
-				};
-				Ok(())
-			})?;
+			pool_info.tokens_proportion.iter().try_for_each(
+				|(token, proportion)| -> DispatchResult {
+					if let Some(ref keeper) = pool_info.keeper {
+						T::MultiCurrency::transfer(
+							*token,
+							&exchanger,
+							&keeper,
+							*proportion * add_value,
+						)?
+					};
+					Ok(())
+				},
+			)?;
 			Self::add_share(&exchanger, pid, add_value);
 
 			match gauge_info {
@@ -395,17 +398,19 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			pool_info.tokens.iter().try_for_each(|(token, proportion)| -> DispatchResult {
-				if let Some(ref keeper) = pool_info.keeper {
-					T::MultiCurrency::transfer(
-						*token,
-						&keeper,
-						&exchanger,
-						*proportion * remove_value,
-					)?
-				};
-				Ok(())
-			})?;
+			pool_info.tokens_proportion.iter().try_for_each(
+				|(token, proportion)| -> DispatchResult {
+					if let Some(ref keeper) = pool_info.keeper {
+						T::MultiCurrency::transfer(
+							*token,
+							&keeper,
+							&exchanger,
+							*proportion * remove_value,
+						)?
+					};
+					Ok(())
+				},
+			)?;
 			Self::remove_share(&exchanger, pid, Some(remove_value))?;
 
 			Self::deposit_event(Event::Withdrawn { who: exchanger, pid, remove_value });
@@ -442,10 +447,12 @@ pub mod pallet {
 				|share_info| -> DispatchResult {
 					let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
 					Self::claim_rewards(&who, pid)?;
-					share_info.share_total.iter().try_for_each(
-						|(currency, share)| -> DispatchResult {
+					// share_info.share_total.iter().try_for_each(
+					pool_info.tokens_proportion.iter().try_for_each(
+						|(currency, proportion)| -> DispatchResult {
+							let share = *proportion * share_info.share;
 							if !share.is_zero() {
-								T::MultiCurrency::transfer(*currency, &keeper, &who, *share)?;
+								T::MultiCurrency::transfer(*currency, &keeper, &who, share)?;
 							}
 							Ok(())
 						},
@@ -484,7 +491,7 @@ pub mod pallet {
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
+			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
@@ -502,7 +509,7 @@ pub mod pallet {
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
-				tokens,
+				tokens_proportion,
 				basic_rewards,
 				Some(gid),
 				min_deposit_to_start,
@@ -547,7 +554,7 @@ pub mod pallet {
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens: BTreeMap<CurrencyIdOf<T>, Permill>,
+			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
 			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -557,7 +564,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid);
-			pool_info.tokens = tokens;
+			pool_info.tokens_proportion = tokens_proportion;
 			pool_info.basic_rewards = basic_rewards;
 			pool_info.min_deposit_to_start = min_deposit_to_start;
 			pool_info.after_block_to_start = after_block_to_start;
