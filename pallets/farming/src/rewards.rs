@@ -37,12 +37,9 @@ use crate::*;
 pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor, AccountIdOf> {
 	pub who: Option<AccountIdOf>,
 	pub share: BalanceOf,
-	pub share_total: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
-	pub gauge_amount: BalanceOf,
-	pub gauge_time_factor: u128,
-	pub gauge_start_block: BlockNumberFor,
-	pub gauge_last_block: BlockNumberFor,
+	pub withdraw_last_block: BlockNumberFor,
+	pub claim_last_block: BlockNumberFor,
 }
 
 impl<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf> Default
@@ -56,12 +53,9 @@ where
 		Self {
 			who: None,
 			share: Default::default(),
-			share_total: BTreeMap::new(),
 			withdrawn_rewards: BTreeMap::new(),
-			gauge_amount: Default::default(),
-			gauge_time_factor: Default::default(),
-			gauge_start_block: Default::default(),
-			gauge_last_block: Default::default(),
+			withdraw_last_block: Default::default(),
+			claim_last_block: Default::default(),
 		}
 	}
 }
@@ -70,7 +64,7 @@ where
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	/// Total shares amount
-	pub tokens: BTreeMap<CurrencyIdOf, Permill>,
+	pub tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -96,7 +90,7 @@ where
 {
 	fn default() -> Self {
 		Self {
-			tokens: BTreeMap::new(),
+			tokens_proportion: BTreeMap::new(),
 			total_shares: Default::default(),
 			basic_rewards: BTreeMap::new(),
 			rewards: BTreeMap::new(),
@@ -120,7 +114,7 @@ where
 {
 	pub fn new(
 		keeper: AccountIdOf,
-		tokens: BTreeMap<CurrencyIdOf, Permill>,
+		tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -129,7 +123,7 @@ where
 		claim_limit_time: BlockNumberFor,
 	) -> Self {
 		Self {
-			tokens,
+			tokens_proportion,
 			total_shares: Default::default(),
 			basic_rewards,
 			rewards: BTreeMap::new(),
@@ -146,7 +140,7 @@ where
 
 	pub fn reset(
 		keeper: AccountIdOf,
-		tokens: BTreeMap<CurrencyIdOf, Permill>,
+		tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		state: PoolState,
 		gauge: Option<PoolId>,
@@ -156,7 +150,7 @@ where
 		claim_limit_time: BlockNumberFor,
 	) -> Self {
 		Self {
-			tokens,
+			tokens_proportion,
 			total_shares: Default::default(),
 			basic_rewards,
 			rewards: BTreeMap::new(),
@@ -248,7 +242,6 @@ impl<T: Config> Pallet<T> {
 
 			SharesAndWithdrawnRewards::<T>::mutate(pool, who, |share_info| {
 				share_info.who = Some(who.clone());
-				// share_info.share_total = add_value.clone();
 				share_info.share = share_info.share.saturating_add(add_amount);
 				// update withdrawn inflation for each reward currency
 				withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
@@ -282,6 +275,8 @@ impl<T: Config> Pallet<T> {
 			pool,
 			who,
 			|share_info_old| -> DispatchResult {
+				let current_block_number: BlockNumberFor<T> =
+					frame_system::Pallet::<T>::block_number();
 				if let Some(mut share_info) = share_info_old.take() {
 					// (mut share, mut withdrawn_rewards)S
 					let remove_amount;
@@ -297,6 +292,11 @@ impl<T: Config> Pallet<T> {
 
 					PoolInfos::<T>::mutate_exists(pool, |maybe_pool_info| -> DispatchResult {
 						if let Some(mut pool_info) = maybe_pool_info.take() {
+							ensure!(
+								share_info.withdraw_last_block + pool_info.withdraw_limit_time <=
+									current_block_number,
+								Error::<T>::CanNotWithdraw
+							);
 							let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
 							pool_info.total_shares =
@@ -345,6 +345,7 @@ impl<T: Config> Pallet<T> {
 						Ok(())
 					})?;
 
+					share_info.withdraw_last_block = current_block_number;
 					share_info.share = share_info.share.saturating_sub(remove_amount);
 					if !share_info.share.is_zero() {
 						*share_info_old = Some(share_info);
@@ -371,12 +372,19 @@ impl<T: Config> Pallet<T> {
 			pool,
 			who,
 			|maybe_share_withdrawn| -> DispatchResult {
+				let current_block_number: BlockNumberFor<T> =
+					frame_system::Pallet::<T>::block_number();
 				if let Some(share_info) = maybe_share_withdrawn {
 					if share_info.share.is_zero() {
 						return Ok(());
 					}
 
 					PoolInfos::<T>::mutate(pool, |pool_info| -> DispatchResult {
+						ensure!(
+							share_info.claim_last_block + pool_info.claim_limit_time <=
+								current_block_number,
+							Error::<T>::CanNotClaim
+						);
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 						pool_info.rewards.iter_mut().try_for_each(
@@ -429,6 +437,7 @@ impl<T: Config> Pallet<T> {
 						)?;
 						Ok(())
 					})?;
+					share_info.claim_last_block = current_block_number;
 				};
 				Ok(())
 			},
