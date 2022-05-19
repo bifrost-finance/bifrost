@@ -135,9 +135,6 @@ copy-genesis-config-production:
 	mkdir -p "target/production/res"
 	cp -r node/service/res/genesis_config target/production/res
 
-.PHONY: production-release-bifrost-kusama
-production-release-bifrost-kusama:
-	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --profile production
-
 .PHONY: production-release
-production-release: production-release-bifrost-kusama
+production-release:
+	cargo build -p node-cli --locked --features "with-all-runtime" --profile production
