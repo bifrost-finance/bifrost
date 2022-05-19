@@ -4,7 +4,7 @@ set -xe
 
 RUSTC_VERSION="1.60.0"
 BIN_PATH=$(dirname $(readlink -f $0))
-WORK_PATH=${BIN_PATH}/../
+WORK_PATH=${BIN_PATH}/..
 
 # build binary
 make production-release
