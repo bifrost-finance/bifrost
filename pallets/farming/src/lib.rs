@@ -102,10 +102,19 @@ pub mod pallet {
 		FarmingPoolReset {
 			pid: PoolId,
 		},
+		FarmingPoolClosed {
+			pid: PoolId,
+		},
+		FarmingPoolKilled {
+			pid: PoolId,
+		},
+		FarmingPoolEdited {
+			pid: PoolId,
+		},
 		Charged {
 			who: AccountIdOf<T>,
 			pid: PoolId,
-			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
 		Deposited {
 			who: AccountIdOf<T>,
@@ -233,11 +242,8 @@ pub mod pallet {
 					PoolInfos::<T>::insert(pid, &pool_info);
 				},
 				PoolState::Charged => {
-					let min_deposit_to_start_value: Vec<BalanceOf<T>> =
-						pool_info.min_deposit_to_start.values().cloned().collect();
-
 					if n >= pool_info.after_block_to_start ||
-						pool_info.total_shares >= min_deposit_to_start_value[0]
+						pool_info.total_shares >= pool_info.min_deposit_to_start
 					{
 						pool_info.block_startup = Some(n);
 						pool_info.state = PoolState::Ongoing;
@@ -261,11 +267,11 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
-			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
-			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
+			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
-			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
 			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
@@ -275,11 +281,15 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
+			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
+				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
+			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
-				tokens_proportion,
-				basic_rewards,
+				tokens_proportion_map,
+				basic_rewards_map,
 				Some(gid),
 				min_deposit_to_start,
 				after_block_to_start,
@@ -311,7 +321,8 @@ pub mod pallet {
 		pub fn charge(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			// rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
@@ -483,6 +494,7 @@ pub mod pallet {
 			pool_info.state = PoolState::Dead;
 			PoolInfos::<T>::insert(&pid, pool_info);
 
+			Self::deposit_event(Event::FarmingPoolClosed { pid });
 			Ok(())
 		}
 
@@ -491,11 +503,11 @@ pub mod pallet {
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
-			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
+			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 			gauge_token: Option<CurrencyIdOf<T>>,
 			// charge_account: AccountIdOf<T>,
-			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
 			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
@@ -507,10 +519,14 @@ pub mod pallet {
 			let gid = Self::gauge_pool_next_id();
 			let keeper = T::PalletId::get().into_sub_account(pid);
 
+			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
+				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
+			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 			let mut pool_info = PoolInfo::new(
 				keeper,
-				tokens_proportion,
-				basic_rewards,
+				tokens_proportion_map,
+				basic_rewards_map,
 				Some(gid),
 				min_deposit_to_start,
 				after_block_to_start,
@@ -547,6 +563,7 @@ pub mod pallet {
 			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			PoolInfos::<T>::remove(pid);
 
+			Self::deposit_event(Event::FarmingPoolKilled { pid });
 			Ok(())
 		}
 
@@ -554,24 +571,30 @@ pub mod pallet {
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens_proportion: BTreeMap<CurrencyIdOf<T>, Permill>,
-			basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-			min_deposit_to_start: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
+			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
 			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
+				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
+			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+
 			let mut pool_info = Self::pool_infos(&pid);
-			pool_info.tokens_proportion = tokens_proportion;
-			pool_info.basic_rewards = basic_rewards;
+			pool_info.tokens_proportion = tokens_proportion_map;
+			pool_info.basic_rewards = basic_rewards_map;
 			pool_info.min_deposit_to_start = min_deposit_to_start;
 			pool_info.after_block_to_start = after_block_to_start;
 			pool_info.withdraw_limit_time = withdraw_limit_time;
 			pool_info.claim_limit_time = claim_limit_time;
 			PoolInfos::<T>::insert(pid, &pool_info);
 
+			Self::deposit_event(Event::FarmingPoolEdited { pid });
 			Ok(())
 		}
 
