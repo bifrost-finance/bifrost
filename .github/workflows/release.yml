@@ -40,9 +40,8 @@ jobs:
       - name: Upload deploy
         uses: actions/upload-artifact@v2
         with:
-          name: bifrost-artifact-${{ github.sha }}
-          path: |
-            ./resources/bifrost-x86_64-linux-gnu.tar.bz2
+          name: bifrost-artifacts
+          path: ${{ github.workspace }}/artifacts/*
 
       - uses: 8398a7/action-slack@v3
         if: failure()
