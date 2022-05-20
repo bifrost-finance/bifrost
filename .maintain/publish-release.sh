@@ -11,7 +11,7 @@ make production-release
 
 # pack artifacts
 mkdir -p ${WORK_PATH}/artifacts
-mv ${WORK_PATH}/target/release/bifrost ${WORK_PATH}/artifacts/
+mv ${WORK_PATH}/target/production/bifrost ${WORK_PATH}/artifacts/
 pushd artifacts
 sha256sum bifrost | tee bifrost.sha256
 shasum -c bifrost.sha256
