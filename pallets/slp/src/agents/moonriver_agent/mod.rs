@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod kusama_agent;
-mod moonriver_agent;
+mod agent;
+mod types;
 
-pub use kusama_agent::*;
-pub use moonriver_agent::*;
+pub use agent::*;
+pub use types::*;
