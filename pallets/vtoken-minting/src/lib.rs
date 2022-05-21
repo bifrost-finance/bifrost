@@ -842,6 +842,7 @@ pub mod pallet {
 						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
+				_ => return Err(Error::<T>::Unexpected.into()),
 			};
 
 			Ok(result)

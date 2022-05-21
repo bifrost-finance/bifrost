@@ -37,15 +37,18 @@ use xcm::{
 	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
 };
 
+use crate::agents::MoonriverAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
 	},
 	traits::{QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use sp_core::{blake2_256, H160};
+use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;
 mod mock;
@@ -1633,6 +1636,7 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
+				MOVR => Ok(Box::new(MoonriverAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1858,6 +1862,14 @@ pub mod pallet {
 			staking_agent.fail_validators_by_delegator_query_response(query_id)?;
 
 			Ok(())
+		}
+
+		pub fn derivative_account_id_20(who: [u8; 20], index: u16) -> H160 {
+			let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
+			let sub_id: [u8; 20] = Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+				.expect("infinite length input; no invalid inputs for type; qed");
+
+			H160::from_slice(sub_id.as_slice())
 		}
 	}
 }

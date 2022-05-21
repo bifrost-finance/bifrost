@@ -1530,7 +1530,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				Parachain(parachains::moonriver::PALLET_ID),
 				AccountKey20 {
 					network: NetworkId::Any,
-					id: Slp::derivative_account_id_20(BifrostParachainAccountId20, index).into(),
+					key: Slp::derivative_account_id_20(BifrostParachainAccountId20, index).into(),
 				},
 			),
 		),
@@ -1547,7 +1547,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 
 pub struct SubAccountIndexMultiLocationConvertor;
 impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert((sub_account_index: u16, currency_id: CurrencyId)) -> MultiLocation {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
 		create_x2_multilocation(sub_account_index, currency_id)
 	}
 }

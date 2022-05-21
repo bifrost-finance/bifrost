@@ -506,3 +506,44 @@ fn set_hosting_fees_works() {
 		assert_eq!(location, treasury_location);
 	});
 }
+
+#[test]
+fn initialize_moonriver_delegator() {
+	ExtBuilder::default().build().execute_with(|| {
+		let bifrostParachainAccountId20: [u8; 20] =
+			hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+
+		// subaccountId0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
+		let subaccountId0 = Slp::derivative_account_id_20(bifrostParachainAccountId20, 0);
+		println!("subaccountId0: {:?}", subaccountId0);
+
+		// subaccountId1: 0x3afe20b0c85801b74e65586fe7070df827172574
+		let subaccountId1 = Slp::derivative_account_id_20(bifrostParachainAccountId20, 1);
+		println!("subaccountId1: {:?}", subaccountId1);
+
+		let subaccount0_location = MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(2023),
+				Junction::AccountKey20 {
+					network: Any,
+					key: [
+						134, 60, 31, 174, 243, 195, 184, 248, 115, 94, 203, 127, 142, 209, 137,
+						150, 53, 109, 211, 222,
+					],
+				},
+			),
+		};
+
+		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
+		assert_eq!(
+			DelegatorsIndex2Multilocation::<Runtime>::get(MOVR, 0),
+			Some(subaccount0_location.clone())
+		);
+		assert_eq!(
+			DelegatorsMultilocation2Index::<Runtime>::get(MOVR, subaccount0_location),
+			Some(0)
+		);
+	});
+}

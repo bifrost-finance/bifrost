@@ -288,14 +288,3 @@ impl<T: Config>
 		unimplemented!()
 	}
 }
-
-/// Internal functions.
-impl<T: Config> MoonriverAgent<T> {
-	pub fn derivative_account_id_20(who: [u8; 20], index: u16) -> H160 {
-		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-		let sub_id: [u8; 20] = Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-			.expect("infinite length input; no invalid inputs for type; qed");
-
-		H160::from_slice(sub_id.as_slice())
-	}
-}
