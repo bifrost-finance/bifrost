@@ -225,13 +225,13 @@ parameter_types! {
 }
 
 impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
-	fn get_query_response_record(query_id: QueryId) -> bool {
+	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
-	fn create_query_record(responder: &MultiLocation, timeout: u64) -> u64 {
+	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
 		Default::default()
 	}
-	fn remove_query_record(query_id: QueryId) -> bool {
+	fn remove_query_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 }

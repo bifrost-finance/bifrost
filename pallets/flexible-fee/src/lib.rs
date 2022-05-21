@@ -230,7 +230,7 @@ where
 
 		let rs;
 		// if the user has enough BNC for fee
-		if fee_sign == false {
+		if !fee_sign {
 			rs = match T::Currency::withdraw(
 				who,
 				fee,

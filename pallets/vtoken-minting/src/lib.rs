@@ -303,8 +303,7 @@ pub mod pallet {
 
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let (token_amount_excluding_fee, vtoken_amount, fee) =
-				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)
-					.map_err(|e| e)?;
+				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)?;
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
@@ -357,8 +356,7 @@ pub mod pallet {
 						Self::unlock_duration(token_id)
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
 						time_unit.clone(),
-					)
-					.map_err(|e| e)?;
+					)?;
 
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
@@ -595,8 +593,7 @@ pub mod pallet {
 			}
 
 			let (_, vtoken_amount, fee) =
-				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)
-					.map_err(|e| e)?;
+				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)?;
 
 			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
 				if let Some(value_info) = value {
@@ -687,8 +684,7 @@ pub mod pallet {
 			};
 
 			let (token_amount, vtoken_amount, fee) =
-				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, unlock_amount)
-					.map_err(|e| e)?;
+				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, unlock_amount)?;
 
 			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
 				if let Some(value_info) = value {
@@ -1043,8 +1039,7 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
-							)
-							.map_err(|e| e);
+							);
 						}
 					}
 				},

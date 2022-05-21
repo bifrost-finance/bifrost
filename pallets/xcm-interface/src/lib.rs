@@ -301,7 +301,7 @@ pub mod pallet {
 		}
 
 		pub(crate) fn transact_id(data: &[u8]) -> MessageId {
-			return sp_io::hashing::blake2_256(&data[..]);
+			return sp_io::hashing::blake2_256(data);
 		}
 
 		pub(crate) fn build_ump_transact(
