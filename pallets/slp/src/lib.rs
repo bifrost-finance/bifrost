@@ -108,7 +108,7 @@ pub mod pallet {
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
-		type AccountConverter: Convert<u16, MultiLocation>;
+		type AccountConverter: Convert<(u16, CurrencyId), MultiLocation>;
 
 		/// Parachain Id which is gotten from the runtime.
 		type ParachainId: Get<ParaId>;
@@ -371,7 +371,7 @@ pub mod pallet {
 		DelegatorLedgerSet {
 			currency_id: CurrencyId,
 			delegator: MultiLocation,
-			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
+			ledger: Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
 			#[codec(compact)]
@@ -515,7 +515,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Ledger<MultiLocation, BalanceOf<T>>,
+		Ledger<MultiLocation, BalanceOf<T>, MultiLocation>,
 		OptionQuery,
 	>;
 
@@ -1417,7 +1417,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
-			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>>>>,
+			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;

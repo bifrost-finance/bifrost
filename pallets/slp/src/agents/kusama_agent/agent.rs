@@ -92,7 +92,7 @@ impl<T: Config>
 		})?;
 
 		// Generate multi-location by id.
-		let delegator_multilocation = T::AccountConverter::convert(new_delegator_id);
+		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, KSM));
 
 		// Add the new delegator into storage
 		Self::add_delegator(&self, new_delegator_id, &delegator_multilocation)
@@ -139,7 +139,7 @@ impl<T: Config>
 			active: Zero::zero(),
 			unlocking: vec![],
 		};
-		let sub_ledger = Ledger::<MultiLocation, BalanceOf<T>>::Substrate(ledger);
+		let sub_ledger = Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Substrate(ledger);
 
 		DelegatorLedgers::<T>::insert(KSM, who, sub_ledger);
 

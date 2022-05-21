@@ -141,10 +141,15 @@ pub enum ExtraFeeName {
 }
 
 // For vtoken-minting and slp modules
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd,
+)]
 pub enum TimeUnit {
+	// Kusama staking time unit
 	Era(#[codec(compact)] u32),
 	SlashingSpan(#[codec(compact)] u32),
+	// Moonriver staking time unit
+	Round(#[codec(compact)] u32),
 }
 
 impl Default for TimeUnit {

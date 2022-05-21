@@ -1518,20 +1518,37 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MiscFeeHandler = MiscFeeHandlers;
 }
 
-pub fn create_x2_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::new(
-		1,
-		X1(AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		}),
-	)
+parameter_types! {
+	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+}
+
+pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
+	match currency_id {
+		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+			1,
+			X2(
+				Parachain(parachains::moonriver::PALLET_ID),
+				AccountKey20 {
+					network: NetworkId::Any,
+					id: Slp::derivative_account_id_20(BifrostParachainAccountId20, index).into(),
+				},
+			),
+		),
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index)
+					.into(),
+			}),
+		),
+	}
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert(sub_account_index: u16) -> MultiLocation {
-		create_x2_multilocation(sub_account_index)
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index: u16, currency_id: CurrencyId)) -> MultiLocation {
+		create_x2_multilocation(sub_account_index, currency_id)
 	}
 }
 

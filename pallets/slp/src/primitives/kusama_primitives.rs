@@ -22,13 +22,7 @@ use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
-/// Simplify the CurrencyId.
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum Ledger<DelegatorId, Balance> {
-	Substrate(SubstrateLedger<DelegatorId, Balance>),
-}
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateLedger<DelegatorId, Balance> {
@@ -57,13 +51,6 @@ pub struct UnlockChunk<Balance> {
 	pub unlock_time: TimeUnit,
 }
 
-/// A type for accommodating delegator update entries for different kinds of currencies.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum LedgerUpdateEntry<Balance, DelegatorId> {
-	/// A type for substrate ledger updating entires
-	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
-}
-
 /// A type for substrate ledger updating entires
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
@@ -87,14 +74,6 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	pub unlock_time: Option<TimeUnit>,
 }
 
-/// A type for accommodating validators by delegator update entries for different kinds of
-/// currencies.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
-	/// A type for substrate validators by delegator updating entires
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
-}
-
 /// A type for substrate validators by delegator updating entires
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
@@ -104,55 +83,4 @@ pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, H
 	pub delegator_id: DelegatorId,
 	/// Validators vec to be updated
 	pub validators: Vec<(ValidatorId, HashT)>,
-}
-
-/// Different minimum and maximum requirements for different chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MinimumsMaximums<Balance> {
-	/// The minimum bonded amount for a delegator at any time.
-	#[codec(compact)]
-	pub delegator_bonded_minimum: Balance,
-	/// The minimum amount each time a delegator needs to bond for extra
-	#[codec(compact)]
-	pub bond_extra_minimum: Balance,
-	/// The minimum unbond amount each time a delegator to unbond.
-	#[codec(compact)]
-	pub unbond_minimum: Balance,
-	/// The minimum amount each time a delegator needs to rebond
-	#[codec(compact)]
-	pub rebond_minimum: Balance,
-	/// The maximum number of unbond records at the same time.
-	#[codec(compact)]
-	pub unbond_record_maximum: u32,
-	/// The maximum number of validators for a delegator to support at the same time.
-	#[codec(compact)]
-	pub validators_back_maximum: u32,
-	/// The maximum amount of active staking for a delegator. It is used to control ROI.
-	#[codec(compact)]
-	pub delegator_active_staking_maximum: Balance,
-}
-
-/// Different delay params for different chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct Delays {
-	/// The unlock delay for the unlocking amount to be able to be liquidized.
-	pub unlock_delay: TimeUnit,
-}
-
-/// XCM operations list
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmOperation {
-	// XTokens
-	XtokensTransfer,
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
 }

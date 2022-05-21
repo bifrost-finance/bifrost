@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{agents::SystemCall, Weight};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
+use sp_core::H160;
 use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{VersionedMultiAssets, VersionedMultiLocation};
+use xcm::VersionedMultiLocation;
 
 use crate::{BalanceOf, Config};
 
@@ -43,7 +45,7 @@ pub enum MoonriverCall<T: Config> {
 pub enum MoonriverBalancesCall<T: Config> {
 	#[codec(index = 3)]
 	TransferKeepAlive(
-		<IdentityLookup<AccountId20> as StaticLookup>::Source,
+		<IdentityLookup<H160> as StaticLookup>::Source,
 		#[codec(compact)] BalanceOf<T>,
 	),
 }
@@ -59,23 +61,23 @@ pub enum MoonriverUtilityCall<MoonriverCall> {
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum MoonriverParachainStakingCall<T: Config> {
 	#[codec(index = 17)]
-	Delegate(AccountId20, #[codec(compact)] BalanceOf<T>, u32, u32),
+	Delegate(H160, #[codec(compact)] BalanceOf<T>, u32, u32),
 	#[codec(index = 18)]
 	ScheduleLeaveDelegators,
 	#[codec(index = 19)]
-	ExecuteLeaveDelegators(AccountId20, u32),
+	ExecuteLeaveDelegators(H160, u32),
 	#[codec(index = 20)]
 	CancelLeaveDelegators,
 	#[codec(index = 21)]
-	ScheduleRevokeDelegation(AccountId20),
+	ScheduleRevokeDelegation(H160),
 	#[codec(index = 22)]
-	DelegatorBondMore(AccountId20, #[codec(compact)] BalanceOf<T>),
+	DelegatorBondMore(H160, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 23)]
-	ScheduleDelegatorBondLess(AccountId20, #[codec(compact)] BalanceOf<T>),
+	ScheduleDelegatorBondLess(H160, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 24)]
-	ExecuteDelegationRequest(AccountId20, AccountId20),
+	ExecuteDelegationRequest(H160, H160),
 	#[codec(index = 25)]
-	CancelDelegationRequest(AccountId20),
+	CancelDelegationRequest(H160),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
