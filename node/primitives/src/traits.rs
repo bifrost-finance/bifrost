@@ -31,7 +31,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::{BridgeAssetBalance, CurrencyId};
+use crate::CurrencyId;
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -52,55 +52,6 @@ pub trait CurrencyIdExt {
 	fn is_lptoken(&self) -> bool;
 	fn is_foreign_asset(&self) -> bool;
 	fn into(symbol: Self::TokenSymbol) -> Self;
-}
-
-pub trait TokenPriceHandler<CurrencyId, Price> {
-	fn set_token_price(asset_id: CurrencyId, price: Price);
-}
-
-/// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<AccountId, CurrencyId, Precision, Balance> {
-	type Error;
-	fn bridge_asset_to(
-		target: Vec<u8>,
-		bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>,
-	) -> Result<(), Self::Error>;
-	fn redeem(
-		asset_id: CurrencyId,
-		amount: Balance,
-		validator_address: Vec<u8>,
-	) -> Result<(), Self::Error>;
-	fn stake(
-		asset_id: CurrencyId,
-		amount: Balance,
-		validator_address: Vec<u8>,
-	) -> Result<(), Self::Error>;
-	fn unstake(
-		asset_id: CurrencyId,
-		amount: Balance,
-		validator_address: Vec<u8>,
-	) -> Result<(), Self::Error>;
-}
-
-pub trait AssetReward<CurrencyId, Balance> {
-	type Output;
-	type Error;
-	fn set_asset_reward(asset_id: CurrencyId, reward: Balance)
-		-> Result<Self::Output, Self::Error>;
-}
-
-pub trait RewardHandler<CurrencyId, Balance> {
-	fn send_reward(asset_id: CurrencyId, reward: Balance);
-}
-
-pub trait RewardTrait<Balance, AccountId, CurrencyId> {
-	type Error;
-	fn record_reward(
-		v_token_id: CurrencyId,
-		vtoken_mint_amount: Balance,
-		referer: AccountId,
-	) -> Result<(), Self::Error>;
-	fn dispatch_reward(v_token_id: CurrencyId, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
 /// Extension traits for assets module
@@ -127,47 +78,6 @@ pub trait MultiCurrencyExt<AccountId> {
 		currency_id: Self::CurrencyId,
 		amount: Self::Balance,
 	) -> DispatchResult;
-}
-
-/// Trait for others module to access vtoken-mint module
-pub trait VtokenMintExt {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ CurrencyIdExt;
-
-	/// The balance of an account.
-	type Balance: AtLeast32BitUnsigned
-		+ FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ Default;
-
-	/// Get mint pool by currency id
-	fn get_mint_pool(currency_id: Self::CurrencyId) -> Self::Balance;
-
-	/// Expand mint pool
-	fn expand_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
-
-	/// Reduce mint pool
-	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
-}
-
-/// Handle mint reward
-pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
-	type Error;
-
-	fn reward_minted_vtoken(
-		minter: &AccountId,
-		currency_id: CurrencyId,
-		minted_vtoken: Balance,
-		block_num: BlockNumber,
-	) -> Result<(), Self::Error>;
 }
 
 pub trait BancorHandler<Balance> {
