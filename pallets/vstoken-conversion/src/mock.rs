@@ -222,7 +222,6 @@ impl ExtBuilder {
 		orml_tokens::GenesisConfig::<Runtime> {
 			balances: self
 				.endowed_accounts
-				.clone()
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != BNC)
 				.collect::<Vec<_>>(),

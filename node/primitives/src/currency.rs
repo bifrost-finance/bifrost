@@ -348,21 +348,21 @@ impl CurrencyId {
 
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
-			Self::VToken(symbol) => Ok(Self::Token(symbol.clone())),
+			Self::VToken(symbol) => Ok(Self::Token(*symbol)),
 			_ => Err(()),
 		}
 	}
 
 	pub fn to_vtoken(&self) -> Result<Self, ()> {
 		match self {
-			Self::Token(symbol) => Ok(Self::VToken(symbol.clone())),
+			Self::Token(symbol) => Ok(Self::VToken(*symbol)),
 			_ => Err(()),
 		}
 	}
 
 	pub fn to_vstoken(&self) -> Result<Self, ()> {
 		match self {
-			Self::Token(symbol) => Ok(Self::VSToken(symbol.clone())),
+			Self::Token(symbol) => Ok(Self::VSToken(*symbol)),
 			_ => Err(()),
 		}
 	}

@@ -1238,7 +1238,7 @@ pub mod pallet {
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
 			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
-				*wt_n_f = weight_and_fee.clone();
+				*wt_n_f = weight_and_fee;
 			});
 
 			// Deposit event.
@@ -1524,7 +1524,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			CurrencyTuneExchangeRateLimit::<T>::mutate_exists(currency_id, |exchange_rate_limit| {
-				*exchange_rate_limit = maybe_tune_exchange_rate_limit.clone();
+				*exchange_rate_limit = maybe_tune_exchange_rate_limit;
 			});
 
 			Pallet::<T>::deposit_event(Event::CurrencyTuneExchangeRateLimitSet {

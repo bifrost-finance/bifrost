@@ -176,7 +176,7 @@ pub mod pallet {
 				UserFeeChargeOrderList::<T>::remove(&who);
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 	}
 }
@@ -297,7 +297,7 @@ where
 			// refund to the the account that paid the fees. If this fails, the
 			// account might have dropped below the existential balance. In
 			// that case we don't refund anything.
-			let refund_imbalance = T::Currency::deposit_into_existing(&who, refund_amount)
+			let refund_imbalance = T::Currency::deposit_into_existing(who, refund_amount)
 				.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
 			// merge the imbalance caused by paying the fees and refunding parts of it again.
 			let adjusted_paid = paid
@@ -340,7 +340,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 				let native_is_enough = <<T as Config>::Currency as Currency<
 					<T as frame_system::Config>::AccountId,
 				>>::free_balance(who)
-				.checked_sub(&(fee + existential_deposit.into()))
+				.checked_sub(&(fee + existential_deposit))
 				.map_or(false, |new_free_balance| {
 					<<T as Config>::Currency as Currency<
 												<T as frame_system::Config>::AccountId,
@@ -380,11 +380,11 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 					T::DexOperator::get_amount_in_by_path(amount_out, &path).map_or(vec![0], |v| v);
 
 				if T::DexOperator::inner_swap_assets_for_exact_assets(
-					&who,
+					who,
 					amount_out,
 					amount_in_max,
 					&path,
-					&who,
+					who,
 				)
 				.is_ok()
 				{
@@ -425,8 +425,8 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 					<T as frame_system::Config>::AccountId,
 				>>::free_balance(who);
 
-				if native_balance >= fee.into() {
-					fee_token_amount_out = fee.into();
+				if native_balance >= fee {
+					fee_token_amount_out = fee;
 					break;
 				}
 			} else {
@@ -434,7 +434,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 				let asset_balance = T::MultiCurrency::total_balance(currency_id, who);
 				let token_asset_id: AssetId = AssetId::try_from(currency_id)
 					.map_err(|_| DispatchError::Other("Conversion Error"))?;
-				let path = vec![native_asset_id.clone(), token_asset_id];
+				let path = vec![native_asset_id, token_asset_id];
 
 				let amount_vec = T::DexOperator::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
@@ -447,6 +447,6 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 				}
 			}
 		}
-		Ok((fee_token_id_out, fee_token_amount_out.into()))
+		Ok((fee_token_id_out, fee_token_amount_out))
 	}
 }

@@ -396,7 +396,7 @@ pub mod pallet {
 				(&target, &source, T::Currency::free_balance(&target) - schedule.locked)
 			};
 
-			T::Currency::transfer(&from, &to, value, ExistenceRequirement::AllowDeath)?;
+			T::Currency::transfer(from, to, value, ExistenceRequirement::AllowDeath)?;
 
 			Vesting::<T>::insert(target.clone(), schedule);
 			let res = Self::update_lock(target.clone());
@@ -468,7 +468,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let target = T::Lookup::lookup(target)?;
-			Cliff::<T>::insert(target.clone(), cliff_block);
+			Cliff::<T>::insert(target, cliff_block);
 
 			Ok(())
 		}
