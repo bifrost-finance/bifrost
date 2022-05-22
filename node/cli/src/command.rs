@@ -45,7 +45,7 @@ fn get_exec_name() -> Option<String> {
 }
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-	let id = if id == "" {
+	let id = if id.is_empty() {
 		let n = get_exec_name().unwrap_or_default();
 
 		["bifrost"]
@@ -175,7 +175,7 @@ impl SubstrateCli for Cli {
 				feature = "with-bifrost-runtime"
 			))]
 			{
-				return &bifrost_polkadot_runtime::VERSION;
+				&bifrost_polkadot_runtime::VERSION
 			}
 			#[cfg(not(any(
 				feature = "with-bifrost-polkadot-runtime",
@@ -218,7 +218,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name().to_string()].iter())
+		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter())
 			.load_spec(id)
 	}
 
@@ -319,11 +319,11 @@ pub fn run() -> Result<()> {
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
-						.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
+						.ok_or("Could not find parachain ID in chain-spec.")?;
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name().to_string()]
+					[RelayChainCli::executable_name()]
 						.iter()
 						.chain(cli.relaychain_args.iter()),
 				);
@@ -476,7 +476,7 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name().to_string()]
+					[RelayChainCli::executable_name()]
 						.iter()
 						.chain(cli.relaychain_args.iter()),
 				);
