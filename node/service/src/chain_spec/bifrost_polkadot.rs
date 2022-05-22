@@ -95,7 +95,7 @@ pub fn bifrost_polkadot_genesis(
 				.map(|(acc, aura)| {
 					(
 						acc.clone(),                                    // account id
-						acc.clone(),                                    // validator id
+						acc,                                            // validator id
 						bifrost_polkadot_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -119,7 +119,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT() / 4))
+		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
 
 	bifrost_polkadot_genesis(
@@ -171,7 +171,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT() / 4))
+		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
 
 	bifrost_polkadot_genesis(

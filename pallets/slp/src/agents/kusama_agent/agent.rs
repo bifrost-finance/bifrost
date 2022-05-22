@@ -95,7 +95,7 @@ impl<T: Config>
 		let delegator_multilocation = T::AccountConverter::convert(new_delegator_id);
 
 		// Add the new delegator into storage
-		Self::add_delegator(&self, new_delegator_id, &delegator_multilocation)
+		Self::add_delegator(self, new_delegator_id, &delegator_multilocation)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -335,7 +335,7 @@ impl<T: Config>
 
 		// Convert vec of multilocations into accounts.
 		let mut accounts = vec![];
-		for (multilocation_account, _hash) in sorted_dedup_list.clone().iter() {
+		for (multilocation_account, _hash) in sorted_dedup_list.iter() {
 			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
 			let unlookup_account = T::Lookup::unlookup(account);
 			accounts.push(unlookup_account);
@@ -384,7 +384,7 @@ impl<T: Config>
 		let mut new_set: Vec<(MultiLocation, Hash<T>)> = vec![];
 		for (acc, acc_hash) in original_set.iter() {
 			if !targets.contains(acc) {
-				new_set.push((acc.clone(), acc_hash.clone()))
+				new_set.push((acc.clone(), *acc_hash))
 			}
 		}
 
@@ -422,7 +422,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		let query_id = Self::delegate(&self, who, targets)?;
+		let query_id = Self::delegate(self, who, targets)?;
 		Ok(query_id)
 	}
 
@@ -434,7 +434,7 @@ impl<T: Config>
 		when: &Option<TimeUnit>,
 	) -> Result<(), Error<T>> {
 		// Get the validator account
-		let validator_account = Pallet::<T>::multilocation_to_account(&validator)?;
+		let validator_account = Pallet::<T>::multilocation_to_account(validator)?;
 
 		// Get the payout era
 		let payout_era = if let Some(TimeUnit::Era(payout_era)) = *when {
@@ -551,12 +551,12 @@ impl<T: Config>
 		DelegatorsMultilocation2Index::<T>::get(KSM, from).ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
+		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
 		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
 
 		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 
 		let dest =
 			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
@@ -608,7 +608,7 @@ impl<T: Config>
 		);
 
 		// Make sure from account is the entrance account of vtoken-minting module.
-		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
+		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
@@ -766,7 +766,7 @@ impl<T: Config>
 			.and_then(|n| TryInto::<u128>::try_into(n).ok())
 			.unwrap_or_else(Zero::zero);
 
-		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
+		let beneficiary = Pallet::<T>::multilocation_to_account(to)?;
 		// Issue corresponding vksm to beneficiary account.
 		T::MultiCurrency::deposit(
 			CurrencyId::VToken(TokenSymbol::KSM),
@@ -1128,7 +1128,7 @@ impl<T: Config> KusamaAgent<T> {
 							loop {
 								if let Some(record) = old_sub_ledger.unlocking.pop() {
 									if remaining_amount >= record.value {
-										remaining_amount = remaining_amount - record.value;
+										remaining_amount -= record.value;
 									} else {
 										let remain_unlock_chunk = UnlockChunk {
 											value: record.value - remaining_amount,
@@ -1324,7 +1324,7 @@ impl<T: Config> KusamaAgent<T> {
 
 		// Prepare parameter dest and beneficiary.
 		let dest = MultiLocation::parent();
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
 
 		// Prepare parameter assets.
@@ -1342,10 +1342,10 @@ impl<T: Config> KusamaAgent<T> {
 
 		// prepare for xcm message
 		let msg = Xcm(vec![
-			WithdrawAsset(assets.clone()),
+			WithdrawAsset(assets),
 			InitiateReserveWithdraw {
 				assets: All.into(),
-				reserve: dest.clone(),
+				reserve: dest,
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
 					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },

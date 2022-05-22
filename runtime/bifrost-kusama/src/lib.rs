@@ -1404,12 +1404,8 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |location: MultiLocation| -> u128 {
-		#[allow(clippy::match_ref_pats)] // false positive
-		match (location.parents, location.first_interior()) {
-			// (1, Some(Parachain(parachains::Statemine::ID))) => XcmInterface::get_parachain_fee(location.clone()),
-			_ => u128::MAX,
-		}
+	pub ParachainMinFee: |_location: MultiLocation| -> u128 {
+		u128::MAX
 	};
 }
 

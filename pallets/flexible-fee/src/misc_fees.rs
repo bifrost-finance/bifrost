@@ -80,7 +80,7 @@ impl<AccountId, CurrencyId, Balance, Call> FeeDeductor<AccountId, CurrencyId, Ba
 			)*
 		);
 
-		return Err(DispatchError::Other("Failed to deduct extra fee."));
+		Err(DispatchError::Other("Failed to deduct extra fee."))
 	}
 }
 
