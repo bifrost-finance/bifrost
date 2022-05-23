@@ -132,7 +132,7 @@ pub mod pallet {
 			let (start, end) = Self::get_start_and_end_release_block();
 			// relsease fixed amount every day if within release interval and has enough balance in
 			// the pool account
-			if (n <= end) & (n > start) && (n - start) % BLOCKS_PER_DAY.into() == Zero::zero() {
+			if (n <= end) && (n > start) && (n - start) % BLOCKS_PER_DAY.into() == Zero::zero() {
 				let ksm = CurrencyId::Token(TokenSymbol::KSM);
 				let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
 				let releae_per_day = Self::get_token_release_per_round();
