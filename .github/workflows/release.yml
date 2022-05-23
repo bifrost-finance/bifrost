@@ -44,7 +44,7 @@ jobs:
           popd
 
       - name: Upload deploy
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: bifrost-artifacts
           path: ${{ github.workspace }}/artifacts/*
