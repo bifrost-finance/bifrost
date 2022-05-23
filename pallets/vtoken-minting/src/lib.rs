@@ -274,14 +274,16 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			Self::handle_on_initialize().map_err(|e| {
-				log::error!(
-					target: "runtime::vtoken-minting",
-					"Received invalid justification for {:?}",
-					e,
-				);
-				e
-			});
+			Self::handle_on_initialize()
+				.map_err(|e| {
+					log::error!(
+						target: "runtime::vtoken-minting",
+						"Received invalid justification for {:?}",
+						e,
+					);
+					e
+				})
+				.ok();
 
 			T::WeightInfo::on_initialize()
 		}
@@ -507,7 +509,8 @@ pub mod pallet {
 										}
 										Ok(())
 									},
-								);
+								)
+								.ok();
 								tmp_amount = tmp_amount.saturating_sub(unlock_amount);
 								// } else {
 								// 	return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
@@ -531,7 +534,8 @@ pub mod pallet {
 									}
 									Ok(())
 								},
-							);
+							)
+							.ok();
 							TimeUnitUnlockLedger::<T>::mutate_exists(
 								&time_unit,
 								&token_id,
@@ -549,7 +553,8 @@ pub mod pallet {
 									}
 									Ok(())
 								},
-							);
+							)
+							.ok();
 							true
 						}
 					} else {
@@ -1037,7 +1042,8 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
-							);
+							)
+							.ok();
 						}
 					}
 				},

@@ -1425,12 +1425,11 @@ pub mod pallet {
 			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
 			if let Some(ref ldgr) = *ledger {
-				if let Ledger::Substrate(lg) = ldgr {
-					ensure!(
-						lg.active >= mins_maxs.delegator_bonded_minimum,
-						Error::<T>::LowerThanMinimum
-					);
-				}
+				let Ledger::Substrate(lg) = ldgr;
+				ensure!(
+					lg.active >= mins_maxs.delegator_bonded_minimum,
+					Error::<T>::LowerThanMinimum
+				);
 			}
 
 			// Update the ledger.
@@ -1775,7 +1774,6 @@ pub mod pallet {
 				let currency_id = match entry.clone() {
 					LedgerUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
-					_ => None,
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1807,7 +1805,6 @@ pub mod pallet {
 				let currency_id = match entry.clone() {
 					ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
-					_ => None,
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1830,7 +1827,6 @@ pub mod pallet {
 				.ok_or(Error::<T>::QueryNotExist)?;
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1850,7 +1846,6 @@ pub mod pallet {
 			let currency_id = match entry {
 				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
 					Some(substrate_entry.currency_id),
-				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
