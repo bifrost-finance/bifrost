@@ -22,6 +22,7 @@ use super::types::{
 	MoonriverBalancesCall, MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall,
 	MoonriverUtilityCall, MoonriverXtokensCall,
 };
+use crate::primitives::{OneToManyLedger, OrderedSet};
 use codec::{Decode, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
@@ -52,9 +53,9 @@ use crate::{
 	agents::SystemCall,
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, SubstrateLedger, SubstrateLedgerUpdateEntry,
-		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
-		XcmOperation, MOVR,
+		Ledger, OneToManyBond, OneToManyDelegatorStatus, SubstrateLedger,
+		SubstrateLedgerUpdateEntry, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, MOVR,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
@@ -105,9 +106,91 @@ impl<T: Config>
 		Ok(delegator_multilocation)
 	}
 
-	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+	/// In the Moonriver context, function bond and delegate have the same effect.
+	fn bond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		// First check if the delegator exists.
+		// If not, check if amount is greater than minimum delegator stake. Afterwards, create the
+		// delegator ledger.
+		// If yes, check if amount is greater than minimum delegation requirement.
+
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+
+			// Ensure the bond after wont exceed delegator_active_staking_maximum
+			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				add_total <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
+		} else {
+			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+
+			// Ensure the bond doesn't exceeds delegator_active_staking_maximum
+			ensure!(
+				amount <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
+
+			// Create a new delegator ledger
+			// The real bonded amount will be updated by services once the xcm transaction
+			// succeeds.
+			let empty_delegation_set: OrderedSet<OneToManyBond<MultiLocation, BalanceOf<T>>> =
+				OrderedSet::new();
+			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+				account: who.clone(),
+				total: Zero::zero(),
+				less_total: Zero::zero(),
+				delegations: empty_delegation_set,
+				requests: vec![],
+				status: OneToManyDelegatorStatus::Active,
+			};
+			let movr_ledger =
+				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonriver(new_ledger);
+
+			DelegatorLedgers::<T>::insert(MOVR, who, movr_ledger);
+		}
+
+		// prepare xcm call
+
+		// Get the delegator account id in Moonriver network
+		let validator_multilocation = validator.as_ref().ok_or(Error::<T>::Unexpected)?;
+		let validator_account_id_20 =
+			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
+
+		let candidate_delegation_count: u32 = mins_maxs.validators_back_maximum;
+		let delegation_count: u32 = mins_maxs.validators_back_maximum;
+		// Construct xcm message.
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::Delegate(
+			validator_account_id_20,
+			amount,
+			candidate_delegation_count,
+			delegation_count,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Bond, call, who)?;
+
+		//【TODO】
+		// // Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		// Self::insert_delegator_ledger_update_entry(
+		// 	who, true, false, false, amount, query_id, timeout,
+		// )?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Bond extra amount to a delegator.
@@ -130,7 +213,7 @@ impl<T: Config>
 		unimplemented!()
 	}
 
-	/// Delegate to some validators. For Kusama, it equals function Nominate.
+	/// Delegate to some validators. For Moonriver, it equals function Nominate.
 	fn delegate(
 		&self,
 		who: &MultiLocation,
@@ -285,6 +368,111 @@ impl<T: Config>
 		&self,
 		query_id: QueryId,
 	) -> Result<(), Error<T>> {
+		unimplemented!()
+	}
+}
+
+/// Internal functions.
+impl<T: Config> MoonriverAgent<T> {
+	fn construct_xcm_as_subaccount_with_query_id(
+		operation: XcmOperation,
+		call: MoonriverCall<T>,
+		who: &MultiLocation,
+	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
+		// prepare the query_id for reporting back transact status
+		let responder = MultiLocation { parents: 1, interior: X1(Parachain(2023)) };
+		let now = frame_system::Pallet::<T>::block_number();
+		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
+
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params_with_query_id(
+				operation, call, who, query_id,
+			)?;
+
+		let xcm_message =
+			Self::construct_xcm_message_with_query_id(call_as_subaccount, fee, weight, query_id);
+
+		Ok((query_id, timeout, xcm_message))
+	}
+
+	fn prepare_send_as_subaccount_call_params_with_query_id(
+		operation: XcmOperation,
+		call: MoonriverCall<T>,
+		who: &MultiLocation,
+		query_id: QueryId,
+	) -> Result<(MoonriverCall<T>, BalanceOf<T>, Weight), Error<T>> {
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(MOVR, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Temporary wrapping remark event in Moonriver for ease use of backend service.
+		let remark_call =
+			MoonriverCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+
+		let call_batched_with_remark =
+			MoonriverCall::Utility(Box::new(MoonriverUtilityCall::BatchAll(Box::new(vec![
+				Box::new(call),
+				Box::new(remark_call),
+			]))));
+
+		let call_as_subaccount =
+			MoonriverCall::Utility(Box::new(MoonriverUtilityCall::AsDerivative(
+				sub_account_index,
+				Box::new(call_batched_with_remark),
+			)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(MOVR, operation)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		Ok((call_as_subaccount, fee, weight))
+	}
+}
+
+/// Trait XcmBuilder implementation for Moonriver
+impl<T: Config>
+	XcmBuilder<
+		BalanceOf<T>,
+		MoonriverCall<T>, // , MultiLocation,
+	> for MoonriverAgent<T>
+{
+	fn construct_xcm_message_with_query_id(
+		call: MoonriverCall<T>,
+		extra_fee: BalanceOf<T>,
+		weight: Weight,
+		_query_id: QueryId,
+	) -> Xcm<()> {
+		let asset = MultiAsset {
+			id: Concrete(MultiLocation::here()),
+			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
+		};
+
+		Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: call.encode().into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(Parachain(T::ParachainId::get().into())),
+				},
+			},
+		])
+		// }
+	}
+
+	fn construct_xcm_message_without_query_id(
+		call: MoonriverCall<T>,
+		extra_fee: BalanceOf<T>,
+		weight: Weight,
+	) -> Xcm<()> {
 		unimplemented!()
 	}
 }

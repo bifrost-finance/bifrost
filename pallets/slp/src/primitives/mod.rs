@@ -72,6 +72,9 @@ pub struct MinimumsMaximums<Balance> {
 	/// The maximum amount of active staking for a delegator. It is used to control ROI.
 	#[codec(compact)]
 	pub delegator_active_staking_maximum: Balance,
+	/// The maximum number of delegators for a validator to reward.
+	#[codec(compact)]
+	pub validators_reward_maximum: u32,
 }
 
 /// Different delay params for different chain

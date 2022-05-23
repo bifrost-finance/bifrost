@@ -21,6 +21,7 @@
 use frame_support::assert_ok;
 use mock::*;
 use orml_traits::MultiCurrency;
+use sp_runtime::traits::AccountIdConversion;
 
 use super::*;
 use crate::KSM;
@@ -510,8 +511,15 @@ fn set_hosting_fees_works() {
 #[test]
 fn initialize_moonriver_delegator() {
 	ExtBuilder::default().build().execute_with(|| {
+		// let bifrostParachainAccountId20: [u8; 20] =
+		// 	hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
 		let bifrostParachainAccountId20: [u8; 20] =
-			hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+			<Runtime as frame_system::Config>::AccountId::encode(
+				&ParaId::from(2001u32).into_account(),
+			)
+			.as_slice()[..20]
+				.try_into()
+				.unwrap();
 
 		// subaccountId0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
 		let subaccountId0 = Slp::derivative_account_id_20(bifrostParachainAccountId20, 0);

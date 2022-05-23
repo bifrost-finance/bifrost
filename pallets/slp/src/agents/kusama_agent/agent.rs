@@ -102,9 +102,14 @@ impl<T: Config>
 	}
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn bond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		ensure!(DelegatorLedgers::<T>::get(KSM, who).is_none(), Error::<T>::AlreadyBonded);
+		ensure!(!DelegatorLedgers::<T>::contains_key(KSM, who), Error::<T>::AlreadyBonded);
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;

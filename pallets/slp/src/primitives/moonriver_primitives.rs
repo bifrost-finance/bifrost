@@ -30,7 +30,8 @@ pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
 	pub account: DelegatorId,
 	pub delegations: OrderedSet<OneToManyBond<ValidatorId, Balance>>,
 	pub total: Balance,
-	pub requests: OneToManyScheduledRequest<DelegatorId, Balance>,
+	pub less_total: Balance,
+	pub requests: Vec<OneToManyScheduledRequest<DelegatorId, Balance>>,
 	pub status: OneToManyDelegatorStatus,
 }
 
@@ -40,7 +41,7 @@ pub enum OneToManyDelegatorStatus {
 	Leaving(TimeUnit),
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
 pub struct OneToManyBond<ValidatorId, Balance> {
 	pub owner: ValidatorId,
 	pub amount: Balance,

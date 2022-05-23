@@ -34,7 +34,11 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
 	latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm},
-	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
+	opaque::latest::{
+		Junction::{AccountKey20, Parachain},
+		Junctions::X2,
+		NetworkId::Any,
+	},
 };
 
 use crate::agents::MoonriverAgent;
@@ -211,6 +215,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
@@ -610,12 +615,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 			#[pallet::compact] amount: BalanceOf<T>,
+			validator: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(&who, amount)?;
+			let query_id = staking_agent.bond(&who, amount, &validator)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -625,6 +631,7 @@ pub mod pallet {
 				bonded_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -1727,6 +1734,27 @@ pub mod pallet {
 			};
 
 			Ok(parachain_location)
+		}
+
+		pub fn multilocation_to_account_20(who: &MultiLocation) -> Result<[u8; 20], Error<T>> {
+			// Get the delegator account id in Kusama network
+			let account_20 = match who {
+				MultiLocation {
+					parents: _,
+					interior:
+						X2(Parachain(_), AccountKey20 { network: _network_id, key: account_id }),
+				} => account_id,
+				_ => Err(Error::<T>::AccountNotExist)?,
+			};
+			Ok(*account_20)
+		}
+
+		pub fn multilocation_to_h160_account(who: &MultiLocation) -> Result<H160, Error<T>> {
+			// Get the delegator account id in Kusama network
+			let account_20 = Self::multilocation_to_account_20(who)?;
+			let account_h160 =
+				H160::decode(&mut &account_20[..]).map_err(|_| Error::<T>::DecodingError)?;
+			Ok(account_h160)
 		}
 
 		/// **************************************/

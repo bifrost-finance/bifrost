@@ -39,7 +39,12 @@ pub trait StakingAgent<
 	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond(
+		&self,
+		who: &DelegatorId,
+		amount: Balance,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
 	fn bond_extra(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
