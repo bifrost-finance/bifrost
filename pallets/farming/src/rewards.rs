@@ -176,7 +176,6 @@ pub enum PoolState {
 }
 
 pub type PoolId = u32;
-// pub type PoolId = Vec<CurrencyId>;
 
 impl<T: Config> Pallet<T> {
 	pub fn accumulate_reward(
@@ -297,6 +296,24 @@ impl<T: Config> Pallet<T> {
 									current_block_number,
 								Error::<T>::CanNotWithdraw
 							);
+							let tokens_proportion_values: Vec<Permill> =
+								pool_info.tokens_proportion.values().cloned().collect();
+							let native_amount = tokens_proportion_values[0]
+								.saturating_reciprocal_mul(remove_amount);
+							pool_info.tokens_proportion.iter().try_for_each(
+								|(token, proportion)| -> DispatchResult {
+									if let Some(ref keeper) = pool_info.keeper {
+										T::MultiCurrency::transfer(
+											*token,
+											&keeper,
+											who,
+											*proportion * native_amount,
+										)?
+									};
+									Ok(())
+								},
+							)?;
+
 							let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
 							pool_info.total_shares =
