@@ -22,7 +22,7 @@ use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
 use frame_support::traits::GenesisBuild;
 use node_primitives::TokenSymbol::KSM;
-use polkadot_primitives::v1::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
@@ -124,7 +124,7 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
 			(AccountId::from(ALICE), 2002 * dollar(CurrencyId::Token(KSM))),
-			(ParaId::from(2001).into_account(), 2 * dollar(CurrencyId::Token(KSM))),
+			(ParaId::from(2001u32).into_account(), 2 * dollar(CurrencyId::Token(KSM))),
 		],
 	}
 	.assimilate_storage(&mut t)

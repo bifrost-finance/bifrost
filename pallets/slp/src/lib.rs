@@ -51,7 +51,9 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
-use sp_core::{blake2_256, H160};
+
+use sp_core::H160;
+use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;

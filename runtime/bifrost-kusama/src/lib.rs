@@ -1527,10 +1527,14 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
 			1,
 			X2(
-				Parachain(parachains::moonriver::PALLET_ID),
+				Parachain(parachains::moonriver::PALLET_ID.into()),
 				AccountKey20 {
 					network: NetworkId::Any,
-					key: Slp::derivative_account_id_20(BifrostParachainAccountId20, index).into(),
+					key: Slp::derivative_account_id_20(
+						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						index,
+					)
+					.into(),
 				},
 			),
 		),

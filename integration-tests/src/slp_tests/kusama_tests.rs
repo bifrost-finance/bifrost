@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Cross-chain transfer tests within Kusama network.
+#![cfg(test)]
 
 use bifrost_polkadot_runtime::PolkadotXcm;
 use bifrost_slp::{
@@ -35,7 +36,7 @@ use pallet_xcm::QueryStatus;
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
-use crate::{integration_tests::*, kusama_test_net::*, slp_tests::VersionedMultiLocation::V1};
+use crate::{integration_tests::*, kusama_test_net::*};
 
 /// ****************************************************
 /// *********  Preparation section  ********************
@@ -168,6 +169,7 @@ fn register_subaccount_index_0() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
 		};
 
 		// Set minimums and maximums
@@ -405,6 +407,7 @@ fn bond_works() {
 			RelayCurrencyId::get(),
 			subaccount_0_location,
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 	});
 
@@ -1019,13 +1022,14 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 
 		// Check the existence of the query in pallet_xcm Queries storage.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1094,7 +1098,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1142,7 +1146,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1211,7 +1215,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1259,7 +1263,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1318,7 +1322,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1365,7 +1369,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1424,7 +1428,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1500,7 +1504,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1556,7 +1560,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1629,7 +1633,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1685,7 +1689,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1729,13 +1733,14 @@ fn fail_delegator_ledger_query_response_works() {
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 
 		// Check the existence of the query in pallet_xcm Queries storage.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})
@@ -1791,7 +1796,7 @@ fn fail_delegator_ledger_query_response_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
 				timeout: 1001
 			})

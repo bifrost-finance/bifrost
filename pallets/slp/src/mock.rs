@@ -32,7 +32,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_core::{blake2_256, H256};
+use sp_core::{hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},

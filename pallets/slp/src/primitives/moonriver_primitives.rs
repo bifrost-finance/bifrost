@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
 

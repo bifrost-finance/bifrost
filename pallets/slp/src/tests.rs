@@ -143,6 +143,7 @@ fn remove_delegator_works() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
 		};
 
 		// Set minimums and maximums
@@ -420,6 +421,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
 		};
 
 		// Set minimums and maximums
