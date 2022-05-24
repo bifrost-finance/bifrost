@@ -32,6 +32,8 @@ pub use sp_runtime::{
 };
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
+pub const KUSAMA_TREASURY_ACCOUNT: [u8; 32] = [2u8; 32];
+pub const BIFROST_TREASURY_ACCOUNT: [u8; 32] = [3u8; 32];
 
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;

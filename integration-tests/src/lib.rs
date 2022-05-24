@@ -29,3 +29,5 @@ mod kusama_test_net;
 mod slp_tests;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod statemine;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+mod treasury;

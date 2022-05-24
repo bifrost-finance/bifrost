@@ -43,7 +43,15 @@ decl_test_parachain! {
 		Origin = Origin,
 		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
 		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext(2001),
+		new_ext = para_ext(2001, vec![(
+					AccountId::from(ALICE),
+					RelayCurrencyId::get(),
+					10 * dollar(RelayCurrencyId::get()),
+				),(
+					AccountId::from(BIFROST_TREASURY_ACCOUNT),
+					RelayCurrencyId::get(),
+					10 * dollar(RelayCurrencyId::get()),
+				)]),
 	}
 }
 
@@ -53,7 +61,11 @@ decl_test_parachain! {
 		Origin = Origin,
 		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
 		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext(2000),
+		new_ext = para_ext(2000, vec![(
+			AccountId::from(ALICE),
+			RelayCurrencyId::get(),
+			10 * dollar(RelayCurrencyId::get()),
+		)]),
 	}
 }
 
@@ -63,7 +75,11 @@ decl_test_parachain! {
 		Origin = westmint_runtime::Origin,
 		XcmpMessageHandler = westmint_runtime::XcmpQueue,
 		DmpMessageHandler = westmint_runtime::DmpQueue,
-		new_ext = para_ext(1000),
+		new_ext = para_ext(1000, vec![(
+			AccountId::from(ALICE),
+			RelayCurrencyId::get(),
+			10 * dollar(RelayCurrencyId::get()),
+		)]),
 	}
 }
 
@@ -125,6 +141,7 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 		balances: vec![
 			(AccountId::from(ALICE), 2002 * dollar(CurrencyId::Token(KSM))),
 			(ParaId::from(2001).into_account(), 2 * dollar(CurrencyId::Token(KSM))),
+			(AccountId::from(KUSAMA_TREASURY_ACCOUNT), 2000 * dollar(CurrencyId::Token(KSM))),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -147,13 +164,9 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 	ext
 }
 
-pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
-	ExtBuilder::default()
-		.balances(vec![(
-			AccountId::from(ALICE),
-			RelayCurrencyId::get(),
-			10 * dollar(RelayCurrencyId::get()),
-		)])
-		.parachain_id(parachain_id)
-		.build()
+pub fn para_ext(
+	parachain_id: u32,
+	balances: Vec<(AccountId, CurrencyId, Balance)>,
+) -> sp_io::TestExternalities {
+	ExtBuilder::default().balances(balances).parachain_id(parachain_id).build()
 }
