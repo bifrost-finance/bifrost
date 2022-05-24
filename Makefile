@@ -53,7 +53,7 @@ copy-genesis-config-release:
 
 .PHONY: format # cargo fmt
 format:
-	cargo +nightly fmt --all
+	cargo +nightly fmt --all -- --check
 
 .PHONY: clippy # cargo clippy
 clippy:

@@ -34,11 +34,6 @@ jobs:
 
       - name: Check All
         run: make check-all
-      - name: cargo fmt --all -- --check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
 
       - name: cargo clippy --all
         uses: actions-rs/clippy-check@v1

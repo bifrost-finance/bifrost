@@ -50,7 +50,7 @@ make build-all-release
 ## Format code
 
 ```sh
-make fmt
+make format
 ```
 
 ## Lint code

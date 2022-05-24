@@ -992,10 +992,7 @@ fn supplement_fee_reserve_works() {
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(
-			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			2999834059328
-		);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
 	});
 }
 
