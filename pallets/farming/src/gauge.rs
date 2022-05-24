@@ -120,7 +120,6 @@ where
 	BlockNumberFor<T>: Into<u128> + Into<BalanceOf<T>>,
 	BalanceOf<T>: Into<u128>,
 {
-	#[transactional]
 	pub fn create_gauge_pool(
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
@@ -139,7 +138,6 @@ where
 		Ok(())
 	}
 
-	#[transactional]
 	pub fn gauge_add(
 		who: &AccountIdOf<T>,
 		pid: PoolId,
@@ -226,7 +224,6 @@ where
 		Ok(())
 	}
 
-	#[transactional]
 	pub fn gauge_claim_inner(who: &AccountIdOf<T>, gid: PoolId) -> DispatchResult {
 		if !GaugeInfos::<T>::contains_key(gid, who) {
 			return Ok(());
