@@ -35,11 +35,11 @@ jobs:
       - name: Check All
         run: make check-all
 
-      - name: cargo clippy --all
+      - name: Cargo clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all --all-targets -- -D warnings
+          args: --features=with-bifrost-kusama-runtime -- -D warnings
 
       - name: Test All
         run: |
