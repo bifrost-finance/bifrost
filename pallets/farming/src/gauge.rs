@@ -66,6 +66,7 @@ where
 pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
 	pub pid: PoolId,
 	pub token: CurrencyIdOf,
+	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
 	pub gauge_state: GaugeState,
@@ -89,6 +90,7 @@ where
 		Self {
 			pid: Default::default(),
 			token: Default::default(),
+			rewards: BTreeMap::new(),
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: Default::default(),
@@ -107,6 +109,7 @@ where
 		Self {
 			pid,
 			token,
+			rewards: BTreeMap::new(),
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: current_block_number,
@@ -232,7 +235,7 @@ where
 		let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
 		let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
 		GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
-			ensure!(gauge_info.gauge_start_block < current_block_number, Error::<T>::CanNotClaim);
+			ensure!(gauge_info.gauge_start_block <= current_block_number, Error::<T>::CanNotClaim);
 			let start_block = if current_block_number > gauge_info.gauge_stop_block {
 				gauge_info.gauge_stop_block
 			} else {
@@ -250,19 +253,28 @@ where
 				gauge_pool_info.total_time_factor,
 			);
 			let interval_block_rate = gauge_rate * (start_block - gauge_info.last_claim_block);
-			pool_info.basic_rewards.clone().iter().try_for_each(
-				|(reward_currency, reward_amount)| -> DispatchResult {
-					let reward_to_claim = reward_amount
-						.checked_mul(&interval_block_rate.into())
+			// and_modify
+
+			// pool_info.basic_rewards.clone()
+			gauge_pool_info.rewards.iter_mut().try_for_each(
+				|(reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
+					let reward = reward_amount
+						.checked_sub(&withdrawn_reward)
 						.ok_or(ArithmeticError::Overflow)?;
+					let reward_to_claim = gauge_rate * reward;
 					match pool_info.keeper {
 						None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-						Some(ref keeper) => T::MultiCurrency::transfer(
-							*reward_currency,
-							&keeper,
-							&who,
-							reward_to_claim,
-						)?,
+						Some(ref keeper) => {
+							*withdrawn_reward = withdrawn_reward
+								.checked_add(&reward_to_claim)
+								.ok_or(ArithmeticError::Overflow)?;
+							T::MultiCurrency::transfer(
+								*reward_currency,
+								&keeper,
+								&who,
+								reward_to_claim,
+							)?
+						},
 					};
 					Ok(())
 				},
@@ -282,9 +294,10 @@ where
 						.total_time_factor
 						.checked_sub(gauge_info.total_time_factor)
 						.ok_or(ArithmeticError::Overflow)?;
-					GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+					// GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
 				};
 			};
+			GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
 			Ok(())
 		})?;
 		Ok(())
