@@ -35,7 +35,7 @@ fn kusama_treasury_propose_spend() {
 }
 
 #[test]
-fn bifrost_issuance_ksm() {
+fn bifrost_issuance_ksm_transfer_to_treasury() {
 	Bifrost::execute_with(|| {
 		let treasury_derivative_account_id = bifrost_kusama_runtime::Utility::derivative_account_id(
 			bifrost_kusama_runtime::TreasuryPalletId::get().into_account(),
@@ -43,10 +43,19 @@ fn bifrost_issuance_ksm() {
 		);
 		assert_ok!(bifrost_kusama_runtime::Tokens::set_balance(
 			bifrost_kusama_runtime::Origin::root(),
-			sp_runtime::MultiAddress::Id(treasury_derivative_account_id),
+			sp_runtime::MultiAddress::Id(treasury_derivative_account_id.clone()),
 			RelayCurrencyId::get(),
 			50_000_000_000_000_000,
 			0,
+		));
+		assert_ok!(bifrost_kusama_runtime::Tokens::force_transfer(
+			bifrost_kusama_runtime::Origin::root(),
+			sp_runtime::MultiAddress::Id(treasury_derivative_account_id),
+			sp_runtime::MultiAddress::Id(
+				bifrost_kusama_runtime::TreasuryPalletId::get().into_account()
+			),
+			RelayCurrencyId::get(),
+			50_000_000_000_000_000,
 		));
 	});
 }
