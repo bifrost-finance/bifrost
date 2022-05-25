@@ -61,6 +61,8 @@ fn deposit() {
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,
 			token: KSM,
+			rewards:
+				BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new(),
 			gauge_amount: 200,
 			total_time_factor: 39900,
 			gauge_last_block: System::block_number(),
@@ -79,19 +81,23 @@ fn gauge() {
 		let (pid, tokens) = init_gauge();
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
 		Farming::on_initialize(0);
-		System::set_block_number(System::block_number() + 10);
+		System::set_block_number(System::block_number() + 1);
+		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2900);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2920);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 10);
-		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1800);
-		System::set_block_number(System::block_number() + 1000);
-		assert_err!(
-			Farming::claim(Origin::signed(ALICE), pid),
-			orml_tokens::Error::<Runtime>::BalanceTooLow
-		);
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1800);
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens, Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1820);
+		System::set_block_number(System::block_number() + 20);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		System::set_block_number(System::block_number() + 200);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		// assert_err!(
+		// 	Farming::claim(Origin::signed(ALICE), pid),
+		// 	orml_tokens::Error::<Runtime>::BalanceTooLow
+		// );
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5660);
 	})
 }
 
@@ -103,8 +109,6 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	// let mut tokens = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 	// tokens.entry(KSM).or_insert(1000);
 	let tokens = 1000;
-	// let mut basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
-	// let _ = basic_rewards.entry(KSM).or_insert(1000);
 	let basic_rewards = vec![(KSM, 1000)];
 
 	assert_ok!(Farming::create_farming_pool(
@@ -121,7 +125,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let pid = 0;
 	// let mut charge_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 	// let _ = charge_rewards.entry(KSM).or_insert(3000);
-	let charge_rewards = vec![(KSM, 3000)];
+	let charge_rewards = vec![(KSM, 300000)];
 	assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
 	let keeper: AccountId = <Runtime as Config>::PalletId::get().into_sub_account(pid);
 	// let starting_token_values: Vec<BalanceOf<Runtime>> = tokens.values().cloned().collect();

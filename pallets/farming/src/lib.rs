@@ -249,6 +249,27 @@ pub mod pallet {
 				_ => (),
 			});
 
+			GaugePoolInfos::<T>::iter().for_each(
+				|(gid, mut gauge_pool_info)| match gauge_pool_info.gauge_state {
+					GaugeState::Bonded => {
+						let pool_info = Self::pool_infos(&gauge_pool_info.pid);
+						pool_info.basic_rewards.clone().iter().for_each(
+							|(reward_currency_id, reward_amount)| {
+								gauge_pool_info
+									.rewards
+									.entry(*reward_currency_id)
+									.and_modify(|(total_reward, _)| {
+										*total_reward = total_reward.saturating_add(*reward_amount);
+									})
+									.or_insert((*reward_amount, Zero::zero()));
+							},
+						);
+						GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
+					},
+					_ => (),
+				},
+			);
+
 			T::WeightInfo::on_initialize()
 		}
 	}
