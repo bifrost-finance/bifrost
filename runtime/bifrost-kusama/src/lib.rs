@@ -302,6 +302,8 @@ parameter_types! {
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 }
 
 impl frame_system::Config for Runtime {
@@ -1377,7 +1379,10 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&FarmingKeeperPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&FarmingRewardIssuerPalletId::get())
+				.eq(a)
 	}
 }
 
@@ -1755,11 +1760,10 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type VsbondAccount = BifrostVsbondPalletId;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
-	type PalletId = LiquidityMiningPalletId;
 }
 
 // Bifrost modules end

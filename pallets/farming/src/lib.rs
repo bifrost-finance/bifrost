@@ -79,18 +79,15 @@ pub mod pallet {
 
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
-		#[pallet::constant]
-		type TreasuryAccount: Get<Self::AccountId>;
-
-		#[pallet::constant]
-		type VsbondAccount: Get<PalletId>;
-
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
 		/// ModuleID for creating sub account
 		#[pallet::constant]
-		type PalletId: Get<PalletId>;
+		type Keeper: Get<PalletId>;
+
+		#[pallet::constant]
+		type RewardIssuer: Get<PalletId>;
 	}
 
 	#[pallet::event]
@@ -297,7 +294,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pid = Self::pool_next_id();
-			let keeper = T::PalletId::get().into_sub_account(pid);
+			let keeper = T::Keeper::get().into_sub_account(pid);
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
