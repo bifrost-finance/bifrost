@@ -51,7 +51,7 @@ fn subaccount_0() -> AccountId {
 	subaccount_0
 }
 
-fn para_account_2001() -> AccountId {
+pub fn para_account_2001() -> AccountId {
 	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
 	let para_account_2001: AccountId =
 		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]

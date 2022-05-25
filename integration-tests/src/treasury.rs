@@ -17,69 +17,36 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{integration_tests::*, kusama_test_net::*};
 use frame_support::assert_ok;
-use xcm::latest::prelude::*;
+// use xcm::latest::prelude::*;
+use crate::slp_tests::para_account_2001;
 use xcm_emulator::TestExt;
 
 #[test]
-fn treasury_send_ksm_to_parachain() {
-	TestNet::reset();
+fn kusama_treasury_propose_spend() {
+	let amount_to_fund = 50_000_000_000_000_000;
 
-	Bifrost::execute_with(|| {
-		let remark = kusama_runtime::Call::System(
-			frame_system::Call::<kusama_runtime::Runtime>::remark_with_event {
-				remark: "Hello from Bifrost!".as_bytes().to_vec(),
-			},
-		);
-
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(8000000000),
-		};
-		let weight = 10_000_000_000;
-		let xcm_msg = Xcm(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset.clone(), weight_limit: Unlimited },
-			Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: remark.encode().into(),
-			},
-			RefundSurplus,
-			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::max_value(),
-				beneficiary: MultiLocation { parents: 0, interior: X1(Parachain(2001)) },
-			},
-		]);
-		Bifrost::execute_with(|| {
-			assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, Parent, xcm_msg));
-		});
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::Treasury::propose_spend(
+			kusama_runtime::Origin::signed(ALICE.into()),
+			amount_to_fund,
+			sp_runtime::MultiAddress::Id(para_account_2001()),
+		));
 	});
 }
 
 #[test]
-fn treasury_transfer_ksm_from_parachain_to_treasury() {
+fn bifrost_issuance_ksm() {
 	Bifrost::execute_with(|| {
-		assert_ok!(XTokens::transfer(
-			Origin::signed(ALICE.into()),
-			CurrencyId::Token(TokenSymbol::KSM),
-			10_000_000_000_000,
-			Box::new(
-				MultiLocation::new(
-					1,
-					X2(
-						Parachain(2001),
-						Junction::AccountId32 { network: NetworkId::Any, id: BIFROST_TREASURY_ACCOUNT.into() }
-					)
-				)
-				.into()
-			),
-			1_000_000_000,
+		let treasury_derivative_account_id = bifrost_kusama_runtime::Utility::derivative_account_id(
+			bifrost_kusama_runtime::TreasuryPalletId::get().into_account(),
+			0,
+		);
+		assert_ok!(bifrost_kusama_runtime::Tokens::set_balance(
+			bifrost_kusama_runtime::Origin::root(),
+			sp_runtime::MultiAddress::Id(treasury_derivative_account_id),
+			RelayCurrencyId::get(),
+			50_000_000_000_000_000,
+			0,
 		));
-
-		// assert_eq!(
-		// 	Tokens::free_balance(CurrencyId::Token(TokenSymbol::KSM), &AccountId::from(ALICE)),
-		// 	90_000_000_000_000
-		// );
 	});
 }
