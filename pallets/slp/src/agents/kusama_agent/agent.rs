@@ -78,7 +78,7 @@ impl<T: Config>
 		AccountIdOf<T>,
 		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
 	> for KusamaAgent<T>
@@ -797,7 +797,7 @@ impl<T: Config>
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,
-		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		// If this is manual mode, it is always updatable.
@@ -1080,7 +1080,7 @@ impl<T: Config> KusamaAgent<T> {
 
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
-		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
 		// update DelegatorLedgers<T> storage
 		if let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {

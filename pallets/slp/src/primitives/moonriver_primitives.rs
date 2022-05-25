@@ -16,20 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::{Decode, Encode};
+use codec::{alloc::collections::BTreeMap, Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
-
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
 	pub account: DelegatorId,
-	pub delegations: OrderedSet<OneToManyBond<ValidatorId, Balance>>,
+	pub delegations: BTreeMap<ValidatorId, Balance>,
 	pub total: Balance,
 	pub less_total: Balance,
 	pub requests: Vec<OneToManyScheduledRequest<DelegatorId, Balance>>,
@@ -61,68 +58,29 @@ pub enum OneToManyDelegationAction<Balance> {
 	Decrease(Balance),
 }
 
-/// An ordered set backed by `Vec`
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, PartialEq, Eq, Encode, Decode, Default, Clone, TypeInfo)]
-pub struct OrderedSet<T>(pub Vec<T>);
-
-impl<T: Ord> OrderedSet<T> {
-	/// Create a new empty set
-	pub fn new() -> Self {
-		Self(Vec::new())
-	}
-
-	/// Create a set from a `Vec`.
-	/// `v` will be sorted and dedup first.
-	pub fn from(mut v: Vec<T>) -> Self {
-		v.sort();
-		v.dedup();
-		Self::from_sorted_set(v)
-	}
-
-	/// Create a set from a `Vec`.
-	/// Assume `v` is sorted and contain unique elements.
-	pub fn from_sorted_set(v: Vec<T>) -> Self {
-		Self(v)
-	}
-
-	/// Insert an element.
-	/// Return true if insertion happened.
-	pub fn insert(&mut self, value: T) -> bool {
-		match self.0.binary_search(&value) {
-			Ok(_) => false,
-			Err(loc) => {
-				self.0.insert(loc, value);
-				true
-			},
-		}
-	}
-
-	/// Remove an element.
-	/// Return true if removal happened.
-	pub fn remove(&mut self, value: &T) -> bool {
-		match self.0.binary_search(value) {
-			Ok(loc) => {
-				self.0.remove(loc);
-				true
-			},
-			Err(_) => false,
-		}
-	}
-
-	/// Return if the set contains `value`
-	pub fn contains(&self, value: &T) -> bool {
-		self.0.binary_search(value).is_ok()
-	}
-
-	/// Clear the set
-	pub fn clear(&mut self) {
-		self.0.clear();
-	}
-}
-
-impl<T: Ord> From<Vec<T>> for OrderedSet<T> {
-	fn from(v: Vec<T>) -> Self {
-		Self::from(v)
-	}
+/// A type for Moonriver ledger updating entires
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
+	/// The currency id of the delegator that needs to be update
+	pub currency_id: CurrencyId,
+	/// The delegator id that needs to be update
+	pub delegator_id: DelegatorId,
+	/// The validator id that needs to be update
+	pub validator_id: ValidatorId,
+	/// If this is true, then this is a bonding entry.
+	pub if_bond: bool,
+	/// If this is true and if_bond is false, then this is an unlocking entry.
+	pub if_unlock: bool,
+	pub if_revoke: bool,
+	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
+	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
+	pub if_cancel: bool,
+	pub if_leave: bool,
+	/// The unlocking/bonding amount.
+	#[codec(compact)]
+	pub amount: Balance,
+	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
+	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
+	/// timeunit when the xcm message is sent.
+	pub unlock_time: Option<TimeUnit>,
 }

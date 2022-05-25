@@ -22,8 +22,8 @@ use super::types::{
 	MoonriverBalancesCall, MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall,
 	MoonriverUtilityCall, MoonriverXtokensCall,
 };
-use crate::primitives::{OneToManyLedger, OrderedSet};
-use codec::{Decode, Encode};
+use crate::primitives::OneToManyLedger;
+use codec::{alloc::collections::BTreeMap, Decode, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
@@ -54,8 +54,8 @@ use crate::{
 	agents::SystemCall,
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, OneToManyBond, OneToManyDelegatorStatus, SubstrateLedger,
-		SubstrateLedgerUpdateEntry, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
+		Ledger, MoonriverLedgerUpdateEntry, OneToManyBond, OneToManyDelegatorStatus,
+		SubstrateLedger, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, MOVR,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
@@ -84,7 +84,7 @@ impl<T: Config>
 		AccountIdOf<T>,
 		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
 	> for MoonriverAgent<T>
@@ -107,7 +107,8 @@ impl<T: Config>
 		Ok(delegator_multilocation)
 	}
 
-	/// In the Moonriver context, function bond and delegate have the same effect.
+	/// First bond a new validator for a delegator. In the Moonriver context, corresponding part
+	/// is "delegate" function.
 	fn bond(
 		&self,
 		who: &MultiLocation,
@@ -118,9 +119,8 @@ impl<T: Config>
 		// If not, check if amount is greater than minimum delegator stake. Afterwards, create the
 		// delegator ledger.
 		// If yes, check if amount is greater than minimum delegation requirement.
-
+		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
-
 		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
 
 		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
@@ -132,6 +132,10 @@ impl<T: Config>
 				add_total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
 			);
+
+			// check if the delegator-validator delegation exists.
+			// if exists, return error. If not, continue.
+			ensure!(!ledger.delegations.contains_key(&collator), Error::<T>::AlreadyBonded);
 		} else {
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
@@ -144,8 +148,7 @@ impl<T: Config>
 			// Create a new delegator ledger
 			// The real bonded amount will be updated by services once the xcm transaction
 			// succeeds.
-			let empty_delegation_set: OrderedSet<OneToManyBond<MultiLocation, BalanceOf<T>>> =
-				OrderedSet::new();
+			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
 			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
@@ -182,11 +185,10 @@ impl<T: Config>
 		let (query_id, timeout, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Bond, call, who)?;
 
-		//【TODO】
-		// // Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		// Self::insert_delegator_ledger_update_entry(
-		// 	who, true, false, false, amount, query_id, timeout,
-		// )?;
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who, &collator, true, false, false, false, false, amount, query_id, timeout,
+		)?;
 
 		// Send out the xcm message.
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
@@ -194,7 +196,7 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Bond extra amount to a delegator.
+	/// Bond extra amount for a existing delegation.
 	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		unimplemented!()
 	}
@@ -220,7 +222,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+		Error::<T>::Unsupported
 	}
 
 	/// Remove delegation relationship with some validators.
@@ -346,7 +348,7 @@ impl<T: Config>
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,
-		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		unimplemented!()
@@ -427,6 +429,73 @@ impl<T: Config> MoonriverAgent<T> {
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
+	}
+
+	fn insert_delegator_ledger_update_entry(
+		who: &MultiLocation,
+		validator: &MultiLocation,
+		if_bond: bool,
+		if_unlock: bool,
+		if_revoke: bool,
+		if_cancel: bool,
+		if_leave: bool,
+		amount: BalanceOf<T>,
+		query_id: QueryId,
+		timeout: BlockNumberFor<T>,
+	) -> Result<(), Error<T>> {
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+
+		// First to see if the delegation relationship exist.
+		// If not, create one. If yes,
+
+		let unlock_time = if if_unlock || if_revoke || if_leave {
+			Self::get_unlocking_round_from_current(if_leave)?
+		} else if if_bond || if_cancel {
+			None
+		//liquidize operation
+		} else {
+			T::VtokenMinting::get_ongoing_time_unit(MOVR)
+		};
+
+		let entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: who.clone(),
+			validator_id: validator.clone(),
+			if_bond,
+			if_unlock,
+			if_revoke,
+			if_cancel,
+			if_leave,
+			amount,
+			unlock_time,
+		});
+		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
+
+		Ok(())
+	}
+
+	fn get_unlocking_round_from_current(if_leave: bool) -> Result<Option<TimeUnit>, Error<T>> {
+		let current_time_unit =
+			T::VtokenMinting::get_ongoing_time_unit(MOVR).ok_or(Error::<T>::TimeUnitNotExist)?;
+		let delays = CurrencyDelays::<T>::get(MOVR).ok_or(Error::<T>::DelaysNotExist)?;
+
+		let unlock_round = if let TimeUnit::Round(current_round) = current_time_unit {
+			let mut delay = delays.unlock_delay;
+			if if_leave {
+				delay = delays.leave_delegators_delay;
+			}
+
+			if let TimeUnit::Round(delay_round) = delay {
+				current_round.checked_add(delay_round).ok_or(Error::<T>::OverFlow)
+			} else {
+				Err(Error::<T>::InvalidTimeUnit)
+			}
+		} else {
+			Err(Error::<T>::InvalidTimeUnit)
+		}?;
+
+		let unlock_time_unit = TimeUnit::Round(unlock_round);
+		Ok(Some(unlock_time_unit))
 	}
 }
 

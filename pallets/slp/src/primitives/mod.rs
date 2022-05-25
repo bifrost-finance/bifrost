@@ -35,9 +35,10 @@ pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + E
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum LedgerUpdateEntry<Balance, DelegatorId> {
+pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// A type for substrate ledger updating entires
 	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
+	Moonriver(MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of
@@ -82,6 +83,8 @@ pub struct MinimumsMaximums<Balance> {
 pub struct Delays {
 	/// The unlock delay for the unlocking amount to be able to be liquidized.
 	pub unlock_delay: TimeUnit,
+	/// Leave from delegator set delay.
+	pub leave_delegators_delay: TimeUnit,
 }
 
 /// XCM operations list

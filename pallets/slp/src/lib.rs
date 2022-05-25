@@ -85,7 +85,7 @@ type StakingAgentBoxType<T> = Box<
 		AccountIdOf<T>,
 		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		pallet::Error<T>,
 	>,
@@ -200,6 +200,8 @@ pub mod pallet {
 		TuneExchangeRateLimitNotSet,
 		DelegatorLatestTuneRecordNotExist,
 		InvalidTransferSource,
+		ValidatorNotProvided,
+		Unsupported,
 	}
 
 	#[pallet::event]
@@ -386,7 +388,7 @@ pub mod pallet {
 		DelegatorLedgerQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		},
 		DelegatorLedgerQueryResponseFailSuccessfully {
 			#[codec(compact)]
@@ -535,7 +537,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation>, BlockNumberFor<T>),
+		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>, BlockNumberFor<T>),
 	>;
 
 	/// Minimum and Maximum constraints for different chains.
