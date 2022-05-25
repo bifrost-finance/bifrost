@@ -63,6 +63,7 @@ fn deposit() {
 			token: KSM,
 			rewards:
 				BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new(),
+			coefficient: Permill::from_percent(100),
 			gauge_amount: 200,
 			total_time_factor: 39900,
 			gauge_last_block: System::block_number(),
@@ -84,11 +85,11 @@ fn gauge() {
 		System::set_block_number(System::block_number() + 1);
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2920);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2919);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 10);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens, Some((100, 100))));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1820);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1819);
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		System::set_block_number(System::block_number() + 200);
@@ -97,7 +98,7 @@ fn gauge() {
 		// 	Farming::claim(Origin::signed(ALICE), pid),
 		// 	orml_tokens::Error::<Runtime>::BalanceTooLow
 		// );
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5660);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5482);
 	})
 }
 
@@ -115,7 +116,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		Origin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some(KSM),
+		Some((KSM, Permill::from_percent(90))),
 		0,
 		0,
 		0,
@@ -160,7 +161,7 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		Origin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some(KSM),
+		Some((KSM, Permill::from_percent(100))),
 		0,
 		0,
 		0,

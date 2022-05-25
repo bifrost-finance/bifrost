@@ -67,6 +67,7 @@ pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFo
 	pub pid: PoolId,
 	pub token: CurrencyIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+	pub coefficient: Permill,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
 	pub gauge_state: GaugeState,
@@ -91,6 +92,7 @@ where
 			pid: Default::default(),
 			token: Default::default(),
 			rewards: BTreeMap::new(),
+			coefficient: Default::default(),
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: Default::default(),
@@ -105,11 +107,17 @@ where
 	CurrencyIdOf: Ord + Default,
 	BlockNumberFor: Clone,
 {
-	pub fn new(pid: PoolId, token: CurrencyIdOf, current_block_number: BlockNumberFor) -> Self {
+	pub fn new(
+		pid: PoolId,
+		token: CurrencyIdOf,
+		coefficient: Permill,
+		current_block_number: BlockNumberFor,
+	) -> Self {
 		Self {
 			pid,
 			token,
 			rewards: BTreeMap::new(),
+			coefficient,
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: current_block_number,
@@ -127,11 +135,13 @@ where
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		gauge_token: CurrencyIdOf<T>,
+		coefficient: Permill,
 	) -> DispatchResult {
 		let gid = Self::gauge_pool_next_id();
 		pool_info.gauge = Some(gid);
 		let current_block_number = frame_system::Pallet::<T>::block_number();
-		let gauge_pool_info = GaugePoolInfo::new(pid, gauge_token, current_block_number);
+		let gauge_pool_info =
+			GaugePoolInfo::new(pid, gauge_token, coefficient, current_block_number);
 
 		GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 		GaugePoolNextId::<T>::mutate(|id| -> DispatchResult {
