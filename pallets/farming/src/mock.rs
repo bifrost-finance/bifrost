@@ -51,7 +51,6 @@ pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
-pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime where
@@ -151,8 +150,8 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 }
 
 ord_parameter_types! {
@@ -162,11 +161,10 @@ ord_parameter_types! {
 impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type TreasuryAccount = TreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type VsbondAccount = BifrostVsbondAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
-	type PalletId = BifrostVsbondAccount;
 }
 
 pub struct ExtBuilder {
