@@ -259,7 +259,9 @@ pub mod pallet {
 									.rewards
 									.entry(*reward_currency_id)
 									.and_modify(|(total_reward, _)| {
-										*total_reward = total_reward.saturating_add(*reward_amount);
+										*total_reward = total_reward.saturating_add(
+											gauge_pool_info.coefficient * *reward_amount,
+										);
 									})
 									.or_insert((*reward_amount, Zero::zero()));
 							},
@@ -286,7 +288,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			gauge_token: Option<CurrencyIdOf<T>>,
+			// gauge_token: Option<CurrencyIdOf<T>>,
+			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
 			// charge_account: AccountIdOf<T>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -314,8 +317,8 @@ pub mod pallet {
 				claim_limit_time,
 			);
 
-			if let Some(gauge) = gauge_token {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge)?;
+			if let Some((gauge_token, coefficient)) = gauge_init {
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient)?;
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);
@@ -510,7 +513,7 @@ pub mod pallet {
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			gauge_token: Option<CurrencyIdOf<T>>,
+			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
 			min_deposit_to_start: Option<BalanceOf<T>>,
 			after_block_to_start: Option<BlockNumberFor<T>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
@@ -532,8 +535,11 @@ pub mod pallet {
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
 			};
-			if let Some(gauge) = gauge_token {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge)?;
+			// if let Some(gauge) = gauge_token {
+			// 	Self::create_gauge_pool(pid, &mut pool_info, gauge)?;
+			// };
+			if let Some((gauge_token, coefficient)) = gauge_init {
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient)?;
 			};
 			PoolInfos::<T>::insert(pid, &pool_info);
 
