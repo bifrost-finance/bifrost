@@ -262,10 +262,6 @@ where
 				latest_claimed_time_factor - gauge_info.claimed_time_factor,
 				gauge_pool_info.total_time_factor,
 			);
-			let interval_block_rate = gauge_rate * (start_block - gauge_info.last_claim_block);
-			// and_modify
-
-			// pool_info.basic_rewards.clone()
 			gauge_pool_info.rewards.iter_mut().try_for_each(
 				|(reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
 					let reward = reward_amount

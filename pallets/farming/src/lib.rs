@@ -288,9 +288,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			// gauge_token: Option<CurrencyIdOf<T>>,
 			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
-			// charge_account: AccountIdOf<T>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
@@ -337,7 +335,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pid: PoolId,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			// rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
@@ -513,16 +510,22 @@ pub mod pallet {
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
+			basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
 			min_deposit_to_start: Option<BalanceOf<T>>,
 			after_block_to_start: Option<BlockNumberFor<T>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
+			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			if let Some(basic_rewards) = basic_rewards {
+				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+					basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+				pool_info.basic_rewards = basic_rewards_map;
+			};
 			if let Some(min_deposit_to_start) = min_deposit_to_start {
 				pool_info.min_deposit_to_start = min_deposit_to_start;
 			};
@@ -535,9 +538,6 @@ pub mod pallet {
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
 			};
-			// if let Some(gauge) = gauge_token {
-			// 	Self::create_gauge_pool(pid, &mut pool_info, gauge)?;
-			// };
 			if let Some((gauge_token, coefficient)) = gauge_init {
 				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient)?;
 			};
@@ -565,27 +565,34 @@ pub mod pallet {
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
-			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			min_deposit_to_start: BalanceOf<T>,
-			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
-			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
-			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+			basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
+			withdraw_limit_time: Option<BlockNumberFor<T>>,
+			claim_limit_time: Option<BlockNumberFor<T>>,
+			gauge_coefficient: Option<Permill>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
-				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
-			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
-
 			let mut pool_info = Self::pool_infos(&pid);
-			pool_info.tokens_proportion = tokens_proportion_map;
-			pool_info.basic_rewards = basic_rewards_map;
-			pool_info.min_deposit_to_start = min_deposit_to_start;
-			pool_info.after_block_to_start = after_block_to_start;
-			pool_info.withdraw_limit_time = withdraw_limit_time;
-			pool_info.claim_limit_time = claim_limit_time;
+			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			if let Some(basic_rewards) = basic_rewards {
+				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+					basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+				pool_info.basic_rewards = basic_rewards_map;
+			};
+			if let Some(withdraw_limit_time) = withdraw_limit_time {
+				pool_info.withdraw_limit_time = withdraw_limit_time;
+			};
+			if let Some(claim_limit_time) = claim_limit_time {
+				pool_info.claim_limit_time = claim_limit_time;
+			};
+			if let Some(coefficient) = gauge_coefficient {
+				GaugePoolInfos::<T>::mutate(
+					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
+					|gauge_pool_info| {
+						gauge_pool_info.coefficient = coefficient;
+					},
+				);
+			};
 			PoolInfos::<T>::insert(pid, &pool_info);
 
 			Self::deposit_event(Event::FarmingPoolEdited { pid });
