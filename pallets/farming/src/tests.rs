@@ -27,7 +27,7 @@ use crate::{mock::*, *};
 #[test]
 fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let (pid, tokens) = init_no_gauge();
+		let (pid, _tokens) = init_no_gauge();
 		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
 		assert_err!(Farming::claim(Origin::signed(ALICE), pid), Error::<Runtime>::InvalidPoolState);
 		System::set_block_number(System::block_number() + 100);
@@ -128,7 +128,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	// let _ = charge_rewards.entry(KSM).or_insert(3000);
 	let charge_rewards = vec![(KSM, 300000)];
 	assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
-	let keeper: AccountId = <Runtime as Config>::PalletId::get().into_sub_account(pid);
+	// let keeper: AccountId = <Runtime as Config>::PalletId::get().into_sub_account(pid);
 	// let starting_token_values: Vec<BalanceOf<Runtime>> = tokens.values().cloned().collect();
 	// let pool_info = PoolInfo::reset(
 	// 	keeper,
