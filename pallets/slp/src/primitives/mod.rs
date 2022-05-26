@@ -107,4 +107,5 @@ pub enum XcmOperation {
 	TransferTo,
 	Chill,
 	Undelegate,
+	CancelLeave,
 }

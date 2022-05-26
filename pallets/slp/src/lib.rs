@@ -205,6 +205,8 @@ pub mod pallet {
 		ValidatorNotBonded,
 		AlreadyRequested,
 		RequestNotExist,
+		AlreadyLeaving,
+		DelegatorNotLeaving,
 	}
 
 	#[pallet::event]

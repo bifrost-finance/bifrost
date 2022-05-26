@@ -210,6 +210,7 @@ impl<T: Config>
 			false,
 			false,
 			false,
+			false,
 			amount,
 			query_id,
 			timeout,
@@ -267,6 +268,7 @@ impl<T: Config>
 			who,
 			Some(&collator),
 			true,
+			false,
 			false,
 			false,
 			false,
@@ -346,6 +348,7 @@ impl<T: Config>
 			false,
 			false,
 			false,
+			false,
 			amount,
 			query_id,
 			timeout,
@@ -362,7 +365,14 @@ impl<T: Config>
 	/// function.
 	fn unbond_all(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// check if the delegator exists.
-		ensure!(DelegatorLedgers::<T>::contains_key(MOVR, who), Error::<T>::DelegatorNotExist);
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if the delegator is in the state of leaving.
+			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
 
 		// Construct xcm message.
 		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleLeaveDelegators);
@@ -381,6 +391,7 @@ impl<T: Config>
 			false,
 			false,
 			true,
+			false,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -475,6 +486,7 @@ impl<T: Config>
 			false,
 			true,
 			false,
+			false,
 			amount,
 			query_id,
 			timeout,
@@ -548,6 +560,7 @@ impl<T: Config>
 			true,
 			false,
 			false,
+			false,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -566,7 +579,46 @@ impl<T: Config>
 		who: &MultiLocation,
 		_targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// first check if the delegator exists.
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if the delegator is in the state of leaving.
+			match ledger.status {
+				OneToManyDelegatorStatus::Leaving(_) => Ok(()),
+				_ => Err(Error::<T>::DelegatorNotLeaving),
+			}?;
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+		// do the cancellation.
+		// Construct xcm message.
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::CancelLeaveDelegators);
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::CancelLeave, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who,
+			None,
+			false,
+			false,
+			false,
+			false,
+			false,
+			true,
+			Zero::zero(),
+			query_id,
+			timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Initiate payout for a certain delegator.
@@ -584,9 +636,9 @@ impl<T: Config>
 		unimplemented!()
 	}
 
-	/// The same as leaving delegator set.
+	/// The same as unbondAll, leaving delegator set.
 	fn chill(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+		Self::unbond_all(&self, who)
 	}
 
 	/// Make token transferred back to Bifrost chain account.
@@ -767,6 +819,7 @@ impl<T: Config> MoonriverAgent<T> {
 		if_revoke: bool,
 		if_cancel: bool,
 		if_leave: bool,
+		if_cancel_leave: bool,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
@@ -778,7 +831,7 @@ impl<T: Config> MoonriverAgent<T> {
 
 		let unlock_time = if if_unlock || if_revoke || if_leave {
 			Self::get_unlocking_round_from_current(if_leave)?
-		} else if if_bond || if_cancel {
+		} else if if_bond || if_cancel || if_cancel_leave {
 			None
 		//liquidize operation
 		} else {
