@@ -152,6 +152,7 @@ pub mod pallet {
 		LastGaugeNotClaim,
 		CanNotClaim,
 		CanNotWithdraw,
+		GaugeMaxBlockOverflow,
 	}
 
 	#[pallet::storage]
@@ -285,7 +286,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
+			gauge_init: Option<(CurrencyIdOf<T>, Permill, BlockNumberFor<T>)>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
@@ -312,8 +313,8 @@ pub mod pallet {
 				claim_limit_time,
 			);
 
-			if let Some((gauge_token, coefficient)) = gauge_init {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient)?;
+			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient, max_block)?;
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);
@@ -512,7 +513,7 @@ pub mod pallet {
 			after_block_to_start: Option<BlockNumberFor<T>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
-			gauge_init: Option<(CurrencyIdOf<T>, Permill)>,
+			gauge_init: Option<(CurrencyIdOf<T>, Permill, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -535,8 +536,8 @@ pub mod pallet {
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
 			};
-			if let Some((gauge_token, coefficient)) = gauge_init {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient)?;
+			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient, max_block)?;
 			};
 			PoolInfos::<T>::insert(pid, &pool_info);
 
@@ -598,7 +599,7 @@ pub mod pallet {
 
 		#[transactional]
 		#[pallet::weight(10000)]
-		pub fn gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
+		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 

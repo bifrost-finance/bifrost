@@ -68,6 +68,7 @@ pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFo
 	pub token: CurrencyIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub coefficient: Permill,
+	pub max_block: BlockNumberFor,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
 	pub gauge_state: GaugeState,
@@ -93,6 +94,7 @@ where
 			token: Default::default(),
 			rewards: BTreeMap::new(),
 			coefficient: Default::default(),
+			max_block: Default::default(),
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: Default::default(),
@@ -111,6 +113,7 @@ where
 		pid: PoolId,
 		token: CurrencyIdOf,
 		coefficient: Permill,
+		max_block: BlockNumberFor,
 		current_block_number: BlockNumberFor,
 	) -> Self {
 		Self {
@@ -118,6 +121,7 @@ where
 			token,
 			rewards: BTreeMap::new(),
 			coefficient,
+			max_block,
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			gauge_last_block: current_block_number,
@@ -136,12 +140,13 @@ where
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		gauge_token: CurrencyIdOf<T>,
 		coefficient: Permill,
+		max_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		let gid = Self::gauge_pool_next_id();
 		pool_info.gauge = Some(gid);
 		let current_block_number = frame_system::Pallet::<T>::block_number();
 		let gauge_pool_info =
-			GaugePoolInfo::new(pid, gauge_token, coefficient, current_block_number);
+			GaugePoolInfo::new(pid, gauge_token, coefficient, max_block, current_block_number);
 
 		GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 		GaugePoolNextId::<T>::mutate(|id| -> DispatchResult {
@@ -171,6 +176,13 @@ where
 						gauge_info.gauge_stop_block >= current_block_number ||
 							gauge_info.gauge_stop_block == Default::default(),
 						Error::<T>::LastGaugeNotClaim
+					);
+
+					ensure!(
+						gauge_pool_info.max_block >=
+							gauge_info.gauge_stop_block - gauge_info.gauge_start_block +
+								gauge_block,
+						Error::<T>::GaugeMaxBlockOverflow
 					);
 
 					let incease_total_time_factor = if gauge_info.gauge_amount.is_zero() {
