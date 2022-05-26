@@ -22,7 +22,10 @@ use super::types::{
 	MoonriverBalancesCall, MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall,
 	MoonriverUtilityCall, MoonriverXtokensCall,
 };
-use crate::primitives::OneToManyLedger;
+use crate::primitives::{
+	OneToManyDelegationAction::{Decrease, Revoke},
+	OneToManyLedger, OneToManyScheduledRequest,
+};
 use codec::{alloc::collections::BTreeMap, Decode, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
@@ -121,8 +124,10 @@ impl<T: Config>
 		// If yes, check if amount is greater than minimum delegation requirement.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
-		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		// Ensure amount is no less than delegation_amount_minimum.
+		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
 
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
 		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
 			ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
@@ -158,12 +163,14 @@ impl<T: Config>
 			// The real bonded amount will be updated by services once the xcm transaction
 			// succeeds.
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
+			let request_briefs_set: BTreeMap<MultiLocation, TimeUnit> = BTreeMap::new();
 			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
 				less_total: Zero::zero(),
 				delegations: empty_delegation_set,
 				requests: vec![],
+				request_briefs: request_briefs_set,
 				status: OneToManyDelegatorStatus::Active,
 			};
 			let movr_ledger =
@@ -217,12 +224,12 @@ impl<T: Config>
 		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
 		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
-		// check if the delegation exists, if not, return error.
+		// check if the delegator exists, if not, return error.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 
-		// check if the delegator exists, if not, return error.
 		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
 		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if the delegation exists, if not, return error.
 			ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
 			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -259,8 +266,69 @@ impl<T: Config>
 	}
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+	fn unbond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		// Check if the amount exceeds the minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+
+		// check if the delegator exists, if not, return error.
+		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if the delegation exists, if not, return error.
+			let old_delegate_amount =
+				ledger.delegations.get(&collator).ok_or(Error::<T>::ValidatorNotBonded)?;
+
+			// check if there is pending request
+			ensure!(!ledger.request_briefs.contains_key(&collator), Error::<T>::AlreadyRequested);
+
+			let delegated_amount_after =
+				old_delegate_amount.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+			ensure!(
+				delegated_amount_after >= mins_maxs.delegation_amount_minimum.into(),
+				Error::<T>::LowerThanMinimum
+			);
+
+			// Ensure the unbond after wont below delegator_bonded_minimum
+			let subtracted_total =
+				ledger.total.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+			ensure!(
+				subtracted_total >= mins_maxs.delegator_bonded_minimum,
+				Error::<T>::LowerThanMinimum
+			);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+
+		// Construct xcm message.
+		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+		let call =
+			MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleDelegatorBondLess(
+				validator_h160_account,
+				amount,
+			));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who, &collator, false, true, false, false, false, amount, query_id, timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
@@ -268,9 +336,89 @@ impl<T: Config>
 		unimplemented!()
 	}
 
-	/// Cancel some unbonding amount.
-	fn rebond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+	/// Cancel pending request
+	fn rebond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if there is pending request
+			ensure!(ledger.request_briefs.contains_key(&collator), Error::<T>::RequestNotExist);
+
+			// get pending request amount.
+			let when_executable;
+			let mut rebond_amount = BalanceOf::<T>::from(0u32);
+			// let request_iter = ledger.requests.iter().ok_or(Error::<T>::Unexpected)?;
+			for OneToManyScheduledRequest::<MultiLocation, BalanceOf<T>> {
+				validator: vali,
+				when_executable: when,
+				action: act,
+			} in ledger.requests.iter()
+			{
+				if *vali == collator {
+					when_executable = when;
+					rebond_amount = match act {
+						Revoke(revoke_balance) => *revoke_balance,
+						Decrease(decrease_balance) => *decrease_balance,
+					};
+
+					break;
+				}
+			}
+
+			// check if the pending request amount plus active amount greater than delegator minimum
+			// request.
+			let active =
+				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
+			let rebond_after_amount =
+				active.checked_add(&rebond_amount).ok_or(Error::<T>::OverFlow)?;
+
+			// ensure the rebond after amount meet the delegator bond requirement.
+			ensure!(
+				rebond_after_amount >= mins_maxs.delegator_bonded_minimum,
+				Error::<T>::LowerThanMinimum
+			);
+
+			// ensure the rebond after amount meet the basic delegation requirement.
+			let old_delegate_amount =
+				ledger.delegations.get(&collator).ok_or(Error::<T>::ValidatorNotBonded)?;
+			let new_delegation_amount =
+				old_delegate_amount.checked_add(&rebond_amount).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				new_delegation_amount >= mins_maxs.delegation_amount_minimum.into(),
+				Error::<T>::LowerThanMinimum
+			);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+
+		// Construct xcm message.
+		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::CancelDelegationRequest(
+			validator_h160_account,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Rebond, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who, &collator, false, false, false, true, false, amount, query_id, timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Delegate to some validators. For Moonriver, it equals function Nominate.
@@ -596,7 +744,6 @@ impl<T: Config>
 				},
 			},
 		])
-		// }
 	}
 
 	fn construct_xcm_message_without_query_id(

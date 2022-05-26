@@ -206,7 +206,12 @@ impl<T: Config>
 	}
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn unbond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
@@ -282,7 +287,12 @@ impl<T: Config>
 	}
 
 	/// Cancel some unbonding amount.
-	fn rebond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn rebond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 

@@ -76,6 +76,9 @@ pub struct MinimumsMaximums<Balance> {
 	/// The maximum number of delegators for a validator to reward.
 	#[codec(compact)]
 	pub validators_reward_maximum: u32,
+	/// The minimum amount for a delegation.
+	#[codec(compact)]
+	pub delegation_amount_minimum: u32,
 }
 
 /// Different delay params for different chain

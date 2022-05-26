@@ -203,6 +203,8 @@ pub mod pallet {
 		ValidatorNotProvided,
 		Unsupported,
 		ValidatorNotBonded,
+		AlreadyRequested,
+		RequestNotExist,
 	}
 
 	#[pallet::event]
@@ -240,6 +242,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
@@ -256,6 +259,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		Delegated {
 			currency_id: CurrencyId,
@@ -679,13 +683,14 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
+			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(&who, amount)?;
+			let query_id = staking_agent.unbond(&who, amount, &validator)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -695,6 +700,7 @@ pub mod pallet {
 				unbond_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -731,13 +737,14 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
+			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(&who, amount)?;
+			let query_id = staking_agent.rebond(&who, amount, &validator)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -747,6 +754,7 @@ pub mod pallet {
 				rebond_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}

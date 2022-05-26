@@ -29,7 +29,10 @@ pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
 	pub delegations: BTreeMap<ValidatorId, Balance>,
 	pub total: Balance,
 	pub less_total: Balance,
-	pub requests: Vec<OneToManyScheduledRequest<DelegatorId, Balance>>,
+	// request details.
+	pub requests: Vec<OneToManyScheduledRequest<ValidatorId, Balance>>,
+	// fast check if request exists
+	pub request_briefs: BTreeMap<ValidatorId, TimeUnit>,
 	pub status: OneToManyDelegatorStatus,
 }
 
@@ -46,8 +49,8 @@ pub struct OneToManyBond<ValidatorId, Balance> {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
-pub struct OneToManyScheduledRequest<DelegatorId, Balance> {
-	pub delegator: DelegatorId,
+pub struct OneToManyScheduledRequest<ValidatorId, Balance> {
+	pub validator: ValidatorId,
 	pub when_executable: TimeUnit,
 	pub action: OneToManyDelegationAction<Balance>,
 }
