@@ -106,4 +106,5 @@ pub enum XcmOperation {
 	TransferBack,
 	TransferTo,
 	Chill,
+	Undelegate,
 }

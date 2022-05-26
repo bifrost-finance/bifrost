@@ -203,7 +203,16 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, &collator, true, false, false, false, false, amount, query_id, timeout,
+			who,
+			Some(&collator),
+			true,
+			false,
+			false,
+			false,
+			false,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -255,7 +264,16 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, &collator, true, false, false, false, false, amount, query_id, timeout,
+			who,
+			Some(&collator),
+			true,
+			false,
+			false,
+			false,
+			false,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -321,7 +339,16 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, &collator, false, true, false, false, false, amount, query_id, timeout,
+			who,
+			Some(&collator),
+			false,
+			true,
+			false,
+			false,
+			false,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -331,9 +358,39 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Unbonding all amount of a delegator. Equivalent to leave delegator set.
+	/// Unbonding all amount of a delegator. Equivalent to leave delegator set. The same as Chill
+	/// function.
 	fn unbond_all(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+		// check if the delegator exists.
+		ensure!(DelegatorLedgers::<T>::contains_key(MOVR, who), Error::<T>::DelegatorNotExist);
+
+		// Construct xcm message.
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleLeaveDelegators);
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Chill, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who,
+			None,
+			false,
+			false,
+			false,
+			false,
+			true,
+			Zero::zero(),
+			query_id,
+			timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Cancel pending request
@@ -411,7 +468,16 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, &collator, false, false, false, true, false, amount, query_id, timeout,
+			who,
+			Some(&collator),
+			false,
+			false,
+			false,
+			true,
+			false,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -476,7 +542,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			&validator,
+			Some(validator),
 			false,
 			false,
 			true,
@@ -494,11 +560,11 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Re-delegate existing delegation to a new validator set.
+	/// Cancel leave delegator set.
 	fn redelegate(
 		&self,
 		who: &MultiLocation,
-		targets: &Vec<MultiLocation>,
+		_targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -518,9 +584,7 @@ impl<T: Config>
 		unimplemented!()
 	}
 
-	/// Chill self. Cancel the identity of delegator in the Relay chain side.
-	/// Unbonding all the active amount should be done before or after chill,
-	/// so that we can collect back all the bonded amount.
+	/// The same as leaving delegator set.
 	fn chill(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		unimplemented!()
 	}
@@ -697,7 +761,7 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
-		validator: &MultiLocation,
+		validator: Option<&MultiLocation>,
 		if_bond: bool,
 		if_unlock: bool,
 		if_revoke: bool,
@@ -721,10 +785,11 @@ impl<T: Config> MoonriverAgent<T> {
 			T::VtokenMinting::get_ongoing_time_unit(MOVR)
 		};
 
+		let collator = validator.ok_or(Error::<T>::Unexpected)?;
 		let entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: who.clone(),
-			validator_id: validator.clone(),
+			validator_id: collator.clone(),
 			if_bond,
 			if_unlock,
 			if_revoke,
