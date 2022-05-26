@@ -163,7 +163,7 @@ impl<T: Config>
 			// The real bonded amount will be updated by services once the xcm transaction
 			// succeeds.
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
-			let request_briefs_set: BTreeMap<MultiLocation, TimeUnit> = BTreeMap::new();
+			let request_briefs_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
 			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
@@ -331,7 +331,7 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
+	/// Unbonding all amount of a delegator. Equivalent to leave delegator set.
 	fn unbond_all(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		unimplemented!()
 	}
@@ -430,13 +430,68 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// Remove delegation relationship with some validators.
+	/// Revoke a delegation relationship. Only deal with the first validator in the vec.
 	fn undelegate(
 		&self,
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+		let validator = targets.first().ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		// First, check if the delegator exists.
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// Second, check the validators one by one to see if all exist.
+			ensure!(ledger.delegations.contains_key(validator), Error::<T>::ValidatorNotBonded);
+			ensure!(!ledger.request_briefs.contains_key(validator), Error::<T>::AlreadyRequested);
+			let unbond_amount = ledger.delegations.get(&validator).ok_or(Error::<T>::OverFlow)?;
+
+			// Check after undelegating all these validators, if the delegator still meets the
+			// requirement.
+			let active =
+				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
+			let unbond_after_amount =
+				active.checked_sub(&unbond_amount).ok_or(Error::<T>::UnderFlow)?;
+			ensure!(
+				unbond_after_amount >= mins_maxs.delegator_bonded_minimum,
+				Error::<T>::LowerThanMinimum
+			);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+
+		// Do the undelegating work.
+		// Construct xcm message.
+		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&validator)?;
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleRevokeDelegation(
+			validator_h160_account,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Undelegate, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who,
+			&validator,
+			false,
+			false,
+			true,
+			false,
+			false,
+			Zero::zero(),
+			query_id,
+			timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Re-delegate existing delegation to a new validator set.
@@ -445,7 +500,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Initiate payout for a certain delegator.
@@ -455,7 +510,7 @@ impl<T: Config>
 		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 	) -> Result<(), Error<T>> {
-		unimplemented!()
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Withdraw the due payout into free balance.
