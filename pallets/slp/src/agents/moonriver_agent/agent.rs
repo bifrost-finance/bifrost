@@ -134,8 +134,17 @@ impl<T: Config>
 			);
 
 			// check if the delegator-validator delegation exists.
-			// if exists, return error. If not, continue.
 			ensure!(!ledger.delegations.contains_key(&collator), Error::<T>::AlreadyBonded);
+
+			// check if it will exceeds the delegation limit of the delegator.
+			let new_deleagtions_count =
+				ledger.delegations.len().checked_add(1).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				(new_deleagtions_count as u32) <= mins_maxs.validators_back_maximum,
+				Error::<T>::GreaterThanMaximum
+			);
+
+		// check if it will exceeds the delegation limit of the validator.
 		} else {
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
@@ -191,14 +200,62 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
 
 	/// Bond extra amount for a existing delegation.
-	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+	fn bond_extra(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		// Check if the amount exceeds the minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+
+		// check if the delegation exists, if not, return error.
+		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		// check if the delegator exists, if not, return error.
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
+			// Ensure the bond after wont exceed delegator_active_staking_maximum
+			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				add_total <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+		// bond extra amount to the existing delegation.
+		// Construct xcm message..
+		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::DelegatorBondMore(
+			validator_h160_account,
+			amount,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::BondExtra, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who, &collator, true, false, false, false, false, amount, query_id, timeout,
+		)?;
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Decrease bonding amount to a delegator.
@@ -222,7 +279,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
-		Error::<T>::Unsupported
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Remove delegation relationship with some validators.
@@ -377,13 +434,17 @@ impl<T: Config>
 
 /// Internal functions.
 impl<T: Config> MoonriverAgent<T> {
+	fn get_moonriver_para_multilocation() -> MultiLocation {
+		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(2023)) }
+	}
+
 	fn construct_xcm_as_subaccount_with_query_id(
 		operation: XcmOperation,
 		call: MoonriverCall<T>,
 		who: &MultiLocation,
 	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
-		let responder = MultiLocation { parents: 1, interior: X1(Parachain(2023)) };
+		let responder = Self::get_moonriver_para_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);

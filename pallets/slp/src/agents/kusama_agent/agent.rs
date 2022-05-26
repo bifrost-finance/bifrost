@@ -160,7 +160,12 @@ impl<T: Config>
 	}
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn bond_extra(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 

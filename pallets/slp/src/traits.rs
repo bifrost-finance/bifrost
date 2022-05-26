@@ -47,7 +47,12 @@ pub trait StakingAgent<
 	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond_extra(
+		&self,
+		who: &DelegatorId,
+		amount: Balance,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
 	fn unbond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
