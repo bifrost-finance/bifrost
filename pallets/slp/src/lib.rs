@@ -207,6 +207,8 @@ pub mod pallet {
 		RequestNotExist,
 		AlreadyLeaving,
 		DelegatorNotLeaving,
+		RequestNotDue,
+		LeavingNotDue,
 	}
 
 	#[pallet::event]
@@ -875,12 +877,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 			when: Option<TimeUnit>,
+			validator: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(&who, &when)?;
+			let query_id = staking_agent.liquidize(&who, &when, &validator)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.

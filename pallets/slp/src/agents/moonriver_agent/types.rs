@@ -27,7 +27,7 @@ use xcm::VersionedMultiLocation;
 
 use crate::{BalanceOf, Config};
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverCall<T: Config> {
 	#[codec(index = 0)]
 	System(SystemCall),
@@ -41,7 +41,7 @@ pub enum MoonriverCall<T: Config> {
 	Xtokens(MoonriverXtokensCall<T>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverBalancesCall<T: Config> {
 	#[codec(index = 3)]
 	TransferKeepAlive(
@@ -50,7 +50,7 @@ pub enum MoonriverBalancesCall<T: Config> {
 	),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverUtilityCall<MoonriverCall> {
 	#[codec(index = 1)]
 	AsDerivative(u16, Box<MoonriverCall>),
@@ -58,7 +58,7 @@ pub enum MoonriverUtilityCall<MoonriverCall> {
 	BatchAll(Box<Vec<Box<MoonriverCall>>>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverParachainStakingCall<T: Config> {
 	#[codec(index = 17)]
 	Delegate(H160, #[codec(compact)] BalanceOf<T>, u32, u32),
@@ -80,7 +80,7 @@ pub enum MoonriverParachainStakingCall<T: Config> {
 	CancelDelegationRequest(H160),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverXtokensCall<T: Config> {
 	#[codec(index = 0)]
 	Transfer(

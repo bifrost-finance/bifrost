@@ -32,7 +32,7 @@ pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
 	// request details.
 	pub requests: Vec<OneToManyScheduledRequest<ValidatorId, Balance>>,
 	// fast check if request exists
-	pub request_briefs: BTreeMap<ValidatorId, Balance>,
+	pub request_briefs: BTreeMap<ValidatorId, (TimeUnit, Balance)>,
 	pub status: OneToManyDelegatorStatus,
 }
 

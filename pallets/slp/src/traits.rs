@@ -91,7 +91,12 @@ pub trait StakingAgent<
 	) -> Result<(), Error>;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: &DelegatorId, when: &Option<TimeUnit>) -> Result<QueryId, Error>;
+	fn liquidize(
+		&self,
+		who: &DelegatorId,
+		when: &Option<TimeUnit>,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
 	fn chill(&self, who: &DelegatorId) -> Result<QueryId, Error>;

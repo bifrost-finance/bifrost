@@ -480,7 +480,12 @@ impl<T: Config>
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
+	fn liquidize(
+		&self,
+		who: &MultiLocation,
+		when: &Option<TimeUnit>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(KSM, who),

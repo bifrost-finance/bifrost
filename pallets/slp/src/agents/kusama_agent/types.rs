@@ -39,19 +39,19 @@ pub enum KusamaCall<T: Config> {
 	Xcm(Box<XcmCall>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum SystemCall {
 	#[codec(index = 8)]
 	RemarkWithEvent(Box<Vec<u8>>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum BalancesCall<T: Config> {
 	#[codec(index = 3)]
 	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum UtilityCall<KusamaCall> {
 	#[codec(index = 1)]
 	AsDerivative(u16, Box<KusamaCall>),
@@ -59,7 +59,7 @@ pub enum UtilityCall<KusamaCall> {
 	BatchAll(Box<Vec<Box<KusamaCall>>>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum StakingCall<T: Config> {
 	/// Kusama has the same account Id type as Bifrost.
 	#[codec(index = 0)]
@@ -84,7 +84,7 @@ pub enum StakingCall<T: Config> {
 	Rebond(#[codec(compact)] BalanceOf<T>),
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum XcmCall {
 	#[codec(index = 2)]
 	ReserveTransferAssets(

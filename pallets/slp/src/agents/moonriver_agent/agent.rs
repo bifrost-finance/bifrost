@@ -127,6 +127,13 @@ impl<T: Config>
 		// Ensure amount is no less than delegation_amount_minimum.
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
 
+		// check if the validator is in the white list.
+		let multi_hash = T::Hashing::hash(&collator.encode());
+		let validator_list = Validators::<T>::get(MOVR).ok_or(Error::<T>::ValidatorSetNotExist)?;
+		validator_list
+			.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
+			.map_err(|_| Error::<T>::ValidatorSetNotExist)?;
+
 		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
 		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
 			ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
@@ -163,7 +170,8 @@ impl<T: Config>
 			// The real bonded amount will be updated by services once the xcm transaction
 			// succeeds.
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
-			let request_briefs_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
+			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
+				BTreeMap::new();
 			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
@@ -206,6 +214,7 @@ impl<T: Config>
 			who,
 			Some(&collator),
 			true,
+			false,
 			false,
 			false,
 			false,
@@ -268,6 +277,7 @@ impl<T: Config>
 			who,
 			Some(&collator),
 			true,
+			false,
 			false,
 			false,
 			false,
@@ -349,6 +359,7 @@ impl<T: Config>
 			false,
 			false,
 			false,
+			false,
 			amount,
 			query_id,
 			timeout,
@@ -391,6 +402,7 @@ impl<T: Config>
 			false,
 			false,
 			true,
+			false,
 			false,
 			Zero::zero(),
 			query_id,
@@ -487,6 +499,7 @@ impl<T: Config>
 			true,
 			false,
 			false,
+			false,
 			amount,
 			query_id,
 			timeout,
@@ -561,6 +574,7 @@ impl<T: Config>
 			false,
 			false,
 			false,
+			false,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -609,6 +623,7 @@ impl<T: Config>
 			false,
 			false,
 			true,
+			false,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -632,8 +647,111 @@ impl<T: Config>
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
-		unimplemented!()
+	fn liquidize(
+		&self,
+		who: &MultiLocation,
+		when: &Option<TimeUnit>,
+		validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		// Check if it is in the delegator set.
+		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let mut leaving = false;
+		let now =
+			T::VtokenMinting::get_ongoing_time_unit(MOVR).ok_or(Error::<T>::TimeUnitNotExist)?;
+		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
+
+		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
+		let mut due_amount = Zero::zero();
+		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+			// check if the delegator is in the state of leaving. If yes, execute leaving.
+			if let OneToManyDelegatorStatus::Leaving(leaving_time) = ledger.status {
+				ensure!(now >= leaving_time, Error::<T>::LeavingNotDue);
+				leaving = true;
+			} else {
+				// check if the validator has a delegation request.
+				ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
+				// check whether the request is already due.
+				let request_info =
+					ledger.request_briefs.get(&collator).ok_or(Error::<T>::RequestNotExist)?;
+				let due_time = &request_info.0;
+				due_amount = request_info.1;
+				ensure!(now >= due_time.clone(), Error::<T>::RequestNotDue);
+			}
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+
+		// Construct xcm message.
+		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
+		let call;
+		if leaving {
+			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteLeaveDelegators(
+				delegator_h160_account,
+				mins_maxs.validators_back_maximum,
+			));
+
+			let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+				XcmOperation::Liquidize,
+				call.clone(),
+				who,
+			)?;
+		} else {
+			let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteDelegationRequest(
+				delegator_h160_account,
+				validator_h160_account,
+			));
+
+			let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+				XcmOperation::Liquidize,
+				call.clone(),
+				who,
+			)?;
+		}
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Liquidize, call, who)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		if leaving {
+			Self::insert_delegator_ledger_update_entry(
+				who,
+				Some(&collator),
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				true,
+				Zero::zero(),
+				query_id,
+				timeout,
+			)?;
+		} else {
+			Self::insert_delegator_ledger_update_entry(
+				who,
+				Some(&collator),
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				due_amount,
+				query_id,
+				timeout,
+			)?;
+		}
+
+		// Send out the xcm message.
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// The same as unbondAll, leaving delegator set.
@@ -820,6 +938,7 @@ impl<T: Config> MoonriverAgent<T> {
 		if_cancel: bool,
 		if_leave: bool,
 		if_cancel_leave: bool,
+		if_execute_leave: bool,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
@@ -829,7 +948,7 @@ impl<T: Config> MoonriverAgent<T> {
 		// First to see if the delegation relationship exist.
 		// If not, create one. If yes,
 
-		let unlock_time = if if_unlock || if_revoke || if_leave {
+		let unlock_time = if if_unlock || if_revoke || if_leave || if_execute_leave {
 			Self::get_unlocking_round_from_current(if_leave)?
 		} else if if_bond || if_cancel || if_cancel_leave {
 			None
