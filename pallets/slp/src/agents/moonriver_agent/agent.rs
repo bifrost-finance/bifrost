@@ -895,12 +895,63 @@ impl<T: Config>
 
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		let multi_hash = T::Hashing::hash(&who.encode());
+		// Check if the validator already exists.
+		let validators_set = Validators::<T>::get(MOVR);
+		if validators_set.is_none() {
+			Validators::<T>::insert(MOVR, vec![(who, multi_hash)]);
+		} else {
+			// Change corresponding storage.
+			Validators::<T>::mutate(MOVR, |validator_vec| -> Result<(), Error<T>> {
+				if let Some(ref mut validator_list) = validator_vec {
+					let rs =
+						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+
+					if let Err(index) = rs {
+						validator_list.insert(index, (who.clone(), multi_hash));
+					} else {
+						Err(Error::<T>::AlreadyExist)?
+					}
+				}
+				Ok(())
+			})?;
+		}
+
+		Ok(())
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		// Check if the validator already exists.
+		let validators_set = Validators::<T>::get(MOVR).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+		let multi_hash = T::Hashing::hash(&who.encode());
+		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
+
+		// Check all the delegators' delegations, to see whether this specific validator is in use.
+		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(MOVR) {
+			if let Ledger::Moonriver(moonriver_ledger) = ledger {
+				ensure!(
+					moonriver_ledger.delegations.contains_key(who),
+					Error::<T>::ValidatorStillInUse
+				);
+			} else {
+				Err(Error::<T>::ProblematicLedger)?;
+			}
+		}
+
+		// Update corresponding storage.
+		Validators::<T>::mutate(MOVR, |validator_vec| {
+			if let Some(ref mut validator_list) = validator_vec {
+				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+
+				if let Ok(index) = rs {
+					validator_list.remove(index);
+				}
+			}
+		});
+
+		Ok(())
 	}
 
 	/// Charge hosting fee.

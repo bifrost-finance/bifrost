@@ -209,6 +209,7 @@ pub mod pallet {
 		DelegatorNotLeaving,
 		RequestNotDue,
 		LeavingNotDue,
+		DelegatorSetNotExist,
 	}
 
 	#[pallet::event]
