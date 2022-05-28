@@ -840,7 +840,16 @@ impl<T: Config>
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
-		unimplemented!()
+		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
+
+		// Check whether "who" is an existing delegator.
+		ensure!(DelegatorLedgers::<T>::contains_key(MOVR, who), Error::<T>::DelegatorNotBonded);
+
+		// Tune the vtoken exchange rate.
+		T::VtokenMinting::increase_token_pool(MOVR, token_amount)
+			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+
+		Ok(())
 	}
 
 	/// Add a new serving delegator for a particular currency.
@@ -880,7 +889,29 @@ impl<T: Config>
 		_from: &MultiLocation,
 		to: &MultiLocation,
 	) -> DispatchResult {
-		unimplemented!()
+		// Get current VKSM/KSM exchange rate.
+		let vtoken_issuance =
+			T::MultiCurrency::total_issuance(CurrencyId::VToken(TokenSymbol::MOVR));
+		let token_pool = T::VtokenMinting::get_token_pool(MOVR);
+		// Calculate how much vksm the beneficiary account can get.
+		let amount: u128 = amount.unique_saturated_into();
+		let vtoken_issuance: u128 = vtoken_issuance.unique_saturated_into();
+		let token_pool: u128 = token_pool.unique_saturated_into();
+		let can_get_vtoken = U256::from(amount)
+			.checked_mul(U256::from(vtoken_issuance))
+			.and_then(|n| n.checked_div(U256::from(token_pool)))
+			.and_then(|n| TryInto::<u128>::try_into(n).ok())
+			.unwrap_or_else(Zero::zero);
+
+		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
+		// Issue corresponding vksm to beneficiary account.
+		T::MultiCurrency::deposit(
+			CurrencyId::VToken(TokenSymbol::MOVR),
+			&beneficiary,
+			BalanceOf::<T>::unique_saturated_from(can_get_vtoken),
+		)?;
+
+		Ok(())
 	}
 
 	/// Deposit some amount as fee to nominator accounts.
