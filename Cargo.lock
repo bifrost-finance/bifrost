@@ -1013,6 +1013,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-interface",
 ]
 
 [[package]]

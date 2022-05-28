@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use core::marker::PhantomData;
+use xcm_interface::traits::parachains;
 
 use super::types::{
 	MoonriverBalancesCall, MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall,
@@ -57,9 +58,9 @@ use crate::{
 	agents::SystemCall,
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, MoonriverLedgerUpdateEntry, OneToManyBond, OneToManyDelegatorStatus,
-		SubstrateLedger, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, MOVR,
+		Ledger, MoonriverLedgerUpdateEntry, OneToManyDelegatorStatus, SubstrateLedger,
+		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
+		XcmOperation, MOVR,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
@@ -766,7 +767,47 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
-		unimplemented!()
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(MOVR, from).ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+
+		// Prepare parameter dest and beneficiary.
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
+		let dest = Box::new(VersionedMultiLocation::from(MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(T::ParachainId::get().into()),
+				AccountId32 { network: Any, id: to_32 },
+			),
+		}));
+
+		let (weight, _) = XcmDestWeightAndFee::<T>::get(MOVR, XcmOperation::XtokensTransferBack)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// Construct xcm message.
+		let call = MoonriverCall::Xtokens(MoonriverXtokensCall::Transfer(
+			MoonriverCurrencyId::SelfReserve,
+			amount.unique_saturated_into(),
+			dest,
+			weight,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperation::TransferBack,
+			call,
+			from,
+		)?;
+
+		Ok(())
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
@@ -872,7 +913,11 @@ impl<T: Config>
 /// Internal functions.
 impl<T: Config> MoonriverAgent<T> {
 	fn get_moonriver_para_multilocation() -> MultiLocation {
-		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(2023)) }
+		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::moonriver::ID)) }
+	}
+
+	fn get_movr_local_multilocation() -> MultiLocation {
+		MultiLocation { parents: 0, interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)) }
 	}
 
 	fn construct_xcm_as_subaccount_with_query_id(
@@ -895,6 +940,23 @@ impl<T: Config> MoonriverAgent<T> {
 			Self::construct_xcm_message_with_query_id(call_as_subaccount, fee, weight, query_id);
 
 		Ok((query_id, timeout, xcm_message))
+	}
+
+	fn construct_xcm_and_send_as_subaccount_without_query_id(
+		operation: XcmOperation,
+		call: MoonriverCall<T>,
+		who: &MultiLocation,
+	) -> Result<(), Error<T>> {
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params_without_query_id(operation, call, who)?;
+
+		let xcm_message =
+			Self::construct_xcm_message_without_query_id(call_as_subaccount, fee, weight);
+
+		let dest = Self::get_moonriver_para_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(())
 	}
 
 	fn prepare_send_as_subaccount_call_params_with_query_id(
@@ -922,6 +984,25 @@ impl<T: Config> MoonriverAgent<T> {
 				sub_account_index,
 				Box::new(call_batched_with_remark),
 			)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(MOVR, operation)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		Ok((call_as_subaccount, fee, weight))
+	}
+
+	fn prepare_send_as_subaccount_call_params_without_query_id(
+		operation: XcmOperation,
+		call: MoonriverCall<T>,
+		who: &MultiLocation,
+	) -> Result<(MoonriverCall<T>, BalanceOf<T>, Weight), Error<T>> {
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(MOVR, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		let call_as_subaccount = MoonriverCall::Utility(Box::new(
+			MoonriverUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
+		));
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(MOVR, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
@@ -1014,7 +1095,7 @@ impl<T: Config>
 		_query_id: QueryId,
 	) -> Xcm<()> {
 		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
+			id: Concrete(Self::get_movr_local_multilocation()),
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
@@ -1043,6 +1124,28 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
 	) -> Xcm<()> {
-		unimplemented!()
+		let asset = MultiAsset {
+			id: Concrete(Self::get_movr_local_multilocation()),
+			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
+		};
+
+		Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: call.encode().into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(Parachain(T::ParachainId::get().into())),
+				},
+			},
+		])
 	}
 }

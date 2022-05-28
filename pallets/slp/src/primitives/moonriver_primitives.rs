@@ -42,12 +42,6 @@ pub enum OneToManyDelegatorStatus {
 	Leaving(TimeUnit),
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
-pub struct OneToManyBond<ValidatorId, Balance> {
-	pub owner: ValidatorId,
-	pub amount: Balance,
-}
-
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
 pub struct OneToManyScheduledRequest<ValidatorId, Balance> {
 	pub validator: ValidatorId,

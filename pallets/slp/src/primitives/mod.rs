@@ -108,4 +108,5 @@ pub enum XcmOperation {
 	Chill,
 	Undelegate,
 	CancelLeave,
+	XtokensTransferBack,
 }
