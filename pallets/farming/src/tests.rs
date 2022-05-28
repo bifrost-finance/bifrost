@@ -78,6 +78,14 @@ fn deposit() {
 }
 
 #[test]
+fn withdraw() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, tokens) = init_no_gauge();
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+	})
+}
+
+#[test]
 fn gauge() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, tokens) = init_gauge();
@@ -122,6 +130,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		0,
 		0,
 		0,
+		5
 	));
 
 	let pid = 0;
@@ -165,8 +174,9 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		Some((KSM, Permill::from_percent(100), 1000)),
 		0,
 		0,
+		10,
 		0,
-		0,
+		5
 	));
 
 	let pid = 0;

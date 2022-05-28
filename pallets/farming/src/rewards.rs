@@ -19,6 +19,8 @@
 // #![allow(clippy::unused_unit)]
 // #![cfg_attr(not(feature = "std"), no_std)]
 
+use core::default;
+
 // mod mock;
 // mod tests;
 use codec::HasCompact;
@@ -40,6 +42,7 @@ pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor, A
 	pub withdrawn_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub withdraw_last_block: BlockNumberFor,
 	pub claim_last_block: BlockNumberFor,
+	pub withdraw_list: Vec<(BlockNumberFor, BalanceOf)>,
 }
 
 impl<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf> Default
@@ -56,6 +59,7 @@ where
 			withdrawn_rewards: BTreeMap::new(),
 			withdraw_last_block: Default::default(),
 			claim_last_block: Default::default(),
+			withdraw_list: Default::default(),
 		}
 	}
 }
@@ -79,6 +83,7 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub after_block_to_start: BlockNumberFor,
 	pub withdraw_limit_time: BlockNumberFor,
 	pub claim_limit_time: BlockNumberFor,
+	pub withdraw_limit_count: u8,
 }
 
 impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor> Default
@@ -102,6 +107,7 @@ where
 			after_block_to_start: Default::default(),
 			withdraw_limit_time: Default::default(),
 			claim_limit_time: Default::default(),
+			withdraw_limit_count: Default::default(),
 		}
 	}
 }
@@ -121,6 +127,7 @@ where
 		after_block_to_start: BlockNumberFor,
 		withdraw_limit_time: BlockNumberFor,
 		claim_limit_time: BlockNumberFor,
+		withdraw_limit_count: u8,
 	) -> Self {
 		Self {
 			tokens_proportion,
@@ -135,6 +142,7 @@ where
 			after_block_to_start,
 			withdraw_limit_time,
 			claim_limit_time,
+			withdraw_limit_count,
 		}
 	}
 
@@ -148,6 +156,7 @@ where
 		after_block_to_start: BlockNumberFor,
 		withdraw_limit_time: BlockNumberFor,
 		claim_limit_time: BlockNumberFor,
+		withdraw_limit_count: u8,
 	) -> Self {
 		Self {
 			tokens_proportion,
@@ -162,6 +171,7 @@ where
 			after_block_to_start,
 			withdraw_limit_time,
 			claim_limit_time,
+			withdraw_limit_count,
 		}
 	}
 }
@@ -296,23 +306,33 @@ impl<T: Config> Pallet<T> {
 									current_block_number,
 								Error::<T>::CanNotWithdraw
 							);
-							let tokens_proportion_values: Vec<Permill> =
-								pool_info.tokens_proportion.values().cloned().collect();
-							let native_amount = tokens_proportion_values[0]
-								.saturating_reciprocal_mul(remove_amount);
-							pool_info.tokens_proportion.iter().try_for_each(
-								|(token, proportion)| -> DispatchResult {
-									if let Some(ref keeper) = pool_info.keeper {
-										T::MultiCurrency::transfer(
-											*token,
-											&keeper,
-											who,
-											*proportion * native_amount,
-										)?
-									};
-									Ok(())
-								},
-							)?;
+
+							ensure!(
+								share_info.withdraw_list.len() <
+									pool_info.withdraw_limit_count.into(),
+								Error::<T>::WithdrawLimitCountExceeded
+							);
+							share_info.withdraw_list.push((
+								current_block_number + pool_info.withdraw_limit_time,
+								remove_amount,
+							));
+							// let tokens_proportion_values: Vec<Permill> =
+							// 	pool_info.tokens_proportion.values().cloned().collect();
+							// let native_amount = tokens_proportion_values[0]
+							// 	.saturating_reciprocal_mul(remove_amount);
+							// pool_info.tokens_proportion.iter().try_for_each(
+							// 	|(token, proportion)| -> DispatchResult {
+							// 		if let Some(ref keeper) = pool_info.keeper {
+							// 			T::MultiCurrency::transfer(
+							// 				*token,
+							// 				&keeper,
+							// 				who,
+							// 				*proportion * native_amount,
+							// 			)?
+							// 		};
+							// 		Ok(())
+							// 	},
+							// )?;
 
 							let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
@@ -402,6 +422,37 @@ impl<T: Config> Pallet<T> {
 								current_block_number,
 							Error::<T>::CanNotClaim
 						);
+
+						// process withraw_list
+						let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
+						let tokens_proportion_values: Vec<Permill> =
+							pool_info.tokens_proportion.values().cloned().collect();
+						share_info.withdraw_list.iter().try_for_each(
+							|(dest_block, remove_value)| -> DispatchResult {
+								if *dest_block < current_block_number {
+									let native_amount = tokens_proportion_values[0]
+										.saturating_reciprocal_mul(*remove_value);
+									pool_info.tokens_proportion.iter().try_for_each(
+										|(token, &proportion)| -> DispatchResult {
+											if let Some(ref keeper) = pool_info.keeper {
+												T::MultiCurrency::transfer(
+													*token,
+													&keeper,
+													who,
+													proportion * native_amount,
+												)?
+											};
+											Ok(())
+										},
+									);
+								} else {
+									tmp.push((*dest_block, *remove_value));
+								};
+								Ok(())
+							},
+						);
+						share_info.withdraw_list = tmp;
+
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 						pool_info.rewards.iter_mut().try_for_each(
@@ -439,8 +490,6 @@ impl<T: Config> Pallet<T> {
 								);
 
 								// pay reward to `who`
-								// T::Handler::payout(who, pool, *reward_currency,
-								// reward_to_withdraw);
 								if let Some(ref keeper) = pool_info.keeper {
 									T::MultiCurrency::transfer(
 										*reward_currency,

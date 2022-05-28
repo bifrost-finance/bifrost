@@ -153,6 +153,7 @@ pub mod pallet {
 		CanNotClaim,
 		CanNotWithdraw,
 		GaugeMaxBlockOverflow,
+		WithdrawLimitCountExceeded,
 	}
 
 	#[pallet::storage]
@@ -291,6 +292,7 @@ pub mod pallet {
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
 			#[pallet::compact] claim_limit_time: BlockNumberFor<T>,
+			withdraw_limit_count: u8,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -311,6 +313,7 @@ pub mod pallet {
 				after_block_to_start,
 				withdraw_limit_time,
 				claim_limit_time,
+				withdraw_limit_count,
 			);
 
 			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
@@ -513,6 +516,7 @@ pub mod pallet {
 			after_block_to_start: Option<BlockNumberFor<T>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
+			withdraw_limit_count: Option<u8>,
 			gauge_init: Option<(CurrencyIdOf<T>, Permill, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -535,6 +539,9 @@ pub mod pallet {
 			};
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
+			};
+			if let Some(withdraw_limit_count) = withdraw_limit_count {
+				pool_info.withdraw_limit_count = withdraw_limit_count;
 			};
 			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
 				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient, max_block)?;
