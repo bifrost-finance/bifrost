@@ -869,7 +869,28 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		// Check if the delegator exists.
+		let index = DelegatorsMultilocation2Index::<T>::get(MOVR, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Get the delegator ledger
+		let ledger = DelegatorLedgers::<T>::get(MOVR, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		let total = if let Ledger::Moonriver(moonriver_ledger) = ledger {
+			moonriver_ledger.total
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
+
+		// Check if ledger total amount is zero. If not, return error.
+		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
+
+		// Remove corresponding storage.
+		DelegatorsIndex2Multilocation::<T>::remove(MOVR, index);
+		DelegatorsMultilocation2Index::<T>::remove(MOVR, who);
+		DelegatorLedgers::<T>::remove(MOVR, who);
+
+		Ok(())
 	}
 
 	/// Add a new serving delegator for a particular currency.
