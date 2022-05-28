@@ -818,7 +818,20 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
-		unimplemented!()
+		// Make sure receiving account is one of the KSM delegators.
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(MOVR, to),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Make sure from account is the entrance account of vtoken-minting module.
+		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+
+		Self::do_transfer_to(from, to, amount)?;
+
+		Ok(())
 	}
 
 	fn tune_vtoken_exchange_rate(
@@ -899,14 +912,14 @@ impl<T: Config>
 	}
 
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
-		unimplemented!()
+		Err(Error::<T>::Unsupported)
 	}
 
 	fn fail_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
 	) -> Result<(), Error<T>> {
-		unimplemented!()
+		Err(Error::<T>::Unsupported)
 	}
 }
 
@@ -918,6 +931,10 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn get_movr_local_multilocation() -> MultiLocation {
 		MultiLocation { parents: 0, interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)) }
+	}
+
+	fn get_movr_multilocation() -> MultiLocation {
+		MultiLocation { parents: 1, interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)) }
 	}
 
 	fn construct_xcm_as_subaccount_with_query_id(
@@ -1078,6 +1095,61 @@ impl<T: Config> MoonriverAgent<T> {
 
 		let unlock_time_unit = TimeUnit::Round(unlock_round);
 		Ok(Some(unlock_time_unit))
+	}
+
+	fn do_transfer_to(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+	) -> Result<(), Error<T>> {
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
+		// not succeed.
+		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
+
+		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(MOVR, XcmOperation::TransferTo)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// Prepare parameter dest and beneficiary.
+		let dest = Self::get_moonriver_para_multilocation();
+		let beneficiary = Pallet::<T>::multilocation_to_local_multilocation(to)?;
+
+		let movr_location = Self::get_movr_multilocation();
+		// Prepare parameter assets.
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(movr_location),
+		};
+		let assets = MultiAssets::from(asset);
+
+		// Prepare fee asset.
+		let movr_local_location = Self::get_movr_local_multilocation();
+		let fee_asset = MultiAsset {
+			fun: Fungible(fee_amount.unique_saturated_into()),
+			id: Concrete(Self::get_movr_local_multilocation()),
+		};
+
+		// prepare for xcm message
+		let msg = Xcm(vec![
+			WithdrawAsset(assets.clone()),
+			InitiateReserveWithdraw {
+				assets: All.into(),
+				reserve: dest.clone(),
+				xcm: Xcm(vec![
+					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+				]),
+			},
+		]);
+
+		// Execute the xcm message.
+		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+			.ensure_complete()
+			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+
+		Ok(())
 	}
 }
 

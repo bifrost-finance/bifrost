@@ -1734,6 +1734,14 @@ pub mod pallet {
 			Ok(local_location)
 		}
 
+		pub fn multilocation_to_local_multilocation(
+			location: &MultiLocation,
+		) -> Result<MultiLocation, Error<T>> {
+			let local_location = MultiLocation { parents: 0, interior: location.interior.clone() };
+
+			Ok(local_location)
+		}
+
 		pub fn account_32_to_parent_location(
 			account_32: [u8; 32],
 		) -> Result<MultiLocation, Error<T>> {
