@@ -73,6 +73,8 @@ pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
 	pub if_cancel: bool,
 	pub if_leave: bool,
+	pub if_cancel_leave: bool,
+	pub if_execute_leave: bool,
 	/// The unlocking/bonding amount.
 	#[codec(compact)]
 	pub amount: Balance,
