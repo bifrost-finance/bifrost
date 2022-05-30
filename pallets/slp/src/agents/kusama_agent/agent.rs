@@ -291,7 +291,7 @@ impl<T: Config>
 		&self,
 		who: &MultiLocation,
 		amount: BalanceOf<T>,
-		validator: &Option<MultiLocation>,
+		_validator: &Option<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;

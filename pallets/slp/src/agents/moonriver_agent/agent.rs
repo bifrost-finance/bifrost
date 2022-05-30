@@ -20,27 +20,25 @@ use core::marker::PhantomData;
 use xcm_interface::traits::parachains;
 
 use super::types::{
-	MoonriverBalancesCall, MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall,
-	MoonriverUtilityCall, MoonriverXtokensCall,
+	MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall, MoonriverUtilityCall,
+	MoonriverXtokensCall,
 };
 use crate::primitives::{
 	OneToManyDelegationAction,
 	OneToManyDelegationAction::{Decrease, Revoke},
 	OneToManyLedger, OneToManyScheduledRequest,
 };
-use codec::{alloc::collections::BTreeMap, Decode, Encode};
+use codec::{alloc::collections::BTreeMap, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-use sp_core::{H160, U256};
-use sp_io::hashing::blake2_256;
+use sp_core::U256;
 use sp_runtime::{
 	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, TrailingZeroInput,
-		UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 	},
 	DispatchResult,
 };
@@ -52,23 +50,21 @@ use xcm::{
 		Junctions::X1,
 		MultiLocation,
 	},
-	VersionedMultiAssets, VersionedMultiLocation,
+	VersionedMultiLocation,
 };
 
 use crate::{
 	agents::SystemCall,
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, MoonriverLedgerUpdateEntry, OneToManyDelegatorStatus, SubstrateLedger,
-		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
-		XcmOperation, MOVR,
+		Ledger, MoonriverLedgerUpdateEntry, OneToManyDelegatorStatus,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, MOVR,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
-	TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
-	XcmDestWeightAndFee, TIMEOUT_BLOCKS,
+	TimeUnit, Validators, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
 /// StakingAgent implementation for Moonriver
@@ -450,17 +446,15 @@ impl<T: Config>
 			ensure!(ledger.request_briefs.contains_key(&collator), Error::<T>::RequestNotExist);
 
 			// get pending request amount.
-			let when_executable;
 			let mut rebond_amount = BalanceOf::<T>::from(0u32);
 			// let request_iter = ledger.requests.iter().ok_or(Error::<T>::Unexpected)?;
 			for OneToManyScheduledRequest::<MultiLocation, BalanceOf<T>> {
 				validator: vali,
-				when_executable: when,
 				action: act,
+				..
 			} in ledger.requests.iter()
 			{
 				if *vali == collator {
-					when_executable = when;
 					rebond_amount = match act {
 						Revoke(revoke_balance) => *revoke_balance,
 						Decrease(decrease_balance) => *decrease_balance,
@@ -533,8 +527,8 @@ impl<T: Config>
 	/// Delegate to some validators. For Moonriver, it equals function Nominate.
 	fn delegate(
 		&self,
-		who: &MultiLocation,
-		targets: &Vec<MultiLocation>,
+		_who: &MultiLocation,
+		_targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -661,9 +655,9 @@ impl<T: Config>
 	/// Initiate payout for a certain delegator.
 	fn payout(
 		&self,
-		who: &MultiLocation,
-		validator: &MultiLocation,
-		when: &Option<TimeUnit>,
+		_who: &MultiLocation,
+		_validator: &MultiLocation,
+		_when: &Option<TimeUnit>,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -672,7 +666,7 @@ impl<T: Config>
 	fn liquidize(
 		&self,
 		who: &MultiLocation,
-		when: &Option<TimeUnit>,
+		_when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
@@ -706,17 +700,17 @@ impl<T: Config>
 		// Construct xcm message.
 		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
 		let call;
-		if leaving {
+		let (query_id, timeout, xcm_message) = if leaving {
 			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteLeaveDelegators(
 				delegator_h160_account,
 				mins_maxs.validators_back_maximum,
 			));
 
-			let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			Self::construct_xcm_as_subaccount_with_query_id(
 				XcmOperation::Liquidize,
 				call.clone(),
 				who,
-			)?;
+			)
 		} else {
 			let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
 			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteDelegationRequest(
@@ -724,17 +718,12 @@ impl<T: Config>
 				validator_h160_account,
 			));
 
-			let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			Self::construct_xcm_as_subaccount_with_query_id(
 				XcmOperation::Liquidize,
 				call.clone(),
 				who,
-			)?;
-		}
-
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Liquidize, call, who)?;
+			)
+		}?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		if leaving {
@@ -1048,9 +1037,9 @@ impl<T: Config>
 
 	fn check_validators_by_delegator_query_response(
 		&self,
-		query_id: QueryId,
-		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
-		manual_mode: bool,
+		_query_id: QueryId,
+		_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -1072,7 +1061,7 @@ impl<T: Config>
 
 	fn fail_validators_by_delegator_query_response(
 		&self,
-		query_id: QueryId,
+		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -1285,7 +1274,7 @@ impl<T: Config> MoonriverAgent<T> {
 		let movr_local_location = Self::get_movr_local_multilocation();
 		let fee_asset = MultiAsset {
 			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(Self::get_movr_local_multilocation()),
+			id: Concrete(movr_local_location),
 		};
 
 		// prepare for xcm message
