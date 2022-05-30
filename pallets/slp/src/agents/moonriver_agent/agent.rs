@@ -1338,6 +1338,10 @@ impl<T: Config> MoonriverAgent<T> {
 						if if_bond {
 							// If this is a bonding operation.
 							// Increase the total amount and add the delegation relationship.
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorLeaving
+							);
 							old_ledger.total = old_ledger
 								.total
 								.checked_add(&amount)
@@ -1352,6 +1356,11 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.delegations.insert(validator_id, new_amount);
 						// schedule bond less request
 						} else if if_unlock {
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorLeaving
+							);
+
 							old_ledger.less_total = old_ledger
 								.less_total
 								.checked_add(&amount)
@@ -1372,6 +1381,11 @@ impl<T: Config> MoonriverAgent<T> {
 								.insert(validator_id, (unlock_time_unit, amount));
 						// schedule revoke request
 						} else if if_revoke {
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorLeaving
+							);
+
 							let revoke_amount = old_ledger
 								.delegations
 								.get(&validator_id)
@@ -1397,6 +1411,11 @@ impl<T: Config> MoonriverAgent<T> {
 								.insert(validator_id, (unlock_time_unit, revoke_amount.clone()));
 						// cancel bond less or revoke request
 						} else if if_cancel {
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorLeaving
+							);
+
 							let (_, cancel_amount) = old_ledger
 								.request_briefs
 								.get(&validator_id)
@@ -1418,6 +1437,11 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.request_briefs.remove(&validator_id);
 						// schedule leave
 						} else if if_leave {
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorAlreadyLeaving
+							);
+
 							old_ledger.less_total = old_ledger.total;
 							let unlock_time = unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 							old_ledger.status =
@@ -1445,6 +1469,10 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.request_briefs = new_request_briefs;
 						// cancel leave
 						} else if if_cancel_leave {
+							let leaving =
+								matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
+							ensure!(leaving, Error::<T>::DelegatorNotLeaving);
+
 							old_ledger.less_total = Zero::zero();
 							old_ledger.status = OneToManyDelegatorStatus::Active;
 
@@ -1452,9 +1480,18 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.request_briefs = BTreeMap::new();
 						// execute leaving
 						} else if if_execute_leave {
+							let leaving =
+								matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
+							ensure!(leaving, Error::<T>::DelegatorNotLeaving);
+
 							*old_ledger_opt = None;
 						// execute request
 						} else {
+							ensure!(
+								old_ledger.status == OneToManyDelegatorStatus::Active,
+								Error::<T>::DelegatorLeaving
+							);
+
 							let (_, execute_amount) = old_ledger
 								.request_briefs
 								.remove(&validator_id)
