@@ -85,7 +85,11 @@ fn withdraw() {
 		Farming::on_initialize(0);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 1);
-		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(1000)));
+		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(800)));
+		assert_err!(
+			Farming::withdraw(Origin::signed(ALICE), pid, Some(100)),
+			Error::<Runtime>::WithdrawLimitCountExceeded
+		);
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
@@ -93,8 +97,12 @@ fn withdraw() {
 		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, tokens, None));
 		Farming::on_initialize(0);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3966);
+		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(200)));
+		System::set_block_number(System::block_number() + 100);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4166);
 	})
 }
 
@@ -114,13 +122,10 @@ fn gauge() {
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1819);
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, 10, None)); // 5482 -> 5471
 		System::set_block_number(System::block_number() + 200);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		// assert_err!(
-		// 	Farming::claim(Origin::signed(ALICE), pid),
-		// 	orml_tokens::Error::<Runtime>::BalanceTooLow
-		// );
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5482);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5471);
 	})
 }
 
@@ -189,7 +194,7 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		0,
 		10,
 		0,
-		5
+		1
 	));
 
 	let pid = 0;

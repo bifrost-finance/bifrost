@@ -19,6 +19,7 @@
 use codec::HasCompact;
 use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
+use sp_core::U256;
 use sp_runtime::{
 	traits::{Zero, *},
 	ArithmeticError, Permill, RuntimeDebug, SaturatedConversion,
@@ -279,7 +280,19 @@ where
 					let reward = reward_amount
 						.checked_sub(&withdrawn_reward)
 						.ok_or(ArithmeticError::Overflow)?;
-					let reward_to_claim = gauge_rate * reward;
+					let total_shares =
+						U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+					let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+					let farming_gauge_reward: BalanceOf<T> =
+						U256::from(share_info.share.to_owned().saturated_into::<u128>())
+							.saturating_mul(U256::from(reward.to_owned().saturated_into::<u128>()))
+							.checked_div(total_shares)
+							.unwrap_or_default()
+							.as_u128()
+							.unique_saturated_into();
+					// reward_to_claim = farming rate * gauge rate * gauge coefficient * existing
+					// rewards in the gauge pool
+					let reward_to_claim = gauge_rate * farming_gauge_reward;
 					match pool_info.keeper {
 						None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 						Some(ref keeper) => {
