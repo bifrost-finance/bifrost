@@ -280,117 +280,86 @@ impl<T: Config> Pallet<T> {
 		// claim rewards firstly
 		Self::claim_rewards(who, pool)?;
 
-		SharesAndWithdrawnRewards::<T>::mutate_exists(
-			pool,
-			who,
-			|share_info_old| -> DispatchResult {
-				let current_block_number: BlockNumberFor<T> =
-					frame_system::Pallet::<T>::block_number();
-				if let Some(mut share_info) = share_info_old.take() {
-					// (mut share, mut withdrawn_rewards)S
-					let remove_amount;
-					if let Some(remove_amount_input) = remove_amount_input {
-						remove_amount = remove_amount_input.min(share_info.share);
-					} else {
-						remove_amount = share_info.share;
-					}
+		SharesAndWithdrawnRewards::<T>::mutate(pool, who, |mut share_info| -> DispatchResult {
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+			// if let Some(mut share_info) = share_info_old.take() {
+			// (mut share, mut withdrawn_rewards)S
+			let remove_amount;
+			if let Some(remove_amount_input) = remove_amount_input {
+				remove_amount = remove_amount_input.min(share_info.share);
+			} else {
+				remove_amount = share_info.share;
+			}
 
-					if remove_amount.is_zero() {
-						return Ok(());
-					}
+			if remove_amount.is_zero() {
+				return Ok(());
+			}
 
-					PoolInfos::<T>::mutate_exists(pool, |maybe_pool_info| -> DispatchResult {
-						if let Some(mut pool_info) = maybe_pool_info.take() {
-							ensure!(
-								share_info.withdraw_last_block + pool_info.withdraw_limit_time <=
-									current_block_number,
-								Error::<T>::CanNotWithdraw
-							);
+			PoolInfos::<T>::mutate(pool, |mut pool_info| -> DispatchResult {
+				// if let Some(mut pool_info) = maybe_pool_info.take() {
+				// ensure!(
+				// 	share_info.withdraw_last_block + pool_info.withdraw_limit_time <=
+				// 		current_block_number,
+				// 	Error::<T>::CanNotWithdraw
+				// );
 
-							ensure!(
-								share_info.withdraw_list.len() <
-									pool_info.withdraw_limit_count.into(),
-								Error::<T>::WithdrawLimitCountExceeded
-							);
-							share_info.withdraw_list.push((
-								current_block_number + pool_info.withdraw_limit_time,
-								remove_amount,
-							));
-							// let tokens_proportion_values: Vec<Permill> =
-							// 	pool_info.tokens_proportion.values().cloned().collect();
-							// let native_amount = tokens_proportion_values[0]
-							// 	.saturating_reciprocal_mul(remove_amount);
-							// pool_info.tokens_proportion.iter().try_for_each(
-							// 	|(token, proportion)| -> DispatchResult {
-							// 		if let Some(ref keeper) = pool_info.keeper {
-							// 			T::MultiCurrency::transfer(
-							// 				*token,
-							// 				&keeper,
-							// 				who,
-							// 				*proportion * native_amount,
-							// 			)?
-							// 		};
-							// 		Ok(())
-							// 	},
-							// )?;
+				ensure!(
+					share_info.withdraw_list.len() < pool_info.withdraw_limit_count.into(),
+					Error::<T>::WithdrawLimitCountExceeded
+				);
+				share_info
+					.withdraw_list
+					.push((current_block_number + pool_info.withdraw_limit_time, remove_amount));
 
-							let removing_share = U256::from(remove_amount.saturated_into::<u128>());
+				let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
-							pool_info.total_shares =
-								pool_info.total_shares.saturating_sub(remove_amount);
+				pool_info.total_shares = pool_info.total_shares.saturating_sub(remove_amount);
 
-							// update withdrawn rewards for each reward currency
-							share_info.withdrawn_rewards.iter_mut().try_for_each(
-								|(reward_currency, withdrawn_reward)| -> DispatchResult {
-									let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
-										.saturating_mul(
-											withdrawn_reward
-												.to_owned()
-												.saturated_into::<u128>()
-												.into(),
-										)
-										.checked_div(
-											share_info.share.saturated_into::<u128>().into(),
-										)
-										.unwrap_or_default()
-										.as_u128()
-										.saturated_into();
+				// update withdrawn rewards for each reward currency
+				share_info.withdrawn_rewards.iter_mut().try_for_each(
+					|(reward_currency, withdrawn_reward)| -> DispatchResult {
+						let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
+							.saturating_mul(
+								withdrawn_reward.to_owned().saturated_into::<u128>().into(),
+							)
+							.checked_div(share_info.share.saturated_into::<u128>().into())
+							.unwrap_or_default()
+							.as_u128()
+							.saturated_into();
 
-									if let Some((total_reward, total_withdrawn_reward)) =
-										pool_info.rewards.get_mut(reward_currency)
-									{
-										*total_reward =
-											total_reward.saturating_sub(withdrawn_reward_to_remove);
-										*total_withdrawn_reward = total_withdrawn_reward
-											.saturating_sub(withdrawn_reward_to_remove);
+						if let Some((total_reward, total_withdrawn_reward)) =
+							pool_info.rewards.get_mut(reward_currency)
+						{
+							*total_reward = total_reward.saturating_sub(withdrawn_reward_to_remove);
+							*total_withdrawn_reward =
+								total_withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
 
-										// remove if all reward is withdrawn
-										if total_reward.is_zero() {
-											pool_info.rewards.remove(reward_currency);
-										}
-									}
-									*withdrawn_reward =
-										withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
-									Ok(())
-								},
-							)?;
-
-							if !pool_info.total_shares.is_zero() {
-								*maybe_pool_info = Some(pool_info);
+							// remove if all reward is withdrawn
+							if total_reward.is_zero() {
+								pool_info.rewards.remove(reward_currency);
 							}
 						}
+						*withdrawn_reward =
+							withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
 						Ok(())
-					})?;
+					},
+				)?;
 
-					share_info.withdraw_last_block = current_block_number;
-					share_info.share = share_info.share.saturating_sub(remove_amount);
-					if !share_info.share.is_zero() {
-						*share_info_old = Some(share_info);
-					};
-				}
+				// 	if !pool_info.total_shares.is_zero() {
+				// 		*maybe_pool_info = Some(pool_info);
+				// 	}
+				// }
 				Ok(())
-			},
-		)?;
+			})?;
+
+			share_info.withdraw_last_block = current_block_number;
+			share_info.share = share_info.share.saturating_sub(remove_amount);
+			// 	if !share_info.share.is_zero() {
+			// 		*share_info_old = Some(share_info);
+			// 	};
+			// }
+			Ok(())
+		})?;
 		Ok(())
 	}
 
@@ -422,36 +391,6 @@ impl<T: Config> Pallet<T> {
 								current_block_number,
 							Error::<T>::CanNotClaim
 						);
-
-						// process withraw_list
-						let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
-						let tokens_proportion_values: Vec<Permill> =
-							pool_info.tokens_proportion.values().cloned().collect();
-						share_info.withdraw_list.iter().try_for_each(
-							|(dest_block, remove_value)| -> DispatchResult {
-								if *dest_block < current_block_number {
-									let native_amount = tokens_proportion_values[0]
-										.saturating_reciprocal_mul(*remove_value);
-									pool_info.tokens_proportion.iter().try_for_each(
-										|(token, &proportion)| -> DispatchResult {
-											if let Some(ref keeper) = pool_info.keeper {
-												T::MultiCurrency::transfer(
-													*token,
-													&keeper,
-													who,
-													proportion * native_amount,
-												)?
-											};
-											Ok(())
-										},
-									);
-								} else {
-									tmp.push((*dest_block, *remove_value));
-								};
-								Ok(())
-							},
-						);
-						share_info.withdraw_list = tmp;
 
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
@@ -509,5 +448,59 @@ impl<T: Config> Pallet<T> {
 			},
 		)?;
 		Ok(())
+	}
+
+	pub fn process_withraw_list(
+		who: &T::AccountId,
+		pool: PoolId,
+		pool_info: &PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
+	) -> DispatchResult {
+		SharesAndWithdrawnRewards::<T>::mutate_exists(
+			pool,
+			who,
+			|share_info_old| -> DispatchResult {
+				if let Some(mut share_info) = share_info_old.take() {
+					let current_block_number: BlockNumberFor<T> =
+						frame_system::Pallet::<T>::block_number();
+					let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
+					let tokens_proportion_values: Vec<Permill> =
+						pool_info.tokens_proportion.values().cloned().collect();
+					share_info.withdraw_list.iter().try_for_each(
+						|(dest_block, remove_value)| -> DispatchResult {
+							if *dest_block < current_block_number {
+								let native_amount = tokens_proportion_values[0]
+									.saturating_reciprocal_mul(*remove_value);
+								pool_info.tokens_proportion.iter().try_for_each(
+									|(token, &proportion)| -> DispatchResult {
+										if let Some(ref keeper) = pool_info.keeper {
+											T::MultiCurrency::transfer(
+												*token,
+												&keeper,
+												who,
+												proportion * native_amount,
+											)?
+										};
+										Ok(())
+									},
+								);
+							} else {
+								tmp.push((*dest_block, *remove_value));
+							};
+							Ok(())
+						},
+					);
+					share_info.withdraw_list = tmp;
+
+					// if withdraw_list and share both are empty, remove it.
+					if share_info.withdraw_list !=
+						Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default() ||
+						!share_info.share.is_zero()
+					{
+						*share_info_old = Some(share_info);
+					};
+				};
+				Ok(())
+			},
+		)
 	}
 }
