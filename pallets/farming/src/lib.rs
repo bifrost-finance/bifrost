@@ -449,6 +449,7 @@ pub mod pallet {
 			if let Some(ref gid) = pool_info.gauge {
 				Self::gauge_claim_inner(&exchanger, *gid)?;
 			}
+			Self::process_withraw_list(&exchanger, pid, &pool_info)?;
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
 			Ok(())

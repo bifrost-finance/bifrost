@@ -82,6 +82,19 @@ fn withdraw() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, tokens) = init_no_gauge();
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		Farming::on_initialize(0);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 1);
+		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(1000)));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
+		System::set_block_number(System::block_number() + 100);
+		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, tokens, None));
+		Farming::on_initialize(0);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4000);
+		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
 	})
 }
 
