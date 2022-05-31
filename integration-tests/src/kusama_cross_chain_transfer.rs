@@ -64,7 +64,7 @@ fn transfer_to_relay_chain() {
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999_893_333_340);
+		assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999_834_059_328);
 	});
 }
 

@@ -56,6 +56,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 	} else {
 		id
 	};
+	#[allow(unreachable_code)]
 	Ok(match id {
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost" | "bifrost-kusama" =>

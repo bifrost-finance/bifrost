@@ -382,7 +382,7 @@ fn transfer_to_works() {
 		);
 
 		// Why not the transferred amount reach the sub-account?
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999893333340);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
 	});
 }
 
@@ -918,7 +918,7 @@ fn transfer_back_works() {
 
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			1999333333375
+			1998962870800
 		);
 	});
 
@@ -948,7 +948,7 @@ fn transfer_back_works() {
 		);
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			2_498_666_666_750
+			2497925741600
 		);
 	});
 
@@ -992,10 +992,7 @@ fn supplement_fee_reserve_works() {
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(
-			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			2_999_893_333_340
-		);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
 	});
 }
 

@@ -28,6 +28,12 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
 [![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
 
+## Get Build Help
+
+```sh
+make help
+```
+
 ## Install Rust and required tools
 
 ```bash
@@ -39,6 +45,18 @@ make init
 
 ```bash
 make build-all-release
+```
+
+## Format code
+
+```sh
+make format
+```
+
+## Lint code
+
+```sh
+make clippy
 ```
 
 ## Testing
@@ -134,6 +152,7 @@ subkey generate-node-key --file ~/node-key/bifrost.key
 ### Start full node
 
 Replace your-fullnode-name
+
 ```sh
 docker pull bifrostnetwork/bifrost:latest
 docker run -d \

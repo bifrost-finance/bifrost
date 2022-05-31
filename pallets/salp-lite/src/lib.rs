@@ -551,6 +551,7 @@ pub mod pallet {
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
 			let contributions = Self::contribution_iterator(fund.trie_index);
 			let mut all_refunded = true;
+			#[allow(clippy::explicit_counter_loop)]
 			for (who, (balance, _)) in contributions {
 				if refund_count >= T::BatchKeysLimit::get() {
 					// Not everyone was able to be refunded this time around.
@@ -562,7 +563,7 @@ pub mod pallet {
 				refund_count += 1;
 			}
 
-			if all_refunded == true {
+			if all_refunded {
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
