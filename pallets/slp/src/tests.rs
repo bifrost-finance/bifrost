@@ -101,11 +101,7 @@ fn supplement_fee_reserve_works() {
 		// set fee source
 		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
 		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-		assert_ok!(Slp::set_fee_source(
-			Origin::signed(ALICE),
-			BNC,
-			Some((alice_location.clone(), 10))
-		));
+		assert_ok!(Slp::set_fee_source(Origin::signed(ALICE), BNC, Some((alice_location, 10))));
 
 		// supplement fee
 		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
@@ -113,7 +109,7 @@ fn supplement_fee_reserve_works() {
 		assert_eq!(Balances::free_balance(&ALICE), 100);
 		assert_eq!(Balances::free_balance(&BOB), 0);
 
-		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location.clone()));
+		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location));
 
 		assert_eq!(Balances::free_balance(&ALICE), 90);
 		assert_eq!(Balances::free_balance(&BOB), 10);
@@ -127,8 +123,7 @@ fn remove_delegator_works() {
 		let subaccount_0: AccountId =
 			hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
 				.into();
-		let subaccount_0_32: [u8; 32] =
-			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
@@ -272,7 +267,7 @@ fn refund_currency_due_unbond_works() {
 		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
 			CHARLIE,
 			KSM,
-			(28, bounded_vec_charlie.clone()),
+			(28, bounded_vec_charlie),
 		);
 
 		let bounded_vec_dave = BoundedVec::try_from(vec![2]).unwrap();
@@ -316,7 +311,7 @@ fn refund_currency_due_unbond_works() {
 		);
 		assert_eq!(
 			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(BOB, KSM,),
-			Some((10, bounded_vec_bob.clone()))
+			Some((10, bounded_vec_bob))
 		);
 
 		// Unlocking records for era 100
@@ -341,7 +336,7 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(CHARLIE, KSM,), None);
 		assert_eq!(
 			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(DAVE, KSM,),
-			Some((8, bounded_vec_dave.clone()))
+			Some((8, bounded_vec_dave))
 		);
 
 		// Unlocking records for era 110
@@ -352,7 +347,7 @@ fn refund_currency_due_unbond_works() {
 
 		assert_eq!(
 			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,),
-			Some((13, bounded_vec_eddie.clone()))
+			Some((13, bounded_vec_eddie))
 		);
 
 		// Set some more balance to exit account.
@@ -396,7 +391,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 	let subaccount_0: AccountId =
 		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
 			.into();
-	let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+	let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
 	let subaccount_0_location: MultiLocation =
 		Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
@@ -405,8 +400,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
 				.into();
 		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
 
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(1));
 
@@ -488,8 +482,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 fn set_hosting_fees_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);

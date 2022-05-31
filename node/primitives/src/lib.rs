@@ -29,7 +29,6 @@ use sp_runtime::{
 	MultiSignature, OpaqueExtrinsic,
 };
 
-mod bridge;
 pub mod currency;
 mod salp;
 pub mod traits;
@@ -39,7 +38,6 @@ pub use salp::*;
 mod tests;
 
 pub use crate::{
-	bridge::*,
 	currency::{CurrencyId, ForeignAssetId, TokenSymbol},
 	traits::*,
 };

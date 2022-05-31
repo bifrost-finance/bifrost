@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 940,
+	spec_version: 942,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1404,12 +1404,8 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |location: MultiLocation| -> u128 {
-		#[allow(clippy::match_ref_pats)] // false positive
-		match (location.parents, location.first_interior()) {
-			// (1, Some(Parachain(parachains::Statemine::ID))) => XcmInterface::get_parachain_fee(location.clone()),
-			_ => u128::MAX,
-		}
+	pub ParachainMinFee: |_location: MultiLocation| -> u128 {
+		u128::MAX
 	};
 }
 
@@ -2040,6 +2036,25 @@ pub type Executive = frame_executive::Executive<
 	(),
 >;
 
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+	define_benchmarks!(
+		[bifrost_flexible_fee, FlexibleFee]
+		[bifrost_salp, Salp]
+		[bifrost_salp_lite, SalpLite]
+		[bifrost_liquidity_mining, LiquidityMining]
+		[bifrost_vsbond_auction, VSBondAuction]
+		[bifrost_token_issuer, TokenIssuer]
+		[bifrost_lightening_redeem, LighteningRedeem]
+		[bifrost_call_switchgear, CallSwitchgear]
+		[parachain_staking, ParachainStaking]
+	);
+}
+
 impl_runtime_apis! {
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
 		fn validate_transaction(
@@ -2249,30 +2264,20 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
+			use frame_benchmarking::{Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
-			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
 
 			let mut list = Vec::<BenchmarkList>::new();
-
-			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
-			list_benchmark!(list, extra, bifrost_salp, Salp);
-			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
-			list_benchmark!(list, extra, bifrost_liquidity_mining::<Instance1>, LiquidityMining);
-			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
-			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
-			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
-			list_benchmark!(list, extra, parachain_staking, ParachainStaking);
+			list_benchmarks!(list, extra);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
-
 			return (list, storage_info)
 		}
+
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
-			use frame_system_benchmarking::Pallet as SystemBench;
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			impl frame_system_benchmarking::Config for Runtime {}
 
@@ -2291,27 +2296,7 @@ impl_runtime_apis! {
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
-
-			// Adding the pallet you will perform the benchmarking
-			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_bounties, Bounties);
-			add_benchmark!(params, batches, pallet_indices, Indices);
-			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_treasury, Treasury);
-			add_benchmark!(params, batches, pallet_utility, Utility);
-			add_benchmark!(params, batches, pallet_vesting, Vesting);
-
-			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
-			add_benchmark!(params, batches, bifrost_salp, Salp);
-			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
-			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
-			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
-			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
-			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
-			add_benchmark!(params, batches, parachain_staking, ParachainStaking);
+			add_benchmarks!(params, batches);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

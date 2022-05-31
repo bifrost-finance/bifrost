@@ -4,6 +4,6 @@ set -e
 
 echo "*** Initializing WASM build environment"
 
-rustup default nightly-2022-04-07
+rustup default nightly-2022-05-11
 
-rustup target add wasm32-unknown-unknown --toolchain nightly-2022-04-07
+rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11

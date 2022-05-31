@@ -511,7 +511,7 @@ pub mod pallet {
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
 			let mut account_to_send = new_order_info.owner.clone();
-			let ed = T::MultiCurrency::minimum_balance(token_to_pay.clone());
+			let ed = T::MultiCurrency::minimum_balance(token_to_pay);
 
 			// deal with account exisitence error we might encounter
 			if amount_to_pay < ed {
@@ -540,7 +540,7 @@ pub mod pallet {
 			)?;
 
 			let mut account_to_send = order_taker.clone();
-			let ed = T::MultiCurrency::minimum_balance(token_to_get.clone());
+			let ed = T::MultiCurrency::minimum_balance(token_to_get);
 
 			// deal with account exisitence error we might encounter
 			if amount_to_get < ed {
@@ -666,7 +666,7 @@ pub mod pallet {
 			};
 
 			let mut account_to_return = order_info.owner.clone();
-			let ed = T::MultiCurrency::minimum_balance(token_to_return.clone());
+			let ed = T::MultiCurrency::minimum_balance(token_to_return);
 
 			// deal with account exisitence error we might encounter
 			if amount_to_return < ed {

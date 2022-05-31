@@ -12,8 +12,8 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 	"max-encoded-len",
 ] }
 hex-literal = { version = "0.3.1" }
-log = { version = "0.4.16", default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 smallvec = "1.6.1"
 static_assertions = "1.1.0"
 # primitives

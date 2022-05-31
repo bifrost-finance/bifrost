@@ -59,15 +59,14 @@ where
 	}
 
 	pub fn to_rpc(&self) -> RpcContributionStatus {
-		let rpc_status = match self {
+		match self {
 			Self::Idle => RpcContributionStatus::Idle,
 			Self::Contributing(_) => RpcContributionStatus::Contributing,
 			Self::Refunded => RpcContributionStatus::Refunded,
 			Self::Unlocked => RpcContributionStatus::Unlocked,
 			Self::Redeemed => RpcContributionStatus::Redeemed,
 			Self::MigrateToIdle => RpcContributionStatus::MigratedIdle,
-		};
-		rpc_status
+		}
 	}
 }
 

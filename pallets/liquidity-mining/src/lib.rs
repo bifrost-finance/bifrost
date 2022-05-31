@@ -142,17 +142,18 @@ where
 	///
 	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_startup<T: Config<I>, I: 'static>(mut self, n: BlockNumberOf) -> Self {
-		if self.state == PoolState::Charged {
-			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
-				self.block_startup = Some(n);
-				self.state = PoolState::Ongoing;
+		if self.state == PoolState::Charged &&
+			n >= self.after_block_to_start &&
+			self.deposit >= self.min_deposit_to_start
+		{
+			self.block_startup = Some(n);
+			self.state = PoolState::Ongoing;
 
-				Pallet::<T, I>::deposit_event(Event::PoolStarted(
-					self.pool_id,
-					self.r#type,
-					self.trading_pair,
-				));
-			}
+			Pallet::<T, I>::deposit_event(Event::PoolStarted(
+				self.pool_id,
+				self.r#type,
+				self.trading_pair,
+			));
 		}
 
 		self
@@ -235,7 +236,7 @@ where
 			user,
 		));
 
-		Ok(().into())
+		Ok(())
 	}
 
 	/// Try to return back the remain of reward from keeper to investor
@@ -259,7 +260,7 @@ where
 			}
 		}
 
-		Ok(().into())
+		Ok(())
 	}
 }
 
@@ -1417,7 +1418,7 @@ pub mod pallet {
 					TotalDepositData::<T, I>::insert(*pid, user.clone(), dd_new);
 				}
 
-				left = left - double_keys.len();
+				left -= double_keys.len();
 				dd_nums = double_keys.len();
 
 				if left > 0 {
@@ -1452,7 +1453,7 @@ pub mod pallet {
 						TotalPoolInfos::<T, I>::insert(*pid, pi_new);
 					}
 
-					left = left - keys.len();
+					left -= keys.len();
 					pi_nums = keys.len();
 				}
 
@@ -1716,13 +1717,13 @@ pub mod pallet {
 				TotalPoolInfos::<T, I>::insert(pid, pool);
 			}
 
-			if deposit_data.deposit == Zero::zero() && deposit_data.pending_unlocks.len() == 0 {
-				TotalDepositData::<T, I>::remove(pid, user.clone());
+			if deposit_data.deposit == Zero::zero() && deposit_data.pending_unlocks.is_empty() {
+				TotalDepositData::<T, I>::remove(pid, user);
 			} else {
-				TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
+				TotalDepositData::<T, I>::insert(pid, user, deposit_data);
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 
 		pub(crate) fn next_pool_id() -> PoolId {
@@ -1753,7 +1754,7 @@ pub mod pallet {
 			pid: PoolId,
 		) -> Result<Vec<(CurrencyId, BalanceOf<T, I>)>, ()> {
 			let pool = Self::pool(pid).ok_or(())?.try_retire::<T, I>().try_update::<T, I>();
-			let deposit_data = Self::user_deposit_data(pid, who.clone()).ok_or(())?;
+			let deposit_data = Self::user_deposit_data(pid, who).ok_or(())?;
 
 			let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T, I>)>::new();
 

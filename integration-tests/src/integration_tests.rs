@@ -198,6 +198,3 @@ fn salp() {
 			assert_eq!(Salp::current_trie_index(), 1);
 		});
 }
-
-#[test]
-fn bancor() {}

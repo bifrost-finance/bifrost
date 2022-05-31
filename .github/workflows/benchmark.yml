@@ -12,14 +12,14 @@ jobs:
     runs-on: [self-hosted, bench]
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-04-07
+          toolchain: nightly-2022-05-11
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true

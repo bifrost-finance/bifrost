@@ -22,27 +22,32 @@ jobs:
           echo "TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
 
       - name: Check to latest commit
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-04-07
+          toolchain: nightly-2022-05-11
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
 
       - name: Build bifrost
         run: |
-          .maintain/publish-release.sh
+          make production-release
+          mkdir -p ${{ github.workspace }}/artifacts
+          mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/
+          pushd ${{ github.workspace }}/artifacts
+          sha256sum bifrost | tee bifrost.sha256
+          shasum -c bifrost.sha256
+          popd
 
       - name: Upload deploy
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: bifrost-artifact-${{ github.sha }}
-          path: |
-            ./resources/bifrost-x86_64-linux-gnu.tar.bz2
+          name: bifrost-artifacts
+          path: ${{ github.workspace }}/artifacts/*
 
       - uses: 8398a7/action-slack@v3
         if: failure()

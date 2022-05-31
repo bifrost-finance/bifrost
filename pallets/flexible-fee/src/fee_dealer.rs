@@ -55,7 +55,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
 		let native_is_enough = <<T as Config>::Currency as Currency<
 			<T as frame_system::Config>::AccountId,
 		>>::free_balance(who)
-		.checked_sub(&(fee + native_existential_deposit.into()))
+		.checked_sub(&(fee + native_existential_deposit))
 		.map_or(false, |new_free_balance| {
 			<<T as Config>::Currency as Currency<
 										<T as frame_system::Config>::AccountId,
@@ -104,8 +104,8 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
 			T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)?;
 
 		match fee_sign {
-			true => Ok((T::AlternativeFeeCurrencyId::get(), fee_amount.into())),
-			false => Ok((T::NativeCurrencyId::get(), fee_amount.into())),
+			true => Ok((T::AlternativeFeeCurrencyId::get(), fee_amount)),
+			false => Ok((T::NativeCurrencyId::get(), fee_amount)),
 		}
 	}
 }

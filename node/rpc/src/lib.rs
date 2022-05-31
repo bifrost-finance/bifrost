@@ -95,7 +95,7 @@ where
 		client.clone(),
 	)));
 
-	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
+	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client)));
 
 	io
 }
@@ -119,7 +119,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
-	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
+	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client)));
 
 	io
 }

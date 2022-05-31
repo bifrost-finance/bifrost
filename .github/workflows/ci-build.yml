@@ -19,14 +19,14 @@ jobs:
     runs-on: [self-hosted, normal]
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
-          submodules: recursive
+          fetch-depth: 1
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-04-07
+          toolchain: nightly-2022-05-11
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
@@ -43,3 +43,6 @@ jobs:
           fields: repo,author,eventName,workflow,ref,commit
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}
+      - name: clean runner workspace
+        run: |
+          rm -r *
