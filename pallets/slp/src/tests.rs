@@ -139,6 +139,7 @@ fn remove_delegator_works() {
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
 			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -416,6 +417,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
 			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -506,9 +508,9 @@ fn set_hosting_fees_works() {
 #[test]
 fn initialize_moonriver_delegator() {
 	ExtBuilder::default().build().execute_with(|| {
-		// let bifrostParachainAccountId20: [u8; 20] =
+		// let bifrost_parachain_account_id_20: [u8; 20] =
 		// 	hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
-		let bifrostParachainAccountId20: [u8; 20] =
+		let bifrost_parachain_account_id_20: [u8; 20] =
 			<Runtime as frame_system::Config>::AccountId::encode(
 				&ParaId::from(2001u32).into_account(),
 			)
@@ -516,13 +518,13 @@ fn initialize_moonriver_delegator() {
 				.try_into()
 				.unwrap();
 
-		// subaccountId0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
-		let subaccountId0 = Slp::derivative_account_id_20(bifrostParachainAccountId20, 0);
-		println!("subaccountId0: {:?}", subaccountId0);
+		// subaccount_id_0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
+		let subaccount_id_0 = Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0);
+		println!("subaccount_id_0: {:?}", subaccount_id_0);
 
-		// subaccountId1: 0x3afe20b0c85801b74e65586fe7070df827172574
-		let subaccountId1 = Slp::derivative_account_id_20(bifrostParachainAccountId20, 1);
-		println!("subaccountId1: {:?}", subaccountId1);
+		// subaccount_id_1: 0x3afe20b0c85801b74e65586fe7070df827172574
+		let subaccount_id_1 = Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 1);
+		println!("subaccountId1: {:?}", subaccount_id_1);
 
 		let subaccount0_location = MultiLocation {
 			parents: 1,

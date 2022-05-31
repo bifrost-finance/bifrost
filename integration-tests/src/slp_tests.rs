@@ -79,7 +79,8 @@ fn register_subaccount_index_0() {
 		));
 
 		// Initialize currency delays.
-		let delay = Delays { unlock_delay: TimeUnit::Era(10) };
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
 		assert_ok!(Slp::set_currency_delays(Origin::root(), RelayCurrencyId::get(), Some(delay)));
 
 		// First to setup index-multilocation relationship of subaccount_0
@@ -170,6 +171,7 @@ fn register_subaccount_index_0() {
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
 			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -384,7 +386,7 @@ fn transfer_to_works() {
 		);
 
 		// Why not the transferred amount reach the sub-account?
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999893333340);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
 	});
 }
 
@@ -450,6 +452,7 @@ fn bond_extra_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
+			None,
 			dollar(RelayCurrencyId::get()),
 		));
 	});
@@ -493,6 +496,7 @@ fn unbond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
+			None,
 			500_000_000_000,
 		));
 	});
@@ -571,6 +575,7 @@ fn rebond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
+			None,
 			500_000_000_000,
 		));
 
@@ -596,6 +601,7 @@ fn rebond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
+			None,
 			500_000_000_000,
 		));
 	});
@@ -854,7 +860,8 @@ fn liquidize_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
-			Some(TimeUnit::SlashingSpan(5))
+			Some(TimeUnit::SlashingSpan(5)),
+			None
 		));
 	});
 
@@ -921,7 +928,7 @@ fn transfer_back_works() {
 
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			1999333333375
+			1998962870800
 		);
 	});
 
@@ -951,7 +958,7 @@ fn transfer_back_works() {
 		);
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			2_498_666_666_750
+			2497925741600
 		);
 	});
 
@@ -995,10 +1002,7 @@ fn supplement_fee_reserve_works() {
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(
-			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			2_999_893_333_340
-		);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
 	});
 }
 
@@ -1129,6 +1133,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
+			None,
 			dollar(RelayCurrencyId::get()),
 		));
 
@@ -1246,6 +1251,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
+			None,
 			500_000_000_000,
 		));
 
@@ -1459,6 +1465,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
+			None,
 			500_000_000_000,
 		));
 
@@ -1484,6 +1491,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
+			None,
 			500_000_000_000,
 		));
 
@@ -1613,7 +1621,8 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
-			Some(TimeUnit::SlashingSpan(5))
+			Some(TimeUnit::SlashingSpan(5)),
+			None
 		));
 
 		assert_eq!(

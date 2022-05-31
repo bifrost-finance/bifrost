@@ -601,7 +601,10 @@ pub mod pallet {
 		}
 
 		fn on_runtime_upgrade() -> Weight {
-			migration::update_minimums_maximums::<T>()
+			let weight_1 = migration::update_minimums_maximums::<T>();
+			let weight_2 = migration::update_delays::<T>();
+
+			weight_1 + weight_2
 		}
 	}
 

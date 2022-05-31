@@ -166,18 +166,18 @@ impl PartialEq for TimeUnit {
 }
 
 impl Ord for TimeUnit {
-	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+	fn cmp(&self, other: &Self) -> sp_std::cmp::Ordering {
 		match (&self, other) {
 			(Self::Era(a), Self::Era(b)) => a.cmp(b),
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.cmp(b),
 			(Self::Round(a), Self::Round(b)) => a.cmp(b),
-			_ => std::cmp::Ordering::Less,
+			_ => sp_std::cmp::Ordering::Less,
 		}
 	}
 }
 
 impl PartialOrd for TimeUnit {
-	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+	fn partial_cmp(&self, other: &Self) -> Option<sp_std::cmp::Ordering> {
 		match (&self, other) {
 			(Self::Era(a), Self::Era(b)) => Some(a.cmp(b)),
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),

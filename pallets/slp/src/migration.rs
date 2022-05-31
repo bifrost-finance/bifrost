@@ -1,5 +1,8 @@
 use super::{Config, MinimumsAndMaximums, Weight};
-use crate::{BalanceOf, Decode, Encode, MinimumsMaximums, RuntimeDebug, TypeInfo};
+use crate::{
+	BalanceOf, CurrencyDelays, Decode, Delays, Encode, MinimumsMaximums, RuntimeDebug, TimeUnit,
+	TypeInfo,
+};
 use frame_support::traits::Get;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -27,6 +30,12 @@ pub struct DeprecatedMinimumsMaximums<Balance> {
 	pub delegator_active_staking_maximum: Balance,
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct DeprecatedDelays {
+	/// The unlock delay for the unlocking amount to be able to be liquidized.
+	pub unlock_delay: TimeUnit,
+}
+
 pub fn update_minimums_maximums<T: Config>() -> Weight {
 	MinimumsAndMaximums::<T>::translate::<DeprecatedMinimumsMaximums<BalanceOf<T>>, _>(
 		|_currency_id, mins_maxs| {
@@ -44,6 +53,18 @@ pub fn update_minimums_maximums<T: Config>() -> Weight {
 			Some(new_entry)
 		},
 	);
+
+	T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
+}
+
+pub fn update_delays<T: Config>() -> Weight {
+	CurrencyDelays::<T>::translate::<Delays, _>(|_currency_id, delays| {
+		let new_entry = Delays {
+			unlock_delay: delays.unlock_delay,
+			leave_delegators_delay: Default::default(),
+		};
+		Some(new_entry)
+	});
 
 	T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
 }
