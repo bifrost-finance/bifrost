@@ -311,6 +311,7 @@ pub mod pallet {
 
 			let pid = Self::pool_next_id();
 			let keeper = T::Keeper::get().into_sub_account(pid);
+			let reward_issuer = T::RewardIssuer::get().into_sub_account(pid);
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -318,6 +319,7 @@ pub mod pallet {
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
+				reward_issuer,
 				tokens_proportion_map,
 				basic_rewards_map,
 				// Some(gid),
@@ -354,11 +356,11 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
-			match pool_info.keeper {
+			match pool_info.reward_issuer {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-				Some(ref keeper) =>
+				Some(ref reward_issuer) =>
 					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
-						T::MultiCurrency::transfer(*reward_currency, &exchanger, &keeper, *reward)?;
+						T::MultiCurrency::transfer(*reward_currency, &exchanger, &reward_issuer, *reward)?;
 						Ok(())
 					})?,
 			}

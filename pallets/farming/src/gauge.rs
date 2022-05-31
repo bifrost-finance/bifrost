@@ -293,15 +293,15 @@ where
 					// reward_to_claim = farming rate * gauge rate * gauge coefficient * existing
 					// rewards in the gauge pool
 					let reward_to_claim = gauge_rate * farming_gauge_reward;
-					match pool_info.keeper {
+					match pool_info.reward_issuer {
 						None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-						Some(ref keeper) => {
+						Some(ref reward_issuer) => {
 							*withdrawn_reward = withdrawn_reward
 								.checked_add(&reward_to_claim)
 								.ok_or(ArithmeticError::Overflow)?;
 							T::MultiCurrency::transfer(
 								*reward_currency,
-								&keeper,
+								&reward_issuer,
 								&who,
 								reward_to_claim,
 							)?

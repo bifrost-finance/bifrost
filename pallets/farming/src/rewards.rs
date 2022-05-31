@@ -76,6 +76,7 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
 	pub keeper: Option<AccountIdOf>,
+	pub reward_issuer: Option<AccountIdOf>,
 	/// Gauge pool id
 	pub gauge: Option<PoolId>,
 	pub block_startup: Option<BlockNumberFor>,
@@ -101,6 +102,7 @@ where
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
 			keeper: None,
+			reward_issuer: None,
 			gauge: None,
 			block_startup: None,
 			min_deposit_to_start: Default::default(),
@@ -120,6 +122,7 @@ where
 {
 	pub fn new(
 		keeper: AccountIdOf,
+		reward_issuer: AccountIdOf,
 		tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		gauge: Option<PoolId>,
@@ -136,6 +139,7 @@ where
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
 			keeper: Some(keeper),
+			reward_issuer: Some(reward_issuer),
 			gauge,
 			block_startup: None,
 			min_deposit_to_start,
@@ -146,34 +150,34 @@ where
 		}
 	}
 
-	pub fn reset(
-		keeper: AccountIdOf,
-		tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
-		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
-		state: PoolState,
-		gauge: Option<PoolId>,
-		min_deposit_to_start: BalanceOf,
-		after_block_to_start: BlockNumberFor,
-		withdraw_limit_time: BlockNumberFor,
-		claim_limit_time: BlockNumberFor,
-		withdraw_limit_count: u8,
-	) -> Self {
-		Self {
-			tokens_proportion,
-			total_shares: Default::default(),
-			basic_rewards,
-			rewards: BTreeMap::new(),
-			state,
-			keeper: Some(keeper),
-			gauge,
-			block_startup: None,
-			min_deposit_to_start,
-			after_block_to_start,
-			withdraw_limit_time,
-			claim_limit_time,
-			withdraw_limit_count,
-		}
-	}
+	// pub fn reset(
+	// 	keeper: AccountIdOf,
+	// 	tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
+	// 	basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
+	// 	state: PoolState,
+	// 	gauge: Option<PoolId>,
+	// 	min_deposit_to_start: BalanceOf,
+	// 	after_block_to_start: BlockNumberFor,
+	// 	withdraw_limit_time: BlockNumberFor,
+	// 	claim_limit_time: BlockNumberFor,
+	// 	withdraw_limit_count: u8,
+	// ) -> Self {
+	// 	Self {
+	// 		tokens_proportion,
+	// 		total_shares: Default::default(),
+	// 		basic_rewards,
+	// 		rewards: BTreeMap::new(),
+	// 		state,
+	// 		keeper: Some(keeper),
+	// 		gauge,
+	// 		block_startup: None,
+	// 		min_deposit_to_start,
+	// 		after_block_to_start,
+	// 		withdraw_limit_time,
+	// 		claim_limit_time,
+	// 		withdraw_limit_count,
+	// 	}
+	// }
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -430,10 +434,10 @@ impl<T: Config> Pallet<T> {
 								);
 
 								// pay reward to `who`
-								if let Some(ref keeper) = pool_info.keeper {
+								if let Some(ref reward_issuer) = pool_info.reward_issuer {
 									T::MultiCurrency::transfer(
 										*reward_currency,
-										&keeper,
+										&reward_issuer,
 										&who,
 										reward_to_withdraw,
 									)?
