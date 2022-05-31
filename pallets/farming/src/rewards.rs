@@ -270,6 +270,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		pool: PoolId,
 		remove_amount_input: Option<BalanceOf<T>>,
+		withdraw_limit_time: BlockNumberFor<T>,
 	) -> DispatchResult {
 		if let Some(remove_amount_input) = remove_amount_input {
 			if remove_amount_input.is_zero() {
@@ -309,7 +310,7 @@ impl<T: Config> Pallet<T> {
 				);
 				share_info
 					.withdraw_list
-					.push((current_block_number + pool_info.withdraw_limit_time, remove_amount));
+					.push((current_block_number + withdraw_limit_time, remove_amount));
 
 				let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
@@ -467,7 +468,7 @@ impl<T: Config> Pallet<T> {
 						pool_info.tokens_proportion.values().cloned().collect();
 					share_info.withdraw_list.iter().try_for_each(
 						|(dest_block, remove_value)| -> DispatchResult {
-							if *dest_block < current_block_number {
+							if *dest_block <= current_block_number {
 								let native_amount = tokens_proportion_values[0]
 									.saturating_reciprocal_mul(*remove_value);
 								pool_info.tokens_proportion.iter().try_for_each(

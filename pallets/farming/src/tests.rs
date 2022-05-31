@@ -28,7 +28,8 @@ use crate::{mock::*, *};
 fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_no_gauge();
-		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, ALICE), (0, tokens));
+		// assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
+		assert_ok!(Farming::set_retire_limit(Origin::signed(ALICE), 10));
 		assert_err!(Farming::claim(Origin::signed(ALICE), pid), Error::<Runtime>::InvalidPoolState);
 		System::set_block_number(System::block_number() + 100);
 		Farming::on_initialize(0);
@@ -40,7 +41,7 @@ fn claim() {
 		Farming::on_initialize(0);
 		assert_ok!(Farming::close_pool(Origin::signed(ALICE), pid));
 		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5000);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5000); // 3000 + 1000 + 1000
 		Farming::on_initialize(0);
 		assert_err!(
 			Farming::force_retire_pool(Origin::signed(ALICE), pid),
@@ -126,6 +127,25 @@ fn gauge() {
 		System::set_block_number(System::block_number() + 200);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5471);
+	})
+}
+
+#[test]
+fn retire() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, tokens) = init_no_gauge();
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 1);
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
+		System::set_block_number(System::block_number() + 1);
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 0, Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
+		assert_ok!(Farming::close_pool(Origin::signed(ALICE), pid));
+		assert_ok!(Farming::set_retire_limit(Origin::signed(ALICE), 10));
+		System::set_block_number(System::block_number() + 1000);
+		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
+		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
 	})
 }
 
