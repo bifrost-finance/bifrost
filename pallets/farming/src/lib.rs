@@ -136,6 +136,15 @@ pub mod pallet {
 		ForceGaugeClaimed {
 			gid: PoolId,
 		},
+		AllRetired {
+			pid: PoolId,
+		},
+		PartiallyRetired {
+			pid: PoolId,
+		},
+		RetireLimitSet {
+			limit: u32,
+		},
 	}
 
 	#[pallet::error]
@@ -163,6 +172,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn gauge_pool_next_id)]
 	pub type GaugePoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn retire_limit)]
+	pub type RetireLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Record reward pool info.
 	///
@@ -427,7 +440,7 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			Self::remove_share(&exchanger, pid, remove_value)?;
+			Self::remove_share(&exchanger, pid, remove_value, pool_info.withdraw_limit_time)?;
 
 			Self::deposit_event(Event::Withdrawn { who: exchanger, pid, remove_value });
 			Ok(())
@@ -463,33 +476,50 @@ pub mod pallet {
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::KeeperNotExist)?;
-			SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid).try_for_each(
-				|share_info| -> DispatchResult {
-					let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
-					Self::claim_rewards(&who, pid)?;
-					// share_info.share_total.iter().try_for_each(
-					pool_info.tokens_proportion.iter().try_for_each(
-						|(currency, proportion)| -> DispatchResult {
-							let share = *proportion * share_info.share;
-							if !share.is_zero() {
-								T::MultiCurrency::transfer(*currency, &keeper, &who, share)?;
-							}
-							Ok(())
-						},
-					)?;
-					Ok(())
-				},
-			)?;
-
-			pool_info.state = PoolState::Retired;
-			pool_info.gauge = None;
-			if let Some(ref gid) = pool_info.gauge {
-				let mut gauge_info = Self::gauge_pool_infos(gid);
-				gauge_info.gauge_state = GaugeState::Unbond;
-				GaugePoolInfos::<T>::insert(&gid, gauge_info);
+			let withdraw_limit_time = BlockNumberFor::<T>::default();
+			let mut retire_count = 0u32;
+			let mut all_retired = true;
+			let share_infos = SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid);
+			for share_info in share_infos {
+				if retire_count >= RetireLimit::<T>::get() {
+					all_retired = false;
+					break;
+				}
+				let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
+				Self::remove_share(&who, pid, None, withdraw_limit_time)?;
+				Self::claim_rewards(&who, pid)?;
+				if let Some(ref gid) = pool_info.gauge {
+					Self::gauge_claim_inner(&who, *gid)?;
+				}
+				Self::process_withraw_list(&who, pid, &pool_info)?;
+				retire_count += 1;
 			}
-			PoolInfos::<T>::insert(&pid, pool_info);
 
+			if all_retired {
+				if let Some(ref gid) = pool_info.gauge {
+					let mut gauge_info = Self::gauge_pool_infos(gid);
+					gauge_info.gauge_state = GaugeState::Unbond;
+					GaugePoolInfos::<T>::insert(&gid, gauge_info);
+				}
+				pool_info.state = PoolState::Retired;
+				pool_info.gauge = None;
+				PoolInfos::<T>::insert(&pid, pool_info);
+				Self::deposit_event(Event::AllRetired { pid });
+			} else {
+				Self::deposit_event(Event::PartiallyRetired { pid });
+			}
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_retire_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			RetireLimit::<T>::mutate(|old_limit| {
+				*old_limit = limit;
+			});
+
+			Self::deposit_event(Event::RetireLimitSet { limit });
 			Ok(())
 		}
 
@@ -609,11 +639,40 @@ pub mod pallet {
 		#[pallet::weight(10000)]
 		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
-			let exchanger = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 
-			Self::gauge_claim_inner(&exchanger, gid)?;
+			let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
+			match gauge_pool_info.gauge_state {
+				GaugeState::Bonded => {
+					Self::gauge_claim_inner(&who, gid)?;
+				},
+				GaugeState::Unbond => {
+					let current_block_number: BlockNumberFor<T> =
+						frame_system::Pallet::<T>::block_number();
+					GaugeInfos::<T>::mutate(gid, &who, |gauge_info| -> DispatchResult {
+						let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
+						let _ = if gauge_info.gauge_stop_block <= current_block_number {
+							if let Some(ref keeper) = pool_info.keeper {
+								T::MultiCurrency::transfer(
+									gauge_pool_info.token,
+									&keeper,
+									&who,
+									gauge_info.gauge_amount,
+								)?;
+								GaugeInfos::<T>::remove(gid, &who);
+								gauge_pool_info.total_time_factor = gauge_pool_info
+									.total_time_factor
+									.checked_sub(gauge_info.total_time_factor)
+									.ok_or(ArithmeticError::Overflow)?;
+								GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+							};
+						};
+						Ok(())
+					})?;
+				},
+			}
 
-			Self::deposit_event(Event::GaugeClaimed { who: exchanger, gid });
+			Self::deposit_event(Event::GaugeClaimed { who, gid });
 			Ok(())
 		}
 
