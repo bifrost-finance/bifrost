@@ -1,0 +1,4 @@
+{
+  "makefile.extensionOutputFolder": "./.vscode",
+  "rust-analyzer.cargo.features": "all"
+}
