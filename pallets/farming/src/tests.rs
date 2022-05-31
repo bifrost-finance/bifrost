@@ -218,13 +218,13 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	));
 
 	let pid = 0;
-	let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
+	// let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
 	// let mut charge_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 	// let _ = charge_rewards.entry(KSM).or_insert(100000);
 	let charge_rewards = vec![(KSM, 100000)];
 
 	assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
-	assert_eq!(Tokens::free_balance(KSM, &keeper), 100000);
+	// assert_eq!(Tokens::free_balance(KSM, &keeper), 100000);
 
 	// let pool_info = PoolInfo::reset(
 	// 	keeper.clone(),
