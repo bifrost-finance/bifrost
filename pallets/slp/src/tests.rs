@@ -291,8 +291,18 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(Tokens::free_balance(KSM, &DAVE), 0);
 		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 0);
 
+		// Before: check pool_token amount
+		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
+		// Before: check vksm amount
+		assert_eq!(Currencies::total_issuance(VKSM), 0);
+
 		// Refund user
 		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+
+		// After: check pool_token amount
+		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
+		// After: check vksm amount
+		assert_eq!(Currencies::total_issuance(VKSM), 0);
 
 		// Check account balances after refund
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
