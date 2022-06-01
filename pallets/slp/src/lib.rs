@@ -1086,7 +1086,7 @@ pub mod pallet {
 						}
 						// Transfer some amount from the exit_account to the user's account
 						T::MultiCurrency::transfer(
-							KSM,
+							currency_id,
 							&exit_account,
 							&user_account,
 							deduct_amount,
@@ -1436,7 +1436,10 @@ pub mod pallet {
 
 			// check delegator
 			// Check if it is bonded already.
-			ensure!(DelegatorLedgers::<T>::contains_key(KSM, &who), Error::<T>::DelegatorNotBonded);
+			ensure!(
+				DelegatorLedgers::<T>::contains_key(currency_id, &who),
+				Error::<T>::DelegatorNotBonded
+			);
 
 			let validators_list =
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
@@ -1464,7 +1467,8 @@ pub mod pallet {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;
 
-			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+			let mins_maxs =
+				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
 			if let Some(ref ldgr) = *ledger {
 				if let Ledger::Substrate(lg) = ldgr {
