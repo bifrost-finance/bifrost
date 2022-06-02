@@ -874,6 +874,8 @@ impl<T: Config>
 		DelegatorsIndex2Multilocation::<T>::insert(MOVR, index, who);
 		DelegatorsMultilocation2Index::<T>::insert(MOVR, who, index);
 
+		// create ledger.
+
 		Ok(())
 	}
 

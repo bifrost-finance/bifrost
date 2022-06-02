@@ -4,6 +4,7 @@ use crate::{
 	TypeInfo,
 };
 use frame_support::traits::Get;
+use sp_runtime::traits::Zero;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct DeprecatedMinimumsMaximums<Balance> {
@@ -47,8 +48,8 @@ pub fn update_minimums_maximums<T: Config>() -> Weight {
 				unbond_record_maximum: mins_maxs.unbond_record_maximum,
 				validators_back_maximum: mins_maxs.validators_back_maximum,
 				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
-				validators_reward_maximum: 0,
-				delegation_amount_minimum: 0,
+				validators_reward_maximum: Zero::zero(),
+				delegation_amount_minimum: Zero::zero(),
 			};
 			Some(new_entry)
 		},

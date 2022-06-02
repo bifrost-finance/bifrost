@@ -18,13 +18,13 @@
 
 #![cfg(test)]
 
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use mock::*;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 
 use super::*;
-use crate::KSM;
+use crate::{KSM, MOVR};
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {
@@ -549,6 +549,100 @@ fn initialize_moonriver_delegator() {
 		assert_eq!(
 			DelegatorsMultilocation2Index::<Runtime>::get(MOVR, subaccount0_location),
 			Some(0)
+		);
+	});
+}
+
+fn moonriver_setup() {
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	// set operate_origins
+	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(ALICE)));
+
+	// Initialize ongoing timeunit as 0.
+	assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(0)));
+
+	// Initialize currency delays.
+	let delay =
+		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
+	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), MOVR, Some(delay)));
+
+	// First to setup index-multilocation relationship of subaccount_0
+	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		Origin::signed(ALICE),
+		MOVR,
+		XcmOperation::Bond,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	let mins_and_maxs = MinimumsMaximums {
+		delegator_bonded_minimum: 100_000_000_000,
+		bond_extra_minimum: 100_000_000_000,
+		unbond_minimum: 100_000_000_000,
+		rebond_minimum: 100_000_000_000,
+		unbond_record_maximum: 1,
+		validators_back_maximum: 100,
+		delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+		validators_reward_maximum: 300,
+		delegation_amount_minimum: 500_000_000,
+	};
+
+	// Set minimums and maximums
+	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
+
+	// Set delegator ledger
+	assert_ok!(Slp::add_validator(Origin::signed(ALICE), MOVR, validator_0_location.clone(),));
+
+	// initialize delegator
+}
+
+#[test]
+fn moonriver_bond_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		moonriver_setup();
+		assert_noop!(
+			Slp::bond(
+				Origin::signed(ALICE),
+				MOVR,
+				subaccount_0_location,
+				5_000_000_000_000_000_000,
+				Some(validator_0_location)
+			),
+			Error::<Runtime>::XcmExecutionFailed
 		);
 	});
 }
