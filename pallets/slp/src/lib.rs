@@ -1851,6 +1851,8 @@ pub mod pallet {
 				let currency_id = match entry.clone() {
 					LedgerUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
+					LedgerUpdateEntry::Moonriver(moonriver_entry) =>
+						Some(moonriver_entry.currency_id),
 					_ => None,
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
@@ -1906,6 +1908,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::QueryNotExist)?;
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
+				LedgerUpdateEntry::Moonriver(moonriver_entry) => Some(moonriver_entry.currency_id),
 				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
