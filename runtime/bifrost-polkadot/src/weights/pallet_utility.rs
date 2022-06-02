@@ -65,4 +65,8 @@ impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
 	fn dispatch_as() -> Weight {
 		(14_340_000 as Weight)
 	}
+
+	fn force_batch(_c: u32) -> Weight {
+		todo!()
+	}
 }

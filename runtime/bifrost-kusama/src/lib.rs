@@ -1329,7 +1329,6 @@ impl pallet_vesting::Config for Runtime {
 // orml runtime start
 
 impl orml_currencies::Config for Runtime {
-	type Event = Event;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -1393,7 +1392,9 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
+	type MaxReserves = MaxReserves;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
@@ -1946,7 +1947,7 @@ construct_runtime! {
 		// Third party modules
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
-		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
+		Currencies: orml_currencies::{Pallet, Call} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
