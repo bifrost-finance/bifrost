@@ -197,7 +197,7 @@ impl<T: Config>
 			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
 
 		let candidate_delegation_count: u32 = mins_maxs.validators_back_maximum;
-		let delegation_count: u32 = mins_maxs.validators_back_maximum;
+		let delegation_count: u32 = u32::max_value();
 		// Construct xcm message.
 		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::Delegate(
 			validator_account_id_20,

@@ -642,7 +642,7 @@ fn moonriver_bond_works() {
 				5_000_000_000_000_000_000,
 				Some(validator_0_location)
 			),
-			Error::<Runtime>::XcmExecutionFailed
+			Error::<Runtime>::XcmFailure
 		);
 	});
 }
