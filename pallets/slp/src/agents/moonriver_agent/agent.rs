@@ -197,7 +197,10 @@ impl<T: Config>
 			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
 
 		let candidate_delegation_count: u32 = mins_maxs.validators_back_maximum;
-		let delegation_count: u32 = u32::max_value();
+		// Only allow bond with validators with maximum 2 times rewarded delegators. Otherwise, it's
+		// too crowded.
+		let delegation_count: u32 =
+			mins_maxs.validators_reward_maximum.checked_mul(2).ok_or(Error::<T>::OverFlow)?;
 		// Construct xcm message.
 		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::Delegate(
 			validator_account_id_20,
