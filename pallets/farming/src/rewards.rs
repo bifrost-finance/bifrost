@@ -28,7 +28,7 @@ use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{Saturating, UniqueSaturatedInto, Zero},
+	traits::{CheckedSub, Saturating, UniqueSaturatedInto, Zero},
 	RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, prelude::*};
