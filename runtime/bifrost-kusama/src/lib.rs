@@ -2253,6 +2253,18 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_rewards(&who, pid).unwrap_or(Vec::new())
+
+			// match pallet_instance {
+			// 	1 => LiquidityMining::rewards(who, pid).unwrap_or(Vec::new()),
+			// 	2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
+			// 	_ => Vec::new()
+			// }
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (

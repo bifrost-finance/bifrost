@@ -360,7 +360,12 @@ pub mod pallet {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 				Some(ref reward_issuer) =>
 					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
-						T::MultiCurrency::transfer(*reward_currency, &exchanger, &reward_issuer, *reward)?;
+						T::MultiCurrency::transfer(
+							*reward_currency,
+							&exchanger,
+							&reward_issuer,
+							*reward,
+						)?;
 						Ok(())
 					})?,
 			}

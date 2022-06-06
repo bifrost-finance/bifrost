@@ -333,4 +333,99 @@ where
 		})?;
 		Ok(())
 	}
+
+	pub fn get_rewards(
+		who: &T::AccountId,
+		pid: PoolId,
+	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+		let share_info = SharesAndWithdrawnRewards::<T>::get(pid, who);
+		let pool_info = PoolInfos::<T>::get(pid);
+		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+		let mut result = BTreeMap::<CurrencyId, BalanceOf<T>>::new();
+		pool_info.rewards.iter().try_for_each(
+			|(reward_currency, (total_reward, total_withdrawn_reward))| -> DispatchResult {
+				let withdrawn_reward =
+					share_info.withdrawn_rewards.get(reward_currency).copied().unwrap_or_default();
+
+				let total_reward_proportion: BalanceOf<T> =
+					U256::from(share_info.share.to_owned().saturated_into::<u128>())
+						.saturating_mul(U256::from(
+							total_reward.to_owned().saturated_into::<u128>(),
+						))
+						.checked_div(total_shares)
+						.unwrap_or_default()
+						.as_u128()
+						.unique_saturated_into();
+
+				let reward_to_withdraw = total_reward_proportion
+					.saturating_sub(withdrawn_reward)
+					.min(total_reward.saturating_sub(*total_withdrawn_reward));
+
+				if reward_to_withdraw.is_zero() {
+					return Ok(());
+				};
+
+				result.insert(*reward_currency, reward_to_withdraw);
+				Ok(())
+			},
+		)?;
+
+		match pool_info.gauge {
+			None => (),
+			Some(gid) => {
+				let gauge_pool_info = GaugePoolInfos::<T>::get(gid);
+				let gauge_info = GaugeInfos::<T>::get(gid, who);
+				let start_block = if current_block_number > gauge_info.gauge_stop_block {
+					gauge_info.gauge_stop_block
+				} else {
+					current_block_number
+				};
+
+				let latest_claimed_time_factor = gauge_info.latest_time_factor +
+					gauge_info
+						.gauge_amount
+						.saturated_into::<u128>()
+						.checked_mul((start_block - gauge_info.gauge_last_block).into())
+						.ok_or(ArithmeticError::Overflow)?;
+				let gauge_rate = Permill::from_rational(
+					latest_claimed_time_factor - gauge_info.claimed_time_factor,
+					gauge_pool_info.total_time_factor,
+				);
+				gauge_pool_info.rewards.iter().try_for_each(
+					|(&reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
+						let reward = reward_amount
+							.checked_sub(&withdrawn_reward)
+							.ok_or(ArithmeticError::Overflow)?;
+						let total_shares =
+							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+						let share_info =
+							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+						let farming_gauge_reward: BalanceOf<T> =
+							U256::from(share_info.share.to_owned().saturated_into::<u128>())
+								.saturating_mul(U256::from(
+									reward.to_owned().saturated_into::<u128>(),
+								))
+								.checked_div(total_shares)
+								.unwrap_or_default()
+								.as_u128()
+								.unique_saturated_into();
+						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+						// existing rewards in the gauge pool
+						let reward_to_claim = gauge_rate * farming_gauge_reward;
+						result.entry(reward_currency).and_modify(|total_reward| {
+							*total_reward = total_reward.saturating_add(reward_to_claim);
+						});
+
+						Ok(())
+					},
+				)?;
+			},
+		};
+		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::default();
+		for (key, value) in result.iter() {
+			result_vec.push((*key, *value))
+		}
+		Ok(result_vec)
+	}
 }

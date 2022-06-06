@@ -551,6 +551,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-farming-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
@@ -612,6 +622,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
  "bifrost-farming",
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
