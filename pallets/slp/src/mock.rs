@@ -247,7 +247,7 @@ impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
 		Default::default()
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
-		Default::default()
+		true
 	}
 }
 

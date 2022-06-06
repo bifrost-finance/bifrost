@@ -138,7 +138,7 @@ impl<T: Config>
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
-			ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+			ensure!(amount >= mins_maxs.delegation_amount_minimum, Error::<T>::LowerThanMinimum);
 
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
 			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -196,11 +196,13 @@ impl<T: Config>
 		let validator_account_id_20 =
 			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
 
-		let candidate_delegation_count: u32 = mins_maxs.validators_back_maximum;
 		// Only allow bond with validators with maximum 2 times rewarded delegators. Otherwise, it's
 		// too crowded.
-		let delegation_count: u32 =
+		let candidate_delegation_count: u32 =
 			mins_maxs.validators_reward_maximum.checked_mul(2).ok_or(Error::<T>::OverFlow)?;
+
+		let delegation_count: u32 = mins_maxs.validators_back_maximum;
+
 		// Construct xcm message.
 		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::Delegate(
 			validator_account_id_20,
