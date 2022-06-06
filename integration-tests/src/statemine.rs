@@ -25,7 +25,7 @@ use xcm_emulator::TestExt;
 use crate::{integration_tests::*, kusama_test_net::*};
 #[test]
 fn statemine() {
-	env_logger::init();
+	// env_logger::init();
 	Statemine::execute_with(|| {
 		use frame_support::traits::Currency;
 		use westmint_runtime::*;

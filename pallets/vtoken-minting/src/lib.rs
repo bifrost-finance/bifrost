@@ -274,14 +274,16 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			Self::handle_on_initialize().map_err(|e| {
-				log::error!(
-					target: "runtime::vtoken-minting",
-					"Received invalid justification for {:?}",
-					e,
-				);
-				e
-			});
+			Self::handle_on_initialize()
+				.map_err(|e| {
+					log::error!(
+						target: "runtime::vtoken-minting",
+						"Received invalid justification for {:?}",
+						e,
+					);
+					e
+				})
+				.ok();
 
 			T::WeightInfo::on_initialize()
 		}
@@ -507,7 +509,8 @@ pub mod pallet {
 										}
 										Ok(())
 									},
-								);
+								)
+								.ok();
 								tmp_amount = tmp_amount.saturating_sub(unlock_amount);
 								// } else {
 								// 	return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
@@ -531,7 +534,8 @@ pub mod pallet {
 									}
 									Ok(())
 								},
-							);
+							)
+							.ok();
 							TimeUnitUnlockLedger::<T>::mutate_exists(
 								&time_unit,
 								&token_id,
@@ -549,7 +553,8 @@ pub mod pallet {
 									}
 									Ok(())
 								},
-							);
+							)
+							.ok();
 							true
 						}
 					} else {
@@ -1038,7 +1043,8 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
-							);
+							)
+							.ok();
 						}
 					}
 				},
@@ -1140,11 +1146,6 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		if let Some((who, unlock_amount, time_unit)) = Self::token_unlock_ledger(currency_id, index)
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
-
-			TokenPool::<T>::mutate(&currency_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_add(&deduct_amount).ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
 
 			CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_sub(&deduct_amount).ok_or(Error::<T>::CalculationOverflow)?;

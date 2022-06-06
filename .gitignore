@@ -4,7 +4,7 @@
 .wasm-binaries
 **/._*
 .idea
-.vscode
+.vscode/*.log
 .DS_Store
 .cargo-remote.toml
 .gitignore

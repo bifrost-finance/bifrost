@@ -33,6 +33,10 @@ pub use sp_runtime::{
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
 
+const SECONDS_PER_YEAR: u32 = 31557600;
+const SECONDS_PER_BLOCK: u32 = 12;
+pub const BLOCKS_PER_YEAR: u32 = SECONDS_PER_YEAR / SECONDS_PER_BLOCK;
+
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;
 use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};

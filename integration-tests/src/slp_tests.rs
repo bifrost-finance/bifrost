@@ -43,7 +43,7 @@ use crate::{integration_tests::*, kusama_test_net::*};
 /// ****************************************************
 
 // parachain 2001 subaccount index 0
-fn subaccount_0() -> AccountId {
+pub fn subaccount_0() -> AccountId {
 	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
 	let subaccount_0: AccountId =
 		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
@@ -52,7 +52,7 @@ fn subaccount_0() -> AccountId {
 	subaccount_0
 }
 
-fn para_account_2001() -> AccountId {
+pub fn para_account_2001() -> AccountId {
 	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
 	let para_account_2001: AccountId =
 		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
