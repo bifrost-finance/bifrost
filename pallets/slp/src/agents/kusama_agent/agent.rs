@@ -175,14 +175,17 @@ impl<T: Config>
 
 		// Check if the new_add_amount + active_staking_amount doesn't exceeds
 		// delegator_active_staking_maximum
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let active = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let active = substrate_ledger.active;
 
-		let total = amount.checked_add(&active).ok_or(Error::<T>::OverFlow)?;
-		ensure!(
-			total <= mins_maxs.delegator_active_staking_maximum,
-			Error::<T>::ExceedActiveMaximum
-		);
+			let total = amount.checked_add(&active).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				total <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 		// Construct xcm message..
 		let call = KusamaCall::Staking(StakingCall::BondExtra(amount));
 
@@ -212,25 +215,29 @@ impl<T: Config>
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let (active_staking, unlocking_num) =
-			(substrate_ledger.active, substrate_ledger.unlocking.len() as u32);
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let (active_staking, unlocking_num) =
+				(substrate_ledger.active, substrate_ledger.unlocking.len() as u32);
 
-		// Check if the unbonding amount exceeds minimum requirement.
-		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+			// Check if the unbonding amount exceeds minimum requirement.
+			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+			ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
-		// Check if the remaining active balance is enough for (unbonding amount + minimum
-		// bonded amount)
-		let remaining = active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
-		ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
+			// Check if the remaining active balance is enough for (unbonding amount + minimum
+			// bonded amount)
+			let remaining =
+				active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
+			ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
 
-		// Check if this unbonding will exceed the maximum unlocking records bound for a single
-		// delegator.
-		ensure!(
-			unlocking_num < mins_maxs.unbond_record_maximum,
-			Error::<T>::ExceedUnlockingRecords
-		);
+			// Check if this unbonding will exceed the maximum unlocking records bound for a single
+			// delegator.
+			ensure!(
+				unlocking_num < mins_maxs.unbond_record_maximum,
+				Error::<T>::ExceedUnlockingRecords
+			);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
@@ -256,26 +263,29 @@ impl<T: Config>
 		// Get the active amount of a delegator.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let amount = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let amount = substrate_ledger.active;
 
-		// Construct xcm message.
-		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+			// Construct xcm message.
+			let call = KusamaCall::Staking(StakingCall::Unbond(amount));
 
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
+			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+			// send it out.
+			let (query_id, timeout, xcm_message) =
+				Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
 
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who, false, true, false, amount, query_id, timeout,
-		)?;
+			// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+			Self::insert_delegator_ledger_update_entry(
+				who, false, true, false, amount, query_id, timeout,
+			)?;
 
-		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			// Send out the xcm message.
+			T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok(query_id)
+			Ok(query_id)
+		} else {
+			Err(Error::<T>::Unexpected)?
+		}
 	}
 
 	/// Cancel some unbonding amount.
@@ -293,15 +303,19 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.rebond_minimum, Error::<T>::LowerThanMinimum);
 
 		// Get the delegator ledger
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let unlock_chunk_list = substrate_ledger.unlocking;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let unlock_chunk_list = substrate_ledger.unlocking;
 
-		// Check if the delegator unlocking amount is greater than or equal to the rebond amount.
-		let mut total_unlocking: BalanceOf<T> = Zero::zero();
-		for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
-			total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
+			// Check if the delegator unlocking amount is greater than or equal to the rebond
+			// amount.
+			let mut total_unlocking: BalanceOf<T> = Zero::zero();
+			for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
+				total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
+			}
+			ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
+		} else {
+			Err(Error::<T>::Unexpected)?;
 		}
-		ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Rebond(amount));
@@ -534,13 +548,16 @@ impl<T: Config>
 		// Get active amount, if not zero, create an update entry.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let amount = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let amount = substrate_ledger.active;
 
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who, false, true, false, amount, query_id, timeout,
-		)?;
+			// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+			Self::insert_delegator_ledger_update_entry(
+				who, false, true, false, amount, query_id, timeout,
+			)?;
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Send out the xcm message.
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
@@ -685,11 +702,14 @@ impl<T: Config>
 		// Get the delegator ledger
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let total = substrate_ledger.total;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let total = substrate_ledger.total;
 
-		// Check if ledger total amount is zero. If not, return error.
-		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
+			// Check if ledger total amount is zero. If not, return error.
+			ensure!(total.is_zero(), Error::<T>::AmountNotZero);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Remove corresponding storage.
 		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
@@ -1086,7 +1106,7 @@ impl<T: Config> KusamaAgent<T> {
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
 		// update DelegatorLedgers<T> storage
-		let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+		if let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
 			if_bond,
@@ -1094,101 +1114,118 @@ impl<T: Config> KusamaAgent<T> {
 			if_rebond,
 			amount,
 			unlock_time,
-		}) = query_entry;
+		}) = query_entry
+		{
+			DelegatorLedgers::<T>::mutate(
+				KSM,
+				delegator_id,
+				|old_ledger| -> Result<(), Error<T>> {
+					if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
+						// If this an unlocking xcm message update record
+						// Decrease the active amount and add an unlocking record.
+						if if_bond {
+							// If this is a bonding operation.
+							// Increase both the active and total amount.
+							old_sub_ledger.active = old_sub_ledger
+								.active
+								.checked_add(&amount)
+								.ok_or(Error::<T>::OverFlow)?;
 
-		DelegatorLedgers::<T>::mutate(KSM, delegator_id, |old_ledger| -> Result<(), Error<T>> {
-			if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
-				// If this an unlocking xcm message update record
-				// Decrease the active amount and add an unlocking record.
-				if if_bond {
-					// If this is a bonding operation.
-					// Increase both the active and total amount.
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+							old_sub_ledger.total = old_sub_ledger
+								.total
+								.checked_add(&amount)
+								.ok_or(Error::<T>::OverFlow)?;
+						} else if if_unlock {
+							old_sub_ledger.active = old_sub_ledger
+								.active
+								.checked_sub(&amount)
+								.ok_or(Error::<T>::UnderFlow)?;
 
-					old_sub_ledger.total =
-						old_sub_ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-				} else if if_unlock {
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+							let unlock_time_unit =
+								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 
-					let unlock_time_unit = unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+							let new_unlock_record =
+								UnlockChunk { value: amount, unlock_time: unlock_time_unit };
 
-					let new_unlock_record =
-						UnlockChunk { value: amount, unlock_time: unlock_time_unit };
+							old_sub_ledger.unlocking.push(new_unlock_record);
+						} else if if_rebond {
+							// If it is a rebonding operation.
+							// Reduce the unlocking records.
+							let mut remaining_amount = amount;
 
-					old_sub_ledger.unlocking.push(new_unlock_record);
-				} else if if_rebond {
-					// If it is a rebonding operation.
-					// Reduce the unlocking records.
-					let mut remaining_amount = amount;
-
-					#[allow(clippy::while_let_loop)]
-					loop {
-						if let Some(record) = old_sub_ledger.unlocking.pop() {
-							if remaining_amount >= record.value {
-								remaining_amount -= record.value;
-							} else {
-								let remain_unlock_chunk = UnlockChunk {
-									value: record.value - remaining_amount,
-									unlock_time: record.unlock_time,
-								};
-								old_sub_ledger.unlocking.push(remain_unlock_chunk);
-								break;
+							#[allow(clippy::while_let_loop)]
+							loop {
+								if let Some(record) = old_sub_ledger.unlocking.pop() {
+									if remaining_amount >= record.value {
+										remaining_amount -= record.value;
+									} else {
+										let remain_unlock_chunk = UnlockChunk {
+											value: record.value - remaining_amount,
+											unlock_time: record.unlock_time,
+										};
+										old_sub_ledger.unlocking.push(remain_unlock_chunk);
+										break;
+									}
+								} else {
+									break;
+								}
 							}
+
+							// Increase the active amount.
+							old_sub_ledger.active = old_sub_ledger
+								.active
+								.checked_add(&amount)
+								.ok_or(Error::<T>::OverFlow)?;
 						} else {
-							break;
+							// If it is a liquidize operation.
+							let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
+							let unlock_era = if let TimeUnit::Era(unlock_era) = unlock_unit {
+								unlock_era
+							} else {
+								Err(Error::<T>::InvalidTimeUnit)?
+							};
+
+							let mut accumulated: BalanceOf<T> = Zero::zero();
+							let mut pop_first_num = 0;
+
+							// for each unlocking record, check whether its unlocking era is smaller
+							// or equal to unlock_time. If yes, pop it out and accumulate its
+							// amount.
+							for record in old_sub_ledger.unlocking.iter() {
+								if let TimeUnit::Era(due_era) = record.unlock_time {
+									if due_era <= unlock_era {
+										accumulated = accumulated
+											.checked_add(&record.value)
+											.ok_or(Error::<T>::OverFlow)?;
+
+										pop_first_num = pop_first_num
+											.checked_add(&1)
+											.ok_or(Error::<T>::OverFlow)?;
+									} else {
+										break;
+									}
+								} else {
+									Err(Error::<T>::Unexpected)?;
+								}
+							}
+
+							// Remove the first pop_first_num elements from unlocking records.
+							old_sub_ledger.unlocking.drain(0..pop_first_num);
+
+							// Finally deduct the accumulated amount from ledger total field.
+							old_sub_ledger.total = old_sub_ledger
+								.total
+								.checked_sub(&accumulated)
+								.ok_or(Error::<T>::OverFlow)?;
 						}
 					}
 
-					// Increase the active amount.
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-				} else {
-					// If it is a liquidize operation.
-					let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
-					let unlock_era = if let TimeUnit::Era(unlock_era) = unlock_unit {
-						unlock_era
-					} else {
-						Err(Error::<T>::InvalidTimeUnit)?
-					};
-
-					let mut accumulated: BalanceOf<T> = Zero::zero();
-					let mut pop_first_num = 0;
-
-					// for each unlocking record, check whether its unlocking era is smaller
-					// or equal to unlock_time. If yes, pop it out and accumulate its
-					// amount.
-					for record in old_sub_ledger.unlocking.iter() {
-						if let TimeUnit::Era(due_era) = record.unlock_time {
-							if due_era <= unlock_era {
-								accumulated = accumulated
-									.checked_add(&record.value)
-									.ok_or(Error::<T>::OverFlow)?;
-
-								pop_first_num =
-									pop_first_num.checked_add(&1).ok_or(Error::<T>::OverFlow)?;
-							} else {
-								break;
-							}
-						} else {
-							Err(Error::<T>::Unexpected)?;
-						}
-					}
-
-					// Remove the first pop_first_num elements from unlocking records.
-					old_sub_ledger.unlocking.drain(0..pop_first_num);
-
-					// Finally deduct the accumulated amount from ledger total field.
-					old_sub_ledger.total = old_sub_ledger
-						.total
-						.checked_sub(&accumulated)
-						.ok_or(Error::<T>::OverFlow)?;
-				}
-			}
-
-			Ok(())
-		})?;
+					Ok(())
+				},
+			)?;
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Delete the DelegatorLedgerXcmUpdateQueue<T> query
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);

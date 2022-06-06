@@ -452,7 +452,6 @@ impl<T: Config>
 
 			// get pending request amount.
 			let mut rebond_amount = BalanceOf::<T>::from(0u32);
-			// let request_iter = ledger.requests.iter().ok_or(Error::<T>::Unexpected)?;
 			for OneToManyScheduledRequest::<MultiLocation, BalanceOf<T>> {
 				validator: vali,
 				action: act,

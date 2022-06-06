@@ -1471,11 +1471,14 @@ pub mod pallet {
 				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
 			if let Some(ref ldgr) = *ledger {
-				let Ledger::Substrate(lg) = ldgr;
-				ensure!(
-					lg.active >= mins_maxs.delegator_bonded_minimum,
-					Error::<T>::LowerThanMinimum
-				);
+				if let Ledger::Substrate(lg) = ldgr {
+					ensure!(
+						lg.active >= mins_maxs.delegator_bonded_minimum,
+						Error::<T>::LowerThanMinimum
+					);
+				} else {
+					Err(Error::<T>::Unexpected)?;
+				}
 			}
 
 			// Update the ledger.
@@ -1852,7 +1855,6 @@ pub mod pallet {
 						Some(substrate_entry.currency_id),
 					LedgerUpdateEntry::Moonriver(moonriver_entry) =>
 						Some(moonriver_entry.currency_id),
-					_ => None,
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1907,7 +1909,6 @@ pub mod pallet {
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 				LedgerUpdateEntry::Moonriver(moonriver_entry) => Some(moonriver_entry.currency_id),
-				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
