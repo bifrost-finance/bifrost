@@ -262,7 +262,9 @@ impl<T: Config>
 			// check if the delegation exists, if not, return error.
 			ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
-			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			let active_amount =
+				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
+			let add_total = active_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				add_total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
@@ -341,8 +343,10 @@ impl<T: Config>
 			);
 
 			// Ensure the unbond after wont below delegator_bonded_minimum
+			let active_amount =
+				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
 			let subtracted_total =
-				ledger.total.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+				active_amount.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
 			ensure!(
 				subtracted_total >= mins_maxs.delegator_bonded_minimum,
 				Error::<T>::LowerThanMinimum
@@ -1486,6 +1490,31 @@ impl<T: Config> MoonriverAgent<T> {
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
 							);
+
+							// ensure current round is no less than executable time.
+							let execute_time_unit =
+								unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
+
+							let execute_round =
+								if let TimeUnit::Round(current_round) = execute_time_unit {
+									current_round
+								} else {
+									Err(Error::<T>::InvalidTimeUnit)?
+								};
+
+							let request_time_unit = old_ledger
+								.request_briefs
+								.get(&validator_id)
+								.ok_or(Error::<T>::RequestNotExist)?;
+
+							let request_round =
+								if let TimeUnit::Round(req_round) = request_time_unit.0 {
+									req_round
+								} else {
+									Err(Error::<T>::InvalidTimeUnit)?
+								};
+
+							ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
 
 							let (_, execute_amount) = old_ledger
 								.request_briefs
