@@ -20,52 +20,65 @@ use std::{marker::PhantomData, sync::Arc};
 
 pub use bifrost_salp_rpc_runtime_api::{self as runtime_api, SalpRuntimeApi};
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{async_trait, RpcResult},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorCode, ErrorObject},
+};
 use node_primitives::{Balance, RpcContributionStatus};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, sp_std::convert::TryInto, traits::Block as BlockT};
 
-pub use self::gen_client::Client as SalpClient;
-
 #[derive(Clone, Debug)]
-pub struct SalpRpcWrapper<C, Block> {
+pub struct SalpRpc<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> SalpRpcWrapper<C, Block> {
+impl<C, Block> SalpRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
-#[rpc]
+fn convert_rpc_params(value: Balance) -> RpcResult<NumberOrHex> {
+	value
+		.try_into()
+		.map_err(|e| {
+			CallError::Custom(ErrorObject::owned(
+				ErrorCode::InvalidParams.code(),
+				format!("{} doesn't fit in NumberOrHex representation", value),
+				Some(format!("{:?}", e)),
+			))
+		})
+		.map_err(|e| jsonrpsee::core::Error::Call(e))
+}
+
+#[rpc(client, server)]
 pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 	/// rpc method for getting current contribution
-	#[rpc(name = "salp_getContribution")]
+	#[method(name = "salp_getContribution")]
 	fn get_contribution(
 		&self,
 		index: ParaId,
 		who: AccountId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
+	) -> RpcResult<(NumberOrHex, RpcContributionStatus)>;
 
-	#[rpc(name = "salp_getLiteContribution")]
+	#[method(name = "salp_getLiteContribution")]
 	fn get_lite_contribution(
 		&self,
 		index: ParaId,
 		who: AccountId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
-
-	fn convert_rpc_params(val: Balance) -> Result<NumberOrHex, RpcError>;
+	) -> RpcResult<(NumberOrHex, RpcContributionStatus)>;
 }
 
-impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
-	for SalpRpcWrapper<C, Block>
+#[async_trait]
+impl<C, Block, ParaId, AccountId> SalpRpcApiServer<<Block as BlockT>::Hash, ParaId, AccountId>
+	for SalpRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -73,34 +86,28 @@ where
 	ParaId: Codec,
 	AccountId: Codec,
 {
-	fn convert_rpc_params(value: Balance) -> Result<NumberOrHex, RpcError> {
-		value.try_into().map_err(|_| RpcError {
-			code: ErrorCode::InvalidParams,
-			message: format!("{} doesn't fit in NumberOrHex representation", value),
-			data: None,
-		})
-	}
 	fn get_contribution(
 		&self,
 		index: ParaId,
 		account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)> {
+	) -> RpcResult<(NumberOrHex, RpcContributionStatus)> {
 		let salp_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
 
 		match rs {
-			Ok((val, status)) => match Self::convert_rpc_params(val) {
+			Ok((val, status)) => match convert_rpc_params(val) {
 				Ok(value) => Ok((value, status)),
 				Err(e) => Err(e),
 			},
-			Err(e) => Err(RpcError {
-				code: ErrorCode::InternalError,
-				message: "Failed to get salp contribution.".to_owned(),
-				data: Some(format!("{:?}", e).into()),
-			}),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get salp contribution.",
+				Some(format!("{:?}", e)),
+			)))
+			.map_err(|e| jsonrpsee::core::Error::Call(e)),
 		}
 	}
 
@@ -109,22 +116,23 @@ where
 		index: ParaId,
 		account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)> {
+	) -> RpcResult<(NumberOrHex, RpcContributionStatus)> {
 		let salp_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
 		let rs = salp_rpc_api.get_lite_contribution(&at, index, account);
 
 		match rs {
-			Ok((val, status)) => match Self::convert_rpc_params(val) {
+			Ok((val, status)) => match convert_rpc_params(val) {
 				Ok(value) => Ok((value, status)),
 				Err(e) => Err(e),
 			},
-			Err(e) => Err(RpcError {
-				code: ErrorCode::InternalError,
-				message: "Failed to get salp contribution.".to_owned(),
-				data: Some(format!("{:?}", e).into()),
-			}),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get salp contribution.",
+				Some(format!("{:?}", e)),
+			)))
+			.map_err(|e| jsonrpsee::core::Error::Call(e)),
 		}
 	}
 }

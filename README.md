@@ -101,7 +101,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.19
+git checkout release-v0.9.22
 cargo build --release
 cd -
 ```
