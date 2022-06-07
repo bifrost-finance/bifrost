@@ -18,9 +18,15 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, primitives::MoonriverLedgerUpdateEntry, Junction::Parachain, Junctions::X2};
+use crate::{
+	mock::*,
+	primitives::{
+		MoonriverLedgerUpdateEntry, OneToManyDelegationAction, OneToManyScheduledRequest,
+	},
+	Junction::Parachain,
+	Junctions::X2,
+};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
@@ -118,6 +124,20 @@ fn moonriver_setup() {
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		Origin::signed(ALICE),
+		MOVR,
+		XcmOperation::Unbond,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		Origin::signed(ALICE),
+		MOVR,
+		XcmOperation::Chill,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 100_000_000_000,
 		bond_extra_minimum: 100_000_000_000,
@@ -181,7 +201,7 @@ fn moonriver_bond_works() {
 		let update_entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: validator_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
 			if_bond: true,
 			if_unlock: false,
 			if_revoke: false,
@@ -259,6 +279,124 @@ fn moonriver_bond_extra_works() {
 }
 
 #[test]
+fn moonriver_unbond_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		moonriver_setup();
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 8_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		// Set delegator ledger
+		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+
+		assert_noop!(
+			Slp::unbond(
+				Origin::signed(ALICE),
+				MOVR,
+				subaccount_0_location,
+				Some(validator_0_location),
+				2_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::XcmFailure
+		);
+	});
+}
+
+#[test]
+fn moonriver_unbond_all_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		moonriver_setup();
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 8_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		// Set delegator ledger
+		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+
+		assert_noop!(
+			Slp::unbond_all(Origin::signed(ALICE), MOVR, subaccount_0_location,),
+			Error::<Runtime>::XcmFailure
+		);
+	});
+}
+
+#[test]
 fn moonriver_confirm_delegator_ledger_query_response_works() {
 	let subaccount_0_account_id_20: [u8; 20] =
 		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
@@ -312,11 +450,13 @@ fn moonriver_confirm_delegator_ledger_query_response_works() {
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), movr_ledger);
 
+		// Bond confirm
 		// setup updateEntry
+		let query_id = 0;
 		let update_entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: validator_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
 			if_bond: true,
 			if_unlock: false,
 			if_revoke: false,
@@ -328,13 +468,20 @@ fn moonriver_confirm_delegator_ledger_query_response_works() {
 			unlock_time: None,
 		});
 
-		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(0, (update_entry.clone(), 1000));
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry.clone(), 1000));
 
-		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(0), Some((update_entry, 1000)));
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry, 1000))
+		);
 
-		assert_ok!(Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, 0));
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		));
 
-		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(0), None);
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
 		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
@@ -358,5 +505,317 @@ fn moonriver_confirm_delegator_ledger_query_response_works() {
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
 			Some(ledger)
 		);
+
+		// BondExtra confirm
+		let query_id = 1;
+		let update_entry_1 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
+			if_bond: true,
+			if_unlock: false,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: false,
+			amount: 5_000_000_000_000_000_000,
+			unlock_time: None,
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_1.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_1, 1000))
+		);
+
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		));
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 10_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		assert_eq!(
+			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			Some(ledger)
+		);
+
+		// Unbond confirm
+		let query_id = 2;
+		let update_entry_2 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
+			if_bond: false,
+			if_unlock: true,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: false,
+			amount: 2_000_000_000_000_000_000,
+			unlock_time: Some(TimeUnit::Round(24)),
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_2.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_2, 1000))
+		);
+
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		));
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		let request = OneToManyScheduledRequest {
+			validator: validator_0_location.clone(),
+			when_executable: TimeUnit::Round(24),
+			action: OneToManyDelegationAction::Decrease(2_000_000_000_000_000_000),
+		};
+		let mut request_list = Vec::new();
+		request_list.push(request);
+		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+		request_briefs_set
+			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 10_000_000_000_000_000_000,
+			less_total: 2_000_000_000_000_000_000,
+			delegations: delegation_set,
+			requests: request_list,
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		assert_eq!(
+			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			Some(ledger)
+		);
+
+		// Unbond confirm
+		let query_id = 3;
+		let update_entry_3 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
+			if_bond: false,
+			if_unlock: false,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: false,
+			amount: 0,
+			unlock_time: Some(TimeUnit::Round(0)),
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_3.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_3.clone(), 1000))
+		);
+
+		assert_noop!(
+			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Error::<Runtime>::RequestNotDue
+		);
+
+		assert_ok!(Slp::fail_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		),);
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		// Not working because time is not right.
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
+
+		let query_id = 4;
+		let update_entry_4 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
+			if_bond: false,
+			if_unlock: false,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: false,
+			amount: 0,
+			unlock_time: Some(TimeUnit::Round(24)),
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_4.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_4.clone(), 1000))
+		);
+
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		));
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 8_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		assert_eq!(
+			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			Some(ledger)
+		);
+
+		// unbond_all confirm
+		// schedule leave
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 8_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(48)),
+		};
+
+		let ledger = Ledger::Moonriver(moonriver_ledger);
+
+		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
+
+		assert_eq!(
+			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			Some(ledger)
+		);
+
+		let query_id = 5;
+		let update_entry_5 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: None,
+			if_bond: false,
+			if_unlock: false,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: true,
+			amount: 0,
+			unlock_time: Some(TimeUnit::Round(24)),
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_5.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_5.clone(), 1000))
+		);
+
+		assert_noop!(
+			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Error::<Runtime>::LeavingNotDue
+		);
+
+		assert_ok!(Slp::fail_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		),);
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		// Not working because time is not right.
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
+
+		let query_id = 6;
+		let update_entry_6 = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+			currency_id: MOVR,
+			delegator_id: subaccount_0_location.clone(),
+			validator_id: Some(validator_0_location.clone()),
+			if_bond: false,
+			if_unlock: false,
+			if_revoke: false,
+			if_cancel: false,
+			if_leave: false,
+			if_cancel_leave: false,
+			if_execute_leave: true,
+			amount: 0,
+			unlock_time: Some(TimeUnit::Round(48)),
+		});
+
+		DelegatorLedgerXcmUpdateQueue::<Runtime>::insert(query_id, (update_entry_6.clone(), 1000));
+
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			Some((update_entry_6.clone(), 1000))
+		);
+
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::signed(ALICE),
+			MOVR,
+			query_id
+		));
+
+		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+
+		assert_eq!(DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()), None);
 	});
 }

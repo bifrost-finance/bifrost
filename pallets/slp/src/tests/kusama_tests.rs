@@ -19,11 +19,10 @@
 #![cfg(test)]
 
 use crate::mock::*;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
 
-use crate::{KSM, MOVR, *};
+use crate::{KSM, *};
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {

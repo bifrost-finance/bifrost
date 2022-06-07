@@ -63,18 +63,19 @@ pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// The delegator id that needs to be update
 	pub delegator_id: DelegatorId,
 	/// The validator id that needs to be update
-	pub validator_id: ValidatorId,
+	pub validator_id: Option<ValidatorId>,
 	/// If this is true, then this is a bonding entry.
 	pub if_bond: bool,
 	/// If this is true and if_bond is false, then this is an unlocking entry.
 	pub if_unlock: bool,
 	pub if_revoke: bool,
-	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
-	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
 	pub if_cancel: bool,
 	pub if_leave: bool,
+	/// if_cancel_leave true means canceling leaving operation.
 	pub if_cancel_leave: bool,
+	/// if_execute_leave true means executing delegator leaving operation.
 	pub if_execute_leave: bool,
+	/// if all ifs are false, then it is a liquidize operation.
 	/// The unlocking/bonding amount.
 	#[codec(compact)]
 	pub amount: Balance,

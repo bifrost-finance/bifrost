@@ -213,6 +213,7 @@ pub mod pallet {
 		DelegatorSetNotExist,
 		DelegatorLeaving,
 		DelegatorAlreadyLeaving,
+		ValidatorError,
 	}
 
 	#[pallet::event]
@@ -1783,7 +1784,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_account_20(who: &MultiLocation) -> Result<[u8; 20], Error<T>> {
-			// Get the delegator account id in Kusama network
+			// Get the delegator account id in Moonriver network
 			let account_20 = match who {
 				MultiLocation {
 					parents: _,
@@ -1796,7 +1797,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_h160_account(who: &MultiLocation) -> Result<H160, Error<T>> {
-			// Get the delegator account id in Kusama network
+			// Get the delegator account id in Moonriver network
 			let account_20 = Self::multilocation_to_account_20(who)?;
 			let account_h160 =
 				H160::decode(&mut &account_20[..]).map_err(|_| Error::<T>::DecodingError)?;

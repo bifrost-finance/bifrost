@@ -219,7 +219,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(&collator),
+			Some(collator),
 			true,
 			false,
 			false,
@@ -288,7 +288,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(&collator),
+			Some(collator),
 			true,
 			false,
 			false,
@@ -371,7 +371,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(&collator),
+			Some(collator),
 			false,
 			true,
 			false,
@@ -512,7 +512,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(&collator),
+			Some(collator),
 			false,
 			false,
 			false,
@@ -591,7 +591,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(validator),
+			Some(validator.clone()),
 			false,
 			false,
 			true,
@@ -737,7 +737,7 @@ impl<T: Config>
 		if leaving {
 			Self::insert_delegator_ledger_update_entry(
 				who,
-				Some(&collator),
+				Some(collator),
 				false,
 				false,
 				false,
@@ -752,7 +752,7 @@ impl<T: Config>
 		} else {
 			Self::insert_delegator_ledger_update_entry(
 				who,
-				Some(&collator),
+				Some(collator),
 				false,
 				false,
 				false,
@@ -1183,7 +1183,7 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
-		validator: Option<&MultiLocation>,
+		validator: Option<MultiLocation>,
 		if_bond: bool,
 		if_unlock: bool,
 		if_revoke: bool,
@@ -1209,11 +1209,10 @@ impl<T: Config> MoonriverAgent<T> {
 			T::VtokenMinting::get_ongoing_time_unit(MOVR)
 		};
 
-		let collator = validator.ok_or(Error::<T>::Unexpected)?;
 		let entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: who.clone(),
-			validator_id: collator.clone(),
+			validator_id: validator,
 			if_bond,
 			if_unlock,
 			if_revoke,
@@ -1316,7 +1315,7 @@ impl<T: Config> MoonriverAgent<T> {
 		if let LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
-			validator_id,
+			validator_id: validator_id_op,
 			if_bond,
 			if_unlock,
 			if_revoke,
@@ -1335,6 +1334,8 @@ impl<T: Config> MoonriverAgent<T> {
 					if let Some(Ledger::Moonriver(ref mut old_ledger)) = old_ledger_opt {
 						// bond more
 						if if_bond {
+							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
 							// If this is a bonding operation.
 							// Increase the total amount and add the delegation relationship.
 							ensure!(
@@ -1355,6 +1356,8 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.delegations.insert(validator_id, new_amount);
 						// schedule bond less request
 						} else if if_unlock {
+							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
 							ensure!(
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
@@ -1380,6 +1383,8 @@ impl<T: Config> MoonriverAgent<T> {
 								.insert(validator_id, (unlock_time_unit, amount));
 						// schedule revoke request
 						} else if if_revoke {
+							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
 							ensure!(
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
@@ -1410,6 +1415,8 @@ impl<T: Config> MoonriverAgent<T> {
 								.insert(validator_id, (unlock_time_unit, revoke_amount.clone()));
 						// cancel bond less or revoke request
 						} else if if_cancel {
+							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
 							ensure!(
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
@@ -1479,13 +1486,34 @@ impl<T: Config> MoonriverAgent<T> {
 							old_ledger.request_briefs = BTreeMap::new();
 						// execute leaving
 						} else if if_execute_leave {
-							let leaving =
-								matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
-							ensure!(leaving, Error::<T>::DelegatorNotLeaving);
+							// make sure leaving time is less than or equal to current time.
+							let scheduled_time =
+								if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
+									old_ledger.clone().status
+								{
+									if let TimeUnit::Round(tu) = scheduled_time_unit {
+										tu
+									} else {
+										Err(Error::<T>::InvalidTimeUnit)?
+									}
+								} else {
+									Err(Error::<T>::DelegatorNotLeaving)?
+								};
+
+							let current_time_unit =
+								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+							if let TimeUnit::Round(current_time) = current_time_unit {
+								ensure!(current_time >= scheduled_time, Error::<T>::LeavingNotDue);
+							} else {
+								Err(Error::<T>::InvalidTimeUnit)?;
+							}
 
 							*old_ledger_opt = None;
 						// execute request
 						} else {
+							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
 							ensure!(
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
@@ -1536,10 +1564,22 @@ impl<T: Config> MoonriverAgent<T> {
 								.map_err(|_| Error::<T>::RequestNotExist)?;
 							old_ledger.requests.remove(request_index);
 
-							old_ledger
+							let old_delegate_amount = old_ledger
 								.delegations
-								.remove(&validator_id)
-								.ok_or(Error::<T>::Unexpected)?;
+								.get(&validator_id)
+								.ok_or(Error::<T>::ValidatorNotBonded)?;
+							let new_delegate_amount = old_delegate_amount
+								.checked_sub(&execute_amount)
+								.ok_or(Error::<T>::UnderFlow)?;
+
+							if new_delegate_amount == Zero::zero() {
+								old_ledger
+									.delegations
+									.remove(&validator_id)
+									.ok_or(Error::<T>::Unexpected)?;
+							} else {
+								old_ledger.delegations.insert(validator_id, new_delegate_amount);
+							}
 						}
 					}
 
