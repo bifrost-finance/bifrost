@@ -133,8 +133,8 @@ where
 
 impl<T: Config> Pallet<T>
 where
-	BlockNumberFor<T>: Into<u128> + Into<BalanceOf<T>>,
-	BalanceOf<T>: Into<u128>,
+	BlockNumberFor<T>: AtLeast32BitUnsigned + Copy,
+	BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 {
 	pub fn create_gauge_pool(
 		pid: PoolId,
@@ -192,19 +192,22 @@ where
 						gauge_info.last_claim_block = current_block_number;
 						gauge_info.total_time_factor = gauge_block
 							.saturated_into::<u128>()
-							.checked_mul(gauge_value.into())
+							.checked_mul(gauge_value.saturated_into::<u128>())
 							.ok_or(ArithmeticError::Overflow)?;
 						gauge_info.total_time_factor
 					} else {
 						let time_factor_a = gauge_value
 							.saturated_into::<u128>()
 							.checked_mul(
-								(gauge_info.gauge_stop_block - current_block_number).into(),
+								(gauge_info.gauge_stop_block - current_block_number)
+									.saturated_into::<u128>(),
 							)
 							.ok_or(ArithmeticError::Overflow)?;
 						let time_factor_b = gauge_block
 							.saturated_into::<u128>()
-							.checked_mul((gauge_value + gauge_info.gauge_amount).into())
+							.checked_mul(
+								(gauge_value + gauge_info.gauge_amount).saturated_into::<u128>(),
+							)
 							.ok_or(ArithmeticError::Overflow)?;
 						let incease_total_time_factor = time_factor_a + time_factor_b;
 						gauge_info.total_time_factor = gauge_info
@@ -216,7 +219,8 @@ where
 							.gauge_amount
 							.saturated_into::<u128>()
 							.checked_mul(
-								(current_block_number - gauge_info.gauge_last_block).into(),
+								(current_block_number - gauge_info.gauge_last_block)
+									.saturated_into::<u128>(),
 							)
 							.ok_or(ArithmeticError::Overflow)?;
 						gauge_info.latest_time_factor = gauge_info
@@ -269,7 +273,9 @@ where
 				gauge_info
 					.gauge_amount
 					.saturated_into::<u128>()
-					.checked_mul((start_block - gauge_info.gauge_last_block).into())
+					.checked_mul(
+						(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
+					)
 					.ok_or(ArithmeticError::Overflow)?;
 			let gauge_rate = Permill::from_rational(
 				latest_claimed_time_factor - gauge_info.claimed_time_factor,
@@ -386,7 +392,9 @@ where
 					gauge_info
 						.gauge_amount
 						.saturated_into::<u128>()
-						.checked_mul((start_block - gauge_info.gauge_last_block).into())
+						.checked_mul(
+							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
+						)
 						.ok_or(ArithmeticError::Overflow)?;
 				let gauge_rate = Permill::from_rational(
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
