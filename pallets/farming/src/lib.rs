@@ -35,7 +35,7 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, Saturating, Zero},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
 		ArithmeticError, Permill,
 	},
 	transactional, PalletId,
@@ -291,8 +291,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
-		BlockNumberFor<T>: Into<u128> + Into<BalanceOf<T>>,
-		BalanceOf<T>: Into<u128>,
+		BlockNumberFor<T>: AtLeast32BitUnsigned + Copy,
+		BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 	{
 		#[transactional]
 		#[pallet::weight(0)]
