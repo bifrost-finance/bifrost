@@ -292,9 +292,10 @@ impl<T: Config>
 	fn rebond(
 		&self,
 		who: &MultiLocation,
-		amount: BalanceOf<T>,
+		amount: Option<BalanceOf<T>>,
 		_validator: &Option<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
+		let amount = amount.ok_or(Error::<T>::AmountNone)?;
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 

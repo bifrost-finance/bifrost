@@ -69,7 +69,7 @@ pub trait StakingAgent<
 	fn rebond(
 		&self,
 		who: &DelegatorId,
-		amount: Balance,
+		amount: Option<Balance>,
 		validator: &Option<ValidatorId>,
 	) -> Result<QueryId, Error>;
 

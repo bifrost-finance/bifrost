@@ -439,7 +439,7 @@ impl<T: Config>
 	fn rebond(
 		&self,
 		who: &MultiLocation,
-		amount: BalanceOf<T>,
+		_amount: Option<BalanceOf<T>>,
 		validator: &Option<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		let mins_maxs = MinimumsAndMaximums::<T>::get(MOVR).ok_or(Error::<T>::NotExist)?;
@@ -520,7 +520,7 @@ impl<T: Config>
 			false,
 			false,
 			false,
-			amount,
+			Zero::zero(),
 			query_id,
 			timeout,
 		)?;

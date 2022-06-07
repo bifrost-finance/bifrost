@@ -214,6 +214,7 @@ pub mod pallet {
 		DelegatorLeaving,
 		DelegatorAlreadyLeaving,
 		ValidatorError,
+		AmountNone,
 	}
 
 	#[pallet::event]
@@ -263,8 +264,7 @@ pub mod pallet {
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
-			#[codec(compact)]
-			rebond_amount: BalanceOf<T>,
+			rebond_amount: Option<BalanceOf<T>>,
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
@@ -754,7 +754,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 			validator: Option<MultiLocation>,
-			#[pallet::compact] amount: BalanceOf<T>,
+			amount: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
