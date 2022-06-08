@@ -615,7 +615,7 @@ impl<T: Config>
 	fn redelegate(
 		&self,
 		who: &MultiLocation,
-		_targets: &Vec<MultiLocation>,
+		_targets: &Option<Vec<MultiLocation>>,
 	) -> Result<QueryId, Error<T>> {
 		// first check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(MOVR, who);
@@ -1375,7 +1375,7 @@ impl<T: Config> MoonriverAgent<T> {
 							let new_request = OneToManyScheduledRequest {
 								validator: validator_id.clone(),
 								when_executable: unlock_time_unit.clone(),
-								action: OneToManyDelegationAction::Decrease(amount),
+								action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(amount),
 							};
 							old_ledger.requests.push(new_request);
 							old_ledger
@@ -1407,7 +1407,9 @@ impl<T: Config> MoonriverAgent<T> {
 							let new_request = OneToManyScheduledRequest {
 								validator: validator_id.clone(),
 								when_executable: unlock_time_unit.clone(),
-								action: OneToManyDelegationAction::Revoke(revoke_amount.clone()),
+								action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
+									revoke_amount.clone(),
+								),
 							};
 							old_ledger.requests.push(new_request);
 							old_ledger
@@ -1462,7 +1464,9 @@ impl<T: Config> MoonriverAgent<T> {
 								let request_entry = OneToManyScheduledRequest {
 									validator: vali.clone(),
 									when_executable: unlock_time.clone(),
-									action: OneToManyDelegationAction::Revoke(amt.clone()),
+									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
+										amt.clone(),
+									),
 								};
 								new_requests.push(request_entry);
 

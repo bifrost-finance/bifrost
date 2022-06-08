@@ -444,8 +444,9 @@ impl<T: Config>
 	fn redelegate(
 		&self,
 		who: &MultiLocation,
-		targets: &Vec<MultiLocation>,
+		targets: &Option<Vec<MultiLocation>>,
 	) -> Result<QueryId, Error<T>> {
+		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorSetNotExist)?;
 		let query_id = Self::delegate(self, who, targets)?;
 		Ok(query_id)
 	}

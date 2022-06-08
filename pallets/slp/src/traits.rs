@@ -80,7 +80,11 @@ pub trait StakingAgent<
 	fn undelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn redelegate(
+		&self,
+		who: &DelegatorId,
+		targets: &Option<Vec<ValidatorId>>,
+	) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
 	fn payout(

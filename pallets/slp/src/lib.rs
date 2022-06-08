@@ -273,7 +273,7 @@ pub mod pallet {
 		Delegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
-			targets: Vec<MultiLocation>,
+			targets: Option<Vec<MultiLocation>>,
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
@@ -795,7 +795,7 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
 				delegator_id: who,
-				targets,
+				targets: Some(targets),
 				query_id,
 				query_id_hash,
 			});
@@ -836,7 +836,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			targets: Vec<MultiLocation>,
+			targets: Option<Vec<MultiLocation>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
