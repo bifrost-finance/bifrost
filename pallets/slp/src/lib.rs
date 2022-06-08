@@ -47,7 +47,7 @@ pub use crate::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
 	},
-	traits::{QueryResponseManager, StakingAgent},
+	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
@@ -135,6 +135,10 @@ pub mod pallet {
 			MultiLocation,
 			BlockNumberFor<Self>,
 		>;
+
+		/// Handler to notify the runtime when refund.
+		/// If you don't need it, you can specify the type `()`.
+		type OnRefund: OnRefund<CurrencyId, AccountIdOf<Self>, BalanceOf<Self>>;
 
 		//【For xcm v3】
 		// /// This chain's Universal Location. Enabled only for xcm v3 version.
