@@ -22,41 +22,46 @@ pub use bifrost_liquidity_mining_rpc_runtime_api::{
 	self as runtime_api, LiquidityMiningRuntimeApi,
 };
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{async_trait, RpcResult},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorCode, ErrorObject},
+};
 use node_primitives::{Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
-#[rpc]
+#[rpc(client, server)]
 pub trait LiquidityMiningRpcApi<BlockHash, AccountId, PoolId> {
 	/// rpc method for getting current rewards
-	#[rpc(name = "liquidityMining_getRewards")]
+	#[method(name = "liquidityMining_getRewards")]
 	fn get_rewards(
 		&self,
 		who: AccountId,
 		pid: PoolId,
 		pallet_instance: u32,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>>;
+	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>>;
 }
 
 #[derive(Clone, Debug)]
-pub struct LiquidityMiningRpcWrapper<C, Block> {
+pub struct LiquidityMiningRpc<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> LiquidityMiningRpcWrapper<C, Block> {
+impl<C, Block> LiquidityMiningRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
-impl<C, Block, AccountId, PoolId> LiquidityMiningRpcApi<<Block as BlockT>::Hash, AccountId, PoolId>
-	for LiquidityMiningRpcWrapper<C, Block>
+#[async_trait]
+impl<C, Block, AccountId, PoolId>
+	LiquidityMiningRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId>
+	for LiquidityMiningRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -70,7 +75,7 @@ where
 		pid: PoolId,
 		pallet_instance: u32,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>> {
+	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -82,11 +87,12 @@ where
 				.into_iter()
 				.map(|(token, amount)| (token, NumberOrHex::Hex(amount.into())))
 				.collect()),
-			Err(e) => Err(RpcError {
-				code: ErrorCode::InternalError,
-				message: "Failed to get lm rewards.".to_owned(),
-				data: Some(format!("{:?}", e).into()),
-			}),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get lm rewards.",
+				Some(format!("{:?}", e)),
+			))),
 		}
+		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }

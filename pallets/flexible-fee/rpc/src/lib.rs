@@ -20,8 +20,11 @@ use std::{convert::TryInto, marker::PhantomData, sync::Arc};
 
 pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use codec::{Codec, Decode};
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{async_trait, RpcResult},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorObject},
+};
 use node_primitives::{Balance, CurrencyId};
 pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
 use sp_api::ProvideRuntimeApi;
@@ -33,29 +36,28 @@ use sp_runtime::{
 	traits::{Block as BlockT, Zero},
 };
 
-#[derive(Clone, Debug)]
-pub struct FlexibleFeeStruct<C, Block> {
-	client: Arc<C>,
+pub struct FlexibleFeeRpc<Client, Block> {
+	client: Arc<Client>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> FlexibleFeeStruct<C, Block> {
-	pub fn new(client: Arc<C>) -> Self {
+impl<Client, Block> FlexibleFeeRpc<Client, Block> {
+	pub fn new(client: Arc<Client>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
-#[rpc]
+#[rpc(client, server)]
 pub trait FeeRpcApi<BlockHash, AccountId> {
 	/// rpc method get balances by account id
 	/// useage: curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0","id":1,"method":"flexibleFeeFee_getFeeTokenAndAmount","params": ["0x0e0626477621754200486f323e3858cd5f28fcbe52c69b2581aecb622e384764", "0xa0040400008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48cef70500"]}’
-	#[rpc(name = "flexibleFee_getFeeTokenAndAmount")]
+	#[method(name = "flexibleFee_getFeeTokenAndAmount")]
 	fn get_fee_token_and_amount(
 		&self,
 		who: AccountId,
 		encoded_xt: Bytes,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<(CurrencyId, NumberOrHex)>;
+	) -> RpcResult<(CurrencyId, NumberOrHex)>;
 }
 
 /// Error type of this RPC api.
@@ -66,8 +68,8 @@ pub enum Error {
 	RuntimeError,
 }
 
-impl From<Error> for i64 {
-	fn from(e: Error) -> i64 {
+impl From<Error> for i32 {
+	fn from(e: Error) -> i32 {
 		match e {
 			Error::RuntimeError => 1,
 			Error::DecodeError => 2,
@@ -75,8 +77,9 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block, AccountId> FeeRpcApi<<Block as BlockT>::Hash, AccountId>
-	for FlexibleFeeStruct<C, Block>
+#[async_trait]
+impl<C, Block, AccountId> FeeRpcApiServer<<Block as BlockT>::Hash, AccountId>
+	for FlexibleFeeRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -89,7 +92,7 @@ where
 		who: AccountId,
 		encoded_xt: Bytes,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<(CurrencyId, NumberOrHex)> {
+	) -> RpcResult<(CurrencyId, NumberOrHex)> {
 		// Ok((
 		//     CurrencyId::Native(TokenSymbol::BNC),
 		//     sp_rpc::number::NumberOrHex::Number(1200),
@@ -99,15 +102,20 @@ where
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 		let encoded_len = encoded_xt.len() as u32;
 
-		let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(|e| RpcError {
-			code: ErrorCode::ServerError(Error::DecodeError.into()),
-			message: "Unable to query fee details.".into(),
-			data: Some(format!("{:?}", e).into()),
+		let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(|e| {
+			CallError::Custom(ErrorObject::owned(
+				Error::DecodeError.into(),
+				"Unable to query fee details.",
+				Some(format!("{:?}", e)),
+			))
 		})?;
-		let fee_details = api.query_fee_details(&at, uxt, encoded_len).map_err(|e| RpcError {
-			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to query fee details.".into(),
-			data: Some(format!("{:?}", e).into()),
+
+		let fee_details = api.query_fee_details(&at, uxt, encoded_len).map_err(|e| {
+			CallError::Custom(ErrorObject::owned(
+				Error::RuntimeError.into(),
+				"Unable to query fee details.",
+				Some(format!("{:?}", e)),
+			))
 		})?;
 
 		let total_inclusion_fee: Balance = {
@@ -125,23 +133,23 @@ where
 		let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
 
 		let try_into_rpc_balance = |value: Balance| {
-			value.try_into().map_err(|_| RpcError {
-				code: ErrorCode::InvalidParams,
-				message: format!("{} doesn't fit in NumberOrHex representation", value),
-				data: None,
+			value.try_into().map_err(|e| {
+				CallError::Custom(ErrorObject::owned(
+					Error::RuntimeError.into(),
+					format!("{} doesn't fit in NumberOrHex representation", value),
+					Some(format!("{:?}", e)),
+				))
 			})
 		};
 
 		match rs {
-			Ok((id, val)) => match try_into_rpc_balance(val) {
-				Ok(value) => Ok((id, value)),
-				Err(e) => Err(e),
-			},
-			Err(e) => Err(RpcError {
-				code: ErrorCode::ServerError(Error::RuntimeError.into()),
-				message: "Unable to query fee token and amount.".into(),
-				data: Some(format!("{:?}", e).into()),
-			}),
+			Ok((id, val)) => try_into_rpc_balance(val).map(|value| (id, value)),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				Error::RuntimeError.into(),
+				"Unable to query fee token and amount.",
+				Some(format!("{:?}", e)),
+			))),
 		}
+		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }

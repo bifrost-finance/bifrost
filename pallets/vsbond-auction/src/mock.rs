@@ -109,7 +109,9 @@ impl orml_tokens::Config for Test {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
+	type MaxReserves = ();
 	type OnDust = ();
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 

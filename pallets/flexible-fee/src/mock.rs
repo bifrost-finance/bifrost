@@ -75,7 +75,7 @@ frame_support::construct_runtime!(
 		// TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -160,7 +160,9 @@ impl orml_tokens::Config for Test {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
+	type MaxReserves = ();
 	type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
@@ -233,7 +235,6 @@ pub type AdaptedBasicCurrency =
 	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
-	type Event = Event;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;

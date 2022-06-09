@@ -111,7 +111,9 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
+	type MaxReserves = ();
 	type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
