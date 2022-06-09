@@ -28,7 +28,12 @@ decl_runtime_apis! {
 		AccountId: Codec,
 		PoolId: Codec,
 	{
-		fn get_rewards(
+		fn get_farming_rewards(
+			who: AccountId,
+			pid: PoolId,
+		) -> Vec<(CurrencyId, Balance)>;
+
+		fn get_gague_rewards(
 			who: AccountId,
 			pid: PoolId,
 		) -> Vec<(CurrencyId, Balance)>;

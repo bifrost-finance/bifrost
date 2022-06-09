@@ -351,7 +351,7 @@ where
 		Ok(())
 	}
 
-	pub fn get_rewards(
+	pub fn get_farming_rewards(
 		who: &T::AccountId,
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
@@ -359,7 +359,8 @@ where
 		let share_info = SharesAndWithdrawnRewards::<T>::get(pid, who);
 		let pool_info = PoolInfos::<T>::get(pid);
 		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-		let mut result = BTreeMap::<CurrencyId, BalanceOf<T>>::new();
+		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
+
 		pool_info.rewards.iter().try_for_each(
 			|(reward_currency, (total_reward, total_withdrawn_reward))| -> DispatchResult {
 				let withdrawn_reward =
@@ -383,10 +384,22 @@ where
 					return Ok(());
 				};
 
-				result.insert(*reward_currency, reward_to_withdraw);
+				result_vec.push((*reward_currency, reward_to_withdraw));
 				Ok(())
 			},
 		)?;
+		Ok(result_vec)
+	}
+
+	pub fn get_gauge_rewards(
+		who: &T::AccountId,
+		pid: PoolId,
+	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+		let share_info = SharesAndWithdrawnRewards::<T>::get(pid, who);
+		let pool_info = PoolInfos::<T>::get(pid);
+		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
 		match pool_info.gauge {
 			None => (),
@@ -411,40 +424,39 @@ where
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
 					gauge_pool_info.total_time_factor,
 				);
-				// gauge_pool_info.rewards.iter().try_for_each(
-				// 	|(&reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
-				// 		let reward = reward_amount
-				// 			.checked_sub(&withdrawn_reward)
-				// 			.ok_or(ArithmeticError::Overflow)?;
-				// 		let total_shares =
-				// 			U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-				// 		let share_info =
-				// 			SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
-				// 		let farming_gauge_reward: BalanceOf<T> =
-				// 			U256::from(share_info.share.to_owned().saturated_into::<u128>())
-				// 				.saturating_mul(U256::from(
-				// 					reward.to_owned().saturated_into::<u128>(),
-				// 				))
-				// 				.checked_div(total_shares)
-				// 				.unwrap_or_default()
-				// 				.as_u128()
-				// 				.unique_saturated_into();
-				// 		// reward_to_claim = farming rate * gauge rate * gauge coefficient *
-				// 		// existing rewards in the gauge pool
-				// 		let reward_to_claim = gauge_rate * farming_gauge_reward;
-				// 		result.entry(reward_currency).and_modify(|total_reward| {
-				// 			*total_reward = total_reward.saturating_add(reward_to_claim);
-				// 		});
-
-				// 		Ok(())
-				// 	},
-				// )?;
+				gauge_pool_info.rewards.iter().try_for_each(
+					|(
+						reward_currency,
+						(reward_amount, total_gauged_reward, total_withdrawn_reward),
+					)|
+					 -> DispatchResult {
+						let reward = reward_amount
+							.checked_sub(&total_gauged_reward)
+							.ok_or(ArithmeticError::Overflow)?;
+						let total_shares =
+							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+						let share_info =
+							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
+						// gauge pool
+						let gauge_reward = gauge_rate * reward;
+						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+						// existing rewards in the gauge pool
+						let reward_to_claim: BalanceOf<T> =
+							U256::from(share_info.share.to_owned().saturated_into::<u128>())
+								.saturating_mul(U256::from(
+									gauge_reward.to_owned().saturated_into::<u128>(),
+								))
+								.checked_div(total_shares)
+								.unwrap_or_default()
+								.as_u128()
+								.unique_saturated_into();
+						result_vec.push((*reward_currency, reward_to_claim));
+						Ok(())
+					},
+				)?;
 			},
 		};
-		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::default();
-		for (key, value) in result.iter() {
-			result_vec.push((*key, *value))
-		}
 		Ok(result_vec)
 	}
 }

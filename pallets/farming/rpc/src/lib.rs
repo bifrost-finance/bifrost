@@ -65,7 +65,7 @@ where
 	AccountId: Codec,
 	PoolId: Codec,
 {
-	fn get_rewards(
+	fn get_farming_rewards(
 		&self,
 		who: AccountId,
 		pid: PoolId,
@@ -74,7 +74,8 @@ where
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_rewards(&at, who, pid);
+		let rs: Result<Vec<(CurrencyId, Balance)>, _> =
+			lm_rpc_api.get_farming_rewards(&at, who, pid);
 
 		match rs {
 			Ok(rewards) => Ok(rewards
@@ -83,17 +84,35 @@ where
 				.collect()),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
-				"Failed to get rewards.",
+				"Failed to get farming rewards.",
 				Some(format!("{:?}", e)),
 			))),
 		}
 		.map_err(|e| jsonrpsee::core::Error::Call(e))
+	}
 
-		// 	Err(e) => Err(RpcError {
-		// 		code: ErrorCode::InternalError,
-		// 		message: "Failed to get rewards.".to_owned(),
-		// 		data: Some(format!("{:?}", e).into()),
-		// 	}),
-		// }
+	fn get_gauge_rewards(
+		&self,
+		who: AccountId,
+		pid: PoolId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
+		let lm_rpc_api = self.client.runtime_api();
+		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_gauge_rewards(&at, who, pid);
+
+		match rs {
+			Ok(rewards) => Ok(rewards
+				.into_iter()
+				.map(|(token, amount)| (token, NumberOrHex::Hex(amount.into())))
+				.collect()),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get gauge rewards.",
+				Some(format!("{:?}", e)),
+			))),
+		}
+		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }
