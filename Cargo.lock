@@ -996,7 +996,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex",
  "hex-literal",
  "node-primitives",
  "orml-currencies",
@@ -5552,7 +5551,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.44"
+version = "0.9.46"
 dependencies = [
  "clap",
  "cumulus-client-cli",

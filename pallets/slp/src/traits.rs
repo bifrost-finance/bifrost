@@ -217,3 +217,8 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
 }
+
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpOperator<CurrencyId> {
+	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
+}

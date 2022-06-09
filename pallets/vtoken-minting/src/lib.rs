@@ -337,6 +337,9 @@ pub mod pallet {
 				vtoken_amount >= MinimumRedeem::<T>::get(vtoken_id),
 				Error::<T>::BelowMinimumRedeem
 			);
+			if token_id == CurrencyId::Token(TokenSymbol::MOVR) {
+				// TODO
+			};
 			let (_mint_rate, redeem_rate) = Fees::<T>::get();
 			let redeem_fee = redeem_rate * vtoken_amount;
 			vtoken_amount =
@@ -1021,21 +1024,34 @@ pub mod pallet {
 
 		#[transactional]
 		fn handle_on_initialize() -> DispatchResult {
-			let ksm = CurrencyId::Token(TokenSymbol::KSM);
-			let time_unit = MinTimeUnit::<T>::get(ksm);
-			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
-				|(_total_locked, ledger_list, token_id)| {
-					let entrance_account_balance = T::MultiCurrency::free_balance(
-						token_id,
-						&T::EntranceAccount::get().into_account(),
-					);
-					for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
-						if let Some((account, unlock_amount, time_unit)) =
-							Self::token_unlock_ledger(token_id, index)
-						{
-							if entrance_account_balance == BalanceOf::<T>::zero() {
-								return;
-							}
+			for currency in OngoingTimeUnit::<T>::iter_keys() {
+				Self::handle_ledger_by_currency(currency)?;
+			}
+			Ok(())
+		}
+
+		fn handle_ledger_by_currency(currency: CurrencyId) -> DispatchResult {
+			let time_unit = MinTimeUnit::<T>::get(currency);
+			let unlock_duration_era = match UnlockDuration::<T>::get(currency) {
+				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
+				_ => 0,
+			};
+			let ongoing_era = match OngoingTimeUnit::<T>::get(currency) {
+				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
+				_ => 0,
+			};
+			if let Some((_total_locked, ledger_list, token_id)) =
+				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
+			{
+				let entrance_account_balance = T::MultiCurrency::free_balance(
+					token_id,
+					&T::EntranceAccount::get().into_account(),
+				);
+				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
+					if let Some((account, unlock_amount, time_unit)) =
+						Self::token_unlock_ledger(token_id, index)
+					{
+						if entrance_account_balance != BalanceOf::<T>::zero() {
 							Self::on_initialize_update_ledger(
 								token_id,
 								account,
@@ -1047,41 +1063,30 @@ pub mod pallet {
 							.ok();
 						}
 					}
-				},
-			);
+				}
+			} else {
+				match time_unit {
+					TimeUnit::Era(min_era) =>
+						if ongoing_era + unlock_duration_era > min_era {
+							MinTimeUnit::<T>::mutate(
+								currency,
+								|time_unit| -> Result<(), Error<T>> {
+									match time_unit {
+										TimeUnit::Era(era) => {
+											*era = era
+												.checked_add(1)
+												.ok_or(Error::<T>::CalculationOverflow)?;
+											Ok(())
+										},
+										_ => Ok(()),
+									}
+								},
+							)?;
+						},
+					_ => (),
+				}
+			};
 
-			let unlock_duration_era = match UnlockDuration::<T>::get(ksm) {
-				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
-				_ => 0,
-			};
-			let ongoing_era = match OngoingTimeUnit::<T>::get(ksm) {
-				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
-				_ => 0,
-			};
-			match time_unit {
-				TimeUnit::Era(min_era) =>
-					if ongoing_era + unlock_duration_era > min_era {
-						let time_unit_ledger_list: Vec<(
-							BalanceOf<T>,
-							BoundedVec<UnlockId, T::MaximumUnlockIdOfTimeUnit>,
-							CurrencyIdOf<T>,
-						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
-						if time_unit_ledger_list.is_empty() {
-							MinTimeUnit::<T>::mutate(ksm, |time_unit| -> Result<(), Error<T>> {
-								match time_unit {
-									TimeUnit::Era(era) => {
-										*era = era
-											.checked_add(1)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-										Ok(())
-									},
-									_ => Ok(()),
-								}
-							})?;
-						}
-					},
-				_ => (),
-			}
 			Ok(())
 		}
 	}

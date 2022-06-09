@@ -32,7 +32,6 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branc
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
-hex = "0.4.3"
 
 [dev-dependencies]
 hex-literal = "0.3.1"

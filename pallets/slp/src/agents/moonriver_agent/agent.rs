@@ -23,10 +23,13 @@ use super::types::{
 	MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall, MoonriverUtilityCall,
 	MoonriverXtokensCall,
 };
-use crate::primitives::{
-	OneToManyDelegationAction,
-	OneToManyDelegationAction::{Decrease, Revoke},
-	OneToManyLedger, OneToManyScheduledRequest,
+use crate::{
+	primitives::{
+		OneToManyDelegationAction,
+		OneToManyDelegationAction::{Decrease, Revoke},
+		OneToManyLedger, OneToManyScheduledRequest,
+	},
+	DelegationsOccupied,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
@@ -794,8 +797,6 @@ impl<T: Config>
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
 		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
 
-		#[cfg(feature = "std")]
-		println!("I am here!");
 		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
 
@@ -819,9 +820,6 @@ impl<T: Config>
 			dest,
 			weight,
 		));
-
-		#[cfg(feature = "std")]
-		println!("encode: {:?}", hex::encode(call.encode()));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -1040,6 +1038,8 @@ impl<T: Config>
 		// Update corresponding storages.
 		if should_update {
 			Self::update_ledger_query_response_storage(query_id, entry.clone())?;
+
+			Self::update_all_occupied_status_storage()?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
@@ -1634,6 +1634,29 @@ impl<T: Config> MoonriverAgent<T> {
 		} else {
 			Err(Error::<T>::Unexpected)
 		}
+	}
+
+	fn update_all_occupied_status_storage() -> Result<(), Error<T>> {
+		let mut all_occupied = true;
+
+		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(MOVR) {
+			if let Ledger::Moonriver(movr_ledger) = ledger {
+				if movr_ledger.delegations.len() > movr_ledger.request_briefs.len() {
+					all_occupied = false;
+					break;
+				}
+			} else {
+				Err(Error::<T>::Unexpected)?;
+			}
+		}
+		let original_status = DelegationsOccupied::<T>::get(MOVR);
+
+		match original_status {
+			Some(status) if status == all_occupied => (),
+			_ => DelegationsOccupied::<T>::insert(MOVR, all_occupied),
+		};
+
+		Ok(())
 	}
 }
 
