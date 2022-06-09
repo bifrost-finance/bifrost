@@ -41,7 +41,7 @@ use xcm::{
 	},
 };
 
-use crate::agents::MoonriverAgent;
+use crate::{agents::MoonriverAgent, traits::SlpOperator};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
@@ -587,6 +587,12 @@ pub mod pallet {
 	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
 	pub type CurrencyTuneExchangeRateLimit<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Permill)>;
+
+	/// reflect if all delegations are on a decrease/revoke status. If yes, then new user redeeming
+	/// is unaccepted.
+	#[pallet::storage]
+	#[pallet::getter(fn get_all_delegations_occupied_status)]
+	pub type DelegationsOccupied<T> = StorageMap<_, Blake2_128Concat, CurrencyId, bool>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1946,5 +1952,11 @@ pub mod pallet {
 
 			H160::from_slice(sub_id.as_slice())
 		}
+	}
+}
+
+impl<T: Config> SlpOperator<CurrencyId> for Pallet<T> {
+	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
+		DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
 	}
 }
