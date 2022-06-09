@@ -31,6 +31,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.22", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
+xcm-interface = { path = "../xcm-interface", default-features = false }
 
 
 [dev-dependencies]
