@@ -61,7 +61,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>}
 	}
 );
@@ -109,7 +109,6 @@ pub type AdaptedBasicCurrency =
 	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Runtime {
-	type Event = Event;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
@@ -145,7 +144,9 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
+	type MaxReserves = ();
 	type OnDust = ();
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
