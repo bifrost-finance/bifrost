@@ -715,7 +715,7 @@ impl<T: Config>
 			));
 
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Liquidize,
+				XcmOperation::ExecuteLeave,
 				call.clone(),
 				who,
 			)
@@ -793,6 +793,7 @@ impl<T: Config>
 
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
 		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
+
 		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
 
@@ -952,7 +953,7 @@ impl<T: Config>
 		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(MOVR) {
 			if let Ledger::Moonriver(moonriver_ledger) = ledger {
 				ensure!(
-					moonriver_ledger.delegations.contains_key(who),
+					!moonriver_ledger.delegations.contains_key(who),
 					Error::<T>::ValidatorStillInUse
 				);
 			} else {
@@ -1088,7 +1089,10 @@ impl<T: Config> MoonriverAgent<T> {
 	}
 
 	fn get_movr_multilocation() -> MultiLocation {
-		MultiLocation { parents: 1, interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)) }
+		MultiLocation {
+			parents: 1,
+			interior: X2(Parachain(2023), PalletInstance(parachains::moonriver::PALLET_ID)),
+		}
 	}
 
 	fn construct_xcm_as_subaccount_with_query_id(
@@ -1242,7 +1246,7 @@ impl<T: Config> MoonriverAgent<T> {
 			if let TimeUnit::Round(delay_round) = delay {
 				current_round.checked_add(delay_round).ok_or(Error::<T>::OverFlow)
 			} else {
-				Err(Error::<T>::InvalidTimeUnit)
+				Err(Error::<T>::InvalidDelays)
 			}
 		} else {
 			Err(Error::<T>::InvalidTimeUnit)
@@ -1513,7 +1517,28 @@ impl<T: Config> MoonriverAgent<T> {
 								Err(Error::<T>::InvalidTimeUnit)?;
 							}
 
-							*old_ledger_opt = None;
+							let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> =
+								BTreeMap::new();
+							let request_briefs_set: BTreeMap<
+								MultiLocation,
+								(TimeUnit, BalanceOf<T>),
+							> = BTreeMap::new();
+							let new_ledger =
+								OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+									account: old_ledger.clone().account,
+									total: Zero::zero(),
+									less_total: Zero::zero(),
+									delegations: empty_delegation_set,
+									requests: vec![],
+									request_briefs: request_briefs_set,
+									status: OneToManyDelegatorStatus::Active,
+								};
+							let movr_ledger =
+								Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonriver(
+									new_ledger,
+								);
+
+							*old_ledger_opt = Some(movr_ledger);
 						// execute request
 						} else {
 							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;

@@ -83,12 +83,7 @@ pub enum MoonriverParachainStakingCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(
-		MoonriverCurrencyId,
-		#[codec(compact)] BalanceOf<T>,
-		Box<VersionedMultiLocation>,
-		Weight,
-	),
+	Transfer(MoonriverCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, Weight),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
