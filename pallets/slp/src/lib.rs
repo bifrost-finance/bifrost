@@ -215,6 +215,7 @@ pub mod pallet {
 		DelegatorAlreadyLeaving,
 		ValidatorError,
 		AmountNone,
+		InvalidDelays,
 	}
 
 	#[pallet::event]

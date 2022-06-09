@@ -109,4 +109,5 @@ pub enum XcmOperation {
 	Undelegate,
 	CancelLeave,
 	XtokensTransferBack,
+	ExecuteLeave,
 }
