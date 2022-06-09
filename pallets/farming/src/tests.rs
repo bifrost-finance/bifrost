@@ -62,8 +62,10 @@ fn deposit() {
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,
 			token: KSM,
-			rewards:
-				BTreeMap::<CurrencyIdOf<Runtime>, (BalanceOf<Runtime>, BalanceOf<Runtime>)>::new(),
+			rewards: BTreeMap::<
+				CurrencyIdOf<Runtime>,
+				(BalanceOf<Runtime>, BalanceOf<Runtime>, BalanceOf<Runtime>),
+			>::new(),
 			coefficient: Permill::from_percent(100),
 			max_block: 1000,
 			gauge_amount: 200,

@@ -270,12 +270,12 @@ pub mod pallet {
 								gauge_pool_info
 									.rewards
 									.entry(*reward_currency_id)
-									.and_modify(|(total_reward, _)| {
+									.and_modify(|(total_reward, _, _)| {
 										*total_reward = total_reward.saturating_add(
 											gauge_pool_info.coefficient * *reward_amount,
 										);
 									})
-									.or_insert((*reward_amount, Zero::zero()));
+									.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
 							},
 						);
 						GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);

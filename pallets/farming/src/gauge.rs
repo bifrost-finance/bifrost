@@ -67,7 +67,7 @@ where
 pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor> {
 	pub pid: PoolId,
 	pub token: CurrencyIdOf,
-	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
+	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf, BalanceOf)>,
 	pub coefficient: Permill,
 	pub max_block: BlockNumberFor,
 	pub gauge_amount: BalanceOf,
@@ -282,27 +282,38 @@ where
 				gauge_pool_info.total_time_factor,
 			);
 			gauge_pool_info.rewards.iter_mut().try_for_each(
-				|(reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
+				|(
+					reward_currency,
+					(reward_amount, total_gauged_reward, total_withdrawn_reward),
+				)|
+				 -> DispatchResult {
 					let reward = reward_amount
-						.checked_sub(&withdrawn_reward)
+						.checked_sub(&total_gauged_reward)
 						.ok_or(ArithmeticError::Overflow)?;
 					let total_shares =
 						U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 					let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
-					let farming_gauge_reward: BalanceOf<T> =
+					// gauge_reward = gauge rate * gauge coefficient * existing rewards in the gauge
+					// pool
+					let gauge_reward = gauge_rate * reward;
+					// reward_to_claim = farming rate * gauge rate * gauge coefficient * existing
+					// rewards in the gauge pool
+					let reward_to_claim: BalanceOf<T> =
 						U256::from(share_info.share.to_owned().saturated_into::<u128>())
-							.saturating_mul(U256::from(reward.to_owned().saturated_into::<u128>()))
+							.saturating_mul(U256::from(
+								gauge_reward.to_owned().saturated_into::<u128>(),
+							))
 							.checked_div(total_shares)
 							.unwrap_or_default()
 							.as_u128()
 							.unique_saturated_into();
-					// reward_to_claim = farming rate * gauge rate * gauge coefficient * existing
-					// rewards in the gauge pool
-					let reward_to_claim = gauge_rate * farming_gauge_reward;
 					match pool_info.reward_issuer {
 						None => return Err(Error::<T>::PoolKeeperNotExist.into()),
 						Some(ref reward_issuer) => {
-							*withdrawn_reward = withdrawn_reward
+							*total_gauged_reward = total_gauged_reward
+								.checked_add(&gauge_reward)
+								.ok_or(ArithmeticError::Overflow)?;
+							*total_withdrawn_reward = total_withdrawn_reward
 								.checked_add(&reward_to_claim)
 								.ok_or(ArithmeticError::Overflow)?;
 							T::MultiCurrency::transfer(
@@ -400,34 +411,34 @@ where
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
 					gauge_pool_info.total_time_factor,
 				);
-				gauge_pool_info.rewards.iter().try_for_each(
-					|(&reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
-						let reward = reward_amount
-							.checked_sub(&withdrawn_reward)
-							.ok_or(ArithmeticError::Overflow)?;
-						let total_shares =
-							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-						let share_info =
-							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
-						let farming_gauge_reward: BalanceOf<T> =
-							U256::from(share_info.share.to_owned().saturated_into::<u128>())
-								.saturating_mul(U256::from(
-									reward.to_owned().saturated_into::<u128>(),
-								))
-								.checked_div(total_shares)
-								.unwrap_or_default()
-								.as_u128()
-								.unique_saturated_into();
-						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
-						// existing rewards in the gauge pool
-						let reward_to_claim = gauge_rate * farming_gauge_reward;
-						result.entry(reward_currency).and_modify(|total_reward| {
-							*total_reward = total_reward.saturating_add(reward_to_claim);
-						});
+				// gauge_pool_info.rewards.iter().try_for_each(
+				// 	|(&reward_currency, (reward_amount, withdrawn_reward))| -> DispatchResult {
+				// 		let reward = reward_amount
+				// 			.checked_sub(&withdrawn_reward)
+				// 			.ok_or(ArithmeticError::Overflow)?;
+				// 		let total_shares =
+				// 			U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+				// 		let share_info =
+				// 			SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+				// 		let farming_gauge_reward: BalanceOf<T> =
+				// 			U256::from(share_info.share.to_owned().saturated_into::<u128>())
+				// 				.saturating_mul(U256::from(
+				// 					reward.to_owned().saturated_into::<u128>(),
+				// 				))
+				// 				.checked_div(total_shares)
+				// 				.unwrap_or_default()
+				// 				.as_u128()
+				// 				.unique_saturated_into();
+				// 		// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+				// 		// existing rewards in the gauge pool
+				// 		let reward_to_claim = gauge_rate * farming_gauge_reward;
+				// 		result.entry(reward_currency).and_modify(|total_reward| {
+				// 			*total_reward = total_reward.saturating_add(reward_to_claim);
+				// 		});
 
-						Ok(())
-					},
-				)?;
+				// 		Ok(())
+				// 	},
+				// )?;
 			},
 		};
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::default();
