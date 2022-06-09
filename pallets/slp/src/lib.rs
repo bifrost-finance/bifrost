@@ -1660,8 +1660,11 @@ pub mod pallet {
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
 					Ok(()),
-				Ok(_) if T::ControlOrigin::ensure_origin(origin).is_ok() => Ok(()),
-				_ => Err(Error::<T>::NotAuthorized),
+				_ => {
+					T::ControlOrigin::ensure_origin(origin)
+						.map_err(|_| Error::<T>::NotAuthorized)?;
+					Ok(())
+				},
 			}
 		}
 
