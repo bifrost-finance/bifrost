@@ -281,6 +281,10 @@ where
 				latest_claimed_time_factor - gauge_info.claimed_time_factor,
 				gauge_pool_info.total_time_factor,
 			);
+			let total_shares =
+				U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+			let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			gauge_pool_info.rewards.iter_mut().try_for_each(
 				|(
 					reward_currency,
@@ -290,10 +294,6 @@ where
 					let reward = reward_amount
 						.checked_sub(&total_gauged_reward)
 						.ok_or(ArithmeticError::Overflow)?;
-					let total_shares =
-						U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-					let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
-						.ok_or(Error::<T>::ShareInfoNotExists)?;
 					// gauge_reward = gauge rate * gauge coefficient * existing rewards in the gauge
 					// pool
 					let gauge_reward = gauge_rate * reward;
@@ -356,7 +356,6 @@ where
 		who: &T::AccountId,
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
-		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let share_info =
 			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
 		let pool_info = PoolInfos::<T>::get(pid);
@@ -397,16 +396,14 @@ where
 		who: &T::AccountId,
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
-		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		let share_info =
-			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
 		let pool_info = PoolInfos::<T>::get(pid);
-		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
 		match pool_info.gauge {
 			None => (),
 			Some(gid) => {
+				let current_block_number: BlockNumberFor<T> =
+					frame_system::Pallet::<T>::block_number();
 				let gauge_pool_info = GaugePoolInfos::<T>::get(gid);
 				let gauge_info = GaugeInfos::<T>::get(gid, who);
 				let start_block = if current_block_number > gauge_info.gauge_stop_block {
@@ -427,20 +424,19 @@ where
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
 					gauge_pool_info.total_time_factor,
 				);
+				let total_shares =
+					U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+				let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
+					.ok_or(Error::<T>::ShareInfoNotExists)?;
 				gauge_pool_info.rewards.iter().try_for_each(
 					|(
 						reward_currency,
-						(reward_amount, total_gauged_reward, total_withdrawn_reward),
+						(reward_amount, total_gauged_reward, _total_withdrawn_reward),
 					)|
 					 -> DispatchResult {
 						let reward = reward_amount
 							.checked_sub(&total_gauged_reward)
 							.ok_or(ArithmeticError::Overflow)?;
-						let total_shares =
-							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-						let share_info =
-							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
-								.ok_or(Error::<T>::ShareInfoNotExists)?;
 						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
 						// gauge pool
 						let gauge_reward = gauge_rate * reward;

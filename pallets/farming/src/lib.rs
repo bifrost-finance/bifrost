@@ -500,7 +500,6 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid);
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
-			let keeper = pool_info.keeper.as_ref().ok_or(Error::<T>::KeeperNotExist)?;
 			let withdraw_limit_time = BlockNumberFor::<T>::default();
 			let mut retire_count = 0u32;
 			let mut all_retired = true;
