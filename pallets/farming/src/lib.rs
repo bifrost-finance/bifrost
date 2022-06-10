@@ -190,7 +190,6 @@ pub mod pallet {
 		Twox64Concat,
 		PoolId,
 		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
-		// ValueQuery,
 	>;
 
 	/// Record gauge farming pool info.
@@ -231,7 +230,6 @@ pub mod pallet {
 		Twox64Concat,
 		T::AccountId,
 		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
-		// ValueQuery,
 	>;
 
 	#[pallet::hooks]
@@ -360,19 +358,14 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
-			match pool_info.reward_issuer {
-				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-				Some(ref reward_issuer) =>
-					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
-						T::MultiCurrency::transfer(
-							*reward_currency,
-							&exchanger,
-							&reward_issuer,
-							*reward,
-						)?;
-						Ok(())
-					})?,
-			}
+			rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
+				T::MultiCurrency::transfer(
+					*reward_currency,
+					&exchanger,
+					&pool_info.reward_issuer,
+					*reward,
+				)
+			})?;
 			pool_info.state = PoolState::Charged;
 			PoolInfos::<T>::insert(&pid, pool_info);
 
@@ -402,15 +395,12 @@ pub mod pallet {
 			let native_amount = tokens_proportion_values[0].saturating_reciprocal_mul(add_value);
 			pool_info.tokens_proportion.iter().try_for_each(
 				|(token, proportion)| -> DispatchResult {
-					if let Some(ref keeper) = pool_info.keeper {
-						T::MultiCurrency::transfer(
-							*token,
-							&exchanger,
-							&keeper,
-							*proportion * native_amount,
-						)?
-					};
-					Ok(())
+					T::MultiCurrency::transfer(
+						*token,
+						&exchanger,
+						&pool_info.keeper,
+						*proportion * native_amount,
+					)
 				},
 			)?;
 			Self::add_share(&exchanger, pid, &mut pool_info, add_value);
@@ -676,20 +666,18 @@ pub mod pallet {
 						let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid)
 							.ok_or(Error::<T>::PoolDoesNotExist)?;
 						let _ = if gauge_info.gauge_stop_block <= current_block_number {
-							if let Some(ref keeper) = pool_info.keeper {
-								T::MultiCurrency::transfer(
-									gauge_pool_info.token,
-									&keeper,
-									&who,
-									gauge_info.gauge_amount,
-								)?;
-								GaugeInfos::<T>::remove(gid, &who);
-								gauge_pool_info.total_time_factor = gauge_pool_info
-									.total_time_factor
-									.checked_sub(gauge_info.total_time_factor)
-									.ok_or(ArithmeticError::Overflow)?;
-								GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
-							};
+							T::MultiCurrency::transfer(
+								gauge_pool_info.token,
+								&pool_info.keeper,
+								&who,
+								gauge_info.gauge_amount,
+							)?;
+							GaugeInfos::<T>::remove(gid, &who);
+							gauge_pool_info.total_time_factor = gauge_pool_info
+								.total_time_factor
+								.checked_sub(gauge_info.total_time_factor)
+								.ok_or(ArithmeticError::Overflow)?;
+							GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
 						};
 						Ok(())
 					})?;

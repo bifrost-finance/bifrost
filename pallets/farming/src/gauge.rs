@@ -242,13 +242,8 @@ where
 				.total_time_factor
 				.checked_add(incease_total_time_factor)
 				.ok_or(ArithmeticError::Overflow)?;
-			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::KeeperNotExist)?;
-			T::MultiCurrency::transfer(
-				gauge_pool_info.token,
-				who,
-				&pool_info.keeper.ok_or(Error::<T>::KeeperNotExist)?,
-				gauge_value,
-			)?;
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			T::MultiCurrency::transfer(gauge_pool_info.token, who, &pool_info.keeper, gauge_value)?;
 			Ok(())
 		})?;
 		Ok(())
@@ -309,43 +304,34 @@ where
 							.unwrap_or_default()
 							.as_u128()
 							.unique_saturated_into();
-					match pool_info.reward_issuer {
-						None => return Err(Error::<T>::PoolKeeperNotExist.into()),
-						Some(ref reward_issuer) => {
-							*total_gauged_reward = total_gauged_reward
-								.checked_add(&gauge_reward)
-								.ok_or(ArithmeticError::Overflow)?;
-							*total_withdrawn_reward = total_withdrawn_reward
-								.checked_add(&reward_to_claim)
-								.ok_or(ArithmeticError::Overflow)?;
-							T::MultiCurrency::transfer(
-								*reward_currency,
-								&reward_issuer,
-								&who,
-								reward_to_claim,
-							)?
-						},
-					};
-					Ok(())
+					*total_gauged_reward = total_gauged_reward
+						.checked_add(&gauge_reward)
+						.ok_or(ArithmeticError::Overflow)?;
+					*total_withdrawn_reward = total_withdrawn_reward
+						.checked_add(&reward_to_claim)
+						.ok_or(ArithmeticError::Overflow)?;
+					T::MultiCurrency::transfer(
+						*reward_currency,
+						&pool_info.reward_issuer,
+						&who,
+						reward_to_claim,
+					)
 				},
 			)?;
 			gauge_info.last_claim_block = current_block_number;
 			gauge_info.claimed_time_factor = latest_claimed_time_factor;
 			let _ = if gauge_info.gauge_stop_block <= current_block_number {
-				if let Some(ref keeper) = pool_info.keeper {
-					T::MultiCurrency::transfer(
-						gauge_pool_info.token,
-						&keeper,
-						&who,
-						gauge_info.gauge_amount,
-					)?;
-					GaugeInfos::<T>::remove(gid, who);
-					gauge_pool_info.total_time_factor = gauge_pool_info
-						.total_time_factor
-						.checked_sub(gauge_info.total_time_factor)
-						.ok_or(ArithmeticError::Overflow)?;
-					// GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
-				};
+				T::MultiCurrency::transfer(
+					gauge_pool_info.token,
+					&pool_info.keeper,
+					&who,
+					gauge_info.gauge_amount,
+				)?;
+				GaugeInfos::<T>::remove(gid, who);
+				gauge_pool_info.total_time_factor = gauge_pool_info
+					.total_time_factor
+					.checked_sub(gauge_info.total_time_factor)
+					.ok_or(ArithmeticError::Overflow)?;
 			};
 			GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
 			Ok(())

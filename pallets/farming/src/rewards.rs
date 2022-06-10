@@ -65,8 +65,8 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	/// Reward infos <reward_currency, (total_reward, total_withdrawn_reward)>
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf)>,
 	pub state: PoolState,
-	pub keeper: Option<AccountIdOf>,
-	pub reward_issuer: Option<AccountIdOf>,
+	pub keeper: AccountIdOf,
+	pub reward_issuer: AccountIdOf,
 	/// Gauge pool id
 	pub gauge: Option<PoolId>,
 	pub block_startup: Option<BlockNumberFor>,
@@ -128,8 +128,8 @@ where
 			basic_rewards,
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
-			keeper: Some(keeper),
-			reward_issuer: Some(reward_issuer),
+			keeper,
+			reward_issuer,
 			gauge,
 			block_startup: None,
 			min_deposit_to_start,
@@ -368,15 +368,12 @@ impl<T: Config> Pallet<T> {
 								);
 
 								// pay reward to `who`
-								if let Some(ref reward_issuer) = pool_info.reward_issuer {
-									T::MultiCurrency::transfer(
-										*reward_currency,
-										&reward_issuer,
-										&who,
-										reward_to_withdraw,
-									)?
-								};
-								Ok(())
+								T::MultiCurrency::transfer(
+									*reward_currency,
+									&pool_info.reward_issuer,
+									&who,
+									reward_to_withdraw,
+								)
 							},
 						)?;
 							*pool_info_old = Some(pool_info);
@@ -415,15 +412,12 @@ impl<T: Config> Pallet<T> {
 									.saturating_reciprocal_mul(*remove_value);
 								pool_info.tokens_proportion.iter().try_for_each(
 									|(token, &proportion)| -> DispatchResult {
-										if let Some(ref keeper) = pool_info.keeper {
-											T::MultiCurrency::transfer(
-												*token,
-												&keeper,
-												who,
-												proportion * native_amount,
-											)?
-										};
-										Ok(())
+										T::MultiCurrency::transfer(
+											*token,
+											&pool_info.keeper,
+											who,
+											proportion * native_amount,
+										)
 									},
 								)?;
 							} else {
