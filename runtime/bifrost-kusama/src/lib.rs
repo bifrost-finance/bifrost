@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 943,
+	spec_version: 944,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -2049,6 +2049,7 @@ mod benches {
 		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
 		[parachain_staking, ParachainStaking]
+		[bifrost_farming, Farming]
 	);
 }
 

@@ -41,13 +41,12 @@ pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
 	pub last_claim_block: BlockNumberFor,
 }
 
-impl<BalanceOf, BlockNumberFor, AccountIdOf> Default
-	for GaugeInfo<BalanceOf, BlockNumberFor, AccountIdOf>
+impl<BalanceOf, BlockNumberFor, AccountIdOf> GaugeInfo<BalanceOf, BlockNumberFor, AccountIdOf>
 where
 	BalanceOf: Default + HasCompact,
 	BlockNumberFor: Default,
 {
-	fn default() -> Self {
+	fn new() -> Self {
 		Self {
 			who: None,
 			gauge_amount: Default::default(),
@@ -171,79 +170,76 @@ where
 				.gauge_amount
 				.checked_add(&gauge_value)
 				.ok_or(ArithmeticError::Overflow)?;
-			let incease_total_time_factor =
-				GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> Result<u128, DispatchError> {
-					ensure!(
-						gauge_info.gauge_stop_block >= current_block_number ||
-							gauge_info.gauge_stop_block == Default::default(),
-						Error::<T>::LastGaugeNotClaim
-					);
+			let mut gauge_info = GaugeInfos::<T>::get(gid, who).unwrap_or_else(|| GaugeInfo::new());
 
-					ensure!(
-						gauge_pool_info.max_block >=
-							gauge_info.gauge_stop_block - gauge_info.gauge_start_block +
-								gauge_block,
-						Error::<T>::GaugeMaxBlockOverflow
-					);
+			ensure!(
+				gauge_info.gauge_stop_block >= current_block_number ||
+					gauge_info.gauge_stop_block == Default::default(),
+				Error::<T>::LastGaugeNotClaim
+			);
 
-					let incease_total_time_factor = if gauge_info.gauge_amount.is_zero() {
-						gauge_info.gauge_stop_block = current_block_number;
-						gauge_info.gauge_start_block = current_block_number;
-						gauge_info.last_claim_block = current_block_number;
-						gauge_info.total_time_factor = gauge_block
-							.saturated_into::<u128>()
-							.checked_mul(gauge_value.saturated_into::<u128>())
-							.ok_or(ArithmeticError::Overflow)?;
-						gauge_info.total_time_factor
-					} else {
-						let time_factor_a = gauge_value
-							.saturated_into::<u128>()
-							.checked_mul(
-								(gauge_info.gauge_stop_block - current_block_number)
-									.saturated_into::<u128>(),
-							)
-							.ok_or(ArithmeticError::Overflow)?;
-						let time_factor_b = gauge_block
-							.saturated_into::<u128>()
-							.checked_mul(
-								(gauge_value + gauge_info.gauge_amount).saturated_into::<u128>(),
-							)
-							.ok_or(ArithmeticError::Overflow)?;
-						let incease_total_time_factor = time_factor_a + time_factor_b;
-						gauge_info.total_time_factor = gauge_info
-							.total_time_factor
-							.checked_add(incease_total_time_factor)
-							.ok_or(ArithmeticError::Overflow)?;
-						// latest_time_factor only increases in not first gauge_deposit
-						let increase_latest_time_factor = gauge_info
-							.gauge_amount
-							.saturated_into::<u128>()
-							.checked_mul(
-								(current_block_number - gauge_info.gauge_last_block)
-									.saturated_into::<u128>(),
-							)
-							.ok_or(ArithmeticError::Overflow)?;
-						gauge_info.latest_time_factor = gauge_info
-							.latest_time_factor
-							.checked_add(increase_latest_time_factor)
-							.ok_or(ArithmeticError::Overflow)?;
-						incease_total_time_factor
-					};
+			ensure!(
+				gauge_pool_info.max_block >=
+					gauge_info.gauge_stop_block - gauge_info.gauge_start_block + gauge_block,
+				Error::<T>::GaugeMaxBlockOverflow
+			);
 
-					gauge_info.gauge_last_block = current_block_number;
-					gauge_info.gauge_amount = gauge_info
-						.gauge_amount
-						.checked_add(&gauge_value)
-						.ok_or(ArithmeticError::Overflow)?;
-					gauge_info.gauge_stop_block = gauge_info.gauge_stop_block + gauge_block;
-					Ok(incease_total_time_factor)
-				})?;
+			let incease_total_time_factor = if gauge_info.gauge_amount.is_zero() {
+				gauge_info.gauge_stop_block = current_block_number;
+				gauge_info.gauge_start_block = current_block_number;
+				gauge_info.last_claim_block = current_block_number;
+				gauge_info.total_time_factor = gauge_block
+					.saturated_into::<u128>()
+					.checked_mul(gauge_value.saturated_into::<u128>())
+					.ok_or(ArithmeticError::Overflow)?;
+				gauge_info.total_time_factor
+			} else {
+				let time_factor_a = gauge_value
+					.saturated_into::<u128>()
+					.checked_mul(
+						(gauge_info.gauge_stop_block - current_block_number)
+							.saturated_into::<u128>(),
+					)
+					.ok_or(ArithmeticError::Overflow)?;
+				let time_factor_b = gauge_block
+					.saturated_into::<u128>()
+					.checked_mul((gauge_value + gauge_info.gauge_amount).saturated_into::<u128>())
+					.ok_or(ArithmeticError::Overflow)?;
+				let incease_total_time_factor = time_factor_a + time_factor_b;
+				gauge_info.total_time_factor = gauge_info
+					.total_time_factor
+					.checked_add(incease_total_time_factor)
+					.ok_or(ArithmeticError::Overflow)?;
+				// latest_time_factor only increases in not first gauge_deposit
+				let increase_latest_time_factor = gauge_info
+					.gauge_amount
+					.saturated_into::<u128>()
+					.checked_mul(
+						(current_block_number - gauge_info.gauge_last_block)
+							.saturated_into::<u128>(),
+					)
+					.ok_or(ArithmeticError::Overflow)?;
+				gauge_info.latest_time_factor = gauge_info
+					.latest_time_factor
+					.checked_add(increase_latest_time_factor)
+					.ok_or(ArithmeticError::Overflow)?;
+				incease_total_time_factor
+			};
+
+			gauge_info.gauge_last_block = current_block_number;
+			gauge_info.gauge_amount = gauge_info
+				.gauge_amount
+				.checked_add(&gauge_value)
+				.ok_or(ArithmeticError::Overflow)?;
+			gauge_info.gauge_stop_block = gauge_info.gauge_stop_block + gauge_block;
+
 			gauge_pool_info.total_time_factor = gauge_pool_info
 				.total_time_factor
 				.checked_add(incease_total_time_factor)
 				.ok_or(ArithmeticError::Overflow)?;
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			T::MultiCurrency::transfer(gauge_pool_info.token, who, &pool_info.keeper, gauge_value)?;
+			GaugeInfos::<T>::insert(gid, who, gauge_info);
 			Ok(())
 		})?;
 		Ok(())
@@ -257,83 +253,89 @@ where
 		let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
 		let pool_info =
 			PoolInfos::<T>::get(gauge_pool_info.pid).ok_or(Error::<T>::KeeperNotExist)?;
-		GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
-			ensure!(gauge_info.gauge_start_block <= current_block_number, Error::<T>::CanNotClaim);
-			let start_block = if current_block_number > gauge_info.gauge_stop_block {
-				gauge_info.gauge_stop_block
-			} else {
-				current_block_number
-			};
+		GaugeInfos::<T>::mutate_exists(gid, who, |maybe_gauge_info| -> DispatchResult {
+			if let Some(mut gauge_info) = maybe_gauge_info.take() {
+				ensure!(
+					gauge_info.gauge_start_block <= current_block_number,
+					Error::<T>::CanNotClaim
+				);
+				let start_block = if current_block_number > gauge_info.gauge_stop_block {
+					gauge_info.gauge_stop_block
+				} else {
+					current_block_number
+				};
 
-			let latest_claimed_time_factor = gauge_info.latest_time_factor +
-				gauge_info
-					.gauge_amount
-					.saturated_into::<u128>()
-					.checked_mul(
-						(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
-					)
-					.ok_or(ArithmeticError::Overflow)?;
-			let gauge_rate = Permill::from_rational(
-				latest_claimed_time_factor - gauge_info.claimed_time_factor,
-				gauge_pool_info.total_time_factor,
-			);
-			let total_shares =
-				U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-			let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
-				.ok_or(Error::<T>::ShareInfoNotExists)?;
-			gauge_pool_info.rewards.iter_mut().try_for_each(
-				|(
-					reward_currency,
-					(reward_amount, total_gauged_reward, total_withdrawn_reward),
-				)|
-				 -> DispatchResult {
-					let reward = reward_amount
-						.checked_sub(&total_gauged_reward)
+				let latest_claimed_time_factor = gauge_info.latest_time_factor +
+					gauge_info
+						.gauge_amount
+						.saturated_into::<u128>()
+						.checked_mul(
+							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
+						)
 						.ok_or(ArithmeticError::Overflow)?;
-					// gauge_reward = gauge rate * gauge coefficient * existing rewards in the gauge
-					// pool
-					let gauge_reward = gauge_rate * reward;
-					// reward_to_claim = farming rate * gauge rate * gauge coefficient * existing
-					// rewards in the gauge pool
-					let reward_to_claim: BalanceOf<T> =
-						U256::from(share_info.share.to_owned().saturated_into::<u128>())
-							.saturating_mul(U256::from(
-								gauge_reward.to_owned().saturated_into::<u128>(),
-							))
-							.checked_div(total_shares)
-							.unwrap_or_default()
-							.as_u128()
-							.unique_saturated_into();
-					*total_gauged_reward = total_gauged_reward
-						.checked_add(&gauge_reward)
-						.ok_or(ArithmeticError::Overflow)?;
-					*total_withdrawn_reward = total_withdrawn_reward
-						.checked_add(&reward_to_claim)
-						.ok_or(ArithmeticError::Overflow)?;
-					T::MultiCurrency::transfer(
-						*reward_currency,
-						&pool_info.reward_issuer,
-						&who,
-						reward_to_claim,
-					)
-				},
-			)?;
-			gauge_info.last_claim_block = current_block_number;
-			gauge_info.claimed_time_factor = latest_claimed_time_factor;
-			let _ = if gauge_info.gauge_stop_block <= current_block_number {
-				T::MultiCurrency::transfer(
-					gauge_pool_info.token,
-					&pool_info.keeper,
-					&who,
-					gauge_info.gauge_amount,
+				let gauge_rate = Permill::from_rational(
+					latest_claimed_time_factor - gauge_info.claimed_time_factor,
+					gauge_pool_info.total_time_factor,
+				);
+				let total_shares =
+					U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+				let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
+					.ok_or(Error::<T>::ShareInfoNotExists)?;
+				gauge_pool_info.rewards.iter_mut().try_for_each(
+					|(
+						reward_currency,
+						(reward_amount, total_gauged_reward, total_withdrawn_reward),
+					)|
+					 -> DispatchResult {
+						let reward = reward_amount
+							.checked_sub(&total_gauged_reward)
+							.ok_or(ArithmeticError::Overflow)?;
+						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
+						// gauge pool
+						let gauge_reward = gauge_rate * reward;
+						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+						// existing rewards in the gauge pool
+						let reward_to_claim: BalanceOf<T> =
+							U256::from(share_info.share.to_owned().saturated_into::<u128>())
+								.saturating_mul(U256::from(
+									gauge_reward.to_owned().saturated_into::<u128>(),
+								))
+								.checked_div(total_shares)
+								.unwrap_or_default()
+								.as_u128()
+								.unique_saturated_into();
+						*total_gauged_reward = total_gauged_reward
+							.checked_add(&gauge_reward)
+							.ok_or(ArithmeticError::Overflow)?;
+						*total_withdrawn_reward = total_withdrawn_reward
+							.checked_add(&reward_to_claim)
+							.ok_or(ArithmeticError::Overflow)?;
+						T::MultiCurrency::transfer(
+							*reward_currency,
+							&pool_info.reward_issuer,
+							&who,
+							reward_to_claim,
+						)
+					},
 				)?;
-				GaugeInfos::<T>::remove(gid, who);
-				gauge_pool_info.total_time_factor = gauge_pool_info
-					.total_time_factor
-					.checked_sub(gauge_info.total_time_factor)
-					.ok_or(ArithmeticError::Overflow)?;
-			};
-			GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+				gauge_info.last_claim_block = current_block_number;
+				gauge_info.claimed_time_factor = latest_claimed_time_factor;
+				if gauge_info.gauge_stop_block <= current_block_number {
+					T::MultiCurrency::transfer(
+						gauge_pool_info.token,
+						&pool_info.keeper,
+						&who,
+						gauge_info.gauge_amount,
+					)?;
+					gauge_pool_info.total_time_factor = gauge_pool_info
+						.total_time_factor
+						.checked_sub(gauge_info.total_time_factor)
+						.ok_or(ArithmeticError::Overflow)?;
+				} else {
+					*maybe_gauge_info = Some(gauge_info);
+				};
+				GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+			}
 			Ok(())
 		})?;
 		Ok(())
@@ -392,7 +394,8 @@ where
 				let current_block_number: BlockNumberFor<T> =
 					frame_system::Pallet::<T>::block_number();
 				let gauge_pool_info = GaugePoolInfos::<T>::get(gid);
-				let gauge_info = GaugeInfos::<T>::get(gid, who);
+				let gauge_info =
+					GaugeInfos::<T>::get(gid, who).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
 				let start_block = if current_block_number > gauge_info.gauge_stop_block {
 					gauge_info.gauge_stop_block
 				} else {

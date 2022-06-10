@@ -155,6 +155,7 @@ pub mod pallet {
 		NotSupportTokenType,
 		CalculationOverflow,
 		PoolDoesNotExist,
+		GaugePoolDoesNotExist,
 		PoolKeeperNotExist,
 		InvalidPoolState,
 		/// The keeper in the farming pool does not exist
@@ -214,7 +215,6 @@ pub mod pallet {
 		Twox64Concat,
 		T::AccountId,
 		GaugeInfo<BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
-		ValueQuery,
 	>;
 
 	/// Record share amount, reward currency and withdrawn reward amount for
@@ -662,23 +662,26 @@ pub mod pallet {
 				GaugeState::Unbond => {
 					let current_block_number: BlockNumberFor<T> =
 						frame_system::Pallet::<T>::block_number();
-					GaugeInfos::<T>::mutate(gid, &who, |gauge_info| -> DispatchResult {
-						let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid)
-							.ok_or(Error::<T>::PoolDoesNotExist)?;
-						let _ = if gauge_info.gauge_stop_block <= current_block_number {
-							T::MultiCurrency::transfer(
-								gauge_pool_info.token,
-								&pool_info.keeper,
-								&who,
-								gauge_info.gauge_amount,
-							)?;
-							GaugeInfos::<T>::remove(gid, &who);
-							gauge_pool_info.total_time_factor = gauge_pool_info
-								.total_time_factor
-								.checked_sub(gauge_info.total_time_factor)
-								.ok_or(ArithmeticError::Overflow)?;
-							GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
-						};
+					GaugeInfos::<T>::mutate(gid, &who, |maybe_gauge_info| -> DispatchResult {
+						if let Some(gauge_info) = maybe_gauge_info.take() {
+							let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid)
+								.ok_or(Error::<T>::PoolDoesNotExist)?;
+							if gauge_info.gauge_stop_block <= current_block_number {
+								T::MultiCurrency::transfer(
+									gauge_pool_info.token,
+									&pool_info.keeper,
+									&who,
+									gauge_info.gauge_amount,
+								)?;
+								gauge_pool_info.total_time_factor = gauge_pool_info
+									.total_time_factor
+									.checked_sub(gauge_info.total_time_factor)
+									.ok_or(ArithmeticError::Overflow)?;
+								GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
+							} else {
+								*maybe_gauge_info = Some(gauge_info);
+							};
+						}
 						Ok(())
 					})?;
 				},

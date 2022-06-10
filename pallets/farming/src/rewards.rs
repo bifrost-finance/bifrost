@@ -77,33 +77,6 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub withdraw_limit_count: u8,
 }
 
-// impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor> Default
-// 	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
-// where
-// 	BalanceOf: Default + HasCompact,
-// 	CurrencyIdOf: Ord,
-// 	BlockNumberFor: Default,
-// {
-// 	fn default() -> Self {
-// 		Self {
-// 			tokens_proportion: BTreeMap::new(),
-// 			total_shares: Default::default(),
-// 			basic_rewards: BTreeMap::new(),
-// 			rewards: BTreeMap::new(),
-// 			state: PoolState::UnCharged,
-// 			keeper: None,
-// 			reward_issuer: None,
-// 			gauge: None,
-// 			block_startup: None,
-// 			min_deposit_to_start: Default::default(),
-// 			after_block_to_start: Default::default(),
-// 			withdraw_limit_time: Default::default(),
-// 			claim_limit_time: Default::default(),
-// 			withdraw_limit_count: Default::default(),
-// 		}
-// 	}
-// }
-
 impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
 	PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
 where
