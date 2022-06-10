@@ -465,6 +465,15 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger);
+			ensure!(
+				share_info.claim_last_block + pool_info.claim_limit_time <= current_block_number,
+				// share_info.deposit_last + pool_info.claim_limit_time <=
+				// 	current_block_number,
+				Error::<T>::CanNotClaim
+			);
+
 			Self::claim_rewards(&exchanger, pid)?;
 			if let Some(ref gid) = pool_info.gauge {
 				Self::gauge_claim_inner(&exchanger, *gid)?;

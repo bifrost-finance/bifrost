@@ -391,11 +391,11 @@ impl<T: Config> Pallet<T> {
 					}
 
 					PoolInfos::<T>::mutate(pool, |pool_info| -> DispatchResult {
-						ensure!(
-							share_info.claim_last_block + pool_info.claim_limit_time <=
-								current_block_number,
-							Error::<T>::CanNotClaim
-						);
+						// ensure!(
+						// 	share_info.claim_last_block + pool_info.claim_limit_time <=
+						// 		current_block_number,
+						// 	Error::<T>::CanNotClaim
+						// );
 
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
