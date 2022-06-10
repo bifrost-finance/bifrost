@@ -133,7 +133,10 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			gid: PoolId,
 		},
-		ForceGaugeClaimed {
+		AllForceGaugeClaimed {
+			gid: PoolId,
+		},
+		PartiallyForceGaugeClaimed {
 			gid: PoolId,
 		},
 		AllRetired {
@@ -704,13 +707,24 @@ pub mod pallet {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			GaugeInfos::<T>::iter_prefix_values(&gid).try_for_each(
-				|gauge_info| -> DispatchResult {
-					Self::gauge_claim_inner(&gauge_info.who.ok_or(Error::<T>::KeeperNotExist)?, gid)
-				},
-			)?;
+			let gauge_infos = GaugeInfos::<T>::iter_prefix_values(&gid);
+			let retire_limit = RetireLimit::<T>::get();
+			let mut all_retired = true;
+			let mut retire_count = 0u32;
+			for gauge_info in gauge_infos {
+				if retire_count >= retire_limit {
+					all_retired = false;
+					break;
+				}
+				Self::gauge_claim_inner(&gauge_info.who.ok_or(Error::<T>::KeeperNotExist)?, gid)?;
+				retire_count += 1;
+			}
 
-			Self::deposit_event(Event::ForceGaugeClaimed { gid });
+			if all_retired {
+				Self::deposit_event(Event::AllForceGaugeClaimed { gid });
+			} else {
+				Self::deposit_event(Event::PartiallyForceGaugeClaimed { gid });
+			}
 			Ok(())
 		}
 	}

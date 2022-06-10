@@ -33,7 +33,7 @@ decl_runtime_apis! {
 			pid: PoolId,
 		) -> Vec<(CurrencyId, Balance)>;
 
-		fn get_gague_rewards(
+		fn get_gauge_rewards(
 			who: AccountId,
 			pid: PoolId,
 		) -> Vec<(CurrencyId, Balance)>;
