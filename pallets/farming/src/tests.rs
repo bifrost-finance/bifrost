@@ -104,7 +104,7 @@ fn withdraw() {
 		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(200)));
 		System::set_block_number(System::block_number() + 100);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
-		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
+		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), None);
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4166);
 	})
 }
@@ -147,7 +147,7 @@ fn retire() {
 		System::set_block_number(System::block_number() + 1000);
 		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
-		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), ShareInfo::default());
+		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), None);
 	})
 }
 

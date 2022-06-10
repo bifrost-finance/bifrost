@@ -163,6 +163,7 @@ pub mod pallet {
 		CanNotWithdraw,
 		GaugeMaxBlockOverflow,
 		WithdrawLimitCountExceeded,
+		ShareInfoNotExists,
 	}
 
 	#[pallet::storage]
@@ -228,7 +229,7 @@ pub mod pallet {
 		Twox64Concat,
 		T::AccountId,
 		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
-		ValueQuery,
+		// ValueQuery,
 	>;
 
 	#[pallet::hooks]
@@ -446,6 +447,12 @@ pub mod pallet {
 					pool_info.state == PoolState::Dead,
 				Error::<T>::InvalidPoolState
 			);
+			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
+			ensure!(
+				share_info.withdraw_list.len() < pool_info.withdraw_limit_count.into(),
+				Error::<T>::WithdrawLimitCountExceeded
+			);
 
 			Self::remove_share(&exchanger, pid, remove_value, pool_info.withdraw_limit_time)?;
 
@@ -466,11 +473,10 @@ pub mod pallet {
 			);
 
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger);
+			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			ensure!(
 				share_info.claim_last_block + pool_info.claim_limit_time <= current_block_number,
-				// share_info.deposit_last + pool_info.claim_limit_time <=
-				// 	current_block_number,
 				Error::<T>::CanNotClaim
 			);
 
@@ -501,7 +507,7 @@ pub mod pallet {
 					all_retired = false;
 					break;
 				}
-				let who = share_info.who.ok_or(Error::<T>::KeeperNotExist)?;
+				let who = share_info.who;
 				Self::remove_share(&who, pid, None, withdraw_limit_time)?;
 				Self::claim_rewards(&who, pid)?;
 				if let Some(ref gid) = pool_info.gauge {

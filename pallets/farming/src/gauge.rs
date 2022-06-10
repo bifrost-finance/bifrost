@@ -292,7 +292,8 @@ where
 						.ok_or(ArithmeticError::Overflow)?;
 					let total_shares =
 						U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-					let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+					let share_info = SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
+						.ok_or(Error::<T>::ShareInfoNotExists)?;
 					// gauge_reward = gauge rate * gauge coefficient * existing rewards in the gauge
 					// pool
 					let gauge_reward = gauge_rate * reward;
@@ -356,7 +357,8 @@ where
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		let share_info = SharesAndWithdrawnRewards::<T>::get(pid, who);
+		let share_info =
+			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
 		let pool_info = PoolInfos::<T>::get(pid);
 		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
@@ -396,7 +398,8 @@ where
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		let share_info = SharesAndWithdrawnRewards::<T>::get(pid, who);
+		let share_info =
+			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
 		let pool_info = PoolInfos::<T>::get(pid);
 		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
@@ -436,7 +439,8 @@ where
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 						let share_info =
-							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who);
+							SharesAndWithdrawnRewards::<T>::get(gauge_pool_info.pid, who)
+								.ok_or(Error::<T>::ShareInfoNotExists)?;
 						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
 						// gauge pool
 						let gauge_reward = gauge_rate * reward;
