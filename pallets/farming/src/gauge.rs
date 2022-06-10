@@ -150,7 +150,6 @@ where
 
 	pub fn gauge_add(
 		who: &AccountIdOf<T>,
-		pid: PoolId,
 		gid: PoolId,
 		gauge_value: BalanceOf<T>,
 		gauge_block: BlockNumberFor<T>,

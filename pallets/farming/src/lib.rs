@@ -47,9 +47,9 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
 // use sp_arithmetic::per_things::Percent;
+use sp_runtime::SaturatedConversion;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 pub use weights::WeightInfo;
-
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -408,7 +408,6 @@ pub mod pallet {
 				Some((gauge_value, gauge_block)) => {
 					Self::gauge_add(
 						&exchanger,
-						pid,
 						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
 						gauge_value,
 						gauge_block,
@@ -489,11 +488,11 @@ pub mod pallet {
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let withdraw_limit_time = BlockNumberFor::<T>::default();
-			let mut retire_count = 0u32;
+			let retire_limit = RetireLimit::<T>::get();
 			let mut all_retired = true;
 			let share_infos = SharesAndWithdrawnRewards::<T>::iter_prefix_values(pid);
-			for share_info in share_infos {
-				if retire_count >= RetireLimit::<T>::get() {
+			for (retire_count, share_info) in share_infos.enumerate() {
+				if retire_count.saturated_into::<u32>() >= retire_limit {
 					all_retired = false;
 					break;
 				}
@@ -504,7 +503,6 @@ pub mod pallet {
 					Self::gauge_claim_inner(&who, *gid)?;
 				}
 				Self::process_withraw_list(&who, pid, &pool_info)?;
-				retire_count += 1;
 			}
 
 			if all_retired {
@@ -702,14 +700,12 @@ pub mod pallet {
 			let gauge_infos = GaugeInfos::<T>::iter_prefix_values(&gid);
 			let retire_limit = RetireLimit::<T>::get();
 			let mut all_retired = true;
-			let mut retire_count = 0u32;
-			for gauge_info in gauge_infos {
-				if retire_count >= retire_limit {
+			for (retire_count, gauge_info) in gauge_infos.enumerate() {
+				if retire_count.saturated_into::<u32>() >= retire_limit {
 					all_retired = false;
 					break;
 				}
 				Self::gauge_claim_inner(&gauge_info.who.ok_or(Error::<T>::KeeperNotExist)?, gid)?;
-				retire_count += 1;
 			}
 
 			if all_retired {
