@@ -42,7 +42,6 @@ impl<BalanceOf, CurrencyIdOf, BlockNumberFor, AccountIdOf>
 where
 	BalanceOf: Default + HasCompact,
 	CurrencyIdOf: Ord,
-	BlockNumberFor: Default,
 {
 	fn new(who: AccountIdOf, claim_last_block: BlockNumberFor) -> Self {
 		Self {
@@ -78,32 +77,32 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub withdraw_limit_count: u8,
 }
 
-impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor> Default
-	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
-where
-	BalanceOf: Default + HasCompact,
-	CurrencyIdOf: Ord,
-	BlockNumberFor: Default,
-{
-	fn default() -> Self {
-		Self {
-			tokens_proportion: BTreeMap::new(),
-			total_shares: Default::default(),
-			basic_rewards: BTreeMap::new(),
-			rewards: BTreeMap::new(),
-			state: PoolState::UnCharged,
-			keeper: None,
-			reward_issuer: None,
-			gauge: None,
-			block_startup: None,
-			min_deposit_to_start: Default::default(),
-			after_block_to_start: Default::default(),
-			withdraw_limit_time: Default::default(),
-			claim_limit_time: Default::default(),
-			withdraw_limit_count: Default::default(),
-		}
-	}
-}
+// impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor> Default
+// 	for PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
+// where
+// 	BalanceOf: Default + HasCompact,
+// 	CurrencyIdOf: Ord,
+// 	BlockNumberFor: Default,
+// {
+// 	fn default() -> Self {
+// 		Self {
+// 			tokens_proportion: BTreeMap::new(),
+// 			total_shares: Default::default(),
+// 			basic_rewards: BTreeMap::new(),
+// 			rewards: BTreeMap::new(),
+// 			state: PoolState::UnCharged,
+// 			keeper: None,
+// 			reward_issuer: None,
+// 			gauge: None,
+// 			block_startup: None,
+// 			min_deposit_to_start: Default::default(),
+// 			after_block_to_start: Default::default(),
+// 			withdraw_limit_time: Default::default(),
+// 			claim_limit_time: Default::default(),
+// 			withdraw_limit_count: Default::default(),
+// 		}
+// 	}
+// }
 
 impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
 	PoolInfo<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
@@ -140,35 +139,6 @@ where
 			withdraw_limit_count,
 		}
 	}
-
-	// pub fn reset(
-	// 	keeper: AccountIdOf,
-	// 	tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
-	// 	basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
-	// 	state: PoolState,
-	// 	gauge: Option<PoolId>,
-	// 	min_deposit_to_start: BalanceOf,
-	// 	after_block_to_start: BlockNumberFor,
-	// 	withdraw_limit_time: BlockNumberFor,
-	// 	claim_limit_time: BlockNumberFor,
-	// 	withdraw_limit_count: u8,
-	// ) -> Self {
-	// 	Self {
-	// 		tokens_proportion,
-	// 		total_shares: Default::default(),
-	// 		basic_rewards,
-	// 		rewards: BTreeMap::new(),
-	// 		state,
-	// 		keeper: Some(keeper),
-	// 		gauge,
-	// 		block_startup: None,
-	// 		min_deposit_to_start,
-	// 		after_block_to_start,
-	// 		withdraw_limit_time,
-	// 		claim_limit_time,
-	// 		withdraw_limit_count,
-	// 	}
-	// }
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -206,56 +176,59 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn add_share(who: &T::AccountId, pool: PoolId, add_amount: BalanceOf<T>) {
+	pub fn add_share(
+		who: &T::AccountId,
+		pid: PoolId,
+		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
+		add_amount: BalanceOf<T>,
+	) {
 		if add_amount.is_zero() {
 			return;
 		}
 
-		PoolInfos::<T>::mutate(pool, |pool_info| {
-			let initial_total_shares = pool_info.total_shares;
-			pool_info.total_shares = pool_info.total_shares.saturating_add(add_amount);
+		let initial_total_shares = pool_info.total_shares;
+		pool_info.total_shares = pool_info.total_shares.saturating_add(add_amount);
 
-			let mut withdrawn_inflation = Vec::<(CurrencyIdOf<T>, BalanceOf<T>)>::new();
+		let mut withdrawn_inflation = Vec::<(CurrencyIdOf<T>, BalanceOf<T>)>::new();
 
-			pool_info.rewards.iter_mut().for_each(
-				|(reward_currency, (total_reward, total_withdrawn_reward))| {
-					let reward_inflation = if initial_total_shares.is_zero() {
-						Zero::zero()
-					} else {
-						U256::from(add_amount.to_owned().saturated_into::<u128>())
-							.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
-							.checked_div(
-								initial_total_shares.to_owned().saturated_into::<u128>().into(),
-							)
-							.unwrap_or_default()
-							.as_u128()
-							.saturated_into()
-					};
-					*total_reward = total_reward.saturating_add(reward_inflation);
-					*total_withdrawn_reward =
-						total_withdrawn_reward.saturating_add(reward_inflation);
+		pool_info.rewards.iter_mut().for_each(
+			|(reward_currency, (total_reward, total_withdrawn_reward))| {
+				let reward_inflation = if initial_total_shares.is_zero() {
+					Zero::zero()
+				} else {
+					U256::from(add_amount.to_owned().saturated_into::<u128>())
+						.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
+						.checked_div(
+							initial_total_shares.to_owned().saturated_into::<u128>().into(),
+						)
+						.unwrap_or_default()
+						.as_u128()
+						.saturated_into()
+				};
+				*total_reward = total_reward.saturating_add(reward_inflation);
+				*total_withdrawn_reward = total_withdrawn_reward.saturating_add(reward_inflation);
 
-					withdrawn_inflation.push((*reward_currency, reward_inflation));
-				},
-			);
+				withdrawn_inflation.push((*reward_currency, reward_inflation));
+			},
+		);
 
-			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
-			let mut share_info = SharesAndWithdrawnRewards::<T>::get(pool, who)
-				.unwrap_or_else(|| ShareInfo::new(who.clone(), current_block_number));
-			share_info.share = share_info.share.saturating_add(add_amount);
-			// update withdrawn inflation for each reward currency
-			withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
-				share_info
-					.withdrawn_rewards
-					.entry(reward_currency)
-					.and_modify(|withdrawn_reward| {
-						*withdrawn_reward = withdrawn_reward.saturating_add(reward_inflation);
-					})
-					.or_insert(reward_inflation);
-			});
-			SharesAndWithdrawnRewards::<T>::insert(pool, who, share_info);
+		let mut share_info = SharesAndWithdrawnRewards::<T>::get(pid, who)
+			.unwrap_or_else(|| ShareInfo::new(who.clone(), current_block_number));
+		share_info.share = share_info.share.saturating_add(add_amount);
+		// update withdrawn inflation for each reward currency
+		withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
+			share_info
+				.withdrawn_rewards
+				.entry(reward_currency)
+				.and_modify(|withdrawn_reward| {
+					*withdrawn_reward = withdrawn_reward.saturating_add(reward_inflation);
+				})
+				.or_insert(reward_inflation);
 		});
+		SharesAndWithdrawnRewards::<T>::insert(pid, who, share_info);
+		PoolInfos::<T>::insert(&pid, pool_info);
 	}
 
 	pub fn remove_share(
@@ -287,46 +260,52 @@ impl<T: Config> Pallet<T> {
 					return Ok(());
 				}
 
-				PoolInfos::<T>::mutate(pool, |mut pool_info| -> DispatchResult {
-					share_info
-						.withdraw_list
-						.push((current_block_number + withdraw_limit_time, remove_amount));
+				PoolInfos::<T>::mutate(pool, |pool_info_old| -> DispatchResult {
+					if let Some(mut pool_info) = pool_info_old.take() {
+						share_info
+							.withdraw_list
+							.push((current_block_number + withdraw_limit_time, remove_amount));
 
-					let removing_share = U256::from(remove_amount.saturated_into::<u128>());
+						let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
-					pool_info.total_shares = pool_info.total_shares.saturating_sub(remove_amount);
+						pool_info.total_shares =
+							pool_info.total_shares.saturating_sub(remove_amount);
 
-					// update withdrawn rewards for each reward currency
-					share_info.withdrawn_rewards.iter_mut().try_for_each(
-						|(reward_currency, withdrawn_reward)| -> DispatchResult {
-							let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
-								.saturating_mul(
-									withdrawn_reward.to_owned().saturated_into::<u128>().into(),
-								)
-								.checked_div(share_info.share.saturated_into::<u128>().into())
-								.unwrap_or_default()
-								.as_u128()
-								.saturated_into();
+						// update withdrawn rewards for each reward currency
+						share_info.withdrawn_rewards.iter_mut().try_for_each(
+							|(reward_currency, withdrawn_reward)| -> DispatchResult {
+								let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
+									.saturating_mul(
+										withdrawn_reward.to_owned().saturated_into::<u128>().into(),
+									)
+									.checked_div(share_info.share.saturated_into::<u128>().into())
+									.unwrap_or_default()
+									.as_u128()
+									.saturated_into();
 
-							if let Some((total_reward, total_withdrawn_reward)) =
-								pool_info.rewards.get_mut(reward_currency)
-							{
-								*total_reward =
-									total_reward.saturating_sub(withdrawn_reward_to_remove);
-								*total_withdrawn_reward = total_withdrawn_reward
-									.saturating_sub(withdrawn_reward_to_remove);
+								if let Some((total_reward, total_withdrawn_reward)) =
+									pool_info.rewards.get_mut(reward_currency)
+								{
+									*total_reward =
+										total_reward.saturating_sub(withdrawn_reward_to_remove);
+									*total_withdrawn_reward = total_withdrawn_reward
+										.saturating_sub(withdrawn_reward_to_remove);
 
-								// remove if all reward is withdrawn
-								if total_reward.is_zero() {
-									pool_info.rewards.remove(reward_currency);
+									// remove if all reward is withdrawn
+									if total_reward.is_zero() {
+										pool_info.rewards.remove(reward_currency);
+									}
 								}
-							}
-							*withdrawn_reward =
-								withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
-							Ok(())
-						},
-					)?;
-					Ok(())
+								*withdrawn_reward =
+									withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
+								Ok(())
+							},
+						)?;
+						*pool_info_old = Some(pool_info);
+						Ok(())
+					} else {
+						Err(Error::<T>::PoolDoesNotExist)?
+					}
 				})?;
 
 				share_info.share = share_info.share.saturating_sub(remove_amount);
@@ -349,10 +328,12 @@ impl<T: Config> Pallet<T> {
 						return Ok(());
 					}
 
-					PoolInfos::<T>::mutate(pool, |pool_info| -> DispatchResult {
-						let total_shares =
-							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-						pool_info.rewards.iter_mut().try_for_each(
+					PoolInfos::<T>::mutate(pool, |pool_info_old| -> DispatchResult {
+						if let Some(mut pool_info) = pool_info_old.take() {
+							let total_shares = U256::from(
+								pool_info.total_shares.to_owned().saturated_into::<u128>(),
+							);
+							pool_info.rewards.iter_mut().try_for_each(
 							|(reward_currency, (total_reward, total_withdrawn_reward))|  -> DispatchResult {
 								let withdrawn_reward = share_info
 									.withdrawn_rewards
@@ -398,7 +379,11 @@ impl<T: Config> Pallet<T> {
 								Ok(())
 							},
 						)?;
-						Ok(())
+							*pool_info_old = Some(pool_info);
+							Ok(())
+						} else {
+							Err(Error::<T>::PoolDoesNotExist)?
+						}
 					})?;
 					share_info.claim_last_block = current_block_number;
 				};

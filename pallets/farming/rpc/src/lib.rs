@@ -33,13 +33,21 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 #[rpc(client, server)]
 pub trait FarmingRpcApi<BlockHash, AccountId, PoolId> {
-	/// rpc method for getting current rewards
-	#[method(name = "Farming_getRewards")]
-	fn get_rewards(
+	/// rpc method for getting farming rewards
+	#[method(name = "Farming_getFarmingRewards")]
+	fn get_farming_rewards(
 		&self,
 		who: AccountId,
 		pid: PoolId,
-		pallet_instance: u32,
+		at: Option<BlockHash>,
+	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>>;
+
+	/// rpc method for getting gauge rewards
+	#[method(name = "Farming_getGaugeRewards")]
+	fn get_gauge_rewards(
+		&self,
+		who: AccountId,
+		pid: PoolId,
 		at: Option<BlockHash>,
 	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>>;
 }

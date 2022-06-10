@@ -242,7 +242,7 @@ where
 				.total_time_factor
 				.checked_add(incease_total_time_factor)
 				.ok_or(ArithmeticError::Overflow)?;
-			let pool_info = Self::pool_infos(&pid);
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::KeeperNotExist)?;
 			T::MultiCurrency::transfer(
 				gauge_pool_info.token,
 				who,
@@ -260,7 +260,8 @@ where
 		}
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
-		let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
+		let pool_info =
+			PoolInfos::<T>::get(gauge_pool_info.pid).ok_or(Error::<T>::KeeperNotExist)?;
 		GaugeInfos::<T>::mutate(gid, who, |gauge_info| -> DispatchResult {
 			ensure!(gauge_info.gauge_start_block <= current_block_number, Error::<T>::CanNotClaim);
 			let start_block = if current_block_number > gauge_info.gauge_stop_block {
@@ -358,7 +359,7 @@ where
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
 		let share_info =
 			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
-		let pool_info = PoolInfos::<T>::get(pid);
+		let pool_info = PoolInfos::<T>::get(pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
@@ -396,7 +397,7 @@ where
 		who: &T::AccountId,
 		pid: PoolId,
 	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
-		let pool_info = PoolInfos::<T>::get(pid);
+		let pool_info = PoolInfos::<T>::get(pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
 		match pool_info.gauge {

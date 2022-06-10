@@ -116,7 +116,6 @@ pub mod pallet {
 		Deposited {
 			who: AccountIdOf<T>,
 			pid: PoolId,
-			// add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			add_value: BalanceOf<T>,
 			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		},
@@ -191,7 +190,7 @@ pub mod pallet {
 		Twox64Concat,
 		PoolId,
 		PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
-		ValueQuery,
+		// ValueQuery,
 	>;
 
 	/// Record gauge farming pool info.
@@ -268,21 +267,22 @@ pub mod pallet {
 			GaugePoolInfos::<T>::iter().for_each(
 				|(gid, mut gauge_pool_info)| match gauge_pool_info.gauge_state {
 					GaugeState::Bonded => {
-						let pool_info = Self::pool_infos(&gauge_pool_info.pid);
-						pool_info.basic_rewards.clone().iter().for_each(
-							|(reward_currency_id, reward_amount)| {
-								gauge_pool_info
-									.rewards
-									.entry(*reward_currency_id)
-									.and_modify(|(total_reward, _, _)| {
-										*total_reward = total_reward.saturating_add(
-											gauge_pool_info.coefficient * *reward_amount,
-										);
-									})
-									.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
-							},
-						);
-						GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
+						if let Some(pool_info) = Self::pool_infos(&gauge_pool_info.pid) {
+							pool_info.basic_rewards.clone().iter().for_each(
+								|(reward_currency_id, reward_amount)| {
+									gauge_pool_info
+										.rewards
+										.entry(*reward_currency_id)
+										.and_modify(|(total_reward, _, _)| {
+											*total_reward = total_reward.saturating_add(
+												gauge_pool_info.coefficient * *reward_amount,
+											);
+										})
+										.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
+								},
+							);
+							GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
+						}
 					},
 					_ => (),
 				},
@@ -358,7 +358,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
 			match pool_info.reward_issuer {
 				None => return Err(Error::<T>::PoolKeeperNotExist.into()),
@@ -385,14 +385,13 @@ pub mod pallet {
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
-			// add_value: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 			add_value: BalanceOf<T>,
 			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
 				Error::<T>::InvalidPoolState
@@ -414,7 +413,7 @@ pub mod pallet {
 					Ok(())
 				},
 			)?;
-			Self::add_share(&exchanger, pid, add_value);
+			Self::add_share(&exchanger, pid, &mut pool_info, add_value);
 
 			match gauge_info {
 				Some((gauge_value, gauge_block)) => {
@@ -443,7 +442,7 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid);
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing ||
 					pool_info.state == PoolState::Charged ||
@@ -469,7 +468,7 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid);
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Dead,
 				Error::<T>::InvalidPoolState
@@ -498,7 +497,7 @@ pub mod pallet {
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let withdraw_limit_time = BlockNumberFor::<T>::default();
 			let mut retire_count = 0u32;
@@ -552,7 +551,7 @@ pub mod pallet {
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 			pool_info.state = PoolState::Dead;
 			PoolInfos::<T>::insert(&pid, pool_info);
@@ -576,7 +575,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -612,7 +611,7 @@ pub mod pallet {
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let pool_info = Self::pool_infos(&pid);
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			PoolInfos::<T>::remove(pid);
@@ -632,7 +631,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid);
+			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -674,7 +673,8 @@ pub mod pallet {
 					let current_block_number: BlockNumberFor<T> =
 						frame_system::Pallet::<T>::block_number();
 					GaugeInfos::<T>::mutate(gid, &who, |gauge_info| -> DispatchResult {
-						let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid);
+						let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid)
+							.ok_or(Error::<T>::PoolDoesNotExist)?;
 						let _ = if gauge_info.gauge_stop_block <= current_block_number {
 							if let Some(ref keeper) = pool_info.keeper {
 								T::MultiCurrency::transfer(
