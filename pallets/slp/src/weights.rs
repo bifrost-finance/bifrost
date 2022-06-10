@@ -68,6 +68,7 @@ pub trait WeightInfo {
 	fn set_currency_delays() -> Weight;
 	fn set_hosting_fees() -> Weight;
 	fn set_currency_tune_exchange_rate_limit() -> Weight;
+	fn set_ongoing_time_unit_update_interval() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -207,6 +208,10 @@ impl WeightInfo for () {
 	}
 
 	fn set_currency_tune_exchange_rate_limit() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_ongoing_time_unit_update_interval() -> Weight {
 		(50_000_000 as Weight)
 	}
 

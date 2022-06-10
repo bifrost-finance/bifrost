@@ -216,6 +216,9 @@ pub mod pallet {
 		ValidatorError,
 		AmountNone,
 		InvalidDelays,
+		OngoingTimeUnitUpdateIntervalNotExist,
+		LastTimeUpdatedOngoingTimeUnitNotExist,
+		TooFrequent,
 	}
 
 	#[pallet::event]
@@ -435,6 +438,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			tune_exchange_rate_limit: Option<(u32, Permill)>,
 		},
+		OngoingTimeUnitUpdateIntervalSet {
+			currency_id: CurrencyId,
+			interval: Option<BlockNumberFor<T>>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -593,6 +600,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_all_delegations_occupied_status)]
 	pub type DelegationsOccupied<T> = StorageMap<_, Blake2_128Concat, CurrencyId, bool>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_last_time_updated_ongoing_time_unit)]
+	pub type LastTimeUpdatedOngoingTimeUnit<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_ongoing_time_unit_update_interval)]
+	pub type OngoingTimeUnitUpdateInterval<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1040,8 +1057,23 @@ pub mod pallet {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
+			// check current block is beyond the interval of ongoing timeunit updating.
+			let interval = OngoingTimeUnitUpdateInterval::<T>::get(currency_id)
+				.ok_or(Error::<T>::OngoingTimeUnitUpdateIntervalNotExist)?;
+
+			let last_update_block = LastTimeUpdatedOngoingTimeUnit::<T>::get(currency_id)
+				.ok_or(Error::<T>::LastTimeUpdatedOngoingTimeUnitNotExist)?;
+			let current_block = frame_system::Pallet::<T>::block_number();
+			let blocks_between =
+				current_block.checked_sub(&last_update_block).ok_or(Error::<T>::UnderFlow)?;
+
+			ensure!(blocks_between >= interval, Error::<T>::TooFrequent);
+
 			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
+
+			// update LastTimeUpdatedOngoingTimeUnit storage
+			LastTimeUpdatedOngoingTimeUnit::<T>::insert(currency_id, current_block);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TimeUnitUpdated { currency_id, old, new: time_unit });
@@ -1586,6 +1618,39 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::CurrencyTuneExchangeRateLimitSet {
 				currency_id,
 				tune_exchange_rate_limit: maybe_tune_exchange_rate_limit,
+			});
+
+			Ok(())
+		}
+
+		/// Set  OngoingTimeUnitUpdateInterval<T> storage.
+		#[pallet::weight(T::WeightInfo::set_ongoing_time_unit_update_interval())]
+		pub fn set_ongoing_time_unit_update_interval(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_interval: Option<BlockNumberFor<T>>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			if maybe_interval.is_none() {
+				LastTimeUpdatedOngoingTimeUnit::<T>::remove(currency_id);
+			} else {
+				// if this is the first time to set interval, add an item to
+				// LastTimeUpdatedOngoingTimeUnit
+				if !OngoingTimeUnitUpdateInterval::<T>::contains_key(currency_id) {
+					let zero_block = BlockNumberFor::<T>::from(0u32);
+					LastTimeUpdatedOngoingTimeUnit::<T>::insert(currency_id, zero_block);
+				}
+			}
+
+			OngoingTimeUnitUpdateInterval::<T>::mutate_exists(currency_id, |interval_op| {
+				*interval_op = maybe_interval;
+			});
+
+			Pallet::<T>::deposit_event(Event::OngoingTimeUnitUpdateIntervalSet {
+				currency_id,
+				interval: maybe_interval,
 			});
 
 			Ok(())
