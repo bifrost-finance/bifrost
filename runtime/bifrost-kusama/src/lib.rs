@@ -987,6 +987,8 @@ impl parachain_staking::Config for Runtime {
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
