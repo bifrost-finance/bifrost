@@ -551,6 +551,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-farming-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-farming-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
 dependencies = [
@@ -5509,6 +5525,8 @@ dependencies = [
 name = "node-rpc"
 version = "0.8.0"
 dependencies = [
+ "bifrost-farming-rpc-api",
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-liquidity-mining-rpc-api",
@@ -5534,6 +5552,7 @@ dependencies = [
 name = "node-service"
 version = "0.8.0"
 dependencies = [
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
  "bifrost-liquidity-mining-rpc-runtime-api",

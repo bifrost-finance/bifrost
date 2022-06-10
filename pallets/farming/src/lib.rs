@@ -202,8 +202,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		PoolId,
-		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>,
-		ValueQuery,
+		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 	>;
 
 	#[pallet::storage]
@@ -510,7 +509,8 @@ pub mod pallet {
 
 			if all_retired {
 				if let Some(ref gid) = pool_info.gauge {
-					let mut gauge_info = Self::gauge_pool_infos(gid);
+					let mut gauge_info =
+						Self::gauge_pool_infos(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
 					gauge_info.gauge_state = GaugeState::Unbond;
 					GaugePoolInfos::<T>::insert(&gid, gauge_info);
 				}
@@ -637,8 +637,11 @@ pub mod pallet {
 			if let Some(coefficient) = gauge_coefficient {
 				GaugePoolInfos::<T>::mutate(
 					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
-					|gauge_pool_info| {
-						gauge_pool_info.coefficient = coefficient;
+					|gauge_pool_info_old| {
+						if let Some(mut gauge_pool_info) = gauge_pool_info_old.take() {
+							gauge_pool_info.coefficient = coefficient;
+							*gauge_pool_info_old = Some(gauge_pool_info);
+						}
 					},
 				);
 			};
@@ -654,7 +657,8 @@ pub mod pallet {
 			// Check origin
 			let who = ensure_signed(origin)?;
 
-			let mut gauge_pool_info = GaugePoolInfos::<T>::get(gid);
+			let mut gauge_pool_info =
+				GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
 			match gauge_pool_info.gauge_state {
 				GaugeState::Bonded => {
 					Self::gauge_claim_inner(&who, gid)?;
@@ -664,12 +668,10 @@ pub mod pallet {
 						frame_system::Pallet::<T>::block_number();
 					GaugeInfos::<T>::mutate(gid, &who, |maybe_gauge_info| -> DispatchResult {
 						if let Some(gauge_info) = maybe_gauge_info.take() {
-							let pool_info = PoolInfos::<T>::get(gauge_pool_info.pid)
-								.ok_or(Error::<T>::PoolDoesNotExist)?;
 							if gauge_info.gauge_stop_block <= current_block_number {
 								T::MultiCurrency::transfer(
 									gauge_pool_info.token,
-									&pool_info.keeper,
+									&gauge_pool_info.keeper,
 									&who,
 									gauge_info.gauge_amount,
 								)?;

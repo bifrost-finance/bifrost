@@ -21,7 +21,7 @@ use std::{marker::PhantomData, sync::Arc};
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
 use codec::Codec;
 use jsonrpsee::{
-	core::{async_trait, RpcResult},
+	core::RpcResult,
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };

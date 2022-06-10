@@ -59,9 +59,14 @@ fn deposit() {
 		System::set_block_number(System::block_number() + 1);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 0, Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
+		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
+		let reward_issuer: AccountId =
+			<Runtime as Config>::RewardIssuer::get().into_sub_account(pid);
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,
 			token: KSM,
+			keeper,
+			reward_issuer,
 			rewards: BTreeMap::<
 				CurrencyIdOf<Runtime>,
 				(BalanceOf<Runtime>, BalanceOf<Runtime>, BalanceOf<Runtime>),
@@ -73,7 +78,7 @@ fn deposit() {
 			gauge_last_block: System::block_number(),
 			gauge_state: GaugeState::Bonded,
 		};
-		assert_eq!(Farming::gauge_pool_infos(0), gauge_pool_info2);
+		assert_eq!(Farming::gauge_pool_infos(0), Some(gauge_pool_info2));
 		Farming::on_initialize(0);
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 1000);
