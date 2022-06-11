@@ -131,10 +131,16 @@ fn gauge() {
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, 10, None)); // 5482 -> 5471
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 9699990);
 		System::set_block_number(System::block_number() + 200);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5471);
-		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, tokens, Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 9699990);
+		assert_ok!(Farming::deposit(Origin::signed(BOB), pid, 0, Some((100, 100))));
+		System::set_block_number(System::block_number() + 200);
+		assert_ok!(Farming::set_retire_limit(Origin::signed(ALICE), 10));
+		assert_ok!(Farming::force_gauge_claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 9699991);
 	})
 }
 

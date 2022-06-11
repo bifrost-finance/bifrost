@@ -151,20 +151,17 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughBalance,
-		NotSupportTokenType,
 		CalculationOverflow,
 		PoolDoesNotExist,
-		GaugePoolDoesNotExist,
-		PoolKeeperNotExist,
-		InvalidPoolState,
-		/// The keeper in the farming pool does not exist
-		KeeperNotExist,
 		GaugePoolNotExist,
+		GaugeInfoNotExist,
+		InvalidPoolState,
 		LastGaugeNotClaim,
+		// claim_limit_time exceeded
 		CanNotClaim,
-		CanNotWithdraw,
+		// gauge pool max_block exceeded
 		GaugeMaxBlockOverflow,
+		// withdraw_limit_time exceeded
 		WithdrawLimitCountExceeded,
 		ShareInfoNotExists,
 	}
@@ -507,10 +504,10 @@ pub mod pallet {
 
 			if all_retired {
 				if let Some(ref gid) = pool_info.gauge {
-					let mut gauge_info =
-						Self::gauge_pool_infos(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
-					gauge_info.gauge_state = GaugeState::Unbond;
-					GaugePoolInfos::<T>::insert(&gid, gauge_info);
+					let mut gauge_pool_info =
+						Self::gauge_pool_infos(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
+					gauge_pool_info.gauge_state = GaugeState::Unbond;
+					GaugePoolInfos::<T>::insert(&gid, gauge_pool_info);
 				}
 				pool_info.state = PoolState::Retired;
 				pool_info.gauge = None;
@@ -656,7 +653,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let mut gauge_pool_info =
-				GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
+				GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
 			match gauge_pool_info.gauge_state {
 				GaugeState::Bonded => {
 					Self::gauge_claim_inner(&who, gid)?;
@@ -705,7 +702,7 @@ pub mod pallet {
 					all_retired = false;
 					break;
 				}
-				Self::gauge_claim_inner(&gauge_info.who.ok_or(Error::<T>::KeeperNotExist)?, gid)?;
+				Self::gauge_claim_inner(&gauge_info.who, gid)?;
 			}
 
 			if all_retired {

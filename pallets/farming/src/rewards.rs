@@ -57,7 +57,6 @@ where
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
-	/// Total shares amount
 	pub tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,

@@ -30,7 +30,7 @@ use crate::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
-	pub who: Option<AccountIdOf>,
+	pub who: AccountIdOf,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
 	pub latest_time_factor: u128,
@@ -46,9 +46,9 @@ where
 	BalanceOf: Default + HasCompact,
 	BlockNumberFor: Default,
 {
-	fn new() -> Self {
+	fn new(who: AccountIdOf) -> Self {
 		Self {
-			who: None,
+			who,
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
 			latest_time_factor: Default::default(),
@@ -154,16 +154,16 @@ where
 		gauge_value: BalanceOf<T>,
 		gauge_block: BlockNumberFor<T>,
 	) -> DispatchResult {
-		let current_block_number = frame_system::Pallet::<T>::block_number();
 		GaugePoolInfos::<T>::mutate(gid, |gauge_pool_info_old| -> DispatchResult {
 			if let Some(mut gauge_pool_info) = gauge_pool_info_old.take() {
+				let current_block_number = frame_system::Pallet::<T>::block_number();
 				gauge_pool_info.gauge_last_block = current_block_number;
 				gauge_pool_info.gauge_amount = gauge_pool_info
 					.gauge_amount
 					.checked_add(&gauge_value)
 					.ok_or(ArithmeticError::Overflow)?;
 				let mut gauge_info =
-					GaugeInfos::<T>::get(gid, who).unwrap_or_else(|| GaugeInfo::new());
+					GaugeInfos::<T>::get(gid, who).unwrap_or_else(|| GaugeInfo::new(who.clone()));
 
 				ensure!(
 					gauge_info.gauge_stop_block >= current_block_number ||
@@ -242,7 +242,7 @@ where
 				*gauge_pool_info_old = Some(gauge_pool_info);
 				Ok(())
 			} else {
-				Err(Error::<T>::GaugePoolDoesNotExist)?
+				Err(Error::<T>::GaugePoolNotExist)?
 			}
 		})?;
 		Ok(())
@@ -254,7 +254,7 @@ where
 		}
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let mut gauge_pool_info =
-			GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
+			GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
 		let pool_info =
 			PoolInfos::<T>::get(gauge_pool_info.pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 		GaugeInfos::<T>::mutate_exists(gid, who, |maybe_gauge_info| -> DispatchResult {
@@ -398,9 +398,9 @@ where
 				let current_block_number: BlockNumberFor<T> =
 					frame_system::Pallet::<T>::block_number();
 				let gauge_pool_info =
-					GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
+					GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
 				let gauge_info =
-					GaugeInfos::<T>::get(gid, who).ok_or(Error::<T>::GaugePoolDoesNotExist)?;
+					GaugeInfos::<T>::get(gid, who).ok_or(Error::<T>::GaugeInfoNotExist)?;
 				let start_block = if current_block_number > gauge_info.gauge_stop_block {
 					gauge_info.gauge_stop_block
 				} else {
