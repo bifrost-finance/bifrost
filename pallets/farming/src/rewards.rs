@@ -232,52 +232,48 @@ impl<T: Config> Pallet<T> {
 					return Ok(());
 				}
 
-				PoolInfos::<T>::mutate(pool, |pool_info_old| -> DispatchResult {
-					if let Some(mut pool_info) = pool_info_old.take() {
-						share_info
-							.withdraw_list
-							.push((current_block_number + withdraw_limit_time, remove_amount));
+				PoolInfos::<T>::mutate(pool, |maybe_pool_info| -> DispatchResult {
+					let pool_info = maybe_pool_info.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
-						let removing_share = U256::from(remove_amount.saturated_into::<u128>());
+					share_info
+						.withdraw_list
+						.push((current_block_number + withdraw_limit_time, remove_amount));
 
-						pool_info.total_shares =
-							pool_info.total_shares.saturating_sub(remove_amount);
+					let removing_share = U256::from(remove_amount.saturated_into::<u128>());
 
-						// update withdrawn rewards for each reward currency
-						share_info.withdrawn_rewards.iter_mut().try_for_each(
-							|(reward_currency, withdrawn_reward)| -> DispatchResult {
-								let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
-									.saturating_mul(
-										withdrawn_reward.to_owned().saturated_into::<u128>().into(),
-									)
-									.checked_div(share_info.share.saturated_into::<u128>().into())
-									.unwrap_or_default()
-									.as_u128()
-									.saturated_into();
+					pool_info.total_shares = pool_info.total_shares.saturating_sub(remove_amount);
 
-								if let Some((total_reward, total_withdrawn_reward)) =
-									pool_info.rewards.get_mut(reward_currency)
-								{
-									*total_reward =
-										total_reward.saturating_sub(withdrawn_reward_to_remove);
-									*total_withdrawn_reward = total_withdrawn_reward
-										.saturating_sub(withdrawn_reward_to_remove);
+					// update withdrawn rewards for each reward currency
+					share_info.withdrawn_rewards.iter_mut().try_for_each(
+						|(reward_currency, withdrawn_reward)| -> DispatchResult {
+							let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
+								.saturating_mul(
+									withdrawn_reward.to_owned().saturated_into::<u128>().into(),
+								)
+								.checked_div(share_info.share.saturated_into::<u128>().into())
+								.unwrap_or_default()
+								.as_u128()
+								.saturated_into();
 
-									// remove if all reward is withdrawn
-									if total_reward.is_zero() {
-										pool_info.rewards.remove(reward_currency);
-									}
+							if let Some((total_reward, total_withdrawn_reward)) =
+								pool_info.rewards.get_mut(reward_currency)
+							{
+								*total_reward =
+									total_reward.saturating_sub(withdrawn_reward_to_remove);
+								*total_withdrawn_reward = total_withdrawn_reward
+									.saturating_sub(withdrawn_reward_to_remove);
+
+								// remove if all reward is withdrawn
+								if total_reward.is_zero() {
+									pool_info.rewards.remove(reward_currency);
 								}
-								*withdrawn_reward =
-									withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
-								Ok(())
-							},
-						)?;
-						*pool_info_old = Some(pool_info);
-						Ok(())
-					} else {
-						Err(Error::<T>::PoolDoesNotExist)?
-					}
+							}
+							*withdrawn_reward =
+								withdrawn_reward.saturating_sub(withdrawn_reward_to_remove);
+							Ok(())
+						},
+					)?;
+					Ok(())
 				})?;
 
 				share_info.share = share_info.share.saturating_sub(remove_amount);
@@ -300,12 +296,13 @@ impl<T: Config> Pallet<T> {
 						return Ok(());
 					}
 
-					PoolInfos::<T>::mutate(pool, |pool_info_old| -> DispatchResult {
-						if let Some(mut pool_info) = pool_info_old.take() {
-							let total_shares = U256::from(
-								pool_info.total_shares.to_owned().saturated_into::<u128>(),
-							);
-							pool_info.rewards.iter_mut().try_for_each(
+					PoolInfos::<T>::mutate(pool, |maybe_pool_info| -> DispatchResult {
+						let pool_info =
+							maybe_pool_info.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
+
+						let total_shares =
+							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
+						pool_info.rewards.iter_mut().try_for_each(
 							|(reward_currency, (total_reward, total_withdrawn_reward))|  -> DispatchResult {
 								let withdrawn_reward = share_info
 									.withdrawn_rewards
@@ -348,11 +345,7 @@ impl<T: Config> Pallet<T> {
 								)
 							},
 						)?;
-							*pool_info_old = Some(pool_info);
-							Ok(())
-						} else {
-							Err(Error::<T>::PoolDoesNotExist)?
-						}
+						Ok(())
 					})?;
 					share_info.claim_last_block = current_block_number;
 				};
