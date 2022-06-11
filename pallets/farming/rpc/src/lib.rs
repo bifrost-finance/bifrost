@@ -21,7 +21,7 @@ use std::{marker::PhantomData, sync::Arc};
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
 use codec::Codec;
 use jsonrpsee::{
-	core::RpcResult,
+	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
@@ -64,6 +64,7 @@ impl<C, Block> FarmingRpc<C, Block> {
 	}
 }
 
+#[async_trait]
 impl<C, Block, AccountId, PoolId> FarmingRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId>
 	for FarmingRpc<C, Block>
 where
