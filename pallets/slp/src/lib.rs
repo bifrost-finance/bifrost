@@ -219,6 +219,8 @@ pub mod pallet {
 		OngoingTimeUnitUpdateIntervalNotExist,
 		LastTimeUpdatedOngoingTimeUnitNotExist,
 		TooFrequent,
+		DestAccountNotValid,
+		WhiteListNotExist,
 	}
 
 	#[pallet::event]
@@ -442,6 +444,14 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			interval: Option<BlockNumberFor<T>>,
 		},
+		SupplementFeeAccountWhitelistAdded {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		},
+		SupplementFeeAccountWhitelistRemoved {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -610,6 +620,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_ongoing_time_unit_update_interval)]
 	pub type OngoingTimeUnitUpdateInterval<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_supplement_fee_account_wihtelist)]
+	pub type SupplementFeeAccountWhitelist<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1175,6 +1190,38 @@ pub mod pallet {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
+			// Ensure dest is one of delegators accounts, or operators account, or in
+			// SupplementFeeAccountWhitelist.
+			let mut valid_account = false;
+
+			if DelegatorsMultilocation2Index::<T>::contains_key(MOVR, dest.clone()) {
+				valid_account = true;
+			}
+
+			if !valid_account {
+				let dest_account_id = Self::multilocation_to_account(&dest)?;
+				let operate_account =
+					OperateOrigins::<T>::get(MOVR).ok_or(Error::<T>::OperateOriginNotExists)?;
+
+				if dest_account_id == operate_account {
+					valid_account = true;
+				}
+			}
+
+			if !valid_account {
+				let white_list = SupplementFeeAccountWhitelist::<T>::get(MOVR)
+					.ok_or(Error::<T>::WhiteListNotExist)?;
+
+				let multi_hash = T::Hashing::hash(&dest.encode());
+				white_list
+					.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
+					.map_err(|_| Error::<T>::DestAccountNotValid)?;
+
+				valid_account = true;
+			}
+
+			ensure!(valid_account, Error::<T>::DestAccountNotValid);
+
 			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
 			let (source_location, reserved_fee) =
 				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
@@ -1651,6 +1698,93 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::OngoingTimeUnitUpdateIntervalSet {
 				currency_id,
 				interval: maybe_interval,
+			});
+
+			Ok(())
+		}
+
+		// Add an account to SupplementFeeAccountWhitelist
+		#[pallet::weight(T::WeightInfo::add_supplement_fee_account_to_whitelist())]
+		pub fn add_supplement_fee_account_to_whitelist(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let multi_hash = T::Hashing::hash(&who.encode());
+			if !SupplementFeeAccountWhitelist::<T>::contains_key(&currency_id) {
+				SupplementFeeAccountWhitelist::<T>::insert(
+					currency_id,
+					vec![(who.clone(), multi_hash)],
+				);
+			} else {
+				SupplementFeeAccountWhitelist::<T>::mutate_exists(
+					currency_id,
+					|whitelist_op| -> Result<(), Error<T>> {
+						if let Some(whitelist) = whitelist_op {
+							let rs =
+								whitelist.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+							if let Err(idx) = rs {
+								whitelist.insert(idx, (who.clone(), multi_hash));
+							} else {
+								Err(Error::<T>::AlreadyExist)?;
+							}
+						} else {
+							Err(Error::<T>::Unexpected)?;
+						}
+
+						Ok(())
+					},
+				)?;
+			}
+
+			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistAdded {
+				currency_id,
+				who,
+			});
+
+			Ok(())
+		}
+
+		// Add an account to SupplementFeeAccountWhitelist
+		#[pallet::weight(T::WeightInfo::remove_supplement_fee_account_from_whitelist())]
+		pub fn remove_supplement_fee_account_from_whitelist(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let multi_hash = T::Hashing::hash(&who.encode());
+			if !SupplementFeeAccountWhitelist::<T>::contains_key(&currency_id) {
+				Err(Error::<T>::WhiteListNotExist)?;
+			} else {
+				SupplementFeeAccountWhitelist::<T>::mutate_exists(
+					currency_id,
+					|whitelist_op| -> Result<(), Error<T>> {
+						if let Some(whitelist) = whitelist_op {
+							let rs =
+								whitelist.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+							if let Ok(idx) = rs {
+								whitelist.remove(idx);
+							} else {
+								Err(Error::<T>::AccountNotExist)?;
+							}
+						} else {
+							Err(Error::<T>::Unexpected)?;
+						}
+
+						Ok(())
+					},
+				)?;
+			}
+
+			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistRemoved {
+				currency_id,
+				who,
 			});
 
 			Ok(())

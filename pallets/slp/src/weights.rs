@@ -69,6 +69,8 @@ pub trait WeightInfo {
 	fn set_hosting_fees() -> Weight;
 	fn set_currency_tune_exchange_rate_limit() -> Weight;
 	fn set_ongoing_time_unit_update_interval() -> Weight;
+	fn add_supplement_fee_account_to_whitelist() -> Weight;
+	fn remove_supplement_fee_account_from_whitelist() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -212,6 +214,14 @@ impl WeightInfo for () {
 	}
 
 	fn set_ongoing_time_unit_update_interval() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn add_supplement_fee_account_to_whitelist() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn remove_supplement_fee_account_from_whitelist() -> Weight {
 		(50_000_000 as Weight)
 	}
 
