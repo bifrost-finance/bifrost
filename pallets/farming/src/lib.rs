@@ -261,22 +261,18 @@ pub mod pallet {
 			GaugePoolInfos::<T>::iter().for_each(
 				|(gid, mut gauge_pool_info)| match gauge_pool_info.gauge_state {
 					GaugeState::Bonded => {
-						if let Some(pool_info) = Self::pool_infos(&gauge_pool_info.pid) {
-							pool_info.basic_rewards.clone().iter().for_each(
-								|(reward_currency_id, reward_amount)| {
-									gauge_pool_info
-										.rewards
-										.entry(*reward_currency_id)
-										.and_modify(|(total_reward, _, _)| {
-											*total_reward = total_reward.saturating_add(
-												gauge_pool_info.coefficient * *reward_amount,
-											);
-										})
-										.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
-								},
-							);
-							GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
-						}
+						gauge_pool_info.gauge_basic_rewards.clone().iter().for_each(
+							|(reward_currency_id, reward_amount)| {
+								gauge_pool_info
+									.rewards
+									.entry(*reward_currency_id)
+									.and_modify(|(total_reward, _, _)| {
+										*total_reward = total_reward.saturating_add(*reward_amount);
+									})
+									.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
+							},
+						);
+						GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 					},
 					_ => (),
 				},
@@ -298,7 +294,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Perbill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			gauge_init: Option<(CurrencyIdOf<T>, Perbill, BlockNumberFor<T>)>,
+			gauge_init: Option<(
+				CurrencyIdOf<T>,
+				BlockNumberFor<T>,
+				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			)>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
@@ -328,8 +328,17 @@ pub mod pallet {
 				withdraw_limit_count,
 			);
 
-			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient, max_block)?;
+			if let Some((gauge_token, max_block, gauge_basic_rewards)) = gauge_init {
+				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+
+				Self::create_gauge_pool(
+					pid,
+					&mut pool_info,
+					gauge_token,
+					gauge_basic_rewards_map,
+					max_block,
+				)?;
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);
@@ -555,7 +564,11 @@ pub mod pallet {
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
 			withdraw_limit_count: Option<u8>,
-			gauge_init: Option<(CurrencyIdOf<T>, Perbill, BlockNumberFor<T>)>,
+			gauge_init: Option<(
+				CurrencyIdOf<T>,
+				BlockNumberFor<T>,
+				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -581,8 +594,17 @@ pub mod pallet {
 			if let Some(withdraw_limit_count) = withdraw_limit_count {
 				pool_info.withdraw_limit_count = withdraw_limit_count;
 			};
-			if let Some((gauge_token, coefficient, max_block)) = gauge_init {
-				Self::create_gauge_pool(pid, &mut pool_info, gauge_token, coefficient, max_block)?;
+			if let Some((gauge_token, max_block, gauge_basic_rewards)) = gauge_init {
+				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+
+				Self::create_gauge_pool(
+					pid,
+					&mut pool_info,
+					gauge_token,
+					gauge_basic_rewards_map,
+					max_block,
+				)?;
 			};
 			PoolInfos::<T>::insert(pid, &pool_info);
 
@@ -611,7 +633,7 @@ pub mod pallet {
 			basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
-			gauge_coefficient: Option<Perbill>,
+			gauge_basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -628,12 +650,14 @@ pub mod pallet {
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
 			};
-			if let Some(coefficient) = gauge_coefficient {
+			if let Some(gauge_basic_rewards) = gauge_basic_rewards {
+				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 				GaugePoolInfos::<T>::mutate(
 					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
 					|gauge_pool_info_old| {
 						if let Some(mut gauge_pool_info) = gauge_pool_info_old.take() {
-							gauge_pool_info.coefficient = coefficient;
+							gauge_pool_info.gauge_basic_rewards = gauge_basic_rewards_map;
 							*gauge_pool_info_old = Some(gauge_pool_info);
 						}
 					},

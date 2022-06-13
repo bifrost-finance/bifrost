@@ -69,7 +69,7 @@ pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, 
 	pub keeper: AccountIdOf,
 	pub reward_issuer: AccountIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf, BalanceOf)>,
-	pub coefficient: Perbill,
+	pub gauge_basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 	pub max_block: BlockNumberFor,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
@@ -95,7 +95,7 @@ where
 		token: CurrencyIdOf,
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
-		coefficient: Perbill,
+		gauge_basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		max_block: BlockNumberFor,
 		current_block_number: BlockNumberFor,
 	) -> Self {
@@ -105,7 +105,7 @@ where
 			keeper,
 			reward_issuer,
 			rewards: BTreeMap::new(),
-			coefficient,
+			gauge_basic_rewards,
 			max_block,
 			gauge_amount: Default::default(),
 			total_time_factor: Default::default(),
@@ -124,7 +124,7 @@ where
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		gauge_token: CurrencyIdOf<T>,
-		coefficient: Perbill,
+		gauge_basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		max_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		let gid = Self::gauge_pool_next_id();
@@ -135,7 +135,7 @@ where
 			gauge_token,
 			pool_info.keeper.clone(),
 			pool_info.reward_issuer.clone(),
-			coefficient,
+			gauge_basic_rewards,
 			max_block,
 			current_block_number,
 		);
@@ -294,10 +294,10 @@ where
 						let reward = reward_amount
 							.checked_sub(&total_gauged_reward)
 							.ok_or(ArithmeticError::Overflow)?;
-						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
+						// gauge_reward = gauge rate * gauge rewards * existing rewards in the
 						// gauge pool
 						let gauge_reward = gauge_rate * reward;
-						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+						// reward_to_claim = farming rate * gauge rate * gauge rewards *
 						// existing rewards in the gauge pool
 						let reward_to_claim: BalanceOf<T> =
 							U256::from(share_info.share.to_owned().saturated_into::<u128>())
@@ -432,10 +432,10 @@ where
 						let reward = reward_amount
 							.checked_sub(&total_gauged_reward)
 							.ok_or(ArithmeticError::Overflow)?;
-						// gauge_reward = gauge rate * gauge coefficient * existing rewards in the
+						// gauge_reward = gauge rate * gauge rewards * existing rewards in the
 						// gauge pool
 						let gauge_reward = gauge_rate * reward;
-						// reward_to_claim = farming rate * gauge rate * gauge coefficient *
+						// reward_to_claim = farming rate * gauge rate * gauge rewards *
 						// existing rewards in the gauge pool
 						let reward_to_claim: BalanceOf<T> =
 							U256::from(share_info.share.to_owned().saturated_into::<u128>())
