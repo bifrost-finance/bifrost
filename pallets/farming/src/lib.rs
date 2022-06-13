@@ -42,7 +42,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, PoolId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;

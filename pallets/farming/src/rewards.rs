@@ -122,8 +122,6 @@ pub enum PoolState {
 	Retired,
 }
 
-pub type PoolId = u32;
-
 impl<T: Config> Pallet<T> {
 	pub fn accumulate_reward(
 		pool: PoolId,
