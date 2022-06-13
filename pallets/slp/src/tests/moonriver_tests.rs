@@ -100,6 +100,11 @@ fn moonriver_setup() {
 	// set operate_origins
 	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(ALICE)));
 
+	// Set OngoingTimeUnitUpdateInterval as 1/3 round(600 blocks per round, 12 seconds per block)
+	assert_ok!(Slp::set_ongoing_time_unit_update_interval(Origin::signed(ALICE), MOVR, Some(200)));
+
+	System::set_block_number(300);
+
 	// Initialize ongoing timeunit as 0.
 	assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(0)));
 
@@ -185,6 +190,13 @@ fn moonriver_setup() {
 		Origin::signed(ALICE),
 		MOVR,
 		XcmOperation::XtokensTransferBack,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		Origin::signed(ALICE),
+		MOVR,
+		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
@@ -1777,7 +1789,7 @@ fn moonriver_transfer_back_works() {
 				.into();
 
 		let exit_account_location = MultiLocation {
-			parents: 1,
+			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
 
@@ -1787,6 +1799,82 @@ fn moonriver_transfer_back_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				Box::new(exit_account_location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::XcmFailure
+		);
+	});
+}
+
+#[test]
+fn moonriver_transfer_to_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		moonriver_setup();
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+
+		let entrance_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+		};
+
+		assert_noop!(
+			Slp::transfer_to(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(entrance_account_location.clone()),
+				Box::new(subaccount_0_location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::XcmFailure
+		);
+	});
+}
+
+#[test]
+fn supplement_fee_account_whitelist_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		moonriver_setup();
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+
+		let entrance_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+		};
+
+		assert_noop!(
+			Slp::transfer_to(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(entrance_account_location.clone()),
+				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure

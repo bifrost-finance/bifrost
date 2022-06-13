@@ -187,7 +187,6 @@ pub mod pallet {
 		WeightAndFeeNotExists,
 		OperateOriginNotExists,
 		MinimumsAndMaximumsNotExist,
-		XcmExecutionFailed,
 		QueryNotExist,
 		DelaysNotExist,
 		Unexpected,
@@ -200,6 +199,7 @@ pub mod pallet {
 		IncreaseTokenPoolError,
 		TuneExchangeRateLimitNotSet,
 		DelegatorLatestTuneRecordNotExist,
+		CurrencyLatestTuneRecordNotExist,
 		InvalidTransferSource,
 		ValidatorNotProvided,
 		Unsupported,
@@ -221,6 +221,7 @@ pub mod pallet {
 		TooFrequent,
 		DestAccountNotValid,
 		WhiteListNotExist,
+		DelegatorAlreadyTuned,
 	}
 
 	#[pallet::event]
@@ -585,7 +586,7 @@ pub mod pallet {
 	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
 
 	/// A delegator's tuning record of exchange rate for the current time unit.
-	/// Currency Id + Delegator Id => (latest tuned TimeUnit, number of tuning times)
+	/// Currency Id + Delegator Id => latest tuned TimeUnit
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_latest_tune_record)]
 	pub type DelegatorLatestTuneRecord<T> = StorageDoubleMap<
@@ -594,12 +595,20 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		(TimeUnit, u32),
+		TimeUnit,
 		OptionQuery,
 	>;
 
-	/// For each currencyId: how many times that a delegator can tune the exchange rate for a single
-	/// time unit, and how much at most each time a delegator can tune the exchange rate
+	/// Currency's tuning record of exchange rate for the current time unit.
+	/// Currency Id => (latest tuned TimeUnit, number of tuning times)
+	#[pallet::storage]
+	#[pallet::getter(fn get_currency_latest_tune_record)]
+	pub type CurrencyLatestTuneRecord<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, (TimeUnit, u32), OptionQuery>;
+
+	/// For each currencyId: how many times that a Currency's all delegators can tune the exchange
+	/// rate for a single time unit, and how much at most each time can tune the
+	/// exchange rate
 	#[pallet::storage]
 	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
 	pub type CurrencyTuneExchangeRateLimit<T> =
@@ -1085,6 +1094,10 @@ pub mod pallet {
 			ensure!(blocks_between >= interval, Error::<T>::TooFrequent);
 
 			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
+
+			// enusre old TimeUnit < new TimeUnit
+			ensure!(old < time_unit, Error::<T>::InvalidTimeUnit);
+
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
 			// update LastTimeUpdatedOngoingTimeUnit storage
@@ -1194,30 +1207,32 @@ pub mod pallet {
 			// SupplementFeeAccountWhitelist.
 			let mut valid_account = false;
 
-			if DelegatorsMultilocation2Index::<T>::contains_key(MOVR, dest.clone()) {
+			if DelegatorsMultilocation2Index::<T>::contains_key(currency_id, dest.clone()) {
 				valid_account = true;
 			}
 
 			if !valid_account {
 				let dest_account_id = Self::multilocation_to_account(&dest)?;
-				let operate_account =
-					OperateOrigins::<T>::get(MOVR).ok_or(Error::<T>::OperateOriginNotExists)?;
+				let operate_account_op = OperateOrigins::<T>::get(currency_id);
 
-				if dest_account_id == operate_account {
-					valid_account = true;
+				if let Some(operate_account) = operate_account_op {
+					if dest_account_id == operate_account {
+						valid_account = true;
+					}
 				}
 			}
 
 			if !valid_account {
-				let white_list = SupplementFeeAccountWhitelist::<T>::get(MOVR)
-					.ok_or(Error::<T>::WhiteListNotExist)?;
+				let white_list_op = SupplementFeeAccountWhitelist::<T>::get(currency_id);
 
-				let multi_hash = T::Hashing::hash(&dest.encode());
-				white_list
-					.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-					.map_err(|_| Error::<T>::DestAccountNotValid)?;
+				if let Some(white_list) = white_list_op {
+					let multi_hash = T::Hashing::hash(&dest.encode());
+					white_list
+						.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
+						.map_err(|_| Error::<T>::DestAccountNotValid)?;
 
-				valid_account = true;
+					valid_account = true;
+				}
 			}
 
 			ensure!(valid_account, Error::<T>::DestAccountNotValid);
@@ -1283,32 +1298,25 @@ pub mod pallet {
 			let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			// If this is the first time.
-			if !DelegatorLatestTuneRecord::<T>::contains_key(currency_id, &who) {
-				// ensure who is a valid delegator
-				ensure!(
-					DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
-					Error::<T>::DelegatorNotExist
-				);
+			if !CurrencyLatestTuneRecord::<T>::contains_key(currency_id) {
 				// Insert an empty record into DelegatorLatestTuneRecord storage.
-				DelegatorLatestTuneRecord::<T>::insert(
-					currency_id,
-					who.clone(),
-					(current_time_unit.clone(), 0),
-				);
+				CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit.clone(), 0));
 			}
 
-			// Get DelegatorLatestTuneRecord for the currencyId.
+			// Get CurrencyLatestTuneRecord for the currencyId.
 			let (latest_time_unit, tune_num) =
-				Self::get_delegator_latest_tune_record(currency_id, &who)
-					.ok_or(Error::<T>::DelegatorLatestTuneRecordNotExist)?;
+				Self::get_currency_latest_tune_record(currency_id)
+					.ok_or(Error::<T>::CurrencyLatestTuneRecordNotExist)?;
 
 			// See if exceeds tuning limit.
 			// If it has been tuned in the current time unit, ensure this tuning is within limit.
+			let mut new_tune_num = Zero::zero();
 			if latest_time_unit == current_time_unit {
 				ensure!(tune_num < limit_num, Error::<T>::GreaterThanMaximum);
+				new_tune_num = tune_num;
 			}
 
-			let new_tune_num = tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+			new_tune_num = new_tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 
 			// Get charged fee value
 			let (fee_permill, beneficiary) =
@@ -1333,12 +1341,8 @@ pub mod pallet {
 				Zero::zero(),
 			)?;
 
-			// Update the DelegatorLatestTuneRecord<T> storage.
-			DelegatorLatestTuneRecord::<T>::insert(
-				currency_id,
-				who.clone(),
-				(current_time_unit, new_tune_num),
-			);
+			// Update the CurrencyLatestTuneRecord<T> storage.
+			CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit, new_tune_num));
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::HostingFeeCharged {
@@ -1964,7 +1968,24 @@ pub mod pallet {
 		pub fn multilocation_to_local_multilocation(
 			location: &MultiLocation,
 		) -> Result<MultiLocation, Error<T>> {
-			let local_location = MultiLocation { parents: 0, interior: location.interior.clone() };
+			let inside: Junction = match location {
+				MultiLocation {
+					parents: _p,
+					interior: X2(Parachain(_para_id), AccountId32 { network: Any, id: account_32 }),
+				} => AccountId32 { network: Any, id: *account_32 },
+				MultiLocation {
+					parents: _p,
+					interior:
+						X2(Parachain(_para_id), AccountKey20 { network: Any, key: account_20 }),
+				} => AccountKey20 { network: Any, key: *account_20 },
+				MultiLocation {
+					parents: _p,
+					interior: X1(AccountId32 { network: Any, id: account_32 }),
+				} => AccountId32 { network: Any, id: *account_32 },
+				_ => Err(Error::<T>::Unsupported)?,
+			};
+
+			let local_location = MultiLocation { parents: 0, interior: X1(inside) };
 
 			Ok(local_location)
 		}

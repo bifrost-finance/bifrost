@@ -71,6 +71,14 @@ fn register_subaccount_index_0() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
+		// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
+		// block)
+		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some(600)
+		));
+
 		// Initialize ongoing timeunit as 0.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			Origin::root(),

@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use crate::mock::*;
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 
 use crate::{KSM, *};
@@ -99,13 +99,24 @@ fn supplement_fee_reserve_works() {
 		// set fee source
 		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
 		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-		assert_ok!(Slp::set_fee_source(Origin::signed(ALICE), BNC, Some((alice_location, 10))));
+		assert_ok!(Slp::set_fee_source(
+			Origin::signed(ALICE),
+			BNC,
+			Some((alice_location.clone(), 10))
+		));
 
 		// supplement fee
 		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
 		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
 		assert_eq!(Balances::free_balance(&ALICE), 100);
 		assert_eq!(Balances::free_balance(&BOB), 0);
+
+		assert_noop!(
+			Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, alice_location),
+			Error::<Runtime>::DestAccountNotValid
+		);
+
+		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(BOB)));
 
 		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location));
 
@@ -479,7 +490,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		assert_eq!(new_token_pool_amount, 200);
 
 		let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(KSM, &subaccount_0_location);
-		assert_eq!(tune_record, Some((TimeUnit::Era(1), 1)));
+		assert_eq!(tune_record, Some(TimeUnit::Era(1)));
 
 		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
 		// before new exchange rate tuned.
