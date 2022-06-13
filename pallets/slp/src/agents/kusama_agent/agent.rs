@@ -649,10 +649,12 @@ impl<T: Config>
 
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &MultiLocation,
+		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
+		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+
 		// ensure who is a valid delegator
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(KSM, &who),

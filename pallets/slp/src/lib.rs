@@ -1276,7 +1276,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] value: BalanceOf<T>,
-			who: MultiLocation,
+			who: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;

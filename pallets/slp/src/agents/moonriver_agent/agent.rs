@@ -858,7 +858,7 @@ impl<T: Config>
 
 	fn tune_vtoken_exchange_rate(
 		&self,
-		_who: &MultiLocation,
+		_who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
