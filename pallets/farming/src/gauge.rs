@@ -22,7 +22,7 @@ use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
 	traits::{Zero, *},
-	ArithmeticError, Permill, RuntimeDebug, SaturatedConversion,
+	ArithmeticError, Perbill, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::prelude::*;
 
@@ -69,7 +69,7 @@ pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, 
 	pub keeper: AccountIdOf,
 	pub reward_issuer: AccountIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf, BalanceOf)>,
-	pub coefficient: Permill,
+	pub coefficient: Perbill,
 	pub max_block: BlockNumberFor,
 	pub gauge_amount: BalanceOf,
 	pub total_time_factor: u128,
@@ -95,7 +95,7 @@ where
 		token: CurrencyIdOf,
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
-		coefficient: Permill,
+		coefficient: Perbill,
 		max_block: BlockNumberFor,
 		current_block_number: BlockNumberFor,
 	) -> Self {
@@ -124,7 +124,7 @@ where
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 		gauge_token: CurrencyIdOf<T>,
-		coefficient: Permill,
+		coefficient: Perbill,
 		max_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		let gid = Self::gauge_pool_next_id();
@@ -277,7 +277,7 @@ where
 							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
-				let gauge_rate = Permill::from_rational(
+				let gauge_rate = Perbill::from_rational(
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
 					gauge_pool_info.total_time_factor,
 				);
@@ -415,7 +415,7 @@ where
 							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
-				let gauge_rate = Permill::from_rational(
+				let gauge_rate = Perbill::from_rational(
 					latest_claimed_time_factor - gauge_info.claimed_time_factor,
 					gauge_pool_info.total_time_factor,
 				);

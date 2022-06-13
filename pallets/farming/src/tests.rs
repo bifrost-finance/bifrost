@@ -71,7 +71,7 @@ fn deposit() {
 				CurrencyIdOf<Runtime>,
 				(BalanceOf<Runtime>, BalanceOf<Runtime>, BalanceOf<Runtime>),
 			>::new(),
-			coefficient: Permill::from_percent(100),
+			coefficient: Perbill::from_percent(100),
 			max_block: 1000,
 			gauge_amount: 200,
 			total_time_factor: 39900,
@@ -164,9 +164,9 @@ fn retire() {
 }
 
 fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
-	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Permill>::new();
-	tokens_proportion_map.entry(KSM).or_insert(Permill::from_percent(100));
-	let tokens_proportion = vec![(KSM, Permill::from_percent(100))];
+	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
+	tokens_proportion_map.entry(KSM).or_insert(Perbill::from_percent(100));
+	let tokens_proportion = vec![(KSM, Perbill::from_percent(100))];
 	let tokens = 1000;
 	let basic_rewards = vec![(KSM, 1000)];
 
@@ -174,7 +174,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		Origin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((KSM, Permill::from_percent(90), 1000)),
+		Some((KSM, Perbill::from_percent(90), 1000)),
 		0,
 		0,
 		0,
@@ -190,9 +190,9 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 }
 
 fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
-	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Permill>::new();
-	tokens_proportion_map.entry(KSM).or_insert(Permill::from_percent(100));
-	let tokens_proportion = vec![(KSM, Permill::from_percent(100))];
+	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
+	tokens_proportion_map.entry(KSM).or_insert(Perbill::from_percent(100));
+	let tokens_proportion = vec![(KSM, Perbill::from_percent(100))];
 	let tokens = 1000;
 	let basic_rewards = vec![(KSM, 1000)];
 
@@ -200,7 +200,7 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		Origin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((KSM, Permill::from_percent(100), 1000)),
+		Some((KSM, Perbill::from_percent(100), 1000)),
 		0,
 		0,
 		10,

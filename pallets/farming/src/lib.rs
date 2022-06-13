@@ -36,7 +36,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
-		ArithmeticError, Permill,
+		ArithmeticError, Perbill,
 	},
 	transactional, PalletId,
 };
@@ -128,7 +128,7 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 		},
-		GaugeClaimed {
+		GaugeWithdrawn {
 			who: AccountIdOf<T>,
 			gid: PoolId,
 		},
@@ -157,11 +157,11 @@ pub mod pallet {
 		GaugeInfoNotExist,
 		InvalidPoolState,
 		LastGaugeNotClaim,
-		// claim_limit_time exceeded
+		/// claim_limit_time exceeded
 		CanNotClaim,
-		// gauge pool max_block exceeded
+		/// gauge pool max_block exceeded
 		GaugeMaxBlockOverflow,
-		// withdraw_limit_time exceeded
+		/// withdraw_limit_time exceeded
 		WithdrawLimitCountExceeded,
 		ShareInfoNotExists,
 	}
@@ -296,9 +296,9 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
-			tokens_proportion: Vec<(CurrencyIdOf<T>, Permill)>,
+			tokens_proportion: Vec<(CurrencyIdOf<T>, Perbill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			gauge_init: Option<(CurrencyIdOf<T>, Permill, BlockNumberFor<T>)>,
+			gauge_init: Option<(CurrencyIdOf<T>, Perbill, BlockNumberFor<T>)>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
@@ -310,7 +310,7 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let keeper = T::Keeper::get().into_sub_account(pid);
 			let reward_issuer = T::RewardIssuer::get().into_sub_account(pid);
-			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Permill> =
+			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
@@ -320,7 +320,6 @@ pub mod pallet {
 				reward_issuer,
 				tokens_proportion_map,
 				basic_rewards_map,
-				// Some(gid),
 				None,
 				min_deposit_to_start,
 				after_block_to_start,
@@ -386,7 +385,7 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let tokens_proportion_values: Vec<Permill> =
+			let tokens_proportion_values: Vec<Perbill> =
 				pool_info.tokens_proportion.values().cloned().collect();
 			let native_amount = tokens_proportion_values[0].saturating_reciprocal_mul(add_value);
 			pool_info.tokens_proportion.iter().try_for_each(
@@ -556,7 +555,7 @@ pub mod pallet {
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
 			withdraw_limit_count: Option<u8>,
-			gauge_init: Option<(CurrencyIdOf<T>, Permill, BlockNumberFor<T>)>,
+			gauge_init: Option<(CurrencyIdOf<T>, Perbill, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -612,7 +611,7 @@ pub mod pallet {
 			basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
-			gauge_coefficient: Option<Permill>,
+			gauge_coefficient: Option<Perbill>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -684,7 +683,7 @@ pub mod pallet {
 				},
 			}
 
-			Self::deposit_event(Event::GaugeClaimed { who, gid });
+			Self::deposit_event(Event::GaugeWithdrawn { who, gid });
 			Ok(())
 		}
 

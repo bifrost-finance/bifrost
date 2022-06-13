@@ -57,7 +57,7 @@ where
 /// The Reward Pool Info.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
-	pub tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
+	pub tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -85,7 +85,7 @@ where
 	pub fn new(
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
-		tokens_proportion: BTreeMap<CurrencyIdOf, Permill>,
+		tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BalanceOf,
@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
 					let current_block_number: BlockNumberFor<T> =
 						frame_system::Pallet::<T>::block_number();
 					let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
-					let tokens_proportion_values: Vec<Permill> =
+					let tokens_proportion_values: Vec<Perbill> =
 						pool_info.tokens_proportion.values().cloned().collect();
 					share_info.withdraw_list.iter().try_for_each(
 						|(dest_block, remove_value)| -> DispatchResult {
