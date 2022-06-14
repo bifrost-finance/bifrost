@@ -79,6 +79,8 @@ fn register_subaccount_index_0() {
 			Some(600)
 		));
 
+		System::set_block_number(600);
+
 		// Initialize ongoing timeunit as 0.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			Origin::root(),
@@ -394,7 +396,7 @@ fn transfer_to_works() {
 		);
 
 		// Why not the transferred amount reach the sub-account?
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999988476752);
 	});
 }
 
@@ -610,7 +612,7 @@ fn rebond_works() {
 			RelayCurrencyId::get(),
 			subaccount_0_location,
 			None,
-			500_000_000_000,
+			Some(500_000_000_000),
 		));
 	});
 
@@ -784,7 +786,7 @@ fn redelegate_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
-			targets.clone(),
+			Some(targets.clone()),
 		));
 	});
 
@@ -936,7 +938,7 @@ fn transfer_back_works() {
 
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			1998962870800
+			1999215574218
 		);
 	});
 
@@ -966,7 +968,7 @@ fn transfer_back_works() {
 		);
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			2497925741600
+			2498431148436
 		);
 	});
 
@@ -1010,7 +1012,7 @@ fn supplement_fee_reserve_works() {
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999988476752);
 	});
 }
 
@@ -1043,7 +1045,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1060,7 +1062,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1112,7 +1114,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1161,7 +1163,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1178,7 +1180,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1230,7 +1232,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1279,7 +1281,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1296,7 +1298,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 					amount: 500_000_000_000,
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1338,7 +1340,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1385,7 +1387,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1402,7 +1404,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1444,7 +1446,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1500,7 +1502,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
 			None,
-			500_000_000_000,
+			Some(500_000_000_000),
 		));
 
 		assert_eq!(
@@ -1522,7 +1524,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1539,7 +1541,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 					amount: 500_000_000_000,
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1578,7 +1580,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1618,6 +1620,8 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
+		System::set_block_number(1200);
+
 		// set ongoing era to be 11 which is greater than due era 10.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			Origin::root(),
@@ -1652,7 +1656,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 2200
 			})
 		);
 
@@ -1669,7 +1673,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 					amount: 0,
 					unlock_time: Some(TimeUnit::Era(11))
 				}),
-				1001
+				2200
 			))
 		);
 	});
@@ -1708,7 +1712,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 2200
 			})
 		);
 
@@ -1759,7 +1763,7 @@ fn fail_delegator_ledger_query_response_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1776,7 +1780,7 @@ fn fail_delegator_ledger_query_response_works() {
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1815,7 +1819,7 @@ fn fail_delegator_ledger_query_response_works() {
 			Some(QueryStatus::Pending {
 				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1893,7 +1897,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 						validators: valis.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -1982,7 +1986,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 						validators: valis_1.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2052,7 +2056,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location.clone(),
-			targets.clone(),
+			Some(targets.clone()),
 		));
 
 		// Before data: Delegate only 1 validator.
@@ -2071,7 +2075,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 						validators: valis_2.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2161,7 +2165,7 @@ fn fail_validators_by_delegator_query_response_works() {
 						validators: valis,
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2169,7 +2173,7 @@ fn fail_validators_by_delegator_query_response_works() {
 		assert_ok!(Slp::fail_validators_by_delegator_query_response(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			0
+			0,
 		));
 
 		// check after data

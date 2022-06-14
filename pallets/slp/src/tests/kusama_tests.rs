@@ -201,8 +201,16 @@ fn decrease_token_pool_works() {
 #[test]
 fn update_ongoing_time_unit_works() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		// Set the era to be 8.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(8));
+		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+			Origin::signed(ALICE),
+			KSM,
+			Some(600)
+		));
+
+		System::set_block_number(650);
 
 		// Update the era to be 9.
 		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), KSM, TimeUnit::Era(9)));
@@ -482,7 +490,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			Origin::signed(ALICE),
 			KSM,
 			100,
-			subaccount_0_location.clone()
+			Some(subaccount_0_location.clone())
 		));
 
 		// Tokenpool should have been added 100.

@@ -360,7 +360,7 @@ pub mod pallet {
 		},
 		TimeUnitUpdated {
 			currency_id: CurrencyId,
-			old: TimeUnit,
+			old: Option<TimeUnit>,
 			new: TimeUnit,
 		},
 		PoolTokenIncreased {
@@ -1093,10 +1093,12 @@ pub mod pallet {
 
 			ensure!(blocks_between >= interval, Error::<T>::TooFrequent);
 
-			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
+			let old_op = T::VtokenMinting::get_ongoing_time_unit(currency_id);
 
-			// enusre old TimeUnit < new TimeUnit
-			ensure!(old < time_unit, Error::<T>::InvalidTimeUnit);
+			if let Some(old) = old_op.clone() {
+				// enusre old TimeUnit < new TimeUnit
+				ensure!(old < time_unit, Error::<T>::InvalidTimeUnit);
+			}
 
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
@@ -1104,7 +1106,11 @@ pub mod pallet {
 			LastTimeUpdatedOngoingTimeUnit::<T>::insert(currency_id, current_block);
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TimeUnitUpdated { currency_id, old, new: time_unit });
+			Pallet::<T>::deposit_event(Event::TimeUnitUpdated {
+				currency_id,
+				old: old_op,
+				new: time_unit,
+			});
 
 			Ok(())
 		}
