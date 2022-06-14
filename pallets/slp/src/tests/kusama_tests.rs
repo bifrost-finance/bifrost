@@ -112,13 +112,13 @@ fn supplement_fee_reserve_works() {
 		assert_eq!(Balances::free_balance(&BOB), 0);
 
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, alice_location),
+			Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(alice_location)),
 			Error::<Runtime>::DestAccountNotValid
 		);
 
 		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(BOB)));
 
-		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location));
+		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(bob_location)));
 
 		assert_eq!(Balances::free_balance(&ALICE), 90);
 		assert_eq!(Balances::free_balance(&BOB), 10);
@@ -168,7 +168,7 @@ fn remove_delegator_works() {
 		assert_ok!(Slp::remove_delegator(
 			Origin::signed(ALICE),
 			KSM,
-			subaccount_0_location.clone()
+			Box::new(subaccount_0_location.clone())
 		));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(KSM, 0), None);

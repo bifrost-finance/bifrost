@@ -216,7 +216,11 @@ fn moonriver_setup() {
 	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// Set delegator ledger
-	assert_ok!(Slp::add_validator(Origin::signed(ALICE), MOVR, validator_0_location.clone(),));
+	assert_ok!(Slp::add_validator(
+		Origin::signed(ALICE),
+		MOVR,
+		Box::new(validator_0_location.clone()),
+	));
 
 	// initialize delegator
 }
@@ -252,7 +256,7 @@ fn moonriver_bond_works() {
 			Slp::bond(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location.clone(),
+				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
 				Some(validator_0_location.clone())
 			),
@@ -314,7 +318,7 @@ fn moonriver_bond_extra_works() {
 			Slp::bond_extra(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location,
+				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				5_000_000_000_000_000_000,
 			),
@@ -376,7 +380,7 @@ fn moonriver_unbond_works() {
 			Slp::unbond(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location,
+				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				2_000_000_000_000_000_000,
 			),
@@ -435,7 +439,7 @@ fn moonriver_unbond_all_works() {
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
-			Slp::unbond_all(Origin::signed(ALICE), MOVR, subaccount_0_location,),
+			Slp::unbond_all(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location),),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -504,7 +508,7 @@ fn moonriver_rebond_works() {
 			Slp::rebond(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location,
+				Box::new(subaccount_0_location),
 				Some(validator_0_location.clone()),
 				None
 			),
@@ -578,7 +582,7 @@ fn moonriver_undelegate_works() {
 			Slp::undelegate(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location,
+				Box::new(subaccount_0_location),
 				vec![validator_0_location],
 			),
 			Error::<Runtime>::XcmFailure
@@ -643,10 +647,10 @@ fn moonriver_redelegate_works() {
 		let ledger = Ledger::Moonriver(moonriver_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
 
 		assert_noop!(
-			Slp::redelegate(Origin::signed(ALICE), MOVR, subaccount_0_location, None),
+			Slp::redelegate(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location), None),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -717,7 +721,7 @@ fn moonriver_liquidize_works() {
 			Slp::liquidize(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location.clone(),
+				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
 			),
@@ -732,7 +736,7 @@ fn moonriver_liquidize_works() {
 			Slp::liquidize(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location.clone(),
+				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
 			),
@@ -778,7 +782,7 @@ fn moonriver_liquidize_works() {
 			Slp::liquidize(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location.clone(),
+				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
 			),
@@ -793,7 +797,7 @@ fn moonriver_liquidize_works() {
 			Slp::liquidize(
 				Origin::signed(ALICE),
 				MOVR,
-				subaccount_0_location,
+				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location)
 			),
@@ -1713,10 +1717,15 @@ fn moonriver_redelegate_confirm_works() {
 		let ledger = Ledger::Moonriver(moonriver_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
 
 		assert_noop!(
-			Slp::redelegate(Origin::signed(ALICE), MOVR, subaccount_0_location.clone(), None),
+			Slp::redelegate(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(subaccount_0_location.clone()),
+				None
+			),
 			Error::<Runtime>::XcmFailure
 		);
 
@@ -1902,7 +1911,11 @@ fn supplement_fee_account_whitelist_works() {
 
 		// Dest should be one of delegators, operateOrigins or accounts in the whitelist.
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), MOVR, subaccount_0_location.clone(),),
+			Slp::supplement_fee_reserve(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(subaccount_0_location.clone()),
+			),
 			Error::<Runtime>::XcmFailure
 		);
 
@@ -1910,7 +1923,7 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
 				MOVR,
-				entrance_account_location.clone(),
+				Box::new(entrance_account_location.clone()),
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
@@ -1922,13 +1935,17 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
 				MOVR,
-				entrance_account_location.clone(),
+				Box::new(entrance_account_location.clone()),
 			),
 			Error::<Runtime>::XcmFailure
 		);
 
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), MOVR, exit_account_location.clone(),),
+			Slp::supplement_fee_reserve(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(exit_account_location.clone()),
+			),
 			Error::<Runtime>::DestAccountNotValid
 		);
 
@@ -1936,11 +1953,15 @@ fn supplement_fee_account_whitelist_works() {
 		assert_ok!(Slp::add_supplement_fee_account_to_whitelist(
 			Origin::signed(ALICE),
 			MOVR,
-			exit_account_location.clone(),
+			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), MOVR, exit_account_location.clone(),),
+			Slp::supplement_fee_reserve(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(exit_account_location.clone()),
+			),
 			Error::<Runtime>::XcmFailure
 		);
 
@@ -1948,11 +1969,15 @@ fn supplement_fee_account_whitelist_works() {
 		assert_ok!(Slp::remove_supplement_fee_account_from_whitelist(
 			Origin::signed(ALICE),
 			MOVR,
-			exit_account_location.clone(),
+			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), MOVR, exit_account_location.clone(),),
+			Slp::supplement_fee_reserve(
+				Origin::signed(ALICE),
+				MOVR,
+				Box::new(exit_account_location.clone()),
+			),
 			Error::<Runtime>::DestAccountNotValid
 		);
 	});

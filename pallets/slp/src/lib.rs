@@ -687,7 +687,7 @@ pub mod pallet {
 		pub fn bond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 			validator: Option<MultiLocation>,
 		) -> DispatchResult {
@@ -701,7 +701,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				bonded_amount: amount,
 				query_id,
 				query_id_hash,
@@ -716,7 +716,7 @@ pub mod pallet {
 		pub fn bond_extra(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
@@ -730,7 +730,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				extra_bonded_amount: amount,
 				query_id,
 				query_id_hash,
@@ -746,7 +746,7 @@ pub mod pallet {
 		pub fn unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
@@ -760,7 +760,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				unbond_amount: amount,
 				query_id,
 				query_id_hash,
@@ -775,7 +775,7 @@ pub mod pallet {
 		pub fn unbond_all(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -787,7 +787,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				query_id,
 				query_id_hash,
 			});
@@ -800,7 +800,7 @@ pub mod pallet {
 		pub fn rebond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			amount: Option<BalanceOf<T>>,
 		) -> DispatchResult {
@@ -814,7 +814,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				rebond_amount: amount,
 				query_id,
 				query_id_hash,
@@ -829,7 +829,7 @@ pub mod pallet {
 		pub fn delegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -842,7 +842,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				targets: Some(targets),
 				query_id,
 				query_id_hash,
@@ -856,7 +856,7 @@ pub mod pallet {
 		pub fn undelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -869,7 +869,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				targets,
 				query_id,
 				query_id_hash,
@@ -883,7 +883,7 @@ pub mod pallet {
 		pub fn redelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			targets: Option<Vec<MultiLocation>>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -896,7 +896,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				targets,
 				query_id,
 				query_id_hash,
@@ -935,7 +935,7 @@ pub mod pallet {
 		pub fn liquidize(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			when: Option<TimeUnit>,
 			validator: Option<MultiLocation>,
 		) -> DispatchResult {
@@ -949,7 +949,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				time_unit: when,
 				query_id,
 				query_id_hash,
@@ -963,7 +963,7 @@ pub mod pallet {
 		pub fn chill(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -975,7 +975,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Chill {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				query_id,
 				query_id_hash,
 			});
@@ -1204,7 +1204,7 @@ pub mod pallet {
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			dest: MultiLocation,
+			dest: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1268,7 +1268,7 @@ pub mod pallet {
 				currency_id,
 				amount: reserved_fee,
 				from: source_location,
-				to: dest,
+				to: *dest,
 			});
 
 			Ok(())
@@ -1437,7 +1437,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] index: u16,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1449,7 +1449,7 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
 				currency_id,
 				index,
-				delegator_id: who,
+				delegator_id: *who,
 			});
 			Ok(())
 		}
@@ -1460,7 +1460,7 @@ pub mod pallet {
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1469,7 +1469,7 @@ pub mod pallet {
 			staking_agent.remove_delegator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: who });
+			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: *who });
 			Ok(())
 		}
 
@@ -1479,7 +1479,7 @@ pub mod pallet {
 		pub fn add_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1488,7 +1488,7 @@ pub mod pallet {
 			staking_agent.add_validator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: who });
+			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 			Ok(())
 		}
 
@@ -1498,7 +1498,7 @@ pub mod pallet {
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1507,7 +1507,10 @@ pub mod pallet {
 			staking_agent.remove_validator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsRemoved { currency_id, validator_id: who });
+			Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
+				currency_id,
+				validator_id: *who,
+			});
 			Ok(())
 		}
 
@@ -1517,7 +1520,7 @@ pub mod pallet {
 		pub fn set_validators_by_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			validators: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
@@ -1534,7 +1537,7 @@ pub mod pallet {
 			// check delegator
 			// Check if it is bonded already.
 			ensure!(
-				DelegatorLedgers::<T>::contains_key(currency_id, &who),
+				DelegatorLedgers::<T>::contains_key(currency_id, who.clone()),
 				Error::<T>::DelegatorNotBonded
 			);
 
@@ -1718,7 +1721,7 @@ pub mod pallet {
 		pub fn add_supplement_fee_account_to_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1737,7 +1740,7 @@ pub mod pallet {
 							let rs =
 								whitelist.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 							if let Err(idx) = rs {
-								whitelist.insert(idx, (who.clone(), multi_hash));
+								whitelist.insert(idx, (*who.clone(), multi_hash));
 							} else {
 								Err(Error::<T>::AlreadyExist)?;
 							}
@@ -1752,7 +1755,7 @@ pub mod pallet {
 
 			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistAdded {
 				currency_id,
-				who,
+				who: *who,
 			});
 
 			Ok(())
@@ -1763,7 +1766,7 @@ pub mod pallet {
 		pub fn remove_supplement_fee_account_from_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1794,7 +1797,7 @@ pub mod pallet {
 
 			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistRemoved {
 				currency_id,
-				who,
+				who: *who,
 			});
 
 			Ok(())
