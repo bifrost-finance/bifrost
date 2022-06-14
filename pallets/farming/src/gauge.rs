@@ -335,6 +335,10 @@ where
 						.total_time_factor
 						.checked_sub(gauge_info.total_time_factor)
 						.ok_or(ArithmeticError::Overflow)?;
+					gauge_pool_info.gauge_amount = gauge_pool_info
+						.gauge_amount
+						.checked_sub(&gauge_info.gauge_amount)
+						.ok_or(ArithmeticError::Overflow)?;
 				} else {
 					*maybe_gauge_info = Some(gauge_info);
 				};
