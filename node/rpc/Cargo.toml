@@ -25,5 +25,7 @@ bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 bifrost-liquidity-mining-rpc-api = { path = "../../pallets/liquidity-mining/rpc" }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
+bifrost-farming-rpc-api = { path = "../../pallets/farming/rpc" }
+bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api" }
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"

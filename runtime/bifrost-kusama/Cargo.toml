@@ -103,6 +103,8 @@ bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-featur
 
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
+bifrost-farming = { path = "../../pallets/farming", default-features = false }
+bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -186,6 +188,8 @@ std = [
 	"orml-xcm/std",
 	"orml-xcm-support/std",
 	"bifrost-runtime-common/std",
+	"bifrost-farming/std",
+	"bifrost-farming-rpc-runtime-api/std",
 	"bifrost-flexible-fee/std",
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",

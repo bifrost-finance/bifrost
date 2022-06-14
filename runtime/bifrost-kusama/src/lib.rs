@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 943,
+	spec_version: 944,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -302,6 +302,8 @@ parameter_types! {
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 }
 
 impl frame_system::Config for Runtime {
@@ -985,6 +987,8 @@ impl parachain_staking::Config for Runtime {
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1376,7 +1380,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
+			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1749,6 +1755,15 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl bifrost_farming::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1968,6 +1983,7 @@ construct_runtime! {
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 	}
 }
 
@@ -2235,6 +2251,16 @@ impl_runtime_apis! {
 				2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
 				_ => Vec::new()
 			}
+		}
+	}
+
+	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
 
