@@ -529,6 +529,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-farming"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-farming-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-farming-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-farming-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
@@ -589,6 +637,8 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-farming",
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
@@ -5476,6 +5526,8 @@ dependencies = [
 name = "node-rpc"
 version = "0.8.0"
 dependencies = [
+ "bifrost-farming-rpc-api",
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-liquidity-mining-rpc-api",
@@ -5501,6 +5553,7 @@ dependencies = [
 name = "node-service"
 version = "0.8.0"
 dependencies = [
+ "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
  "bifrost-liquidity-mining-rpc-runtime-api",
@@ -6861,7 +6914,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.1"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=a4f58987f5c89ddc88922b9950c06c4c16bef63a#a4f58987f5c89ddc88922b9950c06c4c16bef63a"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=4251338f19d1a885ff21921f73eee373014cb200#4251338f19d1a885ff21921f73eee373014cb200"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

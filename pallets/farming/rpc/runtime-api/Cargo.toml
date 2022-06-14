@@ -1,0 +1,19 @@
+[package]
+name = "bifrost-farming-rpc-runtime-api"
+version = "0.8.0"
+authors = ["Kadokura <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
+node-primitives = { path = "../../../../node/primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-api/std",
+    "node-primitives/std",
+]

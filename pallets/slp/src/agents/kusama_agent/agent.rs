@@ -53,11 +53,11 @@ use crate::{
 		XcmOperation, KSM,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
-	TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
-	XcmDestWeightAndFee, TIMEOUT_BLOCKS,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
+	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorNextIndex,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry,
+	MinimumsAndMaximums, Pallet, QueryId, TimeUnit, Validators, ValidatorsByDelegator,
+	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
 /// StakingAgent implementation for Kusama
@@ -649,10 +649,29 @@ impl<T: Config>
 
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &MultiLocation,
+		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
+		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// ensure who is a valid delegator
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(KSM, &who),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Get current TimeUnit.
+		let current_time_unit =
+			T::VtokenMinting::get_ongoing_time_unit(KSM).ok_or(Error::<T>::TimeUnitNotExist)?;
+		// Get DelegatorLatestTuneRecord for the currencyId.
+		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(KSM, &who);
+		// ensure each delegator can only tune once per TimeUnit.
+		ensure!(
+			latest_time_unit_op != Some(current_time_unit.clone()),
+			Error::<T>::DelegatorAlreadyTuned
+		);
+
 		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
 
 		// Check whether "who" is an existing delegator.
@@ -676,6 +695,9 @@ impl<T: Config>
 				Err(Error::<T>::Unexpected)?
 			}
 		})?;
+
+		// Update the DelegatorLatestTuneRecord<T> storage.
+		DelegatorLatestTuneRecord::<T>::insert(KSM, who, current_time_unit);
 
 		Ok(())
 	}
@@ -1398,7 +1420,7 @@ impl<T: Config> KusamaAgent<T> {
 		// Execute the xcm message.
 		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
 			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+			.map_err(|_| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}

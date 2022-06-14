@@ -858,14 +858,11 @@ impl<T: Config>
 
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &MultiLocation,
+		_who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
-
-		// Check whether "who" is an existing delegator.
-		ensure!(DelegatorLedgers::<T>::contains_key(MOVR, who), Error::<T>::DelegatorNotBonded);
 
 		// Tune the vtoken exchange rate.
 		T::VtokenMinting::increase_token_pool(MOVR, token_amount)
@@ -1096,7 +1093,10 @@ impl<T: Config> MoonriverAgent<T> {
 	fn get_movr_multilocation() -> MultiLocation {
 		MultiLocation {
 			parents: 1,
-			interior: X2(Parachain(2023), PalletInstance(parachains::moonriver::PALLET_ID)),
+			interior: X2(
+				Parachain(parachains::moonriver::ID),
+				PalletInstance(parachains::moonriver::PALLET_ID),
+			),
 		}
 	}
 
@@ -1311,7 +1311,7 @@ impl<T: Config> MoonriverAgent<T> {
 		// Execute the xcm message.
 		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
 			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+			.map_err(|_| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}

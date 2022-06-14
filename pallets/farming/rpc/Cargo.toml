@@ -1,0 +1,17 @@
+[package]
+name = "bifrost-farming-rpc-api"
+version = "0.8.0"
+authors = ["Kadokura <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.124", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+node-primitives = { path = "../../../node/primitives", default-features = false }
+bifrost-farming-rpc-runtime-api = { path = "./runtime-api" }
