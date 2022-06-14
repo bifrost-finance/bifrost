@@ -33,6 +33,8 @@
 
 use std::sync::Arc;
 
+use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
+use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpc, LiquidityMiningRpcApiServer};
@@ -76,6 +78,7 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
@@ -89,6 +92,7 @@ where
 	module.merge(SystemRpc::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPaymentRpc::new(client.clone()).into_rpc())?;
 
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(LiquidityMiningRpc::new(client.clone()).into_rpc())?;

@@ -7,6 +7,7 @@ members = [
 	"node/service",
 	"pallets/asset-registry",
 	"pallets/flexible-fee",
+	"pallets/farming",
 	"pallets/lightening-redeem",
 	"pallets/liquidity-mining",
 	"pallets/salp",
@@ -106,4 +107,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b" }
-parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "a4f58987f5c89ddc88922b9950c06c4c16bef63a" }
+parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "4251338f19d1a885ff21921f73eee373014cb200" }
