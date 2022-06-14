@@ -606,6 +606,10 @@ pub mod pallet {
 					max_block,
 				)?;
 			};
+			pool_info.total_shares = Default::default();
+			pool_info.rewards = BTreeMap::new();
+			pool_info.state = PoolState::UnCharged;
+			pool_info.block_startup = None;
 			PoolInfos::<T>::insert(pid, &pool_info);
 
 			Self::deposit_event(Event::FarmingPoolReset { pid });

@@ -174,6 +174,83 @@ fn retire() {
 		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), None);
 	})
 }
+#[test]
+fn reset() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, _tokens) = init_gauge();
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 1900);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 1);
+		Farming::on_initialize(0);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2918);
+		assert_ok!(Farming::close_pool(Origin::signed(ALICE), pid));
+		assert_ok!(Farming::set_retire_limit(Origin::signed(ALICE), 10));
+		assert_ok!(Farming::force_retire_pool(Origin::signed(ALICE), pid));
+		let basic_rewards = vec![(KSM, 1000)];
+		assert_ok!(Farming::reset_pool(
+			Origin::signed(ALICE),
+			pid,
+			None,
+			None,
+			None,
+			None,
+			None,
+			None,
+			Some((KSM, 1000, basic_rewards)),
+		));
+		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
+		let reward_issuer: AccountId =
+			<Runtime as Config>::RewardIssuer::get().into_sub_account(pid);
+		let mut basic_rewards_map = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
+		basic_rewards_map.entry(KSM).or_insert(1000);
+		let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
+		tokens_proportion_map.entry(KSM).or_insert(Perbill::from_percent(100));
+		let pool_infos = PoolInfo {
+			tokens_proportion: tokens_proportion_map,
+			total_shares: Default::default(),
+			basic_rewards: basic_rewards_map.clone(),
+			rewards: BTreeMap::new(),
+			state: PoolState::UnCharged,
+			keeper: keeper.clone(),
+			reward_issuer: reward_issuer.clone(),
+			gauge: Some(1),
+			block_startup: None,
+			min_deposit_to_start: Default::default(),
+			after_block_to_start: Default::default(),
+			withdraw_limit_time: Default::default(),
+			claim_limit_time: Default::default(),
+			withdraw_limit_count: 5,
+		};
+		assert_eq!(Farming::pool_infos(0), Some(pool_infos));
+		let gauge_pool_info = GaugePoolInfo {
+			pid,
+			token: KSM,
+			keeper,
+			reward_issuer,
+			rewards: BTreeMap::<
+				CurrencyIdOf<Runtime>,
+				(BalanceOf<Runtime>, BalanceOf<Runtime>, BalanceOf<Runtime>),
+			>::new(),
+			gauge_basic_rewards: basic_rewards_map,
+			max_block: 1000,
+			gauge_amount: 0,
+			total_time_factor: 0,
+			gauge_last_block: System::block_number(),
+			gauge_state: GaugeState::Bonded,
+		};
+		assert_eq!(Farming::gauge_pool_infos(1), Some(gauge_pool_info));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3918);
+		let charge_rewards = vec![(KSM, 300000)];
+		assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
+		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 1, Some((100, 100))));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3817);
+		Farming::on_initialize(0);
+		System::set_block_number(System::block_number() + 20);
+		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4017);
+	})
+}
 
 fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
