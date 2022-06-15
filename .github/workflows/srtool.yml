@@ -6,10 +6,6 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      srtool_tag:
-        description: The SRTOOL tag to use
-        default: 1.60.0
-        required: false
       ref:
         description: The ref to be used for the repo
         default: develop
@@ -36,7 +32,7 @@ jobs:
         uses: chevdor/srtool-actions@v0.4.0
         with:
           chain: ${{ matrix.chain }}
-          tag: ${{ github.event.inputs.srtool_tag }}
+          runtime_dir: runtime/${{ matrix.chain }}
 
       - name: Summary
         run: |
