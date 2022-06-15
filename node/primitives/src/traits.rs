@@ -147,6 +147,11 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	) -> Option<(AccountId, Balance, TimeUnit)>;
 }
 
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpOperator<CurrencyId> {
+	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
+}
+
 /// A mapping between AssetId and AssetMetadata.
 pub trait AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata> {
 	/// Returns the AssetMetadata associated with a given ForeignAssetId.

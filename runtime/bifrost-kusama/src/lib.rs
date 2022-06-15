@@ -1862,6 +1862,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = SlpEntrancePalletId;
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
 	type WeightInfo = ();
 }
 

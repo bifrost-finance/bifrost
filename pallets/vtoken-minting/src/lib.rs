@@ -41,7 +41,7 @@ use frame_support::{
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TimeUnit, TokenSymbol, VtokenMintingOperator};
+use node_primitives::{CurrencyId, SlpOperator, TimeUnit, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::vec::Vec;
@@ -94,6 +94,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type FeeAccount: Get<Self::AccountId>;
+
+		type BifrostSlp: SlpOperator<CurrencyId>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -184,6 +186,7 @@ pub mod pallet {
 		CalculationOverflow,
 		ExceedMaximumUnlockId,
 		TooManyRedeems,
+		CanNotRedeem,
 	}
 
 	#[pallet::storage]
@@ -338,7 +341,10 @@ pub mod pallet {
 				Error::<T>::BelowMinimumRedeem
 			);
 			if token_id == CurrencyId::Token(TokenSymbol::MOVR) {
-				// TODO
+				ensure!(
+					T::BifrostSlp::all_delegation_requests_occupied(token_id) == true,
+					Error::<T>::CanNotRedeem,
+				);
 			};
 			let (_mint_rate, redeem_rate) = Fees::<T>::get();
 			let redeem_fee = redeem_rate * vtoken_amount;
