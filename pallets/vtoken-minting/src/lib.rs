@@ -342,7 +342,7 @@ pub mod pallet {
 			);
 			if token_id == CurrencyId::Token(TokenSymbol::MOVR) {
 				ensure!(
-					T::BifrostSlp::all_delegation_requests_occupied(token_id) == true,
+					T::BifrostSlp::all_delegation_requests_occupied(token_id),
 					Error::<T>::CanNotRedeem,
 				);
 			};
