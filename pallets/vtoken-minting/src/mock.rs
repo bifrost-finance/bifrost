@@ -21,19 +21,32 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use bifrost_slp::{QueryId, QueryResponseManager};
+use codec::{Decode, Encode};
+pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	ord_parameter_types,
+	pallet_prelude::Get,
+	parameter_types,
 	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32,
+};
+use xcm::{
+	latest::{Junction, MultiLocation},
+	opaque::latest::{
+		Junction::Parachain,
+		Junctions::{X1, X2},
+		NetworkId,
+	},
 };
 
 use crate as vtoken_minting;
@@ -62,7 +75,8 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>}
+		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -171,7 +185,90 @@ impl vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
 	type WeightInfo = ();
+}
+
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		match currency_id {
+			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+				1,
+				X2(
+					Parachain(2023),
+					Junction::AccountKey20 {
+						network: NetworkId::Any,
+						key: Slp::derivative_account_id_20(
+							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							sub_account_index,
+						)
+						.into(),
+					},
+				),
+			),
+			_ => MultiLocation::new(
+				1,
+				X1(Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: Self::derivative_account_id(
+						ParaId::from(2001u32).into_account(),
+						sub_account_index,
+					)
+					.into(),
+				}),
+			),
+		}
+	}
+}
+
+// Mock Utility::derivative_account_id function.
+impl SubAccountIndexMultiLocationConvertor {
+	pub fn derivative_account_id(who: AccountId, index: u16) -> AccountId {
+		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
+		Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+			.expect("infinite length input; no invalid inputs for type; qed")
+	}
+}
+
+pub struct ParachainId;
+impl Get<ParaId> for ParachainId {
+	fn get() -> ParaId {
+		2001.into()
+	}
+}
+
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseManager {
+	fn get_query_response_record(_query_id: QueryId) -> bool {
+		Default::default()
+	}
+	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
+		Default::default()
+	}
+	fn remove_query_record(_query_id: QueryId) -> bool {
+		Default::default()
+	}
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type WeightInfo = ();
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = ParachainId;
+	type XcmRouter = ();
+	type XcmExecutor = ();
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
 }
 
 pub struct ExtBuilder {

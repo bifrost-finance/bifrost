@@ -1113,6 +1113,8 @@ dependencies = [
 name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
+ "bifrost-slp",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1129,6 +1131,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]

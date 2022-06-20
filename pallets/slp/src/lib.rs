@@ -25,7 +25,7 @@ use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
-use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
+use node_primitives::{CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
@@ -41,7 +41,7 @@ use xcm::{
 	},
 };
 
-use crate::{agents::MoonriverAgent, traits::SlpOperator};
+use crate::agents::MoonriverAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
