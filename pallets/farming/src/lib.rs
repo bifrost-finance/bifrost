@@ -289,7 +289,7 @@ pub mod pallet {
 		BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 	{
 		#[transactional]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Perbill)>,
@@ -378,7 +378,7 @@ pub mod pallet {
 		}
 
 		#[transactional]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -426,7 +426,7 @@ pub mod pallet {
 		}
 
 		#[transactional]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -456,7 +456,7 @@ pub mod pallet {
 		}
 
 		#[transactional]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -674,7 +674,7 @@ pub mod pallet {
 		}
 
 		#[transactional]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::gauge_withdraw())]
 		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
 			let who = ensure_signed(origin)?;
