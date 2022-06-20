@@ -24,7 +24,6 @@
 use bifrost_slp::{QueryId, QueryResponseManager};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
 	ord_parameter_types,
 	pallet_prelude::Get,
@@ -297,9 +296,6 @@ impl ExtBuilder {
 			(ALICE, vDOT, 400),
 			(BOB, vKSM, 1000),
 			(BOB, KSM, 10000000000),
-			// (whitelisted_caller(), KSM, 1000000000000),
-			// (whitelisted_caller(), BNC, 1000000000000),
-			// (whitelisted_caller(), vKSM, 1000000000000),
 		])
 	}
 
