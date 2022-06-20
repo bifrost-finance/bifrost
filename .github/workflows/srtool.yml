@@ -6,16 +6,10 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      srtool_tag:
-        description: The SRTOOL tag to use
-        default: 1.60.0
-        required: false
       ref:
         description: The ref to be used for the repo
         default: develop
         required: false
-  schedule:
-    - cron: "00 00 * * 1" # 0AM weekly on mondays
 
 jobs:
   build:
@@ -34,9 +28,11 @@ jobs:
       - name: Srtool build
         id: srtool_build
         uses: chevdor/srtool-actions@v0.4.0
+        env:
+          BUILD_OPTS: "--features on-chain-release-build"
         with:
           chain: ${{ matrix.chain }}
-          tag: ${{ github.event.inputs.srtool_tag }}
+          runtime_dir: runtime/${{ matrix.chain }}
 
       - name: Summary
         run: |
