@@ -58,13 +58,8 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
 	pub delegator_id: DelegatorId,
-	/// If this is true, then this is a bonding entry.
-	pub if_bond: bool,
-	/// If this is true and if_bond is false, then this is an unlocking entry.
-	pub if_unlock: bool,
-	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
-	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
-	pub if_rebond: bool,
+	/// Update operation type
+	pub update_operation: SubstrateLedgerUpdateOperation,
 	/// The unlocking/bonding amount.
 	#[codec(compact)]
 	pub amount: Balance,
@@ -83,4 +78,12 @@ pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, H
 	pub delegator_id: DelegatorId,
 	/// Validators vec to be updated
 	pub validators: Vec<(ValidatorId, HashT)>,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum SubstrateLedgerUpdateOperation {
+	Bond,
+	Unlock,
+	Rebond,
+	Liquidize,
 }
