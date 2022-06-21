@@ -83,5 +83,5 @@ pub enum MoonriverLedgerUpdateOperation {
 	LeaveDelegator,
 	CancelLeave,
 	ExecuteLeave,
-	Liquidize,
+	ExecuteRequest,
 }
