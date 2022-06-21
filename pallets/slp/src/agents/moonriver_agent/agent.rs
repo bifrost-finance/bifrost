@@ -25,9 +25,8 @@ use super::types::{
 };
 use crate::{
 	primitives::{
-		MoonriverLedgerUpdateOperation, OneToManyDelegationAction,
-		OneToManyDelegationAction::{Decrease, Revoke},
-		OneToManyLedger, OneToManyScheduledRequest,
+		MoonriverLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
+		OneToManyScheduledRequest,
 	},
 	DelegationsOccupied,
 };
@@ -1229,8 +1228,8 @@ impl<T: Config> MoonriverAgent<T> {
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
 		use MoonriverLedgerUpdateOperation::{
-			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, LeaveDelegator, Liquidize,
-			Revoke,
+			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, ExecuteRequest,
+			LeaveDelegator, Revoke,
 		};
 		// update DelegatorLedgers<T> storage
 		if let LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
