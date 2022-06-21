@@ -22,7 +22,8 @@
 use bifrost_polkadot_runtime::PolkadotXcm;
 use bifrost_slp::{
 	primitives::{
-		SubstrateLedgerUpdateEntry, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
+		SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
+		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
 	},
 	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 	ValidatorsByDelegatorUpdateEntry, XcmOperation,
@@ -98,7 +99,7 @@ fn register_subaccount_index_0() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			0u16,
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 		));
 
 		// Register Operation weight and fee
@@ -243,7 +244,7 @@ fn register_validators() {
 		assert_ok!(Slp::add_validator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			validator_0_location.clone(),
+			Box::new(validator_0_location.clone()),
 		));
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
@@ -260,7 +261,7 @@ fn register_validators() {
 		assert_ok!(Slp::add_validator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			validator_1_location,
+			Box::new(validator_1_location),
 		));
 
 		assert_eq!(Slp::get_validators(RelayCurrencyId::get()), Some(valis));
@@ -417,7 +418,7 @@ fn bond_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			dollar(RelayCurrencyId::get()),
 			None
 		));
@@ -461,7 +462,7 @@ fn bond_extra_works() {
 		assert_ok!(Slp::bond_extra(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			None,
 			dollar(RelayCurrencyId::get()),
 		));
@@ -505,7 +506,7 @@ fn unbond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			None,
 			500_000_000_000,
 		));
@@ -545,7 +546,11 @@ fn unbond_all_works() {
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
 		// Unbond the only bonded 1 ksm.
-		assert_ok!(Slp::unbond_all(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+		assert_ok!(Slp::unbond_all(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Box::new(subaccount_0_location),
+		));
 	});
 
 	// Can be uncommented to check if the result is correct.
@@ -584,7 +589,7 @@ fn rebond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			None,
 			500_000_000_000,
 		));
@@ -610,7 +615,7 @@ fn rebond_works() {
 		assert_ok!(Slp::rebond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			None,
 			Some(500_000_000_000),
 		));
@@ -672,14 +677,14 @@ fn delegate_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
 		assert_ok!(Slp::set_validators_by_delegator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets,
 		));
 	});
@@ -729,7 +734,7 @@ fn undelegate_works() {
 		assert_ok!(Slp::undelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			targets.clone(),
 		));
 	});
@@ -785,7 +790,7 @@ fn redelegate_works() {
 		assert_ok!(Slp::redelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			Some(targets.clone()),
 		));
 	});
@@ -869,7 +874,7 @@ fn liquidize_works() {
 		assert_ok!(Slp::liquidize(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			Some(TimeUnit::SlashingSpan(5)),
 			None
 		));
@@ -906,7 +911,11 @@ fn chill_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-		assert_ok!(Slp::chill(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+		assert_ok!(Slp::chill(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Box::new(subaccount_0_location),
+		));
 	});
 
 	// check if sub-account index 0 belongs to the group of nominators
@@ -1007,7 +1016,7 @@ fn supplement_fee_reserve_works() {
 		assert_ok!(Slp::supplement_fee_reserve(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 		));
 	});
 
@@ -1034,7 +1043,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			dollar(RelayCurrencyId::get()),
 			None
 		));
@@ -1056,9 +1065,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
@@ -1142,7 +1149,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_ok!(Slp::bond_extra(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			None,
 			dollar(RelayCurrencyId::get()),
 		));
@@ -1174,9 +1181,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
@@ -1260,7 +1265,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			None,
 			500_000_000_000,
 		));
@@ -1292,9 +1297,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: true,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Unlock,
 					amount: 500_000_000_000,
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
@@ -1368,7 +1371,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_ok!(Slp::unbond_all(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 		));
 
 		assert_eq!(
@@ -1398,9 +1401,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: true,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Unlock,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
@@ -1474,7 +1475,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			None,
 			500_000_000_000,
 		));
@@ -1500,7 +1501,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_ok!(Slp::rebond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			None,
 			Some(500_000_000_000),
 		));
@@ -1535,9 +1536,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: false,
-					if_rebond: true,
+					update_operation: SubstrateLedgerUpdateOperation::Rebond,
 					amount: 500_000_000_000,
 					unlock_time: None
 				}),
@@ -1632,7 +1631,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_ok!(Slp::liquidize(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			Some(TimeUnit::SlashingSpan(5)),
 			None
 		));
@@ -1667,9 +1666,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Liquidize,
 					amount: 0,
 					unlock_time: Some(TimeUnit::Era(11))
 				}),
@@ -1752,7 +1749,7 @@ fn fail_delegator_ledger_query_response_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			dollar(RelayCurrencyId::get()),
 			None
 		));
@@ -1774,9 +1771,7 @@ fn fail_delegator_ledger_query_response_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
@@ -1877,7 +1872,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
@@ -1966,7 +1961,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 		assert_ok!(Slp::undelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
@@ -2055,7 +2050,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 		assert_ok!(Slp::redelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			Some(targets.clone()),
 		));
 
@@ -2145,7 +2140,7 @@ fn fail_validators_by_delegator_query_response_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
