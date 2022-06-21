@@ -25,7 +25,7 @@ use super::types::{
 };
 use crate::{
 	primitives::{
-		OneToManyDelegationAction,
+		MoonriverLedgerUpdateOperation, OneToManyDelegationAction,
 		OneToManyDelegationAction::{Decrease, Revoke},
 		OneToManyLedger, OneToManyScheduledRequest,
 	},
@@ -223,13 +223,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			true,
-			false,
-			false,
-			false,
-			false,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::Bond,
 			amount,
 			query_id,
 			timeout,
@@ -292,13 +286,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			true,
-			false,
-			false,
-			false,
-			false,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::Bond,
 			amount,
 			query_id,
 			timeout,
@@ -375,13 +363,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			false,
-			true,
-			false,
-			false,
-			false,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::BondLess,
 			amount,
 			query_id,
 			timeout,
@@ -419,13 +401,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			None,
-			false,
-			false,
-			false,
-			false,
-			true,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::LeaveDelegator,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -516,13 +492,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			false,
-			false,
-			false,
-			true,
-			false,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::CancelRequest,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -595,13 +565,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(validator.clone()),
-			false,
-			false,
-			true,
-			false,
-			false,
-			false,
-			false,
+			MoonriverLedgerUpdateOperation::Revoke,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -644,13 +608,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			None,
-			false,
-			false,
-			false,
-			false,
-			false,
-			true,
-			false,
+			MoonriverLedgerUpdateOperation::CancelLeave,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -741,13 +699,7 @@ impl<T: Config>
 			Self::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				false,
-				false,
-				false,
-				false,
-				false,
-				false,
-				true,
+				MoonriverLedgerUpdateOperation::ExecuteLeave,
 				Zero::zero(),
 				query_id,
 				timeout,
@@ -756,13 +708,7 @@ impl<T: Config>
 			Self::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				false,
-				false,
-				false,
-				false,
-				false,
-				false,
-				false,
+				MoonriverLedgerUpdateOperation::Liquidize,
 				due_amount,
 				query_id,
 				timeout,
@@ -1193,42 +1139,30 @@ impl<T: Config> MoonriverAgent<T> {
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		validator: Option<MultiLocation>,
-		if_bond: bool,
-		if_unlock: bool,
-		if_revoke: bool,
-		if_cancel: bool,
-		if_leave: bool,
-		if_cancel_leave: bool,
-		if_execute_leave: bool,
+		update_operation: MoonriverLedgerUpdateOperation,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {
+		use MoonriverLedgerUpdateOperation::{
+			BondLess, ExecuteLeave, LeaveDelegator, Liquidize, Revoke,
+		};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 
 		// First to see if the delegation relationship exist.
 		// If not, create one. If yes,
-
-		let unlock_time = if if_unlock || if_revoke || if_leave || if_execute_leave {
-			Self::get_unlocking_round_from_current(if_leave)?
-		} else if if_bond || if_cancel || if_cancel_leave {
-			None
-		//liquidize operation
-		} else {
-			T::VtokenMinting::get_ongoing_time_unit(MOVR)
+		let unlock_time = match &update_operation {
+			BondLess | Revoke | ExecuteLeave => Self::get_unlocking_round_from_current(false)?,
+			LeaveDelegator => Self::get_unlocking_round_from_current(true)?,
+			Liquidize => T::VtokenMinting::get_ongoing_time_unit(MOVR),
+			_ => None,
 		};
 
 		let entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: who.clone(),
 			validator_id: validator,
-			if_bond,
-			if_unlock,
-			if_revoke,
-			if_cancel,
-			if_leave,
-			if_cancel_leave,
-			if_execute_leave,
+			update_operation,
 			amount,
 			unlock_time,
 		});
@@ -1320,18 +1254,16 @@ impl<T: Config> MoonriverAgent<T> {
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
+		use MoonriverLedgerUpdateOperation::{
+			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, LeaveDelegator, Liquidize,
+			Revoke,
+		};
 		// update DelegatorLedgers<T> storage
 		if let LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
 			validator_id: validator_id_op,
-			if_bond,
-			if_unlock,
-			if_revoke,
-			if_cancel,
-			if_leave,
-			if_cancel_leave,
-			if_execute_leave,
+			update_operation,
 			amount,
 			unlock_time,
 		}) = query_entry
@@ -1341,283 +1273,316 @@ impl<T: Config> MoonriverAgent<T> {
 				delegator_id,
 				|old_ledger_opt| -> Result<(), Error<T>> {
 					if let Some(Ledger::Moonriver(ref mut old_ledger)) = old_ledger_opt {
-						// bond more
-						if if_bond {
-							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+						match update_operation {
+							// bond more
+							Bond => {
+								let validator_id =
+									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
 
-							// If this is a bonding operation.
-							// Increase the total amount and add the delegation relationship.
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorLeaving
-							);
-							old_ledger.total = old_ledger
-								.total
-								.checked_add(&amount)
-								.ok_or(Error::<T>::OverFlow)?;
+								// If this is a bonding operation.
+								// Increase the total amount and add the delegation relationship.
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorLeaving
+								);
+								old_ledger.total = old_ledger
+									.total
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
 
-							let amount_rs = old_ledger.delegations.get(&validator_id);
-							let original_amount =
-								if let Some(amt) = amount_rs { amt.clone() } else { Zero::zero() };
-
-							let new_amount =
-								original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-							old_ledger.delegations.insert(validator_id, new_amount);
-						// schedule bond less request
-						} else if if_unlock {
-							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorLeaving
-							);
-
-							old_ledger.less_total = old_ledger
-								.less_total
-								.checked_add(&amount)
-								.ok_or(Error::<T>::OverFlow)?;
-
-							let unlock_time_unit =
-								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-							// add a new entry in requests and request_briefs
-							let new_request = OneToManyScheduledRequest {
-								validator: validator_id.clone(),
-								when_executable: unlock_time_unit.clone(),
-								action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(amount),
-							};
-							old_ledger.requests.push(new_request);
-							old_ledger
-								.request_briefs
-								.insert(validator_id, (unlock_time_unit, amount));
-						// schedule revoke request
-						} else if if_revoke {
-							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorLeaving
-							);
-
-							let revoke_amount = old_ledger
-								.delegations
-								.get(&validator_id)
-								.ok_or(Error::<T>::Unexpected)?;
-
-							old_ledger.less_total = old_ledger
-								.less_total
-								.checked_add(&revoke_amount)
-								.ok_or(Error::<T>::OverFlow)?;
-
-							let unlock_time_unit =
-								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-							// add a new entry in requests and request_briefs
-							let new_request = OneToManyScheduledRequest {
-								validator: validator_id.clone(),
-								when_executable: unlock_time_unit.clone(),
-								action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-									revoke_amount.clone(),
-								),
-							};
-							old_ledger.requests.push(new_request);
-							old_ledger
-								.request_briefs
-								.insert(validator_id, (unlock_time_unit, revoke_amount.clone()));
-						// cancel bond less or revoke request
-						} else if if_cancel {
-							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorLeaving
-							);
-
-							let (_, cancel_amount) = old_ledger
-								.request_briefs
-								.get(&validator_id)
-								.ok_or(Error::<T>::Unexpected)?;
-
-							old_ledger.less_total = old_ledger
-								.less_total
-								.checked_sub(&cancel_amount)
-								.ok_or(Error::<T>::UnderFlow)?;
-
-							let request_index = old_ledger
-								.requests
-								.binary_search_by_key(&validator_id, |request| {
-									request.validator.clone()
-								})
-								.map_err(|_| Error::<T>::Unexpected)?;
-							old_ledger.requests.remove(request_index);
-
-							old_ledger.request_briefs.remove(&validator_id);
-						// schedule leave
-						} else if if_leave {
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorAlreadyLeaving
-							);
-
-							old_ledger.less_total = old_ledger.total;
-							let unlock_time = unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-							old_ledger.status =
-								OneToManyDelegatorStatus::Leaving(unlock_time.clone());
-
-							let mut new_requests = vec![];
-							let new_request_briefs: BTreeMap<
-								MultiLocation,
-								(TimeUnit, BalanceOf<T>),
-							> = BTreeMap::new();
-							for (vali, amt) in old_ledger.delegations.iter() {
-								let request_entry = OneToManyScheduledRequest {
-									validator: vali.clone(),
-									when_executable: unlock_time.clone(),
-									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-										amt.clone(),
-									),
-								};
-								new_requests.push(request_entry);
-
-								old_ledger
-									.request_briefs
-									.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
-							}
-
-							old_ledger.requests = new_requests;
-							old_ledger.request_briefs = new_request_briefs;
-						// cancel leave
-						} else if if_cancel_leave {
-							let leaving =
-								matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
-							ensure!(leaving, Error::<T>::DelegatorNotLeaving);
-
-							old_ledger.less_total = Zero::zero();
-							old_ledger.status = OneToManyDelegatorStatus::Active;
-
-							old_ledger.requests = vec![];
-							old_ledger.request_briefs = BTreeMap::new();
-						// execute leaving
-						} else if if_execute_leave {
-							// make sure leaving time is less than or equal to current time.
-							let scheduled_time =
-								if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
-									old_ledger.clone().status
-								{
-									if let TimeUnit::Round(tu) = scheduled_time_unit {
-										tu
-									} else {
-										Err(Error::<T>::InvalidTimeUnit)?
-									}
+								let amount_rs = old_ledger.delegations.get(&validator_id);
+								let original_amount = if let Some(amt) = amount_rs {
+									amt.clone()
 								} else {
-									Err(Error::<T>::DelegatorNotLeaving)?
+									Zero::zero()
 								};
 
-							let current_time_unit =
-								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+								let new_amount = original_amount
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+								old_ledger.delegations.insert(validator_id, new_amount);
+								// schedule bond less request
+							},
+							BondLess => {
+								let validator_id =
+									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
 
-							if let TimeUnit::Round(current_time) = current_time_unit {
-								ensure!(current_time >= scheduled_time, Error::<T>::LeavingNotDue);
-							} else {
-								Err(Error::<T>::InvalidTimeUnit)?;
-							}
-
-							let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> =
-								BTreeMap::new();
-							let request_briefs_set: BTreeMap<
-								MultiLocation,
-								(TimeUnit, BalanceOf<T>),
-							> = BTreeMap::new();
-							let new_ledger =
-								OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
-									account: old_ledger.clone().account,
-									total: Zero::zero(),
-									less_total: Zero::zero(),
-									delegations: empty_delegation_set,
-									requests: vec![],
-									request_briefs: request_briefs_set,
-									status: OneToManyDelegatorStatus::Active,
-								};
-							let movr_ledger =
-								Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonriver(
-									new_ledger,
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorLeaving
 								);
 
-							*old_ledger_opt = Some(movr_ledger);
-						// execute request
-						} else {
-							let validator_id = validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+								old_ledger.less_total = old_ledger
+									.less_total
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
 
-							ensure!(
-								old_ledger.status == OneToManyDelegatorStatus::Active,
-								Error::<T>::DelegatorLeaving
-							);
+								let unlock_time_unit =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 
-							// ensure current round is no less than executable time.
-							let execute_time_unit =
-								unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
-
-							let execute_round =
-								if let TimeUnit::Round(current_round) = execute_time_unit {
-									current_round
-								} else {
-									Err(Error::<T>::InvalidTimeUnit)?
+								// add a new entry in requests and request_briefs
+								let new_request = OneToManyScheduledRequest {
+									validator: validator_id.clone(),
+									when_executable: unlock_time_unit.clone(),
+									action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(
+										amount,
+									),
 								};
-
-							let request_time_unit = old_ledger
-								.request_briefs
-								.get(&validator_id)
-								.ok_or(Error::<T>::RequestNotExist)?;
-
-							let request_round =
-								if let TimeUnit::Round(req_round) = request_time_unit.0 {
-									req_round
-								} else {
-									Err(Error::<T>::InvalidTimeUnit)?
-								};
-
-							ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
-
-							let (_, execute_amount) = old_ledger
-								.request_briefs
-								.remove(&validator_id)
-								.ok_or(Error::<T>::Unexpected)?;
-							old_ledger.total = old_ledger
-								.total
-								.checked_sub(&execute_amount)
-								.ok_or(Error::<T>::UnderFlow)?;
-
-							old_ledger.less_total = old_ledger
-								.less_total
-								.checked_sub(&execute_amount)
-								.ok_or(Error::<T>::UnderFlow)?;
-
-							let request_index = old_ledger
-								.requests
-								.binary_search_by_key(&validator_id, |rqst| rqst.validator.clone())
-								.map_err(|_| Error::<T>::RequestNotExist)?;
-							old_ledger.requests.remove(request_index);
-
-							let old_delegate_amount = old_ledger
-								.delegations
-								.get(&validator_id)
-								.ok_or(Error::<T>::ValidatorNotBonded)?;
-							let new_delegate_amount = old_delegate_amount
-								.checked_sub(&execute_amount)
-								.ok_or(Error::<T>::UnderFlow)?;
-
-							if new_delegate_amount == Zero::zero() {
+								old_ledger.requests.push(new_request);
 								old_ledger
+									.request_briefs
+									.insert(validator_id, (unlock_time_unit, amount));
+								// schedule revoke request
+							},
+							Revoke => {
+								let validator_id =
+									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorLeaving
+								);
+
+								let revoke_amount = old_ledger
 									.delegations
+									.get(&validator_id)
+									.ok_or(Error::<T>::Unexpected)?;
+
+								old_ledger.less_total = old_ledger
+									.less_total
+									.checked_add(&revoke_amount)
+									.ok_or(Error::<T>::OverFlow)?;
+
+								let unlock_time_unit =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+								// add a new entry in requests and request_briefs
+								let new_request = OneToManyScheduledRequest {
+									validator: validator_id.clone(),
+									when_executable: unlock_time_unit.clone(),
+									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
+										revoke_amount.clone(),
+									),
+								};
+								old_ledger.requests.push(new_request);
+								old_ledger.request_briefs.insert(
+									validator_id,
+									(unlock_time_unit, revoke_amount.clone()),
+								);
+								// cancel bond less or revoke request
+							},
+							CancelRequest => {
+								let validator_id =
+									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorLeaving
+								);
+
+								let (_, cancel_amount) = old_ledger
+									.request_briefs
+									.get(&validator_id)
+									.ok_or(Error::<T>::Unexpected)?;
+
+								old_ledger.less_total = old_ledger
+									.less_total
+									.checked_sub(&cancel_amount)
+									.ok_or(Error::<T>::UnderFlow)?;
+
+								let request_index = old_ledger
+									.requests
+									.binary_search_by_key(&validator_id, |request| {
+										request.validator.clone()
+									})
+									.map_err(|_| Error::<T>::Unexpected)?;
+								old_ledger.requests.remove(request_index);
+
+								old_ledger.request_briefs.remove(&validator_id);
+								// schedule leave
+							},
+							LeaveDelegator => {
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorAlreadyLeaving
+								);
+
+								old_ledger.less_total = old_ledger.total;
+								let unlock_time =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+								old_ledger.status =
+									OneToManyDelegatorStatus::Leaving(unlock_time.clone());
+
+								let mut new_requests = vec![];
+								let new_request_briefs: BTreeMap<
+									MultiLocation,
+									(TimeUnit, BalanceOf<T>),
+								> = BTreeMap::new();
+								for (vali, amt) in old_ledger.delegations.iter() {
+									let request_entry = OneToManyScheduledRequest {
+										validator: vali.clone(),
+										when_executable: unlock_time.clone(),
+										action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
+											amt.clone(),
+										),
+									};
+									new_requests.push(request_entry);
+
+									old_ledger
+										.request_briefs
+										.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
+								}
+
+								old_ledger.requests = new_requests;
+								old_ledger.request_briefs = new_request_briefs;
+								// cancel leave
+							},
+							CancelLeave => {
+								let leaving = matches!(
+									old_ledger.status,
+									OneToManyDelegatorStatus::Leaving(_)
+								);
+								ensure!(leaving, Error::<T>::DelegatorNotLeaving);
+
+								old_ledger.less_total = Zero::zero();
+								old_ledger.status = OneToManyDelegatorStatus::Active;
+
+								old_ledger.requests = vec![];
+								old_ledger.request_briefs = BTreeMap::new();
+								// execute leaving
+							},
+							ExecuteLeave => {
+								// make sure leaving time is less than or equal to current time.
+								let scheduled_time =
+									if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
+										old_ledger.clone().status
+									{
+										if let TimeUnit::Round(tu) = scheduled_time_unit {
+											tu
+										} else {
+											Err(Error::<T>::InvalidTimeUnit)?
+										}
+									} else {
+										Err(Error::<T>::DelegatorNotLeaving)?
+									};
+
+								let current_time_unit =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+								if let TimeUnit::Round(current_time) = current_time_unit {
+									ensure!(
+										current_time >= scheduled_time,
+										Error::<T>::LeavingNotDue
+									);
+								} else {
+									Err(Error::<T>::InvalidTimeUnit)?;
+								}
+
+								let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> =
+									BTreeMap::new();
+								let request_briefs_set: BTreeMap<
+									MultiLocation,
+									(TimeUnit, BalanceOf<T>),
+								> = BTreeMap::new();
+								let new_ledger =
+									OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+										account: old_ledger.clone().account,
+										total: Zero::zero(),
+										less_total: Zero::zero(),
+										delegations: empty_delegation_set,
+										requests: vec![],
+										request_briefs: request_briefs_set,
+										status: OneToManyDelegatorStatus::Active,
+									};
+								let movr_ledger = Ledger::<
+									MultiLocation,
+									BalanceOf<T>,
+									MultiLocation,
+								>::Moonriver(new_ledger);
+
+								*old_ledger_opt = Some(movr_ledger);
+								// execute request
+							},
+							Liquidize => {
+								let validator_id =
+									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
+
+								ensure!(
+									old_ledger.status == OneToManyDelegatorStatus::Active,
+									Error::<T>::DelegatorLeaving
+								);
+
+								// ensure current round is no less than executable time.
+								let execute_time_unit =
+									unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
+
+								let execute_round =
+									if let TimeUnit::Round(current_round) = execute_time_unit {
+										current_round
+									} else {
+										Err(Error::<T>::InvalidTimeUnit)?
+									};
+
+								let request_time_unit = old_ledger
+									.request_briefs
+									.get(&validator_id)
+									.ok_or(Error::<T>::RequestNotExist)?;
+
+								let request_round =
+									if let TimeUnit::Round(req_round) = request_time_unit.0 {
+										req_round
+									} else {
+										Err(Error::<T>::InvalidTimeUnit)?
+									};
+
+								ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
+
+								let (_, execute_amount) = old_ledger
+									.request_briefs
 									.remove(&validator_id)
 									.ok_or(Error::<T>::Unexpected)?;
-							} else {
-								old_ledger.delegations.insert(validator_id, new_delegate_amount);
-							}
-						}
-					}
+								old_ledger.total = old_ledger
+									.total
+									.checked_sub(&execute_amount)
+									.ok_or(Error::<T>::UnderFlow)?;
 
-					Ok(())
+								old_ledger.less_total = old_ledger
+									.less_total
+									.checked_sub(&execute_amount)
+									.ok_or(Error::<T>::UnderFlow)?;
+
+								let request_index = old_ledger
+									.requests
+									.binary_search_by_key(&validator_id, |rqst| {
+										rqst.validator.clone()
+									})
+									.map_err(|_| Error::<T>::RequestNotExist)?;
+								old_ledger.requests.remove(request_index);
+
+								let old_delegate_amount = old_ledger
+									.delegations
+									.get(&validator_id)
+									.ok_or(Error::<T>::ValidatorNotBonded)?;
+								let new_delegate_amount = old_delegate_amount
+									.checked_sub(&execute_amount)
+									.ok_or(Error::<T>::UnderFlow)?;
+
+								if new_delegate_amount == Zero::zero() {
+									old_ledger
+										.delegations
+										.remove(&validator_id)
+										.ok_or(Error::<T>::Unexpected)?;
+								} else {
+									old_ledger
+										.delegations
+										.insert(validator_id, new_delegate_amount);
+								}
+							},
+						}
+						Ok(())
+					} else {
+						Err(Error::<T>::Unexpected)
+					}
 				},
 			)?;
 

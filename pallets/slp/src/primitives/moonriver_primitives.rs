@@ -64,23 +64,24 @@ pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	pub delegator_id: DelegatorId,
 	/// The validator id that needs to be update
 	pub validator_id: Option<ValidatorId>,
-	/// If this is true, then this is a bonding entry.
-	pub if_bond: bool,
-	/// If this is true and if_bond is false, then this is an unlocking entry.
-	pub if_unlock: bool,
-	pub if_revoke: bool,
-	pub if_cancel: bool,
-	pub if_leave: bool,
-	/// if_cancel_leave true means canceling leaving operation.
-	pub if_cancel_leave: bool,
-	/// if_execute_leave true means executing delegator leaving operation.
-	pub if_execute_leave: bool,
-	/// if all ifs are false, then it is a liquidize operation.
-	/// The unlocking/bonding amount.
+	/// Update operation type
+	pub update_operation: MoonriverLedgerUpdateOperation,
 	#[codec(compact)]
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
 	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
 	/// timeunit when the xcm message is sent.
 	pub unlock_time: Option<TimeUnit>,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum MoonriverLedgerUpdateOperation {
+	Bond,
+	BondLess,
+	Revoke,
+	CancelRequest,
+	LeaveDelegator,
+	CancelLeave,
+	ExecuteLeave,
+	Liquidize,
 }
