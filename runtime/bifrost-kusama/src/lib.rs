@@ -2071,6 +2071,8 @@ mod benches {
 		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
 		[parachain_staking, ParachainStaking]
+		[bifrost_vtoken_minting, VtokenMinting]
+		[bifrost_farming, Farming]
 	);
 }
 
