@@ -111,8 +111,8 @@ impl<T: Config>
 		Ok(delegator_multilocation)
 	}
 
-	/// First bond a new validator for a delegator. In the Moonriver context, corresponding part
-	/// is "delegate" function.
+	/// First bond a new validator for a delegator. Moonriver's corresponding function is
+	/// "delegate".
 	fn bond(
 		&self,
 		who: &MultiLocation,
@@ -141,10 +141,11 @@ impl<T: Config>
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
-			ensure!(amount >= mins_maxs.delegation_amount_minimum, Error::<T>::LowerThanMinimum);
 
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
-			let add_total = ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			let active_amount =
+				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
+			let add_total = active_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				add_total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
@@ -430,26 +431,9 @@ impl<T: Config>
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
-			// check if there is pending request
-			ensure!(ledger.request_briefs.contains_key(&collator), Error::<T>::RequestNotExist);
 
-			// get pending request amount.
-			let mut rebond_amount = BalanceOf::<T>::from(0u32);
-			for OneToManyScheduledRequest::<MultiLocation, BalanceOf<T>> {
-				validator: vali,
-				action: act,
-				..
-			} in ledger.requests.iter()
-			{
-				if *vali == collator {
-					rebond_amount = match act {
-						Revoke(revoke_balance) => *revoke_balance,
-						Decrease(decrease_balance) => *decrease_balance,
-					};
-
-					break;
-				}
-			}
+			let (_, rebond_amount) =
+				ledger.request_briefs.get(&collator).ok_or(Error::<T>::RequestNotExist)?;
 
 			// check if the pending request amount plus active amount greater than delegator minimum
 			// request.
@@ -461,16 +445,6 @@ impl<T: Config>
 			// ensure the rebond after amount meet the delegator bond requirement.
 			ensure!(
 				rebond_after_amount >= mins_maxs.delegator_bonded_minimum,
-				Error::<T>::LowerThanMinimum
-			);
-
-			// ensure the rebond after amount meet the basic delegation requirement.
-			let old_delegate_amount =
-				ledger.delegations.get(&collator).ok_or(Error::<T>::ValidatorNotBonded)?;
-			let new_delegation_amount =
-				old_delegate_amount.checked_add(&rebond_amount).ok_or(Error::<T>::OverFlow)?;
-			ensure!(
-				new_delegation_amount >= mins_maxs.delegation_amount_minimum.into(),
 				Error::<T>::LowerThanMinimum
 			);
 		} else {
@@ -708,7 +682,7 @@ impl<T: Config>
 			Self::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonriverLedgerUpdateOperation::Liquidize,
+				MoonriverLedgerUpdateOperation::ExecuteRequest,
 				due_amount,
 				query_id,
 				timeout,
@@ -1145,16 +1119,16 @@ impl<T: Config> MoonriverAgent<T> {
 		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {
 		use MoonriverLedgerUpdateOperation::{
-			BondLess, ExecuteLeave, LeaveDelegator, Liquidize, Revoke,
+			BondLess, ExecuteLeave, ExecuteRequest, LeaveDelegator, Revoke,
 		};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 
 		// First to see if the delegation relationship exist.
 		// If not, create one. If yes,
 		let unlock_time = match &update_operation {
-			BondLess | Revoke | ExecuteLeave => Self::get_unlocking_round_from_current(false)?,
+			BondLess | Revoke => Self::get_unlocking_round_from_current(false)?,
 			LeaveDelegator => Self::get_unlocking_round_from_current(true)?,
-			Liquidize => T::VtokenMinting::get_ongoing_time_unit(MOVR),
+			ExecuteRequest | ExecuteLeave => T::VtokenMinting::get_ongoing_time_unit(MOVR),
 			_ => None,
 		};
 
@@ -1274,7 +1248,7 @@ impl<T: Config> MoonriverAgent<T> {
 				|old_ledger_opt| -> Result<(), Error<T>> {
 					if let Some(Ledger::Moonriver(ref mut old_ledger)) = old_ledger_opt {
 						match update_operation {
-							// bond more
+							// first bond and bond more operations
 							Bond => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
@@ -1301,8 +1275,8 @@ impl<T: Config> MoonriverAgent<T> {
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
 								old_ledger.delegations.insert(validator_id, new_amount);
-								// schedule bond less request
 							},
+							// schedule bond less request
 							BondLess => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
@@ -1332,8 +1306,8 @@ impl<T: Config> MoonriverAgent<T> {
 								old_ledger
 									.request_briefs
 									.insert(validator_id, (unlock_time_unit, amount));
-								// schedule revoke request
 							},
+							// schedule revoke request
 							Revoke => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
@@ -1369,8 +1343,8 @@ impl<T: Config> MoonriverAgent<T> {
 									validator_id,
 									(unlock_time_unit, revoke_amount.clone()),
 								);
-								// cancel bond less or revoke request
 							},
+							// cancel bond less or revoke request
 							CancelRequest => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
@@ -1399,8 +1373,8 @@ impl<T: Config> MoonriverAgent<T> {
 								old_ledger.requests.remove(request_index);
 
 								old_ledger.request_briefs.remove(&validator_id);
-								// schedule leave
 							},
+							// schedule leave
 							LeaveDelegator => {
 								ensure!(
 									old_ledger.status == OneToManyDelegatorStatus::Active,
@@ -1435,8 +1409,8 @@ impl<T: Config> MoonriverAgent<T> {
 
 								old_ledger.requests = new_requests;
 								old_ledger.request_briefs = new_request_briefs;
-								// cancel leave
 							},
+							// cancel leave
 							CancelLeave => {
 								let leaving = matches!(
 									old_ledger.status,
@@ -1449,8 +1423,8 @@ impl<T: Config> MoonriverAgent<T> {
 
 								old_ledger.requests = vec![];
 								old_ledger.request_briefs = BTreeMap::new();
-								// execute leaving
 							},
+							// execute leaving
 							ExecuteLeave => {
 								// make sure leaving time is less than or equal to current time.
 								let scheduled_time =
@@ -1503,7 +1477,7 @@ impl<T: Config> MoonriverAgent<T> {
 								*old_ledger_opt = Some(movr_ledger);
 								// execute request
 							},
-							Liquidize => {
+							ExecuteRequest => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
 
@@ -1590,10 +1564,7 @@ impl<T: Config> MoonriverAgent<T> {
 			DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 			// Delete the query in pallet_xcm.
-			ensure!(
-				T::SubstrateResponseManager::remove_query_record(query_id),
-				Error::<T>::QueryResponseRemoveError
-			);
+			T::SubstrateResponseManager::remove_query_record(query_id);
 
 			Ok(())
 		} else {
