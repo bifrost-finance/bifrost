@@ -36,7 +36,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
 		},
-		DispatchError, Permill,
+		DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -44,6 +44,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, SlpOperator, TimeUnit, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_core::U256;
 use sp_std::vec::Vec;
 pub use weights::WeightInfo;
 
@@ -877,11 +878,15 @@ pub mod pallet {
 				token_amount.checked_sub(&mint_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			let mut vtoken_amount = token_amount_excluding_fee;
 			if token_pool_amount != BalanceOf::<T>::zero() {
-				vtoken_amount = token_amount_excluding_fee
-					.checked_mul(&vtoken_total_issuance)
-					.ok_or(Error::<T>::CalculationOverflow)?
-					.checked_div(&token_pool_amount)
-					.ok_or(Error::<T>::CalculationOverflow)?;
+				vtoken_amount =
+					U256::from(token_amount_excluding_fee.to_owned().saturated_into::<u128>())
+						.saturating_mul(
+							vtoken_total_issuance.to_owned().saturated_into::<u128>().into(),
+						)
+						.checked_div(token_pool_amount.to_owned().saturated_into::<u128>().into())
+						.ok_or(Error::<T>::CalculationOverflow)?
+						.as_u128()
+						.saturated_into();
 			}
 
 			// Charging fees
