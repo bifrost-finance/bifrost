@@ -35,6 +35,9 @@ fn mint() {
 			Error::<Runtime>::BelowMinimumMint
 		);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
+		assert_eq!(VtokenMinting::token_pool(MOVR), 190000000000000000000);
 		assert_eq!(VtokenMinting::token_pool(KSM), 950);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 200);
 		assert_eq!(Tokens::total_issuance(vKSM), 1950);
