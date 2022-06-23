@@ -851,12 +851,16 @@ pub mod pallet {
 					TimeUnit::Era(era_b) => TimeUnit::Era(era_a + era_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
+				TimeUnit::Round(round_a) => match b {
+					TimeUnit::Round(round_b) => TimeUnit::Round(round_a + round_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
 					TimeUnit::SlashingSpan(slashing_span_b) =>
 						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
-				_ => return Err(Error::<T>::Unexpected.into()),
+				// _ => return Err(Error::<T>::Unexpected.into()),
 			};
 
 			Ok(result)
@@ -1045,12 +1049,14 @@ pub mod pallet {
 
 		fn handle_ledger_by_currency(currency: CurrencyId) -> DispatchResult {
 			let time_unit = MinTimeUnit::<T>::get(currency);
-			let unlock_duration_era = match UnlockDuration::<T>::get(currency) {
+			let unlock_duration_elem = match UnlockDuration::<T>::get(currency) {
 				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
+				Some(TimeUnit::Round(unlock_duration_round)) => unlock_duration_round,
 				_ => 0,
 			};
-			let ongoing_era = match OngoingTimeUnit::<T>::get(currency) {
+			let ongoing_elem = match OngoingTimeUnit::<T>::get(currency) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
+				Some(TimeUnit::Round(ongoing_round)) => ongoing_round,
 				_ => 0,
 			};
 			if let Some((_total_locked, ledger_list, token_id)) =
@@ -1078,26 +1084,24 @@ pub mod pallet {
 					}
 				}
 			} else {
-				match time_unit {
-					TimeUnit::Era(min_era) =>
-						if ongoing_era + unlock_duration_era > min_era {
-							MinTimeUnit::<T>::mutate(
-								currency,
-								|time_unit| -> Result<(), Error<T>> {
-									match time_unit {
-										TimeUnit::Era(era) => {
-											*era = era
-												.checked_add(1)
-												.ok_or(Error::<T>::CalculationOverflow)?;
-											Ok(())
-										},
-										_ => Ok(()),
-									}
-								},
-							)?;
+				MinTimeUnit::<T>::mutate(currency, |time_unit| -> Result<(), Error<T>> {
+					match time_unit {
+						TimeUnit::Era(era) => {
+							if ongoing_elem + unlock_duration_elem > *era {
+								*era = era.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
 						},
-					_ => (),
-				}
+						TimeUnit::Round(round) => {
+							if ongoing_elem + unlock_duration_elem > *round {
+								*round =
+									round.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
+						_ => Ok(()),
+					}
+				})?;
 			};
 
 			Ok(())

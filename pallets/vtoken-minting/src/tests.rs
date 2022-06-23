@@ -71,8 +71,8 @@ fn redeem() {
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_eq!(VtokenMinting::token_pool(KSM), 1686); // 1000 + 980 - 98 - 196
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 294); // 98 + 196
-		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), MOVR, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::update_ongoing_time_unit(MOVR, TimeUnit::Era(1)));
+		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), MOVR, TimeUnit::Round(1)));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(MOVR, TimeUnit::Round(1)));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 300000000000000000000));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vMOVR, 20000000000000000000));
 		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::root(), MOVR));
