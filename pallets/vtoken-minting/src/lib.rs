@@ -34,7 +34,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
+			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero,
 		},
 		DispatchError, Permill, SaturatedConversion,
 	},
