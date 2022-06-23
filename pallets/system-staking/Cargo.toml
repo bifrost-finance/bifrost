@@ -1,5 +1,5 @@
 [package]
-name = "pallet-system-staking"
+name = "bifrost-system-staking"
 version = "4.0.0-dev"
 description = "System staking pallet"
 authors = ["Akagi201 <akagi201@gmail.com>"]

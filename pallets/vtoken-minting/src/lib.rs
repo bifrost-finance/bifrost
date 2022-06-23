@@ -86,8 +86,8 @@ pub mod pallet {
 		/// Handler to notify the runtime when redeem success
 		/// If you don't need it, you can specify the type `()`.
 		type OnRedeemSuccess: OnRedeemSuccess<
-			CurrencyIdOf<Self>,
 			AccountIdOf<Self>,
+			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
 		>;
 

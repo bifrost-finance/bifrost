@@ -21,8 +21,8 @@
 pub mod types;
 pub mod weights;
 
-pub use frame_support::pallet_prelude::Weight;
 use frame_support::PalletId;
+pub use frame_support::{inherent::Vec, pallet_prelude::Weight};
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -201,7 +201,7 @@ pub mod pallet {
 			ensure!(
 				exec_delay != 0 &&
 					system_stakable_farming_rate > Permill::zero() &&
-					farming_poolids.len() > 0,
+					!farming_poolids.is_empty(),
 				Error::<T>::InvalidTokenConfig
 			);
 			let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token) {
@@ -238,6 +238,7 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
+													  //todo: switch to new config
 			let token_info = <TokenStatus<T>>::get(&token).ok_or(Error::<T>::TokenInfoNotFound)?;
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
@@ -254,6 +255,8 @@ pub mod pallet {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
 			let token_info = <TokenStatus<T>>::get(&token).ok_or(Error::<T>::TokenInfoNotFound)?;
+
+			// todo staking token + not redeem success amount
 
 			let amount = token_info.system_shadow_amount;
 			T::MultiCurrency::deposit(token, &T::TreasuryAccount::get(), amount).ok();
@@ -276,12 +279,18 @@ impl<T: Config> Pallet<T> {
 			token_info.system_stakable_amount += T::FarmingInfo::get_token_shares(*m, token_id);
 		}
 		// check amount, and call vtoken minting pallet
-		if token_info.system_stakable_amount + token_info.current_config.system_stakable_base >
-			token_info.system_shadow_amount
+		// todo:
+		if token_info
+			.current_config
+			.system_stakable_farming_rate
+			.mul_floor(token_info.system_stakable_amount) +
+			token_info.current_config.system_stakable_base >
+			(token_info.system_shadow_amount - token_info.pending_redeem_amount)
 		{
 			let mint_amount = token_info.system_stakable_amount +
 				token_info.current_config.system_stakable_base -
-				token_info.system_shadow_amount;
+				(token_info.system_shadow_amount - token_info.pending_redeem_amount);
+			// todo: deposit
 			match T::VtokenMintingInterface::mint(account, token_id, mint_amount) {
 				Ok(_) => {
 					token_info.system_shadow_amount += mint_amount;
@@ -290,13 +299,15 @@ impl<T: Config> Pallet<T> {
 					log::warn!("mint error: {:?}", error);
 				},
 			}
-			token_info.system_shadow_amount += mint_amount;
 		} else if token_info.system_stakable_amount + token_info.current_config.system_stakable_base <
-			token_info.system_shadow_amount
+			(token_info.system_shadow_amount - token_info.pending_redeem_amount)
 		{
-			let redeem_amount = token_info.system_shadow_amount -
+			let redeem_amount = (token_info.system_shadow_amount -
+				token_info.pending_redeem_amount) -
 				(token_info.system_stakable_amount +
 					token_info.current_config.system_stakable_base);
+			token_info.pending_redeem_amount += redeem_amount;
+			// todo: redeem_amount to vtoken amount
 			T::VtokenMintingInterface::redeem(account, token_id, redeem_amount).ok();
 		}
 
@@ -315,6 +326,8 @@ impl<T: Config> Pallet<T> {
 		};
 
 		token_info.system_shadow_amount -= token_amount;
+		token_info.pending_redeem_amount -= token_amount;
+		// todo withdraw 销毁。
 		<TokenStatus<T>>::insert(&token_id, token_info);
 		T::WeightInfo::on_redeem_success()
 	}

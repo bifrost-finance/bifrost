@@ -138,7 +138,7 @@ pub mod pallet {
 
 		/// Handler to notify the runtime when refund.
 		/// If you don't need it, you can specify the type `()`.
-		type OnRefund: OnRefund<CurrencyId, AccountIdOf<Self>, BalanceOf<Self>>;
+		type OnRefund: OnRefund<AccountIdOf<Self>, CurrencyId, BalanceOf<Self>>;
 
 		//【For xcm v3】
 		// /// This chain's Universal Location. Enabled only for xcm v3 version.

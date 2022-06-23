@@ -189,6 +189,7 @@ impl vtoken_minting::Config for Runtime {
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
+	type OnRedeemSuccess = ();
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
@@ -271,6 +272,7 @@ impl bifrost_slp::Config for Runtime {
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = ();
 }
 
 pub struct ExtBuilder {

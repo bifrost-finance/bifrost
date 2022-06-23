@@ -649,6 +649,7 @@ dependencies = [
  "bifrost-salp-lite",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
+ "bifrost-system-staking",
  "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
@@ -1029,6 +1030,28 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-interface",
+]
+
+[[package]]
+name = "bifrost-system-staking"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -6718,28 +6741,6 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-system-staking"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",

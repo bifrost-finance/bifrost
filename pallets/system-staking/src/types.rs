@@ -69,6 +69,7 @@ pub struct TokenInfo<Balance: Copy> {
 	pub system_stakable_amount: Balance,
 	pub system_shadow_amount: Balance,
 	pub system_staking_token_amount: Balance,
+	pub pending_redeem_amount: Balance,
 	// config params
 	pub current_config: TokenConfig<Balance>,
 	pub new_config: TokenConfig<Balance>,
@@ -80,6 +81,7 @@ impl<Balance: Zero + Copy> Default for TokenInfo<Balance> {
 			system_stakable_amount: Balance::zero(),
 			system_shadow_amount: Balance::zero(),
 			system_staking_token_amount: Balance::zero(),
+			pending_redeem_amount: Balance::zero(),
 			current_config: TokenConfig::<Balance>::default(),
 			new_config: TokenConfig::<Balance>::default(),
 		}
