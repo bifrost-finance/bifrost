@@ -746,7 +746,7 @@ impl<T: Config> FarmingInfo<BalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
 	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		if let Some(pool_info) = Self::pool_infos(&pool_id) {
 			if let Some(portion) = pool_info.tokens_proportion.get(&currency_id) {
-				return portion.saturating_reciprocal_mul(pool_info.total_shares);
+				return portion.mul_floor(pool_info.total_shares);
 			} else {
 				return Zero::zero();
 			}

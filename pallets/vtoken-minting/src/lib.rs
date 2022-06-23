@@ -1184,6 +1184,36 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		pub fn token_to_vtoken_inner(
+			token_id: CurrencyId,
+			vtoken_id: CurrencyId,
+			token_amount: BalanceOf<T>,
+		) -> BalanceOf<T> {
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+
+			token_amount
+				.checked_mul(&vtoken_total_issuance)
+				.unwrap_or(BalanceOf::<T>::zero())
+				.checked_div(&token_pool_amount)
+				.unwrap_or(BalanceOf::<T>::zero())
+		}
+
+		pub fn vtoken_to_token_inner(
+			token_id: CurrencyId,
+			vtoken_id: CurrencyId,
+			vtoken_amount: BalanceOf<T>,
+		) -> BalanceOf<T> {
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+
+			vtoken_amount
+				.checked_mul(&token_pool_amount)
+				.unwrap_or(BalanceOf::<T>::zero())
+				.checked_div(&vtoken_total_issuance)
+				.unwrap_or(BalanceOf::<T>::zero())
+		}
 	}
 }
 
@@ -1349,5 +1379,21 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyId, BalanceOf<T>>
 		vtoken_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
+	}
+
+	fn token_to_vtoken(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		token_amount: BalanceOf<T>,
+	) -> BalanceOf<T> {
+		Self::token_to_vtoken_inner(token_id, vtoken_id, token_amount)
+	}
+
+	fn vtoken_to_token(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: BalanceOf<T>,
+	) -> BalanceOf<T> {
+		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
 	}
 }

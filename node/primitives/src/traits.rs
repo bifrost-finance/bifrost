@@ -175,4 +175,14 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> DispatchResult;
+	fn token_to_vtoken(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		token_amount: Balance,
+	) -> Balance;
+	fn vtoken_to_token(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: Balance,
+	) -> Balance;
 }
