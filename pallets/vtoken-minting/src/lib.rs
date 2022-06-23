@@ -355,11 +355,12 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_amount = vtoken_amount
-				.checked_mul(&token_pool_amount)
+			let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
+				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
+				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
 				.ok_or(Error::<T>::CalculationOverflow)?
-				.checked_div(&vtoken_total_issuance)
-				.ok_or(Error::<T>::CalculationOverflow)?;
+				.as_u128()
+				.saturated_into();
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
