@@ -21,4 +21,4 @@ use crate::mock::*;
 fn token_config_should_work() {
 // 	ExtBuilder::default().build().execute_with(|| {
 // 	});
-// }
+}

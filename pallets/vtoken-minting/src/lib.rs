@@ -1186,33 +1186,53 @@ pub mod pallet {
 		}
 
 		pub fn token_to_vtoken_inner(
-			token_id: CurrencyId,
-			vtoken_id: CurrencyId,
+			token_id: CurrencyIdOf<T>,
+			vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		) -> BalanceOf<T> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			token_amount
-				.checked_mul(&vtoken_total_issuance)
-				.unwrap_or(BalanceOf::<T>::zero())
-				.checked_div(&token_pool_amount)
-				.unwrap_or(BalanceOf::<T>::zero())
+			U256::from(token_amount.saturated_into::<u128>())
+				.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
+				.checked_div(token_pool_amount.saturated_into::<u128>().into())
+				.unwrap_or(U256::zero())
+				.as_u128()
+				.saturated_into()
 		}
 
 		pub fn vtoken_to_token_inner(
-			token_id: CurrencyId,
-			vtoken_id: CurrencyId,
+			token_id: CurrencyIdOf<T>,
+			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> BalanceOf<T> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			vtoken_amount
-				.checked_mul(&token_pool_amount)
-				.unwrap_or(BalanceOf::<T>::zero())
-				.checked_div(&vtoken_total_issuance)
-				.unwrap_or(BalanceOf::<T>::zero())
+			U256::from(vtoken_amount.saturated_into::<u128>())
+				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
+				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
+				.unwrap_or(U256::zero())
+				.as_u128()
+				.saturated_into()
+		}
+
+		pub fn vtoken_id_inner(
+			token_id: CurrencyIdOf<T>,
+		) -> Option<CurrencyIdOf<T>> {
+			match token_id.to_vtoken() {
+				Ok(vtoken_id) => Some(vtoken_id),
+				Err(_) => None,
+			}
+		}
+
+		pub fn token_id_inner(
+			vtoken_id: CurrencyIdOf<T>,
+		) -> Option<CurrencyIdOf<T>> {
+			match vtoken_id.to_token() {
+				Ok(token_id) => Some(token_id),
+				Err(_) => None,
+			}
 		}
 	}
 }
@@ -1364,7 +1384,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	}
 }
 
-impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyId, BalanceOf<T>> for Pallet<T> {
+impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
 	fn mint(
 		exchanger: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
@@ -1382,18 +1402,30 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyId, BalanceOf<T>>
 	}
 
 	fn token_to_vtoken(
-		token_id: CurrencyId,
-		vtoken_id: CurrencyId,
+		token_id: CurrencyIdOf<T>,
+		vtoken_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
 	) -> BalanceOf<T> {
 		Self::token_to_vtoken_inner(token_id, vtoken_id, token_amount)
 	}
 
 	fn vtoken_to_token(
-		token_id: CurrencyId,
-		vtoken_id: CurrencyId,
+		token_id: CurrencyIdOf<T>,
+		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
 	) -> BalanceOf<T> {
 		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
+	}
+
+	fn vtoken_id(
+		token_id: CurrencyIdOf<T>,
+	) -> Option<CurrencyIdOf<T>> {
+		Self::vtoken_id_inner(token_id)
+	}
+
+	fn token_id(
+		vtoken_id: CurrencyIdOf<T>,
+	) -> Option<CurrencyIdOf<T>> {
+		Self::token_id_inner(vtoken_id)
 	}
 }
