@@ -33,9 +33,7 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{
-			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero,
-		},
+		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
 		DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
