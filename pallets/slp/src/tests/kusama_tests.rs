@@ -302,7 +302,7 @@ fn refund_currency_due_unbond_works() {
 			(13, bounded_vec_eddie.clone()),
 		);
 
-		bifrost_vtoken_minting::CurrencyUnlockingTotal::<Runtime>::set(1000);
+		bifrost_vtoken_minting::UnlockingTotal::<Runtime>::insert(KSM, 1000);
 
 		// check account balances before refund
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 50);
