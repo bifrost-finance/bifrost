@@ -77,6 +77,14 @@ fn redeem() {
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vMOVR, 20000000000000000000));
 		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::root(), MOVR));
 		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), MOVR, 19000000000000000000));
+		assert_ok!(VtokenMinting::set_min_time_unit(
+			Origin::signed(ALICE),
+			MOVR,
+			TimeUnit::Round(1)
+		));
+		assert_eq!(VtokenMinting::min_time_unit(MOVR), TimeUnit::Round(1));
+		assert_ok!(VtokenMinting::set_unlocking_total(Origin::signed(ALICE), MOVR, 1000));
+		assert_eq!(VtokenMinting::unlocking_total(MOVR), 1000);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 980);
 		let mut ledger_list_origin = BoundedVec::default();

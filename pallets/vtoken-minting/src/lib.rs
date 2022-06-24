@@ -169,6 +169,10 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
 		},
+		MinTimeUnitSet {
+			token_id: CurrencyIdOf<T>,
+			time_unit: TimeUnit,
+		},
 	}
 
 	#[pallet::error]
@@ -868,6 +872,21 @@ pub mod pallet {
 			UnlockingTotal::<T>::mutate(&token_id, |unlocking_total| *unlocking_total = amount);
 
 			Self::deposit_event(Event::UnlockingTotalSet { token_id, amount });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn set_min_time_unit(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			time_unit: TimeUnit,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			MinTimeUnit::<T>::mutate(&token_id, |old_time_unit| *old_time_unit = time_unit.clone());
+
+			Self::deposit_event(Event::MinTimeUnitSet { token_id, time_unit });
 			Ok(())
 		}
 	}
