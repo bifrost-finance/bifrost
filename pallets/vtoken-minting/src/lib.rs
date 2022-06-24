@@ -1217,18 +1217,14 @@ pub mod pallet {
 				.saturated_into()
 		}
 
-		pub fn vtoken_id_inner(
-			token_id: CurrencyIdOf<T>,
-		) -> Option<CurrencyIdOf<T>> {
+		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 			match token_id.to_vtoken() {
 				Ok(vtoken_id) => Some(vtoken_id),
 				Err(_) => None,
 			}
 		}
 
-		pub fn token_id_inner(
-			vtoken_id: CurrencyIdOf<T>,
-		) -> Option<CurrencyIdOf<T>> {
+		pub fn token_id_inner(vtoken_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 			match vtoken_id.to_token() {
 				Ok(token_id) => Some(token_id),
 				Err(_) => None,
@@ -1384,7 +1380,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	}
 }
 
-impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
+impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
+	for Pallet<T>
+{
 	fn mint(
 		exchanger: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
@@ -1417,15 +1415,11 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
 	}
 
-	fn vtoken_id(
-		token_id: CurrencyIdOf<T>,
-	) -> Option<CurrencyIdOf<T>> {
+	fn vtoken_id(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 		Self::vtoken_id_inner(token_id)
 	}
 
-	fn token_id(
-		vtoken_id: CurrencyIdOf<T>,
-	) -> Option<CurrencyIdOf<T>> {
+	fn token_id(vtoken_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 		Self::token_id_inner(vtoken_id)
 	}
 }

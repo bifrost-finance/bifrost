@@ -185,10 +185,6 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> Balance;
-	fn vtoken_id(
-		token_id: CurrencyId,
-	) -> Option<CurrencyId>;
-	fn token_id(
-		vtoken_id: CurrencyId,
-	) -> Option<CurrencyId>;
+	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
+	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 }

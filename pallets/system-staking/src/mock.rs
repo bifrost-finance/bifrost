@@ -15,166 +15,358 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate as pallet_system_staking;
-use frame_system::EnsureRoot;
-use crate::{Config};
+#![cfg(test)]
+#![allow(non_upper_case_globals)]
+
+use bifrost_slp::{QueryId, QueryResponseManager};
+use codec::{Decode, Encode};
+pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{Everything},
-	weights::Weight,
+	ord_parameter_types,
+	pallet_prelude::Get,
+	parameter_types,
+	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
-use node_primitives::{Amount, CurrencyId, TokenSymbol};
-use sp_core::H256;
-use sp_io;
+use frame_system::{EnsureRoot, EnsureSignedBy};
+use hex_literal::hex;
+use node_primitives::{CurrencyId, TokenSymbol};
+use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-	Perbill,
+	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
+	AccountId32,
+};
+use sp_std::vec;
+use xcm::{
+	latest::{Junction, MultiLocation},
+	opaque::latest::{
+		Junction::Parachain,
+		Junctions::{X1, X2},
+		NetworkId,
+	},
 };
 
-pub type AccountId = u64;
-pub type Balance = u128;
+use crate as system_staking;
+
 pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type Balance = u128;
 
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub type AccountId = AccountId32;
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
+pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId = AccountId32::new([1u8; 32]);
+pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
-
-// Configure a mock runtime to test the pallet.
-construct_runtime!(
-	pub enum Test where
+frame_support::construct_runtime!(
+	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
-		// Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		SystemStaking: pallet_system_staking::{Pallet, Call, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage},
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
+		SystemStaking: system_staking::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::one();
-	pub const SS58Prefix: u8 = 42;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
-
-impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
+impl frame_system::Config for Runtime {
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type AccountId = AccountId;
+	type BaseCallFilter = frame_support::traits::Everything;
+	type BlockHashCount = BlockHashCount;
+	type BlockLength = ();
+	type BlockNumber = u64;
+	type BlockWeights = ();
 	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = SS58Prefix;
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 1;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
-impl pallet_balances::Config for Test {
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 4];
-	type MaxLocks = ();
+
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+impl pallet_balances::Config for Runtime {
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type Balance = Balance;
-	type Event = Event;
 	type DustRemoval = ();
+	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System;
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
-pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, u64>;
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = BNC;
-	pub const RelayCurrencyId: CurrencyId = KSM;
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
+	};
 }
-
-impl orml_currencies::Config for Test {
-	type GetNativeCurrencyId = NativeCurrencyId;
-	// type MultiCurrency = Tokens;
-	type MultiCurrency = ();
-	type NativeCurrency = BifrostToken;
+impl orml_tokens::Config for Runtime {
+	type Amount = i128;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = Nothing;
+	type Event = Event;
+	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type OnDust = ();
+	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
 
-// orml_traits::parameter_type_with_key! {
-// 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-// 		0
-// 	};
-// }
-
-// impl orml_tokens::Config for Runtime {
-// 	type Amount = Amount;
-// 	type Balance = Balance;
-// 	type CurrencyId = CurrencyId;
-// 	type DustRemovalWhitelist = Nothing;
-// 	type Event = Event;
-// 	type ExistentialDeposits = ExistentialDeposits;
-// 	type MaxLocks = MaxLocks;
-// 	type MaxReserves = ();
-// 	type OnDust = ();
-// 	type ReserveIdentifier = [u8; 8];
-// 	type WeightInfo = ();
-// }
-
 parameter_types! {
-	pub const TreasuryAccount: AccountId = 1u64.into();
-	pub const ThePalletId: PalletId = PalletId(*b"/systems");
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
-impl Config for Test {
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
+	type WeightInfo = ();
+	type OnRedeemSuccess = ();
+}
+
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		match currency_id {
+			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+				1,
+				X2(
+					Parachain(2023),
+					Junction::AccountKey20 {
+						network: NetworkId::Any,
+						key: Slp::derivative_account_id_20(
+							hex!["7369626cd1070000000000000000000000000000"].into(),
+							sub_account_index,
+						)
+						.into(),
+					},
+				),
+			),
+			_ => MultiLocation::new(
+				1,
+				X1(Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: Self::derivative_account_id(
+						ParaId::from(2001u32).into_account(),
+						sub_account_index,
+					)
+					.into(),
+				}),
+			),
+		}
+	}
+}
+
+// Mock Utility::derivative_account_id function.
+impl SubAccountIndexMultiLocationConvertor {
+	pub fn derivative_account_id(who: AccountId, index: u16) -> AccountId {
+		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
+		Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+			.expect("infinite length input; no invalid inputs for type; qed")
+	}
+}
+
+pub struct ParachainId;
+impl Get<ParaId> for ParachainId {
+	fn get() -> ParaId {
+		2001.into()
+	}
+}
+
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseManager {
+	fn get_query_response_record(_query_id: QueryId) -> bool {
+		Default::default()
+	}
+	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
+		Default::default()
+	}
+	fn remove_query_record(_query_id: QueryId) -> bool {
+		Default::default()
+	}
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type WeightInfo = ();
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = ParachainId;
+	type XcmRouter = ();
+	type XcmExecutor = ();
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = ();
+}
+
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+}
+
+ord_parameter_types! {
+	pub const One: AccountId = ALICE;
+}
+
+impl bifrost_farming::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub const ThePalletId: PalletId = PalletId(*b"bf/sysst");
+}
+
+impl system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
-	type WeightInfo =  pallet_system_staking::weights::SubstrateWeight<Test>;
-	type FarmingInfo = ();
-	type VtokenMintingInterface = ();
+	type WeightInfo = system_staking::weights::SubstrateWeight<Runtime>;
+	type FarmingInfo = Farming;
+	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = TreasuryAccount;
 	type PalletId = ThePalletId;
 }
 
-pub(crate) struct ExtBuilder;
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self
+		Self { endowed_accounts: vec![] }
 	}
 }
 
 impl ExtBuilder {
-	pub(crate) fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Test>()
-			.expect("Frame system builds valid default genesis config");
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
 
-		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| System::set_block_number(1));
-		ext
+	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, BNC, 100),
+			(BOB, BNC, 100),
+			(CHARLIE, BNC, 100),
+			(ALICE, DOT, 100),
+			(ALICE, vDOT, 400),
+			(BOB, vKSM, 1000),
+			(BOB, KSM, 10000000000),
+			(BOB, MOVR, 1000000000000000000000),
+		])
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		use frame_benchmarking::whitelisted_caller;
+		let whitelist_caller: AccountId = whitelisted_caller();
+		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == BNC)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id != BNC)
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		t.into()
 	}
 }

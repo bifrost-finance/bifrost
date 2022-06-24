@@ -21,27 +21,23 @@
 pub mod types;
 pub mod weights;
 
+pub use frame_support::weights::Weight;
 use frame_support::PalletId;
-pub use frame_support::{inherent::Vec, pallet_prelude::Weight};
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 pub use types::*;
 pub use weights::WeightInfo;
 pub use RoundIndex;
-use sp_runtime::traits::Zero;
-use sp_runtime::traits::Saturating;
-use sp_std::vec;
+#[cfg(test)]
+mod mock;
 
-// #[cfg(test)]
-// mod mock;
+#[cfg(test)]
+mod tests;
 
-// #[cfg(test)]
-// mod tests;
-
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -171,7 +167,7 @@ pub mod pallet {
 				// mutate round
 				round.update(n);
 				<Round<T>>::put(round);
-				Self::deposit_event(Event::NewRound{
+				Self::deposit_event(Event::NewRound {
 					current: round.current,
 					first: round.first,
 					length: round.length,
@@ -234,7 +230,10 @@ pub mod pallet {
 			}
 
 			if let Some(system_stakable_farming_rate) = system_stakable_farming_rate {
-				ensure!(system_stakable_farming_rate >= Permill::zero(), Error::<T>::InvalidTokenConfig);
+				ensure!(
+					system_stakable_farming_rate >= Permill::zero(),
+					Error::<T>::InvalidTokenConfig
+				);
 				token_info.new_config.system_stakable_farming_rate = system_stakable_farming_rate;
 			}
 
@@ -253,13 +252,14 @@ pub mod pallet {
 
 			<TokenStatus<T>>::insert(&token, token_info);
 
-			Self::deposit_event(Event::TokenConfigChanged{
-				token: token,
+			Self::deposit_event(Event::TokenConfigChanged {
+				token,
 				exec_delay: exec_delay.unwrap_or(0),
-				system_stakable_farming_rate: system_stakable_farming_rate.unwrap_or(Permill::zero()),
+				system_stakable_farming_rate: system_stakable_farming_rate
+					.unwrap_or(Permill::zero()),
 				add_or_sub: add_or_sub.unwrap_or(true),
 				system_stakable_base: system_stakable_base.unwrap_or(Default::default()),
-				farming_poolids: farming_poolids.unwrap_or(vec![]),
+				farming_poolids: farming_poolids.unwrap_or(Vec::new()),
 			});
 
 			Ok(().into())
@@ -273,7 +273,8 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
-			let mut token_info = <TokenStatus<T>>::get(&token).ok_or(Error::<T>::TokenInfoNotFound)?;
+			let mut token_info =
+				<TokenStatus<T>>::get(&token).ok_or(Error::<T>::TokenInfoNotFound)?;
 			if token_info.check_config_change() {
 				token_info.update_config();
 			}
@@ -293,7 +294,8 @@ pub mod pallet {
 
 			let token_info = <TokenStatus<T>>::get(&token).ok_or(Error::<T>::TokenInfoNotFound)?;
 
-			let vtoken_id = T::VtokenMintingInterface::vtoken_id(token).ok_or(Error::<T>::TokenInfoNotFound)?;
+			let vtoken_id =
+				T::VtokenMintingInterface::vtoken_id(token).ok_or(Error::<T>::TokenInfoNotFound)?;
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
@@ -301,14 +303,16 @@ pub mod pallet {
 
 			let token_amount = token_amount.saturating_sub(token_info.system_shadow_amount);
 
-			let vtoken_amount = T::VtokenMintingInterface::token_to_vtoken(token, vtoken_id, token_amount);
+			let vtoken_amount =
+				T::VtokenMintingInterface::token_to_vtoken(token, vtoken_id, token_amount);
 
 			T::MultiCurrency::transfer(
 				vtoken_id,
 				&pallet_account,
 				&T::TreasuryAccount::get(),
 				vtoken_amount,
-			).map_err(|_| Error::<T>::PayoutFailed)?;
+			)
+			.map_err(|_| Error::<T>::PayoutFailed)?;
 
 			Self::deposit_event(Event::Payout { token });
 
@@ -325,43 +329,51 @@ impl<T: Config> Pallet<T> {
 	) {
 		// query farming info
 		for m in &token_info.current_config.farming_poolids {
-			token_info.system_stakable_amount = token_info.system_stakable_amount.saturating_add(T::FarmingInfo::get_token_shares(*m, token_id));
+			token_info.system_stakable_amount = token_info
+				.system_stakable_amount
+				.saturating_add(T::FarmingInfo::get_token_shares(*m, token_id));
 		}
 		// check amount, and call vtoken minting pallet
 		let stakable_amount = if token_info.current_config.add_or_sub {
 			token_info
-			.current_config
-			.system_stakable_farming_rate
-			.mul_floor(token_info.system_stakable_amount)
-			.saturating_add(token_info.current_config.system_stakable_base)
+				.current_config
+				.system_stakable_farming_rate
+				.mul_floor(token_info.system_stakable_amount)
+				.saturating_add(token_info.current_config.system_stakable_base)
 		} else {
 			token_info
-			.current_config
-			.system_stakable_farming_rate
-			.mul_floor(token_info.system_stakable_amount)
-			.saturating_sub(token_info.current_config.system_stakable_base)
+				.current_config
+				.system_stakable_farming_rate
+				.mul_floor(token_info.system_stakable_amount)
+				.saturating_sub(token_info.current_config.system_stakable_base)
 		};
 		if stakable_amount >
 			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
 		{
-			let mint_amount = stakable_amount.saturating_sub(token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount));
+			let mint_amount = stakable_amount.saturating_sub(
+				token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount),
+			);
 			match T::MultiCurrency::deposit(token_id, &account, mint_amount) {
-				Ok(_) => {
-					match T::VtokenMintingInterface::mint(account, token_id, mint_amount) {
-						Ok(_) => {
-							token_info.system_shadow_amount = token_info.system_shadow_amount.saturating_add(mint_amount);
-						},
-						Err(error) =>  {
-							log::warn!("mint error: {:?}", error);
-						},
-					}
+				Ok(_) => match T::VtokenMintingInterface::mint(account, token_id, mint_amount) {
+					Ok(_) => {
+						token_info.system_shadow_amount =
+							token_info.system_shadow_amount.saturating_add(mint_amount);
+					},
+					Err(error) => {
+						log::warn!("mint error: {:?}", error);
+					},
 				},
 				Err(error) => {
 					log::warn!("{:?} deposit error: {:?}", token_id, error);
 				},
 			}
-		} else if stakable_amount < token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount) {
-			let redeem_amount = token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount).saturating_sub(stakable_amount);
+		} else if stakable_amount <
+			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
+		{
+			let redeem_amount = token_info
+				.system_shadow_amount
+				.saturating_sub(token_info.pending_redeem_amount)
+				.saturating_sub(stakable_amount);
 			match T::VtokenMintingInterface::vtoken_id(token_id) {
 				Some(vtoken_id) => {
 					let vredeem_amount = T::VtokenMintingInterface::token_to_vtoken(
@@ -370,17 +382,19 @@ impl<T: Config> Pallet<T> {
 						redeem_amount,
 					);
 					if vredeem_amount != BalanceOf::<T>::zero() {
-						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount) {
+						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)
+						{
 							Ok(_) => {
-								token_info.pending_redeem_amount = token_info.pending_redeem_amount.saturating_add(redeem_amount);
+								token_info.pending_redeem_amount =
+									token_info.pending_redeem_amount.saturating_add(redeem_amount);
 							},
-							Err(error) =>  {
+							Err(error) => {
 								log::warn!("redeem error: {:?}", error);
 							},
 						}
 					}
 				},
-				None =>  {
+				None => {
 					log::warn!("vtoken_id not found: {:?}", token_id);
 				},
 			}
@@ -407,8 +421,10 @@ impl<T: Config> Pallet<T> {
 			<TokenInfo<BalanceOf<T>>>::default()
 		};
 
-		token_info.system_shadow_amount = token_info.system_shadow_amount.saturating_sub(token_amount);
-		token_info.pending_redeem_amount = token_info.pending_redeem_amount.saturating_sub(token_amount);
+		token_info.system_shadow_amount =
+			token_info.system_shadow_amount.saturating_sub(token_amount);
+		token_info.pending_redeem_amount =
+			token_info.pending_redeem_amount.saturating_sub(token_amount);
 		match T::MultiCurrency::withdraw(token_id, &to, token_amount) {
 			Ok(_) => {},
 			Err(error) => {

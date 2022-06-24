@@ -1036,9 +1036,14 @@ dependencies = [
 name = "bifrost-system-staking"
 version = "4.0.0-dev"
 dependencies = [
+ "bifrost-farming",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "log",
  "node-primitives",
  "orml-currencies",
@@ -1052,6 +1057,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]

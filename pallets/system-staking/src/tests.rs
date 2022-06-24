@@ -15,10 +15,22 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![cfg(test)]
+
 use crate::mock::*;
+use frame_support::{assert_ok, sp_runtime::Permill};
 
 #[test]
 fn token_config_should_work() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 	});
+	ExtBuilder::default().build().execute_with(|| {
+		assert_ok!(SystemStaking::token_config(
+			Origin::root(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(100),
+			None,
+		));
+	});
 }
