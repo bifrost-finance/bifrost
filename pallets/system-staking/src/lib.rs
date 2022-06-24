@@ -22,7 +22,7 @@ pub mod types;
 pub mod weights;
 
 pub use frame_support::weights::Weight;
-use frame_support::PalletId;
+use frame_support::{inherent::Vec, PalletId};
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -30,7 +30,6 @@ use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 pub use types::*;
 pub use weights::WeightInfo;
 pub use RoundIndex;
-use frame_support::inherent::Vec;
 #[cfg(test)]
 mod mock;
 
