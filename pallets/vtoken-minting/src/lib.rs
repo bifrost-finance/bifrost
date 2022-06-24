@@ -164,6 +164,10 @@ pub mod pallet {
 		HookIterationLimitSet {
 			limit: u32,
 		},
+		UnlockingTotalSet {
+			token_id: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -268,6 +272,11 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn currency_unlocking_total)]
 	pub type CurrencyUnlockingTotal<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn unlocking_total)]
+	pub type UnlockingTotal<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn hook_iteration_limit)]
@@ -375,7 +384,7 @@ pub mod pallet {
 							.ok_or(Error::<T>::CalculationOverflow)?;
 						Ok(())
 					})?;
-					CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+					UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool
 							.checked_add(&token_amount)
 							.ok_or(Error::<T>::CalculationOverflow)?;
@@ -575,7 +584,7 @@ pub mod pallet {
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_tmp)
 						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 
-				CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+				UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 					*pool =
 						pool.checked_sub(&token_amount).ok_or(Error::<T>::CalculationOverflow)?;
 					Ok(())
@@ -681,7 +690,7 @@ pub mod pallet {
 							Ok(())
 						},
 					)?;
-					CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+					UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool
 							.checked_sub(&unlock_amount)
 							.ok_or(Error::<T>::CalculationOverflow)?;
@@ -839,6 +848,21 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::HookIterationLimitSet { limit });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(0)]
+		pub fn set_unlocking_total(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			UnlockingTotal::<T>::mutate(&token_id, |unlocking_total| *unlocking_total = amount);
+
+			Self::deposit_event(Event::UnlockingTotalSet { token_id, amount });
 			Ok(())
 		}
 	}
@@ -1025,7 +1049,7 @@ pub mod pallet {
 				unlock_amount,
 			)?;
 
-			CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+			UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
 				Ok(())
 			})?;
@@ -1169,7 +1193,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
-			CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+			UnlockingTotal::<T>::mutate(&currency_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_sub(&deduct_amount).ok_or(Error::<T>::CalculationOverflow)?;
 				Ok(())
 			})?;
