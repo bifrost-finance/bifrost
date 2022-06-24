@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+mod migration;
 pub mod weights;
 
 use frame_support::{
@@ -297,6 +298,10 @@ pub mod pallet {
 				.ok();
 
 			T::WeightInfo::on_initialize()
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_unlocking_total::<T>()
 		}
 	}
 
