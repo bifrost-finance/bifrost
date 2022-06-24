@@ -1795,6 +1795,10 @@ impl bifrost_farming::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const BlocksPerRound: u32 = prod_or_test!(1500, 100);
+}
+
 impl bifrost_system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -1805,6 +1809,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
 }
 
 // Bifrost modules end

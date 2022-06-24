@@ -30,6 +30,7 @@ use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 pub use types::*;
 pub use weights::WeightInfo;
 pub use RoundIndex;
+use frame_support::inherent::Vec;
 #[cfg(test)]
 mod mock;
 
@@ -89,6 +90,9 @@ pub mod pallet {
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type BlocksPerRound: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -98,7 +102,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn round)]
 	/// Currend Round Information
-	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<T::BlockNumber>, ValueQuery>;
+	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<T::BlockNumber>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_status)]
@@ -161,7 +165,11 @@ pub mod pallet {
 			let mut x = 0u32;
 			let mut y = 0u32;
 
-			let mut round = <Round<T>>::get();
+			let mut round = if let Some(round) = <Round<T>>::get() {
+				round
+			} else {
+				RoundInfo::new(1u32, 0u32.into(), T::BlocksPerRound::get())
+			};
 			// new round start
 			if round.should_update(n) {
 				// mutate round

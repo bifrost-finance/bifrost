@@ -292,7 +292,8 @@ impl bifrost_farming::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const ThePalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const BlocksPerRound: u32 = 100;
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 }
 
 impl system_staking::Config for Runtime {
@@ -303,7 +304,8 @@ impl system_staking::Config for Runtime {
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = TreasuryAccount;
-	type PalletId = ThePalletId;
+	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
 }
 
 pub struct ExtBuilder {
