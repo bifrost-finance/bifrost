@@ -100,6 +100,7 @@ impl<Balance: Copy + PartialEq> TokenInfo<Balance> {
 pub struct TokenConfig<Balance> {
 	pub exec_delay: u32,
 	pub system_stakable_farming_rate: Permill,
+	pub lptoken_rates: Vec<Permill>,
 	pub add_or_sub: bool, // true: add, false: sub
 	pub system_stakable_base: Balance,
 	pub farming_poolids: Vec<PoolId>,
@@ -110,6 +111,7 @@ impl<Balance: Zero> Default for TokenConfig<Balance> {
 		TokenConfig {
 			exec_delay: 0u32,
 			system_stakable_farming_rate: Permill::from_percent(0),
+			lptoken_rates: Vec::new(),
 			system_stakable_base: Balance::zero(),
 			add_or_sub: true, // default add
 			farming_poolids: Vec::new(),

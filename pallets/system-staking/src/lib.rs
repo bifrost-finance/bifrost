@@ -129,6 +129,7 @@ pub mod pallet {
 			add_or_sub: bool,
 			system_stakable_base: BalanceOf<T>,
 			farming_poolids: Vec<PoolId>,
+			lptoken_rates: Vec<Permill>,
 		},
 		TokenInfoProcessed {
 			token: CurrencyIdOf<T>,
@@ -219,6 +220,7 @@ pub mod pallet {
 			add_or_sub: Option<bool>,
 			system_stakable_base: Option<BalanceOf<T>>,
 			farming_poolids: Option<Vec<PoolId>>,
+			lptoken_rates: Option<Vec<Permill>>,
 		) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
@@ -258,7 +260,12 @@ pub mod pallet {
 				token_info.new_config.farming_poolids = farming_poolids.clone();
 			}
 
-			<TokenStatus<T>>::insert(&token, token_info);
+			if let Some(lptoken_rates) = lptoken_rates.clone() {
+				ensure!(!lptoken_rates.is_empty(), Error::<T>::InvalidTokenConfig);
+				token_info.new_config.lptoken_rates = lptoken_rates.clone();
+			}
+
+			<TokenStatus<T>>::insert(&token, token_info.clone());
 			if new_token {
 				let mut token_list = Self::token_list();
 				token_list.push(token);
@@ -267,12 +274,12 @@ pub mod pallet {
 
 			Self::deposit_event(Event::TokenConfigChanged {
 				token,
-				exec_delay: exec_delay.unwrap_or(0),
-				system_stakable_farming_rate: system_stakable_farming_rate
-					.unwrap_or(Permill::zero()),
-				add_or_sub: add_or_sub.unwrap_or(true),
-				system_stakable_base: system_stakable_base.unwrap_or(Default::default()),
-				farming_poolids: farming_poolids.unwrap_or(Vec::new()),
+				exec_delay: token_info.new_config.exec_delay,
+				system_stakable_farming_rate: token_info.new_config.system_stakable_farming_rate,
+				add_or_sub: token_info.new_config.add_or_sub,
+				system_stakable_base: token_info.new_config.system_stakable_base,
+				farming_poolids: token_info.new_config.farming_poolids.clone(),
+				lptoken_rates: token_info.new_config.lptoken_rates.clone(),
 			});
 
 			Ok(().into())
@@ -341,11 +348,17 @@ impl<T: Config> Pallet<T> {
 		token_id: CurrencyIdOf<T>,
 	) {
 		// query farming info
-		for m in &token_info.current_config.farming_poolids {
-			token_info.system_stakable_amount = token_info
-				.system_stakable_amount
-				.saturating_add(T::FarmingInfo::get_token_shares(*m, token_id));
+		for i in 0..token_info.current_config.farming_poolids.len() {
+			token_info.system_stakable_amount = token_info.system_stakable_amount.saturating_add(
+				token_info.current_config.lptoken_rates[i].mul_floor(
+					T::FarmingInfo::get_token_shares(
+						token_info.current_config.farming_poolids[i],
+						token_id,
+					),
+				),
+			);
 		}
+
 		// check amount, and call vtoken minting pallet
 		let stakable_amount = if token_info.current_config.add_or_sub {
 			token_info
