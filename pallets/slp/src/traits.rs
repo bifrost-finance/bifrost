@@ -217,3 +217,21 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
 }
+
+pub trait OnRefund<AccountId, CurrencyId, Balance> {
+	fn on_refund(
+		token_id: CurrencyId,
+		to: AccountId,
+		token_amount: Balance,
+	) -> frame_support::pallet_prelude::Weight;
+}
+
+impl<AccountId, CurrencyId, Balance> OnRefund<AccountId, CurrencyId, Balance> for () {
+	fn on_refund(
+		_token_id: CurrencyId,
+		_to: AccountId,
+		_token_amount: Balance,
+	) -> frame_support::pallet_prelude::Weight {
+		0
+	}
+}

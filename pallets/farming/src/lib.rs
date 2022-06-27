@@ -42,7 +42,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::{CurrencyId, PoolId};
+use node_primitives::{CurrencyId, FarmingInfo, PoolId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
@@ -738,6 +738,20 @@ pub mod pallet {
 				Self::deposit_event(Event::PartiallyForceGaugeClaimed { gid });
 			}
 			Ok(())
+		}
+	}
+}
+
+impl<T: Config> FarmingInfo<BalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
+	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
+		if let Some(pool_info) = Self::pool_infos(&pool_id) {
+			if let Some(portion) = pool_info.tokens_proportion.get(&currency_id) {
+				return portion.mul_floor(pool_info.total_shares);
+			} else {
+				return Zero::zero();
+			}
+		} else {
+			return Zero::zero();
 		}
 	}
 }
