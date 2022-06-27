@@ -21,7 +21,7 @@ scale-info = { version = "2.1.2", default-features = false, features = ["derive"
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
-smallvec = "1.4.1"
+smallvec = "1.8.1"
 
 [features]
 default = ["std"]

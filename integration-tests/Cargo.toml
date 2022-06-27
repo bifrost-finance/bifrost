@@ -15,7 +15,7 @@ serde = { version = "1.0.137", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", default-features = false, optional = true }
 hex-literal = { version = "0.3.4" }
-smallvec = "1.7.0"
+smallvec = "1.8.1"
 
 # primitives
 node-primitives = { default-features = false, path = "../node/primitives" }

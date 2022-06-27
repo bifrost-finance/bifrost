@@ -23,7 +23,7 @@ xcm-interface = { path = "../xcm-interface", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22"}
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22"}
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-smallvec = "1.6.1"
+smallvec = "1.8.1"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
