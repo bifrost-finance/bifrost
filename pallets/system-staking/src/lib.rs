@@ -319,7 +319,10 @@ pub mod pallet {
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
-			let token_amount = T::MultiCurrency::free_balance(token, &pallet_account);
+			let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &pallet_account);
+
+			let token_amount =
+				T::VtokenMintingInterface::vtoken_to_token(token, vtoken_id, vtoken_amount);
 
 			let token_amount = token_amount.saturating_sub(token_info.system_shadow_amount);
 
@@ -349,14 +352,11 @@ impl<T: Config> Pallet<T> {
 	) {
 		// query farming info
 		for i in 0..token_info.current_config.farming_poolids.len() {
-			token_info.system_stakable_amount = token_info.system_stakable_amount.saturating_add(
-				token_info.current_config.lptoken_rates[i].mul_floor(
-					T::FarmingInfo::get_token_shares(
-						token_info.current_config.farming_poolids[i],
-						token_id,
-					),
-				),
-			);
+			token_info.system_stakable_amount = token_info.current_config.lptoken_rates[i]
+				.mul_floor(T::FarmingInfo::get_token_shares(
+					token_info.current_config.farming_poolids[i],
+					token_id,
+				));
 		}
 
 		// check amount, and call vtoken minting pallet
