@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(test)]
 
-use crate::mock::*;
+use crate::{mock::*,*};
 use frame_support::{assert_ok, sp_runtime::Permill};
 
 #[test]
@@ -32,5 +32,26 @@ fn token_config_should_work() {
 			Some(100),
 			None,
 		));
+    let token_info = <TokenStatus<Runtime>>::get(KSM).unwrap();
+    assert_eq!(token_info.new_config.add_or_sub, false);
+    assert_eq!(token_info.new_config.exec_delay, 1);
+    assert_eq!(token_info.new_config.system_stakable_farming_rate, Permill::from_percent(80));
+    assert_eq!(token_info.new_config.system_stakable_base, 100);
+    assert_eq!(token_info.new_config.farming_poolids, Vec::<PoolId>::new());
 	});
 }
+
+// #[test]
+// fn refresh_token_info_should_work() {
+//   ExtBuilder::default().build().execute_with(|| {
+//     assert_ok!(SystemStaking::token_config(
+//       Origin::root(),
+//       KSM,
+//       Some(1),
+//       Some(Permill::from_percent(80)),
+//       Some(false),
+//       Some(100),
+//       None,
+//     ));
+//     let token_info = <TokenStatus<Runtime>>::get(KSM).unwrap();
+// }
