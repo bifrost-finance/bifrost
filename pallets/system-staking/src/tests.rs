@@ -31,6 +31,7 @@ fn token_config_should_work() {
 			Some(false),
 			Some(100),
 			None,
+			None,
 		));
 	});
 }

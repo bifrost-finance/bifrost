@@ -351,13 +351,17 @@ impl<T: Config> Pallet<T> {
 		token_id: CurrencyIdOf<T>,
 	) {
 		// query farming info
+		let mut farming_staking_amount = BalanceOf::<T>::zero();
 		for i in 0..token_info.current_config.farming_poolids.len() {
-			token_info.system_stakable_amount = token_info.current_config.lptoken_rates[i]
-				.mul_floor(T::FarmingInfo::get_token_shares(
-					token_info.current_config.farming_poolids[i],
-					token_id,
-				));
+			farming_staking_amount = farming_staking_amount +
+				token_info.current_config.lptoken_rates[i].mul_floor(
+					T::FarmingInfo::get_token_shares(
+						token_info.current_config.farming_poolids[i],
+						token_id,
+					),
+				);
 		}
+		token_info.system_stakable_amount = farming_staking_amount;
 
 		// check amount, and call vtoken minting pallet
 		let stakable_amount = if token_info.current_config.add_or_sub {
