@@ -134,7 +134,6 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 			system_stakable_amount: BalanceOf<T>,
 			system_shadow_amount: BalanceOf<T>,
-			system_staking_token_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
 		TokenInfoRefreshed {
@@ -223,9 +222,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
+			let mut new_token = false;
 			let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token) {
 				state
 			} else {
+				new_token = true;
 				<TokenInfo<BalanceOf<T>>>::default()
 			};
 
@@ -258,6 +259,11 @@ pub mod pallet {
 			}
 
 			<TokenStatus<T>>::insert(&token, token_info);
+			if new_token {
+				let mut token_list = Self::token_list();
+				token_list.push(token);
+				<TokenList<T>>::put(token_list);
+			}
 
 			Self::deposit_event(Event::TokenConfigChanged {
 				token,
@@ -412,7 +418,6 @@ impl<T: Config> Pallet<T> {
 			token: token_id,
 			system_stakable_amount: token_info.system_stakable_amount,
 			system_shadow_amount: token_info.system_shadow_amount,
-			system_staking_token_amount: token_info.system_staking_token_amount,
 			pending_redeem_amount: token_info.pending_redeem_amount,
 		});
 	}
