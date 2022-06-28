@@ -33,7 +33,7 @@ use frame_support::{
 	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
-use primitives::{AssetIdMapping, CurrencyId, ForeignAssetId};
+use primitives::{AssetIdMapping, AssetIds, CurrencyId, ForeignAssetId};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
 use sp_std::{boxed::Box, vec::Vec};
@@ -70,11 +70,6 @@ pub mod pallet {
 
 		/// Required origin for registering asset.
 		type RegisterOrigin: EnsureOrigin<Self::Origin>;
-	}
-
-	#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
-	pub enum AssetIds {
-		ForeignAssetId(ForeignAssetId),
 	}
 
 	#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
@@ -198,6 +193,42 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		#[pallet::weight(1000000)]
+		#[transactional]
+		pub fn register_native_asset(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			metadata: Box<AssetMetadata<BalanceOf<T>>>,
+		) -> DispatchResult {
+			T::RegisterOrigin::ensure_origin(origin)?;
+
+			Self::do_register_native_asset(currency_id, &metadata)?;
+
+			Self::deposit_event(Event::<T>::AssetRegistered {
+				asset_id: AssetIds::NativeAssetId(currency_id),
+				metadata: *metadata,
+			});
+			Ok(())
+		}
+
+		#[pallet::weight(1000000)]
+		#[transactional]
+		pub fn update_native_asset(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			metadata: Box<AssetMetadata<BalanceOf<T>>>,
+		) -> DispatchResult {
+			T::RegisterOrigin::ensure_origin(origin)?;
+
+			Self::do_update_native_asset(currency_id, &metadata)?;
+
+			Self::deposit_event(Event::<T>::AssetUpdated {
+				asset_id: AssetIds::NativeAssetId(currency_id),
+				metadata: *metadata,
+			});
+			Ok(())
+		}
 	}
 }
 
@@ -281,6 +312,38 @@ impl<T: Config> Pallet<T> {
 			},
 		)
 	}
+
+	fn do_register_native_asset(
+		asset: CurrencyId,
+		metadata: &AssetMetadata<BalanceOf<T>>,
+	) -> DispatchResult {
+		AssetMetadatas::<T>::try_mutate(
+			AssetIds::NativeAssetId(asset),
+			|maybe_asset_metadatas| -> DispatchResult {
+				ensure!(maybe_asset_metadatas.is_none(), Error::<T>::AssetIdExisted);
+
+				*maybe_asset_metadatas = Some(metadata.clone());
+				Ok(())
+			},
+		)?;
+
+		Ok(())
+	}
+
+	fn do_update_native_asset(
+		currency_id: CurrencyId,
+		metadata: &AssetMetadata<BalanceOf<T>>,
+	) -> DispatchResult {
+		AssetMetadatas::<T>::try_mutate(
+			AssetIds::NativeAssetId(currency_id),
+			|maybe_asset_metadatas| -> DispatchResult {
+				ensure!(maybe_asset_metadatas.is_some(), Error::<T>::AssetIdNotExists);
+
+				*maybe_asset_metadatas = Some(metadata.clone());
+				Ok(())
+			},
+		)
+	}
 }
 
 pub struct AssetIdMaps<T>(sp_std::marker::PhantomData<T>);
@@ -288,10 +351,8 @@ pub struct AssetIdMaps<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata<BalanceOf<T>>>
 	for AssetIdMaps<T>
 {
-	fn get_foreign_asset_metadata(
-		foreign_asset_id: ForeignAssetId,
-	) -> Option<AssetMetadata<BalanceOf<T>>> {
-		Pallet::<T>::asset_metadatas(AssetIds::ForeignAssetId(foreign_asset_id))
+	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata<BalanceOf<T>>> {
+		Pallet::<T>::asset_metadatas(asset_ids)
 	}
 
 	fn get_multi_location(foreign_asset_id: ForeignAssetId) -> Option<MultiLocation> {
