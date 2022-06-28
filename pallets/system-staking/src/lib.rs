@@ -133,6 +133,8 @@ pub mod pallet {
 		},
 		TokenInfoProcessed {
 			token: CurrencyIdOf<T>,
+			stage: String,
+			process_amount: BalanceOf<T>,
 			system_stakable_amount: BalanceOf<T>,
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
@@ -384,22 +386,41 @@ impl<T: Config> Pallet<T> {
 				token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount),
 			);
 			match T::MultiCurrency::deposit(token_id, &account, mint_amount) {
-				Ok(_) => match T::VtokenMintingInterface::mint(account, token_id, mint_amount) {
-					Ok(_) => {
-						token_info.system_shadow_amount =
-							token_info.system_shadow_amount.saturating_add(mint_amount);
+				Ok(_) =>
+					match T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount) {
+						Ok(_) => {
+							Self::deposit_event(Event::TokenInfoProcessed {
+								token: token_id,
+								stage: String::from("mint"),
+								process_amount: mint_amount,
+								system_stakable_amount: token_info.system_stakable_amount,
+								system_shadow_amount: token_info.system_shadow_amount,
+								pending_redeem_amount: token_info.pending_redeem_amount,
+							});
+							token_info.system_shadow_amount =
+								token_info.system_shadow_amount.saturating_add(mint_amount);
+						},
+						Err(error) => {
+							log::warn!("mint error: {:?}", error);
+						},
 					},
-					Err(error) => {
-						log::warn!("mint error: {:?}", error);
-					},
-				},
 				Err(error) => {
 					log::warn!("{:?} deposit error: {:?}", token_id, error);
 				},
 			}
-		} else if stakable_amount <
+		}
+
+		if stakable_amount <
 			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
 		{
+			Self::deposit_event(Event::TokenInfoProcessed {
+				token: token_id,
+				stage: String::from("redeem_enter"),
+				process_amount: BalanceOf::<T>::zero(),
+				system_stakable_amount: token_info.system_stakable_amount,
+				system_shadow_amount: token_info.system_shadow_amount,
+				pending_redeem_amount: token_info.pending_redeem_amount,
+			});
 			let redeem_amount = token_info
 				.system_shadow_amount
 				.saturating_sub(token_info.pending_redeem_amount)
@@ -411,32 +432,58 @@ impl<T: Config> Pallet<T> {
 						vtoken_id,
 						redeem_amount,
 					);
+					Self::deposit_event(Event::TokenInfoProcessed {
+						token: token_id,
+						stage: String::from("redeem"),
+						process_amount: vredeem_amount,
+						system_stakable_amount: token_info.system_stakable_amount,
+						system_shadow_amount: token_info.system_shadow_amount,
+						pending_redeem_amount: token_info.pending_redeem_amount,
+					});
 					if vredeem_amount != BalanceOf::<T>::zero() {
 						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)
 						{
 							Ok(_) => {
+								Self::deposit_event(Event::TokenInfoProcessed {
+									token: token_id,
+									stage: String::from("redeem_success"),
+									process_amount: vredeem_amount,
+									system_stakable_amount: token_info.system_stakable_amount,
+									system_shadow_amount: token_info.system_shadow_amount,
+									pending_redeem_amount: token_info.pending_redeem_amount,
+								});
 								token_info.pending_redeem_amount =
 									token_info.pending_redeem_amount.saturating_add(redeem_amount);
 							},
 							Err(error) => {
+								Self::deposit_event(Event::TokenInfoProcessed {
+									token: token_id,
+									stage: String::from("redeem_failed"),
+									process_amount: vredeem_amount,
+									system_stakable_amount: token_info.system_stakable_amount,
+									system_shadow_amount: token_info.system_shadow_amount,
+									pending_redeem_amount: token_info.pending_redeem_amount,
+								});
 								log::warn!("redeem error: {:?}", error);
 							},
 						}
 					}
 				},
 				None => {
+					Self::deposit_event(Event::TokenInfoProcessed {
+						token: token_id,
+						stage: String::from("redeem_failed_notfound"),
+						process_amount: BalanceOf::<T>::zero(),
+						system_stakable_amount: token_info.system_stakable_amount,
+						system_shadow_amount: token_info.system_shadow_amount,
+						pending_redeem_amount: token_info.pending_redeem_amount,
+					});
 					log::warn!("vtoken_id not found: {:?}", token_id);
 				},
 			}
 		}
 
 		<TokenStatus<T>>::insert(&token_id, token_info.clone());
-		Self::deposit_event(Event::TokenInfoProcessed {
-			token: token_id,
-			system_stakable_amount: token_info.system_stakable_amount,
-			system_shadow_amount: token_info.system_shadow_amount,
-			pending_redeem_amount: token_info.pending_redeem_amount,
-		});
 	}
 
 	pub fn on_redeem_success(
