@@ -22,7 +22,7 @@ use frame_support::{assert_ok, sp_runtime::Permill};
 
 #[test]
 fn token_config_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(SystemStaking::token_config(
 			Origin::root(),
 			KSM,
@@ -44,4 +44,22 @@ fn token_config_should_work() {
 }
 
 #[test]
-fn refresh_token_info_should_work() {}
+fn round_info_should_correct() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		System::set_block_number(System::block_number() + 1000);
+		assert_ok!(SystemStaking::token_config(
+			Origin::root(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(100),
+			None,
+			None,
+		));
+		roll_one_block();
+		assert_eq!(SystemStaking::round().unwrap().length, 100);
+		assert_eq!(SystemStaking::round().unwrap().current, 1);
+		assert_eq!(SystemStaking::round().unwrap().first, 1001);
+	});
+}

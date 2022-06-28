@@ -62,6 +62,7 @@ std = [
     "cumulus-primitives-core/std",
     "pallet-balances/std",
     "pallet-utility/std",
+    "bifrost-vtoken-minting/std",
 ]
 
 runtime-benchmarks = [

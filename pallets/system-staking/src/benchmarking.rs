@@ -15,3 +15,40 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+#![cfg(feature = "runtime-benchmarks")]
+
+use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_system::RawOrigin;
+use node_primitives::{CurrencyId, TokenSymbol};
+use sp_arithmetic::per_things::Permill;
+
+use frame_support::{
+  sp_runtime::traits::UniqueSaturatedFrom,
+  traits::OnInitialize,
+};
+
+use crate::{Pallet as SystemStaking, *};
+
+benchmarks! {
+  on_initialize {}:{SystemStaking::<T>::on_initialize(T::BlockNumber::from(101u32));}
+
+  token_config {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+    let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+	}: _(RawOrigin::Root, KSM, Some(1), Some(Permill::from_percent(80)),Some(false),Some(token_amount),None,None)
+
+  refresh_token_info {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	}: _(RawOrigin::Root,KSM)
+
+  payout {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	}: _(RawOrigin::Root,KSM)
+
+  on_redeem_success {
+	const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+  let caller: T::AccountId = whitelisted_caller();
+	let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+  }:{SystemStaking::<T>::on_redeem_success(KSM,caller,token_amount);}
+}

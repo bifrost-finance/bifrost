@@ -213,7 +213,7 @@ pub mod pallet {
 			let mut round = if let Some(round) = <Round<T>>::get() {
 				round
 			} else {
-				RoundInfo::new(1u32, 0u32.into(), T::BlocksPerRound::get())
+				RoundInfo::new(0u32, 0u32.into(), T::BlocksPerRound::get())
 			};
 			// new round start
 			if round.should_update(n) {
@@ -232,6 +232,7 @@ pub mod pallet {
 						x += 1;
 						if token_info.check_config_change() {
 							token_info.update_config();
+							<TokenStatus<T>>::insert(&i, token_info.clone());
 						}
 					}
 				}

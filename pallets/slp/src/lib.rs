@@ -1124,7 +1124,7 @@ pub mod pallet {
 		pub fn refund_currency_due_unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
@@ -1135,13 +1135,15 @@ pub mod pallet {
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
 
 			if exit_account_balance.is_zero() {
-				return Ok(());
+				return Ok(().into());
 			}
 
 			// Get the currency due unlocking records
 			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
+
+			let mut extra_weight = 0 as Weight;
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
@@ -1172,7 +1174,8 @@ pub mod pallet {
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
 
-						T::OnRefund::on_refund(currency_id, user_account, deduct_amount);
+						extra_weight =
+							T::OnRefund::on_refund(currency_id, user_account, deduct_amount);
 
 						// Deposit event.
 						Pallet::<T>::deposit_event(Event::Refund {
@@ -1202,7 +1205,11 @@ pub mod pallet {
 				)?;
 			}
 
-			Ok(())
+			if extra_weight != 0 {
+				Ok(Some(T::WeightInfo::refund_currency_due_unbond() + extra_weight).into())
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[transactional]
