@@ -131,19 +131,63 @@ pub mod pallet {
 			farming_poolids: Vec<PoolId>,
 			lptoken_rates: Vec<Permill>,
 		},
-		TokenInfoProcessed {
+		DepositFailed {
 			token: CurrencyIdOf<T>,
-			stage: String,
-			process_amount: BalanceOf<T>,
+			amount: BalanceOf<T>,
 			system_stakable_amount: BalanceOf<T>,
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
+		},
+		MintSuccess {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			system_stakable_amount: BalanceOf<T>,
+			system_shadow_amount: BalanceOf<T>,
+			pending_redeem_amount: BalanceOf<T>,
+		},
+		MintFailed {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			system_stakable_amount: BalanceOf<T>,
+			system_shadow_amount: BalanceOf<T>,
+			pending_redeem_amount: BalanceOf<T>,
+		},
+		RedeemSuccess {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			system_stakable_amount: BalanceOf<T>,
+			system_shadow_amount: BalanceOf<T>,
+			pending_redeem_amount: BalanceOf<T>,
+		},
+		RedeemStarted {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			system_stakable_amount: BalanceOf<T>,
+			system_shadow_amount: BalanceOf<T>,
+			pending_redeem_amount: BalanceOf<T>,
+		},
+		RedeemFailed {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			system_stakable_amount: BalanceOf<T>,
+			system_shadow_amount: BalanceOf<T>,
+			pending_redeem_amount: BalanceOf<T>,
+		},
+		VtokenNotFound {
+			token: CurrencyIdOf<T>,
 		},
 		TokenInfoRefreshed {
 			token: CurrencyIdOf<T>,
 		},
 		Payout {
 			token: CurrencyIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			from: AccountIdOf<T>,
+			to: AccountIdOf<T>,
+			amount: BalanceOf<T>,
+			free: BalanceOf<T>,
+			vfree: BalanceOf<T>,
+			shadow: BalanceOf<T>,
 		},
 	}
 
@@ -321,12 +365,12 @@ pub mod pallet {
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
-			let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &pallet_account);
+			let vfree_amount = T::MultiCurrency::free_balance(vtoken_id, &pallet_account);
 
-			let token_amount =
-				T::VtokenMintingInterface::vtoken_to_token(token, vtoken_id, vtoken_amount);
+			let free_amount =
+				T::VtokenMintingInterface::vtoken_to_token(token, vtoken_id, vfree_amount);
 
-			let token_amount = token_amount.saturating_sub(token_info.system_shadow_amount);
+			let token_amount = free_amount.saturating_sub(token_info.system_shadow_amount);
 
 			let vtoken_amount =
 				T::VtokenMintingInterface::token_to_vtoken(token, vtoken_id, token_amount);
@@ -339,7 +383,16 @@ pub mod pallet {
 			)
 			.map_err(|_| Error::<T>::PayoutFailed)?;
 
-			Self::deposit_event(Event::Payout { token });
+			Self::deposit_event(Event::Payout {
+				token,
+				vtoken: vtoken_id,
+				from: pallet_account,
+				to: T::TreasuryAccount::get(),
+				amount: vtoken_amount,
+				vfree: vfree_amount,
+				free: free_amount,
+				shadow: token_info.system_shadow_amount,
+			});
 
 			Ok(().into())
 		}
@@ -389,10 +442,9 @@ impl<T: Config> Pallet<T> {
 				Ok(_) =>
 					match T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount) {
 						Ok(_) => {
-							Self::deposit_event(Event::TokenInfoProcessed {
+							Self::deposit_event(Event::MintSuccess {
 								token: token_id,
-								stage: String::from("mint"),
-								process_amount: mint_amount,
+								amount: mint_amount,
 								system_stakable_amount: token_info.system_stakable_amount,
 								system_shadow_amount: token_info.system_shadow_amount,
 								pending_redeem_amount: token_info.pending_redeem_amount,
@@ -401,10 +453,24 @@ impl<T: Config> Pallet<T> {
 								token_info.system_shadow_amount.saturating_add(mint_amount);
 						},
 						Err(error) => {
+							Self::deposit_event(Event::MintFailed {
+								token: token_id,
+								amount: mint_amount,
+								system_stakable_amount: token_info.system_stakable_amount,
+								system_shadow_amount: token_info.system_shadow_amount,
+								pending_redeem_amount: token_info.pending_redeem_amount,
+							});
 							log::warn!("mint error: {:?}", error);
 						},
 					},
 				Err(error) => {
+					Self::deposit_event(Event::DepositFailed {
+						token: token_id,
+						amount: mint_amount,
+						system_stakable_amount: token_info.system_stakable_amount,
+						system_shadow_amount: token_info.system_shadow_amount,
+						pending_redeem_amount: token_info.pending_redeem_amount,
+					});
 					log::warn!("{:?} deposit error: {:?}", token_id, error);
 				},
 			}
@@ -413,14 +479,6 @@ impl<T: Config> Pallet<T> {
 		if stakable_amount <
 			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
 		{
-			Self::deposit_event(Event::TokenInfoProcessed {
-				token: token_id,
-				stage: String::from("redeem_enter"),
-				process_amount: BalanceOf::<T>::zero(),
-				system_stakable_amount: token_info.system_stakable_amount,
-				system_shadow_amount: token_info.system_shadow_amount,
-				pending_redeem_amount: token_info.pending_redeem_amount,
-			});
 			let redeem_amount = token_info
 				.system_shadow_amount
 				.saturating_sub(token_info.pending_redeem_amount)
@@ -432,10 +490,9 @@ impl<T: Config> Pallet<T> {
 						vtoken_id,
 						redeem_amount,
 					);
-					Self::deposit_event(Event::TokenInfoProcessed {
+					Self::deposit_event(Event::RedeemStarted {
 						token: token_id,
-						stage: String::from("redeem"),
-						process_amount: vredeem_amount,
+						amount: vredeem_amount,
 						system_stakable_amount: token_info.system_stakable_amount,
 						system_shadow_amount: token_info.system_shadow_amount,
 						pending_redeem_amount: token_info.pending_redeem_amount,
@@ -444,10 +501,9 @@ impl<T: Config> Pallet<T> {
 						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)
 						{
 							Ok(_) => {
-								Self::deposit_event(Event::TokenInfoProcessed {
+								Self::deposit_event(Event::RedeemSuccess {
 									token: token_id,
-									stage: String::from("redeem_success"),
-									process_amount: vredeem_amount,
+									amount: vredeem_amount,
 									system_stakable_amount: token_info.system_stakable_amount,
 									system_shadow_amount: token_info.system_shadow_amount,
 									pending_redeem_amount: token_info.pending_redeem_amount,
@@ -456,10 +512,9 @@ impl<T: Config> Pallet<T> {
 									token_info.pending_redeem_amount.saturating_add(redeem_amount);
 							},
 							Err(error) => {
-								Self::deposit_event(Event::TokenInfoProcessed {
+								Self::deposit_event(Event::RedeemFailed {
 									token: token_id,
-									stage: String::from("redeem_failed"),
-									process_amount: vredeem_amount,
+									amount: vredeem_amount,
 									system_stakable_amount: token_info.system_stakable_amount,
 									system_shadow_amount: token_info.system_shadow_amount,
 									pending_redeem_amount: token_info.pending_redeem_amount,
@@ -470,14 +525,7 @@ impl<T: Config> Pallet<T> {
 					}
 				},
 				None => {
-					Self::deposit_event(Event::TokenInfoProcessed {
-						token: token_id,
-						stage: String::from("redeem_failed_notfound"),
-						process_amount: BalanceOf::<T>::zero(),
-						system_stakable_amount: token_info.system_stakable_amount,
-						system_shadow_amount: token_info.system_shadow_amount,
-						pending_redeem_amount: token_info.pending_redeem_amount,
-					});
+					Self::deposit_event(Event::VtokenNotFound { token: token_id });
 					log::warn!("vtoken_id not found: {:?}", token_id);
 				},
 			}
