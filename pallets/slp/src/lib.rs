@@ -1172,6 +1172,8 @@ pub mod pallet {
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
 
+						T::OnRefund::on_refund(currency_id, user_account, deduct_amount);
+
 						// Deposit event.
 						Pallet::<T>::deposit_event(Event::Refund {
 							currency_id,

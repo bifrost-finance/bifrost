@@ -938,6 +938,8 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			T::OnRedeemSuccess::on_redeem_success(token_id, account.clone(), unlock_amount);
+
 			Self::deposit_event(Event::RedeemSuccess {
 				unlock_id: *index,
 				token_id,

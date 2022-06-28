@@ -261,7 +261,7 @@ pub mod pallet {
 		pub fn token_config(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
-			exec_delay: Option<u32>,
+			exec_delay: Option<u32>, // TODO: blocknum
 			system_stakable_farming_rate: Option<Permill>,
 			add_or_sub: Option<bool>,
 			system_stakable_base: Option<BalanceOf<T>>,
@@ -315,7 +315,7 @@ pub mod pallet {
 			if new_token {
 				let mut token_list = Self::token_list();
 				token_list.push(token);
-				<TokenList<T>>::put(token_list);
+				<TokenList<T>>::put(token_list); // TODO limit length
 			}
 
 			Self::deposit_event(Event::TokenConfigChanged {

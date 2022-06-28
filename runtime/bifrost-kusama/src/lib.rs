@@ -1384,7 +1384,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
 			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account(&SystemStakingPalletId::get()).eq(a)
 	}
 }
 

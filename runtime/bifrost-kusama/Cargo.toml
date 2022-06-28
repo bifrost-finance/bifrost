@@ -242,6 +242,7 @@ runtime-benchmarks = [
 	"bifrost-call-switchgear/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
+	"bifrost-system-staking/runtime-benchmarks",
 	"parachain-staking/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
