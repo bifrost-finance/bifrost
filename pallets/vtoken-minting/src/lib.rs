@@ -699,7 +699,7 @@ pub mod pallet {
 			mint_fee: Permill,
 			redeem_fee: Permill,
 		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
+			ensure_root(origin)?;
 
 			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee));
 

@@ -29,7 +29,7 @@ fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 200));
 		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::signed(ALICE), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
 		assert_noop!(
 			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::BelowMinimumMint
@@ -53,7 +53,7 @@ fn mint() {
 fn redeem() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		pub const FEE: Permill = Permill::from_percent(2);
-		assert_ok!(VtokenMinting::set_fees(Origin::signed(ALICE), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			Origin::signed(ALICE),
 			KSM,
@@ -117,7 +117,7 @@ fn redeem() {
 fn rebond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		pub const FEE: Permill = Permill::from_percent(0);
-		assert_ok!(VtokenMinting::set_fees(Origin::signed(ALICE), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			Origin::signed(ALICE),
 			KSM,
@@ -168,7 +168,7 @@ fn movr() {
 			TimeUnit::Round(1)
 		));
 		pub const FEE: Permill = Permill::from_percent(2);
-		assert_ok!(VtokenMinting::set_fees(Origin::signed(ALICE), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			Origin::signed(ALICE),
 			MOVR,
