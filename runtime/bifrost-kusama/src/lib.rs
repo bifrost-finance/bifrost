@@ -1879,6 +1879,16 @@ impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for
 	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
 		SystemStaking::on_redeem_success(token_id, to, token_amount)
 	}
+
+	fn on_redeemed(
+		address: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+		fee: Balance,
+	) -> Weight {
+		SystemStaking::on_redeemed(address, token_id, token_amount, vtoken_amount, fee)
+	}
 }
 
 parameter_types! {

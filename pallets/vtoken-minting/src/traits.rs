@@ -24,6 +24,14 @@ pub trait OnRedeemSuccess<AccountId, CurrencyId, Balance> {
 		to: AccountId,
 		token_amount: Balance,
 	) -> frame_support::pallet_prelude::Weight;
+
+	fn on_redeemed(
+		address: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+		fee: Balance,
+	) -> frame_support::pallet_prelude::Weight;
 }
 
 impl<AccountId, CurrencyId, Balance> OnRedeemSuccess<AccountId, CurrencyId, Balance> for () {
@@ -31,6 +39,16 @@ impl<AccountId, CurrencyId, Balance> OnRedeemSuccess<AccountId, CurrencyId, Bala
 		_token_id: CurrencyId,
 		_to: AccountId,
 		_token_amount: Balance,
+	) -> frame_support::pallet_prelude::Weight {
+		0
+	}
+
+	fn on_redeemed(
+		_address: AccountId,
+		_token_id: CurrencyId,
+		_token_amount: Balance,
+		_vtoken_amount: Balance,
+		_fee: Balance,
 	) -> frame_support::pallet_prelude::Weight {
 		0
 	}

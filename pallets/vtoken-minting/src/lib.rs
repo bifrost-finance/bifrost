@@ -68,6 +68,7 @@ pub type UnlockId = u32;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -329,7 +330,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 			Self::mint_inner(exchanger, token_id, token_amount)
@@ -341,7 +342,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			let exchanger = ensure_signed(origin)?;
 			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
 		}
@@ -1022,7 +1023,7 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
@@ -1043,7 +1044,7 @@ pub mod pallet {
 				vtoken_amount,
 				fee,
 			});
-			Ok(())
+			Ok(().into())
 		}
 
 		#[transactional]
@@ -1051,7 +1052,7 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			ensure!(
 				vtoken_amount >= MinimumRedeem::<T>::get(vtoken_id),
@@ -1177,6 +1178,14 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			let extra_weight = T::OnRedeemSuccess::on_redeemed(
+				exchanger.clone(),
+				token_id,
+				vtoken_amount,
+				token_amount,
+				redeem_fee,
+			);
+
 			Self::deposit_event(Event::Redeemed {
 				address: exchanger,
 				token_id,
@@ -1184,7 +1193,7 @@ pub mod pallet {
 				token_amount,
 				fee: redeem_fee,
 			});
-			Ok(())
+			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
 		}
 
 		pub fn token_to_vtoken_inner(
@@ -1389,7 +1398,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		exchanger: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-	) -> DispatchResult {
+	) -> DispatchResultWithPostInfo {
 		Self::mint_inner(exchanger, token_id, token_amount)
 	}
 
@@ -1397,7 +1406,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		exchanger: AccountIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
-	) -> DispatchResult {
+	) -> DispatchResultWithPostInfo {
 		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
 	}
 

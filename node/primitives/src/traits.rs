@@ -23,6 +23,7 @@
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
+	pallet_prelude::DispatchResultWithPostInfo,
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
@@ -169,12 +170,16 @@ pub trait FarmingInfo<Balance, CurrencyId> {
 }
 
 pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
-	fn mint(exchanger: AccountId, token_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+	fn mint(
+		exchanger: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+	) -> DispatchResultWithPostInfo;
 	fn redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
-	) -> DispatchResult;
+	) -> DispatchResultWithPostInfo;
 	fn token_to_vtoken(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,

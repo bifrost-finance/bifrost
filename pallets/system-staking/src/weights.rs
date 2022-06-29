@@ -32,6 +32,7 @@ pub trait WeightInfo {
 	fn refresh_token_info() -> Weight;
 	fn payout() -> Weight;
 	fn on_redeem_success() -> Weight;
+	fn on_redeemed() -> Weight;
 }
 
 pub struct SubstrateWeight<T>(PhantomData<T>);
@@ -56,6 +57,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	}
 
 	fn on_redeem_success() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn on_redeemed() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

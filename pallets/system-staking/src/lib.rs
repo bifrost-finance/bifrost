@@ -567,4 +567,24 @@ impl<T: Config> Pallet<T> {
 	) -> Weight {
 		Self::on_redeem_success(token_id, to, token_amount)
 	}
+
+	pub fn on_redeemed(
+		address: AccountIdOf<T>,
+		token_id: CurrencyIdOf<T>,
+		token_amount: BalanceOf<T>,
+		vtoken_amount: BalanceOf<T>,
+		fee: BalanceOf<T>,
+	) -> Weight {
+		let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
+			state
+		} else {
+			<TokenInfo<BalanceOf<T>>>::default()
+		};
+
+		token_info.pending_redeem_amount =
+			token_info.pending_redeem_amount.saturating_add(token_amount);
+
+		<TokenStatus<T>>::insert(&token_id, token_info);
+		T::WeightInfo::on_redeemed()
+	}
 }
