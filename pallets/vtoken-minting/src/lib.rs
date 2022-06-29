@@ -603,7 +603,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			unlock_duration: TimeUnit,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			UnlockDuration::<T>::mutate(token_id, |old_unlock_duration| {
 				*old_unlock_duration = Some(unlock_duration.clone());
@@ -621,7 +621,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			if !MinimumMint::<T>::contains_key(token_id) {
 				// mutate_exists
@@ -644,7 +644,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			MinimumRedeem::<T>::mutate(token_id, |old_amount| {
 				*old_amount = amount;
@@ -660,7 +660,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			if !TokenToRebond::<T>::contains_key(token_id) {
 				TokenToRebond::<T>::insert(token_id, BalanceOf::<T>::zero());
@@ -676,7 +676,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			if TokenToRebond::<T>::contains_key(token_id) {
 				let token_amount_to_rebond =
@@ -699,7 +699,7 @@ pub mod pallet {
 			mint_fee: Permill,
 			redeem_fee: Permill,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee));
 

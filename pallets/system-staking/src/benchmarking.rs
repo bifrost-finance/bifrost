@@ -23,10 +23,7 @@ use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_arithmetic::per_things::Permill;
 
-use frame_support::{
-  sp_runtime::traits::UniqueSaturatedFrom,
-  traits::OnInitialize,
-};
+use frame_support::{sp_runtime::traits::UniqueSaturatedFrom, traits::OnInitialize};
 
 use crate::{Pallet as SystemStaking, *};
 
@@ -35,7 +32,7 @@ benchmarks! {
 
   token_config {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-    let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+	let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 	}: _(RawOrigin::Root, KSM, Some(1), Some(Permill::from_percent(80)),Some(false),Some(token_amount),None,None)
 
   refresh_token_info {
