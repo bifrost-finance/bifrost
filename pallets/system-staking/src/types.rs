@@ -66,6 +66,7 @@ impl<
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct TokenInfo<Balance: Copy> {
+	pub farming_staking_amount: Balance,
 	pub system_stakable_amount: Balance,
 	pub system_shadow_amount: Balance,
 	pub pending_redeem_amount: Balance,
@@ -77,6 +78,7 @@ pub struct TokenInfo<Balance: Copy> {
 impl<Balance: Zero + Copy> Default for TokenInfo<Balance> {
 	fn default() -> TokenInfo<Balance> {
 		TokenInfo {
+			farming_staking_amount: Balance::zero(),
 			system_stakable_amount: Balance::zero(),
 			system_shadow_amount: Balance::zero(),
 			pending_redeem_amount: Balance::zero(),

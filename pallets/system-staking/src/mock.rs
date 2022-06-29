@@ -293,6 +293,8 @@ impl bifrost_farming::Config for Runtime {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const BlocksPerRound: u32 = 100;
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 }
 
@@ -306,6 +308,8 @@ impl system_staking::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type PalletId = SystemStakingPalletId;
 	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
 pub struct ExtBuilder {

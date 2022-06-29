@@ -27,7 +27,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
-	fn on_initialize(x: u32, y: u32) -> Weight;
+	fn on_initialize(x: u32) -> Weight;
 	fn token_config() -> Weight;
 	fn refresh_token_info() -> Weight;
 	fn payout() -> Weight;
@@ -38,10 +38,8 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 // For backwards compatibility and tests
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn on_initialize(x: u32, y: u32) -> Weight {
-		(50_000_000 as Weight)
-			.saturating_add((50_000_000 as Weight).saturating_mul(x as Weight))
-			.saturating_add((50_000_000 as Weight).saturating_mul(y as Weight))
+	fn on_initialize(x: u32) -> Weight {
+		(50_000_000 as Weight).saturating_add((50_000_000 as Weight).saturating_mul(x as Weight))
 	}
 
 	fn token_config() -> Weight {

@@ -1797,7 +1797,9 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BlocksPerRound: u32 = prod_or_test!(1500, 100);
+	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
 }
 
 impl bifrost_system_staking::Config for Runtime {
@@ -1811,6 +1813,8 @@ impl bifrost_system_staking::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type PalletId = SystemStakingPalletId;
 	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
 // Bifrost modules end
