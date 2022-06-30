@@ -1181,8 +1181,8 @@ pub mod pallet {
 			let extra_weight = T::OnRedeemSuccess::on_redeemed(
 				exchanger.clone(),
 				token_id,
-				vtoken_amount,
 				token_amount,
+				vtoken_amount,
 				redeem_fee,
 			);
 

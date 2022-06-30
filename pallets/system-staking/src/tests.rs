@@ -39,7 +39,7 @@ fn token_config_should_work() {
 		assert_eq!(token_info.new_config.system_stakable_farming_rate, Permill::from_percent(80));
 		assert_eq!(token_info.new_config.system_stakable_base, 100);
 		assert_eq!(token_info.new_config.farming_poolids, Vec::<PoolId>::new());
-		assert_eq!(token_info.new_config.lptoken_rates, Vec::<Permill>::new());
+		assert_eq!(token_info.new_config.lptoken_rates, Vec::<Perbill>::new());
 	});
 }
 

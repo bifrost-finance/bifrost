@@ -19,7 +19,7 @@ use crate::RoundIndex;
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::*;
 use node_primitives::PoolId;
-use sp_arithmetic::per_things::Permill;
+use sp_arithmetic::per_things::{Perbill, Permill};
 use sp_runtime::traits::Zero;
 use sp_std::prelude::*;
 
@@ -52,7 +52,7 @@ impl<
 
 	/// Check exec_delay match
 	pub fn check_delay(&self, now: B, delay: u32) -> bool {
-		now - self.first == delay.into()
+		now - self.first == delay.into() && delay != 0
 	}
 }
 impl<
@@ -102,7 +102,7 @@ impl<Balance: Copy + PartialEq> TokenInfo<Balance> {
 pub struct TokenConfig<Balance> {
 	pub exec_delay: u32,
 	pub system_stakable_farming_rate: Permill,
-	pub lptoken_rates: Vec<Permill>,
+	pub lptoken_rates: Vec<Perbill>,
 	pub add_or_sub: bool, // true: add, false: sub
 	pub system_stakable_base: Balance,
 	pub farming_poolids: Vec<PoolId>,

@@ -57,7 +57,7 @@ pub mod pallet {
 	use crate::{RoundInfo, TokenInfo};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_arithmetic::Permill;
+	use sp_arithmetic::{Perbill, Permill};
 
 	pub type RoundIndex = u32;
 
@@ -138,7 +138,7 @@ pub mod pallet {
 			add_or_sub: bool,
 			system_stakable_base: BalanceOf<T>,
 			farming_poolids: Vec<PoolId>,
-			lptoken_rates: Vec<Permill>,
+			lptoken_rates: Vec<Perbill>,
 		},
 		DepositFailed {
 			token: CurrencyIdOf<T>,
@@ -293,7 +293,7 @@ pub mod pallet {
 			add_or_sub: Option<bool>,
 			system_stakable_base: Option<BalanceOf<T>>,
 			farming_poolids: Option<Vec<PoolId>>,
-			lptoken_rates: Option<Vec<Permill>>,
+			lptoken_rates: Option<Vec<Perbill>>, // TODO, can be > 1
 		) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
@@ -604,8 +604,6 @@ impl<T: Config> Pallet<T> {
 			<TokenInfo<BalanceOf<T>>>::default()
 		};
 
-		token_info.system_shadow_amount =
-			token_info.system_shadow_amount.saturating_sub(token_amount);
 		token_info.pending_redeem_amount =
 			token_info.pending_redeem_amount.saturating_sub(token_amount);
 		match T::MultiCurrency::withdraw(token_id, &to, token_amount) {
@@ -618,6 +616,8 @@ impl<T: Config> Pallet<T> {
 					system_shadow_amount: token_info.system_shadow_amount,
 					pending_redeem_amount: token_info.pending_redeem_amount,
 				});
+				token_info.system_shadow_amount =
+					token_info.system_shadow_amount.saturating_sub(token_amount);
 			},
 			Err(error) => {
 				log::warn!("{:?} withdraw error: {:?}", &token_id, error);
