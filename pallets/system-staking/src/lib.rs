@@ -458,13 +458,13 @@ impl<T: Config> Pallet<T> {
 			token_info
 				.current_config
 				.system_stakable_farming_rate
-				.mul_floor(token_info.system_stakable_amount)
+				.mul_floor(token_info.farming_staking_amount)
 				.saturating_add(token_info.current_config.system_stakable_base)
 		} else {
 			token_info
 				.current_config
 				.system_stakable_farming_rate
-				.mul_floor(token_info.system_stakable_amount)
+				.mul_floor(token_info.farming_staking_amount)
 				.saturating_sub(token_info.current_config.system_stakable_base)
 		};
 		token_info.system_stakable_amount = stakable_amount;
