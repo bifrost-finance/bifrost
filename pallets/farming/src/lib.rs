@@ -638,11 +638,15 @@ pub mod pallet {
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
 			gauge_basic_rewards: Option<Vec<(CurrencyIdOf<T>, BalanceOf<T>)>>,
+			withdraw_limit_count: Option<u8>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			ensure!(
+				pool_info.state == PoolState::Retired || pool_info.state == PoolState::Ongoing,
+				Error::<T>::InvalidPoolState
+			);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 					basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
@@ -653,6 +657,9 @@ pub mod pallet {
 			};
 			if let Some(claim_limit_time) = claim_limit_time {
 				pool_info.claim_limit_time = claim_limit_time;
+			};
+			if let Some(withdraw_limit_count) = withdraw_limit_count {
+				pool_info.withdraw_limit_count = withdraw_limit_count;
 			};
 			if let Some(gauge_basic_rewards) = gauge_basic_rewards {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
