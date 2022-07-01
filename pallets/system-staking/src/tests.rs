@@ -18,7 +18,10 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_ok, sp_runtime::Permill};
+use frame_support::{
+	assert_ok,
+	sp_runtime::{Perbill, Permill},
+};
 
 #[test]
 fn token_config_should_work() {
