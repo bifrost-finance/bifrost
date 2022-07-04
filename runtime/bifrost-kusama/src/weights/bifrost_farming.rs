@@ -39,24 +39,17 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{constants::RocksDbWeight, Weight},};
+use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
-pub trait WeightInfo {
-	fn create_farming_pool() -> Weight;
-	fn deposit() -> Weight;
-	fn withdraw() -> Weight;
-	fn claim() -> Weight;
-	fn gauge_withdraw() -> Weight;
-	fn on_initialize() -> Weight;
-}
 /// Weight functions for `bifrost_farming`.
-impl WeightInfo for () {
+pub struct WeightInfo<T>(PhantomData<T>);
+impl<T: frame_system::Config> bifrost_farming::WeightInfo for WeightInfo<T> {
 	// Storage: Farming PoolInfos (r:1 w:0)
 	// Storage: Farming GaugePoolInfos (r:1 w:0)
 	fn on_initialize() -> Weight {
 		(5_220_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 	}
 	// Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
 	// Storage: Farming PoolNextId (r:1 w:1)
@@ -65,8 +58,8 @@ impl WeightInfo for () {
 	// Storage: Farming PoolInfos (r:0 w:1)
 	fn create_farming_pool() -> Weight {
 		(17_443_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
 	// Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:1)
@@ -75,16 +68,16 @@ impl WeightInfo for () {
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn deposit() -> Weight {
 		(39_505_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+			.saturating_add(T::DbWeight::get().reads(6 as Weight))
+			.saturating_add(T::DbWeight::get().writes(6 as Weight))
 	}
 	// Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn withdraw() -> Weight {
 		(24_006_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	// Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:1)
@@ -92,8 +85,8 @@ impl WeightInfo for () {
 	// Storage: Farming GaugeInfos (r:1 w:0)
 	fn claim() -> Weight {
 		(25_568_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	// Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
 	// Storage: Farming GaugePoolInfos (r:1 w:1)
@@ -102,7 +95,7 @@ impl WeightInfo for () {
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
 	fn gauge_withdraw() -> Weight {
 		(26_590_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads(5 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 }

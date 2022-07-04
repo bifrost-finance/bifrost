@@ -139,14 +139,50 @@ pub enum ExtraFeeName {
 }
 
 // For vtoken-minting and slp modules
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, TypeInfo, MaxEncodedLen)]
 pub enum TimeUnit {
+	// Kusama staking time unit
 	Era(#[codec(compact)] u32),
 	SlashingSpan(#[codec(compact)] u32),
+	// Moonriver staking time unit
+	Round(#[codec(compact)] u32),
 }
 
 impl Default for TimeUnit {
 	fn default() -> Self {
 		TimeUnit::Era(0u32)
+	}
+}
+
+impl PartialEq for TimeUnit {
+	fn eq(&self, other: &Self) -> bool {
+		match (&self, other) {
+			(Self::Era(a), Self::Era(b)) => a.eq(b),
+			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.eq(b),
+			(Self::Round(a), Self::Round(b)) => a.eq(b),
+			_ => false,
+		}
+	}
+}
+
+impl Ord for TimeUnit {
+	fn cmp(&self, other: &Self) -> sp_std::cmp::Ordering {
+		match (&self, other) {
+			(Self::Era(a), Self::Era(b)) => a.cmp(b),
+			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.cmp(b),
+			(Self::Round(a), Self::Round(b)) => a.cmp(b),
+			_ => sp_std::cmp::Ordering::Less,
+		}
+	}
+}
+
+impl PartialOrd for TimeUnit {
+	fn partial_cmp(&self, other: &Self) -> Option<sp_std::cmp::Ordering> {
+		match (&self, other) {
+			(Self::Era(a), Self::Era(b)) => Some(a.cmp(b)),
+			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),
+			(Self::Round(a), Self::Round(b)) => Some(a.cmp(b)),
+			_ => None,
+		}
 	}
 }

@@ -20,6 +20,7 @@ members = [
 	"pallets/slp",
 	"pallets/vtoken-minting",
 	"pallets/vstoken-conversion",
+	"pallets/system-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]

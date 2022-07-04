@@ -89,7 +89,7 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, VtokenMintingOperator},
+	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
 	PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 944,
+	spec_version: 946,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -304,6 +304,7 @@ parameter_types! {
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 }
 
 impl frame_system::Config for Runtime {
@@ -1358,6 +1359,7 @@ parameter_type_with_key! {
 			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 vKSM
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
+			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_foreign_asset_metadata(*foreign_asset_id).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1382,7 +1384,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
 			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account(&SystemStakingPalletId::get()).eq(a)
 	}
 }
 
@@ -1521,20 +1524,41 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MiscFeeHandler = MiscFeeHandlers;
 }
 
-pub fn create_x2_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::new(
-		1,
-		X1(AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		}),
-	)
+parameter_types! {
+	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+}
+
+pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
+	match currency_id {
+		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+			1,
+			X2(
+				Parachain(parachains::moonriver::ID.into()),
+				AccountKey20 {
+					network: NetworkId::Any,
+					key: Slp::derivative_account_id_20(
+						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						index,
+					)
+					.into(),
+				},
+			),
+		),
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index)
+					.into(),
+			}),
+		),
+	}
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert(sub_account_index: u16) -> MultiLocation {
-		create_x2_multilocation(sub_account_index)
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		create_x2_multilocation(sub_account_index, currency_id)
 	}
 }
 
@@ -1731,6 +1755,13 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 	}
 }
 
+pub struct OnRefund;
+impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
+		SystemStaking::on_refund(token_id, to, token_amount)
+	}
+}
+
 impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -1744,6 +1775,7 @@ impl bifrost_slp::Config for Runtime {
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = OnRefund;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1762,6 +1794,27 @@ impl bifrost_farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
+}
+
+impl bifrost_system_staking::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_system_staking::weights::SubstrateWeight<Runtime>;
+	type FarmingInfo = Farming;
+	type VtokenMintingInterface = VtokenMinting;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
 // Bifrost modules end
@@ -1825,6 +1878,22 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
+pub struct OnRedeemSuccess;
+impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for OnRedeemSuccess {
+	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
+		SystemStaking::on_redeem_success(token_id, to, token_amount)
+	}
+
+	fn on_redeemed(
+		address: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+		fee: Balance,
+	) -> Weight {
+		SystemStaking::on_redeemed(address, token_id, token_amount, vtoken_amount, fee)
+	}
+}
 
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
@@ -1841,7 +1910,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = SlpEntrancePalletId;
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
 	type WeightInfo = ();
+	type OnRedeemSuccess = OnRedeemSuccess;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1984,6 +2055,7 @@ construct_runtime! {
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
+		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 	}
 }
 
@@ -2048,6 +2120,8 @@ mod benches {
 		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
 		[parachain_staking, ParachainStaking]
+		[bifrost_vtoken_minting, VtokenMinting]
+		[bifrost_farming, Farming]
 	);
 }
 

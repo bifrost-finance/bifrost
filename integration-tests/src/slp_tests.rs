@@ -17,11 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Cross-chain transfer tests within Kusama network.
+#![cfg(test)]
 
 use bifrost_polkadot_runtime::PolkadotXcm;
 use bifrost_slp::{
 	primitives::{
-		SubstrateLedgerUpdateEntry, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
+		SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
+		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
 	},
 	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 	ValidatorsByDelegatorUpdateEntry, XcmOperation,
@@ -35,7 +37,7 @@ use pallet_xcm::QueryStatus;
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
-use crate::{integration_tests::*, kusama_test_net::*, slp_tests::VersionedMultiLocation::V1};
+use crate::{integration_tests::*, kusama_test_net::*};
 
 /// ****************************************************
 /// *********  Preparation section  ********************
@@ -70,6 +72,16 @@ fn register_subaccount_index_0() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
+		// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
+		// block)
+		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some(600)
+		));
+
+		System::set_block_number(600);
+
 		// Initialize ongoing timeunit as 0.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			Origin::root(),
@@ -78,7 +90,8 @@ fn register_subaccount_index_0() {
 		));
 
 		// Initialize currency delays.
-		let delay = Delays { unlock_delay: TimeUnit::Era(10) };
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
 		assert_ok!(Slp::set_currency_delays(Origin::root(), RelayCurrencyId::get(), Some(delay)));
 
 		// First to setup index-multilocation relationship of subaccount_0
@@ -86,7 +99,7 @@ fn register_subaccount_index_0() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			0u16,
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 		));
 
 		// Register Operation weight and fee
@@ -168,6 +181,8 @@ fn register_subaccount_index_0() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -229,7 +244,7 @@ fn register_validators() {
 		assert_ok!(Slp::add_validator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			validator_0_location.clone(),
+			Box::new(validator_0_location.clone()),
 		));
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
@@ -246,7 +261,7 @@ fn register_validators() {
 		assert_ok!(Slp::add_validator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			validator_1_location,
+			Box::new(validator_1_location),
 		));
 
 		assert_eq!(Slp::get_validators(RelayCurrencyId::get()), Some(valis));
@@ -382,7 +397,7 @@ fn transfer_to_works() {
 		);
 
 		// Why not the transferred amount reach the sub-account?
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999988476752);
 	});
 }
 
@@ -403,8 +418,9 @@ fn bond_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 	});
 
@@ -446,7 +462,8 @@ fn bond_extra_works() {
 		assert_ok!(Slp::bond_extra(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
+			None,
 			dollar(RelayCurrencyId::get()),
 		));
 	});
@@ -489,7 +506,8 @@ fn unbond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
+			None,
 			500_000_000_000,
 		));
 	});
@@ -528,7 +546,11 @@ fn unbond_all_works() {
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
 		// Unbond the only bonded 1 ksm.
-		assert_ok!(Slp::unbond_all(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+		assert_ok!(Slp::unbond_all(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Box::new(subaccount_0_location),
+		));
 	});
 
 	// Can be uncommented to check if the result is correct.
@@ -567,7 +589,8 @@ fn rebond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
+			None,
 			500_000_000_000,
 		));
 
@@ -592,8 +615,9 @@ fn rebond_works() {
 		assert_ok!(Slp::rebond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
-			500_000_000_000,
+			Box::new(subaccount_0_location),
+			None,
+			Some(500_000_000_000),
 		));
 	});
 
@@ -653,14 +677,14 @@ fn delegate_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
 		assert_ok!(Slp::set_validators_by_delegator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets,
 		));
 	});
@@ -710,7 +734,7 @@ fn undelegate_works() {
 		assert_ok!(Slp::undelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 			targets.clone(),
 		));
 	});
@@ -766,8 +790,8 @@ fn redelegate_works() {
 		assert_ok!(Slp::redelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
-			targets.clone(),
+			Box::new(subaccount_0_location),
+			Some(targets.clone()),
 		));
 	});
 
@@ -850,8 +874,9 @@ fn liquidize_works() {
 		assert_ok!(Slp::liquidize(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
-			Some(TimeUnit::SlashingSpan(5))
+			Box::new(subaccount_0_location),
+			Some(TimeUnit::SlashingSpan(5)),
+			None
 		));
 	});
 
@@ -886,7 +911,11 @@ fn chill_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-		assert_ok!(Slp::chill(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+		assert_ok!(Slp::chill(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Box::new(subaccount_0_location),
+		));
 	});
 
 	// check if sub-account index 0 belongs to the group of nominators
@@ -918,7 +947,7 @@ fn transfer_back_works() {
 
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			1998962870800
+			1999215574218
 		);
 	});
 
@@ -948,7 +977,7 @@ fn transfer_back_works() {
 		);
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			2497925741600
+			2498431148436
 		);
 	});
 
@@ -987,12 +1016,12 @@ fn supplement_fee_reserve_works() {
 		assert_ok!(Slp::supplement_fee_reserve(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			Box::new(subaccount_0_location),
 		));
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999834059328);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999988476752);
 	});
 }
 
@@ -1014,17 +1043,18 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 
 		// Check the existence of the query in pallet_xcm Queries storage.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1035,13 +1065,11 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1091,9 +1119,9 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1121,7 +1149,8 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_ok!(Slp::bond_extra(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
+			None,
 			dollar(RelayCurrencyId::get()),
 		));
 
@@ -1139,9 +1168,9 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1152,13 +1181,11 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1208,9 +1235,9 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1238,7 +1265,8 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
+			None,
 			500_000_000_000,
 		));
 
@@ -1256,9 +1284,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1269,13 +1297,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: true,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Unlock,
 					amount: 500_000_000_000,
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1315,9 +1341,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1345,7 +1371,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_ok!(Slp::unbond_all(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 		));
 
 		assert_eq!(
@@ -1362,9 +1388,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1375,13 +1401,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: true,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Unlock,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: Some(TimeUnit::Era(10))
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1421,9 +1445,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1451,7 +1475,8 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
+			None,
 			500_000_000_000,
 		));
 
@@ -1476,8 +1501,9 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_ok!(Slp::rebond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			500_000_000_000,
+			Box::new(subaccount_0_location.clone()),
+			None,
+			Some(500_000_000_000),
 		));
 
 		assert_eq!(
@@ -1497,9 +1523,9 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1510,13 +1536,11 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: false,
-					if_rebond: true,
+					update_operation: SubstrateLedgerUpdateOperation::Rebond,
 					amount: 500_000_000_000,
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1553,9 +1577,9 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1595,6 +1619,8 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
+		System::set_block_number(1200);
+
 		// set ongoing era to be 11 which is greater than due era 10.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			Origin::root(),
@@ -1605,8 +1631,9 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_ok!(Slp::liquidize(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			Some(TimeUnit::SlashingSpan(5))
+			Box::new(subaccount_0_location.clone()),
+			Some(TimeUnit::SlashingSpan(5)),
+			None
 		));
 
 		assert_eq!(
@@ -1626,9 +1653,9 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 2200
 			})
 		);
 
@@ -1639,13 +1666,11 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: false,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Liquidize,
 					amount: 0,
 					unlock_time: Some(TimeUnit::Era(11))
 				}),
-				1001
+				2200
 			))
 		);
 	});
@@ -1682,9 +1707,9 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		assert_eq!(
 			PolkadotXcm::query(1),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 2200
 			})
 		);
 
@@ -1724,17 +1749,18 @@ fn fail_delegator_ledger_query_response_works() {
 		assert_ok!(Slp::bond(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			dollar(RelayCurrencyId::get()),
+			None
 		));
 
 		// Check the existence of the query in pallet_xcm Queries storage.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1745,13 +1771,11 @@ fn fail_delegator_ledger_query_response_works() {
 				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 					currency_id: RelayCurrencyId::get(),
 					delegator_id: subaccount_0_location.clone(),
-					if_bond: true,
-					if_unlock: false,
-					if_rebond: false,
+					update_operation: SubstrateLedgerUpdateOperation::Bond,
 					amount: dollar(RelayCurrencyId::get()),
 					unlock_time: None
 				}),
-				1001
+				1600
 			))
 		);
 	});
@@ -1788,9 +1812,9 @@ fn fail_delegator_ledger_query_response_works() {
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
-				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				responder: VersionedMultiLocation::V1(MultiLocation { parents: 1, interior: Here }),
 				maybe_notify: None,
-				timeout: 1001
+				timeout: 1600
 			})
 		);
 
@@ -1848,7 +1872,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
@@ -1868,7 +1892,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 						validators: valis.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -1937,7 +1961,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 		assert_ok!(Slp::undelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
@@ -1957,7 +1981,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 						validators: valis_1.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2026,8 +2050,8 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 		assert_ok!(Slp::redelegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			targets.clone(),
+			Box::new(subaccount_0_location.clone()),
+			Some(targets.clone()),
 		));
 
 		// Before data: Delegate only 1 validator.
@@ -2046,7 +2070,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 						validators: valis_2.clone(),
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2116,7 +2140,7 @@ fn fail_validators_by_delegator_query_response_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
+			Box::new(subaccount_0_location.clone()),
 			targets.clone(),
 		));
 
@@ -2136,7 +2160,7 @@ fn fail_validators_by_delegator_query_response_works() {
 						validators: valis,
 					}
 				),
-				1001
+				1600
 			))
 		);
 
@@ -2144,7 +2168,7 @@ fn fail_validators_by_delegator_query_response_works() {
 		assert_ok!(Slp::fail_validators_by_delegator_query_response(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			0
+			0,
 		));
 
 		// check after data

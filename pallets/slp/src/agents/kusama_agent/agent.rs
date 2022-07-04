@@ -48,16 +48,16 @@ use crate::{
 	agents::{KusamaCall, RewardDestination, StakingCall, SystemCall, UtilityCall, XcmCall},
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, SubstrateLedger, SubstrateLedgerUpdateEntry,
+		Ledger, SubstrateLedger, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
 		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
 		XcmOperation, KSM,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
-	TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
-	XcmDestWeightAndFee, TIMEOUT_BLOCKS,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
+	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorNextIndex,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry,
+	MinimumsAndMaximums, Pallet, QueryId, TimeUnit, Validators, ValidatorsByDelegator,
+	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
 /// StakingAgent implementation for Kusama
@@ -78,7 +78,7 @@ impl<T: Config>
 		AccountIdOf<T>,
 		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
 	> for KusamaAgent<T>
@@ -92,7 +92,7 @@ impl<T: Config>
 		})?;
 
 		// Generate multi-location by id.
-		let delegator_multilocation = T::AccountConverter::convert(new_delegator_id);
+		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, KSM));
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation)
@@ -102,9 +102,14 @@ impl<T: Config>
 	}
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn bond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		ensure!(DelegatorLedgers::<T>::get(KSM, who).is_none(), Error::<T>::AlreadyBonded);
+		ensure!(!DelegatorLedgers::<T>::contains_key(KSM, who), Error::<T>::AlreadyBonded);
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -139,13 +144,17 @@ impl<T: Config>
 			active: Zero::zero(),
 			unlocking: vec![],
 		};
-		let sub_ledger = Ledger::<MultiLocation, BalanceOf<T>>::Substrate(ledger);
+		let sub_ledger = Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Substrate(ledger);
 
 		DelegatorLedgers::<T>::insert(KSM, who, sub_ledger);
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, true, false, false, amount, query_id, timeout,
+			who,
+			SubstrateLedgerUpdateOperation::Bond,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -155,7 +164,12 @@ impl<T: Config>
 	}
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn bond_extra(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
@@ -165,14 +179,17 @@ impl<T: Config>
 
 		// Check if the new_add_amount + active_staking_amount doesn't exceeds
 		// delegator_active_staking_maximum
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let active = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let active = substrate_ledger.active;
 
-		let total = amount.checked_add(&active).ok_or(Error::<T>::OverFlow)?;
-		ensure!(
-			total <= mins_maxs.delegator_active_staking_maximum,
-			Error::<T>::ExceedActiveMaximum
-		);
+			let total = amount.checked_add(&active).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				total <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 		// Construct xcm message..
 		let call = KusamaCall::Staking(StakingCall::BondExtra(amount));
 
@@ -183,7 +200,11 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, true, false, false, amount, query_id, timeout,
+			who,
+			SubstrateLedgerUpdateOperation::Bond,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -193,29 +214,38 @@ impl<T: Config>
 	}
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn unbond(
+		&self,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let (active_staking, unlocking_num) =
-			(substrate_ledger.active, substrate_ledger.unlocking.len() as u32);
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let (active_staking, unlocking_num) =
+				(substrate_ledger.active, substrate_ledger.unlocking.len() as u32);
 
-		// Check if the unbonding amount exceeds minimum requirement.
-		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+			// Check if the unbonding amount exceeds minimum requirement.
+			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+			ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
-		// Check if the remaining active balance is enough for (unbonding amount + minimum
-		// bonded amount)
-		let remaining = active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
-		ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
+			// Check if the remaining active balance is enough for (unbonding amount + minimum
+			// bonded amount)
+			let remaining =
+				active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
+			ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
 
-		// Check if this unbonding will exceed the maximum unlocking records bound for a single
-		// delegator.
-		ensure!(
-			unlocking_num < mins_maxs.unbond_record_maximum,
-			Error::<T>::ExceedUnlockingRecords
-		);
+			// Check if this unbonding will exceed the maximum unlocking records bound for a single
+			// delegator.
+			ensure!(
+				unlocking_num < mins_maxs.unbond_record_maximum,
+				Error::<T>::ExceedUnlockingRecords
+			);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
@@ -227,7 +257,11 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, false, true, false, amount, query_id, timeout,
+			who,
+			SubstrateLedgerUpdateOperation::Unlock,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -241,30 +275,43 @@ impl<T: Config>
 		// Get the active amount of a delegator.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let amount = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let amount = substrate_ledger.active;
 
-		// Construct xcm message.
-		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+			// Construct xcm message.
+			let call = KusamaCall::Staking(StakingCall::Unbond(amount));
 
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
+			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+			// send it out.
+			let (query_id, timeout, xcm_message) =
+				Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
 
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who, false, true, false, amount, query_id, timeout,
-		)?;
+			// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+			Self::insert_delegator_ledger_update_entry(
+				who,
+				SubstrateLedgerUpdateOperation::Unlock,
+				amount,
+				query_id,
+				timeout,
+			)?;
 
-		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			// Send out the xcm message.
+			T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok(query_id)
+			Ok(query_id)
+		} else {
+			Err(Error::<T>::Unexpected)?
+		}
 	}
 
 	/// Cancel some unbonding amount.
-	fn rebond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn rebond(
+		&self,
+		who: &MultiLocation,
+		amount: Option<BalanceOf<T>>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
+		let amount = amount.ok_or(Error::<T>::AmountNone)?;
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
@@ -273,15 +320,19 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.rebond_minimum, Error::<T>::LowerThanMinimum);
 
 		// Get the delegator ledger
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let unlock_chunk_list = substrate_ledger.unlocking;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let unlock_chunk_list = substrate_ledger.unlocking;
 
-		// Check if the delegator unlocking amount is greater than or equal to the rebond amount.
-		let mut total_unlocking: BalanceOf<T> = Zero::zero();
-		for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
-			total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
+			// Check if the delegator unlocking amount is greater than or equal to the rebond
+			// amount.
+			let mut total_unlocking: BalanceOf<T> = Zero::zero();
+			for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
+				total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
+			}
+			ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
+		} else {
+			Err(Error::<T>::Unexpected)?;
 		}
-		ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Rebond(amount));
@@ -293,7 +344,11 @@ impl<T: Config>
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
-			who, false, false, true, amount, query_id, timeout,
+			who,
+			SubstrateLedgerUpdateOperation::Rebond,
+			amount,
+			query_id,
+			timeout,
 		)?;
 
 		// Send out the xcm message.
@@ -409,8 +464,9 @@ impl<T: Config>
 	fn redelegate(
 		&self,
 		who: &MultiLocation,
-		targets: &Vec<MultiLocation>,
+		targets: &Option<Vec<MultiLocation>>,
 	) -> Result<QueryId, Error<T>> {
+		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorSetNotExist)?;
 		let query_id = Self::delegate(self, who, targets)?;
 		Ok(query_id)
 	}
@@ -449,7 +505,12 @@ impl<T: Config>
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
+	fn liquidize(
+		&self,
+		who: &MultiLocation,
+		when: &Option<TimeUnit>,
+		_validator: &Option<MultiLocation>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(KSM, who),
@@ -474,9 +535,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			false,
-			false,
-			false,
+			SubstrateLedgerUpdateOperation::Liquidize,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -509,13 +568,20 @@ impl<T: Config>
 		// Get active amount, if not zero, create an update entry.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let amount = substrate_ledger.active;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let amount = substrate_ledger.active;
 
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who, false, true, false, amount, query_id, timeout,
-		)?;
+			// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+			Self::insert_delegator_ledger_update_entry(
+				who,
+				SubstrateLedgerUpdateOperation::Unlock,
+				amount,
+				query_id,
+				timeout,
+			)?;
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Send out the xcm message.
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
@@ -605,10 +671,29 @@ impl<T: Config>
 
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &MultiLocation,
+		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
+		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// ensure who is a valid delegator
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(KSM, &who),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Get current TimeUnit.
+		let current_time_unit =
+			T::VtokenMinting::get_ongoing_time_unit(KSM).ok_or(Error::<T>::TimeUnitNotExist)?;
+		// Get DelegatorLatestTuneRecord for the currencyId.
+		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(KSM, &who);
+		// ensure each delegator can only tune once per TimeUnit.
+		ensure!(
+			latest_time_unit_op != Some(current_time_unit.clone()),
+			Error::<T>::DelegatorAlreadyTuned
+		);
+
 		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
 
 		// Check whether "who" is an existing delegator.
@@ -632,6 +717,9 @@ impl<T: Config>
 				Err(Error::<T>::Unexpected)?
 			}
 		})?;
+
+		// Update the DelegatorLatestTuneRecord<T> storage.
+		DelegatorLatestTuneRecord::<T>::insert(KSM, who, current_time_unit);
 
 		Ok(())
 	}
@@ -660,11 +748,14 @@ impl<T: Config>
 		// Get the delegator ledger
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let total = substrate_ledger.total;
+		if let Ledger::Substrate(substrate_ledger) = ledger {
+			let total = substrate_ledger.total;
 
-		// Check if ledger total amount is zero. If not, return error.
-		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
+			// Check if ledger total amount is zero. If not, return error.
+			ensure!(total.is_zero(), Error::<T>::AmountNotZero);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Remove corresponding storage.
 		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
@@ -775,7 +866,7 @@ impl<T: Config>
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,
-		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		// If this is manual mode, it is always updatable.
@@ -1058,112 +1149,134 @@ impl<T: Config> KusamaAgent<T> {
 
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
-		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
+		use crate::primitives::SubstrateLedgerUpdateOperation::{Bond, Liquidize, Rebond, Unlock};
 		// update DelegatorLedgers<T> storage
-		let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+		if let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
-			if_bond,
-			if_unlock,
-			if_rebond,
+			update_operation,
 			amount,
 			unlock_time,
-		}) = query_entry;
-
-		DelegatorLedgers::<T>::mutate(KSM, delegator_id, |old_ledger| -> Result<(), Error<T>> {
-			if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
-				// If this an unlocking xcm message update record
-				// Decrease the active amount and add an unlocking record.
-				if if_bond {
-					// If this is a bonding operation.
-					// Increase both the active and total amount.
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-
-					old_sub_ledger.total =
-						old_sub_ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-				} else if if_unlock {
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
-
-					let unlock_time_unit = unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-					let new_unlock_record =
-						UnlockChunk { value: amount, unlock_time: unlock_time_unit };
-
-					old_sub_ledger.unlocking.push(new_unlock_record);
-				} else if if_rebond {
-					// If it is a rebonding operation.
-					// Reduce the unlocking records.
-					let mut remaining_amount = amount;
-
-					#[allow(clippy::while_let_loop)]
-					loop {
-						if let Some(record) = old_sub_ledger.unlocking.pop() {
-							if remaining_amount >= record.value {
-								remaining_amount -= record.value;
-							} else {
-								let remain_unlock_chunk = UnlockChunk {
-									value: record.value - remaining_amount,
-									unlock_time: record.unlock_time,
-								};
-								old_sub_ledger.unlocking.push(remain_unlock_chunk);
-								break;
-							}
-						} else {
-							break;
-						}
-					}
-
-					// Increase the active amount.
-					old_sub_ledger.active =
-						old_sub_ledger.active.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-				} else {
-					// If it is a liquidize operation.
-					let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
-					let unlock_era = if let TimeUnit::Era(unlock_era) = unlock_unit {
-						unlock_era
-					} else {
-						Err(Error::<T>::InvalidTimeUnit)?
-					};
-
-					let mut accumulated: BalanceOf<T> = Zero::zero();
-					let mut pop_first_num = 0;
-
-					// for each unlocking record, check whether its unlocking era is smaller
-					// or equal to unlock_time. If yes, pop it out and accumulate its
-					// amount.
-					for record in old_sub_ledger.unlocking.iter() {
-						if let TimeUnit::Era(due_era) = record.unlock_time {
-							if due_era <= unlock_era {
-								accumulated = accumulated
-									.checked_add(&record.value)
+		}) = query_entry
+		{
+			DelegatorLedgers::<T>::mutate(
+				KSM,
+				delegator_id,
+				|old_ledger| -> Result<(), Error<T>> {
+					if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
+						// If this an unlocking xcm message update record
+						// Decrease the active amount and add an unlocking record.
+						match update_operation {
+							Bond => {
+								// If this is a bonding operation.
+								// Increase both the active and total amount.
+								old_sub_ledger.active = old_sub_ledger
+									.active
+									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
 
-								pop_first_num =
-									pop_first_num.checked_add(&1).ok_or(Error::<T>::OverFlow)?;
-							} else {
-								break;
-							}
-						} else {
-							Err(Error::<T>::Unexpected)?;
+								old_sub_ledger.total = old_sub_ledger
+									.total
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+							},
+							Unlock => {
+								old_sub_ledger.active = old_sub_ledger
+									.active
+									.checked_sub(&amount)
+									.ok_or(Error::<T>::UnderFlow)?;
+
+								let unlock_time_unit =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+								let new_unlock_record =
+									UnlockChunk { value: amount, unlock_time: unlock_time_unit };
+
+								old_sub_ledger.unlocking.push(new_unlock_record);
+							},
+							Rebond => {
+								// If it is a rebonding operation.
+								// Reduce the unlocking records.
+								let mut remaining_amount = amount;
+
+								#[allow(clippy::while_let_loop)]
+								loop {
+									if let Some(record) = old_sub_ledger.unlocking.pop() {
+										if remaining_amount >= record.value {
+											remaining_amount -= record.value;
+										} else {
+											let remain_unlock_chunk = UnlockChunk {
+												value: record.value - remaining_amount,
+												unlock_time: record.unlock_time,
+											};
+											old_sub_ledger.unlocking.push(remain_unlock_chunk);
+											break;
+										}
+									} else {
+										break;
+									}
+								}
+
+								// Increase the active amount.
+								old_sub_ledger.active = old_sub_ledger
+									.active
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+							},
+							Liquidize => {
+								// If it is a liquidize operation.
+								let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
+								let unlock_era = if let TimeUnit::Era(unlock_era) = unlock_unit {
+									unlock_era
+								} else {
+									Err(Error::<T>::InvalidTimeUnit)?
+								};
+
+								let mut accumulated: BalanceOf<T> = Zero::zero();
+								let mut pop_first_num = 0;
+
+								// for each unlocking record, check whether its unlocking era is
+								// smaller or equal to unlock_time. If yes, pop it out and
+								// accumulate its amount.
+								for record in old_sub_ledger.unlocking.iter() {
+									if let TimeUnit::Era(due_era) = record.unlock_time {
+										if due_era <= unlock_era {
+											accumulated = accumulated
+												.checked_add(&record.value)
+												.ok_or(Error::<T>::OverFlow)?;
+
+											pop_first_num = pop_first_num
+												.checked_add(&1)
+												.ok_or(Error::<T>::OverFlow)?;
+										} else {
+											break;
+										}
+									} else {
+										Err(Error::<T>::Unexpected)?;
+									}
+								}
+
+								// Remove the first pop_first_num elements from unlocking records.
+								old_sub_ledger.unlocking.drain(0..pop_first_num);
+
+								// Finally deduct the accumulated amount from ledger total field.
+								old_sub_ledger.total = old_sub_ledger
+									.total
+									.checked_sub(&accumulated)
+									.ok_or(Error::<T>::OverFlow)?;
+							},
 						}
+						Ok(())
+					} else {
+						Err(Error::<T>::Unexpected)
 					}
-
-					// Remove the first pop_first_num elements from unlocking records.
-					old_sub_ledger.unlocking.drain(0..pop_first_num);
-
-					// Finally deduct the accumulated amount from ledger total field.
-					old_sub_ledger.total = old_sub_ledger
-						.total
-						.checked_sub(&accumulated)
-						.ok_or(Error::<T>::OverFlow)?;
-				}
-			}
-
-			Ok(())
-		})?;
+				},
+			)?;
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
 
 		// Delete the DelegatorLedgerXcmUpdateQueue<T> query
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
@@ -1221,28 +1334,23 @@ impl<T: Config> KusamaAgent<T> {
 
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
-		if_bond: bool,
-		if_unlock: bool,
-		if_rebond: bool,
+		update_operation: SubstrateLedgerUpdateOperation,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {
+		use crate::primitives::SubstrateLedgerUpdateOperation::{Liquidize, Unlock};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		let unlock_time = if if_unlock {
-			Self::get_unlocking_era_from_current()?
-		} else if if_bond || if_rebond {
-			None
-		} else {
-			T::VtokenMinting::get_ongoing_time_unit(KSM)
+		let unlock_time = match &update_operation {
+			Unlock => Self::get_unlocking_era_from_current()?,
+			Liquidize => T::VtokenMinting::get_ongoing_time_unit(KSM),
+			_ => None,
 		};
 
 		let entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id: KSM,
 			delegator_id: who.clone(),
-			if_bond,
-			if_unlock,
-			if_rebond,
+			update_operation,
 			amount,
 			unlock_time,
 		});
@@ -1334,7 +1442,7 @@ impl<T: Config> KusamaAgent<T> {
 		// Execute the xcm message.
 		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
 			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+			.map_err(|_| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}

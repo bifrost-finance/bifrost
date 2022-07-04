@@ -25,11 +25,14 @@ hex-literal = { version = "0.3.1" }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.22", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.22", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+bifrost-slp = { path = "../../pallets/slp", default-features = false }
 
 [features]
 default = ["std"]
@@ -41,6 +44,7 @@ std = [
 	"frame-benchmarking/std",
 	"node-primitives/std",
 	"orml-traits/std",
+	"bifrost-slp/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

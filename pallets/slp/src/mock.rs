@@ -32,7 +32,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_core::{blake2_256, H256};
+use sp_core::{hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
@@ -175,32 +175,49 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
 	type WeightInfo = ();
+	type OnRedeemSuccess = ();
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = AccountId32::new([1u8; 32]);
 }
 
+parameter_types! {
+	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+}
+
 pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert(sub_account_index: u16) -> MultiLocation {
-		MultiLocation::new(
-			1,
-			X1(Junction::AccountId32 {
-				network: NetworkId::Any,
-				// id: Utility::derivative_account_id(
-				// 	ParaId::from(2001u32).into_account(),
-				// 	sub_account_index,
-				// )
-				// .into(),
-				id: Self::derivative_account_id(
-					ParaId::from(2001u32).into_account(),
-					sub_account_index,
-				)
-				.into(),
-			}),
-		)
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		match currency_id {
+			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+				1,
+				X2(
+					Parachain(2023),
+					Junction::AccountKey20 {
+						network: NetworkId::Any,
+						key: Slp::derivative_account_id_20(
+							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							sub_account_index,
+						)
+						.into(),
+					},
+				),
+			),
+			_ => MultiLocation::new(
+				1,
+				X1(Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: Self::derivative_account_id(
+						ParaId::from(2001u32).into_account(),
+						sub_account_index,
+					)
+					.into(),
+				}),
+			),
+		}
 	}
 }
 
@@ -233,7 +250,7 @@ impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
 		Default::default()
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
-		Default::default()
+		true
 	}
 }
 
@@ -250,6 +267,7 @@ impl Config for Runtime {
 	type SubstrateResponseManager = ();
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = ();
 }
 
 pub struct ExtBuilder {
