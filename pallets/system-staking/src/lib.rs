@@ -55,9 +55,11 @@ pub type BalanceOf<T: Config> =
 pub mod pallet {
 	use super::*;
 	use crate::{RoundInfo, TokenInfo};
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		pallet_prelude::*,
+		sp_runtime::{Perbill, Permill},
+	};
 	use frame_system::pallet_prelude::*;
-	use sp_arithmetic::{Perbill, Permill};
 
 	pub type RoundIndex = u32;
 
@@ -173,14 +175,6 @@ pub mod pallet {
 			pending_redeem_amount: BalanceOf<T>,
 		},
 		WithdrawFailed {
-			token: CurrencyIdOf<T>,
-			amount: BalanceOf<T>,
-			farming_staking_amount: BalanceOf<T>,
-			system_stakable_amount: BalanceOf<T>,
-			system_shadow_amount: BalanceOf<T>,
-			pending_redeem_amount: BalanceOf<T>,
-		},
-		RedeemSuccess {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
 			farming_staking_amount: BalanceOf<T>,
@@ -366,6 +360,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// token config，take effect when next round begins
+		#[pallet::weight(<T as Config>::WeightInfo::delete_token())]
+		pub fn delete_token(
+			origin: OriginFor<T>,
+			token: CurrencyIdOf<T>,
+		) -> DispatchResultWithPostInfo {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
+
+			<TokenStatus<T>>::remove(&token);
+
+			let mut token_list = Self::token_list();
+			token_list.retain(|&x| x != token);
+			<TokenList<T>>::put(token_list);
+
+			Ok(().into())
+		}
+
 		/// refresh token info，query farming pallet, and update TokenInfo, change to new
 		/// config，ignore exec_delay, execute immediately
 		#[pallet::weight(<T as Config>::WeightInfo::refresh_token_info())]
@@ -468,6 +479,10 @@ impl<T: Config> Pallet<T> {
 				.saturating_sub(token_info.current_config.system_stakable_base)
 		};
 		token_info.system_stakable_amount = stakable_amount;
+
+		// write state before other calls
+		<TokenStatus<T>>::insert(&token_id, token_info.clone());
+
 		if stakable_amount >
 			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
 		{
@@ -478,6 +493,8 @@ impl<T: Config> Pallet<T> {
 				Ok(_) =>
 					match T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount) {
 						Ok(_) => {
+							token_info.system_shadow_amount =
+								token_info.system_shadow_amount.saturating_add(mint_amount);
 							Self::deposit_event(Event::MintSuccess {
 								token: token_id,
 								amount: mint_amount,
@@ -486,8 +503,6 @@ impl<T: Config> Pallet<T> {
 								system_shadow_amount: token_info.system_shadow_amount,
 								pending_redeem_amount: token_info.pending_redeem_amount,
 							});
-							token_info.system_shadow_amount =
-								token_info.system_shadow_amount.saturating_add(mint_amount);
 						},
 						Err(error) => {
 							Self::deposit_event(Event::MintFailed {
@@ -556,14 +571,14 @@ impl<T: Config> Pallet<T> {
 						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)
 						{
 							Ok(_) => {
-								Self::deposit_event(Event::RedeemSuccess {
-									token: token_id,
-									amount: vredeem_amount,
-									farming_staking_amount: token_info.farming_staking_amount,
-									system_stakable_amount: token_info.system_stakable_amount,
-									system_shadow_amount: token_info.system_shadow_amount,
-									pending_redeem_amount: token_info.pending_redeem_amount,
-								});
+								let new_token_info =
+									if let Some(state) = <TokenStatus<T>>::get(&token_id) {
+										state
+									} else {
+										<TokenInfo<BalanceOf<T>>>::default()
+									};
+								token_info.pending_redeem_amount =
+									new_token_info.pending_redeem_amount;
 							},
 							Err(error) => {
 								Self::deposit_event(Event::RedeemFailed {

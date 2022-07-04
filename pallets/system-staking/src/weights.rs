@@ -29,6 +29,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn on_initialize(x: u32) -> Weight;
 	fn token_config() -> Weight;
+	fn delete_token() -> Weight;
 	fn refresh_token_info() -> Weight;
 	fn payout() -> Weight;
 	fn on_redeem_success() -> Weight;
@@ -43,6 +44,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	}
 
 	fn token_config() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn delete_token() -> Weight {
 		(50_000_000 as Weight)
 	}
 

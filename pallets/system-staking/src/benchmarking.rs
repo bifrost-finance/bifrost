@@ -18,34 +18,46 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
+use frame_support::sp_runtime::{Perbill, Permill};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
-use sp_arithmetic::per_things::Permill;
+use node_primitives::{CurrencyId, PoolId, TokenSymbol};
 
 use frame_support::{sp_runtime::traits::UniqueSaturatedFrom, traits::OnInitialize};
 
 use crate::{Pallet as SystemStaking, *};
 
 benchmarks! {
-  on_initialize {}:{SystemStaking::<T>::on_initialize(T::BlockNumber::from(101u32));}
+	on_initialize {}:{SystemStaking::<T>::on_initialize(T::BlockNumber::from(101u32));}
 
-  token_config {
+	token_config {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
-	}: _(RawOrigin::Root, KSM, Some(1), Some(Permill::from_percent(80)),Some(false),Some(token_amount),None,None)
+		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+		let pool_id = PoolId::from(1u32);
+	}: _(RawOrigin::Root, KSM, Some(1), Some(Permill::from_percent(80)),Some(false),Some(token_amount),Some(vec![pool_id]),Some(vec![Perbill::from_percent(100)]))
 
-  refresh_token_info {
-		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	}: _(RawOrigin::Root,KSM)
-
-  payout {
+	refresh_token_info {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	}: _(RawOrigin::Root,KSM)
 
-  on_redeem_success {
-	const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-  let caller: T::AccountId = whitelisted_caller();
-	let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
-  }:{SystemStaking::<T>::on_redeem_success(KSM,caller,token_amount);}
+	payout {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	}: _(RawOrigin::Root,KSM)
+
+	on_redeem_success {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let caller: T::AccountId = whitelisted_caller();
+		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+	}:{SystemStaking::<T>::on_redeem_success(KSM,caller,token_amount);}
+
+	on_redeemed {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let caller: T::AccountId = whitelisted_caller();
+		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+		let fee_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
+	}:{SystemStaking::<T>::on_redeemed(caller,KSM,token_amount,token_amount,fee_amount);}
+
+	delete_token {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	}: _(RawOrigin::Root,KSM)
 }
