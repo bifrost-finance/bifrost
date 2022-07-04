@@ -89,8 +89,8 @@ use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
-	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
+	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
