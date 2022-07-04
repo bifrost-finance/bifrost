@@ -18,12 +18,11 @@
 
 #![cfg(test)]
 
-use frame_support::assert_ok;
-use mock::*;
+use crate::mock::*;
+use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 
-use super::*;
-use crate::KSM;
+use crate::{KSM, *};
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {
@@ -100,7 +99,11 @@ fn supplement_fee_reserve_works() {
 		// set fee source
 		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
 		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-		assert_ok!(Slp::set_fee_source(Origin::signed(ALICE), BNC, Some((alice_location, 10))));
+		assert_ok!(Slp::set_fee_source(
+			Origin::signed(ALICE),
+			BNC,
+			Some((alice_location.clone(), 10))
+		));
 
 		// supplement fee
 		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
@@ -108,7 +111,14 @@ fn supplement_fee_reserve_works() {
 		assert_eq!(Balances::free_balance(&ALICE), 100);
 		assert_eq!(Balances::free_balance(&BOB), 0);
 
-		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location));
+		assert_noop!(
+			Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(alice_location)),
+			Error::<Runtime>::DestAccountNotValid
+		);
+
+		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(BOB)));
+
+		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(bob_location)));
 
 		assert_eq!(Balances::free_balance(&ALICE), 90);
 		assert_eq!(Balances::free_balance(&BOB), 10);
@@ -137,6 +147,8 @@ fn remove_delegator_works() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -156,7 +168,7 @@ fn remove_delegator_works() {
 		assert_ok!(Slp::remove_delegator(
 			Origin::signed(ALICE),
 			KSM,
-			subaccount_0_location.clone()
+			Box::new(subaccount_0_location.clone())
 		));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(KSM, 0), None);
@@ -189,8 +201,16 @@ fn decrease_token_pool_works() {
 #[test]
 fn update_ongoing_time_unit_works() {
 	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
 		// Set the era to be 8.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(8));
+		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+			Origin::signed(ALICE),
+			KSM,
+			Some(600)
+		));
+
+		System::set_block_number(650);
 
 		// Update the era to be 9.
 		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), KSM, TimeUnit::Era(9)));
@@ -282,7 +302,7 @@ fn refund_currency_due_unbond_works() {
 			(13, bounded_vec_eddie.clone()),
 		);
 
-		bifrost_vtoken_minting::CurrencyUnlockingTotal::<Runtime>::set(1000);
+		bifrost_vtoken_minting::UnlockingTotal::<Runtime>::insert(KSM, 1000);
 
 		// check account balances before refund
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 50);
@@ -423,6 +443,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			unbond_record_maximum: 32,
 			validators_back_maximum: 36,
 			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
 		};
 
 		// Set minimums and maximums
@@ -468,7 +490,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			Origin::signed(ALICE),
 			KSM,
 			100,
-			subaccount_0_location.clone()
+			Some(subaccount_0_location.clone())
 		));
 
 		// Tokenpool should have been added 100.
@@ -476,7 +498,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		assert_eq!(new_token_pool_amount, 200);
 
 		let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(KSM, &subaccount_0_location);
-		assert_eq!(tune_record, Some((TimeUnit::Era(1), 1)));
+		assert_eq!(tune_record, Some(TimeUnit::Era(1)));
 
 		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
 		// before new exchange rate tuned.

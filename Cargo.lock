@@ -649,6 +649,7 @@ dependencies = [
  "bifrost-salp-lite",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
+ "bifrost-system-staking",
  "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
@@ -1028,6 +1029,35 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-interface",
+]
+
+[[package]]
+name = "bifrost-system-staking"
+version = "4.0.0-dev"
+dependencies = [
+ "bifrost-farming",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -1112,6 +1142,8 @@ dependencies = [
 name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
+ "bifrost-slp",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1128,6 +1160,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -5461,7 +5494,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.44"
+version = "0.9.46"
 dependencies = [
  "clap",
  "cumulus-client-cli",

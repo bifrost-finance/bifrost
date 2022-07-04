@@ -25,7 +25,7 @@ use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
-use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
+use node_primitives::{CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
@@ -34,20 +34,30 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
 	latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm},
-	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
+	opaque::latest::{
+		Junction::{AccountKey20, Parachain},
+		Junctions::X2,
+		NetworkId::Any,
+	},
 };
 
+use crate::agents::MoonriverAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
 	},
-	traits::{QueryResponseManager, StakingAgent},
+	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
 
+use sp_core::H160;
+use sp_io::hashing::blake2_256;
+use sp_runtime::traits::TrailingZeroInput;
+
 mod agents;
+mod migration;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -76,7 +86,7 @@ type StakingAgentBoxType<T> = Box<
 		AccountIdOf<T>,
 		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		pallet::Error<T>,
 	>,
@@ -108,7 +118,7 @@ pub mod pallet {
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
-		type AccountConverter: Convert<u16, MultiLocation>;
+		type AccountConverter: Convert<(u16, CurrencyId), MultiLocation>;
 
 		/// Parachain Id which is gotten from the runtime.
 		type ParachainId: Get<ParaId>;
@@ -125,6 +135,10 @@ pub mod pallet {
 			MultiLocation,
 			BlockNumberFor<Self>,
 		>;
+
+		/// Handler to notify the runtime when refund.
+		/// If you don't need it, you can specify the type `()`.
+		type OnRefund: OnRefund<AccountIdOf<Self>, CurrencyId, BalanceOf<Self>>;
 
 		//【For xcm v3】
 		// /// This chain's Universal Location. Enabled only for xcm v3 version.
@@ -177,7 +191,6 @@ pub mod pallet {
 		WeightAndFeeNotExists,
 		OperateOriginNotExists,
 		MinimumsAndMaximumsNotExist,
-		XcmExecutionFailed,
 		QueryNotExist,
 		DelaysNotExist,
 		Unexpected,
@@ -190,7 +203,29 @@ pub mod pallet {
 		IncreaseTokenPoolError,
 		TuneExchangeRateLimitNotSet,
 		DelegatorLatestTuneRecordNotExist,
+		CurrencyLatestTuneRecordNotExist,
 		InvalidTransferSource,
+		ValidatorNotProvided,
+		Unsupported,
+		ValidatorNotBonded,
+		AlreadyRequested,
+		RequestNotExist,
+		AlreadyLeaving,
+		DelegatorNotLeaving,
+		RequestNotDue,
+		LeavingNotDue,
+		DelegatorSetNotExist,
+		DelegatorLeaving,
+		DelegatorAlreadyLeaving,
+		ValidatorError,
+		AmountNone,
+		InvalidDelays,
+		OngoingTimeUnitUpdateIntervalNotExist,
+		LastTimeUpdatedOngoingTimeUnitNotExist,
+		TooFrequent,
+		DestAccountNotValid,
+		WhiteListNotExist,
+		DelegatorAlreadyTuned,
 	}
 
 	#[pallet::event]
@@ -208,6 +243,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
@@ -217,6 +253,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		DelegatorUnbond {
 			currency_id: CurrencyId,
@@ -226,6 +263,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
@@ -237,16 +275,16 @@ pub mod pallet {
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
-			#[codec(compact)]
-			rebond_amount: BalanceOf<T>,
+			rebond_amount: Option<BalanceOf<T>>,
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			validator: Option<MultiLocation>,
 		},
 		Delegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
-			targets: Vec<MultiLocation>,
+			targets: Option<Vec<MultiLocation>>,
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
@@ -326,7 +364,7 @@ pub mod pallet {
 		},
 		TimeUnitUpdated {
 			currency_id: CurrencyId,
-			old: TimeUnit,
+			old: Option<TimeUnit>,
 			new: TimeUnit,
 		},
 		PoolTokenIncreased {
@@ -371,12 +409,12 @@ pub mod pallet {
 		DelegatorLedgerSet {
 			currency_id: CurrencyId,
 			delegator: MultiLocation,
-			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
+			ledger: Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		},
 		DelegatorLedgerQueryResponseFailSuccessfully {
 			#[codec(compact)]
@@ -406,6 +444,18 @@ pub mod pallet {
 		CurrencyTuneExchangeRateLimitSet {
 			currency_id: CurrencyId,
 			tune_exchange_rate_limit: Option<(u32, Permill)>,
+		},
+		OngoingTimeUnitUpdateIntervalSet {
+			currency_id: CurrencyId,
+			interval: Option<BlockNumberFor<T>>,
+		},
+		SupplementFeeAccountWhitelistAdded {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		},
+		SupplementFeeAccountWhitelistRemoved {
+			currency_id: CurrencyId,
+			who: MultiLocation,
 		},
 	}
 
@@ -515,7 +565,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Ledger<MultiLocation, BalanceOf<T>>,
+		Ledger<MultiLocation, BalanceOf<T>, MultiLocation>,
 		OptionQuery,
 	>;
 
@@ -525,7 +575,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation>, BlockNumberFor<T>),
+		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>, BlockNumberFor<T>),
 	>;
 
 	/// Minimum and Maximum constraints for different chains.
@@ -540,7 +590,7 @@ pub mod pallet {
 	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
 
 	/// A delegator's tuning record of exchange rate for the current time unit.
-	/// Currency Id + Delegator Id => (latest tuned TimeUnit, number of tuning times)
+	/// Currency Id + Delegator Id => latest tuned TimeUnit
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_latest_tune_record)]
 	pub type DelegatorLatestTuneRecord<T> = StorageDoubleMap<
@@ -549,16 +599,45 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		(TimeUnit, u32),
+		TimeUnit,
 		OptionQuery,
 	>;
 
-	/// For each currencyId: how many times that a delegator can tune the exchange rate for a single
-	/// time unit, and how much at most each time a delegator can tune the exchange rate
+	/// Currency's tuning record of exchange rate for the current time unit.
+	/// Currency Id => (latest tuned TimeUnit, number of tuning times)
+	#[pallet::storage]
+	#[pallet::getter(fn get_currency_latest_tune_record)]
+	pub type CurrencyLatestTuneRecord<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, (TimeUnit, u32), OptionQuery>;
+
+	/// For each currencyId: how many times that a Currency's all delegators can tune the exchange
+	/// rate for a single time unit, and how much at most each time can tune the
+	/// exchange rate
 	#[pallet::storage]
 	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
 	pub type CurrencyTuneExchangeRateLimit<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Permill)>;
+
+	/// reflect if all delegations are on a decrease/revoke status. If yes, then new user redeeming
+	/// is unaccepted.
+	#[pallet::storage]
+	#[pallet::getter(fn get_all_delegations_occupied_status)]
+	pub type DelegationsOccupied<T> = StorageMap<_, Blake2_128Concat, CurrencyId, bool>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_last_time_updated_ongoing_time_unit)]
+	pub type LastTimeUpdatedOngoingTimeUnit<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_ongoing_time_unit_update_interval)]
+	pub type OngoingTimeUnitUpdateInterval<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_supplement_fee_account_wihtelist)]
+	pub type SupplementFeeAccountWhitelist<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -572,6 +651,13 @@ pub mod pallet {
 
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			let weight_1 = migration::update_minimums_maximums::<T>();
+			let weight_2 = migration::update_delays::<T>();
+
+			weight_1 + weight_2
 		}
 	}
 
@@ -605,23 +691,25 @@ pub mod pallet {
 		pub fn bond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
+			validator: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(&who, amount)?;
+			let query_id = staking_agent.bond(&who, amount, &validator)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				bonded_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -632,23 +720,25 @@ pub mod pallet {
 		pub fn bond_extra(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
+			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond_extra(&who, amount)?;
+			let query_id = staking_agent.bond_extra(&who, amount, &validator)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				extra_bonded_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -660,23 +750,25 @@ pub mod pallet {
 		pub fn unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
+			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(&who, amount)?;
+			let query_id = staking_agent.unbond(&who, amount, &validator)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				unbond_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -687,7 +779,7 @@ pub mod pallet {
 		pub fn unbond_all(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -699,7 +791,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				query_id,
 				query_id_hash,
 			});
@@ -712,23 +804,25 @@ pub mod pallet {
 		pub fn rebond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
-			#[pallet::compact] amount: BalanceOf<T>,
+			who: Box<MultiLocation>,
+			validator: Option<MultiLocation>,
+			amount: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(&who, amount)?;
+			let query_id = staking_agent.rebond(&who, amount, &validator)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				rebond_amount: amount,
 				query_id,
 				query_id_hash,
+				validator,
 			});
 			Ok(())
 		}
@@ -739,7 +833,7 @@ pub mod pallet {
 		pub fn delegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -752,8 +846,8 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
-				delegator_id: who,
-				targets,
+				delegator_id: *who,
+				targets: Some(targets),
 				query_id,
 				query_id_hash,
 			});
@@ -766,7 +860,7 @@ pub mod pallet {
 		pub fn undelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -779,7 +873,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				targets,
 				query_id,
 				query_id_hash,
@@ -793,8 +887,8 @@ pub mod pallet {
 		pub fn redelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
-			targets: Vec<MultiLocation>,
+			who: Box<MultiLocation>,
+			targets: Option<Vec<MultiLocation>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -806,7 +900,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				targets,
 				query_id,
 				query_id_hash,
@@ -845,20 +939,21 @@ pub mod pallet {
 		pub fn liquidize(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			when: Option<TimeUnit>,
+			validator: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(&who, &when)?;
+			let query_id = staking_agent.liquidize(&who, &when, &validator)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				time_unit: when,
 				query_id,
 				query_id_hash,
@@ -872,7 +967,7 @@ pub mod pallet {
 		pub fn chill(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -884,7 +979,7 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Chill {
 				currency_id,
-				delegator_id: who,
+				delegator_id: *who,
 				query_id,
 				query_id_hash,
 			});
@@ -990,11 +1085,36 @@ pub mod pallet {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
-			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
+			// check current block is beyond the interval of ongoing timeunit updating.
+			let interval = OngoingTimeUnitUpdateInterval::<T>::get(currency_id)
+				.ok_or(Error::<T>::OngoingTimeUnitUpdateIntervalNotExist)?;
+
+			let last_update_block = LastTimeUpdatedOngoingTimeUnit::<T>::get(currency_id)
+				.ok_or(Error::<T>::LastTimeUpdatedOngoingTimeUnitNotExist)?;
+			let current_block = frame_system::Pallet::<T>::block_number();
+			let blocks_between =
+				current_block.checked_sub(&last_update_block).ok_or(Error::<T>::UnderFlow)?;
+
+			ensure!(blocks_between >= interval, Error::<T>::TooFrequent);
+
+			let old_op = T::VtokenMinting::get_ongoing_time_unit(currency_id);
+
+			if let Some(old) = old_op.clone() {
+				// enusre old TimeUnit < new TimeUnit
+				ensure!(old < time_unit, Error::<T>::InvalidTimeUnit);
+			}
+
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
+			// update LastTimeUpdatedOngoingTimeUnit storage
+			LastTimeUpdatedOngoingTimeUnit::<T>::insert(currency_id, current_block);
+
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TimeUnitUpdated { currency_id, old, new: time_unit });
+			Pallet::<T>::deposit_event(Event::TimeUnitUpdated {
+				currency_id,
+				old: old_op,
+				new: time_unit,
+			});
 
 			Ok(())
 		}
@@ -1004,7 +1124,7 @@ pub mod pallet {
 		pub fn refund_currency_due_unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
@@ -1015,13 +1135,15 @@ pub mod pallet {
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
 
 			if exit_account_balance.is_zero() {
-				return Ok(());
+				return Ok(().into());
 			}
 
 			// Get the currency due unlocking records
 			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
+
+			let mut extra_weight = 0 as Weight;
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
@@ -1044,13 +1166,16 @@ pub mod pallet {
 						}
 						// Transfer some amount from the exit_account to the user's account
 						T::MultiCurrency::transfer(
-							KSM,
+							currency_id,
 							&exit_account,
 							&user_account,
 							deduct_amount,
 						)?;
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
+
+						extra_weight =
+							T::OnRefund::on_refund(currency_id, user_account, deduct_amount);
 
 						// Deposit event.
 						Pallet::<T>::deposit_event(Event::Refund {
@@ -1080,7 +1205,11 @@ pub mod pallet {
 				)?;
 			}
 
-			Ok(())
+			if extra_weight != 0 {
+				Ok(Some(T::WeightInfo::refund_currency_due_unbond() + extra_weight).into())
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[transactional]
@@ -1088,10 +1217,44 @@ pub mod pallet {
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			dest: MultiLocation,
+			dest: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
+
+			// Ensure dest is one of delegators accounts, or operators account, or in
+			// SupplementFeeAccountWhitelist.
+			let mut valid_account = false;
+
+			if DelegatorsMultilocation2Index::<T>::contains_key(currency_id, dest.clone()) {
+				valid_account = true;
+			}
+
+			if !valid_account {
+				let dest_account_id = Self::multilocation_to_account(&dest)?;
+				let operate_account_op = OperateOrigins::<T>::get(currency_id);
+
+				if let Some(operate_account) = operate_account_op {
+					if dest_account_id == operate_account {
+						valid_account = true;
+					}
+				}
+			}
+
+			if !valid_account {
+				let white_list_op = SupplementFeeAccountWhitelist::<T>::get(currency_id);
+
+				if let Some(white_list) = white_list_op {
+					let multi_hash = T::Hashing::hash(&dest.encode());
+					white_list
+						.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
+						.map_err(|_| Error::<T>::DestAccountNotValid)?;
+
+					valid_account = true;
+				}
+			}
+
+			ensure!(valid_account, Error::<T>::DestAccountNotValid);
 
 			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
 			let (source_location, reserved_fee) =
@@ -1118,7 +1281,7 @@ pub mod pallet {
 				currency_id,
 				amount: reserved_fee,
 				from: source_location,
-				to: dest,
+				to: *dest,
 			});
 
 			Ok(())
@@ -1132,7 +1295,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] value: BalanceOf<T>,
-			who: MultiLocation,
+			who: Option<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1154,32 +1317,25 @@ pub mod pallet {
 			let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			// If this is the first time.
-			if !DelegatorLatestTuneRecord::<T>::contains_key(currency_id, &who) {
-				// ensure who is a valid delegator
-				ensure!(
-					DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
-					Error::<T>::DelegatorNotExist
-				);
+			if !CurrencyLatestTuneRecord::<T>::contains_key(currency_id) {
 				// Insert an empty record into DelegatorLatestTuneRecord storage.
-				DelegatorLatestTuneRecord::<T>::insert(
-					currency_id,
-					who.clone(),
-					(current_time_unit.clone(), 0),
-				);
+				CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit.clone(), 0));
 			}
 
-			// Get DelegatorLatestTuneRecord for the currencyId.
+			// Get CurrencyLatestTuneRecord for the currencyId.
 			let (latest_time_unit, tune_num) =
-				Self::get_delegator_latest_tune_record(currency_id, &who)
-					.ok_or(Error::<T>::DelegatorLatestTuneRecordNotExist)?;
+				Self::get_currency_latest_tune_record(currency_id)
+					.ok_or(Error::<T>::CurrencyLatestTuneRecordNotExist)?;
 
 			// See if exceeds tuning limit.
 			// If it has been tuned in the current time unit, ensure this tuning is within limit.
+			let mut new_tune_num = Zero::zero();
 			if latest_time_unit == current_time_unit {
 				ensure!(tune_num < limit_num, Error::<T>::GreaterThanMaximum);
+				new_tune_num = tune_num;
 			}
 
-			let new_tune_num = tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+			new_tune_num = new_tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 
 			// Get charged fee value
 			let (fee_permill, beneficiary) =
@@ -1204,12 +1360,8 @@ pub mod pallet {
 				Zero::zero(),
 			)?;
 
-			// Update the DelegatorLatestTuneRecord<T> storage.
-			DelegatorLatestTuneRecord::<T>::insert(
-				currency_id,
-				who.clone(),
-				(current_time_unit, new_tune_num),
-			);
+			// Update the CurrencyLatestTuneRecord<T> storage.
+			CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit, new_tune_num));
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::HostingFeeCharged {
@@ -1298,7 +1450,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] index: u16,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1310,7 +1462,7 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
 				currency_id,
 				index,
-				delegator_id: who,
+				delegator_id: *who,
 			});
 			Ok(())
 		}
@@ -1321,7 +1473,7 @@ pub mod pallet {
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1330,7 +1482,7 @@ pub mod pallet {
 			staking_agent.remove_delegator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: who });
+			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: *who });
 			Ok(())
 		}
 
@@ -1340,7 +1492,7 @@ pub mod pallet {
 		pub fn add_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1349,7 +1501,7 @@ pub mod pallet {
 			staking_agent.add_validator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: who });
+			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 			Ok(())
 		}
 
@@ -1359,7 +1511,7 @@ pub mod pallet {
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1368,7 +1520,10 @@ pub mod pallet {
 			staking_agent.remove_validator(&who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsRemoved { currency_id, validator_id: who });
+			Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
+				currency_id,
+				validator_id: *who,
+			});
 			Ok(())
 		}
 
@@ -1378,7 +1533,7 @@ pub mod pallet {
 		pub fn set_validators_by_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
+			who: Box<MultiLocation>,
 			validators: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Check the validity of origin
@@ -1394,7 +1549,10 @@ pub mod pallet {
 
 			// check delegator
 			// Check if it is bonded already.
-			ensure!(DelegatorLedgers::<T>::contains_key(KSM, &who), Error::<T>::DelegatorNotBonded);
+			ensure!(
+				DelegatorLedgers::<T>::contains_key(currency_id, who.clone()),
+				Error::<T>::DelegatorNotBonded
+			);
 
 			let validators_list =
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
@@ -1417,19 +1575,23 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
-			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>>>>,
+			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;
 
-			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+			let mins_maxs =
+				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
 			if let Some(ref ldgr) = *ledger {
-				let Ledger::Substrate(lg) = ldgr;
-				ensure!(
-					lg.active >= mins_maxs.delegator_bonded_minimum,
-					Error::<T>::LowerThanMinimum
-				);
+				if let Ledger::Substrate(lg) = ldgr {
+					ensure!(
+						lg.active >= mins_maxs.delegator_bonded_minimum,
+						Error::<T>::LowerThanMinimum
+					);
+				} else {
+					Err(Error::<T>::Unexpected)?;
+				}
 			}
 
 			// Update the ledger.
@@ -1534,6 +1696,126 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Set  OngoingTimeUnitUpdateInterval<T> storage.
+		#[pallet::weight(T::WeightInfo::set_ongoing_time_unit_update_interval())]
+		pub fn set_ongoing_time_unit_update_interval(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_interval: Option<BlockNumberFor<T>>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			if maybe_interval.is_none() {
+				LastTimeUpdatedOngoingTimeUnit::<T>::remove(currency_id);
+			} else {
+				// if this is the first time to set interval, add an item to
+				// LastTimeUpdatedOngoingTimeUnit
+				if !OngoingTimeUnitUpdateInterval::<T>::contains_key(currency_id) {
+					let zero_block = BlockNumberFor::<T>::from(0u32);
+					LastTimeUpdatedOngoingTimeUnit::<T>::insert(currency_id, zero_block);
+				}
+			}
+
+			OngoingTimeUnitUpdateInterval::<T>::mutate_exists(currency_id, |interval_op| {
+				*interval_op = maybe_interval;
+			});
+
+			Pallet::<T>::deposit_event(Event::OngoingTimeUnitUpdateIntervalSet {
+				currency_id,
+				interval: maybe_interval,
+			});
+
+			Ok(())
+		}
+
+		// Add an account to SupplementFeeAccountWhitelist
+		#[pallet::weight(T::WeightInfo::add_supplement_fee_account_to_whitelist())]
+		pub fn add_supplement_fee_account_to_whitelist(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let multi_hash = T::Hashing::hash(&who.encode());
+			if !SupplementFeeAccountWhitelist::<T>::contains_key(&currency_id) {
+				SupplementFeeAccountWhitelist::<T>::insert(
+					currency_id,
+					vec![(who.clone(), multi_hash)],
+				);
+			} else {
+				SupplementFeeAccountWhitelist::<T>::mutate_exists(
+					currency_id,
+					|whitelist_op| -> Result<(), Error<T>> {
+						if let Some(whitelist) = whitelist_op {
+							let rs =
+								whitelist.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+							if let Err(idx) = rs {
+								whitelist.insert(idx, (*who.clone(), multi_hash));
+							} else {
+								Err(Error::<T>::AlreadyExist)?;
+							}
+						} else {
+							Err(Error::<T>::Unexpected)?;
+						}
+
+						Ok(())
+					},
+				)?;
+			}
+
+			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistAdded {
+				currency_id,
+				who: *who,
+			});
+
+			Ok(())
+		}
+
+		// Add an account to SupplementFeeAccountWhitelist
+		#[pallet::weight(T::WeightInfo::remove_supplement_fee_account_from_whitelist())]
+		pub fn remove_supplement_fee_account_from_whitelist(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let multi_hash = T::Hashing::hash(&who.encode());
+			if !SupplementFeeAccountWhitelist::<T>::contains_key(&currency_id) {
+				Err(Error::<T>::WhiteListNotExist)?;
+			} else {
+				SupplementFeeAccountWhitelist::<T>::mutate_exists(
+					currency_id,
+					|whitelist_op| -> Result<(), Error<T>> {
+						if let Some(whitelist) = whitelist_op {
+							let rs =
+								whitelist.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+							if let Ok(idx) = rs {
+								whitelist.remove(idx);
+							} else {
+								Err(Error::<T>::AccountNotExist)?;
+							}
+						} else {
+							Err(Error::<T>::Unexpected)?;
+						}
+
+						Ok(())
+					},
+				)?;
+			}
+
+			Pallet::<T>::deposit_event(Event::SupplementFeeAccountWhitelistRemoved {
+				currency_id,
+				who: *who,
+			});
+
+			Ok(())
+		}
+
 		/// ********************************************************************
 		/// *************Outer Confirming Xcm queries functions ****************
 		/// ********************************************************************
@@ -1603,8 +1885,11 @@ pub mod pallet {
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
 					Ok(()),
-				Ok(_) if T::ControlOrigin::ensure_origin(origin).is_ok() => Ok(()),
-				_ => Err(Error::<T>::NotAuthorized),
+				_ => {
+					T::ControlOrigin::ensure_origin(origin)
+						.map_err(|_| Error::<T>::NotAuthorized)?;
+					Ok(())
+				},
 			}
 		}
 
@@ -1632,6 +1917,7 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
+				MOVR => Ok(Box::new(MoonriverAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1701,6 +1987,31 @@ pub mod pallet {
 			Ok(local_location)
 		}
 
+		pub fn multilocation_to_local_multilocation(
+			location: &MultiLocation,
+		) -> Result<MultiLocation, Error<T>> {
+			let inside: Junction = match location {
+				MultiLocation {
+					parents: _p,
+					interior: X2(Parachain(_para_id), AccountId32 { network: Any, id: account_32 }),
+				} => AccountId32 { network: Any, id: *account_32 },
+				MultiLocation {
+					parents: _p,
+					interior:
+						X2(Parachain(_para_id), AccountKey20 { network: Any, key: account_20 }),
+				} => AccountKey20 { network: Any, key: *account_20 },
+				MultiLocation {
+					parents: _p,
+					interior: X1(AccountId32 { network: Any, id: account_32 }),
+				} => AccountId32 { network: Any, id: *account_32 },
+				_ => Err(Error::<T>::Unsupported)?,
+			};
+
+			let local_location = MultiLocation { parents: 0, interior: X1(inside) };
+
+			Ok(local_location)
+		}
+
 		pub fn account_32_to_parent_location(
 			account_32: [u8; 32],
 		) -> Result<MultiLocation, Error<T>> {
@@ -1722,6 +2033,27 @@ pub mod pallet {
 			};
 
 			Ok(parachain_location)
+		}
+
+		pub fn multilocation_to_account_20(who: &MultiLocation) -> Result<[u8; 20], Error<T>> {
+			// Get the delegator account id in Moonriver network
+			let account_20 = match who {
+				MultiLocation {
+					parents: _,
+					interior:
+						X2(Parachain(_), AccountKey20 { network: _network_id, key: account_id }),
+				} => account_id,
+				_ => Err(Error::<T>::AccountNotExist)?,
+			};
+			Ok(*account_20)
+		}
+
+		pub fn multilocation_to_h160_account(who: &MultiLocation) -> Result<H160, Error<T>> {
+			// Get the delegator account id in Moonriver network
+			let account_20 = Self::multilocation_to_account_20(who)?;
+			let account_h160 =
+				H160::decode(&mut &account_20[..]).map_err(|_| Error::<T>::DecodingError)?;
+			Ok(account_h160)
 		}
 
 		/// **************************************/
@@ -1774,6 +2106,8 @@ pub mod pallet {
 				let currency_id = match entry.clone() {
 					LedgerUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
+					LedgerUpdateEntry::Moonriver(moonriver_entry) =>
+						Some(moonriver_entry.currency_id),
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1827,6 +2161,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::QueryNotExist)?;
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
+				LedgerUpdateEntry::Moonriver(moonriver_entry) => Some(moonriver_entry.currency_id),
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -1854,5 +2189,19 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		pub fn derivative_account_id_20(who: [u8; 20], index: u16) -> H160 {
+			let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
+			let sub_id: [u8; 20] = Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+				.expect("infinite length input; no invalid inputs for type; qed");
+
+			H160::from_slice(sub_id.as_slice())
+		}
+	}
+}
+
+impl<T: Config> SlpOperator<CurrencyId> for Pallet<T> {
+	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
+		DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
 	}
 }

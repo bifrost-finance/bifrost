@@ -16,8 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod kusama_agent;
-mod moonriver_agent;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-pub use kusama_agent::*;
-pub use moonriver_agent::*;
+use super::{Config, UnlockingTotal, Weight};
+use crate::*;
+use frame_support::traits::Get;
+
+pub fn update_unlocking_total<T: Config>() -> Weight {
+	let ksm_unlocking_total = CurrencyUnlockingTotal::<T>::get();
+	UnlockingTotal::<T>::insert(CurrencyId::Token(TokenSymbol::KSM), ksm_unlocking_total);
+	T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
+}

@@ -39,19 +39,39 @@ pub trait StakingAgent<
 	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond(
+		&self,
+		who: &DelegatorId,
+		amount: Balance,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond_extra(
+		&self,
+		who: &DelegatorId,
+		amount: Balance,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
-	fn unbond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn unbond(
+		&self,
+		who: &DelegatorId,
+		amount: Balance,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
 	fn unbond_all(&self, who: &DelegatorId) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
-	fn rebond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn rebond(
+		&self,
+		who: &DelegatorId,
+		amount: Option<Balance>,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
 	fn delegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
@@ -60,7 +80,11 @@ pub trait StakingAgent<
 	fn undelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn redelegate(
+		&self,
+		who: &DelegatorId,
+		targets: &Option<Vec<ValidatorId>>,
+	) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
 	fn payout(
@@ -71,7 +95,12 @@ pub trait StakingAgent<
 	) -> Result<(), Error>;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: &DelegatorId, when: &Option<TimeUnit>) -> Result<QueryId, Error>;
+	fn liquidize(
+		&self,
+		who: &DelegatorId,
+		when: &Option<TimeUnit>,
+		validator: &Option<ValidatorId>,
+	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
 	fn chill(&self, who: &DelegatorId) -> Result<QueryId, Error>;
@@ -95,7 +124,7 @@ pub trait StakingAgent<
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &DelegatorId,
+		who: &Option<DelegatorId>,
 		token_amount: Balance,
 		vtoken_amount: Balance,
 	) -> Result<(), Error>;
@@ -187,4 +216,22 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	fn get_query_response_record(query_id: QueryId) -> bool;
 	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
+}
+
+pub trait OnRefund<AccountId, CurrencyId, Balance> {
+	fn on_refund(
+		token_id: CurrencyId,
+		to: AccountId,
+		token_amount: Balance,
+	) -> frame_support::pallet_prelude::Weight;
+}
+
+impl<AccountId, CurrencyId, Balance> OnRefund<AccountId, CurrencyId, Balance> for () {
+	fn on_refund(
+		_token_id: CurrencyId,
+		_to: AccountId,
+		_token_amount: Balance,
+	) -> frame_support::pallet_prelude::Weight {
+		0
+	}
 }

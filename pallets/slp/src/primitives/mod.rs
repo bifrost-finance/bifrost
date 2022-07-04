@@ -16,75 +16,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+mod kusama_primitives;
+mod moonriver_primitives;
+
+pub use kusama_primitives::*;
+pub use moonriver_primitives::*;
+
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
+use node_primitives::TimeUnit;
 use scale_info::TypeInfo;
-use sp_std::vec::Vec;
-
-/// Simplify the CurrencyId.
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum Ledger<DelegatorId, Balance> {
+pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + Eq> {
 	Substrate(SubstrateLedger<DelegatorId, Balance>),
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateLedger<DelegatorId, Balance> {
-	/// The delegator account Id
-	pub account: DelegatorId,
-	/// The total amount of the delegator's balance that we are currently accounting for.
-	/// It's just `active` plus all the `unlocking` balances.
-	#[codec(compact)]
-	pub total: Balance,
-	/// The total amount of the delegator's balance that will be at stake in any forthcoming
-	/// rounds.
-	#[codec(compact)]
-	pub active: Balance,
-	/// Any balance that is becoming free, which may eventually be transferred out
-	/// of the delegator (assuming it doesn't get slashed first).
-	pub unlocking: Vec<UnlockChunk<Balance>>,
-}
-
-/// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct UnlockChunk<Balance> {
-	/// Amount of funds to be unlocked.
-	#[codec(compact)]
-	pub value: Balance,
-	/// Era number at which point it'll be unlocked.
-	pub unlock_time: TimeUnit,
+	Moonriver(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum LedgerUpdateEntry<Balance, DelegatorId> {
+pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// A type for substrate ledger updating entires
 	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
-}
-
-/// A type for substrate ledger updating entires
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
-	/// The currency id of the delegator that needs to be update
-	pub currency_id: CurrencyId,
-	/// The delegator id that needs to be update
-	pub delegator_id: DelegatorId,
-	/// If this is true, then this is a bonding entry.
-	pub if_bond: bool,
-	/// If this is true and if_bond is false, then this is an unlocking entry.
-	pub if_unlock: bool,
-	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
-	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
-	pub if_rebond: bool,
-	/// The unlocking/bonding amount.
-	#[codec(compact)]
-	pub amount: Balance,
-	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
-	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
-	/// timeunit when the xcm message is sent.
-	pub unlock_time: Option<TimeUnit>,
+	Moonriver(MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of
@@ -93,17 +47,6 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
 	/// A type for substrate validators by delegator updating entires
 	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
-}
-
-/// A type for substrate validators by delegator updating entires
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
-	/// The currency id of the delegator that needs to be update
-	pub currency_id: CurrencyId,
-	/// The delegator id that needs to be update
-	pub delegator_id: DelegatorId,
-	/// Validators vec to be updated
-	pub validators: Vec<(ValidatorId, HashT)>,
 }
 
 /// Different minimum and maximum requirements for different chain
@@ -130,6 +73,12 @@ pub struct MinimumsMaximums<Balance> {
 	/// The maximum amount of active staking for a delegator. It is used to control ROI.
 	#[codec(compact)]
 	pub delegator_active_staking_maximum: Balance,
+	/// The maximum number of delegators for a validator to reward.
+	#[codec(compact)]
+	pub validators_reward_maximum: u32,
+	/// The minimum amount for a delegation.
+	#[codec(compact)]
+	pub delegation_amount_minimum: Balance,
 }
 
 /// Different delay params for different chain
@@ -137,6 +86,8 @@ pub struct MinimumsMaximums<Balance> {
 pub struct Delays {
 	/// The unlock delay for the unlocking amount to be able to be liquidized.
 	pub unlock_delay: TimeUnit,
+	/// Leave from delegator set delay.
+	pub leave_delegators_delay: TimeUnit,
 }
 
 /// XCM operations list
@@ -155,4 +106,8 @@ pub enum XcmOperation {
 	TransferBack,
 	TransferTo,
 	Chill,
+	Undelegate,
+	CancelLeave,
+	XtokensTransferBack,
+	ExecuteLeave,
 }

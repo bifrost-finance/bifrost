@@ -15,9 +15,6 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-// Ensure we're `no_std` when compiling for Wasm.
-
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
@@ -28,10 +25,10 @@ use frame_support::{
 	ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{GenesisBuild, Nothing},
+	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
 	PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::{blake2_256, H256};
@@ -40,6 +37,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32,
 };
+use sp_std::vec;
 use xcm::{
 	latest::{Junction, MultiLocation},
 	opaque::latest::{
@@ -49,7 +47,7 @@ use xcm::{
 	},
 };
 
-use crate as vtoken_minting;
+use crate as system_staking;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -66,6 +64,7 @@ pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime where
@@ -77,8 +76,10 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
+		SystemStaking: system_staking::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -167,18 +168,14 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaximumUnlockIdOfUser: u32 = 1_000;
-	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
-ord_parameter_types! {
-	pub const One: AccountId = ALICE;
-}
-
-impl vtoken_minting::Config for Runtime {
+impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
@@ -203,7 +200,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 					Junction::AccountKey20 {
 						network: NetworkId::Any,
 						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),
@@ -275,6 +272,46 @@ impl bifrost_slp::Config for Runtime {
 	type OnRefund = ();
 }
 
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+}
+
+ord_parameter_types! {
+	pub const One: AccountId = ALICE;
+}
+
+impl bifrost_farming::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub const BlocksPerRound: u32 = 100;
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+}
+
+impl system_staking::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
+	type WeightInfo = system_staking::weights::SubstrateWeight<Runtime>;
+	type FarmingInfo = Farming;
+	type VtokenMintingInterface = VtokenMinting;
+	type TreasuryAccount = TreasuryAccount;
+	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
+}
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
@@ -298,10 +335,10 @@ impl ExtBuilder {
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 400),
+			(ALICE, KSM, 3000),
 			(BOB, vKSM, 1000),
 			(BOB, KSM, 10000000000),
 			(BOB, MOVR, 1000000000000000000000),
-			(CHARLIE, MOVR, 100000000000000000000000),
 		])
 	}
 
@@ -339,4 +376,27 @@ impl ExtBuilder {
 
 		t.into()
 	}
+}
+
+/// Rolls forward one block. Returns the new block number.
+pub(crate) fn roll_one_block() -> u64 {
+	SystemStaking::on_finalize(System::block_number());
+	Balances::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
+	System::set_block_number(System::block_number() + 1);
+	System::on_initialize(System::block_number());
+	Balances::on_initialize(System::block_number());
+	SystemStaking::on_initialize(System::block_number());
+	System::block_number()
+}
+
+/// Rolls to the desired block. Returns the number of blocks played.
+pub(crate) fn roll_to(n: u64) -> u64 {
+	let mut num_blocks = 0;
+	let mut block = System::block_number();
+	while block < n {
+		block = roll_one_block();
+		num_blocks += 1;
+	}
+	num_blocks
 }

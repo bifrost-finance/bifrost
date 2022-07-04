@@ -23,6 +23,7 @@
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
+	pallet_prelude::DispatchResultWithPostInfo,
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
@@ -31,7 +32,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::{AssetIds, CurrencyId};
+use crate::{AssetIds, CurrencyId, PoolId};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -147,6 +148,11 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	) -> Option<(AccountId, Balance, TimeUnit)>;
 }
 
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpOperator<CurrencyId> {
+	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
+}
+
 /// A mapping between AssetId and AssetMetadata.
 pub trait AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata> {
 	/// Returns the AssetMetadata associated with a given `AssetIds`.
@@ -155,4 +161,35 @@ pub trait AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata> {
 	fn get_multi_location(foreign_asset_id: ForeignAssetId) -> Option<MultiLocation>;
 	/// Returns the CurrencyId associated with a given MultiLocation.
 	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId>;
+}
+
+/// The interface to call farming pallet functions.
+pub trait FarmingInfo<Balance, CurrencyId> {
+	/// Get the currency token shares.
+	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyId) -> Balance;
+}
+
+pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
+	fn mint(
+		exchanger: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+	) -> DispatchResultWithPostInfo;
+	fn redeem(
+		exchanger: AccountId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: Balance,
+	) -> DispatchResultWithPostInfo;
+	fn token_to_vtoken(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		token_amount: Balance,
+	) -> Balance;
+	fn vtoken_to_token(
+		token_id: CurrencyId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: Balance,
+	) -> Balance;
+	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
+	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 }
