@@ -527,7 +527,9 @@ pub mod pallet {
 				let receiver_balance =
 					T::MultiCurrency::total_balance(token_to_pay, &new_order_info.owner);
 
-				if receiver_balance.checked_add(&amount_to_pay).unwrap_or(Zero::zero()) < ed {
+				let receiver_balance_after =
+					receiver_balance.checked_add(&amount_to_pay).ok_or(Error::<T, I>::Overflow)?;
+				if receiver_balance_after < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
 			}
@@ -555,7 +557,9 @@ pub mod pallet {
 			if amount_to_get < ed {
 				let receiver_balance = T::MultiCurrency::total_balance(token_to_get, &order_taker);
 
-				if receiver_balance.checked_add(&amount_to_get).unwrap_or(Zero::zero()) < ed {
+				let receiver_balance_after =
+					receiver_balance.checked_add(&amount_to_get).ok_or(Error::<T, I>::Overflow)?;
+				if receiver_balance_after < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
 			}
@@ -685,7 +689,11 @@ pub mod pallet {
 				let receiver_balance =
 					T::MultiCurrency::total_balance(token_to_return, &order_info.owner);
 
-				if receiver_balance.checked_add(&amount_to_return).unwrap_or(Zero::zero()) < ed {
+				let receiver_balance_after = receiver_balance
+					.checked_add(&amount_to_return)
+					.ok_or(Error::<T, I>::Overflow)?;
+
+				if receiver_balance_after < ed {
 					account_to_return = T::TreasuryAccount::get();
 				}
 			}
