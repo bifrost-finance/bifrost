@@ -236,7 +236,6 @@ pub mod pallet {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			// get token list
 			let token_list = Self::token_list();
-			let mut x = 0u32;
 
 			let mut round = if let Some(round) = <Round<T>>::get() {
 				round
@@ -259,7 +258,6 @@ pub mod pallet {
 			for i in token_list.into_iter() {
 				if let Some(mut token_info) = Self::token_status(i) {
 					if round.check_delay(n, token_info.current_config.exec_delay) {
-						x += 1;
 						if token_info.check_config_change() {
 							token_info.update_config();
 						}
@@ -268,7 +266,7 @@ pub mod pallet {
 				}
 			}
 
-			T::WeightInfo::on_initialize(x)
+			T::WeightInfo::on_initialize()
 		}
 	}
 
