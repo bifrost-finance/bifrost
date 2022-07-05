@@ -102,6 +102,9 @@ pub mod pallet {
 		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
+
+		#[pallet::constant]
+		type MaximumAssetsInOrder: Get<u8>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -150,6 +153,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		NotEnoughBalance,
 		ExceedMaxListLength,
+		ExceedMaximumAssets,
 	}
 
 	#[pallet::call]
@@ -164,6 +168,10 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			if let Some(mut asset_order_list) = asset_order_list_vec {
+				ensure!(
+					(asset_order_list.len() as u8) <= T::MaximumAssetsInOrder::get(),
+					Error::<T>::ExceedMaximumAssets
+				);
 				ensure!(
 					(asset_order_list.len()) as u32 <= MAX_ORDER_LIST_LEN,
 					Error::<T>::ExceedMaxListLength

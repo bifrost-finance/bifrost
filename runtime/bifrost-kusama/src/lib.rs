@@ -1497,6 +1497,7 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
+	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 pub type MiscFeeHandlers = (
@@ -1519,6 +1520,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
+	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 pub fn create_x2_multilocation(index: u16) -> MultiLocation {
