@@ -1499,6 +1499,7 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
+	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 pub type MiscFeeHandlers = (
@@ -1521,6 +1522,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
+	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {
@@ -2121,6 +2123,7 @@ mod benches {
 		[parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
+		[bifrost_system_staking, SystemStaking]
 	);
 }
 

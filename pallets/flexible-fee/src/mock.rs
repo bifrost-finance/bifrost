@@ -207,6 +207,7 @@ parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const SalpContributeFee: Balance = 100_000_000;
+	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 impl crate::Config for Test {
@@ -225,6 +226,7 @@ impl crate::Config for Test {
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
+	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {
