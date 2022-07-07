@@ -17,18 +17,49 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "runtime-benchmarks")]
-
-use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
-use frame_support::sp_runtime::{Perbill, Permill};
-use frame_system::RawOrigin;
+use crate::{Pallet as SystemStaking, *};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
+use frame_support::{
+	assert_ok,
+	sp_runtime::{traits::UniqueSaturatedFrom, Perbill, Permill},
+	traits::OnInitialize,
+};
+use frame_system::{Pallet as System, RawOrigin};
 use node_primitives::{CurrencyId, PoolId, TokenSymbol};
 
-use frame_support::{sp_runtime::traits::UniqueSaturatedFrom, traits::OnInitialize};
-
-use crate::{Pallet as SystemStaking, *};
-
 benchmarks! {
-	on_initialize {}:{SystemStaking::<T>::on_initialize(T::BlockNumber::from(101u32));}
+	on_initialize {
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			MOVR,
+			Some(2),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
+		System::<T>::set_block_number(
+			System::<T>::block_number() + 1u32.into()
+		);
+		SystemStaking::<T>::on_initialize(System::<T>::block_number());
+		System::<T>::set_block_number(
+			System::<T>::block_number() + 1u32.into()
+		);
+		SystemStaking::<T>::on_initialize(System::<T>::block_number());
+	}:{SystemStaking::<T>::on_initialize(System::<T>::block_number());}
 
 	token_config {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -38,20 +69,60 @@ benchmarks! {
 
 	refresh_token_info {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
 	}: _(RawOrigin::Root,KSM)
 
 	payout {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
 	}: _(RawOrigin::Root,KSM)
 
 	on_redeem_success {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
 		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 	}:{SystemStaking::<T>::on_redeem_success(KSM,caller,token_amount);}
 
 	on_redeemed {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
 		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 		let fee_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
@@ -59,5 +130,21 @@ benchmarks! {
 
 	delete_token {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(SystemStaking::<T>::token_config(
+			RawOrigin::Root.into(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+			Some(vec![1 as PoolId]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
 	}: _(RawOrigin::Root,KSM)
 }
+
+impl_benchmark_test_suite!(
+	SystemStaking,
+	crate::mock::ExtBuilder::default().one_hundred_for_alice_n_bob().build(),
+	crate::mock::Runtime
+);

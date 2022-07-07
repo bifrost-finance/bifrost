@@ -2124,6 +2124,7 @@ mod benches {
 		[parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
+		[bifrost_system_staking, SystemStaking]
 	);
 }
 
