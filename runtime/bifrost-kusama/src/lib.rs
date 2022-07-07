@@ -67,7 +67,7 @@ use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_asset_registry::{AssetIdMaps, FixedRateOfForeignAsset};
+use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -122,6 +122,7 @@ mod weights;
 
 mod xcm_config;
 
+use crate::xcm_config::AssetRegistryMigration;
 use xcm_config::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	MultiNativeAsset,
@@ -1178,7 +1179,7 @@ parameter_types! {
 		// MOVR:KSM = 2.67:1
 		ksm_per_second() * 267 * 10_000 //movr currency decimal as 18
 	);
-	pub ForeignAssetUnitsPerSecond: u128 = ksm_per_second();
+	pub BasePerSecond: u128 = ksm_per_second();
 }
 
 pub struct ToTreasury;
@@ -1208,7 +1209,7 @@ pub type Trader = (
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<MovrPerSecond, ToTreasury>,
-	FixedRateOfForeignAsset<Runtime, ForeignAssetUnitsPerSecond, ToTreasury>,
+	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1363,7 +1364,8 @@ parameter_type_with_key! {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 			},
-			_ => Balance::max_value(), // unsupported
+			_ => AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::NativeAssetId(*currency_id))
+				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
 	};
 }
@@ -2102,7 +2104,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	AssetRegistryMigration<SelfParaChainId>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

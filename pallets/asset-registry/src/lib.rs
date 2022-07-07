@@ -123,11 +123,11 @@ pub mod pallet {
 
 	/// The storages for MultiLocations.
 	///
-	/// ForeignAssetLocations: map ForeignAssetId => Option<MultiLocation>
+	/// CurrencyIdToLocations: map CurrencyId => Option<MultiLocation>
 	#[pallet::storage]
-	#[pallet::getter(fn foreign_asset_locations)]
-	pub type ForeignAssetLocations<T: Config> =
-		StorageMap<_, Twox64Concat, ForeignAssetId, MultiLocation, OptionQuery>;
+	#[pallet::getter(fn currency_id_to_locations)]
+	pub type CurrencyIdToLocations<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, MultiLocation, OptionQuery>;
 
 	/// The storages for CurrencyIds.
 	///
@@ -199,11 +199,14 @@ pub mod pallet {
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
+			location: Box<VersionedMultiLocation>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			Self::do_register_native_asset(currency_id, &metadata)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			Self::do_register_native_asset(currency_id, &location, &metadata)?;
 
 			Self::deposit_event(Event::<T>::AssetRegistered {
 				asset_id: AssetIds::NativeAssetId(currency_id),
@@ -217,11 +220,14 @@ pub mod pallet {
 		pub fn update_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
+			location: Box<VersionedMultiLocation>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			Self::do_update_native_asset(currency_id, &metadata)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			Self::do_update_native_asset(currency_id, &location, &metadata)?;
 
 			Self::deposit_event(Event::<T>::AssetUpdated {
 				asset_id: AssetIds::NativeAssetId(currency_id),
@@ -250,8 +256,8 @@ impl<T: Config> Pallet<T> {
 			ensure!(maybe_currency_ids.is_none(), Error::<T>::MultiLocationExisted);
 			*maybe_currency_ids = Some(CurrencyId::ForeignAsset(foreign_asset_id));
 
-			ForeignAssetLocations::<T>::try_mutate(
-				foreign_asset_id,
+			CurrencyIdToLocations::<T>::try_mutate(
+				CurrencyId::ForeignAsset(foreign_asset_id),
 				|maybe_location| -> DispatchResult {
 					ensure!(maybe_location.is_none(), Error::<T>::MultiLocationExisted);
 					*maybe_location = Some(location.clone());
@@ -277,8 +283,8 @@ impl<T: Config> Pallet<T> {
 		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		ForeignAssetLocations::<T>::try_mutate(
-			foreign_asset_id,
+		CurrencyIdToLocations::<T>::try_mutate(
+			CurrencyId::ForeignAsset(foreign_asset_id),
 			|maybe_multi_locations| -> DispatchResult {
 				let old_multi_locations =
 					maybe_multi_locations.as_mut().ok_or(Error::<T>::AssetIdNotExists)?;
@@ -313,50 +319,68 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	fn do_register_native_asset(
-		asset: CurrencyId,
+	pub fn do_register_native_asset(
+		currency_id: CurrencyId,
+		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		AssetMetadatas::<T>::try_mutate(
-			AssetIds::NativeAssetId(asset),
-			|maybe_asset_metadatas| -> DispatchResult {
-				ensure!(maybe_asset_metadatas.is_none(), Error::<T>::AssetIdExisted);
+		ensure!(
+			LocationToCurrencyIds::<T>::get(location).is_none(),
+			Error::<T>::MultiLocationExisted
+		);
+		ensure!(
+			CurrencyIdToLocations::<T>::get(currency_id).is_none(),
+			Error::<T>::MultiLocationExisted
+		);
+		ensure!(
+			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_none(),
+			Error::<T>::AssetIdExisted
+		);
 
-				*maybe_asset_metadatas = Some(metadata.clone());
-				Ok(())
-			},
-		)?;
+		LocationToCurrencyIds::<T>::insert(location, currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, location);
+		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
 
 		Ok(())
 	}
 
 	fn do_update_native_asset(
 		currency_id: CurrencyId,
+		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		AssetMetadatas::<T>::try_mutate(
-			AssetIds::NativeAssetId(currency_id),
-			|maybe_asset_metadatas| -> DispatchResult {
-				ensure!(maybe_asset_metadatas.is_some(), Error::<T>::AssetIdNotExists);
+		ensure!(
+			LocationToCurrencyIds::<T>::get(location).is_some(),
+			Error::<T>::MultiLocationExisted
+		);
+		ensure!(
+			CurrencyIdToLocations::<T>::get(currency_id).is_some(),
+			Error::<T>::MultiLocationExisted
+		);
+		ensure!(
+			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_some(),
+			Error::<T>::AssetIdNotExists
+		);
 
-				*maybe_asset_metadatas = Some(metadata.clone());
-				Ok(())
-			},
-		)
+		LocationToCurrencyIds::<T>::insert(location, currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, location);
+		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
+
+		Ok(())
 	}
 }
 
 pub struct AssetIdMaps<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata<BalanceOf<T>>>
+impl<T: Config> AssetIdMapping<CurrencyId, MultiLocation, AssetMetadata<BalanceOf<T>>>
 	for AssetIdMaps<T>
 {
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata<BalanceOf<T>>> {
 		Pallet::<T>::asset_metadatas(asset_ids)
 	}
 
-	fn get_multi_location(foreign_asset_id: ForeignAssetId) -> Option<MultiLocation> {
-		Pallet::<T>::foreign_asset_locations(foreign_asset_id)
+	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation> {
+		Pallet::<T>::currency_id_to_locations(currency_id)
 	}
 
 	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId> {
@@ -368,7 +392,7 @@ impl<T: Config> AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata<Bala
 ///
 /// The constant `FixedRate` type parameter should be the concrete fungible ID and the amount of it
 /// required for one second of weight.
-pub struct FixedRateOfForeignAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
+pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
 	weight: Weight,
 	amount: u128,
 	ed_ratio: FixedU128,
@@ -377,7 +401,7 @@ pub struct FixedRateOfForeignAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
 }
 
 impl<T: Config, FixedRate: Get<u128>, R: TakeRevenue> WeightTrader
-	for FixedRateOfForeignAsset<T, FixedRate, R>
+	for FixedRateOfAsset<T, FixedRate, R>
 where
 	BalanceOf<T>: Into<u128>,
 {
@@ -473,7 +497,7 @@ where
 	}
 }
 
-impl<T, FixedRate: Get<u128>, R: TakeRevenue> Drop for FixedRateOfForeignAsset<T, FixedRate, R> {
+impl<T, FixedRate: Get<u128>, R: TakeRevenue> Drop for FixedRateOfAsset<T, FixedRate, R> {
 	fn drop(&mut self) {
 		log::trace!(target: "asset-registry::weight", "take revenue, weight: {:?}, amount: {:?}, multi_location: {:?}", self.weight, self.amount, self.multi_location);
 		if self.amount > 0 && self.multi_location.is_some() {
