@@ -226,6 +226,8 @@ pub mod pallet {
 		DestAccountNotValid,
 		WhiteListNotExist,
 		DelegatorAlreadyTuned,
+		FeeTooHight,
+		NotEnoughBalance,
 	}
 
 	#[pallet::event]
@@ -1894,7 +1896,7 @@ pub mod pallet {
 		}
 
 		/// Convert native multiLocation to account.
-		fn native_multilocation_to_account(
+		pub fn native_multilocation_to_account(
 			who: &MultiLocation,
 		) -> Result<AccountIdOf<T>, Error<T>> {
 			// Get the delegator account id in Kusama network
