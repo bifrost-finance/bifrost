@@ -324,10 +324,7 @@ impl<T: Config> Pallet<T> {
 		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		ensure!(
-			LocationToCurrencyIds::<T>::get(location).is_none(),
-			Error::<T>::MultiLocationExisted
-		);
+		ensure!(LocationToCurrencyIds::<T>::get(location).is_none(), Error::<T>::AssetIdExisted);
 		ensure!(
 			CurrencyIdToLocations::<T>::get(currency_id).is_none(),
 			Error::<T>::MultiLocationExisted
@@ -349,10 +346,7 @@ impl<T: Config> Pallet<T> {
 		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		ensure!(
-			LocationToCurrencyIds::<T>::get(location).is_some(),
-			Error::<T>::MultiLocationExisted
-		);
+		ensure!(LocationToCurrencyIds::<T>::get(location).is_some(), Error::<T>::AssetIdNotExists);
 		ensure!(
 			CurrencyIdToLocations::<T>::get(currency_id).is_some(),
 			Error::<T>::MultiLocationExisted
