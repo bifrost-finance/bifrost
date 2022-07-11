@@ -81,7 +81,13 @@ pub fn bifrost_polkadot_genesis(
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
+		democracy: Default::default(),
+		council_membership: Default::default(),
+		technical_membership: Default::default(),
+		council: Default::default(),
+		technical_committee: Default::default(),
 		treasury: Default::default(),
+		phragmen_election: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
