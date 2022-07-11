@@ -97,6 +97,14 @@ fn moonriver_setup() {
 		),
 	};
 
+	let treasury_account_id_32: [u8; 32] =
+		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+			.into();
+	let treasury_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
+	};
+
 	// set operate_origins
 	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(ALICE)));
 
@@ -115,6 +123,22 @@ fn moonriver_setup() {
 
 	// First to setup index-multilocation relationship of subaccount_0
 	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+
+	// update some MOVR balance to treasury account
+	assert_ok!(Tokens::set_balance(
+		Origin::root(),
+		treasury_account_id_32.into(),
+		MOVR,
+		1_000_000_000_000_000_000,
+		0
+	));
+
+	// Set fee source
+	assert_ok!(Slp::set_fee_source(
+		Origin::signed(ALICE),
+		MOVR,
+		Some((treasury_location, 1_000_000_000_000)),
+	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
