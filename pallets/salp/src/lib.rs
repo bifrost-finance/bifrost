@@ -980,9 +980,10 @@ pub mod pallet {
 		}
 
 		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			(slot + 1)
-				.checked_mul(T::LeasePeriod::get())
-				.expect("shouldn't fail when convert Lease to Block")
+			let end_block =
+				(slot + 1).checked_mul(T::LeasePeriod::get()).ok_or(Error::<T>::Overflow)?;
+
+			end_block
 		}
 
 		pub fn find_fund(
