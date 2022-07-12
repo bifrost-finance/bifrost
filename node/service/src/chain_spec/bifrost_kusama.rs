@@ -354,34 +354,34 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
 				.unchecked_into(),
-			ENDOWMENT() / 4,
+			ENDOWMENT(),
 		),
 		(
 			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
 				.unchecked_into(),
-			ENDOWMENT() / 4,
+			ENDOWMENT(),
 		),
 		(
 			// fBAbVJAsbWsKTedTVYGrBB3Usm6Vx635z1N9PX2tZ2boT37
 			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
 			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"]
 				.unchecked_into(),
-			ENDOWMENT() / 4,
+			ENDOWMENT(),
 		),
 		(
 			// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
 			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
 			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"]
 				.unchecked_into(),
-			ENDOWMENT() / 4,
+			ENDOWMENT(),
 		),
 	];
 
 	let endowed_accounts: Vec<AccountId> = vec![
-		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
-		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
 		// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
 		hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
 		// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
@@ -390,10 +390,6 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
 		// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
 		hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
-		// dKwyFv7RL79j1pAukZnZtAmxwG6a3USBmjZyFCLRSbghdiV
-		hex!["46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"].into(),
-		// eCSrvbA5gGNQr7VZ48fkCX5vkt1H16F8Np9g2hYssRXHZJF
-		hex!["6d6f646c62662f7374616b650000000000000000000000000000000000000000"].into(),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 
@@ -403,12 +399,12 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 
 	let council_membership = vec![
-		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
-		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
 	];
 	let technical_committee_membership = vec![
-		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
-		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
 	];
 
 	bifrost_genesis(
@@ -427,8 +423,8 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 
 pub fn stage_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
-		"Bifrost Stage Testnet",
-		"bifrost_stage_testnet",
+		"Bifrost Rococo",
+		"bifrost-rococo",
 		ChainType::Local,
 		move || stage_config_genesis(PARA_ID.into()),
 		vec![],
@@ -436,7 +432,7 @@ pub fn stage_testnet_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
 	))
 }
 

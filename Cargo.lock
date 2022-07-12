@@ -831,8 +831,10 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
+ "pallet-elections-phragmen",
  "pallet-identity",
  "pallet-indices",
+ "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
  "pallet-proxy",
@@ -840,6 +842,7 @@ dependencies = [
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
+ "pallet-tips",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury",
@@ -5494,7 +5497,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.46"
+version = "0.9.48"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -13280,7 +13283,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=70e3c01419a805a6d5243223165114b01ee0c538#70e3c01419a805a6d5243223165114b01ee0c538"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c556f791fb0bd47bf4a22927870c6192b821a953#c556f791fb0bd47bf4a22927870c6192b821a953"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -13303,7 +13306,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=70e3c01419a805a6d5243223165114b01ee0c538#70e3c01419a805a6d5243223165114b01ee0c538"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c556f791fb0bd47bf4a22927870c6192b821a953#c556f791fb0bd47bf4a22927870c6192b821a953"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -13318,7 +13321,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=70e3c01419a805a6d5243223165114b01ee0c538#70e3c01419a805a6d5243223165114b01ee0c538"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c556f791fb0bd47bf4a22927870c6192b821a953#c556f791fb0bd47bf4a22927870c6192b821a953"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

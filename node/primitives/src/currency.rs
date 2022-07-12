@@ -461,3 +461,9 @@ impl TryFrom<u64> for CurrencyId {
 		}
 	}
 }
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
+pub enum AssetIds {
+	ForeignAssetId(ForeignAssetId),
+	NativeAssetId(CurrencyId),
+}

@@ -834,7 +834,8 @@ pub mod pallet {
 
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 			let cur_block = <frame_system::Pallet<T>>::block_number();
-			ensure!(!Self::is_expired(cur_block, fund.last_slot), Error::<T>::VSBondExpired);
+			let expired = Self::is_expired(cur_block, fund.last_slot)?;
+			ensure!(!expired, Error::<T>::VSBondExpired);
 			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
@@ -963,26 +964,35 @@ pub mod pallet {
 			MultisigConfirmAccount::<T>::put(account);
 		}
 		/// Check if the vsBond is `past` the redeemable date
-		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
+		pub(crate) fn is_expired(
+			block: BlockNumberFor<T>,
+			last_slot: LeasePeriod,
+		) -> Result<bool, Error<T>> {
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
-			block >= block_end_redeem
+			Ok(block >= block_end_redeem)
 		}
 
 		/// Check if the vsBond is `in` the redeemable date
 		#[allow(dead_code)]
-		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
+		pub(crate) fn can_redeem(
+			block: BlockNumberFor<T>,
+			last_slot: LeasePeriod,
+		) -> Result<bool, Error<T>> {
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
-			block >= block_begin_redeem && block < block_end_redeem
+			Ok(block >= block_begin_redeem && block < block_end_redeem)
 		}
 
-		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			(slot + 1)
-				.checked_mul(T::LeasePeriod::get())
-				.expect("shouldn't fail when convert Lease to Block")
+		pub(crate) fn block_end_of_lease_period_index(
+			slot: LeasePeriod,
+		) -> Result<BlockNumberFor<T>, Error<T>> {
+			let end_block =
+				(slot + 1).checked_mul(T::LeasePeriod::get()).ok_or(Error::<T>::Overflow)?;
+
+			Ok(end_block)
 		}
 
 		pub fn find_fund(

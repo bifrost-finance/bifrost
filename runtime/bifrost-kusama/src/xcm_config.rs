@@ -16,18 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use bifrost_asset_registry::AssetIdMaps;
+use crate::{AssetRegistry, Balance};
+use bifrost_asset_registry::{AssetIdMaps, AssetMetadata};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
+	pallet_prelude::Weight,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{
-	AccountId, AssetIdMapping, CurrencyId, CurrencyId::ForeignAsset, TokenSymbol,
-};
+use node_primitives::{AccountId, AssetIdMapping, CurrencyId, TokenSymbol};
 use orml_traits::location::Reserve;
-use sp_std::{convert::TryFrom, marker::PhantomData};
+use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 use xcm_interface::traits::parachains;
@@ -137,16 +137,14 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 					PalletInstance(parachains::moonriver::PALLET_ID.into()),
 				),
 			)),
-			ForeignAsset(foreign_asset_id) =>
-				AssetIdMaps::<Runtime>::get_multi_location(foreign_asset_id),
-			_ => None,
+			_ => AssetIdMaps::<Runtime>::get_multi_location(id),
 		}
 	}
 }
 
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Stable, Token, VSToken};
+		use CurrencyId::*;
 		use TokenSymbol::*;
 
 		if location == MultiLocation::parent() {
@@ -221,7 +219,106 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				},
 				_ => None,
 			},
-			_ => None,
+			_ => AssetIdMaps::<Runtime>::get_currency_id(location),
 		}
+	}
+}
+
+pub struct AssetRegistryMigration<T>(sp_std::marker::PhantomData<T>);
+impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration<T> {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use bifrost_runtime_common::{micro, milli};
+		use node_primitives::TokenInfo;
+		use CurrencyId::*;
+		use TokenSymbol::*;
+
+		let items = vec![
+			(Native(BNC), native_currency_location(Native(BNC), T::get()), 10 * milli(Native(BNC))),
+			(Token(ZLK), native_currency_location(Token(ZLK), T::get()), micro(Token(ZLK))),
+			(Token(KSM), MultiLocation::parent(), Balance::from(0u32)),
+			(VSToken(KSM), native_currency_location(VSToken(KSM), T::get()), Balance::from(0u32)),
+			(
+				Token(KAR),
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(parachains::karura::ID),
+						GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+					),
+				),
+				Balance::from(0u32),
+			),
+			(
+				Stable(KUSD),
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(parachains::karura::ID),
+						GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+					),
+				),
+				Balance::from(0u32),
+			),
+			(
+				Token(RMRK),
+				MultiLocation::new(
+					1,
+					X3(
+						Parachain(parachains::Statemine::ID),
+						PalletInstance(parachains::Statemine::PALLET_ID),
+						GeneralIndex(parachains::Statemine::RMRK_ID as u128),
+					),
+				),
+				Balance::from(0u32),
+			),
+			(
+				Token(PHA),
+				MultiLocation::new(1, X1(Parachain(parachains::phala::ID))),
+				Balance::from(0u32),
+			),
+			(
+				Token(MOVR),
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(parachains::moonriver::ID),
+						PalletInstance(parachains::moonriver::PALLET_ID.into()),
+					),
+				),
+				Balance::from(0u32),
+			),
+		];
+
+		for (asset, location, metadata) in
+			items.iter().map(|(currency_id, location, minimal_balance)| {
+				(
+					currency_id.clone(),
+					location,
+					AssetMetadata {
+						name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+						symbol: currency_id
+							.symbol()
+							.map(|s| s.as_bytes().to_vec())
+							.unwrap_or_default(),
+						decimals: currency_id.decimals().unwrap_or_default(),
+						minimal_balance: *minimal_balance,
+					},
+				)
+			}) {
+			AssetRegistry::do_register_native_asset(asset, location, &metadata).expect("");
+		}
+
+		let len = items.len() as Weight;
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(len, len)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		Ok(())
 	}
 }
