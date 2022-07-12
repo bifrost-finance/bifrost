@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -v
-
 ## EXAMPLE
 ##
 ## Generate the weightInfo files of `bifrost-runtimes`;
