@@ -28,7 +28,6 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-mod migration;
 pub mod traits;
 pub mod weights;
 
@@ -288,10 +287,6 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn currency_unlocking_total)]
-	pub type CurrencyUnlockingTotal<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn unlocking_total)]
 	pub type UnlockingTotal<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
@@ -315,10 +310,6 @@ pub mod pallet {
 				.ok();
 
 			T::WeightInfo::on_initialize()
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			migration::update_unlocking_total::<T>()
 		}
 	}
 
