@@ -60,23 +60,23 @@ pub enum MoonriverUtilityCall<MoonriverCall> {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonriverParachainStakingCall<T: Config> {
-	#[codec(index = 19)]
+	#[codec(index = 17)]
 	Delegate(H160, BalanceOf<T>, u32, u32),
-	#[codec(index = 20)]
+	#[codec(index = 18)]
 	ScheduleLeaveDelegators,
-	#[codec(index = 21)]
+	#[codec(index = 19)]
 	ExecuteLeaveDelegators(H160, u32),
-	#[codec(index = 22)]
+	#[codec(index = 20)]
 	CancelLeaveDelegators,
-	#[codec(index = 23)]
+	#[codec(index = 21)]
 	ScheduleRevokeDelegation(H160),
-	#[codec(index = 24)]
+	#[codec(index = 22)]
 	DelegatorBondMore(H160, BalanceOf<T>),
-	#[codec(index = 25)]
+	#[codec(index = 23)]
 	ScheduleDelegatorBondLess(H160, BalanceOf<T>),
-	#[codec(index = 26)]
+	#[codec(index = 24)]
 	ExecuteDelegationRequest(H160, H160),
-	#[codec(index = 27)]
+	#[codec(index = 25)]
 	CancelDelegationRequest(H160),
 }
 

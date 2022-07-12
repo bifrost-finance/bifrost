@@ -57,7 +57,6 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;
-mod migration;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -226,6 +225,8 @@ pub mod pallet {
 		DestAccountNotValid,
 		WhiteListNotExist,
 		DelegatorAlreadyTuned,
+		FeeTooHight,
+		NotEnoughBalance,
 	}
 
 	#[pallet::event]
@@ -651,13 +652,6 @@ pub mod pallet {
 
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			let weight_1 = migration::update_minimums_maximums::<T>();
-			let weight_2 = migration::update_delays::<T>();
-
-			weight_1 + weight_2
 		}
 	}
 
@@ -1894,7 +1888,7 @@ pub mod pallet {
 		}
 
 		/// Convert native multiLocation to account.
-		fn native_multilocation_to_account(
+		pub fn native_multilocation_to_account(
 			who: &MultiLocation,
 		) -> Result<AccountIdOf<T>, Error<T>> {
 			// Get the delegator account id in Kusama network

@@ -28,7 +28,7 @@ use crate::{
 		MoonriverLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
 		OneToManyScheduledRequest,
 	},
-	DelegationsOccupied,
+	DelegationsOccupied, FeeSources,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use cumulus_primitives_core::relay_chain::HashT;
@@ -199,10 +199,16 @@ impl<T: Config>
 		let validator_account_id_20 =
 			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
 
-		// Only allow bond with validators with maximum 2 times rewarded delegators. Otherwise, it's
-		// too crowded.
-		let candidate_delegation_count: u32 =
-			mins_maxs.validators_reward_maximum.checked_mul(2).ok_or(Error::<T>::OverFlow)?;
+		// Only allow bond with validators with maximum 1.3 times rewarded delegators. Otherwise,
+		// it's too crowded.
+		let additional_delegation_count = mins_maxs
+			.validators_reward_maximum
+			.checked_div(3)
+			.ok_or(Error::<T>::Unexpected)?;
+		let candidate_delegation_count: u32 = mins_maxs
+			.validators_reward_maximum
+			.checked_add(additional_delegation_count)
+			.ok_or(Error::<T>::OverFlow)?;
 
 		let delegation_count: u32 = mins_maxs.validators_back_maximum;
 
@@ -216,8 +222,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Bond, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -279,8 +289,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::BondExtra, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -356,8 +370,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -394,8 +412,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Chill, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -458,8 +480,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Rebond, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -531,8 +557,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Undelegate, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -574,8 +604,12 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::CancelLeave, call, who)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -642,7 +676,7 @@ impl<T: Config>
 		// Construct xcm message.
 		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
 		let call;
-		let (query_id, timeout, xcm_message) = if leaving {
+		let (query_id, timeout, fee, xcm_message) = if leaving {
 			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteLeaveDelegators(
 				delegator_h160_account,
 				mins_maxs.validators_back_maximum,
@@ -666,6 +700,10 @@ impl<T: Config>
 				who,
 			)
 		}?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		if leaving {
@@ -742,11 +780,15 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Self::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperation::TransferBack,
 			call,
 			from,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Self::burn_fee_from_source_account(fee)?;
 
 		Ok(())
 	}
@@ -1023,7 +1065,7 @@ impl<T: Config> MoonriverAgent<T> {
 		operation: XcmOperation,
 		call: MoonriverCall<T>,
 		who: &MultiLocation,
-	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
+	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
 		let responder = Self::get_moonriver_para_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
@@ -1038,14 +1080,14 @@ impl<T: Config> MoonriverAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message_with_query_id(call_as_subaccount, fee, weight, query_id);
 
-		Ok((query_id, timeout, xcm_message))
+		Ok((query_id, timeout, fee, xcm_message))
 	}
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
 		operation: XcmOperation,
 		call: MoonriverCall<T>,
 		who: &MultiLocation,
-	) -> Result<(), Error<T>> {
+	) -> Result<BalanceOf<T>, Error<T>> {
 		let (call_as_subaccount, fee, weight) =
 			Self::prepare_send_as_subaccount_call_params_without_query_id(operation, call, who)?;
 
@@ -1055,7 +1097,7 @@ impl<T: Config> MoonriverAgent<T> {
 		let dest = Self::get_moonriver_para_multilocation();
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok(())
+		Ok(fee)
 	}
 
 	fn prepare_send_as_subaccount_call_params_with_query_id(
@@ -1590,6 +1632,26 @@ impl<T: Config> MoonriverAgent<T> {
 			Some(status) if status == all_occupied => (),
 			_ => DelegationsOccupied::<T>::insert(MOVR, all_occupied),
 		};
+
+		Ok(())
+	}
+
+	fn burn_fee_from_source_account(fee: BalanceOf<T>) -> Result<(), Error<T>> {
+		// get fee source first
+		let (source_location, reserved_fee) =
+			FeeSources::<T>::get(MOVR).ok_or(Error::<T>::FeeSourceNotExist)?;
+
+		// check if fee is too high to be covered.
+		ensure!(fee <= reserved_fee, Error::<T>::FeeTooHight);
+
+		let source_account = Pallet::<T>::native_multilocation_to_account(&source_location)?;
+		// ensure the fee source account has the balance of MOVR
+		T::MultiCurrency::ensure_can_withdraw(MOVR, &source_account, fee)
+			.map_err(|_| Error::<T>::NotEnoughBalance)?;
+
+		// withdraw
+		T::MultiCurrency::withdraw(MOVR, &source_account, fee)
+			.map_err(|_| Error::<T>::NotEnoughBalance)?;
 
 		Ok(())
 	}
