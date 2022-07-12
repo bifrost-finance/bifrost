@@ -314,10 +314,25 @@ where
 						*total_withdrawn_reward = total_withdrawn_reward
 							.checked_add(&reward_to_claim)
 							.ok_or(ArithmeticError::Overflow)?;
+
+						let ed = T::MultiCurrency::minimum_balance(*reward_currency);
+						let mut account_to_send = who.clone();
+
+						if reward_to_claim < ed {
+							let receiver_balance =
+								T::MultiCurrency::total_balance(*reward_currency, &who);
+
+							let receiver_balance_after = receiver_balance
+								.checked_add(&reward_to_claim)
+								.ok_or(ArithmeticError::Overflow)?;
+							if receiver_balance_after < ed {
+								account_to_send = T::TreasuryAccount::get();
+							}
+						}
 						T::MultiCurrency::transfer(
 							*reward_currency,
 							&gauge_pool_info.reward_issuer,
-							&who,
+							&account_to_send,
 							reward_to_claim,
 						)
 					},
@@ -325,10 +340,24 @@ where
 				gauge_info.last_claim_block = current_block_number;
 				gauge_info.claimed_time_factor = latest_claimed_time_factor;
 				if gauge_info.gauge_stop_block <= current_block_number {
+					let ed = T::MultiCurrency::minimum_balance(gauge_pool_info.token);
+					let mut account_to_send = who.clone();
+
+					if gauge_info.gauge_amount < ed {
+						let receiver_balance =
+							T::MultiCurrency::total_balance(gauge_pool_info.token, &who);
+
+						let receiver_balance_after = receiver_balance
+							.checked_add(&gauge_info.gauge_amount)
+							.ok_or(ArithmeticError::Overflow)?;
+						if receiver_balance_after < ed {
+							account_to_send = T::TreasuryAccount::get();
+						}
+					}
 					T::MultiCurrency::transfer(
 						gauge_pool_info.token,
 						&gauge_pool_info.keeper,
-						&who,
+						&account_to_send,
 						gauge_info.gauge_amount,
 					)?;
 					gauge_pool_info.total_time_factor = gauge_pool_info

@@ -1793,6 +1793,7 @@ impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();

@@ -285,6 +285,7 @@ impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TreasuryAccount = TreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
