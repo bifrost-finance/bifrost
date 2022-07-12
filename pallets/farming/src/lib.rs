@@ -82,6 +82,9 @@ pub mod pallet {
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
+
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type Keeper: Get<PalletId>;
@@ -125,6 +128,10 @@ pub mod pallet {
 			remove_value: Option<BalanceOf<T>>,
 		},
 		Claimed {
+			who: AccountIdOf<T>,
+			pid: PoolId,
+		},
+		WithdrawClaimed {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 		},
@@ -361,7 +368,7 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
+			// ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
 			rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*reward_currency,
@@ -482,6 +489,32 @@ pub mod pallet {
 			Self::process_withraw_list(&exchanger, pid, &pool_info)?;
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn withdraw_claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			ensure!(
+				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Dead,
+				Error::<T>::InvalidPoolState
+			);
+
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
+			ensure!(
+				share_info.claim_last_block + pool_info.claim_limit_time <= current_block_number,
+				Error::<T>::CanNotClaim
+			);
+
+			Self::process_withraw_list(&exchanger, pid, &pool_info)?;
+
+			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
 			Ok(())
 		}
 

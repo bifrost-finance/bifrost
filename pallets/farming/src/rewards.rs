@@ -16,17 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::*;
 use codec::HasCompact;
 use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{Saturating, UniqueSaturatedInto, Zero},
+	traits::{CheckedAdd, Saturating, UniqueSaturatedInto, Zero},
 	RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, prelude::*};
-
-use crate::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct ShareInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, BlockNumberFor, AccountIdOf> {
@@ -334,11 +333,23 @@ impl<T: Config> Pallet<T> {
 									withdrawn_reward.saturating_add(reward_to_withdraw),
 								);
 
+								let ed = T::MultiCurrency::minimum_balance(*reward_currency);
+								let mut account_to_send = who.clone();
+
+								if reward_to_withdraw < ed {
+									let receiver_balance = T::MultiCurrency::total_balance(*reward_currency, &who);
+
+									let receiver_balance_after =
+										receiver_balance.checked_add(&reward_to_withdraw).ok_or(ArithmeticError::Overflow)?;
+									if receiver_balance_after < ed {
+										account_to_send = T::TreasuryAccount::get();
+									}
+								}
 								// pay reward to `who`
 								T::MultiCurrency::transfer(
 									*reward_currency,
 									&pool_info.reward_issuer,
-									&who,
+									&account_to_send,
 									reward_to_withdraw,
 								)
 							},
