@@ -27,7 +27,7 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly-2022-05-11
-          components: cargo,rustfmt,clippy,rustc,rust-src
+          components: rustfmt,clippy
           target: wasm32-unknown-unknown
           override: true
           default: true
