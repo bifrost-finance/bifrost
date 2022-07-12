@@ -47,6 +47,7 @@ use zenlink_protocol::{AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMult
 
 use super::*;
 use crate as flexible_fee;
+#[allow(unused_imports)]
 use crate::{
 	fee_dealer::FixedCurrencyFeeRate,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -207,14 +208,13 @@ parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const SalpContributeFee: Balance = 100_000_000;
-	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 impl crate::Config for Test {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FixedCurrencyFeeRate<Test>;
-	// type FeeDealer = FlexibleFee;
+	// type FeeDealer = FixedCurrencyFeeRate<Test>;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
@@ -226,7 +226,6 @@ impl crate::Config for Test {
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
-	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {

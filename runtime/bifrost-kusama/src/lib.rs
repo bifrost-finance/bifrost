@@ -69,6 +69,7 @@ use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfForeignAsset};
+#[allow(unused_imports)]
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -1500,7 +1501,6 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
-	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 pub type MiscFeeHandlers = (
@@ -1511,8 +1511,8 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	// type FeeDealer = FlexibleFee;
-	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type FeeDealer = FlexibleFee;
+	// type FeeDealer = FixedCurrencyFeeRate<Runtime>;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1523,7 +1523,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
-	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {
