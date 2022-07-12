@@ -53,11 +53,11 @@ copy-genesis-config-release:
 
 .PHONY: format # cargo fmt
 format:
-	cargo +nightly fmt --all -- --check
+	cargo fmt --all -- --check
 
 .PHONY: clippy # cargo clippy
 clippy:
-	cargo +nightly clippy --all --all-targets -- -D warnings
+	cargo clippy --all --all-targets -- -D warnings
 
 .PHONY: test-benchmarking # test with benchmarking
 test-benchmarking:
