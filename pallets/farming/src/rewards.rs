@@ -386,11 +386,26 @@ impl<T: Config> Pallet<T> {
 									.saturating_reciprocal_mul(*remove_value);
 								pool_info.tokens_proportion.iter().try_for_each(
 									|(token, &proportion)| -> DispatchResult {
+										let withdraw_amount = proportion * native_amount;
+										let ed = T::MultiCurrency::minimum_balance(*token);
+										let mut account_to_send = who.clone();
+
+										if withdraw_amount < ed {
+											let receiver_balance =
+												T::MultiCurrency::total_balance(*token, &who);
+
+											let receiver_balance_after = receiver_balance
+												.checked_add(&withdraw_amount)
+												.ok_or(ArithmeticError::Overflow)?;
+											if receiver_balance_after < ed {
+												account_to_send = T::TreasuryAccount::get();
+											}
+										}
 										T::MultiCurrency::transfer(
 											*token,
 											&pool_info.keeper,
-											who,
-											proportion * native_amount,
+											&account_to_send,
+											withdraw_amount,
 										)
 									},
 								)?;

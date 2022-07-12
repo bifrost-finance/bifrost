@@ -113,6 +113,8 @@ fn withdraw() {
 		assert_ok!(Farming::withdraw_claim(Origin::signed(ALICE), pid));
 		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), None);
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4166);
+		let ed = <Runtime as Config>::MultiCurrency::minimum_balance(KSM);
+		assert_eq!(Tokens::free_balance(KSM, &TREASURY_ACCOUNT), ed);
 	})
 }
 
