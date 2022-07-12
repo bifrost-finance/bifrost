@@ -42,7 +42,6 @@ pub use frame_support::{
 	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use node_primitives::AssetIdMapping;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
@@ -68,7 +67,7 @@ use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_asset_registry::{AssetIdMaps, FixedRateOfForeignAsset};
+use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -90,8 +89,8 @@ use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
-	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
+	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -123,6 +122,7 @@ mod weights;
 
 mod xcm_config;
 
+use crate::xcm_config::AssetRegistryMigration;
 use xcm_config::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	MultiNativeAsset,
@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 946,
+	spec_version: 948,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1179,7 +1179,7 @@ parameter_types! {
 		// MOVR:KSM = 2.67:1
 		ksm_per_second() * 267 * 10_000 //movr currency decimal as 18
 	);
-	pub ForeignAssetUnitsPerSecond: u128 = ksm_per_second();
+	pub BasePerSecond: u128 = ksm_per_second();
 }
 
 pub struct ToTreasury;
@@ -1209,7 +1209,7 @@ pub type Trader = (
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<MovrPerSecond, ToTreasury>,
-	FixedRateOfForeignAsset<Runtime, ForeignAssetUnitsPerSecond, ToTreasury>,
+	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1361,10 +1361,11 @@ parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
-				AssetIdMaps::<Runtime>::get_foreign_asset_metadata(*foreign_asset_id).
+				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 			},
-			_ => Balance::max_value(), // unsupported
+			_ => AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::NativeAssetId(*currency_id))
+				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
 	};
 }
@@ -2104,7 +2105,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	AssetRegistryMigration<SelfParaChainId>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
