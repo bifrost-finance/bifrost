@@ -104,6 +104,7 @@ default = [ "std" ]
 std = []
 runtime-benchmarks = [
 	"bifrost-kusama-runtime/runtime-benchmarks",
+	"bifrost-polkadot-runtime/runtime-benchmarks",
 	"polkadot-service/runtime-benchmarks",
 ]
 with-bifrost-runtime = [
