@@ -488,7 +488,7 @@ impl<T: Config> Pallet<T> {
 				token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount),
 			);
 			match T::MultiCurrency::deposit(token_id, &account, mint_amount) {
-				Ok(_) =>
+				Ok(_) => {
 					match T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount) {
 						Ok(_) => {
 							token_info.system_shadow_amount =
@@ -536,7 +536,8 @@ impl<T: Config> Pallet<T> {
 								},
 							}
 						},
-					},
+					}
+				},
 				Err(error) => {
 					Self::deposit_event(Event::DepositFailed {
 						token: token_id,

@@ -1,0 +1,43 @@
+name: Cargo Check
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    if: "!contains(github.event.commits[0].message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check to latest commit
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2022-05-11
+          components: rustfmt,clippy
+          target: wasm32-unknown-unknown
+          override: true
+          default: true
+      - name: Cargo Check
+        run: make check-all
+      - name: Inform buddies online
+        uses: 8398a7/action-slack@v3
+        if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+        with:
+          status: ${{ job.status }}
+          fields: repo,author,eventName,workflow,ref,commit
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}

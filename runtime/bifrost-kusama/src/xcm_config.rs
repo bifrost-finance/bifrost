@@ -190,11 +190,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
 					if (id == parachains::Statemine::ID &&
 						index == parachains::Statemine::PALLET_ID) =>
+				{
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(TokenSymbol::RMRK))
 					} else {
 						None
-					},
+					}
+				},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
