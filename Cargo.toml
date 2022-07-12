@@ -97,9 +97,9 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "70e3c01419a805a6d5243223165114b01ee0c538" }
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "70e3c01419a805a6d5243223165114b01ee0c538" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "70e3c01419a805a6d5243223165114b01ee0c538" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c556f791fb0bd47bf4a22927870c6192b821a953" }
+zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c556f791fb0bd47bf4a22927870c6192b821a953" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c556f791fb0bd47bf4a22927870c6192b821a953" }
 merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "de07582de0ad16fd7f0b096ed7a38fae4ce975d4" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b" }
