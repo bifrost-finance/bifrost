@@ -421,18 +421,18 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn stage_testnet_config() -> Result<ChainSpec, String> {
+pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
-		"Bifrost Rococo",
-		"bifrost-rococo",
+		"Bifrost K Rococo",
+		"bifrost-k-rococo",
 		ChainType::Local,
-		move || stage_config_genesis(PARA_ID.into()),
+		move || stage_config_genesis(2030u32.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030u32 },
 	))
 }
 
