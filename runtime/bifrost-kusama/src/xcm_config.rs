@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AssetRegistry, Balance};
+use crate::AssetRegistry;
 use bifrost_asset_registry::{AssetIdMaps, AssetMetadata};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
