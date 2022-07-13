@@ -96,29 +96,33 @@ impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Stable, Token, VSToken};
+		use CurrencyId::*;
+		use TokenSymbol::*;
+
+		if let Some(id) = AssetIdMaps::<Runtime>::get_multi_location(id) {
+			return Some(id);
+		}
+
 		match id {
-			Token(TokenSymbol::KSM) => Some(MultiLocation::parent()),
-			Native(TokenSymbol::ASG) |
-			Native(TokenSymbol::BNC) |
-			VSToken(TokenSymbol::KSM) |
-			Token(TokenSymbol::ZLK) => Some(native_currency_location(id, T::get())),
+			Token(KSM) => Some(MultiLocation::parent()),
+			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
+				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
-			Token(TokenSymbol::KAR) => Some(MultiLocation::new(
+			Token(KAR) => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(parachains::karura::ID),
 					GeneralKey(parachains::karura::KAR_KEY.to_vec()),
 				),
 			)),
-			Stable(TokenSymbol::KUSD) => Some(MultiLocation::new(
+			Stable(KUSD) => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(parachains::karura::ID),
 					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
 				),
 			)),
-			Token(TokenSymbol::RMRK) => Some(MultiLocation::new(
+			Token(RMRK) => Some(MultiLocation::new(
 				1,
 				X3(
 					Parachain(parachains::Statemine::ID),
@@ -127,17 +131,16 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 				),
 			)),
 			// Phala Native token
-			Token(TokenSymbol::PHA) =>
-				Some(MultiLocation::new(1, X1(Parachain(parachains::phala::ID)))),
+			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(parachains::phala::ID)))),
 			// Moonriver Native token
-			Token(TokenSymbol::MOVR) => Some(MultiLocation::new(
+			Token(MOVR) => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(parachains::moonriver::ID),
 					PalletInstance(parachains::moonriver::PALLET_ID.into()),
 				),
 			)),
-			_ => AssetIdMaps::<Runtime>::get_multi_location(id),
+			_ => None,
 		}
 	}
 }
@@ -161,10 +164,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) |
-							Native(TokenSymbol::BNC) |
-							VSToken(TokenSymbol::KSM) |
-							Token(TokenSymbol::ZLK) => Some(currency_id),
+							Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
+								Some(currency_id),
 							_ => None,
 						}
 					} else {
@@ -173,16 +174,16 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				},
 				X2(Parachain(id), GeneralKey(key)) if id == parachains::karura::ID => {
 					if key == parachains::karura::KAR_KEY.to_vec() {
-						Some(Token(TokenSymbol::KAR))
+						Some(Token(KAR))
 					} else if key == parachains::karura::KUSD_KEY.to_vec() {
-						Some(Stable(TokenSymbol::KUSD))
+						Some(Stable(KUSD))
 					} else {
 						None
 					}
 				},
 				X2(Parachain(id), GeneralIndex(key)) if id == parachains::Statemine::ID => {
 					if key == parachains::Statemine::RMRK_ID as u128 {
-						Some(Token(TokenSymbol::RMRK))
+						Some(Token(RMRK))
 					} else {
 						None
 					}
@@ -191,15 +192,15 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					if (id == parachains::Statemine::ID &&
 						index == parachains::Statemine::PALLET_ID) =>
 					if key == parachains::Statemine::RMRK_ID as u128 {
-						Some(Token(TokenSymbol::RMRK))
+						Some(Token(RMRK))
 					} else {
 						None
 					},
-				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
+				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
 						(index == parachains::moonriver::PALLET_ID)) =>
-					Some(Token(TokenSymbol::MOVR)),
+					Some(Token(MOVR)),
 				_ => None,
 			},
 			MultiLocation { parents, interior } if parents == 0 => match interior {
@@ -207,10 +208,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) |
-							Native(TokenSymbol::BNC) |
-							VSToken(TokenSymbol::KSM) |
-							Token(TokenSymbol::ZLK) => Some(currency_id),
+							Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
+								Some(currency_id),
 							_ => None,
 						}
 					} else {
@@ -219,7 +218,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				},
 				_ => None,
 			},
-			_ => AssetIdMaps::<Runtime>::get_currency_id(location),
+			_ => None,
 		}
 	}
 }
@@ -227,16 +226,20 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 pub struct AssetRegistryMigration<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration<T> {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use bifrost_runtime_common::{micro, milli};
+		use bifrost_runtime_common::{cent, micro, milli, millicent};
 		use node_primitives::TokenInfo;
 		use CurrencyId::*;
 		use TokenSymbol::*;
 
 		let items = vec![
+			(Token(KSM), MultiLocation::parent(), 10 * millicent(Token(KSM))),
 			(Native(BNC), native_currency_location(Native(BNC), T::get()), 10 * milli(Native(BNC))),
 			(Token(ZLK), native_currency_location(Token(ZLK), T::get()), micro(Token(ZLK))),
-			(Token(KSM), MultiLocation::parent(), Balance::from(0u32)),
-			(VSToken(KSM), native_currency_location(VSToken(KSM), T::get()), Balance::from(0u32)),
+			(
+				VSToken(KSM),
+				native_currency_location(VSToken(KSM), T::get()),
+				10 * millicent(VSToken(KSM)),
+			),
 			(
 				Token(KAR),
 				MultiLocation::new(
@@ -246,7 +249,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 						GeneralKey(parachains::karura::KAR_KEY.to_vec()),
 					),
 				),
-				Balance::from(0u32),
+				10 * millicent(Token(KAR)),
 			),
 			(
 				Stable(KUSD),
@@ -257,7 +260,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 						GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
 					),
 				),
-				Balance::from(0u32),
+				10 * millicent(Stable(KUSD)),
 			),
 			(
 				Token(RMRK),
@@ -269,12 +272,12 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 						GeneralIndex(parachains::Statemine::RMRK_ID as u128),
 					),
 				),
-				Balance::from(0u32),
+				micro(Token(RMRK)),
 			),
 			(
 				Token(PHA),
 				MultiLocation::new(1, X1(Parachain(parachains::phala::ID))),
-				Balance::from(0u32),
+				4 * cent(Token(PHA)),
 			),
 			(
 				Token(MOVR),
@@ -285,7 +288,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 						PalletInstance(parachains::moonriver::PALLET_ID.into()),
 					),
 				),
-				Balance::from(0u32),
+				micro(Token(MOVR)),
 			),
 		];
 
@@ -305,7 +308,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 					},
 				)
 			}) {
-			AssetRegistry::do_register_native_asset(asset, location, &metadata).expect("");
+			AssetRegistry::do_register_native_asset(asset, location, &metadata).expect("Asset register");
 		}
 
 		let len = items.len() as Weight;
