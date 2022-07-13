@@ -308,7 +308,8 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 					},
 				)
 			}) {
-			AssetRegistry::do_register_native_asset(asset, location, &metadata).expect("Asset register");
+			AssetRegistry::do_register_native_asset(asset, location, &metadata)
+				.expect("Asset register");
 		}
 
 		let len = items.len() as Weight;
