@@ -17,7 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Cross-chain transfer tests within Kusama network.
-
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_kusama_runtime::AssetRegistry;
+use bifrost_runtime_common::millicent;
 use frame_support::assert_ok;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
@@ -28,6 +30,8 @@ use crate::{integration_tests::*, kusama_test_net::*};
 
 #[test]
 fn transfer_from_relay_chain() {
+	register_asset();
+
 	KusamaNet::execute_with(|| {
 		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 			kusama_runtime::Origin::signed(ALICE.into()),
@@ -117,5 +121,21 @@ fn transfer_to_sibling() {
 			Tokens::free_balance(CurrencyId::Token(TokenSymbol::KAR), &AccountId::from(ALICE)),
 			90_000_000_000_000
 		);
+	});
+}
+
+fn register_asset() {
+	Bifrost::execute_with(|| {
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
+		assert_ok!(AssetRegistry::do_register_native_asset(
+			currency_id,
+			&MultiLocation::parent(),
+			&AssetMetadata {
+				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				decimals: currency_id.decimals().unwrap_or_default(),
+				minimal_balance: 10 * millicent(currency_id),
+			}
+		));
 	});
 }
