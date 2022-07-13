@@ -498,6 +498,7 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
+			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			Self::process_withraw_list(&exchanger, pid, &pool_info)?;
 
 			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
