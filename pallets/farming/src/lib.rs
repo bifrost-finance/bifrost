@@ -499,19 +499,6 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(
-				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Dead,
-				Error::<T>::InvalidPoolState
-			);
-
-			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
-				.ok_or(Error::<T>::ShareInfoNotExists)?;
-			ensure!(
-				share_info.claim_last_block + pool_info.claim_limit_time <= current_block_number,
-				Error::<T>::CanNotClaim
-			);
-
 			Self::process_withraw_list(&exchanger, pid, &pool_info)?;
 
 			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
