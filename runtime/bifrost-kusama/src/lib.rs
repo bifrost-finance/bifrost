@@ -122,7 +122,6 @@ mod weights;
 
 mod xcm_config;
 
-use crate::xcm_config::AssetRegistryMigration;
 use xcm_config::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	MultiNativeAsset,
@@ -2105,7 +2104,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	AssetRegistryMigration<SelfParaChainId>,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
