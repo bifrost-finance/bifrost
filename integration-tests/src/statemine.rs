@@ -28,17 +28,17 @@ fn statemine() {
 	// env_logger::init();
 	Statemine::execute_with(|| {
 		use frame_support::traits::Currency;
-		use westmint_runtime::*;
+		use statemine_runtime::*;
 
 		let origin = Origin::signed(ALICE.into());
 
-		westmint_runtime::Balances::make_free_balance_be(
+		statemine_runtime::Balances::make_free_balance_be(
 			&ALICE.into(),
 			10 * dollar(RelayCurrencyId::get()),
 		);
 
 		// need to have some KSM to be able to receive user assets
-		westmint_runtime::Balances::make_free_balance_be(
+		statemine_runtime::Balances::make_free_balance_be(
 			&Sibling::from(2001).into_account(),
 			10 * dollar(RelayCurrencyId::get()),
 		);

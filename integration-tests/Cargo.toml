@@ -84,6 +84,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.22", default-features = false }
 
 # bifrost pallets
+bifrost-asset-registry = { path = "../pallets/asset-registry", default-features = false }
 bifrost-flexible-fee = { path = "../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../pallets/flexible-fee/rpc/runtime-api", default-features = false }
 bifrost-liquidity-mining = { path = "../pallets/liquidity-mining", default-features = false }
@@ -124,7 +125,7 @@ kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "rel
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "5a04d6286ee9082d4b7433541e48508f8b65616b" }
 
 node-service = { path = "../node/service", features = ["with-all-runtime"] }
-westmint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.22" }
+statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.22" }
 
 [features]
 default = ["std"]
@@ -190,6 +191,7 @@ std = [
 	"xcm-executor/std",
 	"polkadot-primitives/std",
 	"polkadot-runtime-parachains/std",
+	"bifrost-asset-registry/std",
 	"bifrost-flexible-fee/std",
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-runtime-common/std",
