@@ -368,6 +368,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		pool: PoolId,
 		pool_info: &PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
+		if_remove: bool,
 	) -> DispatchResult {
 		SharesAndWithdrawnRewards::<T>::mutate_exists(
 			pool,
@@ -417,10 +418,11 @@ impl<T: Config> Pallet<T> {
 					)?;
 					share_info.withdraw_list = tmp;
 
-					// if withdraw_list and share both are empty, remove it.
+					// if withdraw_list and share both are empty, and if_remove is true, remove it.
 					if share_info.withdraw_list !=
 						Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default() ||
-						!share_info.share.is_zero()
+						!share_info.share.is_zero() ||
+						!if_remove
 					{
 						*share_info_old = Some(share_info);
 					};
