@@ -18,7 +18,7 @@ build-bifrost-kusama-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
 
 .PHONY: build-bifrost-polkadot-release # build bifrost polkadot release
-build-bifrost-polkadot-release: copy-genesis-config-release
+build-bifrost-polkadot-release:
 	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release
 
 .PHONY: build-all-release # build all runtime release
