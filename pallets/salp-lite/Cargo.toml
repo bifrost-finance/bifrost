@@ -20,7 +20,7 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22"}
-smallvec = "1.6.1"
+smallvec = "1.9.0"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
