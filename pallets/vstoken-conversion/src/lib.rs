@@ -213,11 +213,11 @@ pub mod pallet {
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 9i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease < 0i32 {
-				remaining_due_lease = 0i32
+			if remaining_due_lease < -2_i32 {
+				remaining_due_lease = -2_i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let exchange_fee = ExchangeFee::<T>::get();
@@ -292,11 +292,11 @@ pub mod pallet {
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 9i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease < 0i32 {
-				remaining_due_lease = 0i32
+			if remaining_due_lease < -2_i32 {
+				remaining_due_lease = -2_i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			ensure!(

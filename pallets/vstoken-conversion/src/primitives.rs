@@ -26,8 +26,6 @@ use sp_arithmetic::per_things::Percent;
 pub struct VstokenConversionExchangeRate {
 	pub vsbond_convert_to_vstoken: Percent,
 	pub vstoken_convert_to_vsbond: Percent,
-	// pub vsbond_convert_to_vsdot: Percent,
-	// pub vsdot_convert_to_vsbond: Percent,
 }
 
 /// Exchange fee of vstoken-conversion

@@ -59,7 +59,7 @@ pub struct DeprecatedVstokenConversionExchangeFee<Balance> {
 }
 
 pub fn update_exchange_fee<T: Config>() -> Weight {
-	ExchangeFee::<T>::translate::<DeprecatedVstokenConversionExchangeFee<BalanceOf<T>>, _>(
+	let _ = ExchangeFee::<T>::translate::<DeprecatedVstokenConversionExchangeFee<BalanceOf<T>>, _>(
 		|maybe_exchange_fee| {
 			if let Some(exchange_fee) = maybe_exchange_fee {
 				let new_entry = VstokenConversionExchangeFee::<BalanceOf<T>> {
