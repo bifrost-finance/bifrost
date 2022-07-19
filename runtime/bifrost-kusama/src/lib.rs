@@ -123,7 +123,6 @@ mod weights;
 
 mod xcm_config;
 
-use crate::xcm_config::AssetRegistryMigration;
 use xcm_config::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	MultiNativeAsset,
@@ -2013,7 +2012,7 @@ construct_runtime! {
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config} = 41,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
 		// utilities
@@ -2103,7 +2102,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	AssetRegistryMigration<SelfParaChainId>,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

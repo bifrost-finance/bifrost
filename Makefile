@@ -18,7 +18,7 @@ build-bifrost-kusama-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
 
 .PHONY: build-bifrost-polkadot-release # build bifrost polkadot release
-build-bifrost-polkadot-release: copy-genesis-config-release
+build-bifrost-polkadot-release:
 	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release
 
 .PHONY: build-all-release # build all runtime release
@@ -61,7 +61,7 @@ clippy:
 
 .PHONY: test-benchmarking # test with benchmarking
 test-benchmarking:
-	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime --features --all benchmarking
+	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
@@ -76,9 +76,16 @@ benchmarking-staking:
             --header=./HEADER-GPL3 \
 			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
 
+.PHONY: generate-bifrost-kusama-weights # generate bifrost-kusama weights
+generate-bifrost-kusama-weights:
+	bash ./scripts/generate-weights.sh bifrost-kusama
+
+.PHONY: generate-bifrost-polkadot-weights # generate bifrost-polkadot weights
+generate-bifrost-polkadot-weights:
+	bash ./scripts/generate-weights.sh bifrost-polkadot
+
 .PHONY: generate-all-weights # generate all weights
-generate-all-weights:
-	bash ./scripts/generate-weights.sh bifrost
+generate-all-weights: generate-bifrost-kusama-weights generate-bifrost-polkadot-weights
 
 .PHONY: build-all-release-with-bench # build all release with benchmarking
 build-all-release-with-bench: copy-genesis-config-release

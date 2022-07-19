@@ -5,11 +5,6 @@ env:
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: The ref to be used for the repo
-        default: develop
-        required: false
 
 jobs:
   build:
@@ -27,9 +22,11 @@ jobs:
 
       - name: Srtool build
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.4.0
+        uses: chevdor/srtool-actions@v0.5.0
         env:
           BUILD_OPTS: "--features on-chain-release-build"
+          PARACHAIN_PALLET_ID: "0x05"
+          AUTHORIZE_UPGRADE_PREFIX: "0x02"
         with:
           chain: ${{ matrix.chain }}
           runtime_dir: runtime/${{ matrix.chain }}

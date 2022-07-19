@@ -312,7 +312,6 @@ where
 				pool: transaction_pool.clone(),
 				deny_unsafe,
 			};
-
 			crate::rpc::create_full_polkadot(deps).map_err(Into::into)
 		})
 	};

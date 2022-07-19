@@ -14,7 +14,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 hex-literal = { version = "0.3.1" }
 log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
-smallvec = "1.6.1"
+smallvec = "1.9.0"
 static_assertions = "1.1.0"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
@@ -179,7 +179,6 @@ try-runtime = [
 	"pallet-vesting/try-runtime",
 ]
 
-
 # When enabled, the runtime API will not be build.
 #
 # This is required by Cumulus to access certain types of the
@@ -196,4 +195,3 @@ on-chain-release-build = [
 
 # Set timing constants (e.g. session period) to faster versions to speed up testing.
 fast-runtime = []
-

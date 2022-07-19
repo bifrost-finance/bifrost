@@ -102,7 +102,6 @@ where
 }
 
 /// RPC of bifrost-polkadot runtime.
-#[allow(non_snake_case)]
 pub fn create_full_polkadot<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
