@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+mod migration;
 pub mod primitives;
 pub mod weights;
 
@@ -70,6 +71,8 @@ pub mod pallet {
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
+		type RelayChainTokenSymbol: Get<TokenSymbol>;
+
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		#[pallet::constant]
@@ -109,6 +112,12 @@ pub mod pallet {
 			vsbond_amount: BalanceOf<T>,
 			vsdot_amount: BalanceOf<T>,
 		},
+		VstokenConvertToVsbond {
+			address: AccountIdOf<T>,
+			currency_id: CurrencyIdOf<T>,
+			vsbond_amount: BalanceOf<T>,
+			vstoken_amount: BalanceOf<T>,
+		},
 		ExchangeFeeSet {
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		},
@@ -116,10 +125,7 @@ pub mod pallet {
 			lease: i32,
 			exchange_rate: VstokenConversionExchangeRate,
 		},
-		PolkadotLeaseSet {
-			lease: u32,
-		},
-		KusamaLeaseSet {
+		RelaychainLeaseSet {
 			lease: u32,
 		},
 	}
@@ -135,9 +141,13 @@ pub mod pallet {
 	#[pallet::getter(fn kusama_lease)]
 	pub type KusamaLease<T: Config> = StorageValue<_, u32, ValueQuery>;
 
+	// #[pallet::storage]
+	// #[pallet::getter(fn polkadot_lease)]
+	// pub type PolkadotLease<T: Config> = StorageValue<_, u32, ValueQuery>;
+
 	#[pallet::storage]
-	#[pallet::getter(fn polkadot_lease)]
-	pub type PolkadotLease<T: Config> = StorageValue<_, u32, ValueQuery>;
+	#[pallet::getter(fn relaychain_lease)]
+	pub type RelaychainLease<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_rate)]
@@ -149,6 +159,13 @@ pub mod pallet {
 	#[pallet::getter(fn exchange_fee)]
 	pub type ExchangeFee<T: Config> =
 		StorageValue<_, VstokenConversionExchangeFee<BalanceOf<T>>, ValueQuery>;
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_unlocking_total::<T>()
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -162,23 +179,24 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
+			let relaychain_token_symbol = T::RelayChainTokenSymbol::get();
 			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
 				minimum_vsksm >=
-					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
+					T::MultiCurrency::minimum_balance(CurrencyId::Token(relaychain_token_symbol)),
 				Error::<T>::NotEnoughBalance
 			);
 
 			// Calculate lease
-			let ksm_lease = KusamaLease::<T>::get();
+			let relay_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(
-						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
+						symbol == relaychain_token_symbol|| symbol == TokenSymbol::BNC,
 						Error::<T>::NotSupportTokenType
 					);
-					let mut remaining_due_lease: i32 = (expire_lease as i64 - ksm_lease as i64)
+					let mut remaining_due_lease: i32 = (expire_lease as i64 - relay_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
@@ -209,7 +227,7 @@ pub mod pallet {
 				vsbond_amount,
 			)?;
 			T::MultiCurrency::deposit(
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::VSToken(relaychain_token_symbol),
 				&exchanger,
 				vsksm_balance,
 			)?;
@@ -233,25 +251,26 @@ pub mod pallet {
 		pub fn vsksm_convert_to_vsbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
-			vsksm_amount: BalanceOf<T>,
+			vstoken_amount: BalanceOf<T>,
 			minimum_vsbond: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
+			let relaychain_token_symbol = T::RelayChainTokenSymbol::get();
 			let user_vsksm_balance =
-				T::MultiCurrency::free_balance(CurrencyId::VSToken(TokenSymbol::KSM), &exchanger);
-			ensure!(user_vsksm_balance >= vsksm_amount, Error::<T>::NotEnoughBalance);
+				T::MultiCurrency::free_balance(CurrencyId::VSToken(relaychain_token_symbol), &exchanger);
+			ensure!(user_vsksm_balance >= vstoken_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
 				minimum_vsbond >= T::MultiCurrency::minimum_balance(currency_id),
 				Error::<T>::NotEnoughBalance
 			);
 
 			// Calculate lease
-			let ksm_lease = KusamaLease::<T>::get();
+			let ksm_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(
-						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
+						symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
 						Error::<T>::NotSupportTokenType
 					);
 					let mut remaining_due_lease: i32 = (expire_lease as i64 - ksm_lease as i64)
@@ -277,11 +296,11 @@ pub mod pallet {
 			);
 
 			let exchange_fee = ExchangeFee::<T>::get();
-			let vsksm_balance = vsksm_amount
+			let vstoken_balance = vstoken_amount
 				.checked_sub(&exchange_fee.vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsbond_balance =
-				exchange_rate.vsksm_convert_to_vsbond.saturating_reciprocal_mul(vsksm_balance);
+				exchange_rate.vsksm_convert_to_vsbond.saturating_reciprocal_mul(vstoken_balance);
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
@@ -291,21 +310,21 @@ pub mod pallet {
 				vsbond_balance,
 			)?;
 			T::MultiCurrency::withdraw(
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::VSToken(relaychain_token_symbol),
 				&exchanger,
-				vsksm_amount,
+				vstoken_amount,
 			)?;
 			T::MultiCurrency::deposit(
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::VSToken(relaychain_token_symbol),
 				&T::TreasuryAccount::get(),
 				exchange_fee.vsksm_exchange_fee,
 			)?;
 
-			Self::deposit_event(Event::VsksmConvertToVsbond {
+			Self::deposit_event(Event::VstokenConvertToVsbond {
 				address: exchanger,
 				currency_id,
 				vsbond_amount: vsbond_balance,
-				vsksm_amount: vsksm_balance,
+				vstoken_amount: vstoken_balance,
 			});
 			Ok(())
 		}
@@ -329,7 +348,7 @@ pub mod pallet {
 			);
 
 			// Calculate lease
-			let dot_lease = PolkadotLease::<T>::get();
+			let dot_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
@@ -402,7 +421,7 @@ pub mod pallet {
 			);
 
 			// Calculate lease
-			let dot_lease = PolkadotLease::<T>::get();
+			let dot_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
@@ -493,27 +512,27 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// #[pallet::weight(0)]
+		// pub fn set_kusama_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
+		// 	T::ControlOrigin::ensure_origin(origin)?;
+
+		// 	RelaychainLease::<T>::mutate(|old_lease| {
+		// 		*old_lease = lease;
+		// 	});
+
+		// 	Self::deposit_event(Event::RelaychainLeaseSet { lease });
+		// 	Ok(())
+		// }
+
 		#[pallet::weight(0)]
-		pub fn set_kusama_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
+		pub fn set_relaychain_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			KusamaLease::<T>::mutate(|old_lease| {
+			RelaychainLease::<T>::mutate(|old_lease| {
 				*old_lease = lease;
 			});
 
-			Self::deposit_event(Event::KusamaLeaseSet { lease });
-			Ok(())
-		}
-
-		#[pallet::weight(0)]
-		pub fn set_polkadot_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			PolkadotLease::<T>::mutate(|old_lease| {
-				*old_lease = lease;
-			});
-
-			Self::deposit_event(Event::PolkadotLeaseSet { lease });
+			Self::deposit_event(Event::RelaychainLeaseSet { lease });
 			Ok(())
 		}
 	}

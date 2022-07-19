@@ -1783,6 +1783,8 @@ impl bifrost_slp::Config for Runtime {
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	// type RelayCurrencyId = RelayCurrencyId;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
