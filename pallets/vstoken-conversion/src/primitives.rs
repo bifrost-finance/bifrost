@@ -24,17 +24,15 @@ use sp_arithmetic::per_things::Percent;
 /// Exchange rate of vstoken-conversion
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen, Default)]
 pub struct VstokenConversionExchangeRate {
-	pub vsbond_convert_to_vsksm: Percent,
-	pub vsksm_convert_to_vsbond: Percent,
-	pub vsbond_convert_to_vsdot: Percent,
-	pub vsdot_convert_to_vsbond: Percent,
+	pub vsbond_convert_to_vstoken: Percent,
+	pub vstoken_convert_to_vsbond: Percent,
+	// pub vsbond_convert_to_vsdot: Percent,
+	// pub vsdot_convert_to_vsbond: Percent,
 }
 
 /// Exchange fee of vstoken-conversion
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen, Default)]
 pub struct VstokenConversionExchangeFee<Balance> {
-	pub vsksm_exchange_fee: Balance,
-	pub vsdot_exchange_fee: Balance,
-	pub vsbond_exchange_fee_of_vsksm: Balance,
-	pub vsbond_exchange_fee_of_vsdot: Balance,
+	pub vstoken_exchange_fee: Balance,
+	pub vsbond_exchange_fee_of_vstoken: Balance,
 }
