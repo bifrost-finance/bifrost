@@ -16,7 +16,7 @@ log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.2", default-features = false, features = [
 	"derive",
 ] }
-smallvec = "1.6.1"
+smallvec = "1.9.0"
 static_assertions = "1.1.0"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
