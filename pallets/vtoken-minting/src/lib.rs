@@ -792,7 +792,7 @@ pub mod pallet {
 			account: AccountIdOf<T>,
 			index: &UnlockId,
 			mut unlock_amount: BalanceOf<T>,
-			mut entrance_account_balance: BalanceOf<T>,
+			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
 		) -> DispatchResult {
 			if entrance_account_balance >= unlock_amount {
@@ -898,7 +898,7 @@ pub mod pallet {
 				)?;
 			}
 
-			entrance_account_balance = entrance_account_balance
+			entrance_account_balance
 				.checked_sub(&unlock_amount)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 
