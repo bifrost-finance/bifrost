@@ -72,12 +72,14 @@ fn vsksm_convert_to_vsbond() {
 		pub const EXCHANGE_RATE_PERCENTAGE_0: Percent = Percent::from_percent(100);
 		const EXCHANGE_RATE_0: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE_0,
-			// vsbond_convert_to_vsksm: EXCHANGE_RATE_PERCENTAGE_0,
 			vstoken_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE_0,
-			// vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE_0,
 		};
 		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 11));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 0, EXCHANGE_RATE_0));
+		assert_ok!(VstokenConversion::set_exchange_rate(
+			Origin::signed(ALICE),
+			-2,
+			EXCHANGE_RATE_0
+		));
 		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 900);
 		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 8110);
@@ -97,9 +99,7 @@ fn vsbond_convert_to_vsksm() {
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE,
-			// vsbond_convert_to_vsksm: EXCHANGE_RATE_PERCENTAGE,
 			vstoken_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
-			// vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
 		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 1));
 		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
