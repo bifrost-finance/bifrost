@@ -155,6 +155,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;

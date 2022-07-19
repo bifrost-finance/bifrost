@@ -20,8 +20,8 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 impl-trait-for-tuples = "0.2.1"
 
 [dev-dependencies]
-orml-tokens = { version = "0.4.1-dev" }
-orml-currencies = { version = "0.4.1-dev" }
+orml-tokens = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
 balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
@@ -45,7 +45,6 @@ std = [
 	"pallet-transaction-payment/std",
 	"zenlink-protocol/std",
 	"sp-arithmetic/std",
-	"orml-traits/std",
 ]
 
 runtime-benchmarks = [

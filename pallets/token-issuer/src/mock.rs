@@ -134,7 +134,7 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 parameter_types! {
-	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 	pub const MaxLocks: u32 = 100;
 }
 impl orml_tokens::Config for Runtime {
@@ -149,6 +149,8 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {

@@ -19,12 +19,12 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 hex-literal = { version = "0.3.1" }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 
 [dev-dependencies]
+orml-tokens = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
@@ -38,7 +38,6 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 	"node-primitives/std",
-	"orml-traits/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

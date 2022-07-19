@@ -19,7 +19,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 log = { version = "0.4.17", default-features = false }
 
 [dev-dependencies]
-orml-tokens = { version = "0.4.1-dev" }
+orml-tokens = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }

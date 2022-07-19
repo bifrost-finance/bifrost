@@ -31,8 +31,8 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 sp-core = { default-features = false, version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 sp-io = { default-features = false, version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.25" }
 pallet-balances = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-currencies = "0.4.1-dev"
+orml-tokens = "0.4.1-dev"
 hex-literal = "0.3.4"
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }

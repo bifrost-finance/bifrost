@@ -14,13 +14,14 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
 scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
+orml-traits = "0.4.1-dev"
+orml-tokens = "0.4.1-dev"
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
+
 smallvec = "1.4.1"
 
 [features]
@@ -34,7 +35,6 @@ std = [
 	"sp-io/std",
 	"sp-std/std",
 	"node-primitives/std",
-	"orml-traits/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
 
