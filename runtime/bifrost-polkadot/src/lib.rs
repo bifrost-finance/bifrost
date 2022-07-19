@@ -32,7 +32,7 @@ pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		Contains, EqualPrivilegeOnly, Everything, Imbalance, InstanceFilter, IsInVec,
-		LockIdentifier, Nothing, OnUnbalanced, Randomness,
+		LockIdentifier, NeverEnsureOrigin, Nothing, OnUnbalanced, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -653,24 +653,9 @@ type ApproveOrigin = EitherOfDiverse<
 	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
-pub struct SpendOrigin;
-impl frame_support::traits::EnsureOrigin<Origin> for SpendOrigin {
-	type Success = u128;
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Result::<frame_system::RawOrigin<_>, Origin>::from(o).and_then(|o| match o {
-			frame_system::RawOrigin::Root => Ok(u128::max_value()),
-			r => Err(Origin::from(r)),
-		})
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> Result<Origin, ()> {
-		Ok(Origin::root())
-	}
-}
-
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = SpendOrigin;
+	type SpendOrigin = NeverEnsureOrigin<Balance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;

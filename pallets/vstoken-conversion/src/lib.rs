@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -34,7 +35,7 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{AccountIdConversion, CheckedSub},
-	PalletId,
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
@@ -152,6 +153,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn vsbond_convert_to_vsksm(
 			origin: OriginFor<T>,
@@ -227,6 +229,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn vsksm_convert_to_vsbond(
 			origin: OriginFor<T>,
@@ -308,6 +311,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn vsbond_convert_to_vsdot(
 			origin: OriginFor<T>,
@@ -380,6 +384,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn vsdot_convert_to_vsbond(
 			origin: OriginFor<T>,
