@@ -57,7 +57,7 @@ pub(crate) type BalanceOf<T: Config> =
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{pallet_prelude::*, transactional, weights::Weight};
+	use frame_support::{pallet_prelude::*, weights::Weight};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use scale_info::TypeInfo;
@@ -168,7 +168,6 @@ pub mod pallet {
 			DispatchClass::Normal,
 			Pays::No
 			))]
-		#[transactional]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
 			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
@@ -199,7 +198,6 @@ pub mod pallet {
 			Ok(())
 		}
 		#[pallet::weight(2_000_000_000)]
-		#[transactional]
 		pub fn transfer_statemine_assets(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,

@@ -18,8 +18,8 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-
 pub mod v2 {
+
 	use frame_support::traits::{OnRuntimeUpgrade, PalletInfo};
 
 	use crate::*;
@@ -144,7 +144,7 @@ pub mod v2 {
 			let pallet_name = T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none");
 			log::info!("{} on processing", pallet_name);
 
-			if Pallet::<T, I>::storage_version() == StorageVersion::V1_0_0 {
+			if Pallet::<T, I>::storage_version() == crate::StorageVersion::V1_0_0 {
 				let tp_nums = deprecated::TotalPoolInfos::<T, I>::iter().count() as u32;
 				let td_nums = deprecated::TotalDepositData::<T, I>::iter().count() as u32;
 
@@ -192,7 +192,7 @@ pub mod v2 {
 					})
 				});
 
-				PalletVersion::<T, I>::put(StorageVersion::V2_0_0);
+				PalletVersion::<T, I>::put(crate::StorageVersion::V2_0_0);
 
 				log::info!(" >>> migration completed!");
 
@@ -211,7 +211,7 @@ pub mod v2 {
 			let pallet_name = T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none");
 
 			ensure!(
-				Pallet::<T, I>::storage_version() == StorageVersion::V1_0_0,
+				Pallet::<T, I>::storage_version() == crate::StorageVersion::V1_0_0,
 				"❌ liquidity-mining upgrade to V2_0_0: not right version",
 			);
 

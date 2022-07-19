@@ -35,7 +35,7 @@ use frame_support::{
 		vec::Vec,
 	},
 	traits::EnsureOrigin,
-	transactional, PalletId, RuntimeDebug,
+	PalletId, RuntimeDebug,
 };
 #[cfg(feature = "std")]
 use frame_support::{Deserialize, Serialize};
@@ -991,7 +991,6 @@ pub mod pallet {
 		/// - The deposit caller was contributed to the pool should be bigger than
 		///   `T::MinimumDeposit`;
 		/// - The pool is at `PoolState::Charged` or `PoolState::Ongoing`;
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -1094,7 +1093,6 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -1128,7 +1126,6 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem_all())]
 		pub fn redeem_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1149,7 +1146,6 @@ pub mod pallet {
 		///
 		/// The condition to redeem:
 		/// - The pool is at `PoolState::Retired`.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::volunteer_to_redeem())]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
@@ -1183,7 +1179,6 @@ pub mod pallet {
 		/// The conditions to claim:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing`.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1217,7 +1212,6 @@ pub mod pallet {
 		/// - The pool type is not `PoolType::EBFarming`.
 		/// - There are pending-unlocks in the deposit_data.
 		/// - The current block-height exceeded the unlock-height;
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1323,7 +1317,6 @@ pub mod pallet {
 		/// The conditions to cancel:
 		/// - The pool state is `PoolState::Ongoing`.
 		/// - There is a `pending-unlock` that is specific by the parameter `index`;
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::cancel_unlock())]
 		pub fn cancel_unlock(
 			origin: OriginFor<T>,
@@ -1514,7 +1507,7 @@ pub mod pallet {
 
 			// Construct the PoolInfo
 			let pool_id = Self::next_pool_id();
-			let keeper: AccountIdOf<T> = T::PalletId::get().into_sub_account(pool_id);
+			let keeper: AccountIdOf<T> = T::PalletId::get().into_sub_account_truncating(pool_id);
 			let mining_pool = PoolInfo {
 				pool_id,
 				keeper: keeper.clone(),

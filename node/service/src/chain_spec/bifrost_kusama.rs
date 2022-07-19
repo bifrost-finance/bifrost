@@ -136,11 +136,11 @@ pub fn bifrost_genesis(
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),
 		council_membership: CouncilMembershipConfig {
-			members: council_membership,
+			members: council_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
 		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership,
+			members: technical_committee_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
 		council: CouncilConfig { members: vec![], phantom: Default::default() },

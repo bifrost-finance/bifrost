@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{pallet_prelude::*, transactional, PalletId};
+use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
@@ -134,7 +134,7 @@ pub mod pallet {
 			// the pool account
 			if (n <= end) && (n > start) && (n - start) % BLOCKS_PER_DAY.into() == Zero::zero() {
 				let ksm = CurrencyId::Token(TokenSymbol::KSM);
-				let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
+				let pool_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 				let releae_per_day = Self::get_token_release_per_round();
 				let total_amount = Self::get_pool_amount().saturating_add(releae_per_day);
 
@@ -150,7 +150,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Anyone can add KSM to the pool.
 		#[pallet::weight(T::WeightInfo::add_ksm_to_pool())]
-		#[transactional]
 		pub fn add_ksm_to_pool(origin: OriginFor<T>, token_amount: BalanceOf<T>) -> DispatchResult {
 			let adder = ensure_signed(origin)?;
 			let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
@@ -158,7 +157,7 @@ pub mod pallet {
 			let token_balance = T::MultiCurrency::free_balance(ksm_id, &adder);
 			ensure!(token_balance >= token_amount, Error::<T>::NotEnoughBalance);
 
-			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			T::MultiCurrency::transfer(ksm_id, &adder, &pool_account, token_amount)?;
 
 			Self::deposit_event(Event::KSMAdded(adder, token_amount));
@@ -168,7 +167,6 @@ pub mod pallet {
 
 		// exchange vsksm and vsbond for ksm
 		#[pallet::weight(T::WeightInfo::exchange_for_ksm())]
-		#[transactional]
 		pub fn exchange_for_ksm(
 			origin: OriginFor<T>,
 			token_amount: BalanceOf<T>, // The KSM amount the user exchanges for
@@ -195,7 +193,7 @@ pub mod pallet {
 			ensure!(vsbond_balance >= amount_needed, Error::<T>::NotEnoughBalance);
 
 			// Make changes to account token balances
-			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			T::MultiCurrency::ensure_can_withdraw(ksm, &pool_account, token_amount)?;
 			PoolAmount::<T>::mutate(|amt| *amt = amt.saturating_sub(token_amount));
 
@@ -210,7 +208,6 @@ pub mod pallet {
 
 		// edit exchange discount price
 		#[pallet::weight(T::WeightInfo::edit_exchange_price())]
-		#[transactional]
 		pub fn edit_exchange_price(
 			origin: OriginFor<T>,
 			price: BalanceOf<T>, /* the mumber of ksm we can get by giving out 100 vsksm and 100
@@ -234,7 +231,6 @@ pub mod pallet {
 
 		// edit token release amount per day
 		#[pallet::weight(T::WeightInfo::edit_release_per_day())]
-		#[transactional]
 		pub fn edit_release_per_day(
 			origin: OriginFor<T>,
 			amount_per_day: BalanceOf<T>,
@@ -256,7 +252,6 @@ pub mod pallet {
 
 		// edit token release start and end block
 		#[pallet::weight(T::WeightInfo::edit_release_start_and_end_block())]
-		#[transactional]
 		pub fn edit_release_start_and_end_block(
 			origin: OriginFor<T>,
 			start: BlockNumberFor<T>,

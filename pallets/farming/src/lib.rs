@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: remove_prefix: Use `clear_prefix` instead
 
 #[cfg(test)]
 mod mock;
@@ -38,7 +39,7 @@ use frame_support::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
 		ArithmeticError, Perbill,
 	},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
@@ -295,7 +296,6 @@ pub mod pallet {
 		BlockNumberFor<T>: AtLeast32BitUnsigned + Copy,
 		BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 	{
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
@@ -315,8 +315,8 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pid = Self::pool_next_id();
-			let keeper = T::Keeper::get().into_sub_account(pid);
-			let reward_issuer = T::RewardIssuer::get().into_sub_account(pid);
+			let keeper = T::Keeper::get().into_sub_account_truncating(pid);
+			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -358,7 +358,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn charge(
 			origin: OriginFor<T>,
@@ -384,7 +383,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -432,7 +430,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(
 			origin: OriginFor<T>,
@@ -462,7 +459,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
@@ -492,7 +488,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn withdraw_claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
@@ -505,7 +500,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -559,7 +553,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -573,7 +566,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn reset_pool(
 			origin: OriginFor<T>,
@@ -636,7 +628,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -645,7 +636,6 @@ pub mod pallet {
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			PoolInfos::<T>::remove(pid);
-
 			Self::deposit_event(Event::FarmingPoolKilled { pid });
 			Ok(())
 		}
@@ -700,7 +690,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::gauge_withdraw())]
 		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
@@ -742,7 +731,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn force_gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin

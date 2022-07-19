@@ -36,7 +36,7 @@ use frame_support::{
 		},
 		FixedPointNumber, FixedU128,
 	},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
@@ -263,7 +263,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a sell order or buy order to sell `vsbond`.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_order())]
 		pub fn create_order(
 			origin: OriginFor<T>,
@@ -348,7 +347,7 @@ pub mod pallet {
 				order_type,
 			};
 
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 			// Transfer the amount to vsbond-acution module account.
 			T::MultiCurrency::transfer(
@@ -385,7 +384,6 @@ pub mod pallet {
 		}
 
 		/// Revoke a sell or buy order in trade by the order creator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::revoke_order())]
 		pub fn revoke_order(
 			origin: OriginFor<T>,
@@ -406,7 +404,6 @@ pub mod pallet {
 		}
 
 		/// Revoke a sell or buy order in trade by the order creator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::revoke_order())]
 		pub fn force_revoke(
 			origin: OriginFor<T>,
@@ -421,7 +418,6 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buy the remaining `vsbond` of a sell order.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::clinch_order())]
 		pub fn clinch_order(
 			origin: OriginFor<T>,
@@ -435,7 +431,6 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell or buy order.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::partial_clinch_order())]
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
@@ -517,7 +512,7 @@ pub mod pallet {
 
 			let new_order_info = OrderInfo { remain: remain_order, remain_price, ..order_info };
 
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 			let mut account_to_send = new_order_info.owner.clone();
 			let ed = T::MultiCurrency::minimum_balance(token_to_pay);
@@ -613,7 +608,6 @@ pub mod pallet {
 
 		// edit token release start and end block
 		// input number used as perthousand rate, so it should be less or equal than 1000.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_buy_and_sell_transaction_fee_rate())]
 		pub fn set_buy_and_sell_transaction_fee_rate(
 			origin: OriginFor<T>,
@@ -699,7 +693,7 @@ pub mod pallet {
 			}
 
 			// To transfer back the unused amount
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			T::MultiCurrency::transfer(
 				token_to_return,
 				&module_account,

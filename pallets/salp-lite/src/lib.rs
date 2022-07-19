@@ -27,7 +27,7 @@ pub mod mock;
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::pallet_prelude::*;
 use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -410,7 +410,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn issue(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -466,7 +465,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin.clone())?;
 
@@ -492,7 +490,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::redeem())]
-		#[transactional]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -536,7 +533,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -610,7 +606,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::refund())]
-		#[transactional]
 		pub fn refund(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -673,7 +668,6 @@ pub mod pallet {
 			DispatchClass::Normal,
 			Pays::No
 			))]
-		#[transactional]
 		pub fn dissolve_refunded(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -783,7 +777,7 @@ pub mod pallet {
 			};
 		}
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
-			T::PalletId::get().into_sub_account(index)
+			T::PalletId::get().into_sub_account_truncating(index)
 		}
 
 		pub(crate) fn id_from_index(index: TrieIndex) -> child::ChildInfo {

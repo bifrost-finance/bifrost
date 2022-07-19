@@ -25,7 +25,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use frame_support::{ensure, pallet_prelude::*, transactional};
+use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
@@ -109,7 +109,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
-		#[transactional]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -137,7 +136,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
-		#[transactional]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -160,7 +158,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::add_to_transfer_whitelist())]
-		#[transactional]
 		pub fn add_to_transfer_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -191,7 +188,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_from_transfer_whitelist())]
-		#[transactional]
 		pub fn remove_from_transfer_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -220,7 +216,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::issue())]
-		#[transactional]
 		pub fn issue(
 			origin: OriginFor<T>,
 			dest: AccountIdOf<T>,
@@ -244,7 +239,6 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Root` by the
 		/// transactor.
 		#[pallet::weight(T::WeightInfo::transfer())]
-		#[transactional]
 		pub fn transfer(
 			origin: OriginFor<T>,
 			dest: AccountIdOf<T>,

@@ -20,7 +20,7 @@
 
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, transactional, weights::Weight};
+use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -662,7 +662,6 @@ pub mod pallet {
 		/// *****************************/
 		///
 		/// Delegator initialization work. Generate a new delegator and return its ID.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::initialize_delegator())]
 		pub fn initialize_delegator(
 			origin: OriginFor<T>,
@@ -680,7 +679,6 @@ pub mod pallet {
 		}
 
 		/// First time bonding some amount to a delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::bond())]
 		pub fn bond(
 			origin: OriginFor<T>,
@@ -709,7 +707,6 @@ pub mod pallet {
 		}
 
 		/// Bond extra amount to a delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::bond_extra())]
 		pub fn bond_extra(
 			origin: OriginFor<T>,
@@ -739,7 +736,6 @@ pub mod pallet {
 
 		/// Decrease some amount to a delegator. Leave no less than the minimum delegator
 		/// requirement.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::unbond())]
 		pub fn unbond(
 			origin: OriginFor<T>,
@@ -768,7 +764,6 @@ pub mod pallet {
 		}
 
 		/// Unbond all the active amount of a delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::unbond_all())]
 		pub fn unbond_all(
 			origin: OriginFor<T>,
@@ -793,7 +788,6 @@ pub mod pallet {
 		}
 
 		/// Rebond some unlocking amount to a delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -822,7 +816,6 @@ pub mod pallet {
 		}
 
 		/// Delegate to some validator set.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::delegate())]
 		pub fn delegate(
 			origin: OriginFor<T>,
@@ -849,7 +842,6 @@ pub mod pallet {
 		}
 
 		/// Re-delegate existing delegation to a new validator set.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::undelegate())]
 		pub fn undelegate(
 			origin: OriginFor<T>,
@@ -876,7 +868,6 @@ pub mod pallet {
 		}
 
 		/// Re-delegate existing delegation to a new validator set.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::redelegate())]
 		pub fn redelegate(
 			origin: OriginFor<T>,
@@ -903,7 +894,6 @@ pub mod pallet {
 		}
 
 		/// Initiate payout for a certain delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
@@ -928,7 +918,6 @@ pub mod pallet {
 		}
 
 		/// Withdraw the due payout into free balance.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::liquidize())]
 		pub fn liquidize(
 			origin: OriginFor<T>,
@@ -956,7 +945,6 @@ pub mod pallet {
 		}
 
 		/// Initiate payout for a certain delegator.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::chill())]
 		pub fn chill(
 			origin: OriginFor<T>,
@@ -980,7 +968,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::transfer_back())]
 		pub fn transfer_back(
 			origin: OriginFor<T>,
@@ -1006,7 +993,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::transfer_to())]
 		pub fn transfer_to(
 			origin: OriginFor<T>,
@@ -1113,7 +1099,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::refund_currency_due_unbond())]
 		pub fn refund_currency_due_unbond(
 			origin: OriginFor<T>,
@@ -1206,7 +1191,6 @@ pub mod pallet {
 			}
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
@@ -1281,7 +1265,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
 		/// Charge staking host fee, tune vtoken/token exchange rate, and update delegator ledger
 		/// for single delegator.
@@ -1438,7 +1421,6 @@ pub mod pallet {
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_delegator())]
 		pub fn add_delegator(
 			origin: OriginFor<T>,
@@ -1462,7 +1444,6 @@ pub mod pallet {
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_delegator())]
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
@@ -1481,7 +1462,6 @@ pub mod pallet {
 		}
 
 		/// Update storage Validators<T>.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_validator())]
 		pub fn add_validator(
 			origin: OriginFor<T>,
@@ -1500,7 +1480,6 @@ pub mod pallet {
 		}
 
 		/// Update storage Validators<T>.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_validator())]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
@@ -1522,7 +1501,6 @@ pub mod pallet {
 		}
 
 		/// Update storage ValidatorsByDelegator<T>.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_validators_by_delegator())]
 		pub fn set_validators_by_delegator(
 			origin: OriginFor<T>,
@@ -1813,7 +1791,6 @@ pub mod pallet {
 		/// ********************************************************************
 		/// *************Outer Confirming Xcm queries functions ****************
 		/// ********************************************************************
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
@@ -1826,7 +1803,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
@@ -1840,7 +1816,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
@@ -1854,7 +1829,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
@@ -2053,7 +2027,7 @@ pub mod pallet {
 		/// **************************************/
 		/// ****** XCM confirming Functions ******/
 		/// **************************************/
-		// #[transactional]
+		//
 		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
 			let mut counter = 0u32;
 

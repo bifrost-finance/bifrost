@@ -80,10 +80,11 @@ use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
-	traits::{EnsureOneOf, Get, LockIdentifier},
+	traits::{EitherOfDiverse, Get, LockIdentifier},
 };
 use frame_system::EnsureRoot;
 use hex_literal::hex;
@@ -708,7 +709,7 @@ impl pallet_democracy::Config for Runtime {
 	type BlacklistOrigin = EnsureRoot<AccountId>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
-	type CancelProposalOrigin = EnsureOneOf<
+	type CancelProposalOrigin = EitherOfDiverse<
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 	>;
@@ -778,13 +779,29 @@ parameter_types! {
 	pub CuratorDepositMax: Balance = 100 * dollar(NativeCurrencyId::get());
 }
 
-type ApproveOrigin = EnsureOneOf<
+type ApproveOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
+pub struct SpendOrigin;
+impl frame_support::traits::EnsureOrigin<Origin> for SpendOrigin {
+	type Success = u128;
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Result::<frame_system::RawOrigin<_>, Origin>::from(o).and_then(|o| match o {
+			frame_system::RawOrigin::Root => Ok(u128::max_value()),
+			r => Err(Origin::from(r)),
+		})
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin() -> Result<Origin, ()> {
+		Ok(Origin::root())
+	}
+}
+
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
+	type SpendOrigin = SpendOrigin;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -904,6 +921,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
+	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -962,7 +980,7 @@ impl parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
-		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MinBlocksPerRound = MinBlocksPerRound;
 	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -988,7 +1006,7 @@ impl parachain_staking::Config for Runtime {
 	type InitSeedStk = InitSeedStk;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
-		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1372,25 +1390,40 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
-				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
-			.eq(a) || AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get())
-			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&BifrostSalpLiteCrowdloanId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&LighteningRedeemPalletId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&VsbondAuctionPalletId::get(),
+		)
+		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
-				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
-			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
-			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(
+				&ParachainStakingPalletId::get(),
+			)
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&BifrostVsbondPalletId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&SlpEntrancePalletId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
 			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account(&SystemStakingPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account_truncating(
+				&SystemStakingPalletId::get(),
+			)
+			.eq(a)
 	}
 }
 
 parameter_types! {
-	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl orml_tokens::Config for Runtime {
@@ -1405,6 +1438,8 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -1414,8 +1449,8 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> u128 {
-		u128::MAX
+	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+		Some(u128::MAX)
 	};
 }
 
@@ -1550,8 +1585,11 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			1,
 			X1(AccountId32 {
 				network: NetworkId::Any,
-				id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index)
-					.into(),
+				id: Utility::derivative_account_id(
+					ParachainInfo::get().into_account_truncating(),
+					index,
+				)
+				.into(),
 			}),
 		),
 	}
@@ -1590,7 +1628,7 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = ();
 	type EnsureConfirmAsGovernance =
-		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
 }
 
@@ -1614,7 +1652,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type SlotLength = SlotLength;
 	type WeightInfo = ();
 	type EnsureConfirmAsGovernance =
-		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1631,7 +1669,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = ();
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1678,21 +1716,21 @@ impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for R
 impl bifrost_token_issuer::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 }
 
 impl bifrost_lightening_redeem::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Tokens;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type PalletId = LighteningRedeemPalletId;
 	type WeightInfo = ();
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 }
 
@@ -1703,7 +1741,7 @@ impl bifrost_asset_registry::Config for Runtime {
 }
 
 parameter_types! {
-	pub ParachainAccount: AccountId = ParachainInfo::get().into_account();
+	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
 	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
 	pub UmpTransactFee: Balance = prod_or_test!(milli(RelayCurrencyId::get()),milli(RelayCurrencyId::get()) * 100);
 	pub StatemineTransferFee: Balance = milli(RelayCurrencyId::get()) * 4;
@@ -1712,7 +1750,7 @@ parameter_types! {
 
 impl xcm_interface::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
@@ -1767,7 +1805,7 @@ impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
 impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
@@ -1784,7 +1822,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type WeightInfo = ();
 }
@@ -1792,7 +1830,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
@@ -1809,7 +1847,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance =
-		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_system_staking::weights::SubstrateWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1831,7 +1869,7 @@ parameter_types! {
 impl merkle_distributor::Config for Runtime {
 	type Event = Event;
 	type CurrencyId = CurrencyId;
-	type MultiCurrency = Currencies;
+	type MultiCurrency = Tokens;
 	type Balance = Balance;
 	type MerkleDistributorId = u32;
 	type PalletId = MerkleDirtributorPalletId;
@@ -1901,13 +1939,13 @@ impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = SlpEntrancePalletId;
