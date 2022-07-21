@@ -1855,7 +1855,7 @@ parameter_types! {
 impl merkle_distributor::Config for Runtime {
 	type Event = Event;
 	type CurrencyId = CurrencyId;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type Balance = Balance;
 	type MerkleDistributorId = u32;
 	type PalletId = MerkleDirtributorPalletId;
