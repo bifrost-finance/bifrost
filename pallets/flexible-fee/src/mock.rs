@@ -411,6 +411,7 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 impl bifrost_salp::Config for Test {
@@ -429,6 +430,8 @@ impl bifrost_salp::Config for Test {
 	type WeightInfo = ();
 	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
 	type XcmInterface = MockXcmExecutor;
+	type TreasuryAccount = TreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
 }
 
 //************** Salp mock end *****************
