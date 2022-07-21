@@ -158,6 +158,12 @@ pub mod pallet {
 
 		/// The XcmInterface to manage the staking of sub-account on relaychain.
 		type XcmInterface: XcmHelper<AccountIdOf<Self>, BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		#[pallet::constant]
+		type BuybackPalletId: Get<PalletId>;
 	}
 
 	#[pallet::pallet]
@@ -922,6 +928,21 @@ pub mod pallet {
 			}
 
 			if all_refunded {
+				let from = &Self::fund_account_id(index);
+				let relay_currency_id = T::RelayChainToken::get();
+				let fund_account_balance = T::MultiCurrency::free_balance(relay_currency_id, from);
+				T::MultiCurrency::transfer(
+					relay_currency_id,
+					from,
+					&T::TreasuryAccount::get(),
+					Percent::from_percent(25) * fund_account_balance,
+				)?;
+				T::MultiCurrency::transfer(
+					relay_currency_id,
+					from,
+					&T::BuybackPalletId::get().into_account(),
+					Percent::from_percent(75) * fund_account_balance,
+				)?;
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}

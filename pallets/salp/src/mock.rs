@@ -177,6 +177,8 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
+pub const TREASURY_ACCOUNT: AccountId = AccountId::new([9u8; 32]);
+
 parameter_types! {
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
@@ -191,6 +193,8 @@ parameter_types! {
 		BRUCE,
 		CATHI
 	],2);
+	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 pub struct EnsureConfirmAsGovernance;
@@ -244,6 +248,8 @@ impl salp::Config for Test {
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
 	type WeightInfo = SalpWeightInfo;
 	type XcmInterface = MockXcmExecutor;
+	type TreasuryAccount = TreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
 }
 
 pub struct SalpWeightInfo;

@@ -36,6 +36,8 @@ fn claim() {
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
 		Farming::on_initialize(0);
+		assert_ok!(Farming::withdraw_claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
 		Farming::on_initialize(0);
@@ -110,6 +112,8 @@ fn withdraw() {
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3966);
 		assert_ok!(Farming::withdraw(Origin::signed(ALICE), pid, Some(200)));
 		System::set_block_number(System::block_number() + 100);
+		assert_ok!(Farming::withdraw_claim(Origin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4166);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
 		assert_eq!(Farming::shares_and_withdrawn_rewards(pid, &ALICE), None);
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4166);
