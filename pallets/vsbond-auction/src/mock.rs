@@ -93,7 +93,10 @@ pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		BifrostTreasuryAccount::get().eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account_truncating(
+				&VsbondAuctionPalletId::get(),
+			)
+			.eq(a)
 	}
 }
 
@@ -113,6 +116,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -120,7 +125,7 @@ parameter_types! {
 	pub const MaximumOrderInTrade: u32 = 5;
 	pub const MinimumSupply: Balance = 0;
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
-	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account();
+	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
 }
 
 ord_parameter_types! {

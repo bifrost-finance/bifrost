@@ -43,7 +43,7 @@ pub fn migrate_orders<T: Config<I>, I: 'static>() -> Weight {
 		let free = T::MultiCurrency::free_balance(token_to_transfer, &owner);
 		let reserved = total - free;
 
-		let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+		let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 		if reserved >= amount_to_transfer {
 			ok_count += 1;

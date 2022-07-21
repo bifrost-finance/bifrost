@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction and remove_prefix: Use `clear_prefix` instead
 
 #[cfg(test)]
 mod mock;
@@ -315,8 +316,8 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pid = Self::pool_next_id();
-			let keeper = T::Keeper::get().into_sub_account(pid);
-			let reward_issuer = T::RewardIssuer::get().into_sub_account(pid);
+			let keeper = T::Keeper::get().into_sub_account_truncating(pid);
+			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =

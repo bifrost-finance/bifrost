@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 pub mod migration {
 	pub fn migrate() {
@@ -1010,7 +1011,7 @@ pub mod pallet {
 		}
 
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
-			T::PalletId::get().into_sub_account(index)
+			T::PalletId::get().into_sub_account_truncating(index)
 		}
 
 		pub(crate) fn id_from_index(index: TrieIndex) -> child::ChildInfo {

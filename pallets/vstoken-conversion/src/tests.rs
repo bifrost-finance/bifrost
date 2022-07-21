@@ -63,7 +63,8 @@ fn vsksm_convert_to_vsbond() {
 			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), KSM, 100, 1),
 			Error::<Runtime>::NotSupportTokenType
 		);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
+		let vsbond_account: AccountId =
+			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsBond, &vsbond_account, 10000));
 		assert_ok!(VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 0);
@@ -108,7 +109,8 @@ fn vsbond_convert_to_vsksm() {
 		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1));
 		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
+		let vsbond_account: AccountId =
+			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
 		assert_ok!(VstokenConversion::vsbond_convert_to_vsksm(Some(BOB).into(), vsBond, 100, 1));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 104);
 		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 100);
