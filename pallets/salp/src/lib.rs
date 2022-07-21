@@ -941,7 +941,7 @@ pub mod pallet {
 				T::MultiCurrency::transfer(
 					relay_currency_id,
 					from,
-					&T::BuybackPalletId::get().into_account(),
+					&T::BuybackPalletId::get().into_account_truncating(),
 					Percent::from_percent(75) * fund_account_balance,
 				)?;
 				Funds::<T>::remove(index);
