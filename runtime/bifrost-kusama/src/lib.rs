@@ -304,6 +304,7 @@ parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 impl frame_system::Config for Runtime {
@@ -1385,7 +1386,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a) ||
 			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
 			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account(&SystemStakingPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account(&SystemStakingPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&BuybackPalletId::get()).eq(a)
 	}
 }
 
@@ -1592,6 +1594,8 @@ impl bifrost_salp::Config for Runtime {
 	type EnsureConfirmAsGovernance =
 		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
 }
 
 parameter_types! {
