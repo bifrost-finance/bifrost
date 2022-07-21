@@ -254,7 +254,7 @@ pub mod pallet {
 				});
 			}
 
-			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			for i in token_list.into_iter() {
 				if let Some(mut token_info) = Self::token_status(i) {
 					if round.check_delay(n, token_info.current_config.exec_delay) {
@@ -389,7 +389,7 @@ pub mod pallet {
 				token_info.update_config();
 			}
 
-			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			Pallet::<T>::process_token_info(pallet_account, token_info, token);
 
 			Self::deposit_event(Event::TokenInfoRefreshed { token });
@@ -407,7 +407,7 @@ pub mod pallet {
 			let vtoken_id =
 				T::VtokenMintingInterface::vtoken_id(token).ok_or(Error::<T>::TokenInfoNotFound)?;
 
-			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 			let vfree_amount = T::MultiCurrency::free_balance(vtoken_id, &pallet_account);
 
@@ -607,7 +607,7 @@ impl<T: Config> Pallet<T> {
 		to: AccountIdOf<T>,
 		token_amount: BalanceOf<T>,
 	) -> Weight {
-		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
+		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 		if pallet_account != to {
 			return 0 as Weight;
 		}
@@ -663,7 +663,7 @@ impl<T: Config> Pallet<T> {
 		vtoken_amount: BalanceOf<T>,
 		fee: BalanceOf<T>,
 	) -> Weight {
-		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account();
+		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 		if pallet_account != address {
 			return 0 as Weight;
 		}

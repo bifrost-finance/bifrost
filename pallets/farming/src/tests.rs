@@ -61,9 +61,9 @@ fn deposit() {
 		System::set_block_number(System::block_number() + 1);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 0, Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
-		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
+		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account_truncating(pid);
 		let reward_issuer: AccountId =
-			<Runtime as Config>::RewardIssuer::get().into_sub_account(pid);
+			<Runtime as Config>::RewardIssuer::get().into_sub_account_truncating(pid);
 		let mut gauge_basic_rewards = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		gauge_basic_rewards.entry(KSM).or_insert(1000);
 		let gauge_pool_info2 = GaugePoolInfo {
@@ -228,9 +228,9 @@ fn reset() {
 			None,
 			Some((KSM, 1000, basic_rewards)),
 		));
-		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account(pid);
+		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account_truncating(pid);
 		let reward_issuer: AccountId =
-			<Runtime as Config>::RewardIssuer::get().into_sub_account(pid);
+			<Runtime as Config>::RewardIssuer::get().into_sub_account_truncating(pid);
 		let mut basic_rewards_map = BTreeMap::<CurrencyIdOf<Runtime>, BalanceOf<Runtime>>::new();
 		basic_rewards_map.entry(KSM).or_insert(1000);
 		let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();

@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};

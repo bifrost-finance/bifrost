@@ -149,7 +149,7 @@ orml_traits::parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 	pub MaxLocks: u32 = 2;
 }
 
@@ -165,6 +165,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 // Aggregate name getter to get fee names if the call needs to pay extra fees.

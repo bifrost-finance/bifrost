@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -230,7 +231,7 @@ pub mod pallet {
 			T::MultiCurrency::transfer(
 				currency_id,
 				&exchanger,
-				&T::VsbondAccount::get().into_account(),
+				&T::VsbondAccount::get().into_account_truncating(),
 				vsbond_amount,
 			)?;
 			T::MultiCurrency::deposit(
@@ -315,7 +316,7 @@ pub mod pallet {
 
 			T::MultiCurrency::transfer(
 				currency_id,
-				&T::VsbondAccount::get().into_account(),
+				&T::VsbondAccount::get().into_account_truncating(),
 				&exchanger,
 				vsbond_balance,
 			)?;

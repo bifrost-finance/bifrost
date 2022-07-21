@@ -7,11 +7,11 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.124", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "./runtime-api" }

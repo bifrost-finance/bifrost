@@ -164,6 +164,8 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -215,7 +217,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X1(Junction::AccountId32 {
 					network: NetworkId::Any,
 					id: Self::derivative_account_id(
-						ParaId::from(2001u32).into_account(),
+						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
 					)
 					.into(),

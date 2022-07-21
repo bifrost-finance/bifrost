@@ -44,7 +44,7 @@ fn initialize_moonriver_delegator() {
 		// 	hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
 		let bifrost_parachain_account_id_20: [u8; 20] =
 			<Runtime as frame_system::Config>::AccountId::encode(
-				&ParaId::from(2001u32).into_account(),
+				&ParaId::from(2001u32).into_account_truncating(),
 			)
 			.as_slice()[..20]
 				.try_into()

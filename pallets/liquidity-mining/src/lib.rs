@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 use frame_support::{
 	pallet_prelude::*,
@@ -1514,7 +1515,7 @@ pub mod pallet {
 
 			// Construct the PoolInfo
 			let pool_id = Self::next_pool_id();
-			let keeper: AccountIdOf<T> = T::PalletId::get().into_sub_account(pool_id);
+			let keeper: AccountIdOf<T> = T::PalletId::get().into_sub_account_truncating(pool_id);
 			let mining_pool = PoolInfo {
 				pool_id,
 				keeper: keeper.clone(),

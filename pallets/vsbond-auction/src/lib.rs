@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 //! The pallet supports the trading functions of `vsbond`.
 //!
@@ -348,7 +349,7 @@ pub mod pallet {
 				order_type,
 			};
 
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 			// Transfer the amount to vsbond-acution module account.
 			T::MultiCurrency::transfer(
@@ -517,7 +518,7 @@ pub mod pallet {
 
 			let new_order_info = OrderInfo { remain: remain_order, remain_price, ..order_info };
 
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
 			let mut account_to_send = new_order_info.owner.clone();
 			let ed = T::MultiCurrency::minimum_balance(token_to_pay);
@@ -699,7 +700,7 @@ pub mod pallet {
 			}
 
 			// To transfer back the unused amount
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			T::MultiCurrency::transfer(
 				token_to_return,
 				&module_account,

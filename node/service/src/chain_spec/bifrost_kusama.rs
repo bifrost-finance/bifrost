@@ -136,11 +136,11 @@ pub fn bifrost_genesis(
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),
 		council_membership: CouncilMembershipConfig {
-			members: council_membership,
+			members: council_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
 		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership,
+			members: technical_committee_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
 		council: CouncilConfig { members: vec![], phantom: Default::default() },
@@ -426,13 +426,13 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 		"Bifrost K Rococo",
 		"bifrost-k-rococo",
 		ChainType::Local,
-		move || stage_config_genesis(3010u32.into()),
+		move || stage_config_genesis(PARA_ID.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 3010u32 },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
 	))
 }
 

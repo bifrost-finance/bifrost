@@ -61,7 +61,8 @@ fn vsksm_convert_to_vsbond() {
 			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), KSM, 100, 1),
 			Error::<Runtime>::NotSupportTokenType
 		);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
+		let vsbond_account: AccountId =
+			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsBond, &vsbond_account, 10000));
 		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 0);

@@ -18,6 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -808,7 +809,7 @@ pub mod pallet {
 			account: AccountIdOf<T>,
 			index: &UnlockId,
 			mut unlock_amount: BalanceOf<T>,
-			mut entrance_account_balance: BalanceOf<T>,
+			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
 		) -> DispatchResult {
 			if entrance_account_balance >= unlock_amount {
@@ -914,13 +915,13 @@ pub mod pallet {
 				)?;
 			}
 
-			entrance_account_balance = entrance_account_balance
+			entrance_account_balance
 				.checked_sub(&unlock_amount)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 
 			T::MultiCurrency::transfer(
 				token_id,
-				&T::EntranceAccount::get().into_account(),
+				&T::EntranceAccount::get().into_account_truncating(),
 				&account,
 				unlock_amount,
 			)?;
@@ -966,7 +967,7 @@ pub mod pallet {
 			{
 				let entrance_account_balance = T::MultiCurrency::free_balance(
 					token_id,
-					&T::EntranceAccount::get().into_account(),
+					&T::EntranceAccount::get().into_account_truncating(),
 				);
 				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
 					if let Some((account, unlock_amount, time_unit)) =
@@ -1024,7 +1025,7 @@ pub mod pallet {
 			T::MultiCurrency::transfer(
 				token_id,
 				&exchanger,
-				&T::EntranceAccount::get().into_account(),
+				&T::EntranceAccount::get().into_account_truncating(),
 				token_amount_excluding_fee,
 			)?;
 
@@ -1371,7 +1372,10 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	}
 
 	fn get_entrance_and_exit_accounts() -> (AccountIdOf<T>, AccountIdOf<T>) {
-		(T::EntranceAccount::get().into_account(), T::ExitAccount::get().into_account())
+		(
+			T::EntranceAccount::get().into_account_truncating(),
+			T::ExitAccount::get().into_account_truncating(),
+		)
 	}
 
 	fn get_token_unlock_ledger(
