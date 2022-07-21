@@ -18,11 +18,11 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
+use crate::{mock::*, Error, FundStatus};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use node_primitives::ContributionStatus;
 use orml_traits::MultiCurrency;
-
-use crate::{mock::*, Error, FundStatus};
+use sp_runtime::traits::AccountIdConversion;
 
 #[test]
 fn create_fund_should_work() {
@@ -1270,11 +1270,24 @@ fn refund_meanwhile_issue_should_work() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free,
+			150
+		);
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 50);
 		// after fund dissolved redeem should fail
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free,
+			100
+		);
 		assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free, 0);
+		let treasury_account: AccountId = TreasuryAccount::get();
+		assert_eq!(Tokens::accounts(treasury_account, RelayCurrencyId::get()).free, 25);
+		let buyback_account: AccountId = BuybackPalletId::get().into_account();
+		assert_eq!(Tokens::accounts(buyback_account, RelayCurrencyId::get()).free, 75);
 		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 	});
 }
