@@ -26,10 +26,12 @@ use frame_support::{
 use frame_system::RawOrigin;
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
+use sp_runtime::bounded_vec;
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
 };
+
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
 
@@ -88,7 +90,7 @@ fn _set_relaychain_block_number(number: BlockNumber) {
 }
 
 pub fn get_all_module_accounts() -> Vec<AccountId> {
-	vec![BifrostCrowdloanId::get().into_account()]
+	vec![BifrostCrowdloanId::get().into_account_truncating()]
 }
 
 pub struct ExtBuilder {
@@ -144,7 +146,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance1> {
-			members: vec![],
+			members: bounded_vec![],
 			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
@@ -179,7 +181,7 @@ fn sanity_check_weight_per_time_constants_are_as_expected() {
 #[test]
 fn parachain_subaccounts_are_unique() {
 	ExtBuilder::default().build().execute_with(|| {
-		let parachain: AccountId = ParachainInfo::parachain_id().into_account();
+		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
 		assert_eq!(
 			parachain,
 			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
