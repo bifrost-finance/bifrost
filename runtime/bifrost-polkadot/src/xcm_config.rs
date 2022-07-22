@@ -72,7 +72,10 @@ where
 }
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	MultiLocation::new(1, X2(Parachain(para_id.into()), GeneralKey(id.encode())))
+	MultiLocation::new(
+		1,
+		X2(Parachain(para_id.into()), GeneralKey(id.encode().try_into().unwrap())),
+	)
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {

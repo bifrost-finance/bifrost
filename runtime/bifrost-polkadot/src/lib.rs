@@ -938,7 +938,7 @@ parameter_types! {
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode()))
+			X2(Parachain(SelfParaId::get()), GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:DOT = 80:1
 		dot_per_second() * 80
@@ -946,7 +946,7 @@ parameter_types! {
 	pub BncNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey(NativeCurrencyId::get().encode()))
+			X1(GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:DOT = 80:1
 		dot_per_second() * 80
