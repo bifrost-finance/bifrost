@@ -19,7 +19,7 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SessionConfig, SudoConfig, SystemConfig, VestingConfig, WASM_BINARY,
+	SS58Prefix, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
@@ -74,6 +74,7 @@ pub fn bifrost_polkadot_genesis(
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
+	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -111,6 +112,7 @@ pub fn bifrost_polkadot_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
+		tokens: TokensConfig { balances: tokens },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		sudo: SudoConfig { key: Some(root_key) },
 	}
@@ -127,6 +129,10 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.cloned()
 		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
+	let tokens = endowed_accounts
+		.iter()
+		.flat_map(|x| vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT())])
+		.collect();
 
 	bifrost_polkadot_genesis(
 		vec![(
@@ -137,6 +143,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vestings,
 		id,
+		tokens,
 	)
 }
 
@@ -179,6 +186,12 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.cloned()
 		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
+	let tokens = endowed_accounts
+		.iter()
+		.flat_map(|x| {
+			vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 4_000_000)]
+		})
+		.collect();
 
 	bifrost_polkadot_genesis(
 		vec![
@@ -192,6 +205,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vestings,
 		id,
+		tokens,
 	)
 }
 
@@ -261,5 +275,5 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let balances = vec![(root_key.clone(), 1000 * DOLLARS)];
 
-	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id)
+	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![])
 }

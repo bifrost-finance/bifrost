@@ -799,6 +799,8 @@ dependencies = [
 name = "bifrost-polkadot-runtime"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-call-switchgear",
  "bifrost-runtime-common",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
@@ -819,6 +821,13 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -866,6 +875,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "xcm-interface",
 ]
 
 [[package]]

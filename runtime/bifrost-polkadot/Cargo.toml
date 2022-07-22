@@ -85,6 +85,20 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 # Bifrost
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
+bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
+
+bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
+
+# orml
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-xtokens = { version = "0.4.1-dev", default-features = false }
+orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
+orml-xcm = { version = "0.4.1-dev", default-features = false }
+orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+
+xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
@@ -147,8 +161,16 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
+	"orml-currencies/std",
+	"orml-traits/std",
+	"orml-tokens/std",
+	"orml-xtokens/std",
+	"orml-unknown-tokens/std",
+	"orml-xcm/std",
+	"orml-xcm-support/std",
 	"bifrost-runtime-common/std",
 	"pallet-xcm/std",
+	"bifrost-asset-registry/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 
@@ -169,6 +191,7 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"bifrost-call-switchgear/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 
