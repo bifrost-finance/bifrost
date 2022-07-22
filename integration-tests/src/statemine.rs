@@ -39,7 +39,7 @@ fn statemine() {
 
 		// need to have some KSM to be able to receive user assets
 		statemine_runtime::Balances::make_free_balance_be(
-			&Sibling::from(2001).into_account(),
+			&Sibling::from(2001).into_account_truncating(),
 			10 * dollar(RelayCurrencyId::get()),
 		);
 
@@ -49,7 +49,7 @@ fn statemine() {
 
 		System::reset_events();
 
-		let para_acc: AccountId = Sibling::from(2001).into_account();
+		let para_acc: AccountId = Sibling::from(2001).into_account_truncating();
 		println!("{:?}", para_acc);
 
 		assert_ok!(PolkadotXcm::reserve_transfer_assets(
