@@ -7,12 +7,12 @@ edition = "2021"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "./runtime-api" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 

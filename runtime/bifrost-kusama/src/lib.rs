@@ -838,6 +838,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = WeightToFee;
+	type Event = Event;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -1091,21 +1092,21 @@ parameter_types! {
 	pub VsksmPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode()))
+			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::VSToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
 		).into(),
 		ksm_per_second()
 	);
 	pub VsksmNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode()))
+			X1(GeneralKey((CurrencyId::VSToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
 		).into(),
 		ksm_per_second()
 	);
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode()))
+			X2(Parachain(SelfParaId::get()), GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:KSM = 80:1
 		ksm_per_second() * 80
@@ -1113,7 +1114,7 @@ parameter_types! {
 	pub BncNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey(NativeCurrencyId::get().encode()))
+			X1(GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:KSM = 80:1
 		ksm_per_second() * 80
@@ -1121,7 +1122,7 @@ parameter_types! {
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
+			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
@@ -1130,7 +1131,7 @@ parameter_types! {
 	pub ZlkNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
+			X1(GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
@@ -1139,7 +1140,7 @@ parameter_types! {
 	pub KarPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec()))
+			X2(Parachain(parachains::karura::ID), GeneralKey((parachains::karura::KAR_KEY.to_vec()).try_into().unwrap()))
 		).into(),
 		// KAR:KSM = 100:1
 		ksm_per_second() * 100
@@ -1147,7 +1148,7 @@ parameter_types! {
 	pub KusdPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec()))
+			X2(Parachain(parachains::karura::ID), GeneralKey((parachains::karura::KUSD_KEY.to_vec()).try_into().unwrap()))
 		).into(),
 		// kUSD:KSM = 400:1
 		ksm_per_second() * 400
@@ -2023,7 +2024,7 @@ construct_runtime! {
 
 		// Monetary stuff
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
 
 		// Collator support. the order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,

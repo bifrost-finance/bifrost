@@ -7,11 +7,11 @@ edition = "2021"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 derive_more = "0.99"
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 structopt = "0.3.8"

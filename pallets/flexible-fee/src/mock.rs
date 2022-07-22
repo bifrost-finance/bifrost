@@ -73,7 +73,7 @@ frame_support::construct_runtime!(
 		System: system::{Pallet, Call, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>},
 		Balances: balances::{Pallet, Call, Storage, Event<T>},
-		// TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
@@ -124,6 +124,7 @@ impl pallet_transaction_payment::Config for Test {
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = IdentityFee<Balance>;
+	type Event = Event;
 }
 
 parameter_types! {
