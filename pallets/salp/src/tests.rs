@@ -1286,7 +1286,7 @@ fn refund_meanwhile_issue_should_work() {
 		assert_eq!(Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free, 0);
 		let treasury_account: AccountId = TreasuryAccount::get();
 		assert_eq!(Tokens::accounts(treasury_account, RelayCurrencyId::get()).free, 25);
-		let buyback_account: AccountId = BuybackPalletId::get().into_account();
+		let buyback_account: AccountId = BuybackPalletId::get().into_account_truncating();
 		assert_eq!(Tokens::accounts(buyback_account, RelayCurrencyId::get()).free, 75);
 		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 	});
