@@ -432,6 +432,7 @@ impl bifrost_salp::Config for Test {
 	type XcmInterface = MockXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 }
 
 //************** Salp mock end *****************
