@@ -80,7 +80,7 @@ fn transfer_to_sibling() {
 
 	fn bifrost_reserve_account() -> AccountId {
 		use sp_runtime::traits::AccountIdConversion;
-		polkadot_parachain::primitives::Sibling::from(2001).into_account()
+		polkadot_parachain::primitives::Sibling::from(2001).into_account_truncating()
 	}
 
 	Bifrost::execute_with(|| {

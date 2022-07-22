@@ -41,7 +41,7 @@ fn kusama_treasury_propose_spend() {
 #[test]
 fn bifrost_treasury_operations() {
 	let treasury_account: AccountId32 =
-		bifrost_kusama_runtime::TreasuryPalletId::get().into_account();
+		bifrost_kusama_runtime::TreasuryPalletId::get().into_account_truncating();
 	Bifrost::execute_with(|| {
 		let treasury_derivative_account_id =
 			bifrost_kusama_runtime::Utility::derivative_account_id(treasury_account.clone(), 0);

@@ -105,7 +105,8 @@ fn vsbond_convert_to_vsksm() {
 		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 1));
 		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
-		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
+		let vsbond_account: AccountId =
+			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
 		assert_ok!(VstokenConversion::vsbond_convert_to_vstoken(Some(BOB).into(), vsBond, 100, 1));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 104);
 		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 100);

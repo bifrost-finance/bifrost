@@ -88,7 +88,7 @@ fn _set_relaychain_block_number(number: BlockNumber) {
 }
 
 pub fn get_all_module_accounts() -> Vec<AccountId> {
-	vec![BifrostCrowdloanId::get().into_account()]
+	vec![BifrostCrowdloanId::get().into_account_truncating()]
 }
 
 pub struct ExtBuilder {
@@ -179,7 +179,7 @@ fn sanity_check_weight_per_time_constants_are_as_expected() {
 #[test]
 fn parachain_subaccounts_are_unique() {
 	ExtBuilder::default().build().execute_with(|| {
-		let parachain: AccountId = ParachainInfo::parachain_id().into_account();
+		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
 		assert_eq!(
 			parachain,
 			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
