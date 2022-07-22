@@ -18,6 +18,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
+zenlink-protocol = { version = "*", default-features = false }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25"}
@@ -45,7 +46,8 @@ std = [
 	"sp-runtime/std",
 	"sp-arithmetic/std",
 	"orml-traits/std",
-	"xcm-interface/std"
+	"xcm-interface/std",
+	"zenlink-protocol/std",
 ]
 
 runtime-benchmarks = [

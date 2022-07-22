@@ -946,6 +946,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm-interface",
+ "zenlink-protocol",
 ]
 
 [[package]]

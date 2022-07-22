@@ -1618,6 +1618,7 @@ impl bifrost_salp::Config for Runtime {
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 }
 
 parameter_types! {

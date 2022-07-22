@@ -34,11 +34,12 @@ pub mod mock;
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use frame_support::{pallet_prelude::*, transactional};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, transactional};
 use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
+use zenlink_protocol::{AssetId, ExportZenlink};
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -165,6 +166,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type BuybackPalletId: Get<PalletId>;
+
+		type DexOperator: ExportZenlink<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -205,6 +208,7 @@ pub mod pallet {
 		End(ParaId),
 		Continued(ParaId, LeasePeriod, LeasePeriod),
 		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
+		Buyback(BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -252,6 +256,7 @@ pub mod pallet {
 		InvalidFundNotExist,
 		InvalidRefund,
 		NotEnoughBalanceToContribute,
+		NotSupportTokenType,
 	}
 
 	/// Multisig confirm account
@@ -947,6 +952,40 @@ pub mod pallet {
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
+
+			Ok(())
+		}
+
+		#[pallet::weight((
+			0,
+			DispatchClass::Normal,
+			Pays::No
+			))]
+		#[transactional]
+		pub fn buyback(
+			origin: OriginFor<T>,
+			#[pallet::compact] value: BalanceOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let relay_currency_id = T::RelayChainToken::get();
+			let relay_vstoken_id =
+				relay_currency_id.to_vstoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
+				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_vstoken_asset_id: AssetId = AssetId::try_from(relay_vstoken_id)
+				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let path = vec![relay_asset_id, relay_vstoken_asset_id];
+
+			T::DexOperator::inner_swap_exact_assets_for_assets(
+				&T::BuybackPalletId::get().into_account_truncating(),
+				value.saturated_into(),
+				Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
+				&path,
+				&T::TreasuryAccount::get(),
+			)?;
+
+			Self::deposit_event(Event::<T>::Buyback(value));
 
 			Ok(())
 		}
