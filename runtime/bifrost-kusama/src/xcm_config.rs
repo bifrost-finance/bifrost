@@ -73,7 +73,10 @@ where
 }
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	MultiLocation::new(1, X2(Parachain(para_id.into()), GeneralKey(id.encode())))
+	MultiLocation::new(
+		1,
+		X2(Parachain(para_id.into()), GeneralKey((id.encode()).try_into().unwrap())),
+	)
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
@@ -112,14 +115,14 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 				1,
 				X2(
 					Parachain(parachains::karura::ID),
-					GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+					GeneralKey((parachains::karura::KAR_KEY.to_vec()).try_into().unwrap()),
 				),
 			)),
 			Stable(KUSD) => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(parachains::karura::ID),
-					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+					GeneralKey((parachains::karura::KUSD_KEY.to_vec()).try_into().unwrap()),
 				),
 			)),
 			Token(RMRK) => Some(MultiLocation::new(
@@ -246,7 +249,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 					1,
 					X2(
 						Parachain(parachains::karura::ID),
-						GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+						GeneralKey((parachains::karura::KAR_KEY.to_vec()).try_into().unwrap()),
 					),
 				),
 				10 * millicent(Token(KAR)),
@@ -257,7 +260,7 @@ impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMi
 					1,
 					X2(
 						Parachain(parachains::karura::ID),
-						GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+						GeneralKey((parachains::karura::KUSD_KEY.to_vec()).try_into().unwrap()),
 					),
 				),
 				10 * millicent(Stable(KUSD)),
