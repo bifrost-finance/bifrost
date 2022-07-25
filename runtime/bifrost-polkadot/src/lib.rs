@@ -197,7 +197,7 @@ impl Contains<Call> for CallFilter {
 		}
 
 		// disable transfer
-		let is_transfer = matches!(call, Call::Balances(_));
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
 		if is_transfer {
 			let is_disabled = match *call {
 				// orml-currencies module
