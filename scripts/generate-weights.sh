@@ -28,7 +28,7 @@ do
                 --wasm-execution=compiled \
                 --heap-pages=4096 \
                 --header=./HEADER-GPL3 \
-                --output="./runtime/${runtime}-kusama/src/weights/${pallet}.rs";
+                --output="./runtime/${runtime}/src/weights/${pallet}.rs";
             fi
         done
 done
