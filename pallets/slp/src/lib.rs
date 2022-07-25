@@ -46,7 +46,7 @@ use crate::agents::MoonriverAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, DOT, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -673,7 +673,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let delegator_id = staking_agent.initialize_delegator()?;
+			let delegator_id = staking_agent.initialize_delegator(currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });
@@ -694,7 +694,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(&who, amount, &validator)?;
+			let query_id = staking_agent.bond(&who, amount, &validator, currency_id)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -723,7 +723,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond_extra(&who, amount, &validator)?;
+			let query_id = staking_agent.bond_extra(&who, amount, &validator, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -753,7 +753,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(&who, amount, &validator)?;
+			let query_id = staking_agent.unbond(&who, amount, &validator, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -780,7 +780,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond_all(&who)?;
+			let query_id = staking_agent.unbond_all(&who, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -807,7 +807,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(&who, amount, &validator)?;
+			let query_id = staking_agent.rebond(&who, amount, &validator, currency_id)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -835,7 +835,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.delegate(&who, &targets)?;
+			let query_id = staking_agent.delegate(&who, &targets, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -862,7 +862,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.undelegate(&who, &targets)?;
+			let query_id = staking_agent.undelegate(&who, &targets, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -889,7 +889,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.redelegate(&who, &targets)?;
+			let query_id = staking_agent.redelegate(&who, &targets, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -917,7 +917,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.payout(&who, &validator, &when)?;
+			staking_agent.payout(&who, &validator, &when, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Payout {
@@ -942,7 +942,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(&who, &when, &validator)?;
+			let query_id = staking_agent.liquidize(&who, &when, &validator, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -968,7 +968,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.chill(&who)?;
+			let query_id = staking_agent.chill(&who, currency_id)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -994,7 +994,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_back(&from, &to, amount)?;
+			staking_agent.transfer_back(&from, &to, amount, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferBack {
@@ -1020,7 +1020,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_to(&from, &to, amount)?;
+			staking_agent.transfer_to(&from, &to, amount, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferTo {
@@ -1268,7 +1268,12 @@ pub mod pallet {
 				)?;
 			} else {
 				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-				staking_agent.supplement_fee_reserve(reserved_fee, &source_location, &dest)?;
+				staking_agent.supplement_fee_reserve(
+					reserved_fee,
+					&source_location,
+					&dest,
+					currency_id,
+				)?;
 			}
 
 			// Deposit event.
@@ -1345,6 +1350,7 @@ pub mod pallet {
 				// Dummy value for 【from】account
 				&beneficiary,
 				&beneficiary,
+				currency_id,
 			)?;
 
 			// Tune the new exchange rate.
@@ -1353,6 +1359,7 @@ pub mod pallet {
 				value,
 				// Dummy value for vtoken amount
 				Zero::zero(),
+				currency_id,
 			)?;
 
 			// Update the CurrencyLatestTuneRecord<T> storage.
@@ -1451,7 +1458,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_delegator(index, &who)?;
+			staking_agent.add_delegator(index, &who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
@@ -1474,7 +1481,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.remove_delegator(&who)?;
+			staking_agent.remove_delegator(&who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: *who });
@@ -1493,7 +1500,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_validator(&who)?;
+			staking_agent.add_validator(&who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
@@ -1512,7 +1519,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.remove_validator(&who)?;
+			staking_agent.remove_validator(&who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
@@ -1911,7 +1918,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
+				KSM | DOT => Ok(Box::new(KusamaAgent::<T>::new())),
 				MOVR => Ok(Box::new(MoonriverAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
@@ -2111,6 +2118,7 @@ pub mod pallet {
 					query_id,
 					entry,
 					manual_mode,
+					currency_id,
 				)?;
 			} else {
 				Self::do_fail_delegator_ledger_query_response(query_id)?;

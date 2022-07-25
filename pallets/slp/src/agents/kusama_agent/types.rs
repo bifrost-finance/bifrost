@@ -26,6 +26,12 @@ use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 use crate::{BalanceOf, Config};
 
 #[derive(Encode, Decode, RuntimeDebug)]
+pub enum SubstrateCall<T: Config> {
+	Kusama(KusamaCall<T>),
+	Polkadot(PolkadotCall<T>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
 	#[codec(index = 0)]
 	System(SystemCall),
@@ -34,6 +40,20 @@ pub enum KusamaCall<T: Config> {
 	#[codec(index = 6)]
 	Staking(StakingCall<T>),
 	#[codec(index = 24)]
+	Utility(Box<UtilityCall<Self>>),
+	#[codec(index = 99)]
+	Xcm(Box<XcmCall>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum PolkadotCall<T: Config> {
+	#[codec(index = 0)]
+	System(SystemCall),
+	#[codec(index = 5)]
+	Balances(BalancesCall<T>),
+	#[codec(index = 7)]
+	Staking(StakingCall<T>),
+	#[codec(index = 26)]
 	Utility(Box<UtilityCall<Self>>),
 	#[codec(index = 99)]
 	Xcm(Box<XcmCall>),
