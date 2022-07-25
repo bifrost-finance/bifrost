@@ -19,6 +19,7 @@ do
             pallet=$line;
             if [ "$pallet" != "parachain_staking" ]; then
                 echo "benchmark pallet ${pallet}"
+                echo "benchmark pallet ${runtime}"
                 target/release/bifrost benchmark pallet --chain=$chain \
                 --steps=50 \
                 --repeat=20 \
@@ -27,8 +28,8 @@ do
                 --execution=wasm \
                 --wasm-execution=compiled \
                 --heap-pages=4096 \
-                --header=./HEADER-GPL3 \
-                --output="./runtime/${runtime}/src/weights/${pallet}.rs";
+                --output=./runtime/${runtime}/src/weights2/${pallet}.rs
+                --template="./script/frame-weight-template.hbs" ;
             fi
         done
 done
