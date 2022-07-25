@@ -26,7 +26,6 @@ const TEST_33: [u8; 33] = [1u8; 33];
 
 #[test]
 fn general_key_works() {
-
 	GeneralKey(CurrencyId::ForeignAsset(3).encode().try_into().unwrap());
 	GeneralKey(CurrencyId::ForeignAsset(3).encode().try_into().unwrap());
 	GeneralKey(CurrencyId::ForeignAsset(3).encode().try_into().unwrap());
@@ -39,30 +38,84 @@ fn general_key_works() {
 	GeneralKey(CurrencyId::ForeignAsset(3).encode().try_into().unwrap());
 	GeneralKey(CurrencyId::ForeignAsset(3).encode().try_into().unwrap());
 
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::ASG,100,TokenSymbol::BNC,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::BNC,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::KUSD,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::DOT,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::KSM,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::ETH,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::KAR,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::ZLK,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::PHA,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::RMRK,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::LPToken(TokenSymbol::MOVR,100,TokenSymbol::ASG,100).encode().try_into().unwrap());
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::ASG, 100, TokenSymbol::BNC, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::BNC, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::KUSD, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::DOT, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::KSM, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::ETH, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::KAR, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::ZLK, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::PHA, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::RMRK, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
+	GeneralKey(
+		CurrencyId::LPToken(TokenSymbol::MOVR, 100, TokenSymbol::ASG, 100)
+			.encode()
+			.try_into()
+			.unwrap(),
+	);
 
-
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::ASG,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::BNC,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::KUSD,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::DOT,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::KSM,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::ETH,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::KAR,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::ZLK,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::PHA,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::RMRK,2001,1,100).encode().try_into().unwrap());
-	GeneralKey(CurrencyId::VSBond(TokenSymbol::MOVR,2001,1,100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::ASG, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::BNC, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::KUSD, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::DOT, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::KSM, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::ETH, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::KAR, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::ZLK, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::PHA, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::RMRK, 2001, 1, 100).encode().try_into().unwrap());
+	GeneralKey(CurrencyId::VSBond(TokenSymbol::MOVR, 2001, 1, 100).encode().try_into().unwrap());
 
 	GeneralKey(CurrencyId::VSToken(TokenSymbol::ASG).encode().try_into().unwrap());
 	GeneralKey(CurrencyId::VSToken(TokenSymbol::BNC).encode().try_into().unwrap());
@@ -112,13 +165,10 @@ fn general_key_works() {
 	GeneralKey(CurrencyId::Native(TokenSymbol::RMRK).encode().try_into().unwrap());
 	GeneralKey(CurrencyId::Native(TokenSymbol::MOVR).encode().try_into().unwrap());
 
-
 	GeneralKey(CurrencyId::Native(TokenSymbol::MOVR).encode().try_into().unwrap());
 
-
-
-	assert_eq!(CurrencyId::LPToken(TokenSymbol::ASG,254,TokenSymbol::BNC,100).encode().len(),5);
-	assert_eq!(TEST_33.len(),33)
+	assert_eq!(CurrencyId::LPToken(TokenSymbol::ASG, 254, TokenSymbol::BNC, 100).encode().len(), 5);
+	assert_eq!(TEST_33.len(), 33)
 
 	// 'called `Result::unwrap()` on an `Err` value: ()'
 	//GeneralKey(test_33.encode().try_into().unwrap());
