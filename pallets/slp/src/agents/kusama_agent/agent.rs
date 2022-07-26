@@ -1117,15 +1117,17 @@ impl<T: Config>
 impl<T: Config>
 	XcmBuilder<
 		BalanceOf<T>,
-		SubstrateCall<T>, // , MultiLocation,
+		SubstrateCall<T>,
+		Error<T>, // , MultiLocation,
 	> for KusamaAgent<T>
 {
 	fn construct_xcm_message(
 		call: SubstrateCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
+		_currency_id: CurrencyId,
 		// response_back_location: MultiLocation
-	) -> Xcm<()> {
+	) -> Result<Xcm<()>, Error<T>> {
 		let mut xcm_message = Self::inner_construct_xcm_message(extra_fee);
 		let transact_instruct = match call {
 			SubstrateCall::Kusama(ksm_call) => Self::construct_instruction(ksm_call, weight),
@@ -1133,7 +1135,7 @@ impl<T: Config>
 		};
 
 		xcm_message.insert(2, transact_instruct);
-		Xcm(xcm_message)
+		Ok(Xcm(xcm_message))
 	}
 }
 
@@ -1261,7 +1263,8 @@ impl<T: Config> KusamaAgent<T> {
 				currency_id,
 			)?;
 
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		let xcm_message =
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		//【For xcm v3】
 		// let response_back_location = T::UniversalLocation::get()
@@ -1273,8 +1276,9 @@ impl<T: Config> KusamaAgent<T> {
 		// 	fee,
 		// 	weight,
 		// 	query_id,
+		//  currency_id,
 		// 	response_back_location,
-		// );
+		// )?;
 
 		Ok((query_id, timeout, xcm_message))
 	}
@@ -1293,7 +1297,8 @@ impl<T: Config> KusamaAgent<T> {
 				currency_id,
 			)?;
 
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		let xcm_message =
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 

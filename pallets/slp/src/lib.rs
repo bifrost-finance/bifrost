@@ -46,7 +46,7 @@ use crate::agents::MoonriverAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, DOT, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, DOT, GLMR, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -1919,7 +1919,7 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(KusamaAgent::<T>::new())),
-				MOVR => Ok(Box::new(MoonriverAgent::<T>::new())),
+				MOVR | GLMR => Ok(Box::new(MoonriverAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

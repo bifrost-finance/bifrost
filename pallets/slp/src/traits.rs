@@ -222,13 +222,14 @@ pub trait StakingAgent<
 /// Helper to build xcm message
 //【For xcm v3】
 // pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
-pub trait XcmBuilder<Balance, ChainCallType> {
+pub trait XcmBuilder<Balance, ChainCallType, Error> {
 	fn construct_xcm_message(
 		call: ChainCallType,
 		extra_fee: Balance,
 		weight: Weight,
+		currency_id: CurrencyId,
 		// response_back_location: AccountId
-	) -> Xcm<()>;
+	) -> Result<Xcm<()>, Error>;
 }
 
 pub trait InstructionBuilder<ChainCallType> {

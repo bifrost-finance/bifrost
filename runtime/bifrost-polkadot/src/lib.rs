@@ -64,7 +64,7 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{
-	cent, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
+	cent, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
 	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -1129,6 +1129,9 @@ parameter_type_with_key! {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::VToken(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
+			&CurrencyId::VToken(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)

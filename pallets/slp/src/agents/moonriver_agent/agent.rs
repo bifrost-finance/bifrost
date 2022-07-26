@@ -26,7 +26,7 @@ use super::types::{
 use crate::{
 	primitives::{
 		MoonriverLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
-		OneToManyScheduledRequest,
+		OneToManyScheduledRequest, GLMR, MOVR,
 	},
 	DelegationsOccupied, FeeSources,
 };
@@ -248,7 +248,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -322,7 +322,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -410,7 +410,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -462,7 +462,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -537,7 +537,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -622,7 +622,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -676,7 +676,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -787,7 +787,7 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -1018,8 +1018,13 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> DispatchResult {
 		// Get current VKSM/KSM exchange rate.
-		let vtoken_issuance =
-			T::MultiCurrency::total_issuance(CurrencyId::VToken(TokenSymbol::MOVR));
+		let vtoken = match currency_id {
+			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
+			GLMR => Ok(CurrencyId::VToken(TokenSymbol::GLMR)),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}?;
+
+		let vtoken_issuance = T::MultiCurrency::total_issuance(vtoken);
 		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
 		// Calculate how much vksm the beneficiary account can get.
 		let amount: u128 = amount.unique_saturated_into();
@@ -1034,7 +1039,7 @@ impl<T: Config>
 		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
 		// Issue corresponding vksm to beneficiary account.
 		T::MultiCurrency::deposit(
-			CurrencyId::VToken(TokenSymbol::MOVR),
+			vtoken,
 			&beneficiary,
 			BalanceOf::<T>::unique_saturated_from(can_get_vtoken),
 		)?;
@@ -1119,21 +1124,53 @@ impl<T: Config>
 
 /// Internal functions.
 impl<T: Config> MoonriverAgent<T> {
-	fn get_moonriver_para_multilocation() -> MultiLocation {
-		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::moonriver::ID)) }
+	fn get_moonriver_para_multilocation(
+		currency_id: CurrencyId,
+	) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			MOVR => Ok(MultiLocation {
+				parents: 1,
+				interior: Junctions::X1(Parachain(parachains::moonriver::ID)),
+			}),
+			GLMR => Ok(MultiLocation {
+				parents: 1,
+				interior: Junctions::X1(Parachain(parachains::moonbeam::ID)),
+			}),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
 	}
 
-	fn get_movr_local_multilocation() -> MultiLocation {
-		MultiLocation { parents: 0, interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)) }
+	fn get_movr_local_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			MOVR => Ok(MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
+			}),
+			GLMR => Ok(MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
+			}),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
 	}
 
-	fn get_movr_multilocation() -> MultiLocation {
-		MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(parachains::moonriver::ID),
-				PalletInstance(parachains::moonriver::PALLET_ID),
-			),
+	fn get_movr_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			MOVR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonriver::ID),
+					PalletInstance(parachains::moonriver::PALLET_ID),
+				),
+			}),
+			GLMR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonbeam::ID),
+					PalletInstance(parachains::moonbeam::PALLET_ID),
+				),
+			}),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
 
@@ -1144,7 +1181,7 @@ impl<T: Config> MoonriverAgent<T> {
 		currency_id: CurrencyId,
 	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
-		let responder = Self::get_moonriver_para_multilocation();
+		let responder = Self::get_moonriver_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
@@ -1158,7 +1195,8 @@ impl<T: Config> MoonriverAgent<T> {
 				currency_id,
 			)?;
 
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		let xcm_message =
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		Ok((query_id, timeout, fee, xcm_message))
 	}
@@ -1177,9 +1215,10 @@ impl<T: Config> MoonriverAgent<T> {
 				currency_id,
 			)?;
 
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		let xcm_message =
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(fee)
@@ -1319,10 +1358,10 @@ impl<T: Config> MoonriverAgent<T> {
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter dest and beneficiary.
-		let dest = Self::get_moonriver_para_multilocation();
+		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
 		let beneficiary = Pallet::<T>::multilocation_to_local_multilocation(to)?;
 
-		let movr_location = Self::get_movr_multilocation();
+		let movr_location = Self::get_movr_multilocation(currency_id)?;
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
@@ -1331,7 +1370,7 @@ impl<T: Config> MoonriverAgent<T> {
 		let assets = MultiAssets::from(asset);
 
 		// Prepare fee asset.
-		let movr_local_location = Self::get_movr_local_multilocation();
+		let movr_local_location = Self::get_movr_local_multilocation(currency_id)?;
 		let fee_asset = MultiAsset {
 			fun: Fungible(fee_amount.unique_saturated_into()),
 			id: Concrete(movr_local_location),
@@ -1758,20 +1797,25 @@ impl<T: Config> MoonriverAgent<T> {
 impl<T: Config>
 	XcmBuilder<
 		BalanceOf<T>,
-		MoonriverCall<T>, // , MultiLocation,
+		MoonriverCall<T>,
+		Error<T>,
+		// , MultiLocation,
 	> for MoonriverAgent<T>
 {
 	fn construct_xcm_message(
 		call: MoonriverCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
-	) -> Xcm<()> {
+		currency_id: CurrencyId,
+	) -> Result<Xcm<()>, Error<T>> {
+		let multi = Self::get_movr_local_multilocation(currency_id)?;
+
 		let asset = MultiAsset {
-			id: Concrete(Self::get_movr_local_multilocation()),
+			id: Concrete(multi),
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
-		Xcm(vec![
+		Ok(Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
@@ -1788,6 +1832,6 @@ impl<T: Config>
 					interior: X1(Parachain(T::ParachainId::get().into())),
 				},
 			},
-		])
+		]))
 	}
 }
