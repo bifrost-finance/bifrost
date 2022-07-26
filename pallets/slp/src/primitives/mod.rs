@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod kusama_primitives;
-mod moonriver_primitives;
+mod moonbeam_primitives;
+mod polkadot_primitives;
 
-pub use kusama_primitives::*;
-pub use moonriver_primitives::*;
+pub use moonbeam_primitives::*;
+pub use polkadot_primitives::*;
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
@@ -30,7 +30,7 @@ use scale_info::TypeInfo;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + Eq> {
 	Substrate(SubstrateLedger<DelegatorId, Balance>),
-	Moonriver(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
+	Moonbeam(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
@@ -38,7 +38,7 @@ pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + E
 pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// A type for substrate ledger updating entires
 	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
-	Moonriver(MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
+	Moonbeam(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of

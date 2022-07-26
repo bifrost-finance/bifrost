@@ -20,12 +20,12 @@ use core::marker::PhantomData;
 use xcm_interface::traits::parachains;
 
 use super::types::{
-	MoonriverCall, MoonriverCurrencyId, MoonriverParachainStakingCall, MoonriverUtilityCall,
-	MoonriverXtokensCall,
+	MoonbeamCall, MoonbeamCurrencyId, MoonbeamParachainStakingCall, MoonbeamUtilityCall,
+	MoonbeamXtokensCall,
 };
 use crate::{
 	primitives::{
-		MoonriverLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
+		MoonbeamLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
 		OneToManyScheduledRequest, GLMR, MOVR,
 	},
 	DelegationsOccupied, FeeSources,
@@ -59,7 +59,7 @@ use crate::{
 	agents::SystemCall,
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, MoonriverLedgerUpdateEntry, OneToManyDelegatorStatus,
+		Ledger, MoonbeamLedgerUpdateEntry, OneToManyDelegatorStatus,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
@@ -69,12 +69,12 @@ use crate::{
 	TimeUnit, Validators, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
-/// StakingAgent implementation for Moonriver
-pub struct MoonriverAgent<T>(PhantomData<T>);
+/// StakingAgent implementation for Moonriver/Moonbeam
+pub struct MoonbeamAgent<T>(PhantomData<T>);
 
-impl<T> MoonriverAgent<T> {
+impl<T> MoonbeamAgent<T> {
 	pub fn new() -> Self {
-		MoonriverAgent(PhantomData::<T>)
+		MoonbeamAgent(PhantomData::<T>)
 	}
 }
 
@@ -90,7 +90,7 @@ impl<T: Config>
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
-	> for MoonriverAgent<T>
+	> for MoonbeamAgent<T>
 {
 	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
@@ -110,7 +110,7 @@ impl<T: Config>
 		Ok(delegator_multilocation)
 	}
 
-	/// First bond a new validator for a delegator. Moonriver's corresponding function is
+	/// First bond a new validator for a delegator. Moonriver/Moonbeam's corresponding function is
 	/// "delegate".
 	fn bond(
 		&self,
@@ -137,7 +137,7 @@ impl<T: Config>
 			.map_err(|_| Error::<T>::ValidatorSetNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -188,15 +188,15 @@ impl<T: Config>
 				request_briefs: request_briefs_set,
 				status: OneToManyDelegatorStatus::Active,
 			};
-			let movr_ledger =
-				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonriver(new_ledger);
+			let moonbeam_ledger =
+				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonbeam(new_ledger);
 
-			DelegatorLedgers::<T>::insert(currency_id, who, movr_ledger);
+			DelegatorLedgers::<T>::insert(currency_id, who, moonbeam_ledger);
 		}
 
 		// prepare xcm call
 
-		// Get the delegator account id in Moonriver network
+		// Get the delegator account id in Moonriver/Moonbeam network
 		let validator_multilocation = validator.as_ref().ok_or(Error::<T>::Unexpected)?;
 		let validator_account_id_20 =
 			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
@@ -215,7 +215,7 @@ impl<T: Config>
 		let delegation_count: u32 = mins_maxs.validators_back_maximum;
 
 		// Construct xcm message.
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::Delegate(
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::Delegate(
 			validator_account_id_20,
 			amount,
 			candidate_delegation_count,
@@ -240,7 +240,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			MoonriverLedgerUpdateOperation::Bond,
+			MoonbeamLedgerUpdateOperation::Bond,
 			amount,
 			query_id,
 			timeout,
@@ -248,7 +248,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -270,7 +270,7 @@ impl<T: Config>
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -291,7 +291,7 @@ impl<T: Config>
 		// bond extra amount to the existing delegation.
 		// Construct xcm message..
 		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::DelegatorBondMore(
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::DelegatorBondMore(
 			validator_h160_account,
 			amount,
 		));
@@ -314,7 +314,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			MoonriverLedgerUpdateOperation::Bond,
+			MoonbeamLedgerUpdateOperation::Bond,
 			amount,
 			query_id,
 			timeout,
@@ -322,7 +322,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -344,7 +344,7 @@ impl<T: Config>
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -378,11 +378,10 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call =
-			MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleDelegatorBondLess(
-				validator_h160_account,
-				amount,
-			));
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleDelegatorBondLess(
+			validator_h160_account,
+			amount,
+		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -402,7 +401,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			MoonriverLedgerUpdateOperation::BondLess,
+			MoonbeamLedgerUpdateOperation::BondLess,
 			amount,
 			query_id,
 			timeout,
@@ -410,7 +409,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -426,7 +425,7 @@ impl<T: Config>
 		// check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
 			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
 		} else {
@@ -434,7 +433,7 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleLeaveDelegators);
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleLeaveDelegators);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -454,7 +453,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			None,
-			MoonriverLedgerUpdateOperation::LeaveDelegator,
+			MoonbeamLedgerUpdateOperation::LeaveDelegator,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -462,7 +461,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -480,7 +479,7 @@ impl<T: Config>
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -507,7 +506,7 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::CancelDelegationRequest(
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::CancelDelegationRequest(
 			validator_h160_account,
 		));
 
@@ -529,7 +528,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
-			MoonriverLedgerUpdateOperation::CancelRequest,
+			MoonbeamLedgerUpdateOperation::CancelRequest,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -537,13 +536,13 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
 
-	/// Delegate to some validators. For Moonriver, it equals function Nominate.
+	/// Delegate to some validators. For Moonriver/Moonbeam, it equals function Nominate.
 	fn delegate(
 		&self,
 		_who: &MultiLocation,
@@ -565,7 +564,7 @@ impl<T: Config>
 
 		// First, check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -592,7 +591,7 @@ impl<T: Config>
 		// Do the undelegating work.
 		// Construct xcm message.
 		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&validator)?;
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::ScheduleRevokeDelegation(
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleRevokeDelegation(
 			validator_h160_account,
 		));
 
@@ -614,7 +613,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			Some(validator.clone()),
-			MoonriverLedgerUpdateOperation::Revoke,
+			MoonbeamLedgerUpdateOperation::Revoke,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -622,7 +621,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -637,7 +636,7 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// first check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
 			match ledger.status {
 				OneToManyDelegatorStatus::Leaving(_) => Ok(()),
@@ -648,7 +647,7 @@ impl<T: Config>
 		}
 		// do the cancellation.
 		// Construct xcm message.
-		let call = MoonriverCall::Staking(MoonriverParachainStakingCall::CancelLeaveDelegators);
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::CancelLeaveDelegators);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -668,7 +667,7 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who,
 			None,
-			MoonriverLedgerUpdateOperation::CancelLeave,
+			MoonbeamLedgerUpdateOperation::CancelLeave,
 			Zero::zero(),
 			query_id,
 			timeout,
@@ -676,7 +675,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -710,7 +709,7 @@ impl<T: Config>
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		let mut due_amount = Zero::zero();
-		if let Some(Ledger::Moonriver(ledger)) = ledger_option {
+		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving. If yes, execute leaving.
 			if let OneToManyDelegatorStatus::Leaving(leaving_time) = ledger.status {
 				ensure!(now >= leaving_time, Error::<T>::LeavingNotDue);
@@ -733,7 +732,7 @@ impl<T: Config>
 		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
 		let call;
 		let (query_id, timeout, fee, xcm_message) = if leaving {
-			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteLeaveDelegators(
+			call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteLeaveDelegators(
 				delegator_h160_account,
 				mins_maxs.validators_back_maximum,
 			));
@@ -746,7 +745,7 @@ impl<T: Config>
 			)
 		} else {
 			let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-			call = MoonriverCall::Staking(MoonriverParachainStakingCall::ExecuteDelegationRequest(
+			call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteDelegationRequest(
 				delegator_h160_account,
 				validator_h160_account,
 			));
@@ -768,7 +767,7 @@ impl<T: Config>
 			Self::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonriverLedgerUpdateOperation::ExecuteLeave,
+				MoonbeamLedgerUpdateOperation::ExecuteLeave,
 				Zero::zero(),
 				query_id,
 				timeout,
@@ -778,7 +777,7 @@ impl<T: Config>
 			Self::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonriverLedgerUpdateOperation::ExecuteRequest,
+				MoonbeamLedgerUpdateOperation::ExecuteRequest,
 				due_amount,
 				query_id,
 				timeout,
@@ -787,7 +786,7 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -834,8 +833,8 @@ impl<T: Config>
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Construct xcm message.
-		let call = MoonriverCall::Xtokens(MoonriverXtokensCall::Transfer(
-			MoonriverCurrencyId::SelfReserve,
+		let call = MoonbeamCall::Xtokens(MoonbeamXtokensCall::Transfer(
+			MoonbeamCurrencyId::SelfReserve,
 			amount.unique_saturated_into(),
 			dest,
 			weight,
@@ -930,8 +929,8 @@ impl<T: Config>
 		let ledger =
 			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let total = if let Ledger::Moonriver(moonriver_ledger) = ledger {
-			moonriver_ledger.total
+		let total = if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
+			moonbeam_ledger.total
 		} else {
 			Err(Error::<T>::Unexpected)?
 		};
@@ -985,9 +984,9 @@ impl<T: Config>
 
 		// Check all the delegators' delegations, to see whether this specific validator is in use.
 		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::Moonriver(moonriver_ledger) = ledger {
+			if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
 				ensure!(
-					!moonriver_ledger.delegations.contains_key(who),
+					!moonbeam_ledger.delegations.contains_key(who),
 					Error::<T>::ValidatorStillInUse
 				);
 			} else {
@@ -1123,10 +1122,8 @@ impl<T: Config>
 }
 
 /// Internal functions.
-impl<T: Config> MoonriverAgent<T> {
-	fn get_moonriver_para_multilocation(
-		currency_id: CurrencyId,
-	) -> Result<MultiLocation, Error<T>> {
+impl<T: Config> MoonbeamAgent<T> {
+	fn get_moonbeam_para_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
 			MOVR => Ok(MultiLocation {
 				parents: 1,
@@ -1140,7 +1137,7 @@ impl<T: Config> MoonriverAgent<T> {
 		}
 	}
 
-	fn get_movr_local_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
+	fn get_glmr_local_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
 			MOVR => Ok(MultiLocation {
 				parents: 0,
@@ -1154,7 +1151,7 @@ impl<T: Config> MoonriverAgent<T> {
 		}
 	}
 
-	fn get_movr_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
+	fn get_glmr_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
 			MOVR => Ok(MultiLocation {
 				parents: 1,
@@ -1176,12 +1173,12 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn construct_xcm_as_subaccount_with_query_id(
 		operation: XcmOperation,
-		call: MoonriverCall<T>,
+		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
-		let responder = Self::get_moonriver_para_multilocation(currency_id)?;
+		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
@@ -1203,7 +1200,7 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
 		operation: XcmOperation,
-		call: MoonriverCall<T>,
+		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<BalanceOf<T>, Error<T>> {
@@ -1218,7 +1215,7 @@ impl<T: Config> MoonriverAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(fee)
@@ -1226,27 +1223,27 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn prepare_send_as_subaccount_call_params_with_query_id(
 		operation: XcmOperation,
-		call: MoonriverCall<T>,
+		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		query_id: QueryId,
 		currency_id: CurrencyId,
-	) -> Result<(MoonriverCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, Weight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// Temporary wrapping remark event in Moonriver for ease use of backend service.
+		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
 		let remark_call =
-			MoonriverCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+			MoonbeamCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 		let call_batched_with_remark =
-			MoonriverCall::Utility(Box::new(MoonriverUtilityCall::BatchAll(Box::new(vec![
+			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
 				Box::new(call),
 				Box::new(remark_call),
 			]))));
 
 		let call_as_subaccount =
-			MoonriverCall::Utility(Box::new(MoonriverUtilityCall::AsDerivative(
+			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::AsDerivative(
 				sub_account_index,
 				Box::new(call_batched_with_remark),
 			)));
@@ -1259,16 +1256,16 @@ impl<T: Config> MoonriverAgent<T> {
 
 	fn prepare_send_as_subaccount_call_params_without_query_id(
 		operation: XcmOperation,
-		call: MoonriverCall<T>,
+		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(MoonriverCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, Weight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let call_as_subaccount = MoonriverCall::Utility(Box::new(
-			MoonriverUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
+		let call_as_subaccount = MoonbeamCall::Utility(Box::new(
+			MoonbeamUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
 		));
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
@@ -1280,13 +1277,13 @@ impl<T: Config> MoonriverAgent<T> {
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		validator: Option<MultiLocation>,
-		update_operation: MoonriverLedgerUpdateOperation,
+		update_operation: MoonbeamLedgerUpdateOperation,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		use MoonriverLedgerUpdateOperation::{
+		use MoonbeamLedgerUpdateOperation::{
 			BondLess, ExecuteLeave, ExecuteRequest, LeaveDelegator, Revoke,
 		};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -1300,7 +1297,7 @@ impl<T: Config> MoonriverAgent<T> {
 			_ => None,
 		};
 
-		let entry = LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+		let entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id,
 			delegator_id: who.clone(),
 			validator_id: validator,
@@ -1358,22 +1355,22 @@ impl<T: Config> MoonriverAgent<T> {
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter dest and beneficiary.
-		let dest = Self::get_moonriver_para_multilocation(currency_id)?;
+		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let beneficiary = Pallet::<T>::multilocation_to_local_multilocation(to)?;
 
-		let movr_location = Self::get_movr_multilocation(currency_id)?;
+		let glmr_location = Self::get_glmr_multilocation(currency_id)?;
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(movr_location),
+			id: Concrete(glmr_location),
 		};
 		let assets = MultiAssets::from(asset);
 
 		// Prepare fee asset.
-		let movr_local_location = Self::get_movr_local_multilocation(currency_id)?;
+		let glmr_local_location = Self::get_glmr_local_multilocation(currency_id)?;
 		let fee_asset = MultiAsset {
 			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(movr_local_location),
+			id: Concrete(glmr_local_location),
 		};
 
 		// prepare for xcm message
@@ -1402,12 +1399,12 @@ impl<T: Config> MoonriverAgent<T> {
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		use MoonriverLedgerUpdateOperation::{
+		use MoonbeamLedgerUpdateOperation::{
 			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, ExecuteRequest,
 			LeaveDelegator, Revoke,
 		};
 		// update DelegatorLedgers<T> storage
-		if let LedgerUpdateEntry::Moonriver(MoonriverLedgerUpdateEntry {
+		if let LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
 			validator_id: validator_id_op,
@@ -1420,7 +1417,7 @@ impl<T: Config> MoonriverAgent<T> {
 				currency_id,
 				delegator_id,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonriver(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
 						match update_operation {
 							// first bond and bond more operations
 							Bond => {
@@ -1642,13 +1639,12 @@ impl<T: Config> MoonriverAgent<T> {
 										request_briefs: request_briefs_set,
 										status: OneToManyDelegatorStatus::Active,
 									};
-								let movr_ledger = Ledger::<
-									MultiLocation,
-									BalanceOf<T>,
-									MultiLocation,
-								>::Moonriver(new_ledger);
+								let moonbeam_ledger =
+									Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonbeam(
+										new_ledger,
+									);
 
-								*old_ledger_opt = Some(movr_ledger);
+								*old_ledger_opt = Some(moonbeam_ledger);
 								// execute request
 							},
 							ExecuteRequest => {
@@ -1750,8 +1746,8 @@ impl<T: Config> MoonriverAgent<T> {
 		let mut all_occupied = true;
 
 		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::Moonriver(movr_ledger) = ledger {
-				if movr_ledger.delegations.len() > movr_ledger.request_briefs.len() {
+			if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
+				if moonbeam_ledger.delegations.len() > moonbeam_ledger.request_briefs.len() {
 					all_occupied = false;
 					break;
 				}
@@ -1793,22 +1789,22 @@ impl<T: Config> MoonriverAgent<T> {
 	}
 }
 
-/// Trait XcmBuilder implementation for Moonriver
+/// Trait XcmBuilder implementation for Moonriver/Moonbeam
 impl<T: Config>
 	XcmBuilder<
 		BalanceOf<T>,
-		MoonriverCall<T>,
+		MoonbeamCall<T>,
 		Error<T>,
 		// , MultiLocation,
-	> for MoonriverAgent<T>
+	> for MoonbeamAgent<T>
 {
 	fn construct_xcm_message(
-		call: MoonriverCall<T>,
+		call: MoonbeamCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
 		currency_id: CurrencyId,
 	) -> Result<Xcm<()>, Error<T>> {
-		let multi = Self::get_movr_local_multilocation(currency_id)?;
+		let multi = Self::get_glmr_local_multilocation(currency_id)?;
 
 		let asset = MultiAsset {
 			id: Concrete(multi),

@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	agents::{
-		KusamaCall, PolkadotCall, RewardDestination, StakingCall, SubstrateCall, SystemCall,
-		UtilityCall, XcmCall,
+		KusamaCall, KusamaUtilityCall, PolkadotCall, PolkadotUtilityCall, RewardDestination,
+		StakingCall, SubstrateCall, SystemCall, XcmCall,
 	},
 	pallet::{Error, Event},
 	primitives::{
@@ -61,12 +61,12 @@ use xcm::{
 	VersionedMultiAssets, VersionedMultiLocation,
 };
 
-/// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T>(PhantomData<T>);
+/// StakingAgent implementation for Kusama/Polkadot
+pub struct PolkadotAgent<T>(PhantomData<T>);
 
-impl<T> KusamaAgent<T> {
+impl<T> PolkadotAgent<T> {
 	pub fn new() -> Self {
-		KusamaAgent(PhantomData::<T>)
+		PolkadotAgent(PhantomData::<T>)
 	}
 }
 
@@ -82,7 +82,7 @@ impl<T: Config>
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
-	> for KusamaAgent<T>
+	> for PolkadotAgent<T>
 {
 	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
@@ -123,7 +123,7 @@ impl<T: Config>
 			Error::<T>::ExceedActiveMaximum
 		);
 
-		// Get the delegator account id in Kusama network
+		// Get the delegator account id in Kusama/Polkadot network
 		let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
 
 		// Construct xcm message.
@@ -422,7 +422,7 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Delegate to some validators. For Kusama, it equals function Nominate.
+	/// Delegate to some validators. For Kusama/Polkadot, it equals function Nominate.
 	fn delegate(
 		&self,
 		who: &MultiLocation,
@@ -1113,13 +1113,13 @@ impl<T: Config>
 	}
 }
 
-/// Trait XcmBuilder implementation for Kusama
+/// Trait XcmBuilder implementation for Kusama/Polkadot
 impl<T: Config>
 	XcmBuilder<
 		BalanceOf<T>,
 		SubstrateCall<T>,
 		Error<T>, // , MultiLocation,
-	> for KusamaAgent<T>
+	> for PolkadotAgent<T>
 {
 	fn construct_xcm_message(
 		call: SubstrateCall<T>,
@@ -1140,7 +1140,7 @@ impl<T: Config>
 }
 
 // for kusama call
-impl<T: Config> InstructionBuilder<KusamaCall<T>> for KusamaAgent<T> {
+impl<T: Config> InstructionBuilder<KusamaCall<T>> for PolkadotAgent<T> {
 	fn construct_instruction(call: KusamaCall<T>, weight: Weight) -> Instruction {
 		Transact {
 			origin_type: OriginKind::SovereignAccount,
@@ -1151,7 +1151,7 @@ impl<T: Config> InstructionBuilder<KusamaCall<T>> for KusamaAgent<T> {
 }
 
 // for polkadot call
-impl<T: Config> InstructionBuilder<PolkadotCall<T>> for KusamaAgent<T> {
+impl<T: Config> InstructionBuilder<PolkadotCall<T>> for PolkadotAgent<T> {
 	fn construct_instruction(call: PolkadotCall<T>, weight: Weight) -> Instruction {
 		Transact {
 			origin_type: OriginKind::SovereignAccount,
@@ -1162,7 +1162,7 @@ impl<T: Config> InstructionBuilder<PolkadotCall<T>> for KusamaAgent<T> {
 }
 
 /// Internal functions.
-impl<T: Config> KusamaAgent<T> {
+impl<T: Config> PolkadotAgent<T> {
 	fn prepare_send_as_subaccount_call_params_with_query_id(
 		operation: XcmOperation,
 		call: SubstrateCall<T>,
@@ -1181,28 +1181,30 @@ impl<T: Config> KusamaAgent<T> {
 					KusamaCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 				let call_batched_with_remark =
-					KusamaCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![
+					KusamaCall::Utility(Box::new(KusamaUtilityCall::BatchAll(Box::new(vec![
 						Box::new(ksm_call),
 						Box::new(remark_call),
 					]))));
 
-				Ok(SubstrateCall::Kusama(KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(
-					sub_account_index,
-					Box::new(call_batched_with_remark),
-				)))))
+				Ok(SubstrateCall::Kusama(KusamaCall::Utility(Box::new(
+					KusamaUtilityCall::AsDerivative(
+						sub_account_index,
+						Box::new(call_batched_with_remark),
+					),
+				))))
 			},
 			SubstrateCall::Polkadot(dot_call) => {
 				let remark_call =
 					PolkadotCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 				let call_batched_with_remark =
-					PolkadotCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![
+					PolkadotCall::Utility(Box::new(PolkadotUtilityCall::BatchAll(Box::new(vec![
 						Box::new(dot_call),
 						Box::new(remark_call),
 					]))));
 
 				Ok(SubstrateCall::Polkadot(PolkadotCall::Utility(Box::new(
-					UtilityCall::AsDerivative(
+					PolkadotUtilityCall::AsDerivative(
 						sub_account_index,
 						Box::new(call_batched_with_remark),
 					),
@@ -1228,11 +1230,11 @@ impl<T: Config> KusamaAgent<T> {
 
 		let call_as_subaccount = match call {
 			SubstrateCall::Kusama(ksm_call) => Ok(SubstrateCall::Kusama(KusamaCall::Utility(
-				Box::new(UtilityCall::AsDerivative(sub_account_index, Box::new(ksm_call))),
+				Box::new(KusamaUtilityCall::AsDerivative(sub_account_index, Box::new(ksm_call))),
 			))),
 			SubstrateCall::Polkadot(dot_call) =>
 				Ok(SubstrateCall::Polkadot(PolkadotCall::Utility(Box::new(
-					UtilityCall::AsDerivative(sub_account_index, Box::new(dot_call)),
+					PolkadotUtilityCall::AsDerivative(sub_account_index, Box::new(dot_call)),
 				)))),
 		}?;
 

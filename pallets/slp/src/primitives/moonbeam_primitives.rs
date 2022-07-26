@@ -57,9 +57,9 @@ pub enum OneToManyDelegationAction<Balance> {
 	Decrease(Balance),
 }
 
-/// A type for Moonriver ledger updating entires
+/// A type for Moonbeam ledger updating entires
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
+pub struct MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
@@ -67,7 +67,7 @@ pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// The validator id that needs to be update
 	pub validator_id: Option<ValidatorId>,
 	/// Update operation type
-	pub update_operation: MoonriverLedgerUpdateOperation,
+	pub update_operation: MoonbeamLedgerUpdateOperation,
 	#[codec(compact)]
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
@@ -77,7 +77,7 @@ pub struct MoonriverLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum MoonriverLedgerUpdateOperation {
+pub enum MoonbeamLedgerUpdateOperation {
 	Bond,
 	BondLess,
 	Revoke,

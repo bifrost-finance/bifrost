@@ -19,7 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(deprecated)] // TODO: clear transaction
 
-pub use agents::KusamaAgent;
+pub use agents::PolkadotAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
@@ -42,7 +42,7 @@ use xcm::{
 	},
 };
 
-use crate::agents::MoonriverAgent;
+use crate::agents::MoonbeamAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
@@ -1899,7 +1899,7 @@ pub mod pallet {
 		pub fn native_multilocation_to_account(
 			who: &MultiLocation,
 		) -> Result<AccountIdOf<T>, Error<T>> {
-			// Get the delegator account id in Kusama network
+			// Get the delegator account id in Kusama/Polkadot network
 			let account_32 = match who {
 				MultiLocation {
 					parents: 0,
@@ -1918,8 +1918,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM | DOT => Ok(Box::new(KusamaAgent::<T>::new())),
-				MOVR | GLMR => Ok(Box::new(MoonriverAgent::<T>::new())),
+				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
+				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1951,7 +1951,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
-			// Get the delegator account id in Kusama network
+			// Get the delegator account id in Kusama/Polkadot network
 			let account_32 = Self::multilocation_to_account_32(who)?;
 			let account = T::AccountId::decode(&mut &account_32[..])
 				.map_err(|_| Error::<T>::DecodingError)?;
@@ -1959,7 +1959,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_account_32(who: &MultiLocation) -> Result<[u8; 32], Error<T>> {
-			// Get the delegator account id in Kusama network
+			// Get the delegator account id in Kusama/Polkadot network
 			let account_32 = match who {
 				MultiLocation {
 					parents: _,
@@ -2038,7 +2038,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_account_20(who: &MultiLocation) -> Result<[u8; 20], Error<T>> {
-			// Get the delegator account id in Moonriver network
+			// Get the delegator account id in Moonriver/Moonbeam network
 			let account_20 = match who {
 				MultiLocation {
 					parents: _,
@@ -2051,7 +2051,7 @@ pub mod pallet {
 		}
 
 		pub fn multilocation_to_h160_account(who: &MultiLocation) -> Result<H160, Error<T>> {
-			// Get the delegator account id in Moonriver network
+			// Get the delegator account id in Moonriver/Moonbeam network
 			let account_20 = Self::multilocation_to_account_20(who)?;
 			let account_h160 =
 				H160::decode(&mut &account_20[..]).map_err(|_| Error::<T>::DecodingError)?;
@@ -2108,8 +2108,7 @@ pub mod pallet {
 				let currency_id = match entry.clone() {
 					LedgerUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
-					LedgerUpdateEntry::Moonriver(moonriver_entry) =>
-						Some(moonriver_entry.currency_id),
+					LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -2164,7 +2163,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::QueryNotExist)?;
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				LedgerUpdateEntry::Moonriver(moonriver_entry) => Some(moonriver_entry.currency_id),
+				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
