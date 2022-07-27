@@ -32,6 +32,8 @@ pub mod benchmarking;
 pub mod mock;
 #[cfg(test)]
 mod tests;
+pub mod weights;
+pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, transactional};
@@ -1094,36 +1096,5 @@ pub mod pallet {
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
 		}
-	}
-}
-
-pub trait WeightInfo {
-	fn contribute() -> Weight;
-	fn unlock() -> Weight;
-	fn batch_unlock(k: u32) -> Weight;
-	fn refund() -> Weight;
-	fn redeem() -> Weight;
-}
-
-// For backwards compatibility and tests
-impl WeightInfo for () {
-	fn contribute() -> Weight {
-		50_000_000 as Weight
-	}
-
-	fn unlock() -> Weight {
-		50_000_000 as Weight
-	}
-
-	fn batch_unlock(_k: u32) -> Weight {
-		50_000_000 as Weight
-	}
-
-	fn refund() -> Weight {
-		50_000_000 as Weight
-	}
-
-	fn redeem() -> Weight {
-		50_000_000 as Weight
 	}
 }

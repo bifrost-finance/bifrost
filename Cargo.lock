@@ -767,6 +767,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -1086,6 +1087,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

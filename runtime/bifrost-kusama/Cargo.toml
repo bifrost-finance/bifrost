@@ -253,7 +253,6 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-vesting/try-runtime",
-	"bifrost-liquidity-mining/try-runtime",
 	"parachain-staking/try-runtime",
 ]
 

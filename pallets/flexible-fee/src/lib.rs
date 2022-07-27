@@ -54,7 +54,7 @@ pub mod fee_dealer;
 pub mod misc_fees;
 mod mock;
 mod tests;
-mod weights;
+pub mod weights;
 
 const MAX_ORDER_LIST_LEN: u32 = 20;
 

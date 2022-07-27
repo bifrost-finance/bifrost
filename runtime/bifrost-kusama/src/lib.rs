@@ -120,7 +120,7 @@ use zenlink_protocol::{
 	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
 };
 // Weights used in the runtime.
-mod weights;
+// mod weights;
 
 mod xcm_config;
 
@@ -1542,7 +1542,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
 	type MaximumAssetsInOrder = MaximumAssetsInOrder;
@@ -1613,7 +1613,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
@@ -1637,7 +1637,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type ReleaseRatio = ReleaseRatio;
 	type BatchKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_salp_lite::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
@@ -1653,7 +1653,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_vsbond_auction::weights::BifrostWeight<Runtime>;
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1682,7 +1682,7 @@ impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance1> for R
 	type MaximumCharged = MaximumCharged;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_liquidity_mining::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for Runtime {
@@ -1697,14 +1697,14 @@ impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for R
 	type MaximumCharged = MaximumCharged;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningDOTPalletId;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_liquidity_mining::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_token_issuer::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_lightening_redeem::Config for Runtime {
@@ -1712,13 +1712,13 @@ impl bifrost_lightening_redeem::Config for Runtime {
 	type MultiCurrency = Tokens;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type PalletId = LighteningRedeemPalletId;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_lightening_redeem::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_call_switchgear::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
@@ -1793,6 +1793,7 @@ impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	// type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
@@ -1821,7 +1822,7 @@ impl bifrost_farming::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1835,7 +1836,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = bifrost_system_staking::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1939,7 +1940,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
 	type OnRedeemSuccess = OnRedeemSuccess;
 }
 
