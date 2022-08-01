@@ -993,9 +993,9 @@ impl parachain_staking::Config for Runtime {
 	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
+	type OnCollatorPayout = ();
+	type OnNewRound = ();
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
-	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
