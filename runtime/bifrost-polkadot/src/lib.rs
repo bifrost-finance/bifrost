@@ -27,12 +27,11 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // A few exports that help ease life for downstream crates.
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		Contains, EqualPrivilegeOnly, Everything, Imbalance, InstanceFilter, IsInVec,
-		LockIdentifier, NeverEnsureOrigin, Nothing, OnUnbalanced, Randomness,
+		LockIdentifier, Nothing, OnUnbalanced, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -50,7 +49,7 @@ use sp_core::OpaqueMetadata;
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, ConvertInto, Get},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, ConvertInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -70,7 +69,7 @@ use bifrost_runtime_common::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{Currency, EitherOfDiverse};
+use frame_support::traits::{Currency, EnsureOneOf, Get};
 use frame_system::EnsureRoot;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
@@ -670,7 +669,7 @@ impl pallet_democracy::Config for Runtime {
 	type BlacklistOrigin = EnsureRoot<AccountId>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
-	type CancelProposalOrigin = EitherOfDiverse<
+	type CancelProposalOrigin = EnsureOneOf<
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 	>;
@@ -730,14 +729,13 @@ parameter_types! {
 	pub const MaxApprovals: u32 = 100;
 }
 
-type ApproveOrigin = EitherOfDiverse<
+type ApproveOrigin = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = NeverEnsureOrigin<Balance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -809,7 +807,6 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-	type Event = Event;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
@@ -837,7 +834,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
-	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1210,7 +1206,7 @@ impl orml_xcm::Config for Runtime {
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 }
 
@@ -1230,7 +1226,7 @@ parameter_types! {
 
 impl xcm_interface::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
@@ -1259,7 +1255,7 @@ construct_runtime! {
 
 		// Monetary stuff
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 
 		// Collator support. the order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,

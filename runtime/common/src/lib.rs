@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::{
-	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EitherOfDiverse,
+	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EnsureOneOf,
 };
 use frame_system::EnsureRoot;
 use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, TokenInfo};
@@ -65,13 +65,13 @@ pub type CouncilCollective = pallet_collective::Instance1;
 
 pub type TechnicalCollective = pallet_collective::Instance2;
 
-pub type MoreThanHalfCouncil = EitherOfDiverse<
+pub type MoreThanHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
 
 // Technical Committee Council
-pub type EnsureRootOrAllTechnicalCommittee = EitherOfDiverse<
+pub type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 >;

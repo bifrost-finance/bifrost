@@ -33,8 +33,7 @@ use bifrost_slp::QueryResponseManager;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		Contains, EqualPrivilegeOnly, Everything, InstanceFilter, IsInVec, NeverEnsureOrigin,
-		Nothing, Randomness,
+		Contains, EqualPrivilegeOnly, Everything, InstanceFilter, IsInVec, Nothing, Randomness,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -81,11 +80,10 @@ use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
-	traits::{EitherOfDiverse, Get, LockIdentifier},
+	traits::{EnsureOneOf, Get, LockIdentifier},
 };
 use frame_system::EnsureRoot;
 use hex_literal::hex;
@@ -710,7 +708,7 @@ impl pallet_democracy::Config for Runtime {
 	type BlacklistOrigin = EnsureRoot<AccountId>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
-	type CancelProposalOrigin = EitherOfDiverse<
+	type CancelProposalOrigin = EnsureOneOf<
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 	>;
@@ -780,14 +778,13 @@ parameter_types! {
 	pub CuratorDepositMax: Balance = 100 * dollar(NativeCurrencyId::get());
 }
 
-type ApproveOrigin = EitherOfDiverse<
+type ApproveOrigin = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = NeverEnsureOrigin<Balance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -836,7 +833,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = WeightToFee;
-	type Event = Event;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -908,7 +904,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
-	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -967,7 +962,7 @@ impl parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MinBlocksPerRound = MinBlocksPerRound;
 	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -992,8 +987,6 @@ impl parachain_staking::Config for Runtime {
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
-	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1615,7 +1608,7 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = ();
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
 }
 
@@ -1639,7 +1632,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type SlotLength = SlotLength;
 	type WeightInfo = ();
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1656,7 +1649,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = ();
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1703,21 +1696,21 @@ impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for R
 impl bifrost_token_issuer::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 }
 
 impl bifrost_lightening_redeem::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Tokens;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type PalletId = LighteningRedeemPalletId;
 	type WeightInfo = ();
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 }
 
@@ -1737,7 +1730,7 @@ parameter_types! {
 
 impl xcm_interface::Config for Runtime {
 	type Event = Event;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
@@ -1792,7 +1785,7 @@ impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
 impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
@@ -1809,7 +1802,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type WeightInfo = ();
 }
@@ -1817,7 +1810,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
@@ -1834,7 +1827,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_system_staking::weights::SubstrateWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1932,7 +1925,7 @@ parameter_types! {
 impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = SlpEntrancePalletId;
@@ -2019,7 +2012,7 @@ construct_runtime! {
 
 		// Monetary stuff
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 
 		// Collator support. the order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
