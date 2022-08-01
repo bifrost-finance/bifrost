@@ -26,8 +26,9 @@ use sp_runtime::traits::UniqueSaturatedFrom;
 
 #[allow(unused_imports)]
 pub use crate::{Pallet as Slp, *};
+use bifrost_vtoken_minting as VtokenMinting;
 
-use crate::KSM;
+use crate::{KSM,BNC};
 
 fn moonriver_setup<T: Config>() -> DispatchResult {
 	let origin = T::ControlOrigin::successful_origin();
@@ -69,12 +70,12 @@ fn moonriver_setup<T: Config>() -> DispatchResult {
 	assert_ok!(Slp::<T>::update_ongoing_time_unit(
 		RawOrigin::Signed(caller.clone()).into(),
 		KSM,
-		TimeUnit::Round(1)
+		TimeUnit::Era(0)
 	));
 
 	// Initialize currency delays.
 	let delay =
-		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
+		Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
 	assert_ok!(Slp::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
 
 	// First to setup index-multilocation relationship of subaccount_0
@@ -858,6 +859,134 @@ set_ongoing_time_unit_update_interval {
 			who:Box::new(exit_account_location.clone()),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
+
+	unbond {
+		let origin = T::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+		let validator_0_account_id_20: [u8; 20] =
+			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let validator_0_location = MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(2023),
+				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+			),
+		};
+		moonriver_setup::<T>()?;
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::bond(
+			RawOrigin::Signed(who.clone()).into(),
+			KSM,
+			Box::new(subaccount_0_location.clone()),
+			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
+			Some(validator_0_location.clone()),
+		));
+
+		let call = Call::<T>::unbond {
+				currency_id:KSM,
+				who:Box::new(subaccount_0_location.clone()),
+			    validator:None,
+				amount:BalanceOf::<T>::unique_saturated_from(0u128),
+			};
+	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	unbond_all {
+		let origin = T::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+		let validator_0_account_id_20: [u8; 20] =
+			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let validator_0_location = MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(2023),
+				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+			),
+		};
+		moonriver_setup::<T>()?;
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::bond(
+			RawOrigin::Signed(who.clone()).into(),
+			KSM,
+			Box::new(subaccount_0_location.clone()),
+			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
+			Some(validator_0_location.clone()),
+		));
+
+		let call = Call::<T>::unbond_all {
+				currency_id:KSM,
+				who:Box::new(subaccount_0_location.clone()),
+			};
+	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	// undelegate {
+	// 	let origin = T::ControlOrigin::successful_origin();
+	// 	let who: T::AccountId = whitelisted_caller();
+	// 	let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+	// 	let subaccount_0_location: MultiLocation =
+	// 		Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+	// 	let validator_0_account_id_20: [u8; 20] =
+	// 		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+	// 	let validator_0_location = MultiLocation {
+	// 		parents: 1,
+	// 		interior: X2(
+	// 			Parachain(2023),
+	// 			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+	// 		),
+	// 	};
+	// 	moonriver_setup::<T>()?;
+	// 	assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+	// 	assert_ok!(Slp::<T>::bond(
+	// 		RawOrigin::Signed(who.clone()).into(),
+	// 		KSM,
+	// 		Box::new(subaccount_0_location.clone()),
+	// 		BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
+	// 		Some(validator_0_location.clone()),
+	// 	));
+	// 		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	// let validator_0: AccountId =
+	// 	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
+	// 		.into();
+	//
+	// // JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
+	// let validator_1: AccountId =
+	// 	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
+	// 		.into();
+	// 	let mut targets = vec![];
+	//
+	// 	let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+	// 	let validator_0_location: MultiLocation =
+	// 		Slp::account_32_to_parent_location(validator_0_32).unwrap();
+	// 	targets.push(validator_0_location.clone());
+	//
+	// 	let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
+	// 	let validator_1_location: MultiLocation =
+	// 		Slp::account_32_to_parent_location(validator_1_32).unwrap();
+	// 	targets.push(validator_1_location.clone());
+	//
+	// 	assert_ok!(Slp::<T>::delegate (
+	// 		RawOrigin::Signed(who.clone()).into(),
+	// 		KSM,
+	// 		Box::new(subaccount_0_location.clone()),
+	// 		targets.clone()
+	// 	));
+	//
+	// 	let call = Call::<T>::undelegate {
+	// 		currency_id:KSM,
+	// 		who:Box::new(subaccount_0_location.clone()),
+	// 		targets:vec![validator_0_location.clone()],
+	// 	};
+	//   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+
+	// g
+
+
 }
 //Todo:
 // 	fn chill() -> Weight;
@@ -865,6 +994,4 @@ set_ongoing_time_unit_update_interval {
 // 	fn supplement_fee_reserve() -> Weight;
 // 	fn confirm_validators_by_delegator_query_response() -> Weight;
 // 	fn fail_validators_by_delegator_query_response() -> Weight;
-// 	fn unbond() -> Weight;
-// 	fn unbond_all() -> Weight;
 // 	fn undelegate() -> Weight;
