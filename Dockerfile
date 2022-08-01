@@ -17,7 +17,7 @@
 # syntax=docker/dockerfile:1
 FROM rust:buster as builder
 
-RUN apt-get update && apt-get install time clang libclang-dev llvm -y
+RUN apt-get update && apt-get install time cmake clang libclang-dev llvm -y
 RUN rustup toolchain install nightly-2022-05-11
 RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2022-05-11
 

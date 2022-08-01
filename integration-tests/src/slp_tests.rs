@@ -302,7 +302,7 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 		//  entrance_account get the cross-transferred 2 dollar KSM minus transaction fee.
 		assert_eq!(
 			Tokens::free_balance(RelayCurrencyId::get(), &entrance_account_32.into()),
-			1999907304000
+			1999906760000
 		);
 	});
 }
@@ -982,7 +982,7 @@ fn transfer_back_works() {
 	});
 
 	Bifrost::execute_with(|| {
-		assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 499907304000);
+		assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 499906760000);
 	});
 }
 
