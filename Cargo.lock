@@ -960,6 +960,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm-interface",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -5348,7 +5349,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.50"
+version = "0.9.52"
 dependencies = [
  "clap",
  "cumulus-client-cli",
