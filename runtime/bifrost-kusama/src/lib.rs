@@ -2152,6 +2152,8 @@ mod benches {
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
 		[bifrost_system_staking, SystemStaking]
+		[bifrost_vstoken_conversion, VstokenConversion]
+		[bifrost_slp, Slp]
 	);
 }
 

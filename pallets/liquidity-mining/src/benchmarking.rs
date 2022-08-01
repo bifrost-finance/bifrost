@@ -54,10 +54,10 @@ benchmarks_instance_pallet! {
 	charge {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -81,10 +81,10 @@ assert_ok!(
 	deposit {
 				let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -116,10 +116,10 @@ assert_ok!(
 	redeem {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -162,10 +162,10 @@ assert_ok!(
 	redeem_all {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -208,10 +208,10 @@ assert_ok!(
 	volunteer_to_redeem {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -256,10 +256,10 @@ assert_ok!(
 	claim {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -296,10 +296,10 @@ assert_ok!(
 	unlock {
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -348,10 +348,10 @@ assert_ok!(
 	cancel_unlock{
 		let caller: T::AccountId = whitelisted_caller();
 assert_ok!(
-            LM::<T, I>::lazy_migration_v2_0_0(
-                RawOrigin::Signed(caller.clone()).into(),
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
 			200)
-        );
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();

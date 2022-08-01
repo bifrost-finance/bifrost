@@ -7,6 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+hex-literal = "0.3.1"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
     "derive",
 ] }
@@ -15,6 +16,8 @@ scale-info = { version = "2.1.2", default-features = false, features = [
 ] }
 serde = { version = "1.0.139", optional = true }
 orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
@@ -34,10 +37,7 @@ xcm-interface = { path = "../xcm-interface", default-features = false }
 
 
 [dev-dependencies]
-hex-literal = "0.3.1"
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
-orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
 
 [features]
 default = ["std"]
@@ -50,6 +50,8 @@ std = [
     "sp-arithmetic/std",
     "serde/std",
     "orml-traits/std",
+    "orml-tokens/std",
+    "orml-currencies/std",
     "node-primitives/std",
     "sp-core/std",
     "sp-io/std",
