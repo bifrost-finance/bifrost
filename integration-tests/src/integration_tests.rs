@@ -26,10 +26,12 @@ use frame_support::{
 use frame_system::RawOrigin;
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
+use sp_runtime::bounded_vec;
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
 };
+
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
 
