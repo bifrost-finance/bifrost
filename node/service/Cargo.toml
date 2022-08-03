@@ -88,7 +88,7 @@ node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
 # RPC related dependencies
-jsonrpsee = { version = "0.14.0", features = ["server"] }
+jsonrpsee = { version = "0.15.1", features = ["server"] }
 
 # zenlink rpc
 zenlink-protocol-runtime-api = "*"
