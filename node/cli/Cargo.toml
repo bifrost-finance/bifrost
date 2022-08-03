@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.9.50"
+version = "0.9.52"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -20,6 +20,7 @@ crate-type = ["cdylib", "rlib"]
 clap = { version = "3.2", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 log = "0.4.17"
+tracing-core = "=0.1.26"
 
 # primitives
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
