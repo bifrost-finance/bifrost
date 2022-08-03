@@ -120,7 +120,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 950,
+	spec_version: 952,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -197,7 +197,7 @@ impl Contains<Call> for CallFilter {
 		}
 
 		// disable transfer
-		let is_transfer = matches!(call, Call::Balances(_));
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
 		if is_transfer {
 			let is_disabled = match *call {
 				// orml-currencies module

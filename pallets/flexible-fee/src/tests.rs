@@ -81,6 +81,32 @@ fn basic_setup() {
 	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
 	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
+	let asset_3_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_3).unwrap();
+	let asset_4_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_4).unwrap();
+
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::root(),
+		asset_0_currency_id,
+		asset_1_currency_id
+	));
+
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::root(),
+		asset_0_currency_id,
+		asset_2_currency_id
+	));
+
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::root(),
+		asset_0_currency_id,
+		asset_3_currency_id
+	));
+
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::root(),
+		asset_0_currency_id,
+		asset_4_currency_id
+	));
 
 	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
@@ -108,6 +134,34 @@ fn basic_setup() {
 		1,
 		deadline
 	));
+
+	// pool 0 3
+	deadline = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	assert_ok!(ZenlinkProtocol::add_liquidity(
+		Origin::signed(DICK),
+		asset_0_currency_id,
+		asset_3_currency_id,
+		1000,
+		1000,
+		1,
+		1,
+		deadline
+	));
+
+	// pool 0 4
+	deadline = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	assert_ok!(ZenlinkProtocol::add_liquidity(
+		Origin::signed(DICK),
+		asset_0_currency_id,
+		asset_4_currency_id,
+		1000,
+		1000,
+		1,
+		1,
+		deadline
+	));
 }
 
 #[test]
@@ -122,11 +176,11 @@ fn set_user_fee_charge_order_should_work() {
 		));
 
 		asset_order_list_vec.insert(0, CURRENCY_ID_0);
-		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE), asset_order_list_vec);
+		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE), Some(asset_order_list_vec));
 
 		assert_ok!(FlexibleFee::set_user_fee_charge_order(origin_signed_alice, None));
 
-		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE).is_empty(), true);
+		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE).is_none(), true);
 	});
 }
 
@@ -137,9 +191,8 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		let mut asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 
-		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
+		let default_order_list: Vec<CurrencyId> =
+			vec![CurrencyId::Native(TokenSymbol::ASG), CurrencyId::Token(TokenSymbol::KSM)];
 
 		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), default_order_list);
 
@@ -158,7 +211,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 // fixed.
 
 #[test]
-#[ignore]
+// #[ignore]
 fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -180,6 +233,16 @@ fn ensure_can_charge_fee_should_work() {
 		let _ = FlexibleFee::set_user_fee_charge_order(
 			origin_signed_bob.clone(),
 			Some(asset_order_list_vec.clone()),
+		);
+
+		let _ = FlexibleFee::set_user_fee_charge_order(
+			Origin::signed(ALICE),
+			Some(default_order_list.clone()),
+		);
+
+		let _ = FlexibleFee::set_user_fee_charge_order(
+			Origin::signed(CHARLIE),
+			Some(default_order_list.clone()),
 		);
 
 		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
@@ -207,7 +270,7 @@ fn ensure_can_charge_fee_should_work() {
 }
 
 #[test]
-#[ignore]
+// #[ignore]
 fn withdraw_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -232,7 +295,7 @@ fn withdraw_fee_should_work() {
 }
 
 #[test]
-#[ignore]
+// #[ignore]
 fn correct_and_deposit_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -271,7 +334,7 @@ fn correct_and_deposit_fee_should_work() {
 }
 
 #[test]
-// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+#[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
 fn ensure_can_charge_fee_v2_should_work() {
 	new_test_ext().execute_with(|| {
 		// Deposit 500 DOT and none of native token to Alice's account
@@ -343,7 +406,7 @@ fn ensure_can_charge_fee_v2_should_work() {
 }
 
 #[test]
-// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+#[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
 fn withdraw_fee_should_work_v2() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &CHARLIE, 108));
@@ -383,7 +446,7 @@ fn withdraw_fee_should_work_v2() {
 }
 
 #[test]
-// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+#[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
 fn correct_and_deposit_fee_should_work_v2() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));

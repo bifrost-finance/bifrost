@@ -5,7 +5,7 @@ authors = ["Kadokura <ymlll0508@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.124", features = ["derive"] }
+serde = { version = "1.0.140", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }

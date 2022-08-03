@@ -69,6 +69,7 @@ use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+#[allow(unused_imports)]
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -141,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 948,
+	spec_version: 952,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -306,6 +307,7 @@ parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 impl frame_system::Config for Runtime {
@@ -991,9 +993,9 @@ impl parachain_staking::Config for Runtime {
 	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
+	type OnCollatorPayout = ();
+	type OnNewRound = ();
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
-	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1405,6 +1407,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account_truncating(
 				&SystemStakingPalletId::get(),
 			)
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 			.eq(a)
 	}
 }
@@ -1522,7 +1525,6 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
-	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 pub type MiscFeeHandlers = (
@@ -1533,8 +1535,7 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	// type FeeDealer = FlexibleFee;
-	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1545,7 +1546,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
-	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {
@@ -1617,6 +1617,9 @@ impl bifrost_salp::Config for Runtime {
 	type EnsureConfirmAsGovernance =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
@@ -1808,6 +1811,8 @@ impl bifrost_slp::Config for Runtime {
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	// type RelayCurrencyId = RelayCurrencyId;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;

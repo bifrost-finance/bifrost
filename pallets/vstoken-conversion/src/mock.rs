@@ -160,11 +160,13 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
 	type TreasuryAccount = TreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VsbondAccount = BifrostVsbondAccount;

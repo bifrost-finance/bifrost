@@ -21,23 +21,27 @@
 #![cfg(test)]
 
 use frame_support::{
-	construct_runtime,
-	dispatch::DispatchError,
-	parameter_types,
+	construct_runtime, parameter_types,
+	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
+	sp_std::marker::PhantomData,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
 	weights::Weight,
 	PalletId,
 };
 use frame_system::RawOrigin;
 use node_primitives::{Amount, Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
+use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 };
 use xcm_interface::traits::XcmHelper;
+use zenlink_protocol::{
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMultiAssets,
+};
 
 use crate as salp;
 use crate::WeightInfo;
@@ -62,6 +66,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -180,6 +185,87 @@ impl orml_currencies::Config for Test {
 }
 
 parameter_types! {
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+	pub const SelfParaId: u32 = 2001;
+}
+
+impl zenlink_protocol::Config for Test {
+	type Event = Event;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	type SelfParaId = SelfParaId;
+
+	type TargetChains = ();
+	type XcmExecutor = ();
+	type Conversion = ();
+	type WeightInfo = ();
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+{
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
+		let rs: Result<CurrencyId, _> = asset_id.try_into();
+		match rs {
+			Ok(_) => true,
+			Err(_) => false,
+		}
+	}
+
+	fn local_transfer(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount);
+	}
+
+	fn local_withdraw(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
+pub const TREASURY_ACCOUNT: AccountId = AccountId::new([9u8; 32]);
+
+parameter_types! {
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
@@ -193,6 +279,8 @@ parameter_types! {
 		BRUCE,
 		CATHI
 	],2);
+	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 pub struct EnsureConfirmAsGovernance;
@@ -246,6 +334,9 @@ impl salp::Config for Test {
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
 	type WeightInfo = SalpWeightInfo;
 	type XcmInterface = MockXcmExecutor;
+	type TreasuryAccount = TreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 }
 
 pub struct SalpWeightInfo;
@@ -282,6 +373,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		balances: vec![
 			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
 			(ALICE, RelayCurrencyId::get(), INIT_BALANCE),
+			(ALICE, CurrencyId::VSToken(TokenSymbol::KSM), INIT_BALANCE),
 			(BRUCE, NativeCurrencyId::get(), INIT_BALANCE),
 			(BRUCE, RelayCurrencyId::get(), INIT_BALANCE),
 			(CATHI, NativeCurrencyId::get(), INIT_BALANCE),
