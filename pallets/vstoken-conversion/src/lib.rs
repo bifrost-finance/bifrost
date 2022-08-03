@@ -29,7 +29,6 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-mod migration;
 pub mod primitives;
 pub mod weights;
 
@@ -145,10 +144,6 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn kusama_lease)]
-	pub type KusamaLease<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn relaychain_lease)]
 	pub type RelaychainLease<T: Config> = StorageValue<_, u32, ValueQuery>;
 
@@ -164,14 +159,7 @@ pub mod pallet {
 		StorageValue<_, VstokenConversionExchangeFee<BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_runtime_upgrade() -> Weight {
-			migration::update_relaychain_lease::<T>();
-			migration::update_exchange_rate::<T>();
-			migration::update_exchange_fee::<T>();
-			T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
-		}
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
