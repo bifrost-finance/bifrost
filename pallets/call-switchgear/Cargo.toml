@@ -34,6 +34,7 @@ std = [
 	"frame-system/std",
 	"sp-io/std",
 	"sp-std/std",
+	"scale-info/std",
 	"node-primitives/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

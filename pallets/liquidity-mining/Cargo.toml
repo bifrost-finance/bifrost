@@ -27,6 +27,7 @@ orml-currencies = "0.4.1-dev"
 [features]
 default = ["std"]
 std = [
+    "frame-benchmarking/std",
     "codec/std",
     "scale-info/std",
     "frame-system/std",
@@ -34,7 +35,7 @@ std = [
     "node-primitives/std",
     "orml-traits/std",
     "log/std",
-    "serde",
+    "serde/std",
 ]
 
 runtime-benchmarks = [

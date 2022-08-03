@@ -6761,7 +6761,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.1"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=6392918cc6bd10b6cc17201e1417f11cf4b9be84#6392918cc6bd10b6cc17201e1417f11cf4b9be84"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=99d44ebb817d4c7d2ee9ca3b4b4ee1988974d3cc#99d44ebb817d4c7d2ee9ca3b4b4ee1988974d3cc"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11504,6 +11504,7 @@ source = "git+https://github.com/encointer/substrate-fixed#a4fb461aae6205ffc55be
 dependencies = [
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "typenum 1.16.0",
 ]
 

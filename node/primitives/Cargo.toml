@@ -23,7 +23,7 @@ std = [
 	"frame-system/std",
 	"frame-support/std",
 	"scale-info/std",
-	"serde",
+	"serde/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
