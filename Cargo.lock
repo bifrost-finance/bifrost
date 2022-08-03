@@ -767,6 +767,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -801,6 +802,10 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-farming",
+ "bifrost-farming-rpc-runtime-api",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
@@ -820,6 +825,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "merkle-distributor",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -876,6 +882,8 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "xcm-interface",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -1087,6 +1095,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -5349,7 +5358,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.52"
+version = "0.9.54"
 dependencies = [
  "clap",
  "cumulus-client-cli",

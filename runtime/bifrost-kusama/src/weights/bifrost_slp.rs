@@ -90,12 +90,6 @@ pub trait WeightInfo {
 	fn unbond() -> Weight;
 	fn unbond_all() -> Weight;
 	fn undelegate() -> Weight;
-	fn chill() -> Weight;
-	fn transfer_to() -> Weight;
-	fn supplement_fee_reserve() -> Weight;
-	fn confirm_validators_by_delegator_query_response() -> Weight;
-	fn fail_validators_by_delegator_query_response() -> Weight;
-
 }
 
 /// Weights for bifrost_slp using the Bifrost node and recommended hardware.
@@ -475,31 +469,6 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(12 as Weight))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
-	fn chill() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn transfer_to() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn supplement_fee_reserve() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn confirm_validators_by_delegator_query_response() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn fail_validators_by_delegator_query_response() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
 }
 
 // For backwards compatibility and tests
@@ -874,32 +843,6 @@ impl WeightInfo for () {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn undelegate() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-
-	fn chill() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn transfer_to() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn supplement_fee_reserve() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn confirm_validators_by_delegator_query_response() -> Weight {
-		(307_359_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
-	}
-	fn fail_validators_by_delegator_query_response() -> Weight {
 		(307_359_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(5 as Weight))

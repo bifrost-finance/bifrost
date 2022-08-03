@@ -32,6 +32,7 @@ mod benchmarking;
 pub mod gauge;
 pub mod rewards;
 pub mod weights;
+pub use weights::WeightInfo;
 
 use frame_support::{
 	pallet_prelude::*,
@@ -50,7 +51,6 @@ pub use rewards::*;
 // use sp_arithmetic::per_things::Percent;
 use sp_runtime::SaturatedConversion;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-pub use weights::WeightInfo;
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
