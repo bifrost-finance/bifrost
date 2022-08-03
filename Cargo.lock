@@ -767,6 +767,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -801,6 +802,10 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-farming",
+ "bifrost-farming-rpc-runtime-api",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
@@ -820,6 +825,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "merkle-distributor",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -876,6 +882,8 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "xcm-interface",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -1087,6 +1095,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -5349,7 +5358,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.52"
+version = "0.9.54"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -6761,7 +6770,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.1"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=6392918cc6bd10b6cc17201e1417f11cf4b9be84#6392918cc6bd10b6cc17201e1417f11cf4b9be84"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=99d44ebb817d4c7d2ee9ca3b4b4ee1988974d3cc#99d44ebb817d4c7d2ee9ca3b4b4ee1988974d3cc"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11504,6 +11513,7 @@ source = "git+https://github.com/encointer/substrate-fixed#a4fb461aae6205ffc55be
 dependencies = [
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "typenum 1.16.0",
 ]
 

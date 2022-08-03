@@ -56,7 +56,7 @@ mod tests;
 pub mod migration;
 pub mod weights;
 
-pub use weights::*;
+pub use weights::WeightInfo;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 pub struct PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>

@@ -31,6 +31,7 @@ mod benchmarking;
 
 pub mod traits;
 pub mod weights;
+pub use weights::WeightInfo;
 
 use frame_support::{
 	pallet_prelude::*,
@@ -49,7 +50,6 @@ pub use pallet::*;
 use sp_core::U256;
 use sp_std::vec::Vec;
 pub use traits::*;
-pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;

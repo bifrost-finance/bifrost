@@ -50,9 +50,14 @@ fn run_to_block<T: Config<I>, I: 'static>(n: BlockNumberFor<T>) {
 }
 
 benchmarks_instance_pallet! {
+
 	charge {
 		let caller: T::AccountId = whitelisted_caller();
-
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -74,6 +79,12 @@ benchmarks_instance_pallet! {
 	}: _(RawOrigin::Signed(caller.clone()), 0)
 
 	deposit {
+				let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -103,6 +114,12 @@ benchmarks_instance_pallet! {
 	}: _(RawOrigin::Signed(caller.clone()), 0, T::MinimumDepositOfUser::get())
 
 	redeem {
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -143,6 +160,12 @@ benchmarks_instance_pallet! {
 	}
 
 	redeem_all {
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -183,6 +206,12 @@ benchmarks_instance_pallet! {
 	}
 
 	volunteer_to_redeem {
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -225,6 +254,12 @@ benchmarks_instance_pallet! {
 	}
 
 	claim {
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -259,6 +294,12 @@ benchmarks_instance_pallet! {
 	}: _(RawOrigin::Signed(caller.clone()), 0)
 
 	unlock {
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();
@@ -305,6 +346,12 @@ benchmarks_instance_pallet! {
 	}
 
 	cancel_unlock{
+		let caller: T::AccountId = whitelisted_caller();
+assert_ok!(
+			LM::<T, I>::lazy_migration_v2_0_0(
+				RawOrigin::Signed(caller.clone()).into(),
+			200)
+		);
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
 		let amount: BalanceOf<T,I> = UNIT.saturated_into();

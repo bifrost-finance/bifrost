@@ -297,7 +297,7 @@ impl ExtBuilder {
 		use frame_benchmarking::whitelisted_caller;
 		use sp_runtime::traits::AccountIdConversion;
 		let whitelist_caller: AccountId = whitelisted_caller();
-		let pool_account: AccountId = LighteningRedeemPalletId::get().into_account_truncating();
+		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
