@@ -1253,10 +1253,8 @@ impl Contains<Call> for AggregateExtraFeeFilter {
 
 pub struct ContributeFeeFilter;
 impl Contains<Call> for ContributeFeeFilter {
-	fn contains(c: &Call) -> bool {
-		match *c {
-			_ => false,
-		}
+	fn contains(_c: &Call) -> bool {
+		false
 	}
 }
 
@@ -1296,7 +1294,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
-	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
