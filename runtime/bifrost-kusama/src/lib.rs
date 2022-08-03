@@ -1793,8 +1793,7 @@ impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	// type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
@@ -2152,7 +2151,6 @@ mod benches {
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
 		[bifrost_system_staking, SystemStaking]
-		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slp, Slp]
 	);
 }
