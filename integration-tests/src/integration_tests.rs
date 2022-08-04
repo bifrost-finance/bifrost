@@ -26,7 +26,6 @@ use frame_support::{
 use frame_system::RawOrigin;
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
-use sp_runtime::bounded_vec;
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
