@@ -18,7 +18,11 @@
 
 #![cfg(test)]
 #[cfg(feature = "with-bifrost-kusama-runtime")]
-mod general_key_tests;
+mod asset_registry;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+mod flexible_fee;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+mod general_key;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod integration_tests;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
@@ -28,7 +32,9 @@ mod kusama_cross_chain_transfer;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_test_net;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
-mod slp_tests;
+mod salp;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+mod slp;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod statemine;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
