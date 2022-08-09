@@ -108,4 +108,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "99d44ebb817d4c7d2ee9ca3b4b4ee1988974d3cc" }
+parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "bf8cbe319442ce967b1911f0641a13eca69d5b78" }
