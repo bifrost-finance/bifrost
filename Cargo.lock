@@ -767,6 +767,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -801,6 +802,10 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-farming",
+ "bifrost-farming-rpc-runtime-api",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
@@ -820,6 +825,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "merkle-distributor",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -876,6 +882,8 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "xcm-interface",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -960,6 +968,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm-interface",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -1086,6 +1095,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -5348,7 +5358,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.50"
+version = "0.9.54"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -5372,6 +5382,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "substrate-build-script-utils",
+ "tracing-core",
  "try-runtime-cli",
 ]
 
@@ -6759,12 +6770,11 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.1"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=66bb16b59b7f3580766ddaabe1c3592e38d38850#66bb16b59b7f3580766ddaabe1c3592e38d38850"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=bf8cbe319442ce967b1911f0641a13eca69d5b78#bf8cbe319442ce967b1911f0641a13eca69d5b78"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex-literal",
  "log",
  "pallet-authorship",
  "pallet-session",
@@ -10311,18 +10321,18 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.139"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0171ebb889e45aa68b44aee0859b3eede84c6f5f5c228e6f140c0b2a0a46cad6"
+checksum = "fc855a42c7967b7c369eb5860f7164ef1f6f81c20c7cc1141f2a604e18723b03"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.139"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc1d3230c1de7932af58ad8ffbe1d784bd55efd5a9d84ac24f69c72d83543dfb"
+checksum = "6f2122636b9fe3b81f1cb25099fcf2d3f542cdb1d45940d56c713158884a05da"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11503,6 +11513,7 @@ source = "git+https://github.com/encointer/substrate-fixed#a4fb461aae6205ffc55be
 dependencies = [
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "typenum 1.16.0",
 ]
 
@@ -11868,9 +11879,9 @@ checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
 
 [[package]]
 name = "tracing"
-version = "0.1.35"
+version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a400e31aa60b9d44a52a8ee0343b5b18566b03a8321e0d321f695cf56e940160"
+checksum = "5d0ecdcb44a79f0fe9844f0c4f33a342cbcbb5117de8001e6ba0dc2351327d09"
 dependencies = [
  "cfg-if 1.0.0",
  "pin-project-lite 0.2.9",
@@ -11891,11 +11902,11 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.28"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b7358be39f2f274f322d2aaed611acc57f382e8eb1e5b48cb9ae30933495ce7"
+checksum = "f54c8ca710e81886d498c2fd3331b56c93aa248d49de2222ad2742247c60072f"
 dependencies = [
- "once_cell",
+ "lazy_static",
  "valuable",
 ]
 

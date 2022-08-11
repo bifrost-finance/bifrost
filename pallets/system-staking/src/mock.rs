@@ -305,7 +305,7 @@ impl system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
-	type WeightInfo = system_staking::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = system_staking::weights::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = TreasuryAccount;

@@ -43,19 +43,17 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
-use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, ConvertInto, Get},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, SaturatedConversion,
 };
-pub use sp_runtime::{Perbill, Permill};
-use sp_std::prelude::*;
+use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -63,6 +61,10 @@ use sp_version::RuntimeVersion;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_flexible_fee::{
+	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
+};
 use bifrost_runtime_common::{
 	cent, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
 	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
@@ -70,7 +72,10 @@ use bifrost_runtime_common::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{Currency, EitherOfDiverse};
+use frame_support::{
+	sp_runtime::traits::Convert,
+	traits::{EitherOfDiverse, Get},
+};
 use frame_system::EnsureRoot;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
@@ -85,6 +90,7 @@ use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
+use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -97,7 +103,11 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
-
+// zenlink imports
+use zenlink_protocol::{
+	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler,
+	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
+};
 // Weights used in the runtime.
 mod weights;
 
@@ -120,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 950,
+	spec_version: 954,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -197,7 +207,7 @@ impl Contains<Call> for CallFilter {
 		}
 
 		// disable transfer
-		let is_transfer = matches!(call, Call::Balances(_));
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
 		if is_transfer {
 			let is_disabled = match *call {
 				// orml-currencies module
@@ -269,6 +279,9 @@ parameter_types! {
 
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 }
 
 impl frame_system::Config for Runtime {
@@ -791,28 +804,11 @@ impl pallet_tips::Config for Runtime {
 	type WeightInfo = ();
 }
 
-// 100% percent of fees and tips are deposited to treasury.
-type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-pub struct DealWithFees;
-impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-		if let Some(fees) = fees_then_tips.next() {
-			let total_balance;
-			if let Some(tips) = fees_then_tips.next() {
-				total_balance = tips.merge(fees);
-			} else {
-				total_balance = fees;
-			}
-			Treasury::on_unbalanced(total_balance);
-		}
-	}
-}
-
 impl pallet_transaction_payment::Config for Runtime {
 	type Event = Event;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
+	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = IdentityFee<Balance>;
 }
@@ -951,6 +947,22 @@ parameter_types! {
 		// BNC:DOT = 80:1
 		dot_per_second() * 80
 	);
+	pub ZlkPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+		).into(),
+		// ZLK:KSM = 150:1
+		dot_per_second() * 150 * 1_000_000
+	);
+	pub ZlkNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+		).into(),
+		// ZLK:KSM = 150:1
+		dot_per_second() * 150 * 1_000_000
+	);
 }
 
 pub struct ToTreasury;
@@ -970,6 +982,8 @@ pub type Trader = (
 	FixedRateOfFungible<DotPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
+	FixedRateOfFungible<ZlkPerSecond, ToTreasury>,
+	FixedRateOfFungible<ZlkNewPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1132,6 +1146,7 @@ parameter_type_with_key! {
 			&CurrencyId::VToken(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::Token(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1145,7 +1160,9 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a)
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
+			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1211,6 +1228,77 @@ impl orml_xcm::Config for Runtime {
 
 // Bifrost modules start
 
+// Aggregate name getter to get fee names if the call needs to pay extra fees.
+// If any call need to pay extra fees, it should be added as an item here.
+// Used together with AggregateExtraFeeFilter below.
+pub struct FeeNameGetter;
+impl NameGetter<Call> for FeeNameGetter {
+	fn get_name(c: &Call) -> ExtraFeeName {
+		match *c {
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) =>
+				ExtraFeeName::StatemineTransfer,
+			_ => ExtraFeeName::NoExtraFee,
+		}
+	}
+}
+
+// Aggregate filter to filter if the call needs to pay extra fees
+// If any call need to pay extra fees, it should be added as an item here.
+pub struct AggregateExtraFeeFilter;
+impl Contains<Call> for AggregateExtraFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) => true,
+			_ => false,
+		}
+	}
+}
+
+pub struct ContributeFeeFilter;
+impl Contains<Call> for ContributeFeeFilter {
+	fn contains(_c: &Call) -> bool {
+		false
+	}
+}
+
+pub struct StatemineTransferFeeFilter;
+impl Contains<Call> for StatemineTransferFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) => true,
+			_ => false,
+		}
+	}
+}
+
+parameter_types! {
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+	pub UmpContributeFee: Balance = UmpTransactFee::get();
+	pub const MaximumAssetsInOrder: u8 = 20;
+}
+
+pub type MiscFeeHandlers = (
+	MiscFeeHandler<Runtime, RelayCurrencyId, UmpContributeFee, ContributeFeeFilter>,
+	MiscFeeHandler<Runtime, RelayCurrencyId, StatemineTransferFee, StatemineTransferFeeFilter>,
+);
+
+impl bifrost_flexible_fee::Config for Runtime {
+	type Currency = Balances;
+	type DexOperator = ZenlinkProtocol;
+	// type FeeDealer = FlexibleFee;
+	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type NativeCurrencyId = NativeCurrencyId;
+	type AlternativeFeeCurrencyId = RelayCurrencyId;
+	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type OnUnbalanced = Treasury;
+	type WeightInfo = ();
+	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
+	type MiscFeeHandler = MiscFeeHandlers;
+}
+
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1245,6 +1333,134 @@ impl xcm_interface::Config for Runtime {
 	type ContributionWeight = ContributionWeight;
 	type ContributionFee = UmpTransactFee;
 }
+
+impl bifrost_farming::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const StringLimit: u32 = 50;
+}
+
+impl merkle_distributor::Config for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type Balance = Balance;
+	type MerkleDistributorId = u32;
+	type PalletId = MerkleDirtributorPalletId;
+	type StringLimit = StringLimit;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+
+	// xcm
+	pub const AnyNetwork: NetworkId = NetworkId::Any;
+	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+		// Bifrost local and live, 0.01 BNC
+		(make_x2_location(2001), 10_000_000_000),
+		// Phala local and live, 1 PHA
+		(make_x2_location(2004), 1_000_000_000_000),
+		// Plasm local and live, 0.0000000000001 SDN
+		(make_x2_location(2007), 1_000_000),
+		// Sherpax live, 0 KSX
+		(make_x2_location(2013), 0),
+
+		// Zenlink local 1 for test
+		(make_x2_location(200), 1_000_000),
+		// Zenlink local 2 for test
+		(make_x2_location(300), 1_000_000),
+	];
+}
+
+impl zenlink_protocol::Config for Runtime {
+	type Conversion = ZenlinkLocationToAccountId;
+	type Event = Event;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	type SelfParaId = SelfParaId;
+	type TargetChains = ZenlinkRegistedParaChains;
+	type XcmExecutor = ();
+	type WeightInfo = ();
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+pub type ZenlinkLocationToAccountId = (
+	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+	AccountId32Aliases<AnyNetwork, AccountId>,
+);
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+{
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
+		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
+		match currency_id {
+			Ok(_) => true,
+			Err(_) => false,
+		}
+	}
+
+	fn local_transfer(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount);
+	}
+
+	fn local_withdraw(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
+// zenlink runtime end
 
 construct_runtime! {
 	pub enum Runtime where
@@ -1307,11 +1523,15 @@ construct_runtime! {
 		Currencies: orml_currencies::{Pallet, Call} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
+		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Bifrost modules
+		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
+		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 	}
 }
 
@@ -1476,6 +1696,82 @@ impl_runtime_apis! {
 
 		fn authorities() -> Vec<AuraId> {
 			Aura::authorities().into_inner()
+		}
+	}
+
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+			}
+		}
+	}
+
+	// zenlink runtime outer apis
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+
+		fn get_balance(
+			asset_id: ZenlinkAssetId,
+			owner: AccountId
+		) -> AssetBalance {
+			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
+		}
+
+		fn get_sovereigns_info(
+			asset_id: ZenlinkAssetId
+		) -> Vec<(u32, AccountId, AssetBalance)> {
+			ZenlinkProtocol::get_sovereigns_info(&asset_id)
+		}
+
+		fn get_pair_by_asset_id(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId
+		) -> Option<PairInfo<AccountId, AssetBalance>> {
+			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+
+		fn get_amount_in_price(
+			supply: AssetBalance,
+			path: Vec<ZenlinkAssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::desired_in_amount(supply, path)
+		}
+
+		fn get_amount_out_price(
+			supply: AssetBalance,
+			path: Vec<ZenlinkAssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::supply_out_amount(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: ZenlinkAssetId,
+			token_1: ZenlinkAssetId,
+			amount_0_desired: AssetBalance,
+			amount_1_desired: AssetBalance,
+			amount_0_min: AssetBalance,
+			amount_1_min: AssetBalance,
+		) -> AssetBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min
+			)
+		}
+	}
+
+	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
 

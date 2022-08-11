@@ -21,4 +21,3 @@ reorder_impl_items = false
 spaces_around_ranges = false
 trailing_comma = "Vertical"
 use_field_init_shorthand = true
-license_template_path = "HEADER-GPL3"

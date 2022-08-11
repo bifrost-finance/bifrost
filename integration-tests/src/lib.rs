@@ -18,6 +18,8 @@
 
 #![cfg(test)]
 #[cfg(feature = "with-bifrost-kusama-runtime")]
+mod general_key_tests;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod integration_tests;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_cross_chain_transact;

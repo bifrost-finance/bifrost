@@ -114,6 +114,9 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -122,6 +125,10 @@ where
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
+	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)
 }

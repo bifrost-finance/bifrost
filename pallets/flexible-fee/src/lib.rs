@@ -36,7 +36,7 @@ pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_runtime::{
-	traits::{CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
+	traits::{CheckedAdd, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
 };
 use sp_std::{vec, vec::Vec};
@@ -54,7 +54,7 @@ pub mod fee_dealer;
 pub mod misc_fees;
 mod mock;
 mod tests;
-mod weights;
+pub mod weights;
 
 const MAX_ORDER_LIST_LEN: u32 = 20;
 
@@ -103,9 +103,6 @@ pub mod pallet {
 		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
-
-		#[pallet::constant]
-		type MaximumAssetsInOrder: Get<u8>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -130,20 +127,15 @@ pub mod pallet {
 		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
 
-	#[pallet::type_value]
-	pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
-		[T::NativeCurrencyId::get(), CurrencyId::Token(TokenSymbol::KSM)].to_vec()
-	}
-
 	#[pallet::storage]
 	#[pallet::getter(fn user_fee_charge_order_list)]
 	pub type UserFeeChargeOrderList<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, ValueQuery>;
+		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn default_fee_charge_order_list)]
 	pub type DefaultFeeChargeOrderList<T: Config> =
-		StorageValue<_, Vec<CurrencyIdOf<T>>, ValueQuery, DefaultFeeChargeOrder<T>>;
+		StorageValue<_, Vec<CurrencyIdOf<T>>, OptionQuery>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -154,7 +146,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		NotEnoughBalance,
 		ExceedMaxListLength,
-		ExceedMaximumAssets,
+		Overflow,
+		ConversionError,
 	}
 
 	#[pallet::call]
@@ -169,10 +162,6 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			if let Some(mut asset_order_list) = asset_order_list_vec {
-				ensure!(
-					(asset_order_list.len() as u8) <= T::MaximumAssetsInOrder::get(),
-					Error::<T>::ExceedMaximumAssets
-				);
 				ensure!(
 					(asset_order_list.len()) as u32 <= MAX_ORDER_LIST_LEN,
 					Error::<T>::ExceedMaxListLength
@@ -193,10 +182,11 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// Get user fee charge assets order
 	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyIdOf<T>> {
-		let mut charge_order_list = UserFeeChargeOrderList::<T>::get(&account_id);
-		if charge_order_list.is_empty() {
-			charge_order_list = DefaultFeeChargeOrderList::<T>::get();
-		}
+		let default_charge_order_list = DefaultFeeChargeOrderList::<T>::get()
+			.unwrap_or(vec![T::NativeCurrencyId::get(), CurrencyId::Token(TokenSymbol::KSM)]);
+		let charge_order_list =
+			UserFeeChargeOrderList::<T>::get(&account_id).unwrap_or(default_charge_order_list);
+
 		charge_order_list
 	}
 }
@@ -329,83 +319,36 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 	fn ensure_can_charge_fee(
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
-		reason: WithdrawReasons,
+		_reason: WithdrawReasons,
 	) -> Result<(bool, PalletBalanceOf<T>), DispatchError> {
-		// get the user defined fee charge order list.
-		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-		let existential_deposit = <<T as Config>::Currency as Currency<
-			<T as frame_system::Config>::AccountId,
-		>>::minimum_balance();
+		let result_option = Self::find_out_fee_currency_and_amount(who, fee)
+			.map_err(|_| DispatchError::Other("Fee calculation Error."))?;
 
-		// charge the fee by the order of the above order list.
-		// first to check whether the user has the asset. If no, pass it. If yes, try to make
-		// transaction in the DEX in exchange for BNC
-		for currency_id in user_fee_charge_order_list {
-			let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			// If it is mainnet currency
-			if currency_id == T::NativeCurrencyId::get() {
-				// check native balance if is enough
-				let native_is_enough = <<T as Config>::Currency as Currency<
-					<T as frame_system::Config>::AccountId,
-				>>::free_balance(who)
-				.checked_sub(&(fee + existential_deposit))
-				.map_or(false, |new_free_balance| {
-					<<T as Config>::Currency as Currency<
-												<T as frame_system::Config>::AccountId,
-											>>::ensure_can_withdraw(
-												who, fee, reason, new_free_balance
-											)
-											.is_ok()
-				});
-
-				if native_is_enough {
-					// native balance is enough, break iteration
-					break;
-				}
-			} else {
-				// If it is other assets
-				let native_balance =
-					T::MultiCurrency::free_balance(T::NativeCurrencyId::get(), who);
-
-				// If native token balance is below existential deposit requirement,
-				// go exchange fee + existential deposit. Else to exchange fee amount.
-				let amount_out: AssetBalance;
-				if native_balance > existential_deposit {
-					amount_out = fee.saturated_into();
-				} else {
-					amount_out = (fee + existential_deposit).saturated_into();
-				}
-
-				let asset_balance = T::MultiCurrency::free_balance(currency_id, who);
+		if let Some((currency_id, amount_in, amount_out)) = result_option {
+			if currency_id != T::NativeCurrencyId::get() {
+				let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 				let asset_id: AssetId = AssetId::try_from(currency_id)
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-
 				let path = vec![asset_id, native_asset_id];
-				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
-				// query for amount in
-				let amounts =
-					T::DexOperator::get_amount_in_by_path(amount_out, &path).map_or(vec![0], |v| v);
-
-				if T::DexOperator::inner_swap_assets_for_exact_assets(
+				T::DexOperator::inner_swap_assets_for_exact_assets(
 					who,
-					amount_out,
-					amount_in_max,
+					amount_out.saturated_into(),
+					amount_in.saturated_into(),
 					&path,
 					who,
-				)
-				.is_ok()
-				{
-					Self::deposit_event(Event::FlexibleFeeExchanged(
-						currency_id,
-						PalletBalanceOf::<T>::saturated_from(amounts[0]),
-					));
-					// successfully swap, break iteration
-					break;
-				}
+				)?;
+
+				Self::deposit_event(Event::FlexibleFeeExchanged(
+					currency_id,
+					PalletBalanceOf::<T>::saturated_from(amount_in),
+				));
 			}
 		}
+
+		// We return false in all kinds of situations for BNC-token zenlink pool exchange mode.
+		// And return true in the KSM alternative fee mode if user's BNC is not enough.
 		Ok((false, fee))
 	}
 
@@ -414,14 +357,27 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
 	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
-		let mut fee_token_id_out: CurrencyIdOf<T> = T::NativeCurrencyId::get();
-		let mut fee_token_amount_out = Zero::zero();
+		let result_option = Self::find_out_fee_currency_and_amount(who, fee)
+			.map_err(|_| DispatchError::Other("Fee calculation Error."))?;
 
+		let (currency_id, amount_in, _amount_out) =
+			result_option.ok_or(DispatchError::Other("Not enough balance for fee."))?;
+
+		Ok((currency_id, amount_in))
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	fn find_out_fee_currency_and_amount(
+		who: &T::AccountId,
+		fee: PalletBalanceOf<T>,
+	) -> Result<Option<(CurrencyIdOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>)>, Error<T>> {
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-		let amount_out: AssetBalance = fee.saturated_into();
-		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
-			.map_err(|_| DispatchError::Other("Conversion Error"))?;
+		let native_balance = T::MultiCurrency::free_balance(T::NativeCurrencyId::get(), who);
+		let existential_deposit = <<T as Config>::Currency as Currency<
+			<T as frame_system::Config>::AccountId,
+		>>::minimum_balance();
 
 		// charge the fee by the order of the above order list.
 		// first to check whether the user has the asset. If no, pass it. If yes, try to make
@@ -430,32 +386,50 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 			// If it is mainnet currency
 			if currency_id == T::NativeCurrencyId::get() {
 				// check native balance if is enough
-				let native_balance = <<T as Config>::Currency as Currency<
-					<T as frame_system::Config>::AccountId,
-				>>::free_balance(who);
-
-				if native_balance >= fee {
-					fee_token_amount_out = fee;
-					break;
+				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee).is_ok() {
+					// make sure the balance greater than existential deposit after fee charge
+					let necessary_balance =
+						fee.checked_add(&existential_deposit).ok_or(Error::<T>::Overflow)?;
+					if native_balance >= necessary_balance {
+						// currency, amount_in, amount_out
+						return Ok(Some((currency_id, fee, fee)));
+					}
 				}
 			} else {
 				// If it is other assets
-				let asset_balance = T::MultiCurrency::total_balance(currency_id, who);
-				let token_asset_id: AssetId = AssetId::try_from(currency_id)
-					.map_err(|_| DispatchError::Other("Conversion Error"))?;
-				let path = vec![native_asset_id, token_asset_id];
+				// If native token balance is below existential deposit requirement,
+				// go exchange fee + existential deposit. Else to exchange fee amount.
+				let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
+					.map_err(|_| Error::<T>::ConversionError)?;
 
-				let amount_vec = T::DexOperator::get_amount_in_by_path(amount_out, &path)?;
-				let amount_in = amount_vec[0];
-				let amount_in_balance = amount_in.saturated_into();
+				let amount_out: AssetBalance = {
+					if native_balance > existential_deposit {
+						fee.saturated_into()
+					} else {
+						(fee + existential_deposit).saturated_into()
+					}
+				};
 
-				if asset_balance >= amount_in_balance {
-					fee_token_id_out = currency_id;
-					fee_token_amount_out = amount_in_balance;
-					break;
+				let asset_id: AssetId =
+					AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
+
+				let path = vec![asset_id, native_asset_id];
+				// see if path exists, if not, continue.
+				// query for amount in
+				if let Ok(amounts) = T::DexOperator::get_amount_in_by_path(amount_out, &path) {
+					// make sure the user has enough free token balance that can be charged.
+					let amount_in = PalletBalanceOf::<T>::saturated_from(amounts[0]);
+					if T::MultiCurrency::ensure_can_withdraw(currency_id, who, amount_in).is_ok() {
+						// currency, amount_in, amount_out
+						return Ok(Some((
+							currency_id,
+							amount_in,
+							PalletBalanceOf::<T>::saturated_from(amount_out),
+						)));
+					}
 				}
 			}
 		}
-		Ok((fee_token_id_out, fee_token_amount_out))
+		Ok(None)
 	}
 }

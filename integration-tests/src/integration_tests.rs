@@ -26,7 +26,6 @@ use frame_support::{
 use frame_system::RawOrigin;
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
-use sp_runtime::bounded_vec;
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},
 	DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
@@ -146,7 +145,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance1> {
-			members: bounded_vec![],
+			members: Default::default(),
 			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
