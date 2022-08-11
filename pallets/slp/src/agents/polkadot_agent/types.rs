@@ -26,6 +26,12 @@ use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 use crate::{BalanceOf, Config};
 
 #[derive(Encode, Decode, RuntimeDebug)]
+pub enum SubstrateCall<T: Config> {
+	Kusama(KusamaCall<T>),
+	Polkadot(PolkadotCall<T>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
 	#[codec(index = 0)]
 	System(SystemCall),
@@ -34,7 +40,21 @@ pub enum KusamaCall<T: Config> {
 	#[codec(index = 6)]
 	Staking(StakingCall<T>),
 	#[codec(index = 24)]
-	Utility(Box<UtilityCall<Self>>),
+	Utility(Box<KusamaUtilityCall<Self>>),
+	#[codec(index = 99)]
+	Xcm(Box<XcmCall>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum PolkadotCall<T: Config> {
+	#[codec(index = 0)]
+	System(SystemCall),
+	#[codec(index = 5)]
+	Balances(BalancesCall<T>),
+	#[codec(index = 7)]
+	Staking(StakingCall<T>),
+	#[codec(index = 26)]
+	Utility(Box<PolkadotUtilityCall<Self>>),
 	#[codec(index = 99)]
 	Xcm(Box<XcmCall>),
 }
@@ -52,7 +72,7 @@ pub enum BalancesCall<T: Config> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum UtilityCall<KusamaCall> {
+pub enum KusamaUtilityCall<KusamaCall> {
 	#[codec(index = 1)]
 	AsDerivative(u16, Box<KusamaCall>),
 	#[codec(index = 2)]
@@ -60,8 +80,16 @@ pub enum UtilityCall<KusamaCall> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum PolkadotUtilityCall<PolkadotCall> {
+	#[codec(index = 1)]
+	AsDerivative(u16, Box<PolkadotCall>),
+	#[codec(index = 2)]
+	BatchAll(Box<Vec<Box<PolkadotCall>>>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum StakingCall<T: Config> {
-	/// Kusama has the same account Id type as Bifrost.
+	/// Kusama/Polkadot has the same account Id type as Bifrost.
 	#[codec(index = 0)]
 	Bond(
 		<T::Lookup as StaticLookup>::Source,

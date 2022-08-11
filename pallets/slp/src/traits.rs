@@ -15,11 +15,12 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
+use xcm::opaque::latest::Instruction;
 
-use crate::{QueryId, Weight, Xcm};
+use crate::{Weight, Xcm};
+use node_primitives::CurrencyId;
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -36,7 +37,7 @@ pub trait StakingAgent<
 >
 {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
+	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<DelegatorId, Error>;
 
 	/// First time bonding some amount to a delegator.
 	fn bond(
@@ -44,6 +45,7 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		amount: Balance,
 		validator: &Option<ValidatorId>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
@@ -52,6 +54,7 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		amount: Balance,
 		validator: &Option<ValidatorId>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
@@ -60,10 +63,11 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		amount: Balance,
 		validator: &Option<ValidatorId>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
-	fn unbond_all(&self, who: &DelegatorId) -> Result<QueryId, Error>;
+	fn unbond_all(&self, who: &DelegatorId, currency_id: CurrencyId) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
 	fn rebond(
@@ -71,19 +75,31 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		amount: Option<Balance>,
 		validator: &Option<ValidatorId>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
-	fn delegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn delegate(
+		&self,
+		who: &DelegatorId,
+		targets: &Vec<ValidatorId>,
+		currency_id: CurrencyId,
+	) -> Result<QueryId, Error>;
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn undelegate(
+		&self,
+		who: &DelegatorId,
+		targets: &Vec<ValidatorId>,
+		currency_id: CurrencyId,
+	) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
 	fn redelegate(
 		&self,
 		who: &DelegatorId,
 		targets: &Option<Vec<ValidatorId>>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
@@ -92,6 +108,7 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		validator: &ValidatorId,
 		when: &Option<TimeUnit>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
 	/// Withdraw the due payout into free balance.
@@ -100,10 +117,11 @@ pub trait StakingAgent<
 		who: &DelegatorId,
 		when: &Option<TimeUnit>,
 		validator: &Option<ValidatorId>,
+		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
-	fn chill(&self, who: &DelegatorId) -> Result<QueryId, Error>;
+	fn chill(&self, who: &DelegatorId, currency_id: CurrencyId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
@@ -111,6 +129,7 @@ pub trait StakingAgent<
 		from: &DelegatorId,
 		to: &DelegatorId,
 		amount: Balance,
+		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
@@ -119,6 +138,7 @@ pub trait StakingAgent<
 		from: &DelegatorId,
 		to: &DelegatorId,
 		amount: Balance,
+		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
 	/// Tune the vtoken exchage rate.
@@ -127,6 +147,7 @@ pub trait StakingAgent<
 		who: &Option<DelegatorId>,
 		token_amount: Balance,
 		vtoken_amount: Balance,
+		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
 	/// ************************************
@@ -139,6 +160,7 @@ pub trait StakingAgent<
 		amount: Balance,
 		from: &GenericAccountId,
 		to: &GenericAccountId,
+		currency_id: CurrencyId,
 	) -> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
@@ -147,25 +169,31 @@ pub trait StakingAgent<
 		amount: Balance,
 		from: &GenericAccountId,
 		to: &GenericAccountId,
+		currency_id: CurrencyId,
 	) -> DispatchResult;
 
 	/// ************************************
 	/// Add a new serving delegator for a particular currency.
 	/// ************************************
-	fn add_delegator(&self, index: u16, who: &DelegatorId) -> DispatchResult;
+	fn add_delegator(
+		&self,
+		index: u16,
+		who: &DelegatorId,
+		currency_id: CurrencyId,
+	) -> DispatchResult;
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_delegator(&self, who: &DelegatorId) -> DispatchResult;
+	fn remove_delegator(&self, who: &DelegatorId, currency_id: CurrencyId) -> DispatchResult;
 
 	/// ************************************
 	/// Abstraction over a validator manager.
 	/// ************************************
 
 	/// Add a new serving validator for a particular currency.
-	fn add_validator(&self, who: &ValidatorId) -> DispatchResult;
+	fn add_validator(&self, who: &ValidatorId, currency_id: CurrencyId) -> DispatchResult;
 
 	/// Remove an existing serving validator for a particular currency.
-	fn remove_validator(&self, who: &ValidatorId) -> DispatchResult;
+	fn remove_validator(&self, who: &ValidatorId, currency_id: CurrencyId) -> DispatchResult;
 
 	/// ************************************
 	/// Abstraction over a QueryResponseChecker.
@@ -176,6 +204,7 @@ pub trait StakingAgent<
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry,
 		manual_mode: bool,
+		currency_id: CurrencyId,
 	) -> Result<bool, Error>;
 
 	fn check_validators_by_delegator_query_response(
@@ -193,20 +222,18 @@ pub trait StakingAgent<
 /// Helper to build xcm message
 //【For xcm v3】
 // pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
-pub trait XcmBuilder<Balance, ChainCallType> {
-	fn construct_xcm_message_with_query_id(
+pub trait XcmBuilder<Balance, ChainCallType, Error> {
+	fn construct_xcm_message(
 		call: ChainCallType,
 		extra_fee: Balance,
 		weight: Weight,
-		query_id: QueryId,
+		currency_id: CurrencyId,
 		// response_back_location: AccountId
-	) -> Xcm<()>;
+	) -> Result<Xcm<()>, Error>;
+}
 
-	fn construct_xcm_message_without_query_id(
-		call: ChainCallType,
-		extra_fee: Balance,
-		weight: Weight,
-	) -> Xcm<()>;
+pub trait InstructionBuilder<ChainCallType> {
+	fn construct_instruction(call: ChainCallType, weight: Weight) -> Instruction;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
