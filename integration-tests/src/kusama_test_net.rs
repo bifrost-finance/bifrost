@@ -48,6 +48,16 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
+	pub struct SalpTest {
+		Runtime = Runtime,
+		Origin = Origin,
+		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
+		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
+		new_ext = para_ext_salp(2001),
+	}
+}
+
+decl_test_parachain! {
 	pub struct Sibling {
 		Runtime = Runtime,
 		Origin = Origin,
@@ -154,6 +164,15 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 			RelayCurrencyId::get(),
 			10 * dollar(RelayCurrencyId::get()),
 		)])
+		.parachain_id(parachain_id)
+		.build()
+}
+pub fn para_ext_salp(parachain_id: u32) -> sp_io::TestExternalities {
+	ExtBuilder::default()
+		.balances(vec![
+			(AccountId::from(ALICE), RelayCurrencyId::get(), 10 * dollar(RelayCurrencyId::get())),
+			(AccountId::from(BOB), RelayCurrencyId::get(), 10 * dollar(RelayCurrencyId::get())),
+		])
 		.parachain_id(parachain_id)
 		.build()
 }
