@@ -276,6 +276,7 @@ create_currency_id! {
 		PHA("Phala Native Token", 12) = 8,
 		RMRK("RMRK Token",10) = 9,
 		MOVR("Moonriver Native Token",18) = 10,
+		GLMR("Moonbeam Native Token",18) = 11,
 	}
 }
 

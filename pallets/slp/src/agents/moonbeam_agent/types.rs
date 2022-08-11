@@ -28,21 +28,21 @@ use xcm::VersionedMultiLocation;
 use crate::{BalanceOf, Config};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonriverCall<T: Config> {
+pub enum MoonbeamCall<T: Config> {
 	#[codec(index = 0)]
 	System(SystemCall),
 	#[codec(index = 10)]
-	Balances(MoonriverBalancesCall<T>),
+	Balances(MoonbeamBalancesCall<T>),
 	#[codec(index = 20)]
-	Staking(MoonriverParachainStakingCall<T>),
+	Staking(MoonbeamParachainStakingCall<T>),
 	#[codec(index = 30)]
-	Utility(Box<MoonriverUtilityCall<Self>>),
+	Utility(Box<MoonbeamUtilityCall<Self>>),
 	#[codec(index = 106)]
-	Xtokens(MoonriverXtokensCall<T>),
+	Xtokens(MoonbeamXtokensCall<T>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonriverBalancesCall<T: Config> {
+pub enum MoonbeamBalancesCall<T: Config> {
 	#[codec(index = 3)]
 	TransferKeepAlive(
 		<IdentityLookup<H160> as StaticLookup>::Source,
@@ -51,15 +51,15 @@ pub enum MoonriverBalancesCall<T: Config> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonriverUtilityCall<MoonriverCall> {
+pub enum MoonbeamUtilityCall<MoonbeamCall> {
 	#[codec(index = 1)]
-	AsDerivative(u16, Box<MoonriverCall>),
+	AsDerivative(u16, Box<MoonbeamCall>),
 	#[codec(index = 2)]
-	BatchAll(Box<Vec<Box<MoonriverCall>>>),
+	BatchAll(Box<Vec<Box<MoonbeamCall>>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonriverParachainStakingCall<T: Config> {
+pub enum MoonbeamParachainStakingCall<T: Config> {
 	#[codec(index = 17)]
 	Delegate(H160, BalanceOf<T>, u32, u32),
 	#[codec(index = 18)]
@@ -81,13 +81,13 @@ pub enum MoonriverParachainStakingCall<T: Config> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonriverXtokensCall<T: Config> {
+pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(MoonriverCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, Weight),
+	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, Weight),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum MoonriverCurrencyId {
+pub enum MoonbeamCurrencyId {
 	// Our native token
 	SelfReserve,
 	// Assets representing other chains native tokens
