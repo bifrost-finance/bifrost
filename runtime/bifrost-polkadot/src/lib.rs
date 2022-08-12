@@ -27,6 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 // A few exports that help ease life for downstream crates.
+use bifrost_slp::QueryResponseManager;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -66,8 +67,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
-	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, micro, milli, millicent, prod_or_test, AuraId, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
@@ -88,6 +90,8 @@ use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, Mu
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
+use bifrost_slp::QueryId;
+use pallet_xcm::QueryStatus;
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
 use sp_runtime::traits::ConvertInto;
@@ -282,6 +286,8 @@ parameter_types! {
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 }
 
 impl frame_system::Config for Runtime {
@@ -1144,9 +1150,10 @@ parameter_type_with_key! {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::VToken(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			&CurrencyId::Token(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1162,7 +1169,12 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
 			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(
+				&SlpEntrancePalletId::get(),
+			)
+			.eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get()).eq(a)
 	}
 }
 
@@ -1342,6 +1354,115 @@ impl bifrost_farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+}
+
+pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
+	match currency_id {
+		CurrencyId::Token(TokenSymbol::GLMR) => MultiLocation::new(
+			1,
+			X2(
+				Parachain(parachains::moonbeam::ID.into()),
+				AccountKey20 {
+					network: NetworkId::Any,
+					key: Slp::derivative_account_id_20(
+						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						index,
+					)
+					.into(),
+				},
+			),
+		),
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(
+					ParachainInfo::get().into_account_truncating(),
+					index,
+				)
+				.into(),
+			}),
+		),
+	}
+}
+
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		create_x2_multilocation(sub_account_index, currency_id)
+	}
+}
+
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResponseManager {
+	fn get_query_response_record(query_id: QueryId) -> bool {
+		if let Some(QueryStatus::Ready { .. }) = PolkadotXcm::query(query_id) {
+			true
+		} else {
+			false
+		}
+	}
+
+	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
+		PolkadotXcm::new_query(responder.clone(), timeout)
+		// for xcm v3 version see the following
+		// PolkadotXcm::new_query(responder, timeout, Here)
+	}
+
+	fn remove_query_record(query_id: QueryId) -> bool {
+		// Temporarily banned. Querries from pallet_xcm cannot be removed unless it is in ready
+		// status. And we are not allowed to mannually change query status.
+		// So in the manual mode, it is not possible to remove the query at all.
+		// PolkadotXcm::take_response(query_id).is_some()
+
+		PolkadotXcm::take_response(query_id);
+		true
+	}
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = SelfParaChainId;
+	type XcmRouter = XcmRouter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = ();
+}
+
+parameter_types! {
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = SlpEntrancePalletId;
+	type ExitAccount = SlpExitPalletId;
+	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
+	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
+	type OnRedeemSuccess = ();
 }
 
 parameter_types! {
@@ -1530,6 +1651,8 @@ construct_runtime! {
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 	}
@@ -1586,7 +1709,9 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[pallet_vesting, Vesting]
-		[bifrost_call_switchgear, CallSwitchgear]
+		[bifrost_call_switchgear, CallSwitchgear],
+		[bifrost_vtoken_minting, VtokenMinting],
+		[bifrost_slp, Slp]
 	);
 }
 
