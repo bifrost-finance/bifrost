@@ -119,5 +119,5 @@ benchmarks! {
 impl_benchmark_test_suite!(
 	VtokenMinting,
 	crate::mock::ExtBuilder::default().one_hundred_for_alice_n_bob().build(),
-	crate::mock::Test,
+	crate::mock::Runtime,
 );

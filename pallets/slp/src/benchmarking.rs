@@ -22,19 +22,23 @@
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use frame_system::RawOrigin;
-use sp_runtime::traits::UniqueSaturatedFrom;
+use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
 
 #[allow(unused_imports)]
 pub use crate::{Pallet as Slp, *};
 
 use crate::KSM;
 
-// pub fn lookup_of_account<T: Config>(who: T::AccountId) -> <<T as frame_system::Config>::Lookup as
-// StaticLookup>::Source { 	<T as frame_system::Config>::Lookup::unlookup(who)
-// }
+pub fn lookup_of_account<T: Config>(
+	who: T::AccountId,
+) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
+	<T as frame_system::Config>::Lookup::unlookup(who)
+}
 
-fn kusama_setup<T: Config>() -> DispatchResult {
-	let origin = T::ControlOrigin::successful_origin();
+fn kusama_setup<
+	T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config,
+>() -> DispatchResult {
+	let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 	let caller: T::AccountId = whitelisted_caller();
 
 	let validator_0_account_id_20: [u8; 20] =
@@ -51,7 +55,8 @@ fn kusama_setup<T: Config>() -> DispatchResult {
 	let treasury_account_id_32: [u8; 32] =
 		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
 			.into();
-	// let treasury_account :T::AccountId = sp_runtime::AccountId32::from(treasury_account_id_32);
+	// let treasury_account :T::AccountId =
+	// sp_core::crypto::AccountId32::new(treasury_account_id_32);
 	let treasury_location = MultiLocation {
 		parents: 0,
 		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
@@ -85,14 +90,17 @@ fn kusama_setup<T: Config>() -> DispatchResult {
 	assert_ok!(Slp::<T>::initialize_delegator(origin.clone(), KSM));
 	//DelegatorNotExist
 
-	// // update some KSM balance to treasury account
-	// assert_ok!(Tokens::Pallet::<T>::set_balance(
-	// 	RawOrigin::Root.into(),
-	// 	lookup_of_account(treasury_account.clone()),
-	// 	KSM,
-	// 	1_000_000_000_000_000_000.into(),
-	// 	0.into()
-	// ));
+	// update some KSM balance to treasury account
+	assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(T::EntranceAccount::get().into_account_truncating()),
+		KSM,
+		// BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128),
+		// BalanceOf::<T>::unique_saturated_from(0u128)
+		// 1_000_000_000_000_000_000u128.into(),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
 
 	// Set fee source
 	assert_ok!(Slp::<T>::set_fee_source(
@@ -229,8 +237,13 @@ fn kusama_setup<T: Config>() -> DispatchResult {
 }
 
 benchmarks! {
+	where_clause {
+		where
+			T: Config + orml_tokens::Config<CurrencyId = CurrencyId>+ bifrost_vtoken_minting::Config
+	}
+
 	initialize_delegator {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let call = Call::<T>::initialize_delegator {
 			currency_id:KSM,
 		};
@@ -240,7 +253,7 @@ benchmarks! {
 	}
 
 	bond {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who:T::AccountId = whitelisted_caller();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
@@ -266,7 +279,7 @@ benchmarks! {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	bond_extra {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -297,8 +310,8 @@ benchmarks! {
 			};
 	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
-rebond {
-		let origin = T::ControlOrigin::successful_origin();
+	rebond {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -321,7 +334,7 @@ rebond {
 			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
 			Some(validator_0_location.clone()),
 		));
-	let call = Call::<T>::rebond {
+		let call = Call::<T>::rebond {
 			currency_id:KSM,
 			who:Box::new(subaccount_0_location.clone()),
 			validator:Some(validator_0_location.clone()),
@@ -329,8 +342,8 @@ rebond {
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
-delegate {
-		let origin = T::ControlOrigin::successful_origin();
+	delegate {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -349,7 +362,7 @@ delegate {
 			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
 			Some(validator_0_location.clone()),
 		));
-	let call = Call::<T>::delegate {
+		let call = Call::<T>::delegate {
 			currency_id:KSM,
 			who:Box::new(subaccount_0_location.clone()),
 			targets:vec![validator_0_location.clone()],
@@ -357,7 +370,7 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	redelegate {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -376,7 +389,7 @@ delegate {
 			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
 			Some(validator_0_location.clone()),
 		));
-	let call = Call::<T>::redelegate {
+		let call = Call::<T>::redelegate {
 			currency_id:KSM,
 			who:Box::new(subaccount_0_location.clone()),
 			targets:Some(vec![validator_0_location.clone()]),
@@ -384,7 +397,7 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	payout {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -396,7 +409,7 @@ delegate {
 		kusama_setup::<T>()?;
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
 		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-	let call = Call::<T>::payout {
+		let call = Call::<T>::payout {
 			currency_id:KSM,
 			who:Box::new(subaccount_0_location.clone()),
 			validator:Box::new(validator_0_location.clone()),
@@ -405,7 +418,7 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	liquidize {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -425,7 +438,7 @@ delegate {
 			Some(validator_0_location.clone()),
 		));
 		<frame_system::Pallet<T>>::set_block_number(BlockNumberFor::<T>::from(101_000u32));
-	let call = Call::<T>::liquidize {
+		let call = Call::<T>::liquidize {
 			currency_id:KSM,
 			who:Box::new(subaccount_0_location.clone()),
 			when:Some(TimeUnit::SlashingSpan(5)),
@@ -434,33 +447,30 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 		transfer_back {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-
 		let subaccount_0_location: MultiLocation =
 			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-				let exit_account_id_32: [u8; 32] =
+		let exit_account_id_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
 				.into();
-
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
-			// set operate_origins
+
 		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		// assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
 		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::TransferBack,
 		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
-	let call = Call::<T>::transfer_back {
+		let call = Call::<T>::transfer_back {
 			currency_id:KSM,
 			from:Box::new(subaccount_0_location.clone()),
 			to:Box::new(exit_account_location.clone()),
@@ -469,7 +479,7 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	increase_token_pool {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let call = Call::<T>::increase_token_pool {
 			currency_id:KSM,
 			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -477,7 +487,7 @@ delegate {
   }: {call.dispatch_bypass_filter(origin)?}
 
 	decrease_token_pool {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
 		let call = Call::<T>::decrease_token_pool {
 			currency_id:KSM,
@@ -486,7 +496,7 @@ delegate {
   }: {call.dispatch_bypass_filter(origin)?}
 
 	update_ongoing_time_unit {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
 
 		let call = Call::<T>::update_ongoing_time_unit {
@@ -496,7 +506,7 @@ delegate {
   }: {call.dispatch_bypass_filter(origin)?}
 
 	refund_currency_due_unbond {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
 
 		let call = Call::<T>::refund_currency_due_unbond {
@@ -505,7 +515,7 @@ delegate {
   }: {call.dispatch_bypass_filter(origin)?}
 
 	charge_host_fee_and_tune_vtoken_exchange_rate {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -527,7 +537,7 @@ delegate {
 			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
 		};
 		assert_ok!(Slp::<T>::set_hosting_fees(origin.clone(), KSM, Some((pct, treasury_location))));
-			assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
+		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
 		assert_ok!(Slp::<T>::set_currency_tune_exchange_rate_limit(origin.clone(), KSM,Some((1, pct_100))));
 		assert_ok!(Slp::<T>::bond(
 			RawOrigin::Signed(who.clone()).into(),
@@ -545,7 +555,7 @@ delegate {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	confirm_delegator_ledger_query_response {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -573,7 +583,7 @@ delegate {
 
 
 	fail_delegator_ledger_query_response {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -587,20 +597,20 @@ delegate {
 		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
 
 		assert_ok!(Slp::<T>::bond(
-		RawOrigin::Signed(who.clone()).into(),
-		KSM,
-		Box::new(subaccount_0_location.clone()),
-		BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-		Some(validator_0_location.clone()),
+			RawOrigin::Signed(who.clone()).into(),
+			KSM,
+			Box::new(subaccount_0_location.clone()),
+			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
+			Some(validator_0_location.clone()),
 	));
-	let call = Call::<T>::fail_delegator_ledger_query_response {
+		let call = Call::<T>::fail_delegator_ledger_query_response {
 			currency_id:KSM,
 			query_id:0,
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	set_xcm_dest_weight_and_fee {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let call = Call::<T>::set_xcm_dest_weight_and_fee {
 			currency_id:KSM,
 			operation:XcmOperation::Bond,
@@ -612,7 +622,7 @@ delegate {
 	}
 
 	set_operate_origin {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let call = Call::<T>::set_operate_origin {
 			currency_id:KSM,
@@ -624,7 +634,7 @@ delegate {
 	}
 
 	set_fee_source {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let who_32 = Pallet::<T>::account_id_to_account_32(who).unwrap();
 		let who_location = Pallet::<T>::account_32_to_local_location(who_32).unwrap();
@@ -638,10 +648,10 @@ delegate {
 	}
 
 	add_delegator {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
 
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
 		let subaccount_0_location: MultiLocation =
 			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
 
@@ -653,7 +663,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_delegator {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -681,7 +691,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_validators_by_delegator {
-				let origin = T::ControlOrigin::successful_origin();
+				let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -709,7 +719,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_delegator_ledger {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
 
@@ -732,7 +742,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	add_validator {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
 
@@ -746,7 +756,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_validator {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
 
@@ -762,7 +772,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_minimums_and_maximums {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 
 		let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: BalanceOf::<T>::unique_saturated_from(100_000_000_000u128),
@@ -783,7 +793,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_currency_delays {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let delay =
 			Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
 
@@ -794,7 +804,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_hosting_fees {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let treasury_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
 				let pct = Permill::from_percent(20);
@@ -809,7 +819,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_currency_tune_exchange_rate_limit {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let pct_100 = Permill::from_percent(100);
 		let call = Call::<T>::set_currency_tune_exchange_rate_limit {
 			currency_id:KSM,
@@ -818,44 +828,43 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	set_ongoing_time_unit_update_interval {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 
 		let call = Call::<T>::set_ongoing_time_unit_update_interval {
 			currency_id:KSM,
 			maybe_interval:Some(BlockNumberFor::<T>::from(100u32))
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
-
 	verify {
 		assert_eq!(Slp::<T>::get_ongoing_time_unit_update_interval(KSM),Some(BlockNumberFor::<T>::from(100u32)));
 	}
 
 	add_supplement_fee_account_to_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let exit_account_id_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
 				.into();
-
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
+
 		let call = Call::<T>::add_supplement_fee_account_to_whitelist {
 			currency_id:KSM,
 			who:Box::new(exit_account_location.clone()),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
+
 	remove_supplement_fee_account_from_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let exit_account_id_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
 				.into();
-
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
-		 assert_ok!(Slp::<T>::add_supplement_fee_account_to_whitelist(origin.clone(), KSM, Box::new(exit_account_location.clone())));
+		assert_ok!(Slp::<T>::add_supplement_fee_account_to_whitelist(origin.clone(), KSM, Box::new(exit_account_location.clone())));
 		let call = Call::<T>::remove_supplement_fee_account_from_whitelist {
 			currency_id:KSM,
 			who:Box::new(exit_account_location.clone()),
@@ -863,7 +872,7 @@ delegate {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	unbond {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -896,7 +905,7 @@ delegate {
 	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	unbond_all {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
@@ -927,21 +936,21 @@ delegate {
 	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	undelegate {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
 		let subaccount_0_location: MultiLocation =
 			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-let validator_0_account: T::AccountId = account("validator0",0,1);
-	let validator_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(validator_0_account.clone()).unwrap();
-	let validator_0_location: MultiLocation =
-		Pallet::<T>::account_32_to_parent_location(validator_0_32).unwrap();
+		let validator_0_account: T::AccountId = account("validator0",0,1);
+		let validator_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(validator_0_account.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(validator_0_32).unwrap();
 
-	let validator_1_account: T::AccountId = account("validator1",0,1);
-	let validator_1_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(validator_1_account.clone()).unwrap();
-	let validator_1_location: MultiLocation =
-		Pallet::<T>::account_32_to_parent_location(validator_1_32).unwrap();
+		let validator_1_account: T::AccountId = account("validator1",0,1);
+		let validator_1_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(validator_1_account.clone()).unwrap();
+		let validator_1_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(validator_1_32).unwrap();
 
 		kusama_setup::<T>()?;
 
@@ -971,10 +980,347 @@ let validator_0_account: T::AccountId = account("validator0",0,1);
 			targets:vec![validator_0_location.clone()],
 		};
 	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	transfer_to {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
+
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(entrance_account.clone()),
+		KSM,
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
+
+		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	);
+
+
+	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
+	let entrance_account_location: MultiLocation =
+		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
+		origin.clone(),
+		KSM,
+		XcmOperation::TransferTo,
+		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+	));
+	let call = Call::<T>::transfer_to {
+			currency_id:KSM,
+			from:Box::new(entrance_account_location.clone()),
+			to:Box::new(subaccount_0_location.clone()),
+			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		};
+  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	chill {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
+
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(entrance_account.clone()),
+		KSM,
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
+
+		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	);
+
+
+	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
+	let entrance_account_location: MultiLocation =
+		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
+		origin.clone(),
+		KSM,
+		XcmOperation::Chill,
+		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+	));
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
+			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
+			unlocking: vec![],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
+
+		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
+
+		assert_ok!(Slp::<T>::update_ongoing_time_unit(
+			origin.clone(),KSM,TimeUnit::Era(27)
+		));
+
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
+
+
+		CurrencyDelays::<T>::insert(KSM, delay);
+
+	let call = Call::<T>::chill {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+		};
+  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	supplement_fee_reserve {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
+
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(entrance_account.clone()),
+		KSM,
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
+
+		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	);
+
+
+	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
+	let entrance_account_location: MultiLocation =
+		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
+		origin.clone(),
+		KSM,
+		XcmOperation::TransferTo,
+		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+	));
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
+			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
+			unlocking: vec![],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
+
+		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
+
+		assert_ok!(Slp::<T>::update_ongoing_time_unit(
+			origin.clone(),KSM,TimeUnit::Era(27)
+		));
+
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
+
+
+		CurrencyDelays::<T>::insert(KSM, delay);
+
+		assert_ok!(Slp::<T>::set_fee_source (
+			origin.clone(),
+			KSM,
+			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
+		));
+
+	let call = Call::<T>::supplement_fee_reserve {
+			currency_id:KSM,
+			dest:Box::new(subaccount_0_location.clone()),
+		};
+  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+
+	confirm_validators_by_delegator_query_response {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let who2: T::AccountId = whitelisted_caller();
+		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
+
+		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
+
+		kusama_setup::<T>()?;
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(entrance_account.clone()),
+		KSM,
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
+
+		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	);
+
+
+	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
+	let entrance_account_location: MultiLocation =
+		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
+		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
+		origin.clone(),
+		KSM,
+		XcmOperation::TransferTo,
+		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+	));
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
+			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
+			unlocking: vec![],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
+
+		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
+
+		assert_ok!(Slp::<T>::update_ongoing_time_unit(
+			origin.clone(),KSM,TimeUnit::Era(27)
+		));
+
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
+
+
+		CurrencyDelays::<T>::insert(KSM, delay);
+		assert_ok!(Slp::<T>::delegate (
+			origin.clone(),
+			KSM,
+			Box::new(subaccount_0_location.clone()),
+			vec![validator_0_location.clone()],
+		));
+
+		assert_ok!(Slp::<T>::set_fee_source (
+			origin.clone(),
+			KSM,
+			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
+		));
+
+	let call = Call::<T>::confirm_validators_by_delegator_query_response {
+			currency_id:KSM,
+			query_id:0,
+		};
+  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	fail_validators_by_delegator_query_response {
+		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
+		let who: T::AccountId = whitelisted_caller();
+
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let who2: T::AccountId = whitelisted_caller();
+		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
+
+		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
+
+		kusama_setup::<T>()?;
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+		RawOrigin::Root.into(),
+		lookup_of_account::<T>(entrance_account.clone()),
+		KSM,
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+	));
+
+		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
+		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	);
+
+
+	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
+	let entrance_account_location: MultiLocation =
+		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
+		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
+		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
+		assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
+		origin.clone(),
+		KSM,
+		XcmOperation::TransferTo,
+		Some((20_000_000_000, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+	));
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
+			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
+			unlocking: vec![],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
+
+		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
+
+		assert_ok!(Slp::<T>::update_ongoing_time_unit(
+			origin.clone(),KSM,TimeUnit::Era(27)
+		));
+
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
+
+
+		CurrencyDelays::<T>::insert(KSM, delay);
+		assert_ok!(Slp::<T>::delegate (
+			origin.clone(),
+			KSM,
+			Box::new(subaccount_0_location.clone()),
+			vec![validator_0_location.clone()],
+		));
+		// DelegatorLedgerXcmUpdateQueue::<T>::insert(0, (update_entry.clone(), 1000));
+
+		assert_ok!(Slp::<T>::set_fee_source (
+			origin.clone(),
+			KSM,
+			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
+		));
+
+	let call = Call::<T>::fail_validators_by_delegator_query_response {
+			currency_id:KSM,
+			query_id:0,
+		};
+  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
 }
-// Todo:
-// 	fn chill() -> Weight;
-// 	fn transfer_to() -> Weight;
-// 	fn supplement_fee_reserve() -> Weight;
-// 	fn confirm_validators_by_delegator_query_response() -> Weight;
-// 	fn fail_validators_by_delegator_query_response() -> Weight;

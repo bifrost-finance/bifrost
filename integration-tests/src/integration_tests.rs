@@ -23,16 +23,16 @@ use frame_support::{
 	traits::{GenesisBuild, OnFinalize, OnInitialize},
 	weights::constants::*,
 };
-use frame_system::RawOrigin;
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},
-	DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
+	BuildStorage, DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
 };
 
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
+pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
 
 const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;
@@ -45,8 +45,8 @@ use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod bifrost_imports {
 	pub use bifrost_kusama_runtime::{
-		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
-		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
+		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
+		BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
 		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens,
 		TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
@@ -163,6 +163,12 @@ impl ExtBuilder {
 		)
 		.unwrap();
 
+		<bifrost_salp::GenesisConfig<Runtime> as GenesisBuild<Runtime>>::assimilate_storage(
+			&bifrost_salp::GenesisConfig { initial_multisig_account: Some(AccountId::new(ALICE)) },
+			&mut t,
+		)
+		.unwrap();
+
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
@@ -187,19 +193,4 @@ fn parachain_subaccounts_are_unique() {
 				.into()
 		);
 	});
-}
-
-#[test]
-fn salp() {
-	ExtBuilder::default()
-		.balances(vec![
-			(AccountId::from(ALICE), RelayCurrencyId::get(), 100 * dollar(RelayCurrencyId::get())),
-			(AccountId::from(BOB), RelayCurrencyId::get(), 100 * dollar(RelayCurrencyId::get())),
-		])
-		.build()
-		.execute_with(|| {
-			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 1_000, 1, SlotLength::get()));
-			assert_ok!(Salp::funds(3_000).ok_or(()));
-			assert_eq!(Salp::current_trie_index(), 1);
-		});
 }
