@@ -58,6 +58,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;
+mod migration;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -653,6 +654,10 @@ pub mod pallet {
 
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_minimums_maximums::<T>()
 		}
 	}
 

@@ -37,7 +37,11 @@ use codec::Encode;
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get, weights::Weight};
+use frame_support::{
+	ensure,
+	traits::{Get, Len},
+	weights::Weight,
+};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -884,6 +888,11 @@ impl<T: Config>
 			Error::<T>::AlreadyExist
 		);
 
+		// Ensure delegators count is not greater than maximum.
+		let delegators_count = DelegatorNextIndex::<T>::get(currency_id);
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		ensure!(delegators_count < mins_maxs.delegators_maximum, Error::<T>::GreaterThanMaximum);
+
 		// Revise two delegator storages.
 		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
 		DelegatorsMultilocation2Index::<T>::insert(currency_id, who, index);
@@ -923,6 +932,14 @@ impl<T: Config>
 		let multi_hash = T::Hashing::hash(&who.encode());
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(currency_id);
+
+		// Ensure validator candidates in the whitelist is not greater than maximum.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		ensure!(
+			validators_set.len() as u16 <= mins_maxs.validators_maximum,
+			Error::<T>::GreaterThanMaximum
+		);
+
 		if validators_set.is_none() {
 			Validators::<T>::insert(currency_id, vec![(who, multi_hash)]);
 		} else {
