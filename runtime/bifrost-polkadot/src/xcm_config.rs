@@ -30,6 +30,7 @@ use orml_traits::location::Reserve;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
+use xcm_interface::traits::parachains;
 
 use super::Runtime;
 
@@ -108,6 +109,14 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		match id {
 			Token(DOT) => Some(MultiLocation::parent()),
 			Native(BNC) => Some(native_currency_location(id, T::get())),
+			// Moonbeam Native token
+			Token(GLMR) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::moonbeam::ID),
+					PalletInstance(parachains::moonbeam::PALLET_ID.into()),
+				),
+			)),
 			_ => None,
 		}
 	}
@@ -139,6 +148,11 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						None
 					}
 				},
+				X2(Parachain(id), PalletInstance(index))
+					if ((id == parachains::moonbeam::ID) &&
+						(index == parachains::moonbeam::PALLET_ID)) =>
+					Some(Token(GLMR)),
+
 				_ => None,
 			},
 			MultiLocation { parents, interior } if parents == 0 => match interior {
