@@ -11,7 +11,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 	"max-encoded-len",
 ] }
 log = { version = "0.4.17", default-features = false }
-serde = { version = "1.0.140", optional = true }
+serde = { version = "1.0.143", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", default-features = false, optional = true }
 hex-literal = { version = "0.3.4" }
