@@ -77,7 +77,7 @@ parachain-staking = "*"
 # External Crates
 hex-literal = "0.3.4"
 serde = { version = "1.0.143", features = ["derive"] }
-serde_json = "1.0.82"
+serde_json = "1.0.83"
 log = '0.4'
 
 # Runtimes
