@@ -1554,10 +1554,10 @@ parameter_types! {
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
 	match currency_id {
-		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+		CurrencyId::Token(TokenSymbol::GLMR) => MultiLocation::new(
 			1,
 			X2(
-				Parachain(parachains::moonriver::ID.into()),
+				Parachain(parachains::moonbeam::ID.into()),
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
