@@ -85,9 +85,14 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
+bifrost-salp = { path = "../../pallets/salp", default-features = false }
+bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
+bifrost-slp = { path = "../../pallets/slp", default-features = false }
+bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
+bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
 
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
@@ -180,7 +185,10 @@ std = [
 	"bifrost-farming-rpc-runtime-api/std",
 	"bifrost-flexible-fee/std",
 	"bifrost-flexible-fee-rpc-runtime-api/std",
-	"pallet-xcm/std",
+	"bifrost-salp/std",
+	"bifrost-salp-rpc-runtime-api/std",
+	"bifrost-slp/std",
+	"bifrost-vtoken-minting/std",
 	"bifrost-asset-registry/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",

@@ -26,6 +26,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use core::convert::TryInto;
+
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
@@ -43,6 +46,7 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use pallet_xcm::QueryStatus;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
@@ -66,17 +70,19 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
+	cent, constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
 	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
 };
+use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
-use constants::{currency::*, time::*};
+use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
 	traits::{EitherOfDiverse, Get},
 };
 use frame_system::EnsureRoot;
+use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
@@ -279,9 +285,16 @@ parameter_types! {
 
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
+	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
 impl frame_system::Config for Runtime {
@@ -1161,8 +1174,14 @@ pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
-			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+		AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get()).eq(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&BifrostVsbondPalletId::get()).eq(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&SlpEntrancePalletId::get()).eq(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get()).eq(a) ||
+		FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+		FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&SystemStakingPalletId::get()).eq(a) ||
+		AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get()).eq(a)
 	}
 }
 
@@ -1235,6 +1254,7 @@ pub struct FeeNameGetter;
 impl NameGetter<Call> for FeeNameGetter {
 	fn get_name(c: &Call) -> ExtraFeeName {
 		match *c {
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
 			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) =>
 				ExtraFeeName::StatemineTransfer,
 			_ => ExtraFeeName::NoExtraFee,
@@ -1248,6 +1268,7 @@ pub struct AggregateExtraFeeFilter;
 impl Contains<Call> for AggregateExtraFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
 			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) => true,
 			_ => false,
 		}
@@ -1256,8 +1277,11 @@ impl Contains<Call> for AggregateExtraFeeFilter {
 
 pub struct ContributeFeeFilter;
 impl Contains<Call> for ContributeFeeFilter {
-	fn contains(_c: &Call) -> bool {
-		false
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
+			_ => false,
+		}
 	}
 }
 
@@ -1299,6 +1323,80 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MiscFeeHandler = MiscFeeHandlers;
 }
 
+parameter_types! {
+	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+}
+
+pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
+	match currency_id {
+		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+			1,
+			X2(
+				Parachain(parachains::moonriver::ID.into()),
+				AccountKey20 {
+					network: NetworkId::Any,
+					key: Slp::derivative_account_id_20(
+						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						index,
+					)
+						.into(),
+				},
+			),
+		),
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(
+					ParachainInfo::get().into_account_truncating(),
+					index,
+				)
+					.into(),
+			}),
+		),
+	}
+}
+
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
+		create_x2_multilocation(sub_account_index, currency_id)
+	}
+}
+
+parameter_types! {
+	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
+	pub const RemoveKeysLimit: u32 = 500;
+	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub const LeasePeriod: BlockNumber = POLKA_LEASE_PERIOD;
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
+
+impl bifrost_salp::Config for Runtime {
+	type BancorPool = ();
+	type Event = Event;
+	type LeasePeriod = LeasePeriod;
+	type MinContribution = MinContribution;
+	type MultiCurrency = Currencies;
+	type PalletId = BifrostCrowdloanId;
+	type RelayChainToken = RelayCurrencyId;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
+	type RemoveKeysLimit = RemoveKeysLimit;
+	type SlotLength = SlotLength;
+	type VSBondValidPeriod = VSBondValidPeriod;
+	type WeightInfo = ();
+	type EnsureConfirmAsGovernance =
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type XcmInterface = XcmInterface;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
+}
+
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1334,6 +1432,61 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResponseManager {
+	fn get_query_response_record(query_id: QueryId) -> bool {
+		if let Some(QueryStatus::Ready { .. }) = PolkadotXcm::query(query_id) {
+			true
+		} else {
+			false
+		}
+	}
+
+	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
+		PolkadotXcm::new_query(responder.clone(), timeout)
+		// for xcm v3 version see the following
+		// PolkadotXcm::new_query(responder, timeout, Here)
+	}
+
+	fn remove_query_record(query_id: QueryId) -> bool {
+		// Temporarily banned. Querries from pallet_xcm cannot be removed unless it is in ready
+		// status. And we are not allowed to mannually change query status.
+		// So in the manual mode, it is not possible to remove the query at all.
+		// PolkadotXcm::take_response(query_id).is_some()
+
+		PolkadotXcm::take_response(query_id);
+		true
+	}
+}
+
+pub struct OnRefund;
+impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
+		SystemStaking::on_refund(token_id, to, token_amount)
+	}
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = SelfParaChainId;
+	type XcmRouter = XcmRouter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
+	type OnRefund = OnRefund;
+}
+
 impl bifrost_farming::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -1343,6 +1496,31 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
 }
+
+parameter_types! {
+	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
+}
+
+impl bifrost_system_staking::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type EnsureConfirmAsGovernance =
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
+	type FarmingInfo = Farming;
+	type VtokenMintingInterface = VtokenMinting;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
+}
+
+// Bifrost modules end
+
+// zenlink runtime start
 
 parameter_types! {
 	pub const StringLimit: u32 = 50;
@@ -1401,6 +1579,43 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
+pub struct OnRedeemSuccess;
+impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for OnRedeemSuccess {
+	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
+		SystemStaking::on_redeem_success(token_id, to, token_amount)
+	}
+
+	fn on_redeemed(
+		address: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+		fee: Balance,
+	) -> Weight {
+		SystemStaking::on_redeemed(address, token_id, token_amount, vtoken_amount, fee)
+	}
+}
+
+parameter_types! {
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = SlpEntrancePalletId;
+	type ExitAccount = SlpExitPalletId;
+	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
+	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
+	type OnRedeemSuccess = OnRedeemSuccess;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1528,10 +1743,14 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
+		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 	}
 }
 
@@ -1762,6 +1981,20 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
+			}
+		}
+
+		fn get_lite_contribution(_index: ParaId, _who: AccountId) -> (Balance,RpcContributionStatus) {
+				(Zero::zero(),RpcContributionStatus::Idle)
 		}
 	}
 
