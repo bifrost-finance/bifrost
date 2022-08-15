@@ -57,6 +57,7 @@ pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 
 construct_runtime!(
 	pub enum Runtime where

@@ -58,6 +58,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;
+mod migration;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -653,6 +654,10 @@ pub mod pallet {
 
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_minimums_maximums::<T>()
 		}
 	}
 
@@ -1318,7 +1323,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			// If this is the first time.
 			if !CurrencyLatestTuneRecord::<T>::contains_key(currency_id) {
-				// Insert an empty record into DelegatorLatestTuneRecord storage.
+				// Insert an empty record into CurrencyLatestTuneRecord storage.
 				CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit.clone(), 0));
 			}
 
