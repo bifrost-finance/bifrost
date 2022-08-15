@@ -999,6 +999,8 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
+		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
 		// Get current VKSM/KSM or VDOT/DOT exchange rate.
 		let vtoken = match currency_id {
 			KSM => Ok(CurrencyId::VToken(TokenSymbol::KSM)),

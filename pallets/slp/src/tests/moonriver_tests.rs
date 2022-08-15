@@ -70,6 +70,27 @@ fn initialize_moonriver_delegator() {
 			),
 		};
 
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 100_000_000_000,
+			unbond_minimum: 100_000_000_000,
+			rebond_minimum: 100_000_000_000,
+			unbond_record_maximum: 1,
+			validators_back_maximum: 100,
+			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+			validators_reward_maximum: 300,
+			delegation_amount_minimum: 500_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::signed(ALICE),
+			MOVR,
+			Some(mins_and_maxs)
+		));
+
 		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
 		assert_eq!(
@@ -118,6 +139,23 @@ fn moonriver_setup() {
 	let delay =
 		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
 	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), MOVR, Some(delay)));
+
+	let mins_and_maxs = MinimumsMaximums {
+		delegator_bonded_minimum: 100_000_000_000,
+		bond_extra_minimum: 100_000_000_000,
+		unbond_minimum: 100_000_000_000,
+		rebond_minimum: 100_000_000_000,
+		unbond_record_maximum: 1,
+		validators_back_maximum: 100,
+		delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+		validators_reward_maximum: 300,
+		delegation_amount_minimum: 500_000_000,
+		delegators_maximum: 100,
+		validators_maximum: 300,
+	};
+
+	// Set minimums and maximums
+	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
 	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
@@ -221,21 +259,6 @@ fn moonriver_setup() {
 		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
-
-	let mins_and_maxs = MinimumsMaximums {
-		delegator_bonded_minimum: 100_000_000_000,
-		bond_extra_minimum: 100_000_000_000,
-		unbond_minimum: 100_000_000_000,
-		rebond_minimum: 100_000_000_000,
-		unbond_record_maximum: 1,
-		validators_back_maximum: 100,
-		delegator_active_staking_maximum: 200_000_000_000_000_000_000,
-		validators_reward_maximum: 300,
-		delegation_amount_minimum: 500_000_000,
-	};
-
-	// Set minimums and maximums
-	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// Set delegator ledger
 	assert_ok!(Slp::add_validator(
@@ -1981,6 +2004,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
 			validators_reward_maximum: 300,
 			delegation_amount_minimum: 5_000_000_000_000_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
 		};
 
 		// Set minimums and maximums
@@ -2073,6 +2098,27 @@ fn add_validator_and_remove_validator_works() {
 		let mut valis = vec![];
 		let multi_hash_0 =
 			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 100_000_000_000,
+			unbond_minimum: 100_000_000_000,
+			rebond_minimum: 100_000_000_000,
+			unbond_record_maximum: 1,
+			validators_back_maximum: 100,
+			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+			validators_reward_maximum: 300,
+			delegation_amount_minimum: 500_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::signed(ALICE),
+			MOVR,
+			Some(mins_and_maxs)
+		));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
