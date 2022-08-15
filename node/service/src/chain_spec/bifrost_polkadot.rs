@@ -19,7 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WASM_BINARY,SalpConfig
+	SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
@@ -287,5 +288,5 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 
-	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![],salp_multisig)
+	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![], salp_multisig)
 }

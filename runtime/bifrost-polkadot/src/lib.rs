@@ -70,8 +70,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
-	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -1173,13 +1174,18 @@ pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get()).eq(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&BifrostVsbondPalletId::get()).eq(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&SlpEntrancePalletId::get()).eq(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get()).eq(a) ||
-		FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-		FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get()).eq(a)
+			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&BifrostVsbondPalletId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&SlpEntrancePalletId::get(),
+		)
+		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
+				.eq(a)
 	}
 }
 
@@ -1337,7 +1343,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 						index,
 					)
-						.into(),
+					.into(),
 				},
 			),
 		),
@@ -1502,7 +1508,6 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = ();
 }
-
 
 // Bifrost modules end
 
