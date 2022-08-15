@@ -1323,7 +1323,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			// If this is the first time.
 			if !CurrencyLatestTuneRecord::<T>::contains_key(currency_id) {
-				// Insert an empty record into DelegatorLatestTuneRecord storage.
+				// Insert an empty record into CurrencyLatestTuneRecord storage.
 				CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit.clone(), 0));
 			}
 
