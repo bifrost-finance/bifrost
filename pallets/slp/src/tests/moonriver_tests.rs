@@ -70,6 +70,27 @@ fn initialize_moonriver_delegator() {
 			),
 		};
 
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 100_000_000_000,
+			unbond_minimum: 100_000_000_000,
+			rebond_minimum: 100_000_000_000,
+			unbond_record_maximum: 1,
+			validators_back_maximum: 100,
+			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+			validators_reward_maximum: 300,
+			delegation_amount_minimum: 500_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::signed(ALICE),
+			MOVR,
+			Some(mins_and_maxs)
+		));
+
 		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
 		assert_eq!(
@@ -118,6 +139,23 @@ fn moonriver_setup() {
 	let delay =
 		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
 	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), MOVR, Some(delay)));
+
+	let mins_and_maxs = MinimumsMaximums {
+		delegator_bonded_minimum: 100_000_000_000,
+		bond_extra_minimum: 100_000_000_000,
+		unbond_minimum: 100_000_000_000,
+		rebond_minimum: 100_000_000_000,
+		unbond_record_maximum: 1,
+		validators_back_maximum: 100,
+		delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+		validators_reward_maximum: 300,
+		delegation_amount_minimum: 500_000_000,
+		delegators_maximum: 100,
+		validators_maximum: 300,
+	};
+
+	// Set minimums and maximums
+	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
 	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
@@ -221,21 +259,6 @@ fn moonriver_setup() {
 		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
-
-	let mins_and_maxs = MinimumsMaximums {
-		delegator_bonded_minimum: 100_000_000_000,
-		bond_extra_minimum: 100_000_000_000,
-		unbond_minimum: 100_000_000_000,
-		rebond_minimum: 100_000_000_000,
-		unbond_record_maximum: 1,
-		validators_back_maximum: 100,
-		delegator_active_staking_maximum: 200_000_000_000_000_000_000,
-		validators_reward_maximum: 300,
-		delegation_amount_minimum: 500_000_000,
-	};
-
-	// Set minimums and maximums
-	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// Set delegator ledger
 	assert_ok!(Slp::add_validator(
@@ -1930,5 +1953,191 @@ fn supplement_fee_account_whitelist_works() {
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
+	});
+}
+
+#[test]
+fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
+	let subaccount_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+		),
+	};
+
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		let treasury_id: AccountId =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+				.into();
+		let treasury_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+
+		// moonriver_setup();
+
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(MOVR, TimeUnit::Round(1));
+
+		DelegatorsIndex2Multilocation::<Runtime>::insert(MOVR, 0, subaccount_0_location.clone());
+		DelegatorsMultilocation2Index::<Runtime>::insert(MOVR, subaccount_0_location.clone(), 0);
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 5_000_000_000_000_000_000,
+			bond_extra_minimum: 0,
+			unbond_minimum: 0,
+			rebond_minimum: 0,
+			unbond_record_maximum: 32,
+			validators_back_maximum: 100,
+			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+			validators_reward_maximum: 300,
+			delegation_amount_minimum: 5_000_000_000_000_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		MinimumsAndMaximums::<Runtime>::insert(MOVR, mins_and_maxs);
+
+		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
+		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+			BTreeMap::new();
+
+		// set delegator_0 ledger
+		let moonriver_ledger = OneToManyLedger {
+			account: subaccount_0_location.clone(),
+			total: 5_000_000_000_000_000_000,
+			less_total: 0,
+			delegations: delegation_set,
+			requests: vec![],
+			request_briefs: request_briefs_set,
+			status: OneToManyDelegatorStatus::Active,
+		};
+
+		let ledger = Ledger::Moonbeam(moonriver_ledger);
+
+		// Set delegator ledger
+		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+
+		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
+		let pct = Permill::from_percent(20);
+		let treasury_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+		};
+
+		assert_ok!(Slp::set_hosting_fees(
+			Origin::signed(ALICE),
+			MOVR,
+			Some((pct, treasury_location))
+		));
+
+		let pct_100 = Permill::from_percent(100);
+		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
+			Origin::signed(ALICE),
+			MOVR,
+			Some((1, pct_100))
+		));
+
+		// First set base vtoken exchange rate. Should be 1:1.
+		assert_ok!(Currencies::deposit(VMOVR, &ALICE, 100));
+		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), MOVR, 100));
+
+		// call the charge_host_fee_and_tune_vtoken_exchange_rate
+		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
+			Origin::signed(ALICE),
+			MOVR,
+			100,
+			Some(subaccount_0_location.clone())
+		));
+
+		// Tokenpool should have been added 100.
+		let new_token_pool_amount = <Runtime as Config>::VtokenMinting::get_token_pool(MOVR);
+		assert_eq!(new_token_pool_amount, 200);
+
+		// let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(MOVR,
+		// &subaccount_0_location); assert_eq!(tune_record, (1, Some(TimeUnit::Round(1))));
+
+		let tune_record = CurrencyLatestTuneRecord::<Runtime>::get(MOVR);
+		assert_eq!(tune_record, Some((TimeUnit::Round(1), 1)));
+
+		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
+		// before new exchange rate tuned.
+		let treasury_vmovr = Currencies::free_balance(VMOVR, &treasury_id);
+		assert_eq!(treasury_vmovr, 20);
+	});
+}
+
+#[test]
+fn add_validator_and_remove_validator_works() {
+	let validator_0_account_id_20: [u8; 20] =
+		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+
+	let validator_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2023),
+			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		let mut valis = vec![];
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 100_000_000_000,
+			unbond_minimum: 100_000_000_000,
+			rebond_minimum: 100_000_000_000,
+			unbond_record_maximum: 1,
+			validators_back_maximum: 100,
+			delegator_active_staking_maximum: 200_000_000_000_000_000_000,
+			validators_reward_maximum: 300,
+			delegation_amount_minimum: 500_000_000,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::signed(ALICE),
+			MOVR,
+			Some(mins_and_maxs)
+		));
+
+		// Set delegator ledger
+		assert_ok!(Slp::add_validator(
+			Origin::signed(ALICE),
+			MOVR,
+			Box::new(validator_0_location.clone()),
+		));
+
+		// The storage is reordered by hash. So we need to adjust the push order here.
+		valis.push((validator_0_location.clone(), multi_hash_0));
+
+		assert_eq!(Slp::get_validators(MOVR), Some(valis));
+
+		assert_ok!(Slp::remove_validator(
+			Origin::signed(ALICE),
+			MOVR,
+			Box::new(validator_0_location.clone()),
+		));
+
+		assert_eq!(Slp::get_validators(MOVR), Some(vec![]));
 	});
 }

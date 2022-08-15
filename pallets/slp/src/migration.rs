@@ -16,42 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod moonbeam_primitives;
-mod polkadot_primitives;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-pub use moonbeam_primitives::*;
-pub use polkadot_primitives::*;
-
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use node_primitives::TimeUnit;
-use scale_info::TypeInfo;
+use super::{Config, MinimumsAndMaximums, Weight};
+use crate::{BalanceOf, Decode, Encode, MinimumsMaximums, RuntimeDebug, TimeUnit, TypeInfo};
+use frame_support::traits::Get;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + Eq> {
-	Substrate(SubstrateLedger<DelegatorId, Balance>),
-	Moonbeam(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
-}
-
-/// A type for accommodating delegator update entries for different kinds of currencies.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
-	/// A type for substrate ledger updating entires
-	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
-	Moonbeam(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
-}
-
-/// A type for accommodating validators by delegator update entries for different kinds of
-/// currencies.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
-	/// A type for substrate validators by delegator updating entires
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
-}
-
-/// Different minimum and maximum requirements for different chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MinimumsMaximums<Balance> {
+pub struct DeprecatedMinimumsMaximums<Balance> {
 	/// The minimum bonded amount for a delegator at any time.
 	#[codec(compact)]
 	pub delegator_bonded_minimum: Balance,
@@ -79,41 +51,33 @@ pub struct MinimumsMaximums<Balance> {
 	/// The minimum amount for a delegation.
 	#[codec(compact)]
 	pub delegation_amount_minimum: Balance,
-	// Maximum delegators count.
-	#[codec(compact)]
-	pub delegators_maximum: u16,
-	// Maximum validators candidates in the whitelist(Validators<T>)
-	#[codec(compact)]
-	pub validators_maximum: u16,
 }
 
-/// Different delay params for different chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct Delays {
+pub struct DeprecatedDelays {
 	/// The unlock delay for the unlocking amount to be able to be liquidized.
 	pub unlock_delay: TimeUnit,
-	/// Leave from delegator set delay.
-	pub leave_delegators_delay: TimeUnit,
 }
 
-/// XCM operations list
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmOperation {
-	// XTokens
-	XtokensTransfer,
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
-	Undelegate,
-	CancelLeave,
-	XtokensTransferBack,
-	ExecuteLeave,
+pub fn update_minimums_maximums<T: Config>() -> Weight {
+	MinimumsAndMaximums::<T>::translate::<DeprecatedMinimumsMaximums<BalanceOf<T>>, _>(
+		|_currency_id, mins_maxs| {
+			let new_entry = MinimumsMaximums::<BalanceOf<T>> {
+				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
+				bond_extra_minimum: mins_maxs.bond_extra_minimum,
+				unbond_minimum: mins_maxs.unbond_minimum,
+				rebond_minimum: mins_maxs.rebond_minimum,
+				unbond_record_maximum: mins_maxs.unbond_record_maximum,
+				validators_back_maximum: mins_maxs.validators_back_maximum,
+				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
+				validators_reward_maximum: mins_maxs.validators_reward_maximum,
+				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
+				delegators_maximum: 100u16,
+				validators_maximum: 300u16,
+			};
+			Some(new_entry)
+		},
+	);
+
+	T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
 }
