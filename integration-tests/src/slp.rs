@@ -183,6 +183,8 @@ fn register_subaccount_index_0() {
 			delegator_active_staking_maximum: 200_000_000_000_000,
 			validators_reward_maximum: 0,
 			delegation_amount_minimum: 0,
+			delegators_maximum: 100,
+			validators_maximum: 300,
 		};
 
 		// Set minimums and maximums
