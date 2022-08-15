@@ -70,7 +70,7 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
 	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
@@ -286,14 +286,12 @@ parameter_types! {
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
@@ -1157,9 +1155,10 @@ parameter_type_with_key! {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::VToken(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			&CurrencyId::Token(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1180,7 +1179,6 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get()).eq(a) ||
 		FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
 		FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-		AccountIdConversion::<AccountId>::into_account_truncating(&SystemStakingPalletId::get()).eq(a) ||
 		AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get()).eq(a)
 	}
 }
@@ -1351,7 +1349,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 					ParachainInfo::get().into_account_truncating(),
 					index,
 				)
-					.into(),
+				.into(),
 			}),
 		),
 	}
@@ -1464,13 +1462,6 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 	}
 }
 
-pub struct OnRefund;
-impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
-		SystemStaking::on_refund(token_id, to, token_amount)
-	}
-}
-
 impl bifrost_slp::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -1484,7 +1475,22 @@ impl bifrost_slp::Config for Runtime {
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = OnRefund;
+	type OnRefund = ();
+}
+
+parameter_types! {
+	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
+}
+
+impl bifrost_vstoken_conversion::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	// type RelayCurrencyId = RelayCurrencyId;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type VsbondAccount = BifrostVsbondPalletId;
+	type WeightInfo = ();
 }
 
 impl bifrost_farming::Config for Runtime {
@@ -1497,26 +1503,6 @@ impl bifrost_farming::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
-	pub const MaxTokenLen: u32 = 500;
-	pub const MaxFarmingPoolIdLen: u32 = 100;
-}
-
-impl bifrost_system_staking::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
-	type FarmingInfo = Farming;
-	type VtokenMintingInterface = VtokenMinting;
-	type TreasuryAccount = BifrostTreasuryAccount;
-	type PalletId = SystemStakingPalletId;
-	type BlocksPerRound = BlocksPerRound;
-	type MaxTokenLen = MaxTokenLen;
-	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
-}
 
 // Bifrost modules end
 
@@ -1579,22 +1565,6 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
-pub struct OnRedeemSuccess;
-impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for OnRedeemSuccess {
-	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
-		SystemStaking::on_redeem_success(token_id, to, token_amount)
-	}
-
-	fn on_redeemed(
-		address: AccountId,
-		token_id: CurrencyId,
-		token_amount: Balance,
-		vtoken_amount: Balance,
-		fee: Balance,
-	) -> Weight {
-		SystemStaking::on_redeemed(address, token_id, token_amount, vtoken_amount, fee)
-	}
-}
 
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
@@ -1612,8 +1582,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
-	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
-	type OnRedeemSuccess = OnRedeemSuccess;
+	type WeightInfo = ();
+	type OnRedeemSuccess = ();
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1749,8 +1719,8 @@ construct_runtime! {
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
+		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
-		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 	}
 }
 
@@ -1805,7 +1775,10 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[pallet_vesting, Vesting]
-		[bifrost_call_switchgear, CallSwitchgear]
+		[bifrost_call_switchgear, CallSwitchgear],
+		[bifrost_vtoken_minting, VtokenMinting],
+		[bifrost_slp, Slp]
+		[bifrost_salp, Salp]
 	);
 }
 

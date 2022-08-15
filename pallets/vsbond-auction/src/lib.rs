@@ -283,10 +283,7 @@ pub mod pallet {
 			ensure!(amount > T::MinimumAmount::get(), Error::<T, I>::NotEnoughAmount);
 
 			// Check the token_symbol
-			ensure!(
-				token_symbol == TokenSymbol::KSM || token_symbol == TokenSymbol::DOT,
-				Error::<T, I>::InvalidVsbond
-			);
+			ensure!(token_symbol == TokenSymbol::KSM, Error::<T, I>::InvalidVsbond);
 
 			// Construct vsbond
 			let (_, vsbond) = CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot);
