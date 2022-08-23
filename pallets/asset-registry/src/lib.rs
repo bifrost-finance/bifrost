@@ -402,6 +402,14 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	fn get_next_token_id() -> Result<TokenId, DispatchError> {
+		NextTokenId::<T>::try_mutate(|current| -> Result<TokenId, DispatchError> {
+			let id = *current;
+			*current = current.checked_add(One::one()).ok_or(ArithmeticError::Overflow)?;
+			Ok(id)
+		})
+	}
+
 	fn do_register_foreign_asset(
 		location: &MultiLocation,
 		metadata: &AssetMetadata<BalanceOf<T>>,
