@@ -157,6 +157,10 @@ macro_rules! create_currency_id {
 					| Self::VSToken(ts)
 					| Self::VSBond(ts, ..) => ts as u8,
 					Self::ForeignAsset(..) => 0u8,
+					Self::Token2(..) => 0u8,
+					Self::VToken2(..) => 0u8,
+					Self::VSToken2(..) => 0u8,
+					Self::VSBond2(..) => 0u8,
 					Self::LPToken(..) => 0u8
 				} as u64;
 
@@ -192,7 +196,19 @@ macro_rules! create_currency_id {
 					},
 					Self::ForeignAsset(asset_token_id) => {
 						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
-					}
+					},
+					Self::Token2(token_id) => {
+						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
+					},
+					Self::VToken2(token_id) => {
+						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
+					},
+					Self::VSToken2(token_id) => {
+						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
+					},
+					Self::VSBond2(token_id) => {
+						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
+					},
 				}
 			}
 
@@ -287,6 +303,7 @@ impl Default for TokenSymbol {
 }
 
 pub type ForeignAssetId = u32;
+pub type TokenId = u32;
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(
@@ -314,6 +331,10 @@ pub enum CurrencyId {
 	// [currency1 Tokensymbol, currency1 TokenType, currency2 TokenSymbol, currency2 TokenType]
 	LPToken(TokenSymbol, u8, TokenSymbol, u8),
 	ForeignAsset(ForeignAssetId),
+	Token2(TokenId),
+	VToken2(TokenId),
+	VSToken2(TokenId),
+	VSBond2(TokenId),
 }
 
 impl Default for CurrencyId {
@@ -378,6 +399,10 @@ impl CurrencyId {
 			Self::VSBond(..) => 5,
 			Self::LPToken(..) => 6,
 			Self::ForeignAsset(..) => 7,
+			Self::Token2(..) => 8,
+			Self::VToken2(..) => 9,
+			Self::VSToken2(..) => 10,
+			Self::VSBond2(..) => 11,
 		}
 	}
 }
@@ -386,19 +411,19 @@ impl CurrencyIdExt for CurrencyId {
 	type TokenSymbol = TokenSymbol;
 
 	fn is_vtoken(&self) -> bool {
-		matches!(self, CurrencyId::VToken(_))
+		matches!(self, CurrencyId::VToken(_) | CurrencyId::VToken2(_))
 	}
 
 	fn is_token(&self) -> bool {
-		matches!(self, CurrencyId::Token(_))
+		matches!(self, CurrencyId::Token(_) | CurrencyId::Token2(_))
 	}
 
 	fn is_vstoken(&self) -> bool {
-		matches!(self, CurrencyId::VSToken(_))
+		matches!(self, CurrencyId::VSToken(_) | CurrencyId::VSToken2(_))
 	}
 
 	fn is_vsbond(&self) -> bool {
-		matches!(self, CurrencyId::VSBond(..))
+		matches!(self, CurrencyId::VSBond(..) | CurrencyId::VSBond2(..))
 	}
 
 	fn is_native(&self) -> bool {
@@ -457,6 +482,22 @@ impl TryFrom<u64> for CurrencyId {
 			7 => {
 				let foreign_asset_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as ForeignAssetId;
 				Ok(Self::ForeignAsset(foreign_asset_id))
+			},
+			8 => {
+				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				Ok(Self::Token2(token_id))
+			},
+			9 => {
+				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				Ok(Self::VToken2(token_id))
+			},
+			10 => {
+				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				Ok(Self::VSToken2(token_id))
+			},
+			11 => {
+				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				Ok(Self::VSBond2(token_id))
 			},
 			_ => Err(()),
 		}
