@@ -1,25 +1,18 @@
 name: Release
+
+env:
+  SUBWASM_VERSION: 0.17.0
+
 on:
-  release:
-    types:
-      - published
-  workflow_dispatch:
+  push:
+    tags:
+      - 'b*'
 
 jobs:
-  build-release:
-    name: Build binary
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - name: Set tag from input
-        run: |
-          echo "Tag: ${{ github.event.inputs.tag }}"
-          echo "TAG=${{ github.event.inputs.tag }}" >> "$GITHUB_ENV"
-
-      - name: Set Tag from release
-        if: ${{ github.event.release.tag_name }}
-        run: |
-          echo "TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
-
       - name: Check to latest commit
         uses: actions/checkout@v3
 
@@ -33,10 +26,13 @@ jobs:
           default: true
 
       - name: Build bifrost
+        working-directory: ${{ github.workspace }}
         run: |
-          make production-release
+          make build-all-release
           mkdir -p ${{ github.workspace }}/artifacts
-          mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/release/bifrost ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
           pushd ${{ github.workspace }}/artifacts
           sha256sum bifrost | tee bifrost.sha256
           shasum -c bifrost.sha256
@@ -47,6 +43,43 @@ jobs:
         with:
           name: bifrost-artifacts
           path: ${{ github.workspace }}/artifacts/*
+
+      # We now get extra information thanks to subwasm,
+      - name: Install subwasm ${{ env.SUBWASM_VERSION }}
+        run: |
+          wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          sudo dpkg -i subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          subwasm --version
+
+      - name: Subwasm info
+        run: |
+          echo "# Upgrade Priority
+
+          Low: This is a low priority release and you may upgrade at your convenience." >> ${{ github.workspace }}-CHANGELOG.txt
+          echo "## Bifrost Kusama Runtime" >> ${{ github.workspace }}-CHANGELOG.txt
+          echo '```' >> ${{ github.workspace }}-CHANGELOG.txt
+          subwasm info ${{ github.workspace }}/artifacts/bifrost_kusama_runtime.compact.compressed.wasm >> ${{ github.workspace }}-CHANGELOG.txt
+          echo '```' >> ${{ github.workspace }}-CHANGELOG.txt
+          echo ' ' >> ${{ github.workspace }}-CHANGELOG.txt
+          echo "## Bifrost Polkadot Runtime" >> ${{ github.workspace }}-CHANGELOG.txt
+          echo '```' >> ${{ github.workspace }}-CHANGELOG.txt
+          subwasm info ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm >> ${{ github.workspace }}-CHANGELOG.txt
+          echo '```' >> ${{ github.workspace }}-CHANGELOG.txt
+
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
+          append_body: true
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          files: |
+            ${{ github.workspace }}/artifacts/bifrost
+            ${{ github.workspace }}/artifacts/bifrost.sha256
+            ${{ github.workspace }}/artifacts/bifrost_kusama_runtime.compact.compressed.wasm
+            ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm
 
       - uses: 8398a7/action-slack@v3
         if: failure()
