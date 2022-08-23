@@ -300,7 +300,7 @@ pub mod pallet {
 			{
 				let mut name = "Voucher ".as_bytes().to_vec();
 				name.extend_from_slice(&token_metadata.symbol);
-				let mut symbol = vec![b'v'];
+				let mut symbol = "v".as_bytes().to_vec();
 				symbol.extend_from_slice(&token_metadata.symbol);
 				let vtoken_metadata = AssetMetadata { name, symbol, ..token_metadata };
 				Self::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
@@ -323,7 +323,7 @@ pub mod pallet {
 			{
 				let mut name = "Voucher Slot ".as_bytes().to_vec();
 				name.extend_from_slice(&token_metadata.symbol);
-				let mut symbol = vec![b'v', b's'];
+				let mut symbol = "vs".as_bytes().to_vec();
 				symbol.extend_from_slice(&token_metadata.symbol);
 				let vstoken_metadata = AssetMetadata { name, symbol, ..token_metadata };
 				Self::do_register_metadata(CurrencyId::VSToken2(token_id), &vstoken_metadata)?;
@@ -347,6 +347,7 @@ pub mod pallet {
 
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
 			{
+				use scale_info::prelude::format;
 				let vstoken_metadata = AssetMetadata {
 					name: format!(
 						"vsBOND-{:?}-{}-{}-{}",

@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::{AssetIds, CurrencyId, PoolId, TokenId};
+use crate::{AssetIds, PoolId};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
