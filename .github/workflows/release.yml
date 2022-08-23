@@ -28,7 +28,7 @@ jobs:
       - name: Build bifrost
         working-directory: ${{ github.workspace }}
         run: |
-          make build-all-release
+          make production-release
           mkdir -p ${{ github.workspace }}/artifacts
           mv ${{ github.workspace }}/target/release/bifrost ${{ github.workspace }}/artifacts/
           mv ${{ github.workspace }}/target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
