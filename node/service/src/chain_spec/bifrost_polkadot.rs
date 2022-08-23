@@ -19,7 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
@@ -75,6 +76,7 @@ pub fn bifrost_polkadot_genesis(
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
+	salp_multisig_key: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -115,6 +117,7 @@ pub fn bifrost_polkadot_genesis(
 		tokens: TokensConfig { balances: tokens },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		sudo: SudoConfig { key: Some(root_key) },
+		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 	}
 }
 
@@ -134,6 +137,9 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT())])
 		.collect();
 
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+
 	bifrost_polkadot_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -144,6 +150,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		salp_multisig,
 	)
 }
 
@@ -192,6 +199,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 4_000_000)]
 		})
 		.collect();
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	bifrost_polkadot_genesis(
 		vec![
@@ -206,6 +215,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		salp_multisig,
 	)
 }
 
@@ -275,5 +285,8 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let balances = vec![(root_key.clone(), 1000 * DOLLARS)];
 
-	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![])
+	let salp_multisig: AccountId =
+		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+
+	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![], salp_multisig)
 }
