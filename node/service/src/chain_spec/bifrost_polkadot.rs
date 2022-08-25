@@ -195,9 +195,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| {
-			vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 4_000_000)]
-		})
+		.flat_map(|x| vec![(x.clone(), CurrencyId::Token2(0), ENDOWMENT() * 4_000_000)])
 		.collect();
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();

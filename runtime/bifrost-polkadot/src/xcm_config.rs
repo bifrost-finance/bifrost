@@ -16,12 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::AssetRegistry;
-use bifrost_asset_registry::{AssetIdMaps, AssetMetadata};
+use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	pallet_prelude::Weight,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
@@ -171,53 +169,5 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 			},
 			_ => None,
 		}
-	}
-}
-
-pub struct AssetRegistryMigration<T>(sp_std::marker::PhantomData<T>);
-impl<T: Get<ParaId>> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration<T> {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use bifrost_runtime_common::{milli, millicent};
-		use node_primitives::TokenInfo;
-		use CurrencyId::*;
-		use TokenSymbol::*;
-
-		let items = vec![
-			(Token(DOT), MultiLocation::parent(), 10 * millicent(Token(DOT))),
-			(Native(BNC), native_currency_location(Native(BNC), T::get()), 10 * milli(Native(BNC))),
-		];
-
-		for (asset, location, metadata) in
-			items.iter().map(|(currency_id, location, minimal_balance)| {
-				(
-					currency_id.clone(),
-					location,
-					AssetMetadata {
-						name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-						symbol: currency_id
-							.symbol()
-							.map(|s| s.as_bytes().to_vec())
-							.unwrap_or_default(),
-						decimals: currency_id.decimals().unwrap_or_default(),
-						minimal_balance: *minimal_balance,
-					},
-				)
-			}) {
-			AssetRegistry::do_register_native_asset(asset, location, &metadata)
-				.expect("Asset register");
-		}
-
-		let len = items.len() as Weight;
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(len, len)
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		Ok(())
 	}
 }
