@@ -87,7 +87,8 @@ use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
+	GLMR_TOKEN_ID,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -280,7 +281,7 @@ impl Contains<Call> for CallFilter {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(0); // DOT
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
@@ -1151,7 +1152,7 @@ parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
-			&CurrencyId::Token2(0) => 1_000_000,  // DOT
+			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
@@ -1326,7 +1327,7 @@ parameter_types! {
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
 	match currency_id {
-		CurrencyId::Token(TokenSymbol::GLMR) => MultiLocation::new(
+		CurrencyId::Token2(GLMR_TOKEN_ID) => MultiLocation::new(
 			1,
 			X2(
 				Parachain(parachains::moonbeam::ID.into()),

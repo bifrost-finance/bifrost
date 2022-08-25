@@ -23,7 +23,9 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, AssetIdMapping, CurrencyId, TokenSymbol};
+use node_primitives::{
+	AccountId, AssetIdMapping, CurrencyId, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+};
 use orml_traits::location::Reserve;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xcm::latest::prelude::*;
@@ -105,10 +107,10 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		}
 
 		match id {
-			Token(DOT) => Some(MultiLocation::parent()),
+			Token2(DOT_TOKEN_ID) => Some(MultiLocation::parent()),
 			Native(BNC) => Some(native_currency_location(id, T::get())),
 			// Moonbeam Native token
-			Token(GLMR) => Some(MultiLocation::new(
+			Token2(GLMR_TOKEN_ID) => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(parachains::moonbeam::ID),
@@ -126,7 +128,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		use TokenSymbol::*;
 
 		if location == MultiLocation::parent() {
-			return Some(Token(DOT));
+			return Some(Token2(DOT_TOKEN_ID));
 		}
 
 		if let Some(currency_id) = AssetIdMaps::<Runtime>::get_currency_id(location.clone()) {
@@ -149,7 +151,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonbeam::ID) &&
 						(index == parachains::moonbeam::PALLET_ID)) =>
-					Some(Token(GLMR)),
+					Some(Token2(GLMR_TOKEN_ID)),
 
 				_ => None,
 			},

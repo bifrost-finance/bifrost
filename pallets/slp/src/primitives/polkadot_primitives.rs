@@ -23,7 +23,6 @@ use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateLedger<DelegatorId, Balance> {
