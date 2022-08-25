@@ -22,7 +22,7 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, CurrencyId, TokenSymbol};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol, DOT_TOKEN_ID};
 use orml_traits::location::Reserve;
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
@@ -246,7 +246,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>>
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		use CurrencyId::Token;
 		match id {
-			Token(TokenSymbol::DOT) => Some(MultiLocation::parent()),
+			Token2(DOT_TOKEN_ID) => Some(MultiLocation::parent()),
 			_ => None,
 		}
 	}
@@ -260,7 +260,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>>
 		use CurrencyId::Token;
 		use TokenSymbol::*;
 		if location == MultiLocation::parent() {
-			Some(Token(DOT))
+			Some(Token2(DOT_TOKEN_ID))
 		} else {
 			None
 		}

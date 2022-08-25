@@ -35,9 +35,9 @@ use crate::{
 	LeasePeriod, ParaId,
 };
 pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost parachain id
-pub const DOT_TOKEN_ID: u8 = 1u8;
+pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
-pub const GLMR_TOKEN_ID: u8 = 2u8;
+pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
 
 macro_rules! create_currency_id {
