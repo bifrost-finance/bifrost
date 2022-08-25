@@ -87,7 +87,11 @@ macro_rules! create_currency_id {
 						let currency_index1 =
 							(((((index1 as u64) << 8) & 0x0000_ff00) + (symbol1 as u64 & 0x0000_00ff)) as u64) << 32;
 						Ok((6 as u64, currency_index0 + currency_index1))
-					}
+					},
+					CurrencyId::Token2(token_id) => Ok((8_u64, token_id as u64)),
+					CurrencyId::VToken2(token_id) => Ok((9_u64, token_id as u64)),
+					CurrencyId::VSToken2(token_id) => Ok((10_u64, token_id as u64)),
+					// ForeignAsset, vsbond and vsbond2 are not allowed to be transferred to zenlink pool(c_disc is 7, 5 and 11).
 					_ => Err(()),
 				};
 				let asset_index = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
@@ -122,6 +126,9 @@ macro_rules! create_currency_id {
 					3 => Ok(CurrencyId::Stable(TokenSymbol::try_from(_index)?)),
 					4 => Ok(CurrencyId::VSToken(TokenSymbol::try_from(_index)?)),
 					6 => Ok(CurrencyId::try_from(id)?),
+					8 => Ok(CurrencyId::Token2(_index)),
+					9 => Ok(CurrencyId::VToken2(_index)),
+					10 => Ok(CurrencyId::VSToken2(_index)),
 					_ => Err(()),
 				}
 			}
@@ -145,6 +152,12 @@ macro_rules! create_currency_id {
 			// TokenSymbol 2 Discriminant:  1byte
 			// Currency Discriminant:       1byte
 			// TokenSymbol Discriminant:    1byte
+			//
+			// If it is Foreign Asset:
+			// Empty:						2byte
+			// ForeignAssetId of u32:       4byte
+			// Currency Discriminant:       1byte
+			// TokenSymbol Discriminant:    1byte
 
 			fn currency_id(&self) -> u64 {
 				let c_discr = self.discriminant() as u64;
@@ -155,14 +168,13 @@ macro_rules! create_currency_id {
 					| Self::Native(ts)
 					| Self::Stable(ts)
 					| Self::VSToken(ts)
-					| Self::VSBond(ts, ..) => ts as u8,
-					Self::ForeignAsset(..) => 0u8,
-					Self::Token2(..) => 0u8,
-					Self::VToken2(..) => 0u8,
-					Self::VSToken2(..) => 0u8,
-					Self::VSBond2(..) => 0u8,
-					Self::LPToken(..) => 0u8
-				} as u64;
+					| Self::VSBond(ts, ..) => ts as u64,
+					Self::Token2(tk_id)
+					| Self::VToken2(tk_id)
+					| Self::VSToken2(tk_id)
+					| Self::VSBond2(tk_id) => tk_id as u64,
+					Self::ForeignAsset(..) | Self::LPToken(..) => 0u64
+				};
 
 		 		let discr = (c_discr << 8) + t_discr;
 
@@ -171,7 +183,11 @@ macro_rules! create_currency_id {
 					| Self::VToken(..)
 					| Self::Native(..)
 					| Self::Stable(..)
-					| Self::VSToken(..) => (0x0000_ffff & discr) as u64,
+					| Self::VSToken(..)
+					| Self::Token2(..)
+					| Self::VToken2(..)
+					| Self::VSToken2(..)
+					=> (0x0000_ffff & discr) as u64,
 					Self::VSBond(_, pid, lp1, lp2) => {
 						// NOTE: ParaId representation
 						//
@@ -197,16 +213,8 @@ macro_rules! create_currency_id {
 					Self::ForeignAsset(asset_token_id) => {
 						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
 					},
-					Self::Token2(token_id) => {
-						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
-					},
-					Self::VToken2(token_id) => {
-						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
-					},
-					Self::VSToken2(token_id) => {
-						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
-					},
 					Self::VSBond2(token_id) => {
+						// TODO: use metadata to get pid, lp1 and lp2, and form the same format as VSBond does.
 						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
 					},
 				}
@@ -303,7 +311,7 @@ impl Default for TokenSymbol {
 }
 
 pub type ForeignAssetId = u32;
-pub type TokenId = u32;
+pub type TokenId = u8;
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(
@@ -484,15 +492,15 @@ impl TryFrom<u64> for CurrencyId {
 				Ok(Self::ForeignAsset(foreign_asset_id))
 			},
 			8 => {
-				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				let token_id = c_discr as TokenId;
 				Ok(Self::Token2(token_id))
 			},
 			9 => {
-				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				let token_id = c_discr as TokenId;
 				Ok(Self::VToken2(token_id))
 			},
 			10 => {
-				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
+				let token_id = c_discr as TokenId;
 				Ok(Self::VSToken2(token_id))
 			},
 			11 => {
