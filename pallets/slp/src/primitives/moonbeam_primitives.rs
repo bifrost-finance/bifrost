@@ -23,7 +23,6 @@ use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const GLMR: CurrencyId = CurrencyId::Token(TokenSymbol::GLMR);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
