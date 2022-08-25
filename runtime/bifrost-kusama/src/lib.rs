@@ -93,7 +93,7 @@ use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -288,7 +288,7 @@ parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 parameter_types! {
