@@ -70,9 +70,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
