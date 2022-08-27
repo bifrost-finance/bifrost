@@ -43,7 +43,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, SlpOperator, TimeUnit, TokenSymbol, VtokenMintingInterface, VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, SlpOperator, TimeUnit, TokenSymbol, VtokenMintingInterface,
+	VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -109,6 +110,8 @@ pub mod pallet {
 		type FeeAccount: Get<Self::AccountId>;
 
 		type BifrostSlp: SlpOperator<CurrencyId>;
+
+		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -347,8 +350,8 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-
-			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let _token_amount_to_rebond =
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 			if let Some((user_unlock_amount, mut ledger_list)) =
@@ -507,7 +510,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
-			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let _token_amount_to_rebond =
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 
@@ -1018,7 +1022,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
-			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let (token_amount_excluding_fee, vtoken_amount, fee) =
 				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)?;
 			// Transfer the user's token to EntranceAccount.
@@ -1045,7 +1050,8 @@ pub mod pallet {
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let token_id = T::CurrencyIdConversion::convert_to_token(vtoken_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			ensure!(
 				vtoken_amount >= MinimumRedeem::<T>::get(vtoken_id),
 				Error::<T>::BelowMinimumRedeem
@@ -1221,17 +1227,11 @@ pub mod pallet {
 		}
 
 		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
-			match token_id.to_vtoken() {
-				Ok(vtoken_id) => Some(vtoken_id),
-				Err(_) => None,
-			}
+			T::CurrencyIdConversion::convert_to_vtoken(token_id).ok()
 		}
 
 		pub fn token_id_inner(vtoken_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
-			match vtoken_id.to_token() {
-				Ok(token_id) => Some(token_id),
-				Err(_) => None,
-			}
+			T::CurrencyIdConversion::convert_to_token(vtoken_id).ok()
 		}
 	}
 }

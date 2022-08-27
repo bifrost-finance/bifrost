@@ -86,7 +86,7 @@ use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
-	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
+	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, ExtraFeeName,
 	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
 	GLMR_TOKEN_ID,
 };
@@ -1393,6 +1393,7 @@ impl bifrost_salp::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1485,11 +1486,11 @@ parameter_types! {
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	// type RelayCurrencyId = RelayCurrencyId;
-	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
+	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 }
 
@@ -1583,6 +1584,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.

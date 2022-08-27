@@ -24,7 +24,7 @@ use frame_support::{
 	traits::Get,
 };
 use node_primitives::{
-	AccountId, AssetIdMapping, CurrencyId, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 use orml_traits::location::Reserve;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};

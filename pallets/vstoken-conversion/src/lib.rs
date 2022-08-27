@@ -38,7 +38,7 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, CurrencyIdConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
@@ -71,7 +71,8 @@ pub mod pallet {
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type RelayChainTokenSymbol: Get<TokenSymbol>;
+		#[pallet::constant]
+		type RelayCurrencyId: Get<CurrencyId>;
 
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
@@ -80,6 +81,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VsbondAccount: Get<PalletId>;
+
+		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -167,31 +170,28 @@ pub mod pallet {
 		#[pallet::weight(10000)]
 		pub fn vsbond_convert_to_vstoken(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			vs_bond_currency_id: CurrencyIdOf<T>,
 			vsbond_amount: BalanceOf<T>,
 			minimum_vstoken: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			let relaychain_token_symbol = T::RelayChainTokenSymbol::get();
-			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
+			let user_vsbond_balance =
+				T::MultiCurrency::free_balance(vs_bond_currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
-				minimum_vstoken >=
-					T::MultiCurrency::minimum_balance(CurrencyId::Token(
-						relaychain_token_symbol
-					)),
+				minimum_vstoken >= T::MultiCurrency::minimum_balance(T::RelayCurrencyId::get()),
 				Error::<T>::NotEnoughBalance
 			);
 
 			// Calculate lease
 			let relay_lease = RelaychainLease::<T>::get();
-			let mut remaining_due_lease: i32 = match currency_id {
-				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
-					ensure!(
-						symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
-						Error::<T>::NotSupportTokenType
-					);
+			let mut remaining_due_lease: i32 = match vs_bond_currency_id {
+				CurrencyId::VSBond(.., expire_lease) | CurrencyId::VSBond2(.., expire_lease) => {
+					// ensure!(
+					// 	symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
+					// 	Error::<T>::NotSupportTokenType
+					// );
 					let mut remaining_due_lease: i32 = (expire_lease as i64 - relay_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
@@ -217,25 +217,26 @@ pub mod pallet {
 			ensure!(vstoken_balance >= minimum_vstoken, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
-				currency_id,
+				vs_bond_currency_id,
 				&exchanger,
 				&T::VsbondAccount::get().into_account_truncating(),
 				vsbond_amount,
 			)?;
 			T::MultiCurrency::deposit(
-				CurrencyId::VSToken(relaychain_token_symbol),
+				T::CurrencyIdConversion::convert_to_vstoken(T::RelayCurrencyId::get())
+					.map_err(|_| Error::<T>::NotSupportTokenType)?,
 				&exchanger,
 				vstoken_balance,
 			)?;
 			T::MultiCurrency::deposit(
-				currency_id,
+				vs_bond_currency_id,
 				&T::TreasuryAccount::get(),
 				exchange_fee.vsbond_exchange_fee_of_vstoken,
 			)?;
 
 			Self::deposit_event(Event::VsbondConvertToVstoken {
 				address: exchanger,
-				currency_id,
+				currency_id: vs_bond_currency_id,
 				vsbond_amount,
 				vstoken_amount: vstoken_balance,
 			});
@@ -252,11 +253,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			let relaychain_token_symbol = T::RelayChainTokenSymbol::get();
-			let user_vstoken_balance = T::MultiCurrency::free_balance(
-				CurrencyId::VSToken(relaychain_token_symbol),
-				&exchanger,
-			);
+			let vs_token_currency_id =
+				T::CurrencyIdConversion::convert_to_vstoken(T::RelayCurrencyId::get())
+					.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let user_vstoken_balance =
+				T::MultiCurrency::free_balance(vs_token_currency_id, &exchanger);
 			ensure!(user_vstoken_balance >= vstoken_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
 				minimum_vsbond >= T::MultiCurrency::minimum_balance(currency_id),
@@ -266,11 +267,11 @@ pub mod pallet {
 			// Calculate lease
 			let relay_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
-				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
-					ensure!(
-						symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
-						Error::<T>::NotSupportTokenType
-					);
+				CurrencyId::VSBond(.., expire_lease) | CurrencyId::VSBond2(.., expire_lease) => {
+					// ensure!(
+					// 	symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
+					// 	Error::<T>::NotSupportTokenType
+					// );
 					let mut remaining_due_lease: i32 = (expire_lease as i64 - relay_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
@@ -308,13 +309,9 @@ pub mod pallet {
 				&exchanger,
 				vsbond_balance,
 			)?;
-			T::MultiCurrency::withdraw(
-				CurrencyId::VSToken(relaychain_token_symbol),
-				&exchanger,
-				vstoken_amount,
-			)?;
+			T::MultiCurrency::withdraw(vs_token_currency_id, &exchanger, vstoken_amount)?;
 			T::MultiCurrency::deposit(
-				CurrencyId::VSToken(relaychain_token_symbol),
+				vs_token_currency_id,
 				&T::TreasuryAccount::get(),
 				exchange_fee.vstoken_exchange_fee,
 			)?;

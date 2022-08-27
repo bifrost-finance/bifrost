@@ -176,7 +176,7 @@ macro_rules! create_currency_id {
 					Self::Token2(tk_id)
 					| Self::VToken2(tk_id)
 					| Self::VSToken2(tk_id)
-					| Self::VSBond2(tk_id) => tk_id as u64,
+					| Self::VSBond2(tk_id, ..) => tk_id as u64,
 					Self::ForeignAsset(..) | Self::LPToken(..) => 0u64
 				};
 
@@ -217,9 +217,12 @@ macro_rules! create_currency_id {
 					Self::ForeignAsset(asset_token_id) => {
 						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
 					},
-					Self::VSBond2(token_id) => {
-						// TODO: use metadata to get pid, lp1 and lp2, and form the same format as VSBond does.
-						(((*token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
+					Self::VSBond2(_, pid, lp1, lp2) => {
+						let pid = (0x0000_ffff & pid) as u64;
+						let lp1 = (0x0000_ffff & lp1) as u64;
+						let lp2 = (0x0000_ffff & lp2) as u64;
+
+						(pid << 48) + (lp1 << 32) + (lp2 << 16) + discr
 					},
 				}
 			}
@@ -345,7 +348,7 @@ pub enum CurrencyId {
 	Token2(TokenId),
 	VToken2(TokenId),
 	VSToken2(TokenId),
-	VSBond2(TokenId),
+	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
 }
 
 impl Default for CurrencyId {
@@ -507,8 +510,8 @@ impl TryFrom<u64> for CurrencyId {
 				Ok(Self::VSToken2(token_id))
 			},
 			11 => {
-				let token_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as TokenId;
-				Ok(Self::VSBond2(token_id))
+				let token_id = c_discr as TokenId;
+				Ok(Self::VSBond2(token_id, pid, lp1, lp2))
 			},
 			_ => Err(()),
 		}

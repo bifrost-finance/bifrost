@@ -33,7 +33,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	AssetIdMapping, AssetIds, CurrencyId, ForeignAssetId, LeasePeriod, ParaId, TokenId,
+	AssetIds, CurrencyId, CurrencyIdConversion, CurrencyIdMapping, ForeignAssetId, LeasePeriod,
+	ParaId, TokenId, TokenSymbol,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
@@ -79,13 +80,6 @@ pub mod pallet {
 		pub symbol: Vec<u8>,
 		pub decimals: u8,
 		pub minimal_balance: Balance,
-	}
-
-	#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
-	pub struct VsBondData {
-		pub para_id: ParaId,
-		pub first_lease_period: LeasePeriod,
-		pub last_lease_period: LeasePeriod,
 	}
 
 	#[pallet::error]
@@ -176,14 +170,6 @@ pub mod pallet {
 	#[pallet::getter(fn currency_metadatas)]
 	pub type CurrencyMetadatas<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, AssetMetadata<BalanceOf<T>>, OptionQuery>;
-
-	/// The storages for VsBondData.
-	///
-	/// CurrencyMetadatas: map CurrencyId => Option<AssetMetadata>
-	#[pallet::storage]
-	#[pallet::getter(fn vs_bonds)]
-	pub type VsBondDatas<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, VsBondData, OptionQuery>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -340,8 +326,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			token_id: TokenId,
 			para_id: ParaId,
-			first_lease_period: LeasePeriod,
-			last_lease_period: LeasePeriod,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -351,22 +337,22 @@ pub mod pallet {
 				let vstoken_metadata = AssetMetadata {
 					name: format!(
 						"vsBOND-{:?}-{}-{}-{}",
-						token_metadata.symbol, para_id, first_lease_period, last_lease_period
+						token_metadata.symbol, para_id, first_slot, last_slot
 					)
 					.as_bytes()
 					.to_vec(),
 					symbol: format!(
 						"vsBOND-{:?}-{}-{}-{}",
-						token_metadata.symbol, para_id, first_lease_period, last_lease_period
+						token_metadata.symbol, para_id, first_slot, last_slot
 					)
 					.as_bytes()
 					.to_vec(),
 					..token_metadata
 				};
-				Self::do_register_metadata(CurrencyId::VSBond2(token_id), &vstoken_metadata)?;
-
-				let vs_bond = VsBondData { para_id, first_lease_period, last_lease_period };
-				VsBondDatas::<T>::insert(CurrencyId::VSBond2(token_id), vs_bond);
+				Self::do_register_metadata(
+					CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
+					&vstoken_metadata,
+				)?;
 
 				return Ok(());
 			} else {
@@ -572,7 +558,7 @@ impl<T: Config> Pallet<T> {
 
 pub struct AssetIdMaps<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Config> AssetIdMapping<CurrencyId, MultiLocation, AssetMetadata<BalanceOf<T>>>
+impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<BalanceOf<T>>>
 	for AssetIdMaps<T>
 {
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata<BalanceOf<T>>> {
@@ -589,6 +575,59 @@ impl<T: Config> AssetIdMapping<CurrencyId, MultiLocation, AssetMetadata<BalanceO
 
 	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId> {
 		Pallet::<T>::location_to_currency_ids(multi_location)
+	}
+}
+
+impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
+	fn convert_to_token(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
+		match currency_id {
+			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) =>
+				Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			CurrencyId::VToken(token_symbol) |
+			CurrencyId::VSToken(token_symbol) |
+			CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
+			CurrencyId::VToken2(token_id) |
+			CurrencyId::VSToken2(token_id) |
+			CurrencyId::VSBond2(token_id, ..) => Ok(CurrencyId::Token2(token_id)),
+			_ => Err(()),
+		}
+	}
+
+	fn convert_to_vtoken(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
+		match currency_id {
+			CurrencyId::Token2(token_id) => Ok(CurrencyId::VToken2(token_id)),
+			CurrencyId::Token(token_symbol) => Ok(CurrencyId::VToken(token_symbol)),
+			_ => Err(()),
+		}
+	}
+
+	fn convert_to_vstoken(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
+		match currency_id {
+			CurrencyId::Token(token_symbol) => Ok(CurrencyId::VSToken(token_symbol)),
+			CurrencyId::Token2(token_id) => Ok(CurrencyId::VSToken2(token_id)),
+			_ => Err(()),
+		}
+	}
+
+	fn convert_to_vsbond(
+		currency_id: CurrencyId,
+		index: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> Result<CurrencyId, ()> {
+		match currency_id {
+			CurrencyId::Token(token_symbol) => {
+				let mut vs_bond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
+				if vs_bond == CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20) {
+					// fix vsBOND::BNC
+					vs_bond = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
+				}
+				Ok(vs_bond)
+			},
+			CurrencyId::Token2(token_id) =>
+				Ok(CurrencyId::VSBond2(token_id, index, first_slot, last_slot)),
+			_ => Err(()),
+		}
 	}
 }
 
