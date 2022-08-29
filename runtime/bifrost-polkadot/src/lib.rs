@@ -1806,7 +1806,7 @@ impl frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration {
 		log::info!("try-runtime::pre_upgrade next_token_id: {:?}", AssetRegistry::next_token_id());
 		assert_eq!(AssetRegistry::next_token_id(), 2);
 		assert_eq!(
-			AssetRegistry::currency_metadatas(CurrencyId::Token2(0)).unwrap(),
+			AssetRegistry::currency_metadatas(CurrencyId::Token2(DOT_TOKEN_ID)).unwrap(),
 			bifrost_asset_registry::AssetMetadata {
 				name: "Polkadot DOT".as_bytes().to_vec(),
 				symbol: "DOT".as_bytes().to_vec(),
@@ -1815,7 +1815,7 @@ impl frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration {
 			}
 		);
 		assert_eq!(
-			AssetRegistry::currency_metadatas(CurrencyId::Token2(1)).unwrap(),
+			AssetRegistry::currency_metadatas(CurrencyId::Token2(GLMR_TOKEN_ID)).unwrap(),
 			bifrost_asset_registry::AssetMetadata {
 				name: "Moonbeam Native Token".as_bytes().to_vec(),
 				symbol: "GLMR".as_bytes().to_vec(),

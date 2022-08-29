@@ -38,7 +38,7 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion};
+use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
@@ -187,11 +187,9 @@ pub mod pallet {
 			// Calculate lease
 			let relay_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match vs_bond_currency_id {
-				CurrencyId::VSBond(.., expire_lease) | CurrencyId::VSBond2(.., expire_lease) => {
-					// ensure!(
-					// 	symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
-					// 	Error::<T>::NotSupportTokenType
-					// );
+				CurrencyId::VSBond(TokenSymbol::KSM, .., expire_lease) |
+				CurrencyId::VSBond(TokenSymbol::BNC, .., expire_lease) |
+				CurrencyId::VSBond2(.., expire_lease) => {
 					let mut remaining_due_lease: i32 = (expire_lease as i64 - relay_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
@@ -267,11 +265,9 @@ pub mod pallet {
 			// Calculate lease
 			let relay_lease = RelaychainLease::<T>::get();
 			let mut remaining_due_lease: i32 = match currency_id {
-				CurrencyId::VSBond(.., expire_lease) | CurrencyId::VSBond2(.., expire_lease) => {
-					// ensure!(
-					// 	symbol == relaychain_token_symbol || symbol == TokenSymbol::BNC,
-					// 	Error::<T>::NotSupportTokenType
-					// );
+				CurrencyId::VSBond(TokenSymbol::KSM, .., expire_lease) |
+				CurrencyId::VSBond(TokenSymbol::BNC, .., expire_lease) |
+				CurrencyId::VSBond2(.., expire_lease) => {
 					let mut remaining_due_lease: i32 = (expire_lease as i64 - relay_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
