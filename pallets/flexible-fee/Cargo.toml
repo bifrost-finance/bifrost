@@ -23,6 +23,7 @@ zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 impl-trait-for-tuples = "0.2.1"
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26", default-features = false }
+bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -51,6 +52,7 @@ std = [
 	"zenlink-protocol/std",
 	"sp-arithmetic/std",
 	"cumulus-primitives-core/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = [

@@ -575,6 +575,7 @@ dependencies = [
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-kusama-runtime",
  "bifrost-runtime-common",
  "bifrost-salp",
