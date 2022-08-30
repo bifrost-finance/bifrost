@@ -1059,6 +1059,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-system-maker"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "zenlink-protocol",
+]
+
+[[package]]
 name = "bifrost-system-staking"
 version = "4.0.0-dev"
 dependencies = [
