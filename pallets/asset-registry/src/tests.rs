@@ -448,3 +448,200 @@ fn update_native_asset_works() {
 		);
 	});
 }
+
+#[test]
+fn register_token_metadata_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"BNC Token".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			Origin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_eq!(CurrencyMetadatas::<Runtime>::get(CurrencyId::Token2(0)), Some(metadata.clone()))
+	})
+}
+
+#[test]
+fn register_vtoken_metadata_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"BNC Token".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		let v_metadata = AssetMetadata {
+			name: b"Voucher BNC".to_vec(),
+			symbol: b"vBNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		assert_noop!(
+			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			Origin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_ok!(AssetRegistry::register_vtoken_metadata(
+			Origin::signed(CouncilAccount::get()),
+			0
+		));
+
+		assert_eq!(
+			CurrencyMetadatas::<Runtime>::get(CurrencyId::VToken2(0)),
+			Some(v_metadata.clone())
+		)
+	})
+}
+
+#[test]
+fn register_vstoken_metadata_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"BNC Token".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		let v_metadata = AssetMetadata {
+			name: b"Voucher Slot BNC".to_vec(),
+			symbol: b"vsBNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		assert_noop!(
+			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			Origin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_ok!(AssetRegistry::register_vstoken_metadata(
+			Origin::signed(CouncilAccount::get()),
+			0
+		));
+
+		assert_eq!(
+			CurrencyMetadatas::<Runtime>::get(CurrencyId::VSToken2(0)),
+			Some(v_metadata.clone())
+		)
+	})
+}
+
+#[test]
+fn register_vsbond_metadata_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"BNC Token".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		let v_metadata = AssetMetadata {
+			name: format!("vsBOND-{:?}-{}-{}-{}", b"BNC".to_vec(), 2001, 10, 20)
+				.as_bytes()
+				.to_vec(),
+			symbol: format!("vsBOND-{:?}-{}-{}-{}", b"BNC".to_vec(), 2001, 10, 20)
+				.as_bytes()
+				.to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		assert_noop!(
+			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			Origin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_ok!(AssetRegistry::register_vsbond_metadata(
+			Origin::signed(CouncilAccount::get()),
+			0,
+			2001,
+			10,
+			20
+		));
+
+		assert_eq!(
+			CurrencyMetadatas::<Runtime>::get(CurrencyId::VSBond2(0, 2001, 10, 20)),
+			Some(v_metadata.clone())
+		)
+	})
+}
+
+#[test]
+fn register_multilocation_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"BNC Token".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		// v1
+		let location = VersionedMultiLocation::V1(MultiLocation {
+			parents: 1,
+			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+		});
+		let multi_location: MultiLocation = location.clone().try_into().unwrap();
+
+		assert_noop!(
+			AssetRegistry::register_multilocation(
+				Origin::signed(CouncilAccount::get()),
+				CurrencyId::Token2(0),
+				Box::new(location.clone()),
+				2000_000_000
+			),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			Origin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_ok!(AssetRegistry::register_multilocation(
+			Origin::signed(CouncilAccount::get()),
+			CurrencyId::Token2(0),
+			Box::new(location.clone()),
+			2000_000_000
+		));
+
+		assert_noop!(
+			AssetRegistry::register_multilocation(
+				Origin::signed(CouncilAccount::get()),
+				CurrencyId::Token2(0),
+				Box::new(location.clone()),
+				2000_000_000
+			),
+			Error::<Runtime>::CurrencyIdExisted
+		);
+
+		assert_eq!(
+			LocationToCurrencyIds::<Runtime>::get(multi_location.clone()),
+			Some(CurrencyId::Token2(0))
+		);
+		assert_eq!(
+			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
+			Some(multi_location.clone())
+		);
+		assert_eq!(CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)), Some(2000_000_000));
+	})
+}
