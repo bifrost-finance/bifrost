@@ -6,8 +6,12 @@ edition = "2021"
 
 [dependencies]
 bstringify = "0.1.2"
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.2", default-features = false, features = [
+	"derive",
+] }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
@@ -29,3 +33,11 @@ std = [
 	"sp-std/std",
 	"zenlink-protocol/std",
 ]
+
+with-bifrost-runtime = [
+	"with-bifrost-kusama-runtime",
+	"with-bifrost-polkadot-runtime",
+]
+with-bifrost-kusama-runtime = []
+with-bifrost-polkadot-runtime = []
+with-all-runtime = ["with-bifrost-runtime"]

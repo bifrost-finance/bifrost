@@ -34,7 +34,12 @@ use crate::{
 	traits::{CurrencyIdExt, TokenInfo},
 	LeasePeriod, ParaId,
 };
-pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost parachain id
+
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime",))]
+pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost kusama parachain id
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
+pub const BIFROST_PARACHAIN_ID: u32 = 2030; // bifrost polkadot parachain id
+
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
