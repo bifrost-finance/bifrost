@@ -1322,7 +1322,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 }
 
 parameter_types! {
-	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+	pub BifrostParachainAccountId20: [u8; 20] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
 }
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
@@ -1334,7 +1334,8 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
-						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						cumulus_primitives_core::ParaId::from(ParachainInfo::get())
+							.into_account_truncating(),
 						index,
 					)
 					.into(),
