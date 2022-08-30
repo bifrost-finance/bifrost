@@ -30,14 +30,6 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
-#[cfg(feature = "try-runtime")]
-use crate::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnRuntimeUpgradeHelpersExt;
-#[cfg(feature = "try-runtime")]
-use bifrost_slp::MinimumsAndMaximums;
-#[cfg(feature = "try-runtime")]
-use bifrost_slp::{migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsMaximums};
-#[cfg(feature = "try-runtime")]
-use frame_support::ensure;
 use frame_support::traits::OnRuntimeUpgrade;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -2149,6 +2141,10 @@ pub type Executive = frame_executive::Executive<
 	SlpMigration,
 >;
 
+use bifrost_slp::{
+	migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsAndMaximums, MinimumsMaximums,
+};
+use frame_support::{ensure, traits::OnRuntimeUpgradeHelpersExt};
 pub struct SlpMigration;
 impl OnRuntimeUpgrade for SlpMigration {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
