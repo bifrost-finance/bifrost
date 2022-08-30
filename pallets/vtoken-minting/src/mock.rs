@@ -79,8 +79,18 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+}
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -180,6 +190,8 @@ ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
+use bifrost_asset_registry::AssetIdMaps;
+
 impl vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -192,6 +204,7 @@ impl vtoken_minting::Config for Runtime {
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;

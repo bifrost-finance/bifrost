@@ -63,9 +63,19 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>}
+		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+}
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -160,16 +170,20 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
+	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
+
+use bifrost_asset_registry::AssetIdMaps;
 
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
+	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = TreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VsbondAccount = BifrostVsbondAccount;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 }
 

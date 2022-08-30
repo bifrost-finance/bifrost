@@ -39,6 +39,7 @@ bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.26", default-features = false }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
 default = ["std"]
@@ -57,6 +58,7 @@ std = [
 	"bifrost-vtoken-minting/std",
 	"bifrost-farming/std",
 	"xcm/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

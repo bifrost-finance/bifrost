@@ -31,6 +31,7 @@ bifrost-salp = { path = "../salp" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 xcm-interface = { path = "../xcm-interface"}
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
 default = ["std"]
@@ -45,6 +46,7 @@ std = [
 	"pallet-transaction-payment/std",
 	"zenlink-protocol/std",
 	"sp-arithmetic/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = [

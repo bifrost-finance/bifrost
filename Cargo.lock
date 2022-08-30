@@ -575,6 +575,7 @@ dependencies = [
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-kusama-runtime",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -952,6 +953,7 @@ dependencies = [
 name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1029,6 +1031,7 @@ dependencies = [
 name = "bifrost-slp"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -1058,6 +1061,7 @@ dependencies = [
 name = "bifrost-system-staking"
 version = "4.0.0-dev"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-farming",
  "bifrost-slp",
  "bifrost-vtoken-minting",
@@ -1143,6 +1147,7 @@ dependencies = [
 name = "bifrost-vstoken-conversion"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1165,6 +1170,7 @@ dependencies = [
 name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-slp",
  "cumulus-primitives-core",
  "frame-benchmarking",

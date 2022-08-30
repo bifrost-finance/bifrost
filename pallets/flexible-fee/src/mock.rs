@@ -23,7 +23,7 @@ use std::convert::TryInto;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
-	parameter_types,
+	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
 	traits::{Contains, Nothing},
@@ -31,7 +31,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system as system;
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use node_primitives::{CurrencyId, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
@@ -78,8 +78,18 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
@@ -415,6 +425,8 @@ parameter_types! {
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
+use bifrost_asset_registry::AssetIdMaps;
+
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
 	type Event = Event;
@@ -434,6 +446,7 @@ impl bifrost_salp::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
 }
 
 //************** Salp mock end *****************
