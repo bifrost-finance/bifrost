@@ -25,7 +25,7 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, AssetIdMapping, CurrencyId, TokenSymbol};
+use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 use orml_traits::location::Reserve;
 use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
 use xcm::latest::prelude::*;

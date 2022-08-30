@@ -153,14 +153,28 @@ pub trait SlpOperator<CurrencyId> {
 	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
 }
 
-/// A mapping between AssetId and AssetMetadata.
-pub trait AssetIdMapping<CurrencyId, MultiLocation, AssetMetadata> {
+/// A mapping between CurrencyId and AssetMetadata.
+pub trait CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata> {
 	/// Returns the AssetMetadata associated with a given `AssetIds`.
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata>;
+	/// Returns the AssetMetadata associated with a given `CurrencyId`.
+	fn get_currency_metadata(currency_id: CurrencyId) -> Option<AssetMetadata>;
 	/// Returns the MultiLocation associated with a given CurrencyId.
 	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation>;
 	/// Returns the CurrencyId associated with a given MultiLocation.
 	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId>;
+}
+
+pub trait CurrencyIdConversion<CurrencyId> {
+	fn convert_to_token(currency_id: CurrencyId) -> Result<CurrencyId, ()>;
+	fn convert_to_vtoken(currency_id: CurrencyId) -> Result<CurrencyId, ()>;
+	fn convert_to_vstoken(currency_id: CurrencyId) -> Result<CurrencyId, ()>;
+	fn convert_to_vsbond(
+		currency_id: CurrencyId,
+		index: crate::ParaId,
+		first_slot: crate::LeasePeriod,
+		last_slot: crate::LeasePeriod,
+	) -> Result<CurrencyId, ()>;
 }
 
 /// The interface to call farming pallet functions.

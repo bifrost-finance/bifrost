@@ -38,7 +38,10 @@ pub use salp::*;
 mod tests;
 
 pub use crate::{
-	currency::{AssetIds, CurrencyId, ForeignAssetId, TokenSymbol},
+	currency::{
+		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, DOT, DOT_TOKEN_ID, GLMR,
+		GLMR_TOKEN_ID,
+	},
 	traits::*,
 };
 

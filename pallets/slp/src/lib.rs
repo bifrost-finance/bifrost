@@ -26,7 +26,9 @@ use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
-use node_primitives::{CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator};
+use node_primitives::{
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, GLMR,
+};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
@@ -46,7 +48,7 @@ use crate::agents::MoonbeamAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, DOT, GLMR, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
