@@ -20,6 +20,7 @@
 
 #![cfg(test)]
 
+use bifrost_asset_registry::AssetIdMaps;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
@@ -70,15 +71,6 @@ construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Test {
-	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-}
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -212,6 +204,15 @@ impl zenlink_protocol::Config for Test {
 	type WeightInfo = ();
 }
 
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+}
+
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -327,8 +328,6 @@ impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExec
 		}
 	}
 }
-
-use bifrost_asset_registry::AssetIdMaps;
 
 impl salp::Config for Test {
 	type BancorPool = ();

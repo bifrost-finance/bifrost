@@ -20,6 +20,7 @@
 
 #![cfg(test)]
 
+use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -74,15 +75,6 @@ construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-}
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
@@ -179,8 +171,6 @@ parameter_types! {
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
-use bifrost_asset_registry::AssetIdMaps;
-
 impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -190,10 +180,19 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+}
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 }
 
 ord_parameter_types! {

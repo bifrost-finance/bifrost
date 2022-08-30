@@ -36,6 +36,7 @@ use sp_runtime::{
 };
 
 use crate as bifrost_vstoken_conversion;
+use bifrost_asset_registry::AssetIdMaps;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -67,15 +68,6 @@ frame_support::construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-}
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -174,8 +166,6 @@ ord_parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
-use bifrost_asset_registry::AssetIdMaps;
-
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -185,6 +175,15 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type VsbondAccount = BifrostVsbondAccount;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
+}
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 }
 
 pub struct ExtBuilder {

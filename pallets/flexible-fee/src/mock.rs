@@ -20,6 +20,7 @@
 
 use std::convert::TryInto;
 
+use bifrost_asset_registry::AssetIdMaps;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
@@ -81,15 +82,6 @@ frame_support::construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Test {
-	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
@@ -425,8 +417,6 @@ parameter_types! {
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 }
 
-use bifrost_asset_registry::AssetIdMaps;
-
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
 	type Event = Event;
@@ -447,6 +437,15 @@ impl bifrost_salp::Config for Test {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
+}
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 }
 
 //************** Salp mock end *****************
