@@ -473,15 +473,13 @@ impl TryFrom<u64> for CurrencyId {
 		let lp1 = ((id & 0x0000_ffff_0000_0000) >> 32) as u32;
 		let lp2 = ((id & 0x0000_0000_ffff_0000) >> 16) as u32;
 
-		let token_symbol = TokenSymbol::try_from(t_discr)?;
-
 		match c_discr {
-			0 => Ok(Self::Native(token_symbol)),
-			1 => Ok(Self::VToken(token_symbol)),
-			2 => Ok(Self::Token(token_symbol)),
-			3 => Ok(Self::Stable(token_symbol)),
-			4 => Ok(Self::VSToken(token_symbol)),
-			5 => Ok(Self::VSBond(token_symbol, pid, lp1, lp2)),
+			0 => Ok(Self::Native(TokenSymbol::try_from(t_discr)?)),
+			1 => Ok(Self::VToken(TokenSymbol::try_from(t_discr)?)),
+			2 => Ok(Self::Token(TokenSymbol::try_from(t_discr)?)),
+			3 => Ok(Self::Stable(TokenSymbol::try_from(t_discr)?)),
+			4 => Ok(Self::VSToken(TokenSymbol::try_from(t_discr)?)),
+			5 => Ok(Self::VSBond(TokenSymbol::try_from(t_discr)?, pid, lp1, lp2)),
 			6 => {
 				let token_symbol_num_1 = ((id & 0x0000_0000_00ff_0000) >> 16) as u8;
 				let token_type_1 = ((id & 0x0000_0000_ff00_0000) >> 24) as u8;
