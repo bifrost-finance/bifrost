@@ -207,3 +207,10 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 }
+
+pub trait TryConvertFrom<CurrencyId> {
+	type Error;
+	fn try_convert_from(currency_id: CurrencyId, para_id: u32) -> Result<Self, Self::Error>
+	where
+		Self: Sized;
+}

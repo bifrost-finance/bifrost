@@ -1319,6 +1319,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
+	type ParachainId = ParachainInfo;
 }
 
 parameter_types! {
@@ -1395,6 +1396,7 @@ impl bifrost_salp::Config for Runtime {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type ParachainId = ParachainInfo;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {

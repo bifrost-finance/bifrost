@@ -32,13 +32,8 @@ use zenlink_protocol::{AssetId, LOCAL, NATIVE};
 
 use crate::{
 	traits::{CurrencyIdExt, TokenInfo},
-	LeasePeriod, ParaId,
+	LeasePeriod, ParaId, TryConvertFrom,
 };
-
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime",))]
-pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost kusama parachain id
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
-pub const BIFROST_PARACHAIN_ID: u32 = 2030; // bifrost polkadot parachain id
 
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
@@ -76,14 +71,14 @@ macro_rules! create_currency_id {
 			}
 		}
 
-		impl TryFrom<CurrencyId> for AssetId {
+		impl TryConvertFrom<CurrencyId> for AssetId {
 			// DATA LAYOUT
 			//
 			// Empty:					 2bytes
 			// Currency Discriminant:    1byte
 			// TokenSymbol Index:        1byte
 			type Error = ();
-			fn try_from(id: CurrencyId) -> Result<AssetId, ()> {
+			fn try_convert_from(id: CurrencyId, para_id: u32) -> Result<AssetId, ()> {
 				let _index = match id {
 					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((0_u64, TokenSymbol::$symbol as u64)),)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((1_u64, TokenSymbol::$symbol as u64)),)*
@@ -105,10 +100,10 @@ macro_rules! create_currency_id {
 				};
 				let asset_index = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
 				if id.is_native() {
-					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: 0 })
+					Ok(AssetId { chain_id: para_id, asset_type: NATIVE, asset_index: 0 })
 				} else {
 					Ok(AssetId {
-						chain_id: BIFROST_PARACHAIN_ID,
+						chain_id: para_id,
 						asset_type: LOCAL,
 						asset_index: asset_index as u64,
 					})

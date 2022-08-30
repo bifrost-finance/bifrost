@@ -952,6 +952,7 @@ dependencies = [
 name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
