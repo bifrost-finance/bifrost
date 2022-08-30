@@ -30,6 +30,13 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
+#[cfg(feature = "try-runtime")]
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnRuntimeUpgradeHelpersExt;
+#[cfg(feature = "try-runtime")]
+use bifrost_slp::{migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsMaximums};
+#[cfg(feature = "try-runtime")]
+use frame_support::ensure;
+use frame_support::traits::OnRuntimeUpgrade;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -43,6 +50,8 @@ pub use frame_support::{
 	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+#[cfg(feature = "try-runtime")]
+use node_primitives::TokenInfo;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
@@ -1549,7 +1558,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 }
 
 parameter_types! {
-	pub BifrostParachainAccountId20: [u8; 20] = ParaId::from(ParachainInfo::get()).into_account_truncating();
+	pub BifrostParachainAccountId20: [u8; 20] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
 }
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
@@ -1561,7 +1570,8 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
-						ParaId::from(ParachainInfo::get()).into_account_truncating(),
+						cumulus_primitives_core::ParaId::from(ParachainInfo::get())
+							.into_account_truncating(),
 						index,
 					)
 					.into(),
@@ -2134,8 +2144,50 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	SlpMigration,
 >;
+
+pub struct SlpMigration;
+impl OnRuntimeUpgrade for SlpMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_slp::migration::update_minimums_maximums::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		for (currency_id, original_mins_max) in bifrost_slp::MinimumsAndMaximums::<Runtime>::iter()
+		{
+			Self::set_temp_storage(original_mins_max, currency_id.name().unwrap());
+		}
+
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		for (currency_id, post_migration) in bifrost_slp::MinimumsAndMaximums::<Runtime>::iter() {
+			let mins_maxs: DeprecatedMinimumsMaximums<BalanceOf<Runtime>> =
+				Self::get_temp_storage(currency_id.name().unwrap()).unwrap();
+			let pre_migration = MinimumsMaximums::<BalanceOf<Runtime>> {
+				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
+				bond_extra_minimum: mins_maxs.bond_extra_minimum,
+				unbond_minimum: mins_maxs.unbond_minimum,
+				rebond_minimum: mins_maxs.rebond_minimum,
+				unbond_record_maximum: mins_maxs.unbond_record_maximum,
+				validators_back_maximum: mins_maxs.validators_back_maximum,
+				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
+				validators_reward_maximum: mins_maxs.validators_reward_maximum,
+				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
+				delegators_maximum: 100u16,
+				validators_maximum: 300u16,
+			};
+
+			ensure!(post_migration == pre_migration, "error ...");
+		}
+
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
