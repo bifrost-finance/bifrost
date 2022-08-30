@@ -453,7 +453,7 @@ fn update_native_asset_works() {
 fn register_token_metadata_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
-			name: b"BNC Token".to_vec(),
+			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
@@ -472,7 +472,7 @@ fn register_token_metadata_should_work() {
 fn register_vtoken_metadata_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
-			name: b"BNC Token".to_vec(),
+			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
@@ -509,14 +509,14 @@ fn register_vtoken_metadata_should_work() {
 fn register_vstoken_metadata_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
-			name: b"BNC Token".to_vec(),
-			symbol: b"BNC".to_vec(),
+			name: b"KSM Native Token".to_vec(),
+			symbol: b"KSM".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
 		};
 		let v_metadata = AssetMetadata {
-			name: b"Voucher Slot BNC".to_vec(),
-			symbol: b"vsBNC".to_vec(),
+			name: b"Voucher Slot KSM".to_vec(),
+			symbol: b"vsKSM".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
 		};
@@ -546,21 +546,14 @@ fn register_vstoken_metadata_should_work() {
 fn register_vsbond_metadata_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
-			name: b"BNC Token".to_vec(),
-			symbol: b"BNC".to_vec(),
+			name: b"KSM Native Token".to_vec(),
+			symbol: b"KSM".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
 		};
-		let v_metadata = AssetMetadata {
-			name: format!("vsBOND-{:?}-{}-{}-{}", b"BNC".to_vec(), 2001, 10, 20)
-				.as_bytes()
-				.to_vec(),
-			symbol: format!("vsBOND-{:?}-{}-{}-{}", b"BNC".to_vec(), 2001, 10, 20)
-				.as_bytes()
-				.to_vec(),
-			decimals: 12,
-			minimal_balance: 0,
-		};
+		let name = "vsBOND-KSM-2001-10-20".as_bytes().to_vec();
+		let v_metadata =
+			AssetMetadata { name: name.clone(), symbol: name, decimals: 12, minimal_balance: 0 };
 		assert_noop!(
 			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
 			Error::<Runtime>::CurrencyIdNotExists
@@ -590,7 +583,7 @@ fn register_vsbond_metadata_should_work() {
 fn register_multilocation_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
-			name: b"BNC Token".to_vec(),
+			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
 			decimals: 12,
 			minimal_balance: 0,
