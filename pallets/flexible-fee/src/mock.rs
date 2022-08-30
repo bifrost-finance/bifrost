@@ -79,7 +79,7 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 

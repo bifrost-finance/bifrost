@@ -26,7 +26,7 @@ orml-currencies = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
-bifrost-asset-registry = { path = "../asset-registry" }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
 default = ["std"]
@@ -38,6 +38,7 @@ std = [
 	"frame-benchmarking/std",
 	"node-primitives/std",
 	"orml-traits/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

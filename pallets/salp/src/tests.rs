@@ -18,7 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-use crate::{mock::*, Error, FundStatus};
+use crate::{mock::*, Error, FundStatus, *};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol};
@@ -259,8 +259,16 @@ fn unlock_should_work() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
@@ -290,8 +298,16 @@ fn contribute_should_work() {
 		assert_eq!(contributed, 100);
 		assert_eq!(status, ContributionStatus::Idle);
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 100);
 	});
@@ -325,8 +341,16 @@ fn double_contribute_should_work() {
 		assert_eq!(contributed, 200);
 		assert_eq!(status, ContributionStatus::Idle);
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 200);
 	});
@@ -351,8 +375,16 @@ fn contribute_when_xcm_error_should_work() {
 		assert_eq!(contributed, 0);
 		assert_eq!(status, ContributionStatus::Idle);
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
@@ -382,8 +414,16 @@ fn confirm_contribute_later_should_work() {
 		assert_eq!(contributed, 100);
 		assert_eq!(status, ContributionStatus::Idle);
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 100);
 	});
@@ -658,8 +698,16 @@ fn refund_should_work() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
@@ -688,8 +736,16 @@ fn refund_when_xcm_error_should_work() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
@@ -874,8 +930,16 @@ fn redeem_should_work() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
@@ -940,7 +1004,16 @@ fn redeem_with_speical_vsbond_should_work() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 2001));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 2001));
 
-		let (vs_token, vs_bond) = CurrencyId::vsAssets(TokenSymbol::KSM, 2001, 13, 20);
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			2001,
+			13,
+			20,
+		)
+		.unwrap();
 
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
@@ -1017,8 +1090,16 @@ fn redeem_with_not_redeemable_vsbond_should_fail() {
 		let block_not_redeemable = LeasePeriod::get();
 		System::set_block_number(block_not_redeemable);
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
@@ -1051,8 +1132,16 @@ fn redeem_without_enough_vsassets_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
@@ -1180,8 +1269,16 @@ fn unlock_when_fund_ongoing_should_work() {
 		));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
-		let (vs_token, vs_bond) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
@@ -1226,7 +1323,13 @@ fn refund_meanwhile_issue_should_work() {
 		));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		let (_, vs_bond_old) = CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 1, SlotLength::get());
+		let vs_bond_old = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 100);
 		assert_ok!(Salp::continue_fund(Some(ALICE).into(), 3_000, 2, SlotLength::get() + 1));
 		let old_fund = Salp::failed_funds_to_refund((3_000, 1, SlotLength::get())).unwrap();
@@ -1235,8 +1338,13 @@ fn refund_meanwhile_issue_should_work() {
 		let mut new_fund = Salp::funds(3_000).unwrap();
 		assert_eq!(new_fund.first_slot, 2);
 		assert_eq!(new_fund.raised, 100);
-		let (_, vs_bond_new) =
-			CurrencyId::vsAssets(TokenSymbol::KSM, 3_000, 2, SlotLength::get() + 1);
+		let vs_bond_new = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			2,
+			SlotLength::get() + 1,
+		)
+		.unwrap();
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		assert_ok!(Salp::confirm_contribute(
 			Some(ALICE).into(),
@@ -1313,11 +1421,12 @@ fn refund_meanwhile_issue_should_work() {
 		));
 		assert_noop!(
 			Salp::buyback(Some(ALICE).into(), 80),
-			zenlink_protocol::Error::<Test>::InvalidPath
+			orml_tokens::Error::<Test>::BalanceTooLow
 		);
+		assert_ok!(Salp::buyback(Some(ALICE).into(), 70));
 		assert_noop!(
 			Salp::buyback(Some(ALICE).into(), 10),
-			zenlink_protocol::Error::<Test>::InvalidPath
+			zenlink_protocol::Error::<Test>::InsufficientTargetAmount
 		);
 	});
 }

@@ -81,7 +81,7 @@ frame_support::construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
 		SystemStaking: system_staking::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 

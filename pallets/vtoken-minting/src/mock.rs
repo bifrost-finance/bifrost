@@ -80,7 +80,7 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 

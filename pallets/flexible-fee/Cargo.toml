@@ -46,6 +46,7 @@ std = [
 	"pallet-transaction-payment/std",
 	"zenlink-protocol/std",
 	"sp-arithmetic/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = [

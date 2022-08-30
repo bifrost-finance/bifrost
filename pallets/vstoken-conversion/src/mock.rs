@@ -65,7 +65,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 
@@ -162,6 +162,7 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 

@@ -68,7 +68,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 

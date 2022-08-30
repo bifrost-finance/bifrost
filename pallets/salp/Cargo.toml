@@ -31,7 +31,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
-bifrost-asset-registry = { path = "../asset-registry" }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
 default = ["std"]
@@ -49,6 +49,7 @@ std = [
 	"orml-traits/std",
 	"xcm-interface/std",
 	"zenlink-protocol/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = [

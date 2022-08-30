@@ -58,6 +58,7 @@ std = [
 	"bifrost-vtoken-minting/std",
 	"bifrost-farming/std",
 	"xcm/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
