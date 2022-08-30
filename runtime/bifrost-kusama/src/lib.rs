@@ -2141,9 +2141,11 @@ pub type Executive = frame_executive::Executive<
 	SlpMigration,
 >;
 
+#[cfg(feature = "try-runtime")]
 use bifrost_slp::{
 	migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsAndMaximums, MinimumsMaximums,
 };
+#[cfg(feature = "try-runtime")]
 use frame_support::{ensure, traits::OnRuntimeUpgradeHelpersExt};
 pub struct SlpMigration;
 impl OnRuntimeUpgrade for SlpMigration {
