@@ -496,19 +496,19 @@ impl TryFrom<u64> for CurrencyId {
 				Ok(Self::ForeignAsset(foreign_asset_id))
 			},
 			8 => {
-				let token_id = c_discr as TokenId;
+				let token_id = t_discr as TokenId;
 				Ok(Self::Token2(token_id))
 			},
 			9 => {
-				let token_id = c_discr as TokenId;
+				let token_id = t_discr as TokenId;
 				Ok(Self::VToken2(token_id))
 			},
 			10 => {
-				let token_id = c_discr as TokenId;
+				let token_id = t_discr as TokenId;
 				Ok(Self::VSToken2(token_id))
 			},
 			11 => {
-				let token_id = c_discr as TokenId;
+				let token_id = t_discr as TokenId;
 				Ok(Self::VSBond2(token_id, pid, lp1, lp2))
 			},
 			_ => Err(()),
