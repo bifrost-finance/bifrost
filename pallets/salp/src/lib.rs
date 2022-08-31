@@ -1011,7 +1011,7 @@ pub mod pallet {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let relay_currency_id = T::RelayChainToken::get();
-			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
+			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let relay_asset_id: AssetId =
 				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())

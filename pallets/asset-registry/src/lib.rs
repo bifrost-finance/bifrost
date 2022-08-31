@@ -334,21 +334,17 @@ pub mod pallet {
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
 			{
 				use scale_info::prelude::format;
-				let vstoken_metadata = AssetMetadata {
-					name: format!(
-						"vsBOND-{:?}-{}-{}-{}",
-						token_metadata.symbol, para_id, first_slot, last_slot
-					)
-					.as_bytes()
-					.to_vec(),
-					symbol: format!(
-						"vsBOND-{:?}-{}-{}-{}",
-						token_metadata.symbol, para_id, first_slot, last_slot
-					)
-					.as_bytes()
-					.to_vec(),
-					..token_metadata
-				};
+				let name = format!(
+					"vsBOND-{}-{}-{}-{}",
+					core::str::from_utf8(&token_metadata.symbol).unwrap_or(""),
+					para_id,
+					first_slot,
+					last_slot
+				)
+				.as_bytes()
+				.to_vec();
+				let vstoken_metadata =
+					AssetMetadata { name: name.clone(), symbol: name, ..token_metadata };
 				Self::do_register_metadata(
 					CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
 					&vstoken_metadata,

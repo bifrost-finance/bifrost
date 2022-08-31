@@ -455,8 +455,6 @@ impl bifrost_salp::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Test>;
-	type ParachainId = ();
 }
 
 //************** Salp mock end *****************
