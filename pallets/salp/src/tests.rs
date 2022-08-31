@@ -1399,9 +1399,11 @@ fn refund_meanwhile_issue_should_work() {
 		assert_eq!(Tokens::accounts(buyback_account, RelayCurrencyId::get()).free, 75);
 		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 
-		let asset_0_currency_id: AssetId = AssetId::try_from(RelayCurrencyId::get()).unwrap();
+		let para_id = 2001u32;
+		let asset_0_currency_id: AssetId =
+			AssetId::try_convert_from(RelayCurrencyId::get(), para_id).unwrap();
 		let asset_1_currency_id: AssetId =
-			AssetId::try_from(CurrencyId::VSToken(TokenSymbol::KSM)).unwrap();
+			AssetId::try_convert_from(CurrencyId::VSToken(TokenSymbol::KSM), para_id).unwrap();
 		assert_ok!(ZenlinkProtocol::create_pair(
 			Origin::root(),
 			asset_0_currency_id,

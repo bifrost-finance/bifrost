@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use std::convert::TryFrom;
+use node_primitives::TryConvertFrom;
 
 // use balances::Call as BalancesCall;
 use frame_support::{
@@ -78,11 +78,12 @@ fn basic_setup() {
 	assert_ok!(Currencies::deposit(CURRENCY_ID_4, &DICK, 100000));
 
 	// create DEX pair
-	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
-	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
-	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
-	let asset_3_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_3).unwrap();
-	let asset_4_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_4).unwrap();
+	let para_id: u32 = 2001;
+	let asset_0_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_0, para_id).unwrap();
+	let asset_1_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_1, para_id).unwrap();
+	let asset_2_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_2, para_id).unwrap();
+	let asset_3_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_3, para_id).unwrap();
+	let asset_4_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_4, para_id).unwrap();
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		Origin::root(),

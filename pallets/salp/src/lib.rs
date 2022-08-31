@@ -37,7 +37,7 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, transactional};
-use node_primitives::{ContributionStatus, CurrencyIdConversion, TrieIndex};
+use node_primitives::{ContributionStatus, CurrencyIdConversion, TrieIndex, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -172,6 +172,8 @@ pub mod pallet {
 		type DexOperator: ExportZenlink<Self::AccountId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
+
+		type ParachainId: Get<cumulus_primitives_core::ParaId>;
 	}
 
 	#[pallet::pallet]
@@ -1011,10 +1013,12 @@ pub mod pallet {
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let relay_vstoken_asset_id: AssetId = AssetId::try_from(relay_vstoken_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_asset_id: AssetId =
+				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_vstoken_asset_id: AssetId =
+				AssetId::try_convert_from(relay_vstoken_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![relay_asset_id, relay_vstoken_asset_id];
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(

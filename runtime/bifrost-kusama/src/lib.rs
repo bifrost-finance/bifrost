@@ -44,6 +44,8 @@ pub use frame_support::{
 	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+#[cfg(feature = "try-runtime")]
+use node_primitives::TokenInfo;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
@@ -1547,6 +1549,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
+	type ParachainId = ParachainInfo;
 }
 
 parameter_types! {
@@ -1623,6 +1626,7 @@ impl bifrost_salp::Config for Runtime {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type ParachainId = ParachainInfo;
 }
 
 parameter_types! {

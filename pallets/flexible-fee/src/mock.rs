@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+use cumulus_primitives_core::ParaId as Pid;
 use std::convert::TryInto;
 
 use bifrost_asset_registry::AssetIdMaps;
@@ -27,7 +28,7 @@ use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, Nothing},
+	traits::{Contains, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
@@ -79,9 +80,19 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
 	}
 );
+
+ord_parameter_types! {
+	pub const One: AccountId = ALICE;
+}
+
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
+}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
@@ -230,6 +241,14 @@ impl crate::Config for Test {
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
+	type ParachainId = ParaInfo;
+}
+
+pub struct ParaInfo;
+impl Get<Pid> for ParaInfo {
+	fn get() -> Pid {
+		Pid::from(2001)
+	}
 }
 
 parameter_types! {
@@ -437,15 +456,7 @@ impl bifrost_salp::Config for Test {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
-}
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Test {
-	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type ParachainId = ParaInfo;
 }
 
 //************** Salp mock end *****************

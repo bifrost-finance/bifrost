@@ -25,6 +25,7 @@ use frame_support::{
 	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+use node_primitives::TryConvertFrom;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
 use xcm_emulator::TestExt;
@@ -172,11 +173,17 @@ fn basic_setup() {
 	));
 
 	// create DEX pair
-	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
-	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
-	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
-	let asset_3_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_3).unwrap();
-	let asset_4_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_4).unwrap();
+	let parachain_id: u32 = 2001;
+	let asset_0_currency_id: AssetId =
+		AssetId::try_convert_from(CURRENCY_ID_0, parachain_id).unwrap();
+	let asset_1_currency_id: AssetId =
+		AssetId::try_convert_from(CURRENCY_ID_1, parachain_id).unwrap();
+	let asset_2_currency_id: AssetId =
+		AssetId::try_convert_from(CURRENCY_ID_2, parachain_id).unwrap();
+	let asset_3_currency_id: AssetId =
+		AssetId::try_convert_from(CURRENCY_ID_3, parachain_id).unwrap();
+	let asset_4_currency_id: AssetId =
+		AssetId::try_convert_from(CURRENCY_ID_4, parachain_id).unwrap();
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		Origin::root(),
