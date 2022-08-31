@@ -2145,6 +2145,86 @@ pub type Executive = frame_executive::Executive<
 	SlpMigration,
 >;
 
+#[cfg(feature = "try-runtime")]
+use bifrost_slp::{
+	migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsAndMaximums, MinimumsMaximums,
+};
+#[cfg(feature = "try-runtime")]
+use frame_support::{ensure, traits::OnRuntimeUpgradeHelpersExt};
+pub struct SlpMigration;
+impl OnRuntimeUpgrade for SlpMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_slp::migration::update_minimums_maximums::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		let mut count = 0;
+		let mut match_count = 0;
+		MinimumsAndMaximums::<Runtime>::translate::<
+			DeprecatedMinimumsMaximums<BalanceOf<Runtime>>,
+			_,
+		>(|_currency_id, mins_maxs| {
+			let new_entry = MinimumsMaximums::<BalanceOf<Runtime>> {
+				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
+				bond_extra_minimum: mins_maxs.bond_extra_minimum,
+				unbond_minimum: mins_maxs.unbond_minimum,
+				rebond_minimum: mins_maxs.rebond_minimum,
+				unbond_record_maximum: mins_maxs.unbond_record_maximum,
+				validators_back_maximum: mins_maxs.validators_back_maximum,
+				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
+				validators_reward_maximum: mins_maxs.validators_reward_maximum,
+				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
+				delegators_maximum: 100u16,
+				validators_maximum: 300u16,
+			};
+
+			let post_migration = MinimumsMaximums::<BalanceOf<Runtime>> {
+				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
+				bond_extra_minimum: mins_maxs.bond_extra_minimum,
+				unbond_minimum: mins_maxs.unbond_minimum,
+				rebond_minimum: mins_maxs.rebond_minimum,
+				unbond_record_maximum: mins_maxs.unbond_record_maximum,
+				validators_back_maximum: mins_maxs.validators_back_maximum,
+				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
+				validators_reward_maximum: mins_maxs.validators_reward_maximum,
+				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
+				delegators_maximum: 100u16,
+				validators_maximum: 300u16,
+			};
+
+			count = count + 1;
+
+			if post_migration == new_entry {
+				match_count = match_count + 1;
+			}
+
+			Some(new_entry)
+		});
+
+		ensure!(count == match_count, "error ...");
+		log::info!("count: {}", count);
+
+		Self::set_temp_storage(count, "count");
+
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		let mut count = 0;
+		for (_currency_id, _post_migration) in bifrost_slp::MinimumsAndMaximums::<Runtime>::iter() {
+			count = count + 1;
+		}
+
+		let post_count = Self::get_temp_storage("count");
+
+		ensure!(Some(count) == post_count, "error ...");
+
+		Ok(())
+	}
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
 extern crate frame_benchmarking;

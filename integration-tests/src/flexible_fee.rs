@@ -25,11 +25,11 @@ use frame_support::{
 	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+use node_primitives::TryConvertFrom;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
 use xcm_emulator::TestExt;
 use zenlink_protocol::AssetId;
-use node_primitives::TryConvertFrom;
 
 // some common variables
 pub const CHARLIE: AccountId = AccountId::new([0u8; 32]);
@@ -173,7 +173,7 @@ fn basic_setup() {
 	));
 
 	// create DEX pair
-	let parachain_id: u32 = 2001
+	let parachain_id: u32 = 2001;
 	let asset_0_currency_id: AssetId =
 		AssetId::try_convert_from(CURRENCY_ID_0, parachain_id).unwrap();
 	let asset_1_currency_id: AssetId =
