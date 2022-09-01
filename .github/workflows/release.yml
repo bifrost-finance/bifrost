@@ -30,9 +30,9 @@ jobs:
         run: |
           make production-release
           mkdir -p ${{ github.workspace }}/artifacts
-          mv ${{ github.workspace }}/target/release/bifrost ${{ github.workspace }}/artifacts/
-          mv ${{ github.workspace }}/target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
-          mv ${{ github.workspace }}/target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/production/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/target/production/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
           pushd ${{ github.workspace }}/artifacts
           sha256sum bifrost | tee bifrost.sha256
           shasum -c bifrost.sha256
