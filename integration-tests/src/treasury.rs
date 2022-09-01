@@ -21,6 +21,7 @@ use frame_support::assert_ok;
 use xcm_emulator::TestExt;
 // use node_primitives::*;
 // use zenlink_protocol::LIQUIDITY;
+use node_primitives::TryConvertFrom;
 use sp_runtime::AccountId32;
 // use bifrost_polkadot_runtime::Permill;
 
@@ -40,6 +41,7 @@ fn kusama_treasury_propose_spend() {
 
 #[test]
 fn bifrost_treasury_operations() {
+	let para_id = 2001u32;
 	let treasury_account: AccountId32 =
 		bifrost_kusama_runtime::TreasuryPalletId::get().into_account_truncating();
 	Bifrost::execute_with(|| {
@@ -68,14 +70,14 @@ fn bifrost_treasury_operations() {
 
 		assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::create_pair(
 			bifrost_kusama_runtime::Origin::root(),
-			zenlink_protocol::AssetId::try_from(KSM).unwrap(),
-			zenlink_protocol::AssetId::try_from(VKSM).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 		));
 
 		assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::add_liquidity(
 			bifrost_kusama_runtime::Origin::signed(treasury_account.clone()),
-			zenlink_protocol::AssetId::try_from(KSM).unwrap(),
-			zenlink_protocol::AssetId::try_from(VKSM).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 			25_000_000_000_000_000,
 			25_000_000_000_000_000,
 			0,
@@ -84,8 +86,8 @@ fn bifrost_treasury_operations() {
 		));
 
 		let lp_asset_id = bifrost_kusama_runtime::ZenlinkProtocol::lp_asset_id(
-			&zenlink_protocol::AssetId::try_from(KSM).unwrap(),
-			&zenlink_protocol::AssetId::try_from(VKSM).unwrap(),
+			&zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
+			&zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 		);
 
 		let lp = bifrost_kusama_runtime::ZenlinkProtocol::foreign_balance_of(
@@ -95,8 +97,8 @@ fn bifrost_treasury_operations() {
 
 		assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::remove_liquidity(
 			bifrost_kusama_runtime::Origin::signed(treasury_account.clone()),
-			zenlink_protocol::AssetId::try_from(KSM).unwrap(),
-			zenlink_protocol::AssetId::try_from(VKSM).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
+			zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 			lp,
 			0,
 			0,

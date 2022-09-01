@@ -18,20 +18,22 @@
 
 #![cfg(test)]
 
+use cumulus_primitives_core::ParaId as Pid;
 use std::convert::TryInto;
 
+use bifrost_asset_registry::AssetIdMaps;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
-	parameter_types,
+	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, Nothing},
+	traits::{Contains, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
 use frame_system as system;
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use node_primitives::{CurrencyId, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
@@ -78,8 +80,19 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
 	}
 );
+
+ord_parameter_types! {
+	pub const One: AccountId = ALICE;
+}
+
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
+}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
@@ -228,6 +241,14 @@ impl crate::Config for Test {
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
+	type ParachainId = ParaInfo;
+}
+
+pub struct ParaInfo;
+impl Get<Pid> for ParaInfo {
+	fn get() -> Pid {
+		Pid::from(2001)
+	}
 }
 
 parameter_types! {
@@ -434,6 +455,8 @@ impl bifrost_salp::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type ParachainId = ParaInfo;
 }
 
 //************** Salp mock end *****************

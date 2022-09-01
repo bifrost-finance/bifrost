@@ -37,7 +37,7 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, transactional};
-use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
+use node_primitives::{ContributionStatus, CurrencyIdConversion, TrieIndex, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -170,6 +170,10 @@ pub mod pallet {
 		type BuybackPalletId: Get<PalletId>;
 
 		type DexOperator: ExportZenlink<Self::AccountId>;
+
+		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
+
+		type ParachainId: Get<cumulus_primitives_core::ParaId>;
 	}
 
 	#[pallet::pallet]
@@ -624,13 +628,20 @@ pub mod pallet {
 			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
 			let contributing = status.contributing();
 
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
 			if is_success {
 				// Issue reserved vsToken/vsBond to contributor
-				T::MultiCurrency::deposit(vsToken, &who, contributing)?;
-				T::MultiCurrency::deposit(vsBond, &who, contributing)?;
+				T::MultiCurrency::deposit(vs_token, &who, contributing)?;
+				T::MultiCurrency::deposit(vs_bond, &who, contributing)?;
 
 				// Update the raised of fund
 				let fund_new =
@@ -682,11 +693,18 @@ pub mod pallet {
 
 			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-			T::MultiCurrency::unreserve(vsToken, &who, contributed);
-			T::MultiCurrency::unreserve(vsBond, &who, contributed);
+			T::MultiCurrency::unreserve(vs_token, &who, contributed);
+			T::MultiCurrency::unreserve(vs_bond, &who, contributed);
 
 			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
 
@@ -716,10 +734,18 @@ pub mod pallet {
 					break;
 				}
 				if status != ContributionStatus::Unlocked {
-					#[allow(non_snake_case)]
-					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-					T::MultiCurrency::unreserve(vsToken, &who, contributed);
-					T::MultiCurrency::unreserve(vsBond, &who, contributed);
+					let vs_token =
+						T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+							.map_err(|_| Error::<T>::NotSupportTokenType)?;
+					let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+						T::RelayChainToken::get(),
+						index,
+						fund.first_slot,
+						fund.last_slot,
+					)
+					.map_err(|_| Error::<T>::NotSupportTokenType)?;
+					T::MultiCurrency::unreserve(vs_token, &who, contributed);
+					T::MultiCurrency::unreserve(vs_bond, &who, contributed);
 
 					unlock_count += 1;
 				}
@@ -790,15 +816,22 @@ pub mod pallet {
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRefundPool);
 
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 
-			T::MultiCurrency::withdraw(vsToken, &who, value)?;
-			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+			T::MultiCurrency::withdraw(vs_token, &who, value)?;
+			T::MultiCurrency::withdraw(vs_bond, &who, value)?;
 
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 			let mut fund_new = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -843,20 +876,27 @@ pub mod pallet {
 			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 			let cur_block = <frame_system::Pallet<T>>::block_number();
 			let expired = Self::is_expired(cur_block, fund.last_slot)?;
 			ensure!(!expired, Error::<T>::VSBondExpired);
-			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 
-			T::MultiCurrency::withdraw(vsToken, &who, value)?;
-			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+			T::MultiCurrency::withdraw(vs_token, &who, value)?;
+			T::MultiCurrency::withdraw(vs_bond, &who, value)?;
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			fund.raised = fund.raised.saturating_sub(value);
@@ -971,12 +1011,14 @@ pub mod pallet {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let relay_currency_id = T::RelayChainToken::get();
-			let relay_vstoken_id =
-				relay_currency_id.to_vstoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let relay_vstoken_asset_id: AssetId = AssetId::try_from(relay_vstoken_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let relay_asset_id: AssetId =
+				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_vstoken_asset_id: AssetId =
+				AssetId::try_convert_from(relay_vstoken_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![relay_asset_id, relay_vstoken_asset_id];
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
@@ -1121,20 +1163,6 @@ pub mod pallet {
 				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
 				Ok(*ti - 1)
 			})
-		}
-
-		#[allow(non_snake_case)]
-		pub(crate) fn vsAssets(
-			index: ParaId,
-			first_slot: LeasePeriod,
-			last_slot: LeasePeriod,
-		) -> (CurrencyId, CurrencyId) {
-			let currency_id_u64: u64 = T::RelayChainToken::get().currency_id();
-			// todo some refact required
-			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
-			let token_symbol = TokenSymbol::try_from(tokensymbo_bit).unwrap_or(TokenSymbol::KSM);
-
-			CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot)
 		}
 
 		fn put_contribution(

@@ -70,9 +70,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	constants::time::*, dollar, milli, millicent, prod_or_test, AuraId, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -86,8 +86,9 @@ use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
-	AccountId, Amount, AssetIdMapping, AssetIds, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
+	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, ExtraFeeName,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
+	GLMR_TOKEN_ID,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -137,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 954,
+	spec_version: 956,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -280,7 +281,7 @@ impl Contains<Call> for CallFilter {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
@@ -991,11 +992,8 @@ impl TakeRevenue for ToTreasury {
 }
 
 pub type Trader = (
-	FixedRateOfFungible<DotPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
-	FixedRateOfFungible<ZlkPerSecond, ToTreasury>,
-	FixedRateOfFungible<ZlkNewPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1154,17 +1152,13 @@ parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
-			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::VToken(TokenSymbol::DOT) => 1 * cent(RelayCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
-			&CurrencyId::Token(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::GLMR) => 1 * micro(CurrencyId::Token(TokenSymbol::GLMR)),	// GLMR has a decimals of 10e18
+			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 			},
-			_ => AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::NativeAssetId(*currency_id))
+			_ => AssetIdMaps::<Runtime>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
 	};
@@ -1325,22 +1319,24 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
+	type ParachainId = ParachainInfo;
 }
 
 parameter_types! {
-	pub BifrostParachainAccountId20: [u8; 20] = hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+	pub BifrostParachainAccountId20: [u8; 20] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
 }
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
 	match currency_id {
-		CurrencyId::Token(TokenSymbol::GLMR) => MultiLocation::new(
+		CurrencyId::Token2(GLMR_TOKEN_ID) => MultiLocation::new(
 			1,
 			X2(
 				Parachain(parachains::moonbeam::ID.into()),
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
-						hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+						cumulus_primitives_core::ParaId::from(ParachainInfo::get())
+							.into_account_truncating(),
 						index,
 					)
 					.into(),
@@ -1399,6 +1395,8 @@ impl bifrost_salp::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type ParachainId = ParachainInfo;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1491,11 +1489,11 @@ parameter_types! {
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	// type RelayCurrencyId = RelayCurrencyId;
-	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
+	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VsbondAccount = BifrostVsbondPalletId;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 }
 
@@ -1589,6 +1587,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1724,7 +1723,7 @@ construct_runtime! {
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
-		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
+		TokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 	}
 }
@@ -1769,8 +1768,67 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	AssetRegistryMigration,
 >;
+
+pub struct AssetRegistryMigration;
+impl frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let items = vec![
+			("Polkadot DOT", "DOT", 10_u8, 1_000_000_u128), // 0.0001 DOT
+			("Moonbeam Native Token", "GLMR", 18_u8, 1_000_000_000_000_u128), // 0.000001 GLMR
+		];
+		for (currency_id, metadata) in
+			items.iter().map(|(name, symbol, decimals, minimal_balance)| {
+				let token_id = AssetRegistry::get_next_token_id().expect("Next token id");
+				(
+					CurrencyId::Token2(token_id),
+					bifrost_asset_registry::AssetMetadata {
+						name: name.as_bytes().to_vec(),
+						symbol: symbol.as_bytes().to_vec(),
+						decimals: *decimals,
+						minimal_balance: *minimal_balance,
+					},
+				)
+			}) {
+			AssetRegistry::do_register_metadata(currency_id, &metadata).expect("Asset register");
+		}
+
+		let len = items.len() as Weight;
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(len, len)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		log::info!("try-runtime::pre_upgrade next_token_id: {:?}", AssetRegistry::next_token_id());
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		log::info!("try-runtime::pre_upgrade next_token_id: {:?}", AssetRegistry::next_token_id());
+		assert_eq!(AssetRegistry::next_token_id(), 2);
+		assert_eq!(
+			AssetRegistry::currency_metadatas(CurrencyId::Token2(DOT_TOKEN_ID)).unwrap(),
+			bifrost_asset_registry::AssetMetadata {
+				name: "Polkadot DOT".as_bytes().to_vec(),
+				symbol: "DOT".as_bytes().to_vec(),
+				decimals: 10_u8,
+				minimal_balance: 1_000_000_u128,
+			}
+		);
+		assert_eq!(
+			AssetRegistry::currency_metadatas(CurrencyId::Token2(GLMR_TOKEN_ID)).unwrap(),
+			bifrost_asset_registry::AssetMetadata {
+				name: "Moonbeam Native Token".as_bytes().to_vec(),
+				symbol: "GLMR".as_bytes().to_vec(),
+				decimals: 18_u8,
+				minimal_balance: 1_000_000_000_000_u128,
+			}
+		);
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

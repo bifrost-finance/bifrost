@@ -41,12 +41,7 @@ fn initialize_moonriver_delegator() {
 		// let bifrost_parachain_account_id_20: [u8; 20] =
 		// 	hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
 		let bifrost_parachain_account_id_20: [u8; 20] =
-			<Runtime as frame_system::Config>::AccountId::encode(
-				&ParaId::from(2001u32).into_account_truncating(),
-			)
-			.as_slice()[..20]
-				.try_into()
-				.unwrap();
+			ParaId::from(2001).into_account_truncating();
 
 		// subaccount_id_0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
 		let subaccount_id_0 = Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0);

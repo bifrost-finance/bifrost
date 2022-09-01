@@ -23,7 +23,7 @@ use super::types::{
 use crate::{
 	primitives::{
 		MoonbeamLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
-		OneToManyScheduledRequest, GLMR, MOVR,
+		OneToManyScheduledRequest, MOVR,
 	},
 	DelegationsOccupied, FeeSources,
 };
@@ -37,7 +37,7 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
+use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::{
@@ -1037,7 +1037,7 @@ impl<T: Config>
 		// Get current VKSM/KSM exchange rate.
 		let vtoken = match currency_id {
 			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
-			GLMR => Ok(CurrencyId::VToken(TokenSymbol::GLMR)),
+			GLMR => Ok(CurrencyId::VToken2(GLMR_TOKEN_ID)),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}?;
 

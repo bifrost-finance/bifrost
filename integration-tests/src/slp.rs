@@ -94,6 +94,27 @@ fn register_subaccount_index_0() {
 			Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
 		assert_ok!(Slp::set_currency_delays(Origin::root(), RelayCurrencyId::get(), Some(delay)));
 
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 0,
+			unbond_minimum: 0,
+			rebond_minimum: 0,
+			unbond_record_maximum: 32,
+			validators_back_maximum: 36,
+			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some(mins_and_maxs)
+		));
+
 		// First to setup index-multilocation relationship of subaccount_0
 		assert_ok!(Slp::add_delegator(
 			Origin::root(),
@@ -172,27 +193,6 @@ fn register_subaccount_index_0() {
 			XcmOperation::TransferBack,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
-
-		let mins_and_maxs = MinimumsMaximums {
-			delegator_bonded_minimum: 100_000_000_000,
-			bond_extra_minimum: 0,
-			unbond_minimum: 0,
-			rebond_minimum: 0,
-			unbond_record_maximum: 32,
-			validators_back_maximum: 36,
-			delegator_active_staking_maximum: 200_000_000_000_000,
-			validators_reward_maximum: 0,
-			delegation_amount_minimum: 0,
-			delegators_maximum: 100,
-			validators_maximum: 300,
-		};
-
-		// Set minimums and maximums
-		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::root(),
-			RelayCurrencyId::get(),
-			Some(mins_and_maxs)
-		));
 	});
 }
 
@@ -241,6 +241,27 @@ fn register_validators() {
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		let multi_hash_0 =
 			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 0,
+			unbond_minimum: 0,
+			rebond_minimum: 0,
+			unbond_record_maximum: 32,
+			validators_back_maximum: 36,
+			delegator_active_staking_maximum: 200_000_000_000_000,
+			validators_reward_maximum: 0,
+			delegation_amount_minimum: 0,
+			delegators_maximum: 100,
+			validators_maximum: 300,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some(mins_and_maxs)
+		));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
@@ -641,9 +662,9 @@ fn rebond_works() {
 #[test]
 fn delegate_works() {
 	// bond 1 ksm for sub-account index 0
-	register_validators();
 	locally_bond_subaccount_0_1ksm_in_kusama();
 	register_subaccount_index_0();
+	register_validators();
 	register_delegator_ledger();
 	let subaccount_0 = subaccount_0();
 

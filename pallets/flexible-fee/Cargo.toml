@@ -5,8 +5,12 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.2", default-features = false, features = [
+	"derive",
+] }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
@@ -18,6 +22,8 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 impl-trait-for-tuples = "0.2.1"
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26", default-features = false }
+bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -28,9 +34,10 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 smallvec = "1.9.0"
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.26" }
 bifrost-salp = { path = "../salp" }
+bifrost-asset-registry = { path = "../asset-registry" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-runtime-common = { path = "../../runtime/common" }
-xcm-interface = { path = "../xcm-interface"}
+xcm-interface = { path = "../xcm-interface" }
 
 [features]
 default = ["std"]
@@ -45,6 +52,8 @@ std = [
 	"pallet-transaction-payment/std",
 	"zenlink-protocol/std",
 	"sp-arithmetic/std",
+	"cumulus-primitives-core/std",
+	"bifrost-asset-registry/std",
 ]
 
 runtime-benchmarks = [

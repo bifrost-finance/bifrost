@@ -20,15 +20,17 @@
 
 #![cfg(test)]
 
+use bifrost_asset_registry::AssetIdMaps;
+use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
 	sp_std::marker::PhantomData,
-	traits::{EnsureOrigin, GenesisBuild, Nothing},
+	traits::{EnsureOrigin, GenesisBuild, Get, Nothing},
 	weights::Weight,
 	PalletId,
 };
-use frame_system::RawOrigin;
+use frame_system::{EnsureSignedBy, RawOrigin};
 use node_primitives::{Amount, Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
@@ -67,6 +69,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 
@@ -200,6 +203,15 @@ impl zenlink_protocol::Config for Test {
 	type XcmExecutor = ();
 	type Conversion = ();
 	type WeightInfo = ();
+}
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
@@ -337,6 +349,15 @@ impl salp::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type ParachainId = ParaInfo;
+}
+
+pub struct ParaInfo;
+impl Get<Pid> for ParaInfo {
+	fn get() -> Pid {
+		Pid::from(2001)
+	}
 }
 
 pub struct SalpWeightInfo;

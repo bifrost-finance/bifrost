@@ -26,7 +26,9 @@ use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
-use node_primitives::{CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator};
+use node_primitives::{
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, GLMR,
+};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
@@ -46,7 +48,7 @@ use crate::agents::MoonbeamAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, DOT, GLMR, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -58,7 +60,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 mod agents;
-mod migration;
+pub mod migration;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -77,7 +79,7 @@ pub const TIMEOUT_BLOCKS: u32 = 1000;
 pub const BASE_WEIGHT: Weight = 1000;
 type Hash<T> = <T as frame_system::Config>::Hash;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> = Box<
 	dyn StakingAgent<
 		MultiLocation,
@@ -654,10 +656,6 @@ pub mod pallet {
 
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			migration::update_minimums_maximums::<T>()
 		}
 	}
 

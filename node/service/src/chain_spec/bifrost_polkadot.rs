@@ -26,7 +26,7 @@ use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenInfo, TokenSymbol};
+use node_primitives::{CurrencyId, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -195,9 +195,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| {
-			vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 4_000_000)]
-		})
+		.flat_map(|x| vec![(x.clone(), CurrencyId::Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
 		.collect();
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();

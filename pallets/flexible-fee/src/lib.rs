@@ -19,8 +19,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(deprecated)] // TODO: clear transaction
 
-use core::convert::{Into, TryFrom};
+use core::convert::Into;
 
+use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -30,7 +31,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, ExtraFeeName, TokenSymbol};
+use node_primitives::{CurrencyId, ExtraFeeName, TokenSymbol, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
@@ -103,6 +104,8 @@ pub mod pallet {
 		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
+
+		type ParachainId: Get<ParaId>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -326,10 +329,14 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 
 		if let Some((currency_id, amount_in, amount_out)) = result_option {
 			if currency_id != T::NativeCurrencyId::get() {
-				let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-				let asset_id: AssetId = AssetId::try_from(currency_id)
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
+				let native_asset_id: AssetId = AssetId::try_convert_from(
+					T::NativeCurrencyId::get(),
+					T::ParachainId::get().into(),
+				)
+				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+				let asset_id: AssetId =
+					AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
+						.map_err(|_| DispatchError::Other("Conversion Error."))?;
 				let path = vec![asset_id, native_asset_id];
 
 				T::DexOperator::inner_swap_assets_for_exact_assets(
@@ -399,8 +406,11 @@ impl<T: Config> Pallet<T> {
 				// If it is other assets
 				// If native token balance is below existential deposit requirement,
 				// go exchange fee + existential deposit. Else to exchange fee amount.
-				let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
-					.map_err(|_| Error::<T>::ConversionError)?;
+				let native_asset_id: AssetId = AssetId::try_convert_from(
+					T::NativeCurrencyId::get(),
+					T::ParachainId::get().into(),
+				)
+				.map_err(|_| Error::<T>::ConversionError)?;
 
 				let amount_out: AssetBalance = {
 					if native_balance > existential_deposit {
@@ -411,7 +421,8 @@ impl<T: Config> Pallet<T> {
 				};
 
 				let asset_id: AssetId =
-					AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
+					AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
+						.map_err(|_| Error::<T>::ConversionError)?;
 
 				let path = vec![asset_id, native_asset_id];
 				// see if path exists, if not, continue.
