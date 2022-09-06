@@ -211,6 +211,7 @@ pub mod pallet {
 		ExceedMaximumUnlockId,
 		TooManyRedeems,
 		CanNotRedeem,
+		CanNotRebond,
 	}
 
 	#[pallet::storage]
@@ -517,6 +518,7 @@ pub mod pallet {
 
 			let unlock_amount = match Self::token_unlock_ledger(token_id, unlock_id) {
 				Some((who, unlock_amount, time_unit)) => {
+					ensure!(who == exchanger, Error::<T>::CanNotRebond);
 					TimeUnitUnlockLedger::<T>::mutate_exists(
 						&time_unit,
 						&token_id,

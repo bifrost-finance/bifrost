@@ -293,6 +293,10 @@ fn rebond_by_unlock_id() {
 			Error::<Runtime>::InvalidRebondToken
 		);
 		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), KSM));
+		assert_noop!(
+			VtokenMinting::rebond_by_unlock_id(Some(ALICE).into(), KSM, 0),
+			Error::<Runtime>::CanNotRebond
+		);
 		assert_ok!(VtokenMinting::rebond_by_unlock_id(Some(BOB).into(), KSM, 0));
 		assert_eq!(
 			VtokenMinting::time_unit_unlock_ledger(TimeUnit::Era(1), KSM),
