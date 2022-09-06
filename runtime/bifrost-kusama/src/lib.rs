@@ -30,7 +30,6 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
-use frame_support::traits::OnRuntimeUpgrade;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -44,8 +43,6 @@ pub use frame_support::{
 	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-#[cfg(feature = "try-runtime")]
-use node_primitives::TokenInfo;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
@@ -145,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 956,
+	spec_version: 957,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -2142,88 +2139,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	SlpMigration,
+	(),
 >;
-
-#[cfg(feature = "try-runtime")]
-use bifrost_slp::{
-	migration::DeprecatedMinimumsMaximums, BalanceOf, MinimumsAndMaximums, MinimumsMaximums,
-};
-#[cfg(feature = "try-runtime")]
-use frame_support::{ensure, traits::OnRuntimeUpgradeHelpersExt};
-pub struct SlpMigration;
-impl OnRuntimeUpgrade for SlpMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		bifrost_slp::migration::update_minimums_maximums::<Runtime>()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		let mut count = 0;
-		let mut match_count = 0;
-		MinimumsAndMaximums::<Runtime>::translate::<
-			DeprecatedMinimumsMaximums<BalanceOf<Runtime>>,
-			_,
-		>(|_currency_id, mins_maxs| {
-			let new_entry = MinimumsMaximums::<BalanceOf<Runtime>> {
-				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
-				bond_extra_minimum: mins_maxs.bond_extra_minimum,
-				unbond_minimum: mins_maxs.unbond_minimum,
-				rebond_minimum: mins_maxs.rebond_minimum,
-				unbond_record_maximum: mins_maxs.unbond_record_maximum,
-				validators_back_maximum: mins_maxs.validators_back_maximum,
-				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
-				validators_reward_maximum: mins_maxs.validators_reward_maximum,
-				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
-				delegators_maximum: 100u16,
-				validators_maximum: 300u16,
-			};
-
-			let post_migration = MinimumsMaximums::<BalanceOf<Runtime>> {
-				delegator_bonded_minimum: mins_maxs.delegator_bonded_minimum,
-				bond_extra_minimum: mins_maxs.bond_extra_minimum,
-				unbond_minimum: mins_maxs.unbond_minimum,
-				rebond_minimum: mins_maxs.rebond_minimum,
-				unbond_record_maximum: mins_maxs.unbond_record_maximum,
-				validators_back_maximum: mins_maxs.validators_back_maximum,
-				delegator_active_staking_maximum: mins_maxs.delegator_active_staking_maximum,
-				validators_reward_maximum: mins_maxs.validators_reward_maximum,
-				delegation_amount_minimum: mins_maxs.delegation_amount_minimum,
-				delegators_maximum: 100u16,
-				validators_maximum: 300u16,
-			};
-
-			count = count + 1;
-
-			if post_migration == new_entry {
-				match_count = match_count + 1;
-			}
-
-			Some(new_entry)
-		});
-
-		ensure!(count == match_count, "error ...");
-		log::info!("count: {}", count);
-
-		Self::set_temp_storage(count, "count");
-
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		let mut count = 0;
-		for (_currency_id, _post_migration) in bifrost_slp::MinimumsAndMaximums::<Runtime>::iter() {
-			count = count + 1;
-		}
-
-		let post_count = Self::get_temp_storage("count");
-
-		ensure!(Some(count) == post_count, "error ...");
-
-		Ok(())
-	}
-}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

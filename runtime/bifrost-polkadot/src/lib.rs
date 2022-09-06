@@ -138,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 956,
+	spec_version: 957,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1769,67 +1769,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	AssetRegistryMigration,
+	(),
 >;
-
-pub struct AssetRegistryMigration;
-impl frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let items = vec![
-			("Polkadot DOT", "DOT", 10_u8, 1_000_000_u128), // 0.0001 DOT
-			("Moonbeam Native Token", "GLMR", 18_u8, 1_000_000_000_000_u128), // 0.000001 GLMR
-		];
-		for (currency_id, metadata) in
-			items.iter().map(|(name, symbol, decimals, minimal_balance)| {
-				let token_id = AssetRegistry::get_next_token_id().expect("Next token id");
-				(
-					CurrencyId::Token2(token_id),
-					bifrost_asset_registry::AssetMetadata {
-						name: name.as_bytes().to_vec(),
-						symbol: symbol.as_bytes().to_vec(),
-						decimals: *decimals,
-						minimal_balance: *minimal_balance,
-					},
-				)
-			}) {
-			AssetRegistry::do_register_metadata(currency_id, &metadata).expect("Asset register");
-		}
-
-		let len = items.len() as Weight;
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(len, len)
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		log::info!("try-runtime::pre_upgrade next_token_id: {:?}", AssetRegistry::next_token_id());
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		log::info!("try-runtime::pre_upgrade next_token_id: {:?}", AssetRegistry::next_token_id());
-		assert_eq!(AssetRegistry::next_token_id(), 2);
-		assert_eq!(
-			AssetRegistry::currency_metadatas(CurrencyId::Token2(DOT_TOKEN_ID)).unwrap(),
-			bifrost_asset_registry::AssetMetadata {
-				name: "Polkadot DOT".as_bytes().to_vec(),
-				symbol: "DOT".as_bytes().to_vec(),
-				decimals: 10_u8,
-				minimal_balance: 1_000_000_u128,
-			}
-		);
-		assert_eq!(
-			AssetRegistry::currency_metadatas(CurrencyId::Token2(GLMR_TOKEN_ID)).unwrap(),
-			bifrost_asset_registry::AssetMetadata {
-				name: "Moonbeam Native Token".as_bytes().to_vec(),
-				symbol: "GLMR".as_bytes().to_vec(),
-				decimals: 18_u8,
-				minimal_balance: 1_000_000_000_000_u128,
-			}
-		);
-		Ok(())
-	}
-}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
