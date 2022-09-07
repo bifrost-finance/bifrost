@@ -6,9 +6,11 @@ env:
 on:
   push:
     tags:
-      - 'b*'
+      - 'bifrost-*'
 
 jobs:
+  srtool:
+    uses: ./.github/workflows/srtool.yml
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -25,24 +27,30 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
 
+      - name: Download kusama strool result
+        uses: actions/download-artifact@v2
+        with:
+          name: bifrost-kusama-runtime
+          path: ${{ github.workspace }}/artifacts
+
+      - name: Download polkadot strool result
+        uses: actions/download-artifact@v2
+        with:
+          name: bifrost-polkadot-runtime
+          path: ${{ github.workspace }}/artifacts
+
       - name: Build bifrost
         working-directory: ${{ github.workspace }}
         run: |
           make production-release
           mkdir -p ${{ github.workspace }}/artifacts
           mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/
-          mv ${{ github.workspace }}/target/production/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
-          mv ${{ github.workspace }}/target/production/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/artifacts/runtime/bifrost-kusama/target/srtool/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
+          mv ${{ github.workspace }}/artifacts/runtime/bifrost-polkadot/target/srtool/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm ${{ github.workspace }}/artifacts/
           pushd ${{ github.workspace }}/artifacts
           sha256sum bifrost | tee bifrost.sha256
           shasum -c bifrost.sha256
           popd
-
-      - name: Upload deploy
-        uses: actions/upload-artifact@v3
-        with:
-          name: bifrost-artifacts
-          path: ${{ github.workspace }}/artifacts/*
 
       # We now get extra information thanks to subwasm,
       - name: Install subwasm ${{ env.SUBWASM_VERSION }}
@@ -66,15 +74,15 @@ jobs:
           subwasm info ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm >> ${{ github.workspace }}-CHANGELOG.txt
           echo '```' >> ${{ github.workspace }}-CHANGELOG.txt
 
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
-          append_body: true
           body_path: ${{ github.workspace }}-CHANGELOG.txt
+          append_body: true
+          prerelease: true
           files: |
             ${{ github.workspace }}/artifacts/bifrost
             ${{ github.workspace }}/artifacts/bifrost.sha256

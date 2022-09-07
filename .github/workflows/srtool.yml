@@ -4,10 +4,8 @@ env:
   SUBWASM_VERSION: 0.17.0
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build:
