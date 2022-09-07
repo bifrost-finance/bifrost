@@ -43,7 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, SlpOperator, TimeUnit, TokenSymbol, VtokenMintingInterface,
+	CurrencyId, CurrencyIdConversion, SlpOperator, TimeUnit, VtokenMintingInterface,
 	VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
@@ -1056,12 +1056,12 @@ pub mod pallet {
 				vtoken_amount >= MinimumRedeem::<T>::get(vtoken_id),
 				Error::<T>::BelowMinimumRedeem
 			);
-			if token_id == CurrencyId::Token(TokenSymbol::MOVR) {
-				ensure!(
-					!T::BifrostSlp::all_delegation_requests_occupied(token_id),
-					Error::<T>::CanNotRedeem,
-				);
-			};
+
+			ensure!(
+				!T::BifrostSlp::all_delegation_requests_occupied(token_id),
+				Error::<T>::CanNotRedeem,
+			);
+
 			let (_mint_rate, redeem_rate) = Fees::<T>::get();
 			let redeem_fee = redeem_rate * vtoken_amount;
 			let vtoken_amount =
