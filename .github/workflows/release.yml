@@ -13,6 +13,7 @@ jobs:
     uses: ./.github/workflows/srtool.yml
   release:
     name: Create Release
+    needs: srtool
     runs-on: ubuntu-latest
     steps:
       - name: Check to latest commit
