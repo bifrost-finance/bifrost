@@ -31,7 +31,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, ExtraFeeName, TokenSymbol, TryConvertFrom};
+use node_primitives::{CurrencyId, ExtraFeeName, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
@@ -135,11 +135,6 @@ pub mod pallet {
 	pub type UserFeeChargeOrderList<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, OptionQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn default_fee_charge_order_list)]
-	pub type DefaultFeeChargeOrderList<T: Config> =
-		StorageValue<_, Vec<CurrencyIdOf<T>>, OptionQuery>;
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -185,8 +180,9 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// Get user fee charge assets order
 	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyIdOf<T>> {
-		let default_charge_order_list = DefaultFeeChargeOrderList::<T>::get()
-			.unwrap_or(vec![T::NativeCurrencyId::get(), CurrencyId::Token(TokenSymbol::KSM)]);
+		// native currency first, then the relay currency.
+		let default_charge_order_list =
+			vec![T::NativeCurrencyId::get(), T::AlternativeFeeCurrencyId::get()];
 		let charge_order_list =
 			UserFeeChargeOrderList::<T>::get(&account_id).unwrap_or(default_charge_order_list);
 
@@ -242,7 +238,7 @@ where
 				Ok(imbalance) => Ok(Some(imbalance)),
 				Err(_msg) => Err(InvalidTransaction::Payment.into()),
 			};
-		// if the user donsn't enough BNC but has enough KSM
+		// if the user doesn't enough BNC but has enough KSM
 		} else {
 			// This withdraw operation allows death. So it will succeed given the remaining amount
 			// less than the existential deposit.

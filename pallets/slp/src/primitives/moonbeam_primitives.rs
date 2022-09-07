@@ -56,7 +56,7 @@ pub enum OneToManyDelegationAction<Balance> {
 	Decrease(Balance),
 }
 
-/// A type for Moonbeam ledger updating entires
+/// A type for Moonbeam ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// The currency id of the delegator that needs to be update

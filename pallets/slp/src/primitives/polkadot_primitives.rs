@@ -51,7 +51,7 @@ pub struct UnlockChunk<Balance> {
 	pub unlock_time: TimeUnit,
 }
 
-/// A type for substrate ledger updating entires
+/// A type for substrate ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	/// The currency id of the delegator that needs to be update
@@ -69,7 +69,7 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	pub unlock_time: Option<TimeUnit>,
 }
 
-/// A type for substrate validators by delegator updating entires
+/// A type for substrate validators by delegator updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
 	/// The currency id of the delegator that needs to be update

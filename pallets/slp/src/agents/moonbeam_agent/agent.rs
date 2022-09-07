@@ -1792,7 +1792,7 @@ impl<T: Config> MoonbeamAgent<T> {
 			FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
 
 		// check if fee is too high to be covered.
-		ensure!(fee <= reserved_fee, Error::<T>::FeeTooHight);
+		ensure!(fee <= reserved_fee, Error::<T>::FeeTooHigh);
 
 		let source_account = Pallet::<T>::native_multilocation_to_account(&source_location)?;
 		// ensure the fee source account has the balance of currency_id
