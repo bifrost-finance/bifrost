@@ -29,7 +29,7 @@ RUN export PATH="$PATH:$HOME/.cargo/bin" && \
 
 # ===== SECOND STAGE ======
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN rm -rf /usr/share  && \
   rm -rf /usr/lib/python* && \
