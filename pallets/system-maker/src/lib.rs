@@ -31,6 +31,7 @@ mod benchmarking;
 
 pub mod weights;
 
+use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -40,7 +41,7 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
+use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
@@ -64,7 +65,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -89,13 +90,15 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type SystemMakerPalletId: Get<PalletId>;
+
+		type ParachainId: Get<ParaId>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Charged { who: AccountIdOf<T>, currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
-		ConfigSet { currency_id: CurrencyIdOf<T>, annualization: Permill },
+		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>> },
 		Closed { currency_id: CurrencyIdOf<T> },
 		Paid { currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
 	}
@@ -108,15 +111,21 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn info)]
-	pub type Info<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Permill, ValueQuery>;
+	#[pallet::getter(fn infos)]
+	pub type Infos<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Info<BalanceOf<T>>>;
+
+	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+	pub struct Info<BalanceOf> {
+		pub annualization: Permill,
+		pub granularity: BalanceOf,
+	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(bn: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
 			let system_maker = T::SystemMakerPalletId::get().into_account_truncating();
-			for (currency_id, annualization) in Info::<T>::iter() {
-				Self::handle_by_currency_id(system_maker, currency_id, annualization)
+			for (currency_id, info) in Infos::<T>::iter() {
+				Self::handle_by_currency_id(&system_maker, currency_id, info)
 					.map_err(|e| {
 						log::error!(
 							target: "runtime::system-maker",
@@ -144,15 +153,15 @@ pub mod pallet {
 		pub fn set_config(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
-			annualization: Permill,
+			info: Info<BalanceOf<T>>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			Info::<T>::mutate(currency_id, |old_annualization| {
-				*old_annualization = Some(annualization.clone());
+			Infos::<T>::mutate(currency_id, |old_info| {
+				*old_info = Some(info.clone());
 			});
 
-			Self::deposit_event(Event::ConfigSet { currency_id, annualization });
+			Self::deposit_event(Event::ConfigSet { currency_id, info });
 
 			Ok(())
 		}
@@ -164,7 +173,6 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
 			let exchanger = ensure_signed(origin)?;
 
 			T::MultiCurrency::transfer(
@@ -184,7 +192,7 @@ pub mod pallet {
 		pub fn close(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			Info::<T>::remove(currency_id);
+			Infos::<T>::remove(currency_id);
 
 			Self::deposit_event(Event::Closed { currency_id });
 
@@ -214,25 +222,32 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		fn handle_by_currency_id(
-			system_maker: AccountIdOf<T>,
+			system_maker: &AccountIdOf<T>,
 			currency_id: CurrencyId,
-			annualization: Permill,
+			info: Info<BalanceOf<T>>, // annualization: Permill,
 		) -> DispatchResult {
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let relay_vtoken_asset_id: AssetId = AssetId::try_from(relay_vtoken_id)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			// let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
+			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			// let relay_vtoken_asset_id: AssetId = AssetId::try_from(relay_vtoken_id)
+			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			// let path = vec![relay_asset_id, relay_vtoken_asset_id];
+			let relay_asset_id: AssetId =
+				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			let relay_vtoken_asset_id: AssetId =
+				AssetId::try_convert_from(relay_vtoken_id, T::ParachainId::get().into())
+					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![relay_asset_id, relay_vtoken_asset_id];
-
 			let balance = T::MultiCurrency::free_balance(currency_id, &system_maker);
 			T::DexOperator::inner_swap_exact_assets_for_assets(
-				&system_maker,
+				system_maker,
 				balance.saturated_into(),
-				annualization.saturating_reciprocal_mul(balance).saturated_into(),
+				info.annualization.saturating_reciprocal_mul(info.granularity).saturated_into(),
 				&path,
 				&system_maker,
 			)

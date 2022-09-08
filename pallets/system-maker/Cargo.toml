@@ -24,6 +24,7 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.2
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -31,7 +32,6 @@ orml-currencies = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]

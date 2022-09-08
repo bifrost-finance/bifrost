@@ -214,6 +214,14 @@ impl bifrost_system_maker::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type RelayChainToken = RelayCurrencyId;
 	type SystemMakerPalletId = SystemMakerPalletId;
+	type ParachainId = ParaInfo;
+}
+
+pub struct ParaInfo;
+impl Get<ParaId> for ParaInfo {
+	fn get() -> ParaId {
+		ParaId::from(2001)
+	}
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
@@ -317,6 +325,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 }
