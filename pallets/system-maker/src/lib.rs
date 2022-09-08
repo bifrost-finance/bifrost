@@ -228,31 +228,35 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			info: Info<BalanceOf<T>>, // annualization: Permill,
 		) -> DispatchResult {
-			let relay_currency_id = T::RelayChainToken::get();
-			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
+			// T::MultiCurrency::transfer(
+			// 	currency_id,
+			// 	&T::SystemMakerPalletId::get().into_account_truncating(),
+			// 	&T::TreasuryAccount::get(),
+			// 	info.granularity,
+			// )?;
+			// let relay_currency_id = T::RelayChainToken::get();
+			let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			// let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
 			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			// let relay_vtoken_asset_id: AssetId = AssetId::try_from(relay_vtoken_id)
 			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			// let path = vec![relay_asset_id, relay_vtoken_asset_id];
-			let relay_asset_id: AssetId =
-				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())
+			let asset_id: AssetId =
+				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let relay_vtoken_asset_id: AssetId =
-				AssetId::try_convert_from(relay_vtoken_id, T::ParachainId::get().into())
+			let vcurrency_asset_id: AssetId =
+				AssetId::try_convert_from(vcurrency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let path = vec![relay_asset_id, relay_vtoken_asset_id];
+			let path = vec![asset_id, vcurrency_asset_id];
 			let balance = T::MultiCurrency::free_balance(currency_id, &system_maker);
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				system_maker,
-				balance.saturated_into(),
+				info.granularity.saturated_into(),
 				info.annualization.saturating_reciprocal_mul(info.granularity).saturated_into(),
 				&path,
 				&system_maker,
 			)
-			.err();
-			Ok(())
 		}
 	}
 }
