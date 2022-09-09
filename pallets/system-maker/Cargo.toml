@@ -20,6 +20,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 hex-literal = { version = "0.3.1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.26", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }

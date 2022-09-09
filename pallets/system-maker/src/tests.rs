@@ -44,7 +44,7 @@ fn on_idle() {
 			Origin::signed(ALICE),
 			asset_0_currency_id,
 			asset_1_currency_id,
-			1000,
+			2000,
 			2200,
 			1,
 			1,
@@ -54,7 +54,7 @@ fn on_idle() {
 		SystemMaker::set_config(
 			Origin::signed(ALICE),
 			RelayCurrencyId::get(),
-			Info { annualization: Permill::from_percent(100), granularity: 1000 },
+			Info { annualization: 600_000u32, granularity: 1000 },
 		);
 		let system_maker =
 			<Runtime as Config>::SystemMakerPalletId::get().into_account_truncating();
@@ -62,10 +62,11 @@ fn on_idle() {
 		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 100000000);
 		System::set_block_number(System::block_number() + 1);
 		// SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 100);
-		let a = ZenlinkProtocol::pair_account_id(asset_0_currency_id, asset_1_currency_id);
-		// assert_eq!(Tokens::free_balance(KSM, &system_maker), 10000);
-		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 11098);
-		assert_eq!(Tokens::free_balance(KSM, &a), 2000);
-		assert_eq!(Tokens::free_balance(vKSM, &a), 1102);
+		let zenlink_pair_account_id =
+			ZenlinkProtocol::pair_account_id(asset_0_currency_id, asset_1_currency_id);
+		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);
+		// assert_eq!(Tokens::free_balance(vKSM, &system_maker), 11098);
+		assert_eq!(Tokens::free_balance(KSM, &zenlink_pair_account_id), 3000);
+		assert_eq!(Tokens::free_balance(vKSM, &zenlink_pair_account_id), 1469);
 	});
 }

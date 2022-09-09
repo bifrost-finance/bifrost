@@ -44,7 +44,11 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol, TryConvertFrom};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::{per_things::Permill, traits::Zero};
+use sp_arithmetic::{
+	per_things::Permill,
+	traits::{UniqueSaturatedInto, Zero},
+};
+use sp_core::U256;
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
@@ -116,7 +120,7 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<BalanceOf> {
-		pub annualization: Permill,
+		pub annualization: u32,
 		pub granularity: BalanceOf,
 	}
 
@@ -234,14 +238,8 @@ pub mod pallet {
 			// 	&T::TreasuryAccount::get(),
 			// 	info.granularity,
 			// )?;
-			// let relay_currency_id = T::RelayChainToken::get();
 			let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			// let relay_asset_id: AssetId = AssetId::try_from(relay_currency_id)
-			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			// let relay_vtoken_asset_id: AssetId = AssetId::try_from(relay_vtoken_id)
-			// 	.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			// let path = vec![relay_asset_id, relay_vtoken_asset_id];
 			let asset_id: AssetId =
 				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
@@ -250,10 +248,20 @@ pub mod pallet {
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![asset_id, vcurrency_asset_id];
 			let balance = T::MultiCurrency::free_balance(currency_id, &system_maker);
+
+			let denominator = U256::from(
+				(1_000_000u32.saturating_add(info.annualization)).saturated_into::<u128>(),
+			);
+			let amount_out_min: u128 = U256::from(info.granularity.saturated_into::<u128>())
+				.saturating_mul(U256::from(1_000_000u32))
+				.checked_div(denominator)
+				.unwrap_or_default()
+				.as_u128();
+
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				system_maker,
 				info.granularity.saturated_into(),
-				info.annualization.saturating_reciprocal_mul(info.granularity).saturated_into(),
+				amount_out_min,
 				&path,
 				&system_maker,
 			)
