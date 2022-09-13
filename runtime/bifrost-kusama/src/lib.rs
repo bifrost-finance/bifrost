@@ -308,6 +308,7 @@ parameter_types! {
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
+	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 }
 
 impl frame_system::Config for Runtime {
@@ -1408,7 +1409,10 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 				&SystemStakingPalletId::get(),
 			)
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
-			.eq(a)
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			&SystemMakerPalletId::get(),
+		)
+		.eq(a)
 	}
 }
 
@@ -1854,6 +1858,20 @@ impl bifrost_system_staking::Config for Runtime {
 	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
+impl bifrost_system_maker::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type SystemMakerPalletId = SystemMakerPalletId;
+	type ParachainId = ParachainInfo;
+	type VtokenMintingInterface = VtokenMinting;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -2094,6 +2112,7 @@ construct_runtime! {
 		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
+		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 	}
 }
 
