@@ -43,7 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, SlpOperator, TimeUnit, TokenSymbol,
+	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, SlpOperator, TimeUnit,
 	VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
