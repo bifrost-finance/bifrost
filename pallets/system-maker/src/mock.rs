@@ -216,6 +216,7 @@ impl bifrost_system_maker::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type SystemMakerPalletId = SystemMakerPalletId;
 	type ParachainId = ParaInfo;
+	type VtokenMintingInterface = VtokenMinting;
 }
 
 pub struct ParaInfo;
