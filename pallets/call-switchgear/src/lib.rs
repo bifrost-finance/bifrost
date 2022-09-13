@@ -132,14 +132,12 @@ pub mod pallet {
 					|item| {
 						if item.is_none() {
 							*item = Some(());
-							Self::deposit_event(Event::TransactionSwitchedoff(
-								pallet_name,
-								function_name,
-							));
 						}
 					},
 				);
 			}
+
+			Self::deposit_event(Event::TransactionSwitchedoff(pallet_name, function_name));
 
 			Ok(())
 		}
@@ -158,13 +156,12 @@ pub mod pallet {
 
 			if pallet_name_string.to_lowercase() == "all" {
 				OverallToggle::<T>::put(false);
+			} else {
+				SwitchedOffTransactions::<T>::take((pallet_name.clone(), &function_name.clone()));
 			}
 
-			if SwitchedOffTransactions::<T>::take((pallet_name.clone(), &function_name.clone()))
-				.is_some()
-			{
-				Self::deposit_event(Event::TransactionSwitchedOn(pallet_name, function_name));
-			};
+			Self::deposit_event(Event::TransactionSwitchedOn(pallet_name, function_name));
+
 			Ok(())
 		}
 

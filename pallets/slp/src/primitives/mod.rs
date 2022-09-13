@@ -36,7 +36,7 @@ pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + E
 /// A type for accommodating delegator update entries for different kinds of currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
-	/// A type for substrate ledger updating entires
+	/// A type for substrate ledger updating entries
 	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
 	Moonbeam(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
 }
@@ -45,7 +45,7 @@ pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 /// currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
-	/// A type for substrate validators by delegator updating entires
+	/// A type for substrate validators by delegator updating entries
 	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
 }
 
