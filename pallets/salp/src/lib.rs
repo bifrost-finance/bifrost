@@ -37,7 +37,9 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, transactional};
-use node_primitives::{ContributionStatus, CurrencyIdConversion, TrieIndex, TryConvertFrom};
+use node_primitives::{
+	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
+};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -172,6 +174,8 @@ pub mod pallet {
 		type DexOperator: ExportZenlink<Self::AccountId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
+
+		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
 		type ParachainId: Get<cumulus_primitives_core::ParaId>;
 	}
@@ -505,6 +509,33 @@ pub mod pallet {
 					status: FundStatus::Ongoing,
 				}),
 			);
+
+			match T::RelayChainToken::get() {
+				CurrencyId::Token(token_symbol) =>
+					if T::CurrencyIdRegister::check_vsbond_registered(
+						token_symbol,
+						index,
+						first_slot,
+						last_slot,
+					) {
+						T::CurrencyIdRegister::register_vsbond_metadata(
+							token_symbol,
+							index,
+							first_slot,
+							last_slot,
+						)?;
+					},
+				CurrencyId::Token2(token_id) => {
+					if T::CurrencyIdRegister::check_vsbond2_registered(
+						token_id, index, first_slot, last_slot,
+					) {
+						T::CurrencyIdRegister::register_vsbond2_metadata(
+							token_id, index, first_slot, last_slot,
+						)?;
+					}
+				},
+				_ => (),
+			}
 
 			Self::deposit_event(Event::<T>::Created(index));
 

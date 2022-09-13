@@ -456,6 +456,7 @@ impl bifrost_salp::Config for Test {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type ParachainId = ParaInfo;
 }
 
