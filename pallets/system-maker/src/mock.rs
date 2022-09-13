@@ -206,8 +206,6 @@ ord_parameter_types! {
 impl bifrost_system_maker::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	// type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
-	// type TreasuryAccount = TreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type DexOperator = ZenlinkProtocol;

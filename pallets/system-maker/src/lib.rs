@@ -34,7 +34,7 @@ pub mod weights;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::{traits::AccountIdConversion, SaturatedConversion},
+	sp_runtime::{traits::AccountIdConversion, ArithmeticError, SaturatedConversion},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -247,7 +247,7 @@ pub mod pallet {
 			let amount_out_min: u128 = U256::from(info.granularity.saturated_into::<u128>())
 				.saturating_mul(U256::from(1_000_000u32))
 				.checked_div(denominator)
-				.unwrap_or_default()
+				.ok_or(ArithmeticError::Overflow)?
 				.as_u128();
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
