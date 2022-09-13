@@ -102,11 +102,20 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
+		log::info!(
+			"try-runtime::pre_upgrade currency_metadatas count: {:?}",
+			bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count()
+		);
+
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
+		let count = bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count();
+		log::info!("try-runtime::post_upgrade currency_metadatas count: {:?}", count);
+		assert_eq!(count, 32);
+
 		Ok(())
 	}
 }
