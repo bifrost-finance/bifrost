@@ -474,7 +474,7 @@ fn correct_and_deposit_fee_should_work_v2() {
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 30);
 
-		// Since the fee withdrawl mode is allowdeath, if the account is destroyed,
+		// Since the fee withdrawal mode is allowdeath, if the account is destroyed,
 		// due to balance less than the existential deposit, no refund will be returned.
 
 		// If already_withdrawn is less than corrected_fee, no refund will be executed
