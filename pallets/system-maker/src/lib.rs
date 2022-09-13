@@ -222,18 +222,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		#[transactional]
-		#[pallet::weight(T::WeightInfo::payout())]
-		pub fn handle_redeem_by_currency_id2(
-			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
-			// info: Info<BalanceOf<T>>,
-		) -> DispatchResultWithPostInfo {
-			let exchanger = ensure_signed(origin)?;
-			Self::handle_redeem_by_currency_id(&exchanger, currency_id)
-			// Ok(().into())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
