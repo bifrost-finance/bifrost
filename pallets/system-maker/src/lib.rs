@@ -34,25 +34,16 @@ pub mod weights;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::{
-		traits::{AccountIdConversion, CheckedSub},
-		SaturatedConversion,
-	},
+	sp_runtime::{traits::AccountIdConversion, SaturatedConversion},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{
-	CurrencyId, CurrencyIdConversion, TokenSymbol, TryConvertFrom, VtokenMintingInterface,
-};
+use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::{
-	per_things::Permill,
-	traits::{UniqueSaturatedInto, Zero},
-};
 use sp_core::U256;
 pub use weights::WeightInfo;
-use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
+use zenlink_protocol::{AssetId, ExportZenlink};
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -114,6 +105,7 @@ pub mod pallet {
 		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>> },
 		Closed { currency_id: CurrencyIdOf<T> },
 		Paid { currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
+		RedeemFailed { vcurrency_id: CurrencyIdOf<T>, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -129,29 +121,17 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<BalanceOf> {
+		pub vcurrency_id: CurrencyId,
 		pub annualization: u32,
 		pub granularity: BalanceOf,
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_idle(bn: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
+		fn on_idle(_bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			let system_maker = T::SystemMakerPalletId::get().into_account_truncating();
 			for (currency_id, info) in Infos::<T>::iter() {
-				let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
-					.ok()
-					.unwrap_or_default();
-				// .map_err(|_| Error::<T>::NotSupportTokenType)?;
-				// Self::handle_by_currency_id(&system_maker, currency_id, info).err().ok_or(|e| {
-				// 	log::error!(
-				// 		target: "runtime::system-maker",
-				// 		"Received invalid justification for {:?}",
-				// 		e,
-				// 	);
-				// });
-				if let Some(e) =
-					Self::handle_by_currency_id(&system_maker, currency_id, vcurrency_id, info)
-						.err()
+				if let Some(e) = Self::swap_by_currency_id(&system_maker, currency_id, &info).err()
 				{
 					log::error!(
 						target: "runtime::system-maker",
@@ -159,42 +139,8 @@ pub mod pallet {
 						e,
 					);
 				}
-
-				if let Some(e) =
-					Self::handle_redeem_by_currency_id(&system_maker, vcurrency_id).err()
-				{
-					// Self::deposit_event(Event::RedeemFailed {
-					// 	token: token_id,
-					// 	amount: vredeem_amount,
-					// 	farming_staking_amount: token_info.farming_staking_amount,
-					// 	system_stakable_amount: token_info.system_stakable_amount,
-					// 	system_shadow_amount: token_info.system_shadow_amount,
-					// 	pending_redeem_amount: token_info.pending_redeem_amount,
-					// });
-					log::error!(
-						target: "runtime::system-maker",
-						"Received invalid justification for {:?}",
-						e,
-					);
-				}
-
-				// Self::handle_redeem_by_currency_id(&system_maker, currency_id)
-				// 	.map_err(|e| {
-				// 		log::error!(
-				// 			target: "runtime::system-maker",
-				// 			"Received invalid justification for {:?}",
-				// 			e,
-				// 		);
-				// 		e
-				// 	})
-				// 	.ok();
+				Self::handle_redeem_by_currency_id(&system_maker, &info);
 			}
-			// log::debug!(
-			//     target: "runtime",
-			//     "block #{:?} with weight='{:?}'",
-			//     bn,
-			//     remaining_weight,
-			// );
 			0
 		}
 	}
@@ -210,6 +156,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			ensure!(vcurrency_id == info.vcurrency_id, Error::<T>::NotSupportTokenType);
 			Infos::<T>::mutate(currency_id, |old_info| {
 				*old_info = Some(info.clone());
 			});
@@ -272,44 +221,24 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		#[transactional]
-		#[pallet::weight(T::WeightInfo::payout())]
-		pub fn handle_redeem_by_currency_id2(
-			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
-			// info: Info<BalanceOf<T>>,
-		) -> DispatchResultWithPostInfo {
-			let exchanger = ensure_signed(origin)?;
-			Self::handle_redeem_by_currency_id(&exchanger, currency_id)
-			// Ok(().into())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		#[transactional]
-		fn handle_by_currency_id(
+		fn swap_by_currency_id(
 			system_maker: &AccountIdOf<T>,
 			currency_id: CurrencyId,
-			vcurrency_id: CurrencyId,
-			info: Info<BalanceOf<T>>, // annualization: Permill,
+			info: &Info<BalanceOf<T>>,
 		) -> DispatchResult {
-			// T::MultiCurrency::transfer(
-			// 	currency_id,
-			// 	&T::SystemMakerPalletId::get().into_account_truncating(),
-			// 	&T::TreasuryAccount::get(),
-			// 	info.granularity,
-			// )?;
-			// let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
-			// 	.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let asset_id: AssetId =
 				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let vcurrency_asset_id: AssetId =
-				AssetId::try_convert_from(vcurrency_id, T::ParachainId::get().into())
+				AssetId::try_convert_from(info.vcurrency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![asset_id, vcurrency_asset_id];
 			let balance = T::MultiCurrency::free_balance(currency_id, &system_maker);
+			ensure!(balance > info.granularity, Error::<T>::NotEnoughBalance);
 
 			let denominator = U256::from(
 				(1_000_000u32.saturating_add(info.annualization)).saturated_into::<u128>(),
@@ -329,17 +258,26 @@ pub mod pallet {
 			)
 		}
 
-		#[transactional]
-		fn handle_redeem_by_currency_id(
-			system_maker: &AccountIdOf<T>,
-			vcurrency_id: CurrencyId,
-			// info: Info<BalanceOf<T>>,
-		) -> DispatchResultWithPostInfo {
-			// let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
-			// 	.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let redeem_amount = T::MultiCurrency::free_balance(vcurrency_id, system_maker);
+		fn handle_redeem_by_currency_id(system_maker: &AccountIdOf<T>, info: &Info<BalanceOf<T>>) {
+			let redeem_amount = T::MultiCurrency::free_balance(info.vcurrency_id, system_maker);
 
-			T::VtokenMintingInterface::redeem(system_maker.to_owned(), vcurrency_id, redeem_amount)
+			if let Some(e) = T::VtokenMintingInterface::redeem(
+				system_maker.to_owned(),
+				info.vcurrency_id,
+				redeem_amount,
+			)
+			.err()
+			{
+				Self::deposit_event(Event::RedeemFailed {
+					vcurrency_id: info.vcurrency_id,
+					amount: redeem_amount,
+				});
+				log::error!(
+					target: "runtime::system-maker",
+					"Received invalid justification for {:?}",
+					e,
+				);
+			}
 		}
 	}
 }

@@ -21,9 +21,9 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::assert_ok;
 use node_primitives::{TimeUnit, VtokenMintingOperator};
-use sp_arithmetic::per_things::Percent;
+use sp_arithmetic::per_things::Permill;
 
 #[test]
 fn on_idle() {
@@ -31,11 +31,16 @@ fn on_idle() {
 		let para_id = 2001u32;
 		let zenlink_pair_account_id = init_zenlink(para_id);
 
-		SystemMaker::set_config(
+		assert_ok!(SystemMaker::set_config(
 			Origin::signed(ALICE),
 			RelayCurrencyId::get(),
-			Info { annualization: 600_000u32, granularity: 1000 },
-		);
+			Info { vcurrency_id: vKSM, annualization: 600_000u32, granularity: 1000 },
+		));
+		// SystemMaker::set_config(
+		// 	Origin::signed(ALICE),
+		// 	RelayCurrencyId::get(),
+		// 	Info { vcurrency_id: vKSM, annualization: 600_000u32, granularity: 1000 },
+		// );
 		let system_maker =
 			<Runtime as Config>::SystemMakerPalletId::get().into_account_truncating();
 		assert_eq!(Tokens::free_balance(KSM, &system_maker), 10000);

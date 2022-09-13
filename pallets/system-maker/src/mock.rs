@@ -67,8 +67,8 @@ pub type Balance = u64;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
+// pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+// pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
