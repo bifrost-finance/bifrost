@@ -23,7 +23,9 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 pub use frame_support::weights::Weight;
-use frame_support::{inherent::Vec, traits::Get, PalletId};
+use frame_support::{
+	dispatch::DispatchResultWithPostInfo, inherent::Vec, traits::Get, transactional, PalletId,
+};
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -261,7 +263,7 @@ pub mod pallet {
 						if token_info.check_config_change() {
 							token_info.update_config();
 						}
-						Self::process_token_info(pallet_account.clone(), token_info, i);
+						Self::process_token_info(pallet_account.clone(), token_info, i).ok();
 					}
 				}
 			}
@@ -378,6 +380,7 @@ pub mod pallet {
 		/// refresh token info，query farming pallet, and update TokenInfo, change to new
 		/// config，ignore exec_delay, execute immediately
 		#[pallet::weight(<T as Config>::WeightInfo::refresh_token_info())]
+		#[transactional]
 		pub fn refresh_token_info(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
@@ -390,7 +393,7 @@ pub mod pallet {
 			}
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
-			Pallet::<T>::process_token_info(pallet_account, token_info, token);
+			Pallet::<T>::process_token_info(pallet_account, token_info, token)?;
 
 			Self::deposit_event(Event::TokenInfoRefreshed { token });
 
@@ -399,6 +402,7 @@ pub mod pallet {
 
 		/// payout to treasury
 		#[pallet::weight(<T as Config>::WeightInfo::payout())]
+		#[transactional]
 		pub fn payout(origin: OriginFor<T>, token: CurrencyIdOf<T>) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
@@ -444,11 +448,12 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	#[transactional]
 	fn process_token_info(
 		account: AccountIdOf<T>,
 		mut token_info: TokenInfo<BalanceOf<T>>,
 		token_id: CurrencyIdOf<T>,
-	) {
+	) -> DispatchResultWithPostInfo {
 		// query farming info
 		let mut farming_staking_amount = BalanceOf::<T>::zero();
 		for i in 0..token_info.current_config.farming_poolids.len() {
@@ -487,68 +492,18 @@ impl<T: Config> Pallet<T> {
 			let mint_amount = stakable_amount.saturating_sub(
 				token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount),
 			);
-			match T::MultiCurrency::deposit(token_id, &account, mint_amount) {
-				Ok(_) =>
-					match T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount) {
-						Ok(_) => {
-							token_info.system_shadow_amount =
-								token_info.system_shadow_amount.saturating_add(mint_amount);
-							Self::deposit_event(Event::MintSuccess {
-								token: token_id,
-								amount: mint_amount,
-								farming_staking_amount: token_info.farming_staking_amount,
-								system_stakable_amount: token_info.system_stakable_amount,
-								system_shadow_amount: token_info.system_shadow_amount,
-								pending_redeem_amount: token_info.pending_redeem_amount,
-							});
-						},
-						Err(error) => {
-							Self::deposit_event(Event::MintFailed {
-								token: token_id,
-								amount: mint_amount,
-								farming_staking_amount: token_info.farming_staking_amount,
-								system_stakable_amount: token_info.system_stakable_amount,
-								system_shadow_amount: token_info.system_shadow_amount,
-								pending_redeem_amount: token_info.pending_redeem_amount,
-							});
-							log::warn!("mint error: {:?}", error);
-							match T::MultiCurrency::withdraw(token_id, &account, mint_amount) {
-								Ok(_) => {
-									Self::deposit_event(Event::WithdrawSuccess {
-										token: token_id,
-										amount: mint_amount,
-										farming_staking_amount: token_info.farming_staking_amount,
-										system_stakable_amount: token_info.system_stakable_amount,
-										system_shadow_amount: token_info.system_shadow_amount,
-										pending_redeem_amount: token_info.pending_redeem_amount,
-									});
-								},
-								Err(error) => {
-									log::warn!("{:?} withdraw error: {:?}", &token_id, error);
-									Self::deposit_event(Event::WithdrawFailed {
-										token: token_id,
-										amount: mint_amount,
-										farming_staking_amount: token_info.farming_staking_amount,
-										system_stakable_amount: token_info.system_stakable_amount,
-										system_shadow_amount: token_info.system_shadow_amount,
-										pending_redeem_amount: token_info.pending_redeem_amount,
-									});
-								},
-							}
-						},
-					},
-				Err(error) => {
-					Self::deposit_event(Event::DepositFailed {
-						token: token_id,
-						amount: mint_amount,
-						farming_staking_amount: token_info.farming_staking_amount,
-						system_stakable_amount: token_info.system_stakable_amount,
-						system_shadow_amount: token_info.system_shadow_amount,
-						pending_redeem_amount: token_info.pending_redeem_amount,
-					});
-					log::warn!("{:?} deposit error: {:?}", token_id, error);
-				},
-			}
+			T::MultiCurrency::deposit(token_id, &account, mint_amount)?;
+			T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount)?;
+			token_info.system_shadow_amount =
+				token_info.system_shadow_amount.saturating_add(mint_amount);
+			Self::deposit_event(Event::MintSuccess {
+				token: token_id,
+				amount: mint_amount,
+				farming_staking_amount: token_info.farming_staking_amount,
+				system_stakable_amount: token_info.system_stakable_amount,
+				system_shadow_amount: token_info.system_shadow_amount,
+				pending_redeem_amount: token_info.pending_redeem_amount,
+			});
 		}
 
 		if stakable_amount <
@@ -558,48 +513,23 @@ impl<T: Config> Pallet<T> {
 				.system_shadow_amount
 				.saturating_sub(token_info.pending_redeem_amount)
 				.saturating_sub(stakable_amount);
-			match T::VtokenMintingInterface::vtoken_id(token_id) {
-				Some(vtoken_id) => {
-					let vredeem_amount = T::VtokenMintingInterface::token_to_vtoken(
-						token_id,
-						vtoken_id,
-						redeem_amount,
-					);
-					if vredeem_amount != BalanceOf::<T>::zero() {
-						match T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)
-						{
-							Ok(_) => {
-								let new_token_info =
-									if let Some(state) = <TokenStatus<T>>::get(&token_id) {
-										state
-									} else {
-										<TokenInfo<BalanceOf<T>>>::default()
-									};
-								token_info.pending_redeem_amount =
-									new_token_info.pending_redeem_amount;
-							},
-							Err(error) => {
-								Self::deposit_event(Event::RedeemFailed {
-									token: token_id,
-									amount: vredeem_amount,
-									farming_staking_amount: token_info.farming_staking_amount,
-									system_stakable_amount: token_info.system_stakable_amount,
-									system_shadow_amount: token_info.system_shadow_amount,
-									pending_redeem_amount: token_info.pending_redeem_amount,
-								});
-								log::warn!("redeem error: {:?}", error);
-							},
-						}
-					}
-				},
-				None => {
-					Self::deposit_event(Event::VtokenNotFound { token: token_id });
-					log::warn!("vtoken_id not found: {:?}", token_id);
-				},
+			if let Some(vtoken_id) = T::VtokenMintingInterface::vtoken_id(token_id) {
+				let vredeem_amount =
+					T::VtokenMintingInterface::token_to_vtoken(token_id, vtoken_id, redeem_amount);
+				if vredeem_amount != BalanceOf::<T>::zero() {
+					T::VtokenMintingInterface::redeem(account, vtoken_id, vredeem_amount)?;
+					let new_token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
+						state
+					} else {
+						<TokenInfo<BalanceOf<T>>>::default()
+					};
+					token_info.pending_redeem_amount = new_token_info.pending_redeem_amount;
+				}
 			}
 		}
 
 		<TokenStatus<T>>::insert(&token_id, token_info.clone());
+		Ok(().into())
 	}
 
 	pub fn on_redeem_success(
