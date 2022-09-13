@@ -57,7 +57,7 @@ format:
 
 .PHONY: clippy # cargo clippy
 clippy:
-	cargo clippy --all --all-targets -- -D warnings
+	cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: test-benchmarking # test with benchmarking
 test-benchmarking:

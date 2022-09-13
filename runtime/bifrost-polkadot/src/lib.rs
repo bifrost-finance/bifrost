@@ -1397,6 +1397,7 @@ impl bifrost_salp::Config for Runtime {
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type ParachainId = ParachainInfo;
 }
 
@@ -1588,7 +1589,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
