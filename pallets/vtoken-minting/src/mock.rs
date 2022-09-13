@@ -180,6 +180,7 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
 impl vtoken_minting::Config for Runtime {
@@ -192,7 +193,9 @@ impl vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 }

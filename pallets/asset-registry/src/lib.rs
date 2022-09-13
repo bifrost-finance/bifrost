@@ -33,8 +33,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	AssetIds, CurrencyId, CurrencyIdConversion, CurrencyIdMapping, ForeignAssetId, LeasePeriod,
-	ParaId, TokenId, TokenSymbol,
+	AssetIds, CurrencyId, CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister,
+	ForeignAssetId, LeasePeriod, ParaId, TokenId, TokenSymbol,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
@@ -284,11 +284,7 @@ pub mod pallet {
 
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
 			{
-				let mut name = "Voucher ".as_bytes().to_vec();
-				name.extend_from_slice(&token_metadata.symbol);
-				let mut symbol = "v".as_bytes().to_vec();
-				symbol.extend_from_slice(&token_metadata.symbol);
-				let vtoken_metadata = AssetMetadata { name, symbol, ..token_metadata };
+				let vtoken_metadata = Self::convert_to_vtoken_metadata(token_metadata);
 				Self::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
 
 				return Ok(());
@@ -307,11 +303,7 @@ pub mod pallet {
 
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
 			{
-				let mut name = "Voucher Slot ".as_bytes().to_vec();
-				name.extend_from_slice(&token_metadata.symbol);
-				let mut symbol = "vs".as_bytes().to_vec();
-				symbol.extend_from_slice(&token_metadata.symbol);
-				let vstoken_metadata = AssetMetadata { name, symbol, ..token_metadata };
+				let vstoken_metadata = Self::convert_to_vstoken_metadata(token_metadata);
 				Self::do_register_metadata(CurrencyId::VSToken2(token_id), &vstoken_metadata)?;
 
 				return Ok(());
@@ -333,21 +325,15 @@ pub mod pallet {
 
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
 			{
-				use scale_info::prelude::format;
-				let name = format!(
-					"vsBOND-{}-{}-{}-{}",
-					core::str::from_utf8(&token_metadata.symbol).unwrap_or(""),
+				let vsbond_metadata = Self::convert_to_vsbond_metadata(
+					token_metadata,
 					para_id,
 					first_slot,
-					last_slot
-				)
-				.as_bytes()
-				.to_vec();
-				let vstoken_metadata =
-					AssetMetadata { name: name.clone(), symbol: name, ..token_metadata };
+					last_slot,
+				);
 				Self::do_register_metadata(
 					CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
-					&vstoken_metadata,
+					&vsbond_metadata,
 				)?;
 
 				return Ok(());
@@ -487,6 +473,44 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	pub fn convert_to_vtoken_metadata(
+		token_metadata: AssetMetadata<BalanceOf<T>>,
+	) -> AssetMetadata<BalanceOf<T>> {
+		let mut name = "Voucher ".as_bytes().to_vec();
+		name.extend_from_slice(&token_metadata.symbol);
+		let mut symbol = "v".as_bytes().to_vec();
+		symbol.extend_from_slice(&token_metadata.symbol);
+		AssetMetadata { name, symbol, ..token_metadata }
+	}
+
+	pub fn convert_to_vstoken_metadata(
+		token_metadata: AssetMetadata<BalanceOf<T>>,
+	) -> AssetMetadata<BalanceOf<T>> {
+		let mut name = "Voucher Slot ".as_bytes().to_vec();
+		name.extend_from_slice(&token_metadata.symbol);
+		let mut symbol = "vs".as_bytes().to_vec();
+		symbol.extend_from_slice(&token_metadata.symbol);
+		AssetMetadata { name, symbol, ..token_metadata }
+	}
+
+	pub fn convert_to_vsbond_metadata(
+		token_metadata: AssetMetadata<BalanceOf<T>>,
+		para_id: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> AssetMetadata<BalanceOf<T>> {
+		let name = scale_info::prelude::format!(
+			"vsBOND-{}-{}-{}-{}",
+			core::str::from_utf8(&token_metadata.symbol).unwrap_or(""),
+			para_id,
+			first_slot,
+			last_slot
+		)
+		.as_bytes()
+		.to_vec();
+		AssetMetadata { name: name.clone(), symbol: name, ..token_metadata }
+	}
+
 	pub fn do_register_metadata(
 		currency_id: CurrencyId,
 		metadata: &AssetMetadata<BalanceOf<T>>,
@@ -623,6 +647,158 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 			CurrencyId::Token2(token_id) =>
 				Ok(CurrencyId::VSBond2(token_id, index, first_slot, last_slot)),
 			_ => Err(()),
+		}
+	}
+}
+
+impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
+	fn check_token_registered(token_symbol: TokenSymbol) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)).is_some()
+	}
+
+	fn check_vtoken_registered(token_symbol: TokenSymbol) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VToken(token_symbol)).is_some()
+	}
+
+	fn check_vstoken_registered(token_symbol: TokenSymbol) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VSToken(token_symbol)).is_some()
+	}
+
+	fn check_vsbond_registered(
+		token_symbol: TokenSymbol,
+		para_id: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VSBond(
+			token_symbol,
+			para_id,
+			first_slot,
+			last_slot,
+		))
+		.is_some()
+	}
+
+	fn register_vtoken_metadata(token_symbol: TokenSymbol) -> sp_runtime::DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+		}
+	}
+
+	fn register_vstoken_metadata(token_symbol: TokenSymbol) -> sp_runtime::DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+			let vstoken_metadata = Pallet::<T>::convert_to_vstoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(
+				CurrencyId::VSToken(token_symbol),
+				&vstoken_metadata,
+			)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(Error::<T>::CurrencyIdNotExists)?;
+		}
+	}
+
+	fn register_vsbond_metadata(
+		token_symbol: TokenSymbol,
+		para_id: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> sp_runtime::DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
+				token_metadata,
+				para_id,
+				first_slot,
+				last_slot,
+			);
+			Pallet::<T>::do_register_metadata(
+				CurrencyId::VSBond(token_symbol, para_id, first_slot, last_slot),
+				&vsbond_metadata,
+			)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(Error::<T>::CurrencyIdNotExists)?;
+		}
+	}
+
+	fn check_token2_registered(token_id: TokenId) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)).is_some()
+	}
+
+	fn check_vtoken2_registered(token_id: TokenId) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VToken2(token_id)).is_some()
+	}
+
+	fn check_vstoken2_registered(token_id: TokenId) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VSToken2(token_id)).is_some()
+	}
+
+	fn check_vsbond2_registered(
+		token_id: TokenId,
+		para_id: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> bool {
+		CurrencyMetadatas::<T>::get(CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot))
+			.is_some()
+	}
+
+	fn register_vtoken2_metadata(token_id: TokenId) -> DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
+			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+		}
+	}
+
+	fn register_vstoken2_metadata(token_id: TokenId) -> DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
+			let vstoken_metadata = Pallet::<T>::convert_to_vstoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VSToken2(token_id), &vstoken_metadata)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(Error::<T>::CurrencyIdNotExists)?;
+		}
+	}
+
+	fn register_vsbond2_metadata(
+		token_id: TokenId,
+		para_id: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> DispatchResult {
+		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
+			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
+				token_metadata,
+				para_id,
+				first_slot,
+				last_slot,
+			);
+			Pallet::<T>::do_register_metadata(
+				CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
+				&vsbond_metadata,
+			)?;
+
+			return Ok(());
+		} else {
+			return Ok(());
+			// return Err(Error::<T>::CurrencyIdNotExists)?;
 		}
 	}
 }

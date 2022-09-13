@@ -177,6 +177,7 @@ parameter_types! {
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -189,7 +190,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 }

@@ -43,8 +43,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, SlpOperator, TimeUnit, VtokenMintingInterface,
-	VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, SlpOperator, TimeUnit, TokenSymbol,
+	VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -109,9 +109,14 @@ pub mod pallet {
 		#[pallet::constant]
 		type FeeAccount: Get<Self::AccountId>;
 
+		#[pallet::constant]
+		type RelayChainToken: Get<CurrencyId>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
+
+		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -629,6 +634,18 @@ pub mod pallet {
 				MinimumMint::<T>::mutate(token_id, |old_amount| {
 					*old_amount = amount;
 				});
+			}
+
+			match T::RelayChainToken::get() {
+				CurrencyId::Token(token_symbol) =>
+					if T::CurrencyIdRegister::check_vstoken_registered(token_symbol) {
+						T::CurrencyIdRegister::register_vstoken_metadata(token_symbol)?;
+					},
+				CurrencyId::Token2(token_id) =>
+					if T::CurrencyIdRegister::check_vstoken2_registered(token_id) {
+						T::CurrencyIdRegister::register_vstoken2_metadata(token_id)?;
+					},
+				_ => (),
 			}
 
 			Self::deposit_event(Event::MinimumMintSet { token_id, amount });
