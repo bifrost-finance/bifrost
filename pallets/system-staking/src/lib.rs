@@ -23,9 +23,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 pub use frame_support::weights::Weight;
-use frame_support::{
-	dispatch::DispatchResultWithPostInfo, inherent::Vec, traits::Get, transactional, PalletId,
-};
+use frame_support::{dispatch::DispatchResultWithPostInfo, inherent::Vec, traits::Get, PalletId};
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -249,6 +247,14 @@ pub mod pallet {
 				// mutate round
 				round.update(n);
 				<Round<T>>::put(round);
+				for i in token_list.clone().into_iter() {
+					if let Some(mut token_info) = Self::token_status(i) {
+						if token_info.check_config_change() {
+							token_info.update_config();
+							<TokenStatus<T>>::insert(&i, token_info.clone());
+						}
+					}
+				}
 				Self::deposit_event(Event::NewRound {
 					current: round.current,
 					first: round.first,
@@ -258,11 +264,8 @@ pub mod pallet {
 
 			let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 			for i in token_list.into_iter() {
-				if let Some(mut token_info) = Self::token_status(i) {
+				if let Some(token_info) = Self::token_status(i) {
 					if round.check_delay(n, token_info.current_config.exec_delay) {
-						if token_info.check_config_change() {
-							token_info.update_config();
-						}
 						Self::process_token_info(pallet_account.clone(), token_info, i).ok();
 					}
 				}
@@ -380,7 +383,6 @@ pub mod pallet {
 		/// refresh token info，query farming pallet, and update TokenInfo, change to new
 		/// config，ignore exec_delay, execute immediately
 		#[pallet::weight(<T as Config>::WeightInfo::refresh_token_info())]
-		#[transactional]
 		pub fn refresh_token_info(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
@@ -402,7 +404,6 @@ pub mod pallet {
 
 		/// payout to treasury
 		#[pallet::weight(<T as Config>::WeightInfo::payout())]
-		#[transactional]
 		pub fn payout(origin: OriginFor<T>, token: CurrencyIdOf<T>) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?; // Motion
 
@@ -448,7 +449,6 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	#[transactional]
 	fn process_token_info(
 		account: AccountIdOf<T>,
 		mut token_info: TokenInfo<BalanceOf<T>>,
