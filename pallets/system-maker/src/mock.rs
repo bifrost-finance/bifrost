@@ -15,6 +15,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Ensure we're `no_std` when compiling for Wasm.
+
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
@@ -26,19 +29,24 @@ use frame_support::{
 	ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
+	sp_runtime::{DispatchError, DispatchResult},
+	sp_std::marker::PhantomData,
+	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::{blake2_256, H256};
+use orml_traits::MultiCurrency;
+use sp_core::{hashing::blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
-	AccountId32,
+	traits::{
+		AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput,
+		UniqueSaturatedInto,
+	},
+	AccountId32, SaturatedConversion,
 };
-use sp_std::vec;
 use xcm::{
 	latest::{Junction, MultiLocation},
 	opaque::latest::{
@@ -47,25 +55,28 @@ use xcm::{
 		NetworkId,
 	},
 };
+use zenlink_protocol::{
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMultiAssets,
+};
 
-use crate as system_staking;
+use crate as bifrost_system_maker;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u128;
+pub type Balance = u64;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
+// pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+// pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
+pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
+pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime where
@@ -77,13 +88,22 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
+		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
-		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
-		SystemStaking: system_staking::{Pallet, Call, Storage, Event<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+}
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -172,38 +192,36 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaximumUnlockIdOfUser: u32 = 10;
-	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub const RelayCurrencyId: CurrencyId = KSM;
-}
-
-impl bifrost_vtoken_minting::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
-	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
-	type EntranceAccount = BifrostEntranceAccount;
-	type ExitAccount = BifrostExitAccount;
-	type FeeAccount = BifrostFeeAccount;
-	type BifrostSlp = Slp;
-	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type WeightInfo = ();
-	type OnRedeemSuccess = ();
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
+	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 }
 
 ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+	pub const One: AccountId = ALICE;
+	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
-impl bifrost_asset_registry::Config for Runtime {
+
+impl bifrost_system_maker::Config for Runtime {
 	type Event = Event;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type WeightInfo = ();
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = TreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type SystemMakerPalletId = SystemMakerPalletId;
+	type ParachainId = ParaInfo;
+	type VtokenMintingInterface = VtokenMinting;
+}
+
+pub struct ParaInfo;
+impl Get<ParaId> for ParaInfo {
+	fn get() -> ParaId {
+		ParaId::from(2001)
+	}
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
@@ -217,7 +235,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 					Junction::AccountKey20 {
 						network: NetworkId::Any,
 						key: Slp::derivative_account_id_20(
-							hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),
@@ -290,44 +308,107 @@ impl bifrost_slp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
-ord_parameter_types! {
-	pub const One: AccountId = ALICE;
-}
-
-impl bifrost_farming::Config for Runtime {
+impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type TreasuryAccount = TreasuryAccount;
-	type Keeper = FarmingKeeperPalletId;
-	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
+	type RelayChainToken = RelayCurrencyId;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
+	type OnRedeemSuccess = ();
 }
 
 parameter_types! {
-	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const BlocksPerRound: u32 = 5;
-	pub const MaxTokenLen: u32 = 50;
-	pub const MaxFarmingPoolIdLen: u32 = 100;
-	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+	pub const SelfParaId: u32 = 2001;
 }
 
-impl system_staking::Config for Runtime {
+impl zenlink_protocol::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
-	type WeightInfo = system_staking::weights::BifrostWeight<Runtime>;
-	type FarmingInfo = Farming;
-	type VtokenMintingInterface = VtokenMinting;
-	type TreasuryAccount = TreasuryAccount;
-	type PalletId = SystemStakingPalletId;
-	type BlocksPerRound = BlocksPerRound;
-	type MaxTokenLen = MaxTokenLen;
-	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	type SelfParaId = SelfParaId;
+
+	type TargetChains = ();
+	type XcmExecutor = ();
+	type Conversion = ();
+	type WeightInfo = ();
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+{
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
+		let rs: Result<CurrencyId, _> = asset_id.try_into();
+		match rs {
+			Ok(_) => true,
+			Err(_) => false,
+		}
+	}
+
+	fn local_transfer(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount);
+	}
+
+	fn local_withdraw(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
 }
 
 pub struct ExtBuilder {
@@ -351,12 +432,13 @@ impl ExtBuilder {
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
-			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
-			(ALICE, KSM, 3000),
-			(BOB, vKSM, 1000),
-			(BOB, KSM, 10000000000),
-			(BOB, MOVR, 1000000000000000000000),
+			(ALICE, RelayCurrencyId::get(), 10000),
+			(ALICE, vKSM, 10000),
+			(BOB, vsKSM, 100),
+			(BOB, KSM, 100),
+			(BOB, vsBond, 100),
+			(SystemMakerPalletId::get().into_account_truncating(), vKSM, 10000),
+			(SystemMakerPalletId::get().into_account_truncating(), KSM, 10000),
 		])
 	}
 
@@ -394,42 +476,4 @@ impl ExtBuilder {
 
 		t.into()
 	}
-}
-
-/// Rolls forward one block. Returns the new block number.
-pub(crate) fn roll_one_block() -> u64 {
-	SystemStaking::on_finalize(System::block_number());
-	Balances::on_finalize(System::block_number());
-	System::on_finalize(System::block_number());
-	System::set_block_number(System::block_number() + 1);
-	System::on_initialize(System::block_number());
-	Balances::on_initialize(System::block_number());
-	SystemStaking::on_initialize(System::block_number());
-	System::block_number()
-}
-
-/// Rolls to the desired block. Returns the number of blocks played.
-pub(crate) fn roll_to(n: u64) -> u64 {
-	let mut num_blocks = 0;
-	let mut block = System::block_number();
-	while block < n {
-		block = roll_one_block();
-		num_blocks += 1;
-	}
-	num_blocks
-}
-
-/// Rolls block-by-block to the beginning of the specified round.
-/// This will complete the block in which the round change occurs.
-/// Returns the number of blocks played.
-pub(crate) fn roll_to_round_begin(round: u64) -> u64 {
-	let block = (round - 1) * BlocksPerRound::get() as u64;
-	roll_to(block)
-}
-
-/// Rolls block-by-block to the end of the specified round.
-/// The block following will be the one in which the specified round change occurs.
-pub(crate) fn roll_to_round_end(round: u64) -> u64 {
-	let block = round * BlocksPerRound::get() as u64 - 1;
-	roll_to(block)
 }

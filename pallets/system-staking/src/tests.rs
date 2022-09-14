@@ -109,7 +109,7 @@ fn round_info_should_correct() {
 			None,
 		));
 		roll_one_block();
-		assert_eq!(SystemStaking::round().unwrap().length, 100);
+		assert_eq!(SystemStaking::round().unwrap().length, 5);
 		assert_eq!(SystemStaking::round().unwrap().current, 1);
 		assert_eq!(SystemStaking::round().unwrap().first, 1001);
 	});
@@ -149,6 +149,78 @@ fn refresh_token_info_should_work() {
 	});
 }
 
+#[test]
+fn round_process_token() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, _tokens) = init_farming_no_gauge();
+
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10));
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_unlock_duration(
+			Origin::signed(ALICE),
+			KSM,
+			TimeUnit::Era(1)
+		));
+		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
+		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10));
+
+		assert_ok!(SystemStaking::token_config(
+			Origin::root(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(100),
+			Some(vec![pid]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
+
+		roll_to(5); // round start
+		roll_to(6); // delay exec
+
+		let token_info = <TokenStatus<Runtime>>::get(KSM).unwrap();
+		assert!(token_info.system_shadow_amount > 0);
+	});
+}
+
+#[test]
+fn round_process_token_rollback() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, _tokens) = init_farming_no_gauge();
+
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10000));
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_unlock_duration(
+			Origin::signed(ALICE),
+			KSM,
+			TimeUnit::Era(1)
+		));
+		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
+		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10000));
+
+		assert_ok!(SystemStaking::token_config(
+			Origin::root(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(100),
+			Some(vec![pid]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
+
+		roll_to(5); // round start
+		roll_to(6); // delay exec
+
+		let token_info = <TokenStatus<Runtime>>::get(KSM).unwrap();
+		assert!(token_info.system_shadow_amount == 0);
+	});
+}
+
 fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
 	tokens_proportion_map.entry(KSM).or_insert(Perbill::from_percent(100));
@@ -174,4 +246,8 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
 	assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
 	(pid, tokens)
+}
+
+fn increase_farming_no_gauge(pid: u32) {
+	assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 1000, None));
 }
