@@ -67,6 +67,7 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 
 		// vsBond
 		let items = vec![
+			// Token, ParaId, first_slot, last_slot
 			(BNC, 2001u32, 13u32, 20u32),
 			(KSM, 2011, 19, 26),
 			(KSM, 2085, 15, 22),
@@ -114,7 +115,7 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 	fn post_upgrade() -> Result<(), &'static str> {
 		let count = bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count();
 		log::info!("try-runtime::post_upgrade currency_metadatas count: {:?}", count);
-		assert_eq!(count, 32);
+		assert_eq!(count, 33);
 
 		Ok(())
 	}
