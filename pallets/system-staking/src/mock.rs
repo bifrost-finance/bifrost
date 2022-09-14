@@ -310,8 +310,8 @@ impl bifrost_farming::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const BlocksPerRound: u32 = 100;
-	pub const MaxTokenLen: u32 = 500;
+	pub const BlocksPerRound: u32 = 5;
+	pub const MaxTokenLen: u32 = 50;
 	pub const MaxFarmingPoolIdLen: u32 = 100;
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 }
@@ -417,4 +417,19 @@ pub(crate) fn roll_to(n: u64) -> u64 {
 		num_blocks += 1;
 	}
 	num_blocks
+}
+
+/// Rolls block-by-block to the beginning of the specified round.
+/// This will complete the block in which the round change occurs.
+/// Returns the number of blocks played.
+pub(crate) fn roll_to_round_begin(round: u64) -> u64 {
+	let block = (round - 1) * BlocksPerRound::get() as u64;
+	roll_to(block)
+}
+
+/// Rolls block-by-block to the end of the specified round.
+/// The block following will be the one in which the specified round change occurs.
+pub(crate) fn roll_to_round_end(round: u64) -> u64 {
+	let block = round * BlocksPerRound::get() as u64 - 1;
+	roll_to(block)
 }
