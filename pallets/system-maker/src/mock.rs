@@ -325,7 +325,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 }
