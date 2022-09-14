@@ -101,6 +101,7 @@ bifrost-slp = { path = "../../pallets/slp", default-features = false }
 # xcm-support = { path = "../../xcm-support", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
+bifrost-system-maker = { path = "../../pallets/system-maker", default-features = false }
 
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
@@ -205,6 +206,7 @@ std = [
 	"bifrost-vtoken-minting/std",
 	"bifrost-asset-registry/std",
 	"bifrost-system-staking/std",
+	"bifrost-system-maker/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
