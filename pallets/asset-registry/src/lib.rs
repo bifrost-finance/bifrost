@@ -100,7 +100,7 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(fn deposit_event)]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The foreign asset registered.
 		ForeignAssetRegistered {
@@ -118,6 +118,8 @@ pub mod pallet {
 		AssetRegistered { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The asset updated.
 		AssetUpdated { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
+		/// The CurrencyId registered.
+		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -517,7 +519,12 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		ensure!(CurrencyMetadatas::<T>::get(currency_id).is_none(), Error::<T>::CurrencyIdExisted);
 
-		CurrencyMetadatas::<T>::insert(currency_id, metadata);
+		CurrencyMetadatas::<T>::insert(currency_id, metadata.clone());
+
+		Pallet::<T>::deposit_event(Event::<T>::CurrencyIdRegistered {
+			currency_id,
+			metadata: metadata.clone(),
+		});
 
 		Ok(())
 	}
