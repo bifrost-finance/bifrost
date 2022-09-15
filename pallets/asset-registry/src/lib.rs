@@ -683,11 +683,9 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
 			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
 			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
-
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -701,8 +699,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -726,8 +723,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -760,8 +756,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -772,8 +767,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -797,8 +791,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 }
