@@ -66,7 +66,7 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_flexible_fee::{
-	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	fee_dealer::FeeDealer,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
@@ -1299,6 +1299,7 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 }
 
 parameter_types! {
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
 	pub const MaximumAssetsInOrder: u8 = 20;
 }
