@@ -17,10 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	primitives::{
-		ParachainStakingOneToManyDelegationAction, ParachainStakingOneToManyLedger,
-		ParachainStakingOneToManyScheduledRequest,
-	},
+	primitives::{OneToManyDelegationAction, OneToManyLedger, OneToManyScheduledRequest},
 	DelegationsOccupied,
 };
 use bifrost_parachain_staking::ParachainStakingInterface;
@@ -42,9 +39,7 @@ use xcm::opaque::latest::MultiLocation;
 
 use crate::{
 	pallet::Error,
-	primitives::{
-		Ledger, ParachainStakingOneToManyDelegatorStatus, ValidatorsByDelegatorUpdateEntry, BNC,
-	},
+	primitives::{Ledger, OneToManyDelegatorStatus, ValidatorsByDelegatorUpdateEntry, BNC},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry,
@@ -121,7 +116,7 @@ impl<T: Config>
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
 
@@ -161,16 +156,15 @@ impl<T: Config>
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
 			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 				BTreeMap::new();
-			let new_ledger =
-				ParachainStakingOneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
-					account: who.clone(),
-					total: Zero::zero(),
-					less_total: Zero::zero(),
-					delegations: empty_delegation_set,
-					requests: vec![],
-					request_briefs: request_briefs_set,
-					status: ParachainStakingOneToManyDelegatorStatus::Active,
-				};
+			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+				account: who.clone(),
+				total: Zero::zero(),
+				less_total: Zero::zero(),
+				delegations: empty_delegation_set,
+				requests: vec![],
+				request_briefs: request_briefs_set,
+				status: OneToManyDelegatorStatus::Active,
+			};
 			let parachain_staking_ledger =
 				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::ParachainStaking(new_ledger);
 
@@ -213,7 +207,7 @@ impl<T: Config>
 					// If this is a bonding operation.
 					// Increase the total amount and add the delegation relationship.
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorLeaving
 					);
 					old_ledger.total =
@@ -256,7 +250,7 @@ impl<T: Config>
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
 			// check if the delegation exists, if not, return error.
@@ -293,7 +287,7 @@ impl<T: Config>
 					// If this is a bonding operation.
 					// Increase the total amount and add the delegation relationship.
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorLeaving
 					);
 					old_ledger.total =
@@ -336,7 +330,7 @@ impl<T: Config>
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
 			// check if the delegation exists, if not, return error.
@@ -383,7 +377,7 @@ impl<T: Config>
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorLeaving
 					);
 
@@ -395,12 +389,10 @@ impl<T: Config>
 							.ok_or(Error::<T>::TimeUnitNotExist)?;
 
 					// add a new entry in requests and request_briefs
-					let new_request = ParachainStakingOneToManyScheduledRequest {
+					let new_request = OneToManyScheduledRequest {
 						validator: (*validator_multilocation).clone(),
 						when_executable: unlock_time_unit.clone(),
-						action: ParachainStakingOneToManyDelegationAction::<BalanceOf<T>>::Decrease(
-							amount,
-						),
+						action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(amount),
 					};
 					old_ledger.requests.push(new_request);
 					old_ledger
@@ -430,10 +422,7 @@ impl<T: Config>
 
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
-			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
-				Error::<T>::AlreadyLeaving
-			);
+			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
@@ -449,27 +438,23 @@ impl<T: Config>
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorAlreadyLeaving
 					);
 
 					old_ledger.less_total = old_ledger.total;
 					let unlock_time = Self::get_unlocking_round_from_current(false, currency_id)?
 						.ok_or(Error::<T>::TimeUnitNotExist)?;
-					old_ledger.status =
-						ParachainStakingOneToManyDelegatorStatus::Leaving(unlock_time.clone());
+					old_ledger.status = OneToManyDelegatorStatus::Leaving(unlock_time.clone());
 
 					let mut new_requests = vec![];
 					let new_request_briefs: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 						BTreeMap::new();
 					for (vali, amt) in old_ledger.delegations.iter() {
-						let request_entry = ParachainStakingOneToManyScheduledRequest {
+						let request_entry = OneToManyScheduledRequest {
 							validator: vali.clone(),
 							when_executable: unlock_time.clone(),
-							action:
-								ParachainStakingOneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-									amt.clone(),
-								),
+							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(amt.clone()),
 						};
 						new_requests.push(request_entry);
 
@@ -506,7 +491,7 @@ impl<T: Config>
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
 
@@ -542,7 +527,7 @@ impl<T: Config>
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorLeaving
 					);
 
@@ -601,7 +586,7 @@ impl<T: Config>
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
-				ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
 			);
 			// Second, check the validators one by one to see if all exist.
@@ -635,7 +620,7 @@ impl<T: Config>
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					ensure!(
-						old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorLeaving
 					);
 
@@ -652,10 +637,10 @@ impl<T: Config>
 							.ok_or(Error::<T>::TimeUnitNotExist)?;
 
 					// add a new entry in requests and request_briefs
-					let new_request = ParachainStakingOneToManyScheduledRequest {
+					let new_request = OneToManyScheduledRequest {
 						validator: (*validator).clone(),
 						when_executable: unlock_time_unit.clone(),
-						action: ParachainStakingOneToManyDelegationAction::<BalanceOf<T>>::Revoke(
+						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
 							revoke_amount.clone(),
 						),
 					};
@@ -687,7 +672,7 @@ impl<T: Config>
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
 			match ledger.status {
-				ParachainStakingOneToManyDelegatorStatus::Leaving(_) => Ok(()),
+				OneToManyDelegatorStatus::Leaving(_) => Ok(()),
 				_ => Err(Error::<T>::DelegatorNotLeaving),
 			}?;
 		} else {
@@ -704,14 +689,11 @@ impl<T: Config>
 			who,
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
-					let leaving = matches!(
-						old_ledger.status,
-						ParachainStakingOneToManyDelegatorStatus::Leaving(_)
-					);
+					let leaving = matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
 					ensure!(leaving, Error::<T>::DelegatorNotLeaving);
 
 					old_ledger.less_total = Zero::zero();
-					old_ledger.status = ParachainStakingOneToManyDelegatorStatus::Active;
+					old_ledger.status = OneToManyDelegatorStatus::Active;
 
 					old_ledger.requests = vec![];
 					old_ledger.request_briefs = BTreeMap::new();
@@ -757,7 +739,7 @@ impl<T: Config>
 		// let mut due_amount = Zero::zero();
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving. If yes, execute leaving.
-			if let ParachainStakingOneToManyDelegatorStatus::Leaving(leaving_time) = ledger.status {
+			if let OneToManyDelegatorStatus::Leaving(leaving_time) = ledger.status {
 				ensure!(now >= leaving_time, Error::<T>::LeavingNotDue);
 				leaving = true;
 			} else {
@@ -791,9 +773,8 @@ impl<T: Config>
 					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						// make sure leaving time is less than or equal to current time.
 						let scheduled_time =
-							if let ParachainStakingOneToManyDelegatorStatus::Leaving(
-								scheduled_time_unit,
-							) = old_ledger.clone().status
+							if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
+								old_ledger.clone().status
 							{
 								if let TimeUnit::Round(tu) = scheduled_time_unit {
 									tu
@@ -818,19 +799,16 @@ impl<T: Config>
 							BTreeMap::new();
 						let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 							BTreeMap::new();
-						let new_ledger = ParachainStakingOneToManyLedger::<
-							MultiLocation,
-							MultiLocation,
-							BalanceOf<T>,
-						> {
-							account: old_ledger.clone().account,
-							total: Zero::zero(),
-							less_total: Zero::zero(),
-							delegations: empty_delegation_set,
-							requests: vec![],
-							request_briefs: request_briefs_set,
-							status: ParachainStakingOneToManyDelegatorStatus::Active,
-						};
+						let new_ledger =
+							OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+								account: old_ledger.clone().account,
+								total: Zero::zero(),
+								less_total: Zero::zero(),
+								delegations: empty_delegation_set,
+								requests: vec![],
+								request_briefs: request_briefs_set,
+								status: OneToManyDelegatorStatus::Active,
+							};
 						let parachain_staking_ledger =
 							Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::ParachainStaking(
 								new_ledger,
@@ -857,7 +835,7 @@ impl<T: Config>
 				|old_ledger_opt| -> Result<(), Error<T>> {
 					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						ensure!(
-							old_ledger.status == ParachainStakingOneToManyDelegatorStatus::Active,
+							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
 						);
 

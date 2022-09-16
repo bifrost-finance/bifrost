@@ -30,6 +30,7 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
+pub use bifrost_parachain_staking::{InflationInfo, Range};
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -46,7 +47,6 @@ use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
-pub use bifrost_parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]

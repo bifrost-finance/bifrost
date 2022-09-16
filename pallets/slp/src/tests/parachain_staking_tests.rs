@@ -21,8 +21,8 @@
 use crate::{
 	mock::*,
 	primitives::{
-		ParachainStakingLedgerUpdateEntry, ParachainStakingOneToManyDelegationAction,
-		ParachainStakingOneToManyScheduledRequest,
+		MoonbeamLedgerUpdateEntry, OneToManyDelegationAction,
+		OneToManyScheduledRequest,
 	},
 	Junction::Parachain,
 	Junctions::X2,
@@ -33,8 +33,8 @@ use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
 	primitives::{
-		ParachainStakingLedgerUpdateOperation, ParachainStakingOneToManyDelegatorStatus,
-		ParachainStakingOneToManyLedger,
+		ParachainStakingLedgerUpdateOperation, OneToManyDelegatorStatus,
+		OneToManyLedger,
 	},
 	BNC, *,
 };
