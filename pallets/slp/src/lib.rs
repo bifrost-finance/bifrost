@@ -20,6 +20,7 @@
 #![allow(deprecated)] // TODO: clear transaction
 
 pub use agents::PolkadotAgent;
+use bifrost_parachain_staking::ParachainStakingInterface;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
@@ -44,11 +45,11 @@ use xcm::{
 	},
 };
 
-use crate::agents::MoonbeamAgent;
+use crate::agents::{MoonbeamAgent, ParachainStakingAgent};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -154,6 +155,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxRefundPerBlock: Get<u32>;
+
+		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
 	}
 
 	#[pallet::error]
@@ -1916,6 +1919,7 @@ pub mod pallet {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
 				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
+				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -2105,6 +2109,8 @@ pub mod pallet {
 					LedgerUpdateEntry::Substrate(substrate_entry) =>
 						Some(substrate_entry.currency_id),
 					LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+					LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
+						Some(parachain_staking_entry.currency_id),
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -2160,6 +2166,8 @@ pub mod pallet {
 			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+				LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
+					Some(parachain_staking_entry.currency_id),
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 

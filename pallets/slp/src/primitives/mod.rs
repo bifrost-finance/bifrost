@@ -17,9 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 mod moonbeam_primitives;
+mod parachain_staking_primitives;
 mod polkadot_primitives;
 
 pub use moonbeam_primitives::*;
+pub use parachain_staking_primitives::*;
 pub use polkadot_primitives::*;
 
 use codec::{Decode, Encode};
@@ -31,6 +33,7 @@ use scale_info::TypeInfo;
 pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + Eq> {
 	Substrate(SubstrateLedger<DelegatorId, Balance>),
 	Moonbeam(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
+	ParachainStaking(ParachainStakingOneToManyLedger<DelegatorId, ValidatorId, Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
@@ -39,6 +42,7 @@ pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
 	/// A type for substrate ledger updating entries
 	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
 	Moonbeam(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
+	ParachainStaking(ParachainStakingLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of

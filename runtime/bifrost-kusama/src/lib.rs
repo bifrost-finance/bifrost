@@ -74,6 +74,7 @@ use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
+use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -1820,6 +1821,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
+	type ParachainStaking = ParachainStakingInterface;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

@@ -21,6 +21,7 @@
 #![cfg(test)]
 
 use bifrost_asset_registry::AssetIdMaps;
+// use bifrost_parachain_staking::ParachainStakingInterface;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -37,7 +38,7 @@ use sp_core::{hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
-	AccountId32,
+	AccountId32, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::latest::prelude::*;
@@ -73,6 +74,7 @@ construct_runtime!(
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+		ParachainStaking: bifrost_parachain_staking::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -188,6 +190,62 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type OnRedeemSuccess = ();
 }
 
+parameter_types! {
+	pub const MinBlocksPerRound: u32 = 3;
+	pub const DefaultBlocksPerRound: u32 = 5;
+	pub const LeaveCandidatesDelay: u32 = 2;
+	pub const CandidateBondLessDelay: u32 = 2;
+	pub const LeaveDelegatorsDelay: u32 = 2;
+	pub const RevokeDelegationDelay: u32 = 2;
+	pub const DelegationBondLessDelay: u32 = 2;
+	pub const RewardPaymentDelay: u32 = 2;
+	pub const MinSelectedCandidates: u32 = 5;
+	pub const MaxTopDelegationsPerCandidate: u32 = 4;
+	pub const MaxBottomDelegationsPerCandidate: u32 = 4;
+	pub const MaxDelegationsPerDelegator: u32 = 4;
+	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
+	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
+	pub const MinCollatorStk: u128 = 10;
+	pub const MinDelegatorStk: u128 = 5;
+	pub const MinDelegation: u128 = 3;
+	pub AllowInflation: bool = true;
+	pub PaymentInRound: u128 = 10;
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
+	pub ToMigrateInvulnables: Vec<AccountId> = vec![AccountId32::new([1u8; 32])];
+	pub InitSeedStk: u128 = 10;
+}
+impl bifrost_parachain_staking::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type LeaveCandidatesDelay = LeaveCandidatesDelay;
+	type CandidateBondLessDelay = CandidateBondLessDelay;
+	type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
+	type RevokeDelegationDelay = RevokeDelegationDelay;
+	type DelegationBondLessDelay = DelegationBondLessDelay;
+	type RewardPaymentDelay = RewardPaymentDelay;
+	type MinSelectedCandidates = MinSelectedCandidates;
+	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
+	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
+	type DefaultCollatorCommission = DefaultCollatorCommission;
+	type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
+	type MinCollatorStk = MinCollatorStk;
+	type MinCandidateStk = MinCollatorStk;
+	type MinDelegatorStk = MinDelegatorStk;
+	type MinDelegation = MinDelegation;
+	type OnCollatorPayout = ();
+	type OnNewRound = ();
+	type WeightInfo = ();
+	type AllowInflation = AllowInflation;
+	type PaymentInRound = PaymentInRound;
+	type PalletId = ParachainStakingPalletId;
+	type ToMigrateInvulnables = ToMigrateInvulnables;
+	type InitSeedStk = InitSeedStk;
+}
+
 ord_parameter_types! {
 	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
 }
@@ -285,6 +343,7 @@ impl Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
+	type ParachainStaking = ParachainStaking;
 }
 
 pub struct ExtBuilder {
