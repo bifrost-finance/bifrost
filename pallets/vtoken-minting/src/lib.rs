@@ -1448,7 +1448,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		Self::token_id_inner(vtoken_id)
 	}
 
-	fn get_minimuns_redeem(vtoken_id: CurrencyIdOf<T>) -> BalanceOf<T> {
+	fn get_minimums_redeem(vtoken_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		MinimumRedeem::<T>::get(vtoken_id)
 	}
 }

@@ -142,7 +142,7 @@ pub mod pallet {
 				}
 				let redeem_amount =
 					T::MultiCurrency::free_balance(info.vcurrency_id, &system_maker);
-				if redeem_amount > T::VtokenMintingInterface::get_minimuns_redeem(info.vcurrency_id)
+				if redeem_amount > T::VtokenMintingInterface::get_minimums_redeem(info.vcurrency_id)
 				{
 					Self::handle_redeem_by_currency_id(&system_maker, &info, redeem_amount);
 				}
