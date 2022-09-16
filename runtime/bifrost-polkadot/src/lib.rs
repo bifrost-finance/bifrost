@@ -1299,7 +1299,6 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 }
 
 parameter_types! {
-	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
 	pub const MaximumAssetsInOrder: u8 = 20;
 }
@@ -1312,8 +1311,7 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	// type FeeDealer = FlexibleFee;
-	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
