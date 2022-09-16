@@ -46,7 +46,7 @@ use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
-pub use parachain_staking::{InflationInfo, Range};
+pub use bifrost_parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
@@ -74,7 +74,6 @@ use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
-use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -972,7 +971,7 @@ parameter_types! {
 	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
 	pub InitSeedStk: u128 = 5000 * dollar(NativeCurrencyId::get());
 }
-impl parachain_staking::Config for Runtime {
+impl bifrost_parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
@@ -1002,7 +1001,9 @@ impl parachain_staking::Config for Runtime {
 	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
-	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+	type OnCollatorPayout = ();
+	type OnNewRound = ();
+	type WeightInfo = bifrost_parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1821,7 +1822,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
-	type ParachainStaking = ParachainStakingInterface;
+	type ParachainStaking = ParachainStaking;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -2064,7 +2065,7 @@ construct_runtime! {
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
-		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
+		ParachainStaking: bifrost_parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
 
 		// Governance stuff
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -2186,7 +2187,7 @@ mod benches {
 		[bifrost_token_issuer, TokenIssuer]
 		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
-		[parachain_staking, ParachainStaking]
+		[bifrost_parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
 		[bifrost_system_staking, SystemStaking]
