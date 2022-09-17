@@ -66,7 +66,7 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_flexible_fee::{
-	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	fee_dealer::FeeDealer,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
@@ -1312,8 +1312,7 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	// type FeeDealer = FlexibleFee;
-	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
