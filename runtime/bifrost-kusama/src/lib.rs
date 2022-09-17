@@ -30,7 +30,6 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
-pub use bifrost_parachain_staking::{InflationInfo, Range};
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -47,6 +46,7 @@ use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::QueryStatus;
+pub use parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
@@ -971,7 +971,7 @@ parameter_types! {
 	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
 	pub InitSeedStk: u128 = 5000 * dollar(NativeCurrencyId::get());
 }
-impl bifrost_parachain_staking::Config for Runtime {
+impl parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
@@ -1003,7 +1003,7 @@ impl bifrost_parachain_staking::Config for Runtime {
 	type InitSeedStk = InitSeedStk;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
-	type WeightInfo = bifrost_parachain_staking::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -2065,7 +2065,7 @@ construct_runtime! {
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
-		ParachainStaking: bifrost_parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
+		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
 
 		// Governance stuff
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -2187,7 +2187,7 @@ mod benches {
 		[bifrost_token_issuer, TokenIssuer]
 		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
-		[bifrost_parachain_staking, ParachainStaking]
+		[parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_farming, Farming]
 		[bifrost_system_staking, SystemStaking]

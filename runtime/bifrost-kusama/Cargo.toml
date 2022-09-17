@@ -107,7 +107,7 @@ bifrost-asset-registry = { path = "../../pallets/asset-registry", default-featur
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
-bifrost-parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -207,7 +207,7 @@ std = [
 	"bifrost-asset-registry/std",
 	"bifrost-system-staking/std",
 	"bifrost-system-maker/std",
-	"bifrost-parachain-staking/std",
+	"parachain-staking/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
@@ -247,7 +247,7 @@ runtime-benchmarks = [
 	"bifrost-system-staking/runtime-benchmarks",
 	"bifrost-vstoken-conversion/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
-	"bifrost-parachain-staking/runtime-benchmarks",
+	"parachain-staking/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 
@@ -257,7 +257,7 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-vesting/try-runtime",
-	"bifrost-parachain-staking/try-runtime",
+	"parachain-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

@@ -60,9 +60,7 @@ pub const PARA_ID: u32 = 2001;
 
 pub fn inflation_config() -> InflationInfo<Balance> {
 	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
-		use bifrost_parachain_staking::inflation::{
-			perbill_annual_to_perbill_round, BLOCKS_PER_YEAR,
-		};
+		use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
 		perbill_annual_to_perbill_round(
 			annual,
 			// rounds per year

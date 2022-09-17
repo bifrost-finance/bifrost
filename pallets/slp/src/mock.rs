@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use bifrost_asset_registry::AssetIdMaps;
-// use bifrost_parachain_staking::ParachainStakingInterface;
+// use parachain_staking::ParachainStakingInterface;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -74,7 +74,7 @@ construct_runtime!(
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
-		ParachainStaking: bifrost_parachain_staking::{Pallet, Call, Storage, Event<T>},
+		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -214,7 +214,7 @@ parameter_types! {
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![AccountId32::new([1u8; 32])];
 	pub InitSeedStk: u128 = 10;
 }
-impl bifrost_parachain_staking::Config for Runtime {
+impl parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;

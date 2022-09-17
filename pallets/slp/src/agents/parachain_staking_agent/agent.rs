@@ -20,12 +20,12 @@ use crate::{
 	primitives::{OneToManyDelegationAction, OneToManyLedger, OneToManyScheduledRequest},
 	DelegationsOccupied,
 };
-use bifrost_parachain_staking::ParachainStakingInterface;
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Len};
+use parachain_staking::ParachainStakingInterface;
 // use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -1098,7 +1098,7 @@ impl<T: Config>
 
 		// Get current VKSM/KSM exchange rate.
 		let vtoken = match currency_id {
-			BNC => Ok(CurrencyId::Native(TokenSymbol::BNC)),
+			BNC => Ok(CurrencyId::VToken(TokenSymbol::BNC)),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}?;
 

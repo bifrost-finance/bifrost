@@ -20,7 +20,6 @@
 #![allow(deprecated)] // TODO: clear transaction
 
 pub use agents::PolkadotAgent;
-use bifrost_parachain_staking::ParachainStakingInterface;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
@@ -31,6 +30,7 @@ use node_primitives::{
 	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, GLMR,
 };
 use orml_traits::MultiCurrency;
+use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_runtime::traits::{CheckedSub, Convert};
