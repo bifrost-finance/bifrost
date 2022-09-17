@@ -658,6 +658,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 13;
 	pub const DesiredRunnersUp: u32 = 20;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+	pub const MaxVoters: u32 = 10 * 1000;
+	pub const MaxCandidates: u32 = 1000;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
@@ -678,6 +680,8 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type TermDuration = TermDuration;
 	type VotingBondBase = VotingBondBase;
 	type VotingBondFactor = VotingBondFactor;
+	type MaxCandidates = MaxCandidates;
+	type MaxVoters = MaxVoters;
 	type WeightInfo = ();
 }
 
@@ -1109,7 +1113,6 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const MaxCandidates: u32 = 1000;
 	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;

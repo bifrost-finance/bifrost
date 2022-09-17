@@ -98,15 +98,15 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "bfdd0829a0b5475584a46330af24112f829dd640" }
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "bfdd0829a0b5475584a46330af24112f829dd640" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "bfdd0829a0b5475584a46330af24112f829dd640" }
-merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "0e28a2568fd340a2e4142e37dddefd7c9808b7a9" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8c625a5ab43c1c56cdeed5f8d814a891566d4cf8" }
-parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "bb743eb9514f4d7caf923dedcf8726c261bc238c" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "8f33428408ff6b10beecc93bd30f593c82540574" }
+zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "8f33428408ff6b10beecc93bd30f593c82540574" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "8f33428408ff6b10beecc93bd30f593c82540574" }
+merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "1fedde2e2867be1572a6b233c40104f60da0901f" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "c7425cf5c5bcf54b2c91980884c4329ec3d44e9d" }
