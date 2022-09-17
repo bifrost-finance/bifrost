@@ -51,7 +51,6 @@ fn on_idle() {
 		// assert_eq!(Tokens::free_balance(vKSM, &system_maker), 11098);
 		assert_eq!(Tokens::free_balance(KSM, &zenlink_pair_account_id), 3000);
 		assert_eq!(Tokens::free_balance(vKSM, &zenlink_pair_account_id), 1469);
-
 		init_vtoken_minting();
 		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 100000000);
 		// assert_ok!(SystemMaker::handle_redeem_by_currency_id2(
