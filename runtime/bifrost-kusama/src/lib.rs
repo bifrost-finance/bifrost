@@ -675,6 +675,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 7;
 	pub const DesiredRunnersUp: u32 = 7;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+	pub const MaxVoters: u32 = 10 * 1000;
+	pub const MaxCandidates: u32 = 1000;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
@@ -695,6 +697,8 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type TermDuration = TermDuration;
 	type VotingBondBase = VotingBondBase;
 	type VotingBondFactor = VotingBondFactor;
+	type MaxCandidates = MaxCandidates;
+	type MaxVoters = MaxVoters;
 	type WeightInfo = ();
 }
 
@@ -972,6 +976,8 @@ impl parachain_staking::Config for Runtime {
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type EnsureConfirmAsGovernance =
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MinBlocksPerRound = MinBlocksPerRound;
 	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -995,8 +1001,6 @@ impl parachain_staking::Config for Runtime {
 	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type PalletId = ParachainStakingPalletId;
 	type InitSeedStk = InitSeedStk;
-	type OnCollatorPayout = ();
-	type OnNewRound = ();
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
