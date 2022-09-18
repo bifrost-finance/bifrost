@@ -87,6 +87,8 @@ pub trait ParachainStakingInterface<AccountId, Balance> {
 		delegator: AccountId,
 		candidate: AccountId,
 	) -> DispatchResultWithPostInfo;
+
+	fn get_delegation_count(delegator: AccountId, candidate: AccountId) -> (u32, u32);
 }
 
 impl<AccountId, Balance> ParachainStakingInterface<AccountId, Balance> for () {
@@ -150,5 +152,9 @@ impl<AccountId, Balance> ParachainStakingInterface<AccountId, Balance> for () {
 		_candidate: AccountId,
 	) -> DispatchResultWithPostInfo {
 		Ok(().into())
+	}
+
+	fn get_delegation_count(_delegator: AccountId, _candidate: AccountId) -> (u32, u32) {
+		(0, 0)
 	}
 }

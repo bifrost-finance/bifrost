@@ -1822,6 +1822,23 @@ pub mod pallet {
 			<AwardedPts<T>>::insert(now, author, score_plus_20);
 			<Points<T>>::mutate(now, |x| *x = x.saturating_add(20));
 		}
+
+		pub fn get_delegation_count_inner(
+			delegator: AccountIdOf<T>,
+			candidate: AccountIdOf<T>,
+		) -> (u32, u32) {
+			let mut delegation_count = 0;
+			if let Some(state) = <DelegatorState<T>>::get(&delegator) {
+				delegation_count = state.delegations.0.len() as u32;
+			}
+
+			let mut candidate_delegation_count = 0;
+			if let Some(state) = <CandidateInfo<T>>::get(&candidate) {
+				candidate_delegation_count = state.delegation_count as u32;
+			}
+
+			(delegation_count, candidate_delegation_count)
+		}
 	}
 
 	impl<T: Config> Get<Vec<AccountIdOf<T>>> for Pallet<T> {
@@ -1983,5 +2000,9 @@ impl<T: Config> ParachainStakingInterface<AccountIdOf<T>, BalanceOf<T>> for Pall
 		candidate: AccountIdOf<T>,
 	) -> DispatchResultWithPostInfo {
 		Self::delegation_execute_scheduled_request(candidate, delegator)
+	}
+
+	fn get_delegation_count(delegator: AccountIdOf<T>, candidate: AccountIdOf<T>) -> (u32, u32) {
+		Self::get_delegation_count_inner(delegator, candidate)
 	}
 }

@@ -176,18 +176,11 @@ impl<T: Config>
 		let validator_account_id = Pallet::<T>::multilocation_to_account(validator_multilocation)?;
 		let delegator_account_id = Pallet::<T>::multilocation_to_account(who)?;
 
-		// Only allow bond with validators with maximum 1.3 times rewarded delegators. Otherwise,
-		// it's too crowded.
-		let additional_delegation_count = mins_maxs
-			.validators_reward_maximum
-			.checked_div(3)
-			.ok_or(Error::<T>::Unexpected)?;
-		let candidate_delegation_count: u32 = mins_maxs
-			.validators_reward_maximum
-			.checked_add(additional_delegation_count)
-			.ok_or(Error::<T>::OverFlow)?;
-
-		let delegation_count: u32 = mins_maxs.validators_back_maximum;
+		let (delegation_count, candidate_delegation_count) =
+			T::ParachainStaking::get_delegation_count(
+				delegator_account_id.clone(),
+				validator_account_id.clone(),
+			);
 
 		T::ParachainStaking::delegate(
 			delegator_account_id,
