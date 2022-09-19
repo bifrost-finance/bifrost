@@ -54,8 +54,7 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, StaticLookup,
-		UniqueSaturatedInto, Zero,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, StaticLookup, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, SaturatedConversion,
@@ -1987,13 +1986,19 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::free_balance(currency_id, &who).saturated_into()
+		if let Ok(currency_id) = asset_id.try_into() {
+			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
+				.unwrap_or_default();
+		}
+		AssetBalance::default()
 	}
 
 	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::total_issuance(currency_id).saturated_into()
+		if let Ok(currency_id) = asset_id.try_into() {
+			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
+				.unwrap_or_default();
+		}
+		AssetBalance::default()
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
@@ -2010,10 +2015,18 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
-
-		Ok(())
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::transfer(
+				currency_id,
+				&origin,
+				&target,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local transfer"))?,
+			)
+		} else {
+			Err(DispatchError::Other("unknown asset in local transfer"))
+		}
 	}
 
 	fn local_deposit(
@@ -2021,9 +2034,19 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
-		return Ok(amount);
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::deposit(
+				currency_id,
+				&origin,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local deposit"))?,
+			)?;
+		} else {
+			return Err(DispatchError::Other("unknown asset in local transfer"));
+		}
+
+		Ok(amount)
 	}
 
 	fn local_withdraw(
@@ -2031,8 +2054,17 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::withdraw(
+				currency_id,
+				&origin,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local withdraw"))?,
+			)?;
+		} else {
+			return Err(DispatchError::Other("unknown asset in local transfer"));
+		}
 
 		Ok(amount)
 	}
