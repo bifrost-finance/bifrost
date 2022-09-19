@@ -716,7 +716,18 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		first_slot: LeasePeriod,
 		last_slot: LeasePeriod,
 	) -> sp_runtime::DispatchResult {
-		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+		let option_token_metadata =
+			if CurrencyMetadatas::<T>::contains_key(CurrencyId::Token(token_symbol)) {
+				CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol))
+			} else if token_symbol == TokenSymbol::BNC &&
+				CurrencyMetadatas::<T>::contains_key(CurrencyId::Native(token_symbol))
+			{
+				CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
+			} else {
+				None
+			};
+
+		if let Some(token_metadata) = option_token_metadata {
 			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
 				token_metadata,
 				para_id,
