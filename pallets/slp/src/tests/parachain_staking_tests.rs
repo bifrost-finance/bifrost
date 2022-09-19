@@ -20,10 +20,7 @@
 
 use crate::{
 	mock::*,
-	primitives::{
-		MoonbeamLedgerUpdateEntry, OneToManyDelegationAction,
-		OneToManyScheduledRequest,
-	},
+	primitives::{MoonbeamLedgerUpdateEntry, OneToManyDelegationAction, OneToManyScheduledRequest},
 	Junction::Parachain,
 	Junctions::X2,
 };
@@ -32,11 +29,8 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
-	primitives::{
-		ParachainStakingLedgerUpdateOperation, OneToManyDelegatorStatus,
-		OneToManyLedger,
-	},
-	BNC, *,
+	primitives::{MoonbeamLedgerUpdateOperation, OneToManyDelegatorStatus, OneToManyLedger},
+	MOVR, *,
 };
 use codec::alloc::collections::BTreeMap;
 use node_primitives::Balance;
@@ -355,7 +349,7 @@ fn parachain_staking_bond_extra_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -417,7 +411,7 @@ fn parachain_staking_unbond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -479,7 +473,7 @@ fn parachain_staking_unbond_all_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -545,7 +539,7 @@ fn parachain_staking_rebond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -619,7 +613,7 @@ fn parachain_staking_undelegate_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -690,7 +684,7 @@ fn parachain_staking_redelegate_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(24)),
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
@@ -758,7 +752,7 @@ fn parachain_staking_liquidize_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -819,7 +813,7 @@ fn parachain_staking_liquidize_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(48)),
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
@@ -894,9 +888,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 		let movr_ledger =
-			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::ParachainStaking(
-				old_ledger,
-			);
+			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(old_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), movr_ledger);
@@ -904,7 +896,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 		// Bond confirm
 		// setup updateEntry
 		let query_id = 0;
-		let update_entry = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -944,7 +936,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -953,7 +945,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 
 		// BondExtra confirm
 		let query_id = 1;
-		let update_entry_1 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_1 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -993,7 +985,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1046,7 +1038,7 @@ fn parachain_staking_unbond_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
@@ -1058,7 +1050,7 @@ fn parachain_staking_unbond_confirm_works() {
 
 		// Unbond confirm
 		let query_id = 2;
-		let update_entry_2 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_2 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1107,7 +1099,7 @@ fn parachain_staking_unbond_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1116,7 +1108,7 @@ fn parachain_staking_unbond_confirm_works() {
 
 		// Unbond confirm
 		let query_id = 3;
-		let update_entry_3 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_3 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1151,7 +1143,7 @@ fn parachain_staking_unbond_confirm_works() {
 		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
 
 		let query_id = 4;
-		let update_entry_4 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_4 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1191,7 +1183,7 @@ fn parachain_staking_unbond_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1245,7 +1237,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(48)),
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
 
@@ -1255,7 +1247,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 		);
 
 		let query_id = 5;
-		let update_entry_5 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_5 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: None,
@@ -1290,7 +1282,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
 
 		let query_id = 6;
-		let update_entry_6 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_6 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1327,9 +1319,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 		let movr_ledger =
-			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::ParachainStaking(
-				new_ledger,
-			);
+			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(new_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1392,7 +1382,7 @@ fn parachain_staking_rebond_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
 
 		assert_eq!(
@@ -1401,7 +1391,7 @@ fn parachain_staking_rebond_confirm_works() {
 		);
 
 		let query_id = 7;
-		let update_entry_7 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_7 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1441,7 +1431,7 @@ fn parachain_staking_rebond_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1506,13 +1496,13 @@ fn parachain_staking_undelegate_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
 
 		let query_id = 8;
-		let update_entry_8 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_8 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1564,7 +1554,7 @@ fn parachain_staking_undelegate_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1573,7 +1563,7 @@ fn parachain_staking_undelegate_confirm_works() {
 
 		// execute revoke confirm
 		let query_id = 9;
-		let update_entry_9 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_9 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1595,7 +1585,7 @@ fn parachain_staking_undelegate_confirm_works() {
 		);
 
 		let query_id = 10;
-		let update_entry_10 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_10 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
@@ -1635,7 +1625,7 @@ fn parachain_staking_undelegate_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -1698,7 +1688,7 @@ fn parachain_staking_redelegate_confirm_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(24)),
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
@@ -1714,7 +1704,7 @@ fn parachain_staking_redelegate_confirm_works() {
 		);
 
 		let query_id = 8;
-		let update_entry_8 = LedgerUpdateEntry::ParachainStaking(MoonbeamLedgerUpdateEntry {
+		let update_entry_8 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: None,
@@ -1754,7 +1744,7 @@ fn parachain_staking_redelegate_confirm_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
@@ -2032,7 +2022,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);

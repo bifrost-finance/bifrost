@@ -20,8 +20,8 @@
 mod kusama_tests;
 #[cfg(test)]
 mod moonriver_tests;
-// #[cfg(test)]
-// mod parachain_staking_tests;
+#[cfg(test)]
+mod parachain_staking_tests;
 
 #[cfg(test)]
 pub use kusama_tests::*;

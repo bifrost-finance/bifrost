@@ -64,7 +64,8 @@ std = [
     "pallet-balances/std",
     "pallet-utility/std",
     "bifrost-vtoken-minting/std",
-	"bifrost-asset-registry/std",
+    "bifrost-asset-registry/std",
+    "parachain-staking/std",
 ]
 
 runtime-benchmarks = [

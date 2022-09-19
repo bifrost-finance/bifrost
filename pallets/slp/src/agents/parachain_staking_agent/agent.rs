@@ -1120,11 +1120,16 @@ impl<T: Config>
 	/// Deposit some amount as fee to nominator accounts.
 	fn supplement_fee_reserve(
 		&self,
-		_amount: BalanceOf<T>,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_currency_id: CurrencyId,
+		amount: BalanceOf<T>,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		currency_id: CurrencyId,
 	) -> DispatchResult {
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
+		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
+		T::MultiCurrency::withdraw(currency_id, &from_account_id, amount)?;
+		T::MultiCurrency::deposit(currency_id, &to_account_id, amount)?;
 		Ok(())
 	}
 

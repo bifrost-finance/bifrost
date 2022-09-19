@@ -30,9 +30,7 @@ pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 smallvec = "1.9.0"
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
