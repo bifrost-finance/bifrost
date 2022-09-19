@@ -16,10 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod moonbeam_agent;
-mod parachain_staking_agent;
-mod polkadot_agent;
+mod agent;
 
-pub use moonbeam_agent::*;
-pub use parachain_staking_agent::*;
-pub use polkadot_agent::*;
+pub use agent::*;

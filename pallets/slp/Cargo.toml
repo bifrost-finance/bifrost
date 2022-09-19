@@ -35,6 +35,7 @@ pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "po
 xcm-interface = { path = "../xcm-interface", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
+parachain-staking = { path = "../../pallets/parachain-staking", default-features = false}
 
 [dev-dependencies]
 #bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
@@ -63,7 +64,8 @@ std = [
     "pallet-balances/std",
     "pallet-utility/std",
     "bifrost-vtoken-minting/std",
-	"bifrost-asset-registry/std",
+    "bifrost-asset-registry/std",
+    "parachain-staking/std",
 ]
 
 runtime-benchmarks = [

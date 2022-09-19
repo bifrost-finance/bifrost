@@ -305,6 +305,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
+	type ParachainStaking = ();
 }
 
 parameter_types! {

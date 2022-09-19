@@ -22,6 +22,7 @@ members = [
 	"pallets/vstoken-conversion",
 	"pallets/system-staking",
 	"pallets/system-maker",
+	"pallets/parachain-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]
@@ -109,4 +110,3 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
-parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "c7425cf5c5bcf54b2c91980884c4329ec3d44e9d" }
