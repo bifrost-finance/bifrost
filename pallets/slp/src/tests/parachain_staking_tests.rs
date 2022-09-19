@@ -30,7 +30,7 @@ use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
 	primitives::{MoonbeamLedgerUpdateOperation, OneToManyDelegatorStatus, OneToManyLedger},
-	MOVR, *,
+	BNC, *,
 };
 use codec::alloc::collections::BTreeMap;
 use node_primitives::Balance;
@@ -82,18 +82,18 @@ fn initialize_parachain_staking_delegator() {
 		// Set minimums and maximums
 		assert_ok!(Slp::set_minimums_and_maximums(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
-		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
+		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC));
+		assert_eq!(DelegatorNextIndex::<Runtime>::get(BNC), 1);
 		assert_eq!(
-			DelegatorsIndex2Multilocation::<Runtime>::get(MOVR, 0),
+			DelegatorsIndex2Multilocation::<Runtime>::get(BNC, 0),
 			Some(subaccount0_location.clone())
 		);
 		assert_eq!(
-			DelegatorsMultilocation2Index::<Runtime>::get(MOVR, subaccount0_location),
+			DelegatorsMultilocation2Index::<Runtime>::get(BNC, subaccount0_location),
 			Some(0)
 		);
 	});
@@ -120,20 +120,20 @@ fn parachain_staking_setup() {
 	};
 
 	// set operate_origins
-	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(ALICE)));
+	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(ALICE)));
 
 	// Set OngoingTimeUnitUpdateInterval as 1/3 round(600 blocks per round, 12 seconds per block)
-	assert_ok!(Slp::set_ongoing_time_unit_update_interval(Origin::signed(ALICE), MOVR, Some(200)));
+	assert_ok!(Slp::set_ongoing_time_unit_update_interval(Origin::signed(ALICE), BNC, Some(200)));
 
 	System::set_block_number(300);
 
 	// Initialize ongoing timeunit as 1.
-	assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(1)));
+	assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), BNC, TimeUnit::Round(1)));
 
 	// Initialize currency delays.
 	let delay =
 		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
-	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), MOVR, Some(delay)));
+	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), BNC, Some(delay)));
 
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 100_000_000_000,
@@ -150,16 +150,16 @@ fn parachain_staking_setup() {
 	};
 
 	// Set minimums and maximums
-	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
+	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), BNC, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC,));
 
-	// update some MOVR balance to treasury account
+	// update some BNC balance to treasury account
 	assert_ok!(Tokens::set_balance(
 		Origin::root(),
 		treasury_account_id_32.into(),
-		MOVR,
+		BNC,
 		1_000_000_000_000_000_000,
 		0
 	));
@@ -167,90 +167,90 @@ fn parachain_staking_setup() {
 	// Set fee source
 	assert_ok!(Slp::set_fee_source(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		Some((treasury_location, 1_000_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Bond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::BondExtra,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Unbond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Chill,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Rebond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Undelegate,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::CancelLeave,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::Liquidize,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::ExecuteLeave,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::TransferBack,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::XtokensTransferBack,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
@@ -258,7 +258,7 @@ fn parachain_staking_setup() {
 	// Set delegator ledger
 	assert_ok!(Slp::add_validator(
 		Origin::signed(ALICE),
-		MOVR,
+		BNC,
 		Box::new(validator_0_location.clone()),
 	));
 
@@ -295,7 +295,7 @@ fn parachain_staking_bond_works() {
 		assert_noop!(
 			Slp::bond(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
 				Some(validator_0_location.clone())
@@ -352,12 +352,12 @@ fn parachain_staking_bond_extra_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::bond_extra(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				5_000_000_000_000_000_000,
@@ -414,12 +414,12 @@ fn parachain_staking_unbond_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::unbond(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				2_000_000_000_000_000_000,
@@ -476,10 +476,10 @@ fn parachain_staking_unbond_all_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
-			Slp::unbond_all(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location),),
+			Slp::unbond_all(Origin::signed(ALICE), BNC, Box::new(subaccount_0_location),),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -542,12 +542,12 @@ fn parachain_staking_rebond_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::rebond(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location.clone()),
 				None
@@ -616,12 +616,12 @@ fn parachain_staking_undelegate_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::undelegate(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
 			),
@@ -687,10 +687,10 @@ fn parachain_staking_redelegate_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, Box::new(subaccount_0_location.clone()), ledger);
 
 		assert_noop!(
-			Slp::redelegate(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location), None),
+			Slp::redelegate(Origin::signed(ALICE), BNC, Box::new(subaccount_0_location), None),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -755,12 +755,12 @@ fn parachain_staking_liquidize_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::liquidize(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
@@ -770,12 +770,12 @@ fn parachain_staking_liquidize_works() {
 
 		System::set_block_number(500);
 
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), BNC, TimeUnit::Round(24)));
 
 		assert_noop!(
 			Slp::liquidize(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
@@ -816,12 +816,12 @@ fn parachain_staking_liquidize_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::liquidize(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
 				Some(validator_0_location.clone())
@@ -831,12 +831,12 @@ fn parachain_staking_liquidize_works() {
 
 		System::set_block_number(700);
 
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), BNC, TimeUnit::Round(48)));
 
 		assert_noop!(
 			Slp::liquidize(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location)
@@ -891,13 +891,13 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(old_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), movr_ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), movr_ledger);
 
 		// Bond confirm
 		// setup updateEntry
 		let query_id = 0;
 		let update_entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Bond,
@@ -914,7 +914,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -939,14 +939,14 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		// BondExtra confirm
 		let query_id = 1;
 		let update_entry_1 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Bond,
@@ -963,7 +963,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -988,7 +988,7 @@ fn parachain_staking_bond_and_bond_extra_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 	});
@@ -1041,17 +1041,17 @@ fn parachain_staking_unbond_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger.clone());
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		// Unbond confirm
 		let query_id = 2;
 		let update_entry_2 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::BondLess,
@@ -1068,7 +1068,7 @@ fn parachain_staking_unbond_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1102,14 +1102,14 @@ fn parachain_staking_unbond_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		// Unbond confirm
 		let query_id = 3;
 		let update_entry_3 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
@@ -1125,13 +1125,13 @@ fn parachain_staking_unbond_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), BNC, query_id),
 			Error::<Runtime>::RequestNotDue
 		);
 
 		assert_ok!(Slp::fail_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		),);
 
@@ -1140,11 +1140,11 @@ fn parachain_staking_unbond_confirm_works() {
 		System::set_block_number(500);
 
 		// Not working because time is not right.
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), BNC, TimeUnit::Round(24)));
 
 		let query_id = 4;
 		let update_entry_4 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
@@ -1161,7 +1161,7 @@ fn parachain_staking_unbond_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1186,7 +1186,7 @@ fn parachain_staking_unbond_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 	});
@@ -1239,16 +1239,16 @@ fn parachain_staking_unbond_all_confirm_works() {
 
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger.clone());
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		let query_id = 5;
 		let update_entry_5 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: None,
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteLeave,
@@ -1264,13 +1264,13 @@ fn parachain_staking_unbond_all_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), BNC, query_id),
 			Error::<Runtime>::LeavingNotDue
 		);
 
 		assert_ok!(Slp::fail_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		),);
 
@@ -1279,11 +1279,11 @@ fn parachain_staking_unbond_all_confirm_works() {
 		System::set_block_number(500);
 
 		// Not working because time is not right.
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), BNC, TimeUnit::Round(48)));
 
 		let query_id = 6;
 		let update_entry_6 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteLeave,
@@ -1300,7 +1300,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1322,7 +1322,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(new_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(movr_ledger)
 		);
 	});
@@ -1383,16 +1383,16 @@ fn parachain_staking_rebond_confirm_works() {
 		};
 
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger.clone());
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger.clone());
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		let query_id = 7;
 		let update_entry_7 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::CancelRequest,
@@ -1409,7 +1409,7 @@ fn parachain_staking_rebond_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1434,7 +1434,7 @@ fn parachain_staking_rebond_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 	});
@@ -1499,11 +1499,11 @@ fn parachain_staking_undelegate_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		let query_id = 8;
 		let update_entry_8 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Revoke,
@@ -1520,7 +1520,7 @@ fn parachain_staking_undelegate_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1557,14 +1557,14 @@ fn parachain_staking_undelegate_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 
 		// execute revoke confirm
 		let query_id = 9;
 		let update_entry_9 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
@@ -1580,13 +1580,13 @@ fn parachain_staking_undelegate_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), BNC, query_id),
 			Error::<Runtime>::RequestNotDue
 		);
 
 		let query_id = 10;
 		let update_entry_10 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: Some(validator_0_location.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
@@ -1603,7 +1603,7 @@ fn parachain_staking_undelegate_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1628,7 +1628,7 @@ fn parachain_staking_undelegate_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 	});
@@ -1691,12 +1691,12 @@ fn parachain_staking_redelegate_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, Box::new(subaccount_0_location.clone()), ledger);
 
 		assert_noop!(
 			Slp::redelegate(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None
 			),
@@ -1705,7 +1705,7 @@ fn parachain_staking_redelegate_confirm_works() {
 
 		let query_id = 8;
 		let update_entry_8 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: MOVR,
+			currency_id: BNC,
 			delegator_id: subaccount_0_location.clone(),
 			validator_id: None,
 			update_operation: MoonbeamLedgerUpdateOperation::CancelLeave,
@@ -1722,7 +1722,7 @@ fn parachain_staking_redelegate_confirm_works() {
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			query_id
 		));
 
@@ -1747,7 +1747,7 @@ fn parachain_staking_redelegate_confirm_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(BNC, subaccount_0_location.clone()),
 			Some(ledger)
 		);
 	});
@@ -1781,7 +1781,7 @@ fn parachain_staking_transfer_back_works() {
 		assert_noop!(
 			Slp::transfer_back(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 				Box::new(exit_account_location.clone()),
 				5_000_000_000_000_000_000,
@@ -1819,7 +1819,7 @@ fn parachain_staking_transfer_to_works() {
 		assert_noop!(
 			Slp::transfer_to(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(entrance_account_location.clone()),
 				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
@@ -1873,7 +1873,7 @@ fn supplement_fee_account_whitelist_works() {
 		let source_location = Slp::account_32_to_local_location(source_account_id_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Some((source_location.clone(), 1_000_000_000_000_000_000))
 		));
 
@@ -1881,7 +1881,7 @@ fn supplement_fee_account_whitelist_works() {
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(subaccount_0_location.clone()),
 			),
 			Error::<Runtime>::XcmFailure
@@ -1890,19 +1890,19 @@ fn supplement_fee_account_whitelist_works() {
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(entrance_account_location.clone()),
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
 
 		// register entrance_account_location as operateOrigin
-		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(entrance_account_id)));
+		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(entrance_account_id)));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(entrance_account_location.clone()),
 			),
 			Error::<Runtime>::XcmFailure
@@ -1911,7 +1911,7 @@ fn supplement_fee_account_whitelist_works() {
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(exit_account_location.clone()),
 			),
 			Error::<Runtime>::DestAccountNotValid
@@ -1920,14 +1920,14 @@ fn supplement_fee_account_whitelist_works() {
 		// register exit_account_location into whitelist
 		assert_ok!(Slp::add_supplement_fee_account_to_whitelist(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(exit_account_location.clone()),
 			),
 			Error::<Runtime>::XcmFailure
@@ -1936,14 +1936,14 @@ fn supplement_fee_account_whitelist_works() {
 		// remove exit_account_location from whitelist
 		assert_ok!(Slp::remove_supplement_fee_account_from_whitelist(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				Origin::signed(ALICE),
-				MOVR,
+				BNC,
 				Box::new(exit_account_location.clone()),
 			),
 			Error::<Runtime>::DestAccountNotValid
@@ -1984,10 +1984,10 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		// parachain_staking_setup();
 
-		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(MOVR, TimeUnit::Round(1));
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(BNC, TimeUnit::Round(1));
 
-		DelegatorsIndex2Multilocation::<Runtime>::insert(MOVR, 0, subaccount_0_location.clone());
-		DelegatorsMultilocation2Index::<Runtime>::insert(MOVR, subaccount_0_location.clone(), 0);
+		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
+		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location.clone(), 0);
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 5_000_000_000_000_000_000,
@@ -2004,7 +2004,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		};
 
 		// Set minimums and maximums
-		MinimumsAndMaximums::<Runtime>::insert(MOVR, mins_and_maxs);
+		MinimumsAndMaximums::<Runtime>::insert(BNC, mins_and_maxs);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
 		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
@@ -2025,7 +2025,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);
@@ -2036,37 +2036,37 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		assert_ok!(Slp::set_hosting_fees(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Some((pct, treasury_location))
 		));
 
 		let pct_100 = Permill::from_percent(100);
 		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Some((1, pct_100))
 		));
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VMOVR, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), MOVR, 100));
+		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), BNC, 100));
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			100,
 			Some(subaccount_0_location.clone())
 		));
 
 		// Tokenpool should have been added 100.
-		let new_token_pool_amount = <Runtime as Config>::VtokenMinting::get_token_pool(MOVR);
+		let new_token_pool_amount = <Runtime as Config>::VtokenMinting::get_token_pool(BNC);
 		assert_eq!(new_token_pool_amount, 200);
 
-		// let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(MOVR,
+		// let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(BNC,
 		// &subaccount_0_location); assert_eq!(tune_record, (1, Some(TimeUnit::Round(1))));
 
-		let tune_record = CurrencyLatestTuneRecord::<Runtime>::get(MOVR);
+		let tune_record = CurrencyLatestTuneRecord::<Runtime>::get(BNC);
 		assert_eq!(tune_record, Some((TimeUnit::Round(1), 1)));
 
 		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
@@ -2111,28 +2111,28 @@ fn add_validator_and_remove_validator_works() {
 		// Set minimums and maximums
 		assert_ok!(Slp::set_minimums_and_maximums(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Some(mins_and_maxs)
 		));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Box::new(validator_0_location.clone()),
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
 		valis.push((validator_0_location.clone(), multi_hash_0));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(valis));
+		assert_eq!(Slp::get_validators(BNC), Some(valis));
 
 		assert_ok!(Slp::remove_validator(
 			Origin::signed(ALICE),
-			MOVR,
+			BNC,
 			Box::new(validator_0_location.clone()),
 		));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(vec![]));
+		assert_eq!(Slp::get_validators(BNC), Some(vec![]));
 	});
 }

@@ -1128,8 +1128,7 @@ impl<T: Config>
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-		T::MultiCurrency::withdraw(currency_id, &from_account_id, amount)?;
-		T::MultiCurrency::deposit(currency_id, &to_account_id, amount)?;
+		T::MultiCurrency::transfer(currency_id, &from_account_id, &to_account_id, amount)?;
 		Ok(())
 	}
 
