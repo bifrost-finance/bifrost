@@ -26,7 +26,6 @@ use frame_support::{
 	dispatch::{CallMetadata, GetCallMetadata},
 	pallet_prelude::*,
 	traits::{Contains, PalletInfoAccess},
-	transactional,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
@@ -108,7 +107,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::switchoff_transaction())]
-		#[transactional]
 		pub fn switchoff_transaction(
 			origin: OriginFor<T>,
 			pallet_name: Vec<u8>,
@@ -143,7 +141,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::switchon_transaction())]
-		#[transactional]
 		pub fn switchon_transaction(
 			origin: OriginFor<T>,
 			pallet_name: Vec<u8>,
@@ -166,8 +163,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::disable_transfers())]
-		// #[pallet::weight(10000)]
-		#[transactional]
 		pub fn disable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -181,8 +176,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::enable_transfers())]
-		// #[pallet::weight(10000)]
-		#[transactional]
 		pub fn enable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 

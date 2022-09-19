@@ -27,7 +27,6 @@ use frame_support::{
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
-	transactional,
 	weights::constants::WEIGHT_PER_SECOND,
 	RuntimeDebug,
 };
@@ -178,7 +177,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_foreign_asset(
 			origin: OriginFor<T>,
 			location: Box<VersionedMultiLocation>,
@@ -199,7 +197,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn update_foreign_asset(
 			origin: OriginFor<T>,
 			foreign_asset_id: ForeignAssetId,
@@ -221,7 +218,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -242,7 +238,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn update_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -263,7 +258,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_token_metadata(
 			origin: OriginFor<T>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
@@ -278,7 +272,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_vtoken_metadata(origin: OriginFor<T>, token_id: TokenId) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -294,7 +287,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_vstoken_metadata(
 			origin: OriginFor<T>,
 			token_id: TokenId,
@@ -313,7 +305,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_vsbond_metadata(
 			origin: OriginFor<T>,
 			token_id: TokenId,
@@ -343,7 +334,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1000000)]
-		#[transactional]
 		pub fn register_multilocation(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
