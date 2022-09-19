@@ -441,7 +441,7 @@ impl<T: Config>
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
-		ensure!(vec_len > Zero::zero(), Error::<T>::VectorEmpty);
+		ensure!(vec_len > 0, Error::<T>::VectorEmpty);
 
 		// Check if targets exceeds validators_back_maximum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -506,7 +506,7 @@ impl<T: Config>
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
-		ensure!(vec_len > Zero::zero(), Error::<T>::VectorEmpty);
+		ensure!(vec_len > 0, Error::<T>::VectorEmpty);
 
 		// Get the original delegated validators.
 		let original_set = ValidatorsByDelegator::<T>::get(currency_id, who)
@@ -521,7 +521,7 @@ impl<T: Config>
 		}
 
 		// Ensure new set is not empty.
-		ensure!(new_set.len() > Zero::zero(), Error::<T>::VectorEmpty);
+		ensure!(new_set.len() > 0, Error::<T>::VectorEmpty);
 
 		// Convert new targets into account vec.
 		let mut accounts = vec![];

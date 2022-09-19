@@ -53,9 +53,9 @@ use sp_core::OpaqueMetadata;
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -658,6 +658,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 13;
 	pub const DesiredRunnersUp: u32 = 20;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+	pub const MaxVoters: u32 = 10 * 1000;
+	pub const MaxCandidates: u32 = 1000;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
@@ -678,6 +680,8 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type TermDuration = TermDuration;
 	type VotingBondBase = VotingBondBase;
 	type VotingBondFactor = VotingBondFactor;
+	type MaxCandidates = MaxCandidates;
+	type MaxVoters = MaxVoters;
 	type WeightInfo = ();
 }
 
@@ -1109,7 +1113,6 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const MaxCandidates: u32 = 1000;
 	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;
@@ -1485,6 +1488,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
+	type ParachainStaking = ();
 }
 
 parameter_types! {
@@ -1619,13 +1623,19 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::free_balance(currency_id, &who).saturated_into()
+		if let Ok(currency_id) = asset_id.try_into() {
+			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
+				.unwrap_or_default();
+		}
+		AssetBalance::default()
 	}
 
 	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::total_issuance(currency_id).saturated_into()
+		if let Ok(currency_id) = asset_id.try_into() {
+			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
+				.unwrap_or_default();
+		}
+		AssetBalance::default()
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
@@ -1642,10 +1652,18 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
-
-		Ok(())
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::transfer(
+				currency_id,
+				&origin,
+				&target,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local transfer"))?,
+			)
+		} else {
+			Err(DispatchError::Other("unknown asset in local transfer"))
+		}
 	}
 
 	fn local_deposit(
@@ -1653,9 +1671,19 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
-		return Ok(amount);
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::deposit(
+				currency_id,
+				&origin,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local deposit"))?,
+			)?;
+		} else {
+			return Err(DispatchError::Other("unknown asset in local transfer"));
+		}
+
+		Ok(amount)
 	}
 
 	fn local_withdraw(
@@ -1663,8 +1691,17 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+		if let Ok(currency_id) = asset_id.try_into() {
+			Local::withdraw(
+				currency_id,
+				&origin,
+				amount
+					.try_into()
+					.map_err(|_| DispatchError::Other("convert amount in local withdraw"))?,
+			)?;
+		} else {
+			return Err(DispatchError::Other("unknown asset in local transfer"));
+		}
 
 		Ok(amount)
 	}
