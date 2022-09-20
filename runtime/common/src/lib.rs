@@ -78,14 +78,15 @@ pub type EnsureRootOrAllTechnicalCommittee = EitherOfDiverse<
 >;
 
 pub fn dollar<T: Config>(currency_id: CurrencyId) -> Balance {
-	match currency_id {
-		CurrencyId::Native(..) | CurrencyId::Token(..) =>
-			10u128.saturating_pow(currency_id.decimals().unwrap_or(12).into()),
-		_ => 10u128.saturating_pow(
+	let decimals = currency_id
+		.decimals()
+		.unwrap_or(
 			AssetIdMaps::<T>::get_currency_metadata(currency_id)
 				.map_or(12, |metatata| metatata.decimals.into()),
-		),
-	}
+		)
+		.into();
+
+	10u128.saturating_pow(decimals)
 }
 
 pub fn milli<T: Config>(currency_id: CurrencyId) -> Balance {
