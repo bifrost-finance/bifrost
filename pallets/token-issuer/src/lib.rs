@@ -83,8 +83,8 @@ pub mod pallet {
 		AddedToTransferList(T::AccountId, CurrencyId),
 		/// Successful remove an account from the transfer whitelist. \[account, currency_id]\
 		RemovedFromTransferList(T::AccountId, CurrencyId),
-		/// Token issue success, \[currency_id, dest, amount\]
-		Issued(T::AccountId, CurrencyId, BalanceOf<T>),
+		/// Token issue success, \[currency_id, dest, amount, remark\]
+		Issued(T::AccountId, CurrencyId, BalanceOf<T>, Option<Vec<u8>>),
 		/// Token transferred success, \[origin, dest, currency_id, amount\]
 		Transferred(T::AccountId, T::AccountId, CurrencyId, BalanceOf<T>),
 	}
@@ -227,6 +227,7 @@ pub mod pallet {
 			dest: AccountIdOf<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
+			remark: Option<Vec<u8>>,
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin)?;
 
@@ -236,7 +237,7 @@ pub mod pallet {
 
 			T::MultiCurrency::deposit(currency_id, &dest, amount)?;
 
-			Self::deposit_event(Event::Issued(dest, currency_id, amount));
+			Self::deposit_event(Event::Issued(dest, currency_id, amount, remark));
 			Ok(())
 		}
 
