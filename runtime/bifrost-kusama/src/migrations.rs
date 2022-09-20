@@ -34,14 +34,14 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 
 		// Token
 		let items = vec![
-			(Native(BNC), 10 * milli(Native(BNC))),
-			(Stable(KUSD), 10 * millicent(Stable(KUSD))),
-			(Token(KSM), 10 * millicent(Token(KSM))),
-			(Token(ZLK), 1 * micro(Token(ZLK))),
-			(Token(KAR), 10 * millicent(Token(KAR))),
-			(Token(RMRK), 1 * micro(Token(RMRK))),
-			(Token(PHA), 4 * cent(Token(PHA))),
-			(Token(MOVR), 1 * micro(Token(MOVR))),
+			(Native(BNC), 10 * milli::<T>(Native(BNC))),
+			(Stable(KUSD), 10 * millicent::<T>(Stable(KUSD))),
+			(Token(KSM), 10 * millicent::<T>(Token(KSM))),
+			(Token(ZLK), 1 * micro::<T>(Token(ZLK))),
+			(Token(KAR), 10 * millicent::<T>(Token(KAR))),
+			(Token(RMRK), 1 * micro::<T>(Token(RMRK))),
+			(Token(PHA), 4 * cent::<T>(Token(PHA))),
+			(Token(MOVR), 1 * micro::<T>(Token(MOVR))),
 		];
 		for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
 			(

@@ -19,8 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	Runtime, SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
@@ -43,7 +43,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
-	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC))
+	1_000_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
 }
 
 pub const PARA_ID: u32 = 2030;

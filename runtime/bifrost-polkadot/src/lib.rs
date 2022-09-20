@@ -1153,9 +1153,9 @@ impl orml_currencies::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
-			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1210,7 +1210,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
-	pub RelayXcmBaseWeight: u64 = milli(RelayCurrencyId::get()) as u64;
+	pub RelayXcmBaseWeight: u64 = milli::<Runtime>(RelayCurrencyId::get()) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -1369,7 +1369,8 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 }
 
 parameter_types! {
-	pub const MinContribution: Balance = 5 * 10_000_000_000;
+	pub MinContribution: Balance = dollar::<Runtime>(RelayCurrencyId::get()) / 10;
+	// pub const MinContribution: Balance = 5 * 10_000_000_000;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1419,8 +1420,8 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
 	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
-	pub UmpTransactFee: Balance = prod_or_test!(milli(RelayCurrencyId::get()),milli(RelayCurrencyId::get()) * 100);
-	pub StatemineTransferFee: Balance = milli(RelayCurrencyId::get()) * 4;
+	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
+	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
 	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 4).into();
 }
 

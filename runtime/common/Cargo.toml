@@ -69,6 +69,7 @@ zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
 xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
+bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 
 [features]
 default = ["std"]
@@ -116,4 +117,5 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"xcm-interface/std",
+	"bifrost-asset-registry/std",
 ]
