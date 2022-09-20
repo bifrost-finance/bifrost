@@ -1372,8 +1372,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 }
 
 parameter_types! {
-	pub MinContribution: Balance = dollar::<Runtime>(RelayCurrencyId::get()) / 10;
-	// pub const MinContribution: Balance = 5 * 10_000_000_000;
+	pub MinContribution: Balance = dollar::<Runtime>(RelayCurrencyId::get()) * 5;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
