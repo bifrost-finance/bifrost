@@ -20,6 +20,8 @@
 
 /// Money matters.
 pub mod currency {
+	use crate::Runtime;
+	use bifrost_asset_registry::Config;
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
@@ -29,9 +31,9 @@ pub mod currency {
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
-	pub fn deposit(items: u32, bytes: u32) -> Balance {
-		items as Balance * 15 * cent(CurrencyId::Native(TokenSymbol::BNC)) +
-			(bytes as Balance) * 6 * cent(CurrencyId::Native(TokenSymbol::BNC))
+	pub fn deposit<Runtime: Config>(items: u32, bytes: u32) -> Balance {
+		items as Balance * 15 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) +
+			(bytes as Balance) * 6 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
 	}
 
 	pub struct WeightToFee;
@@ -39,7 +41,7 @@ pub mod currency {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
-			let p = base_tx_fee();
+			let p = base_tx_fee::<Runtime>();
 			let q = Balance::from(ExtrinsicBaseWeight::get());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
@@ -50,18 +52,18 @@ pub mod currency {
 		}
 	}
 
-	fn base_tx_fee() -> Balance {
-		milli(CurrencyId::Native(TokenSymbol::BNC)) / 3
+	fn base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
+		milli::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) / 3
 	}
 
-	fn xcm_base_tx_fee() -> Balance {
-		cent(CurrencyId::Native(TokenSymbol::BNC)) / 10
+	fn xcm_base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
+		cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) / 10
 	}
 
-	pub fn ksm_per_second() -> u128 {
+	pub fn ksm_per_second<Runtime: bifrost_asset_registry::Config>() -> u128 {
 		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
 		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-		let fee_per_second = base_tx_per_second * xcm_base_tx_fee();
+		let fee_per_second = base_tx_per_second * xcm_base_tx_fee::<Runtime>();
 		fee_per_second / 100
 	}
 }
