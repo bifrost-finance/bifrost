@@ -95,6 +95,7 @@ pub trait WeightInfo {
 	fn supplement_fee_reserve() -> Weight;
 	fn confirm_validators_by_delegator_query_response() -> Weight;
 	fn fail_validators_by_delegator_query_response() -> Weight;
+	fn register_linked_account() -> Weight;
 }
 
 /// Weights for bifrost_slp using the Bifrost node and recommended hardware.
@@ -546,6 +547,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
+
+	fn register_linked_account() -> Weight {
+		(142_245_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
 }
 
 // For backwards compatibility and tests
@@ -995,5 +1002,11 @@ impl WeightInfo for () {
 		(142_245_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+
+	fn register_linked_account() -> Weight {
+		(142_245_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
 	}
 }
