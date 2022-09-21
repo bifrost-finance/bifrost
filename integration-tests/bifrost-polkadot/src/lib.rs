@@ -17,25 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod asset_registry;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod flexible_fee;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod general_key;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod integration_tests;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod kusama_cross_chain_transact;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod kusama_cross_chain_transfer;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod kusama_test_net;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod salp;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod slp;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod statemine;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
-mod treasury;
+
+mod polkadot_cross_chain_transfer;
+mod polkadot_integration_tests;
+mod polkadot_test_net;

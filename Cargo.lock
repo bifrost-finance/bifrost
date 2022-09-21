@@ -640,6 +640,73 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-kusama-integration-tests"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-kusama-runtime",
+ "bifrost-liquidity-mining",
+ "bifrost-polkadot-runtime",
+ "bifrost-runtime-common",
+ "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
+ "bifrost-slp",
+ "bifrost-vesting",
+ "bifrost-vsbond-auction",
+ "bifrost-vtoken-minting",
+ "cumulus-pallet-aura-ext",
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-primitives-timestamp",
+ "cumulus-primitives-utility",
+ "cumulus-test-relay-sproof-builder",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "kusama-runtime",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-collator-selection",
+ "pallet-membership",
+ "pallet-staking",
+ "pallet-transaction-payment",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "serde",
+ "smallvec",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-trie",
+ "static_assertions",
+ "xcm",
+ "xcm-builder",
+ "xcm-emulator",
+ "xcm-executor",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
+]
+
+[[package]]
 name = "bifrost-kusama-runtime"
 version = "0.8.0"
 dependencies = [
@@ -808,6 +875,73 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
+]
+
+[[package]]
+name = "bifrost-polkadot-integration-tests"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-kusama-runtime",
+ "bifrost-liquidity-mining",
+ "bifrost-polkadot-runtime",
+ "bifrost-runtime-common",
+ "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
+ "bifrost-slp",
+ "bifrost-vesting",
+ "bifrost-vsbond-auction",
+ "bifrost-vtoken-minting",
+ "cumulus-pallet-aura-ext",
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-primitives-timestamp",
+ "cumulus-primitives-utility",
+ "cumulus-test-relay-sproof-builder",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-collator-selection",
+ "pallet-membership",
+ "pallet-staking",
+ "pallet-transaction-payment",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime",
+ "polkadot-runtime-parachains",
+ "serde",
+ "smallvec",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-trie",
+ "static_assertions",
+ "xcm",
+ "xcm-builder",
+ "xcm-emulator",
+ "xcm-executor",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -2278,19 +2412,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-pallet-session-benchmarking"
-version = "3.0.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-session",
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "cumulus-pallet-xcm"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
@@ -2323,23 +2444,6 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-executor",
-]
-
-[[package]]
-name = "cumulus-ping"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
-dependencies = [
- "cumulus-pallet-xcm",
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
- "xcm",
 ]
 
 [[package]]
@@ -5993,37 +6097,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-asset-tx-payment"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-assets"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-aura"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
@@ -6821,21 +6894,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-uniques"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-utility"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
@@ -6935,35 +6993,6 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "substrate-fixed",
-]
-
-[[package]]
-name = "parachains-common"
-version = "1.0.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
-dependencies = [
- "cumulus-primitives-utility",
- "frame-executive",
- "frame-support",
- "frame-system",
- "pallet-asset-tx-payment",
- "pallet-assets",
- "pallet-authorship",
- "pallet-balances",
- "pallet-collator-selection",
- "parity-scale-codec",
- "polkadot-primitives",
- "polkadot-runtime-common",
- "scale-info",
- "sp-consensus-aura",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "substrate-wasm-builder",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
@@ -9046,106 +9075,6 @@ dependencies = [
  "netlink-proto",
  "nix",
  "thiserror",
-]
-
-[[package]]
-name = "runtime-integration-tests"
-version = "0.8.0"
-dependencies = [
- "bifrost-asset-registry",
- "bifrost-flexible-fee",
- "bifrost-flexible-fee-rpc-runtime-api",
- "bifrost-kusama-runtime",
- "bifrost-liquidity-mining",
- "bifrost-polkadot-runtime",
- "bifrost-runtime-common",
- "bifrost-salp",
- "bifrost-salp-rpc-runtime-api",
- "bifrost-slp",
- "bifrost-vesting",
- "bifrost-vsbond-auction",
- "bifrost-vtoken-minting",
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent",
- "cumulus-primitives-timestamp",
- "cumulus-primitives-utility",
- "cumulus-test-relay-sproof-builder",
- "env_logger",
- "frame-benchmarking",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-rpc-runtime-api",
- "frame-try-runtime",
- "hex",
- "hex-literal",
- "kusama-runtime",
- "log",
- "node-primitives",
- "node-service",
- "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
- "orml-unknown-tokens",
- "orml-xcm-support",
- "orml-xtokens",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-bounties",
- "pallet-collator-selection",
- "pallet-collective",
- "pallet-democracy",
- "pallet-elections-phragmen",
- "pallet-indices",
- "pallet-membership",
- "pallet-multisig",
- "pallet-proxy",
- "pallet-scheduler",
- "pallet-session",
- "pallet-staking",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-tips",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
- "pallet-utility",
- "pallet-xcm",
- "parachain-info",
- "parity-scale-codec",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-runtime-parachains",
- "serde",
- "smallvec",
- "sp-api",
- "sp-arithmetic",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-trie",
- "sp-version",
- "statemine-runtime",
- "static_assertions",
- "xcm",
- "xcm-builder",
- "xcm-emulator",
- "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -11499,69 +11428,6 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
-
-[[package]]
-name = "statemine-runtime"
-version = "2.0.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
-dependencies = [
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-session-benchmarking",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-ping",
- "cumulus-primitives-core",
- "cumulus-primitives-timestamp",
- "cumulus-primitives-utility",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-rpc-runtime-api",
- "kusama-runtime-constants",
- "log",
- "pallet-asset-tx-payment",
- "pallet-assets",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-collator-selection",
- "pallet-multisig",
- "pallet-proxy",
- "pallet-session",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-uniques",
- "pallet-utility",
- "pallet-xcm",
- "parachain-info",
- "parachains-common",
- "parity-scale-codec",
- "polkadot-core-primitives",
- "polkadot-parachain",
- "polkadot-runtime-common",
- "scale-info",
- "serde",
- "smallvec",
- "sp-api",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "substrate-wasm-builder",
- "xcm",
- "xcm-builder",
- "xcm-executor",
-]
 
 [[package]]
 name = "static_assertions"

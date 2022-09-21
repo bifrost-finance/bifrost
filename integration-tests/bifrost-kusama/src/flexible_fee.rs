@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{integration_tests::*, kusama_test_net::*};
+use crate::{kusama_integration_tests::*, kusama_test_net::*};
 use bifrost_flexible_fee::UserFeeChargeOrderList;
 use bifrost_kusama_runtime::{Call, FlexibleFee, ZenlinkProtocol};
 use bifrost_runtime_common::milli;

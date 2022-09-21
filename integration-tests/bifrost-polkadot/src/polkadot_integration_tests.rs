@@ -17,12 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 pub use codec::Encode;
-use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
-use frame_support::{
-	assert_ok,
-	traits::{GenesisBuild, OnFinalize, OnInitialize},
-	weights::constants::*,
-};
+use frame_support::{traits::GenesisBuild, weights::constants::*};
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
 pub use sp_runtime::{
@@ -32,20 +27,12 @@ pub use sp_runtime::{
 
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
-pub const CATHI: [u8; 32] = [2u8; 32];
-pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
 
-const SECONDS_PER_YEAR: u32 = 31557600;
-const SECONDS_PER_BLOCK: u32 = 12;
-pub const BLOCKS_PER_YEAR: u32 = SECONDS_PER_YEAR / SECONDS_PER_BLOCK;
-
-#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;
-use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
+use bifrost_polkadot_runtime::{ExistentialDeposit, NativeCurrencyId};
 
-#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod bifrost_imports {
-	pub use bifrost_kusama_runtime::{
+	pub use bifrost_polkadot_runtime::{
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
 		BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
@@ -55,38 +42,6 @@ mod bifrost_imports {
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
 	pub use sp_runtime::traits::AccountIdConversion;
-}
-
-fn _run_to_block(n: u32) {
-	while System::block_number() < n {
-		Scheduler::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		Scheduler::on_initialize(System::block_number());
-		Scheduler::on_initialize(System::block_number());
-		Session::on_initialize(System::block_number());
-	}
-}
-
-fn _set_relaychain_block_number(number: BlockNumber) {
-	ParachainSystem::on_initialize(number);
-
-	let (relay_storage_root, proof) =
-		RelayStateSproofBuilder::default().into_state_root_and_proof();
-
-	assert_ok!(ParachainSystem::set_validation_data(
-		Origin::none(),
-		cumulus_primitives_parachain_inherent::ParachainInherentData {
-			validation_data: cumulus_primitives_core::PersistedValidationData {
-				parent_head: Default::default(),
-				relay_parent_number: number,
-				relay_parent_storage_root: relay_storage_root,
-				max_pov_size: Default::default(),
-			},
-			relay_chain_state: proof,
-			downward_messages: Default::default(),
-			horizontal_messages: Default::default(),
-		}
-	));
 }
 
 pub fn get_all_module_accounts() -> Vec<AccountId> {
@@ -100,7 +55,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 2001 }
+		Self { balances: vec![], parachain_id: 2010 }
 	}
 }
 
@@ -190,7 +145,7 @@ fn parachain_subaccounts_are_unique() {
 		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
 		assert_eq!(
 			parachain,
-			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
+			hex_literal::hex!["70617261da070000000000000000000000000000000000000000000000000000"]
 				.into()
 		);
 	});

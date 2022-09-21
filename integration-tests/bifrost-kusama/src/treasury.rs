@@ -15,7 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{integration_tests::*, kusama_test_net::*, slp::*};
+use crate::{kusama_integration_tests::*, kusama_test_net::*, slp::*};
 use frame_support::assert_ok;
 // use xcm::latest::prelude::*;
 use xcm_emulator::TestExt;

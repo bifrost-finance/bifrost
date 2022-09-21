@@ -20,7 +20,7 @@ use frame_support::assert_ok;
 use xcm::latest::prelude::*;
 use xcm_emulator::TestExt;
 
-use crate::{integration_tests::*, kusama_test_net::*};
+use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
 #[test]
 fn relaychain_transact_works() {

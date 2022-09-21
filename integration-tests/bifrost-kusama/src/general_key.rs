@@ -18,7 +18,7 @@
 
 #![allow(unused)]
 
-use crate::integration_tests::*;
+use crate::kusama_integration_tests::*;
 use xcm::latest::prelude::*;
 
 /// Currency ID, it might be extended with more variants in the future.

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{integration_tests::*, kusama_test_net::*};
+use crate::{kusama_integration_tests::*, kusama_test_net::*};
 use bifrost_asset_registry::{
 	AssetMetadata, AssetMetadatas, CurrencyIdToLocations, CurrencyIdToWeights, CurrencyMetadatas,
 	Error, Event, LocationToCurrencyIds,

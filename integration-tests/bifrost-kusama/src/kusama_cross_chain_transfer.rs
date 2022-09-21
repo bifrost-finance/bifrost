@@ -26,7 +26,7 @@ use orml_traits::MultiCurrency;
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
-use crate::{integration_tests::*, kusama_test_net::*};
+use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
 #[test]
 fn transfer_from_relay_chain() {
