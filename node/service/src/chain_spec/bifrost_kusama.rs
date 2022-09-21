@@ -24,7 +24,7 @@ use std::{
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
 	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
-	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, Runtime,
+	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
 	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
 	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };

@@ -19,8 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	Runtime, SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig,
-	VestingConfig, WASM_BINARY,
+	SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
