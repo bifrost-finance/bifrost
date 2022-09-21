@@ -22,7 +22,7 @@ use bifrost_polkadot_runtime::{
 	Runtime, SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig,
 	VestingConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::{dollar, AuraId};
+use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -43,7 +43,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
-	1_000_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
+	1_000_000 * DOLLARS
 }
 
 pub const PARA_ID: u32 = 2030;

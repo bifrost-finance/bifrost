@@ -22,13 +22,13 @@ use std::{
 };
 
 use bifrost_kusama_runtime::{
-	AccountId, Balance, BalancesConfig, BlockNumber, CouncilConfig, CouncilMembershipConfig,
-	DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig, InflationInfo,
-	ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, Runtime, SS58Prefix,
-	SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
+	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
+	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, Runtime,
+	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
 	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::{dollar, AuraId};
+use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -53,7 +53,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
-	1_000_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
+	1_000_000 * DOLLARS
 }
 
 pub const PARA_ID: u32 = 2001;
@@ -74,11 +74,7 @@ pub fn inflation_config() -> InflationInfo<Balance> {
 	};
 	InflationInfo {
 		// staking expectations
-		expect: Range {
-			min: 100_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)),
-			ideal: 200_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)),
-			max: 500_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)),
-		},
+		expect: Range { min: 100_000 * DOLLARS, ideal: 200_000 * DOLLARS, max: 500_000 * DOLLARS },
 		// annual inflation
 		annual,
 		round: to_round_inflation(annual),
@@ -514,11 +510,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		.into_iter()
 		.collect();
 
-	assert_eq!(
-		total_issuance,
-		32_000_000 * dollar::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)),
-		"total issuance must be equal to 320 million"
-	);
+	assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
 
 	let vesting_configs: Vec<VestingConfig> =
 		config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
