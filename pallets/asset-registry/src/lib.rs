@@ -622,7 +622,8 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 
 	fn convert_to_vtoken(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
 		match currency_id {
-			CurrencyId::Token(token_symbol) => Ok(CurrencyId::VToken(token_symbol)),
+			CurrencyId::Token(token_symbol) | CurrencyId::Native(token_symbol) =>
+				Ok(CurrencyId::VToken(token_symbol)),
 			CurrencyId::Token2(token_id) => Ok(CurrencyId::VToken2(token_id)),
 			_ => Err(()),
 		}
