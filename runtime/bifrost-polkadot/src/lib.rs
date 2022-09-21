@@ -70,7 +70,7 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, milli, millicent, prod_or_test, AuraId, CouncilCollective,
+	constants::time::*, dollar, milli, millicent, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -1213,7 +1213,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
-	pub RelayXcmBaseWeight: u64 = milli::<Runtime>(RelayCurrencyId::get()) * 100 as u64;
+	pub RelayXcmBaseWeight: u64 = (100 * milli::<Runtime>(RelayCurrencyId::get())) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
