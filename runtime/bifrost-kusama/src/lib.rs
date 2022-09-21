@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 957,
+	spec_version: 958,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -364,10 +364,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub ExistentialDeposit: Balance = 10 * milli(NativeCurrencyId::get());
-	pub TransferFee: Balance = 1 * milli(NativeCurrencyId::get());
-	pub CreationFee: Balance = 1 * milli(NativeCurrencyId::get());
-	pub TransactionByteFee: Balance = 16 * micro(NativeCurrencyId::get());
+	pub ExistentialDeposit: Balance = 10 * milli::<Runtime>(NativeCurrencyId::get());
+	pub TransferFee: Balance = 1 * milli::<Runtime>(NativeCurrencyId::get());
+	pub CreationFee: Balance = 1 * milli::<Runtime>(NativeCurrencyId::get());
+	pub TransactionByteFee: Balance = 16 * micro::<Runtime>(NativeCurrencyId::get());
 	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
@@ -382,12 +382,12 @@ impl pallet_utility::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size 32, value size 8; .
-	pub ProxyDepositBase: Balance = deposit(1, 8);
+	pub ProxyDepositBase: Balance = deposit::<Runtime>(1, 8);
 	// Additional storage item size of 33 bytes.
-	pub ProxyDepositFactor: Balance = deposit(0, 33);
+	pub ProxyDepositFactor: Balance = deposit::<Runtime>(0, 33);
 	pub const MaxProxies: u16 = 32;
-	pub AnnouncementDepositBase: Balance = deposit(1, 8);
-	pub AnnouncementDepositFactor: Balance = deposit(0, 66);
+	pub AnnouncementDepositBase: Balance = deposit::<Runtime>(1, 8);
+	pub AnnouncementDepositFactor: Balance = deposit::<Runtime>(0, 66);
 	pub const MaxPending: u16 = 32;
 }
 
@@ -499,8 +499,8 @@ impl pallet_proxy::Config for Runtime {
 
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
-	pub PreimageBaseDeposit: Balance = deposit(2, 64);
-	pub PreimageByteDeposit: Balance = deposit(0, 1);
+	pub PreimageBaseDeposit: Balance = deposit::<Runtime>(2, 64);
+	pub PreimageByteDeposit: Balance = deposit::<Runtime>(0, 1);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -536,9 +536,9 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub DepositBase: Balance = deposit(1, 88);
+	pub DepositBase: Balance = deposit::<Runtime>(1, 88);
 	// Additional storage item size of 32 bytes.
-	pub DepositFactor: Balance = deposit(0, 32);
+	pub DepositFactor: Balance = deposit::<Runtime>(0, 32);
 	pub const MaxSignatories: u16 = 100;
 }
 
@@ -554,9 +554,9 @@ impl pallet_multisig::Config for Runtime {
 
 parameter_types! {
 	// Minimum 4 CENTS/byte
-	pub BasicDeposit: Balance = deposit(1, 258);
-	pub FieldDeposit: Balance = deposit(0, 66);
-	pub SubAccountDeposit: Balance = deposit(1, 53);
+	pub BasicDeposit: Balance = deposit::<Runtime>(1, 258);
+	pub FieldDeposit: Balance = deposit::<Runtime>(0, 66);
+	pub SubAccountDeposit: Balance = deposit::<Runtime>(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
 	pub const MaxRegistrars: u32 = 20;
@@ -578,7 +578,7 @@ impl pallet_identity::Config for Runtime {
 }
 
 parameter_types! {
-	pub IndexDeposit: Balance = 1 * dollar(NativeCurrencyId::get());
+	pub IndexDeposit: Balance = 1 * dollar::<Runtime>(NativeCurrencyId::get());
 }
 
 impl pallet_indices::Config for Runtime {
@@ -664,11 +664,11 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub CandidacyBond: Balance = 100 * cent(NativeCurrencyId::get());
+	pub CandidacyBond: Balance = 100 * cent::<Runtime>(NativeCurrencyId::get());
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub VotingBondBase: Balance = deposit(1, 64);
+	pub VotingBondBase: Balance = deposit::<Runtime>(1, 64);
 	// additional data per vote is 32 bytes (account id).
-	pub VotingBondFactor: Balance = deposit(0, 32);
+	pub VotingBondFactor: Balance = deposit::<Runtime>(0, 32);
 	/// Daily council elections
 	pub const TermDuration: BlockNumber = 24 * HOURS;
 	pub const DesiredMembers: u32 = 7;
@@ -705,7 +705,7 @@ parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
 	pub const VotingPeriod: BlockNumber = 7 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub MinimumDeposit: Balance = 100 * dollar(NativeCurrencyId::get());
+	pub MinimumDeposit: Balance = 100 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	pub const InstantAllowed: bool = true;
@@ -766,25 +766,25 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub ProposalBondMinimum: Balance = 100 * dollar(NativeCurrencyId::get());
-	pub ProposalBondMaximum: Balance = 500 * dollar(NativeCurrencyId::get());
+	pub ProposalBondMinimum: Balance = 100 * dollar::<Runtime>(NativeCurrencyId::get());
+	pub ProposalBondMaximum: Balance = 500 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub TipReportDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
-	pub DataDepositPerByte: Balance = 10 * cent(NativeCurrencyId::get());
-	pub BountyDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
+	pub TipReportDepositBase: Balance = 1 * dollar::<Runtime>(NativeCurrencyId::get());
+	pub DataDepositPerByte: Balance = 10 * cent::<Runtime>(NativeCurrencyId::get());
+	pub BountyDepositBase: Balance = 1 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-	pub BountyValueMinimum: Balance = 10 * dollar(NativeCurrencyId::get());
+	pub BountyValueMinimum: Balance = 10 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub const MaxApprovals: u32 = 100;
 
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
-	pub CuratorDepositMin: Balance = 1 * dollar(NativeCurrencyId::get());
-	pub CuratorDepositMax: Balance = 100 * dollar(NativeCurrencyId::get());
+	pub CuratorDepositMin: Balance = 1 * dollar::<Runtime>(NativeCurrencyId::get());
+	pub CuratorDepositMax: Balance = 100 * dollar::<Runtime>(NativeCurrencyId::get());
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -952,11 +952,11 @@ parameter_types! {
 	/// Default percent of inflation set aside for parachain bond every round
 	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(0);
 	/// Minimum stake required to become a collator
-	pub MinCollatorStk: u128 = 5000 * dollar(NativeCurrencyId::get());
+	pub MinCollatorStk: u128 = 5000 * dollar::<Runtime>(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a candidate
-	pub MinCandidateStk: u128 = 5000 * dollar(NativeCurrencyId::get());
+	pub MinCandidateStk: u128 = 5000 * dollar::<Runtime>(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a delegator
-	pub MinDelegatorStk: u128 = 50 * dollar(NativeCurrencyId::get());
+	pub MinDelegatorStk: u128 = 50 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
 	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_test!(vec![
 		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
@@ -967,8 +967,8 @@ parameter_types! {
 		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),
 	]);
-	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
-	pub InitSeedStk: u128 = 5000 * dollar(NativeCurrencyId::get());
+	pub PaymentInRound: u128 = 180 * dollar::<Runtime>(NativeCurrencyId::get());
+	pub InitSeedStk: u128 = 5000 * dollar::<Runtime>(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -1093,20 +1093,20 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 >;
 
 parameter_types! {
-	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
+	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second::<Runtime>());
 	pub VsksmPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::VSToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
 		).into(),
-		ksm_per_second()
+		ksm_per_second::<Runtime>()
 	);
 	pub VsksmNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			0,
 			X1(GeneralKey((CurrencyId::VSToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
 		).into(),
-		ksm_per_second()
+		ksm_per_second::<Runtime>()
 	);
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1114,7 +1114,7 @@ parameter_types! {
 			X2(Parachain(SelfParaId::get()), GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:KSM = 80:1
-		ksm_per_second() * 80
+		ksm_per_second::<Runtime>() * 80
 	);
 	pub BncNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1122,7 +1122,7 @@ parameter_types! {
 			X1(GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:KSM = 80:1
-		ksm_per_second() * 80
+		ksm_per_second::<Runtime>() * 80
 	);
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1131,7 +1131,7 @@ parameter_types! {
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
-		ksm_per_second() * 150 * 1_000_000
+		ksm_per_second::<Runtime>() * 150 * 1_000_000
 	);
 	pub ZlkNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1140,7 +1140,7 @@ parameter_types! {
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
-		ksm_per_second() * 150 * 1_000_000
+		ksm_per_second::<Runtime>() * 150 * 1_000_000
 	);
 	pub KarPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1148,7 +1148,7 @@ parameter_types! {
 			X2(Parachain(parachains::karura::ID), GeneralKey((parachains::karura::KAR_KEY.to_vec()).try_into().unwrap()))
 		).into(),
 		// KAR:KSM = 100:1
-		ksm_per_second() * 100
+		ksm_per_second::<Runtime>() * 100
 	);
 	pub KusdPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1156,7 +1156,7 @@ parameter_types! {
 			X2(Parachain(parachains::karura::ID), GeneralKey((parachains::karura::KUSD_KEY.to_vec()).try_into().unwrap()))
 		).into(),
 		// kUSD:KSM = 400:1
-		ksm_per_second() * 400
+		ksm_per_second::<Runtime>() * 400
 	);
 	pub PhaPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1164,7 +1164,7 @@ parameter_types! {
 			X1(Parachain(parachains::phala::ID)),
 		).into(),
 		// PHA:KSM = 400:1
-		ksm_per_second() * 400
+		ksm_per_second::<Runtime>() * 400
 	);
 	pub RmrkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1172,7 +1172,7 @@ parameter_types! {
 			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
 		).into(),
 		// rmrk:KSM = 10:1
-		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+		ksm_per_second::<Runtime>() * 10 / 100 //rmrk currency decimal as 10
 	);
 	pub RmrkNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1180,7 +1180,7 @@ parameter_types! {
 			X3(Parachain(parachains::Statemine::ID), PalletInstance(parachains::Statemine::PALLET_ID),GeneralIndex(parachains::Statemine::RMRK_ID.into()))
 		).into(),
 		// rmrk:KSM = 10:1
-		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+		ksm_per_second::<Runtime>() * 10 / 100 //rmrk currency decimal as 10
 	);
 	pub MovrPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -1188,9 +1188,9 @@ parameter_types! {
 			X2(Parachain(parachains::moonriver::ID), PalletInstance(parachains::moonriver::PALLET_ID.into()))
 		).into(),
 		// MOVR:KSM = 2.67:1
-		ksm_per_second() * 267 * 10_000 //movr currency decimal as 18
+		ksm_per_second::<Runtime>() * 267 * 10_000 //movr currency decimal as 18
 	);
-	pub BasePerSecond: u128 = ksm_per_second();
+	pub BasePerSecond: u128 = ksm_per_second::<Runtime>();
 }
 
 pub struct ToTreasury;
@@ -1354,23 +1354,23 @@ impl orml_currencies::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
-			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
-			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
-			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
-			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
-			&CurrencyId::Token(TokenSymbol::PHA) => 4 * cent(CurrencyId::Token(TokenSymbol::PHA)),	// 0.04 PHA, PHA has a decimals of 10e12.
-			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
-			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
-			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 vKSM
-			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
-			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent::<Runtime>(StableCurrencyId::get()),
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),  // 0.0001 KSM
+			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent::<Runtime>(CurrencyId::Token(TokenSymbol::KAR)),
+			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent::<Runtime>(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::Token(TokenSymbol::PHA) => 4 * cent::<Runtime>(CurrencyId::Token(TokenSymbol::PHA)),	// 0.04 PHA, PHA has a decimals of 10e12.
+			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent::<Runtime>(PolkadotCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent::<Runtime>(PolkadotCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
+			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),  // 0.0001 vKSM
+			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::RMRK)),
+			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
+			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1442,7 +1442,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
-	pub RelayXcmBaseWeight: u64 = milli(RelayCurrencyId::get()) as u64;
+	pub RelayXcmBaseWeight: u64 = milli::<Runtime>(RelayCurrencyId::get()) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -1600,7 +1600,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 }
 
 parameter_types! {
-	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
+	pub MinContribution: Balance = dollar::<Runtime>(RelayCurrencyId::get()) / 10;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1678,7 +1678,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 parameter_types! {
 	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
-	pub MaximumDepositInPool: Balance = 1_000_000_000_000_000 * dollar(NativeCurrencyId::get());
+	pub MaximumDepositInPool: Balance = 1_000_000_000_000_000 * dollar::<Runtime>(NativeCurrencyId::get());
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
@@ -1746,8 +1746,8 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
 	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
-	pub UmpTransactFee: Balance = prod_or_test!(milli(RelayCurrencyId::get()),milli(RelayCurrencyId::get()) * 100);
-	pub StatemineTransferFee: Balance = milli(RelayCurrencyId::get()) * 4;
+	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
+	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
 	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 4).into();
 }
 

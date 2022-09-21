@@ -1044,6 +1044,7 @@ dependencies = [
 name = "bifrost-runtime-common"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
@@ -5552,7 +5553,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.57"
+version = "0.9.58"
 dependencies = [
  "clap",
  "cumulus-client-cli",

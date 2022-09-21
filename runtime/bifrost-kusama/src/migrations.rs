@@ -34,14 +34,14 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 
 		// Token
 		let items = vec![
-			(Native(BNC), 10 * milli(Native(BNC))),
-			(Stable(KUSD), 10 * millicent(Stable(KUSD))),
-			(Token(KSM), 10 * millicent(Token(KSM))),
-			(Token(ZLK), 1 * micro(Token(ZLK))),
-			(Token(KAR), 10 * millicent(Token(KAR))),
-			(Token(RMRK), 1 * micro(Token(RMRK))),
-			(Token(PHA), 4 * cent(Token(PHA))),
-			(Token(MOVR), 1 * micro(Token(MOVR))),
+			(Native(BNC), 10 * milli::<T>(Native(BNC))),
+			(Stable(KUSD), 10 * millicent::<T>(Stable(KUSD))),
+			(Token(KSM), 10 * millicent::<T>(Token(KSM))),
+			(Token(ZLK), 1 * micro::<T>(Token(ZLK))),
+			(Token(KAR), 10 * millicent::<T>(Token(KAR))),
+			(Token(RMRK), 1 * micro::<T>(Token(RMRK))),
+			(Token(PHA), 4 * cent::<T>(Token(PHA))),
+			(Token(MOVR), 1 * micro::<T>(Token(MOVR))),
 		];
 		for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
 			(
@@ -67,6 +67,7 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 
 		// vsBond
 		let items = vec![
+			// Token, ParaId, first_slot, last_slot
 			(BNC, 2001u32, 13u32, 20u32),
 			(KSM, 2011, 19, 26),
 			(KSM, 2085, 15, 22),
@@ -114,7 +115,7 @@ impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigrati
 	fn post_upgrade() -> Result<(), &'static str> {
 		let count = bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count();
 		log::info!("try-runtime::post_upgrade currency_metadatas count: {:?}", count);
-		assert_eq!(count, 32);
+		assert_eq!(count, 34);
 
 		Ok(())
 	}

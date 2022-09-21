@@ -17,11 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use bifrost_asset_registry::{AssetIdMaps, Config};
 use frame_support::{
 	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EitherOfDiverse,
 };
 use frame_system::EnsureRoot;
-use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, TokenInfo};
+use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{FixedPointNumber, Perquintill};
@@ -76,28 +77,36 @@ pub type EnsureRootOrAllTechnicalCommittee = EitherOfDiverse<
 	pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 >;
 
-pub fn dollar(currency_id: CurrencyId) -> Balance {
-	10u128.saturating_pow(currency_id.decimals().unwrap_or(12).into())
+pub fn dollar<T: Config>(currency_id: CurrencyId) -> Balance {
+	let decimals = currency_id
+		.decimals()
+		.unwrap_or(
+			AssetIdMaps::<T>::get_currency_metadata(currency_id)
+				.map_or(12, |metatata| metatata.decimals.into()),
+		)
+		.into();
+
+	10u128.saturating_pow(decimals)
 }
 
-pub fn milli(currency_id: CurrencyId) -> Balance {
-	dollar(currency_id) / 1000
+pub fn milli<T: Config>(currency_id: CurrencyId) -> Balance {
+	dollar::<T>(currency_id) / 1000
 }
 
-pub fn micro(currency_id: CurrencyId) -> Balance {
-	milli(currency_id) / 1000
+pub fn micro<T: Config>(currency_id: CurrencyId) -> Balance {
+	milli::<T>(currency_id) / 1000
 }
 
-pub fn cent(currency_id: CurrencyId) -> Balance {
-	dollar(currency_id) / 100
+pub fn cent<T: Config>(currency_id: CurrencyId) -> Balance {
+	dollar::<T>(currency_id) / 100
 }
 
-pub fn millicent(currency_id: CurrencyId) -> Balance {
-	cent(currency_id) / 1000
+pub fn millicent<T: Config>(currency_id: CurrencyId) -> Balance {
+	cent::<T>(currency_id) / 1000
 }
 
-pub fn microcent(currency_id: CurrencyId) -> Balance {
-	millicent(currency_id) / 1000
+pub fn microcent<T: Config>(currency_id: CurrencyId) -> Balance {
+	millicent::<T>(currency_id) / 1000
 }
 
 pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);

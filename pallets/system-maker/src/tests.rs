@@ -34,30 +34,35 @@ fn on_idle() {
 		assert_ok!(SystemMaker::set_config(
 			Origin::signed(ALICE),
 			RelayCurrencyId::get(),
-			Info { vcurrency_id: vKSM, annualization: 600_000u32, granularity: 1000 },
+			Info {
+				vcurrency_id: vKSM,
+				annualization: 600_000u32,
+				granularity: 1000,
+				minimum_redeem: 20000
+			},
 		));
-		// SystemMaker::set_config(
-		// 	Origin::signed(ALICE),
-		// 	RelayCurrencyId::get(),
-		// 	Info { vcurrency_id: vKSM, annualization: 600_000u32, granularity: 1000 },
-		// );
 		let system_maker =
 			<Runtime as Config>::SystemMakerPalletId::get().into_account_truncating();
 		assert_eq!(Tokens::free_balance(KSM, &system_maker), 10000);
 		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 100000000);
 		System::set_block_number(System::block_number() + 1);
-		// SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 100);
 		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);
-		// assert_eq!(Tokens::free_balance(vKSM, &system_maker), 11098);
 		assert_eq!(Tokens::free_balance(KSM, &zenlink_pair_account_id), 3000);
 		assert_eq!(Tokens::free_balance(vKSM, &zenlink_pair_account_id), 1469);
-
 		init_vtoken_minting();
-		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 100000000);
-		// assert_ok!(SystemMaker::handle_redeem_by_currency_id2(
-		// 	Origin::signed(system_maker.clone()),
-		// 	vKSM
-		// ));
+		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 0);
+		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);
+		assert_ok!(SystemMaker::set_config(
+			Origin::signed(ALICE),
+			RelayCurrencyId::get(),
+			Info {
+				vcurrency_id: vKSM,
+				annualization: 600_000u32,
+				granularity: 1000,
+				minimum_redeem: 2000
+			},
+		));
+		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 0);
 		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 0);
 	});
 }
