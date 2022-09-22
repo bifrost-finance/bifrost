@@ -38,6 +38,10 @@ check-all: format
 test-all:
 	SKIP_WASM_BUILD= cargo test --features "with-all-runtime"
 
+.PHONY: integration-test # integration test
+integration-test:
+	SKIP_WASM_BUILD= cargo test  -p *-integration-tests
+
 .PHONY: kusama-integration-test # integration test
 kusama-integration-test:
 	SKIP_WASM_BUILD= cargo test -p bifrost-kusama-integration-tests

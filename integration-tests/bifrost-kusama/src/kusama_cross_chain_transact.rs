@@ -24,34 +24,36 @@ use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
 #[test]
 fn relaychain_transact_works() {
-	let remark = kusama_runtime::Call::System(
-		frame_system::Call::<kusama_runtime::Runtime>::remark_with_event {
-			remark: "Hello from Bifrost!".as_bytes().to_vec(),
-		},
-	);
+	sp_io::TestExternalities::default().execute_with(|| {
+		let remark = kusama_runtime::Call::System(
+			frame_system::Call::<kusama_runtime::Runtime>::remark_with_event {
+				remark: "Hello from Bifrost!".as_bytes().to_vec(),
+			},
+		);
 
-	let asset: MultiAsset =
-		MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(8000000000) };
+		let asset: MultiAsset =
+			MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(8000000000) };
 
-	let msg = Xcm(vec![
-		WithdrawAsset(asset.clone().into()),
-		BuyExecution { fees: asset, weight_limit: WeightLimit::Limited(6000000000) },
-		Transact {
-			origin_type: OriginKind::SovereignAccount,
-			require_weight_at_most: 2000000000 as u64,
-			call: remark.encode().into(),
-		},
-	]);
+		let msg = Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: WeightLimit::Limited(6000000000) },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: 2000000000 as u64,
+				call: remark.encode().into(),
+			},
+		]);
 
-	Bifrost::execute_with(|| {
-		assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, Parent, msg));
-	});
+		Bifrost::execute_with(|| {
+			assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, Parent, msg));
+		});
 
-	KusamaNet::execute_with(|| {
-		use kusama_runtime::{Event, System};
-		assert!(System::events().iter().any(|r| matches!(
-			r.event,
-			Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
-		)));
-	});
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::{Event, System};
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+			)));
+		});
+	})
 }

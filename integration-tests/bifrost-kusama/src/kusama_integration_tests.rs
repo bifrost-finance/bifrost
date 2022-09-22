@@ -182,14 +182,14 @@ fn sanity_check_weight_per_time_constants_are_as_expected() {
 	assert_eq!(WEIGHT_PER_NANOS, WEIGHT_PER_MICROS / 1000);
 }
 
-// #[test]
-// fn parachain_subaccounts_are_unique() {
-// 	ExtBuilder::default().build().execute_with(|| {
-// 		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
-// 		assert_eq!(
-// 			parachain,
-// 			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
-// 				.into()
-// 		);
-// 	});
-// }
+#[test]
+fn parachain_subaccounts_are_unique() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
+		assert_eq!(
+			parachain,
+			hex_literal::hex!["7061726164000000000000000000000000000000000000000000000000000000"]
+				.into()
+		);
+	});
+}
