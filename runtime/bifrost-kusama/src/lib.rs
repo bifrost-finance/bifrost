@@ -1375,7 +1375,7 @@ parameter_type_with_key! {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 			},
-			_ => AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::NativeAssetId(*currency_id))
+			_ => AssetIdMaps::<Runtime>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
 	};
