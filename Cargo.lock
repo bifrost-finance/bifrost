@@ -1217,8 +1217,10 @@ name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-runtime-common",
  "bifrost-slp",
  "cumulus-primitives-core",
+ "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

@@ -692,6 +692,12 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
 			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
 			return Ok(());
+		} else if let Some(token_metadata) =
+			CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
+		{
+			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
+			return Ok(());
 		} else {
 			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
