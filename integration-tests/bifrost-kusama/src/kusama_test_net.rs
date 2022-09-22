@@ -133,8 +133,14 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-			(AccountId::from(ALICE), 2002 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM))),
-			(ParaId::from(2001u32).into_account_truncating(), 2 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM))),
+			(
+				AccountId::from(ALICE),
+				2002 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM)),
+			),
+			(
+				ParaId::from(2001u32).into_account_truncating(),
+				2 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM)),
+			),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -170,8 +176,16 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 pub fn para_ext_salp(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilder::default()
 		.balances(vec![
-			(AccountId::from(ALICE), RelayCurrencyId::get(), 10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get())),
-			(AccountId::from(BOB), RelayCurrencyId::get(), 10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get())),
+			(
+				AccountId::from(ALICE),
+				RelayCurrencyId::get(),
+				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+			),
+			(
+				AccountId::from(BOB),
+				RelayCurrencyId::get(),
+				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+			),
 		])
 		.parachain_id(parachain_id)
 		.build()

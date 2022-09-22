@@ -23,9 +23,9 @@
 // mod general_key;
 // mod kusama_cross_chain_transact;
 // mod kusama_cross_chain_transfer;
+mod dollor_tests;
 mod kusama_integration_tests;
 mod kusama_test_net;
-mod dollor_tests;
 // mod salp;
 // mod slp;
 // mod statemine;

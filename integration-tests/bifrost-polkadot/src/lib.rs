@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 
-// mod polkadot_cross_chain_transfer;
+mod dollor_tests;
+mod polkadot_cross_chain_transfer;
 mod polkadot_integration_tests;
 mod polkadot_test_net;
-mod dollor_tests;

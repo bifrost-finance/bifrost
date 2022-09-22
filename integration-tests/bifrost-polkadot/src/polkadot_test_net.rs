@@ -20,13 +20,21 @@
 
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
-use frame_support::traits::GenesisBuild;
+use frame_support::{assert_ok, traits::GenesisBuild};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 use crate::polkadot_integration_tests::*;
+
+pub const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
+pub const DECIMAL_10: u128 = 10_000_000_000;
+
+pub const DOT_TOKEN_ID: u8 = 0;
+pub const GLMR_TOKEN_ID: u8 = 1;
+pub const DOT_MINIMAL_BALANCE: u128 = 1_000_000;
+pub const GLMR_MINIMAL_BALANCE: u128 = 1_000_000_000_000;
 
 decl_test_relay_chain! {
 	pub struct PolkadotNet {
@@ -111,8 +119,11 @@ pub fn polkadot_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-			(AccountId::from(ALICE), 2002 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
-			(ParaId::from(2010u32).into_account_truncating(), 2 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
+			(AccountId::from(ALICE), 100 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
+			(
+				ParaId::from(2010u32).into_account_truncating(),
+				2 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT),
+			),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -137,11 +148,43 @@ pub fn polkadot_ext() -> sp_io::TestExternalities {
 
 pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilder::default()
-		.balances(vec![(
-			AccountId::from(ALICE),
-			RelayCurrencyId::get(),
-			10 * dollar::<Runtime>(RelayCurrencyId::get()),
-		)])
+		.balances(vec![(AccountId::from(ALICE), RelayCurrencyId::get(), 10 * 10_000_000_000)])
 		.parachain_id(parachain_id)
 		.build()
+}
+
+pub fn register_token2_asset() {
+	Bifrost::execute_with(|| {
+		// Token
+		let items = vec![
+			(
+				CurrencyId::Token2(DOT_TOKEN_ID),
+				b"Polkadot DOT".to_vec(),
+				b"DOT".to_vec(),
+				10u8,
+				DOT_MINIMAL_BALANCE,
+			),
+			(
+				CurrencyId::Token2(GLMR_TOKEN_ID),
+				b"Moonbeam Native Token".to_vec(),
+				b"GLMR".to_vec(),
+				18u8,
+				GLMR_MINIMAL_BALANCE,
+			),
+		];
+		for (currency_id, metadata) in
+			items.iter().map(|(currency_id, name, symbol, decimals, minimal_balance)| {
+				(
+					currency_id,
+					bifrost_asset_registry::AssetMetadata {
+						name: (*name.clone()).to_vec(),
+						symbol: (*symbol.clone()).to_vec(),
+						decimals: *decimals,
+						minimal_balance: *minimal_balance,
+					},
+				)
+			}) {
+			assert_ok!(AssetRegistry::do_register_metadata(*currency_id, &metadata));
+		}
+	});
 }
