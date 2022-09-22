@@ -610,6 +610,7 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 		match currency_id {
 			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) =>
 				Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			CurrencyId::VToken(TokenSymbol::BNC) => Ok(CurrencyId::Native(TokenSymbol::BNC)),
 			CurrencyId::VToken(token_symbol) |
 			CurrencyId::VSToken(token_symbol) |
 			CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
