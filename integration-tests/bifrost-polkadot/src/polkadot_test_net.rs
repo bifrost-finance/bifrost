@@ -111,8 +111,8 @@ pub fn polkadot_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-			(AccountId::from(ALICE), 2002 * dollar(DOT)),
-			(ParaId::from(2010u32).into_account_truncating(), 2 * dollar(DOT)),
+			(AccountId::from(ALICE), 2002 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
+			(ParaId::from(2010u32).into_account_truncating(), 2 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -140,7 +140,7 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 		.balances(vec![(
 			AccountId::from(ALICE),
 			RelayCurrencyId::get(),
-			10 * dollar(RelayCurrencyId::get()),
+			10 * dollar::<Runtime>(RelayCurrencyId::get()),
 		)])
 		.parachain_id(parachain_id)
 		.build()

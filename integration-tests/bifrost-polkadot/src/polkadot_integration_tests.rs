@@ -39,7 +39,6 @@ mod bifrost_imports {
 		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens,
 		TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};
-	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
 	pub use sp_runtime::traits::AccountIdConversion;
 }

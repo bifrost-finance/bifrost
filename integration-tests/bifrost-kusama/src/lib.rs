@@ -18,14 +18,15 @@
 
 #![cfg(test)]
 
-mod asset_registry;
-mod flexible_fee;
-mod general_key;
-mod kusama_cross_chain_transact;
-mod kusama_cross_chain_transfer;
+// mod asset_registry;
+// mod flexible_fee;
+// mod general_key;
+// mod kusama_cross_chain_transact;
+// mod kusama_cross_chain_transfer;
 mod kusama_integration_tests;
 mod kusama_test_net;
-mod salp;
-mod slp;
-mod statemine;
-mod treasury;
+mod dollor_tests;
+// mod salp;
+// mod slp;
+// mod statemine;
+// mod treasury;

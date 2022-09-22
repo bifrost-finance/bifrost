@@ -49,31 +49,31 @@ fn basic_setup() {
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_0,
-		10 * milli(CURRENCY_ID_0) as i128
+		10 * milli::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Bob
@@ -81,31 +81,31 @@ fn basic_setup() {
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Charlie
@@ -113,31 +113,31 @@ fn basic_setup() {
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Dick
@@ -145,31 +145,31 @@ fn basic_setup() {
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// create DEX pair
@@ -215,8 +215,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_1_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_1),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_1),
 		1,
 		1,
 		deadline
@@ -229,8 +229,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_2_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_2),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_2),
 		1,
 		1,
 		deadline
@@ -243,8 +243,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_3_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_3),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_3),
 		1,
 		1,
 		deadline
@@ -257,8 +257,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_4_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_4),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_4),
 		1,
 		1,
 		deadline
@@ -307,7 +307,7 @@ fn withdraw_fee_should_work() {
 
 		assert_eq!(
 			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 107
+			10 * dollar::<Runtime>(CURRENCY_ID_0) - 107
 		);
 	});
 }
@@ -338,7 +338,7 @@ fn correct_and_deposit_fee_should_work() {
 
 		assert_eq!(
 			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 80
+			10 * dollar::<Runtime>(CURRENCY_ID_0) - 80
 		);
 
 		assert_ok!(FlexibleFee::correct_and_deposit_fee(
@@ -352,7 +352,7 @@ fn correct_and_deposit_fee_should_work() {
 
 		assert_eq!(
 			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 80
+			10 * dollar::<Runtime>(CURRENCY_ID_0) - 80
 		);
 	});
 }

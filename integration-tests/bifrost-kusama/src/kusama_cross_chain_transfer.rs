@@ -18,7 +18,7 @@
 
 //! Cross-chain transfer tests within Kusama network.
 use bifrost_asset_registry::AssetMetadata;
-use bifrost_kusama_runtime::AssetRegistry;
+use bifrost_kusama_runtime::{AssetRegistry,Runtime};
 use bifrost_runtime_common::millicent;
 use frame_support::assert_ok;
 use node_primitives::{CurrencyId, TokenSymbol};
@@ -39,7 +39,7 @@ fn transfer_from_relay_chain() {
 			Box::new(VersionedMultiLocation::V1(
 				X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any }).into()
 			)),
-			Box::new(VersionedMultiAssets::V1((Here, dollar(RelayCurrencyId::get())).into())),
+			Box::new(VersionedMultiAssets::V1((Here, dollar::<Runtime>(RelayCurrencyId::get())).into())),
 			0,
 		));
 	});
@@ -58,7 +58,7 @@ fn transfer_to_relay_chain() {
 		assert_ok!(XTokens::transfer(
 			Origin::signed(ALICE.into()),
 			RelayCurrencyId::get(),
-			dollar(RelayCurrencyId::get()),
+			dollar::<Runtime>(RelayCurrencyId::get()),
 			Box::new(xcm::VersionedMultiLocation::V1(MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
