@@ -610,6 +610,7 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 		match currency_id {
 			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) =>
 				Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			CurrencyId::VToken(TokenSymbol::BNC) => Ok(CurrencyId::Native(TokenSymbol::BNC)),
 			CurrencyId::VToken(token_symbol) |
 			CurrencyId::VSToken(token_symbol) |
 			CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
@@ -689,6 +690,12 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 	fn register_vtoken_metadata(token_symbol: TokenSymbol) -> sp_runtime::DispatchResult {
 		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
+			return Ok(());
+		} else if let Some(token_metadata) =
+			CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
+		{
 			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
 			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
 			return Ok(());
