@@ -5,6 +5,10 @@ on:
     types:
       - published
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'bifrost image tag'
+        required: true
 
 jobs:
   buildx:
