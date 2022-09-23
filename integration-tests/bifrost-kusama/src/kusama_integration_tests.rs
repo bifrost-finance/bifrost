@@ -39,11 +39,9 @@ const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;
 pub const BLOCKS_PER_YEAR: u32 = SECONDS_PER_YEAR / SECONDS_PER_BLOCK;
 
-#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;
 use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
 
-#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod bifrost_imports {
 	pub use bifrost_kusama_runtime::{
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
@@ -186,11 +184,11 @@ fn sanity_check_weight_per_time_constants_are_as_expected() {
 
 #[test]
 fn parachain_subaccounts_are_unique() {
-	ExtBuilder::default().build().execute_with(|| {
+	sp_io::TestExternalities::default().execute_with(|| {
 		let parachain: AccountId = ParachainInfo::parachain_id().into_account_truncating();
 		assert_eq!(
 			parachain,
-			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
+			hex_literal::hex!["7061726164000000000000000000000000000000000000000000000000000000"]
 				.into()
 		);
 	});
