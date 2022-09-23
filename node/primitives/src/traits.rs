@@ -321,6 +321,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	) -> Balance;
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
+	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 }
 
 pub trait TryConvertFrom<CurrencyId> {

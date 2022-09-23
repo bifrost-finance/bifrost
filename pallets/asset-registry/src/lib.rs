@@ -100,7 +100,7 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(fn deposit_event)]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The foreign asset registered.
 		ForeignAssetRegistered {
@@ -118,6 +118,8 @@ pub mod pallet {
 		AssetRegistered { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The asset updated.
 		AssetUpdated { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
+		/// The CurrencyId registered.
+		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -517,7 +519,12 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		ensure!(CurrencyMetadatas::<T>::get(currency_id).is_none(), Error::<T>::CurrencyIdExisted);
 
-		CurrencyMetadatas::<T>::insert(currency_id, metadata);
+		CurrencyMetadatas::<T>::insert(currency_id, metadata.clone());
+
+		Pallet::<T>::deposit_event(Event::<T>::CurrencyIdRegistered {
+			currency_id,
+			metadata: metadata.clone(),
+		});
 
 		Ok(())
 	}
@@ -603,6 +610,7 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 		match currency_id {
 			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) =>
 				Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			CurrencyId::VToken(TokenSymbol::BNC) => Ok(CurrencyId::Native(TokenSymbol::BNC)),
 			CurrencyId::VToken(token_symbol) |
 			CurrencyId::VSToken(token_symbol) |
 			CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
@@ -615,7 +623,8 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 
 	fn convert_to_vtoken(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
 		match currency_id {
-			CurrencyId::Token(token_symbol) => Ok(CurrencyId::VToken(token_symbol)),
+			CurrencyId::Token(token_symbol) | CurrencyId::Native(token_symbol) =>
+				Ok(CurrencyId::VToken(token_symbol)),
 			CurrencyId::Token2(token_id) => Ok(CurrencyId::VToken2(token_id)),
 			_ => Err(()),
 		}
@@ -683,11 +692,15 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
 			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
 			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
-
+			return Ok(());
+		} else if let Some(token_metadata) =
+			CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
+		{
+			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
+			Pallet::<T>::do_register_metadata(CurrencyId::VToken(token_symbol), &vtoken_metadata)?;
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -701,8 +714,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -712,7 +724,18 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		first_slot: LeasePeriod,
 		last_slot: LeasePeriod,
 	) -> sp_runtime::DispatchResult {
-		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
+		let option_token_metadata =
+			if CurrencyMetadatas::<T>::contains_key(CurrencyId::Token(token_symbol)) {
+				CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol))
+			} else if token_symbol == TokenSymbol::BNC &&
+				CurrencyMetadatas::<T>::contains_key(CurrencyId::Native(token_symbol))
+			{
+				CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
+			} else {
+				None
+			};
+
+		if let Some(token_metadata) = option_token_metadata {
 			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
 				token_metadata,
 				para_id,
@@ -726,8 +749,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -760,8 +782,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(<Pallet as T>::Error::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -772,8 +793,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 
@@ -797,8 +817,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 			return Ok(());
 		} else {
-			return Ok(());
-			// return Err(Error::<T>::CurrencyIdNotExists)?;
+			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
 }

@@ -16,20 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{integration_tests::*, kusama_test_net::*};
 use bifrost_flexible_fee::UserFeeChargeOrderList;
-use bifrost_kusama_runtime::{Call, FlexibleFee, ZenlinkProtocol};
-use bifrost_runtime_common::milli;
+use bifrost_kusama_runtime::{Call, Currencies, FlexibleFee, Origin, Runtime, ZenlinkProtocol};
+use bifrost_runtime_common::{dollar, milli};
 use frame_support::{
 	assert_ok,
 	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::TryConvertFrom;
+use node_primitives::{AccountId, CurrencyId, TokenSymbol, TryConvertFrom};
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
 use xcm_emulator::TestExt;
 use zenlink_protocol::AssetId;
+
+use crate::kusama_test_net::Bifrost;
 
 // some common variables
 pub const CHARLIE: AccountId = AccountId::new([0u8; 32]);
@@ -49,31 +50,31 @@ fn basic_setup() {
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_0,
-		10 * milli(CURRENCY_ID_0) as i128
+		10 * milli::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		ALICE.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Bob
@@ -81,31 +82,31 @@ fn basic_setup() {
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		BOB.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Charlie
@@ -113,31 +114,31 @@ fn basic_setup() {
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// Dick
@@ -145,31 +146,31 @@ fn basic_setup() {
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_0,
-		10 * dollar(CURRENCY_ID_0) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_1,
-		10 * dollar(CURRENCY_ID_1) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_2,
-		10 * dollar(CURRENCY_ID_2) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_3,
-		100 * dollar(CURRENCY_ID_3) as i128
+		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
 		Origin::root(),
 		DICK.into(),
 		CURRENCY_ID_4,
-		10 * dollar(CURRENCY_ID_4) as i128
+		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
 	));
 
 	// create DEX pair
@@ -215,8 +216,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_1_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_1),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_1),
 		1,
 		1,
 		deadline
@@ -229,8 +230,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_2_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_2),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_2),
 		1,
 		1,
 		deadline
@@ -243,8 +244,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_3_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_3),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_3),
 		1,
 		1,
 		deadline
@@ -257,8 +258,8 @@ fn basic_setup() {
 		Origin::signed(DICK),
 		asset_0_currency_id,
 		asset_4_currency_id,
-		1 * dollar(CURRENCY_ID_0),
-		1 * dollar(CURRENCY_ID_4),
+		1 * dollar::<Runtime>(CURRENCY_ID_0),
+		1 * dollar::<Runtime>(CURRENCY_ID_4),
 		1,
 		1,
 		deadline
@@ -267,92 +268,98 @@ fn basic_setup() {
 
 #[test]
 fn set_user_fee_charge_order_should_work() {
-	Bifrost::execute_with(|| {
-		let origin_signed_alice = Origin::signed(ALICE);
-		let mut asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
-		assert_ok!(FlexibleFee::set_user_fee_charge_order(
-			origin_signed_alice.clone(),
-			Some(asset_order_list_vec.clone())
-		));
+	sp_io::TestExternalities::default().execute_with(|| {
+		Bifrost::execute_with(|| {
+			let origin_signed_alice = Origin::signed(ALICE);
+			let mut asset_order_list_vec: Vec<CurrencyId> =
+				vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
+			assert_ok!(FlexibleFee::set_user_fee_charge_order(
+				origin_signed_alice.clone(),
+				Some(asset_order_list_vec.clone())
+			));
 
-		asset_order_list_vec.insert(0, CURRENCY_ID_0);
-		assert_eq!(UserFeeChargeOrderList::<Runtime>::get(ALICE), Some(asset_order_list_vec));
+			asset_order_list_vec.insert(0, CURRENCY_ID_0);
+			assert_eq!(UserFeeChargeOrderList::<Runtime>::get(ALICE), Some(asset_order_list_vec));
 
-		assert_ok!(FlexibleFee::set_user_fee_charge_order(origin_signed_alice, None));
+			assert_ok!(FlexibleFee::set_user_fee_charge_order(origin_signed_alice, None));
 
-		assert_eq!(UserFeeChargeOrderList::<Runtime>::get(ALICE).is_none(), true);
-	});
+			assert_eq!(UserFeeChargeOrderList::<Runtime>::get(ALICE).is_none(), true);
+		});
+	})
 }
 
 #[test]
 fn withdraw_fee_should_work() {
-	Bifrost::execute_with(|| {
-		basic_setup();
+	sp_io::TestExternalities::default().execute_with(|| {
+		Bifrost::execute_with(|| {
+			basic_setup();
 
-		// prepare call variable
-		let asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
-			asset_order_list_vec: Some(asset_order_list_vec),
+			// prepare call variable
+			let asset_order_list_vec: Vec<CurrencyId> =
+				vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+			let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
+				asset_order_list_vec: Some(asset_order_list_vec),
+			});
+
+			// prepare info variable
+			let extra = ();
+			let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+			let info = xt.get_dispatch_info();
+
+			// 99 inclusion fee and a tip of 8
+			assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+
+			assert_eq!(
+				<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
+				10 * dollar::<Runtime>(CURRENCY_ID_0) - 107
+			);
 		});
-
-		// prepare info variable
-		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
-		let info = xt.get_dispatch_info();
-
-		// 99 inclusion fee and a tip of 8
-		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
-
-		assert_eq!(
-			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 107
-		);
-	});
+	})
 }
 
 #[test]
 fn correct_and_deposit_fee_should_work() {
-	Bifrost::execute_with(|| {
-		basic_setup();
-		// prepare call variable
-		let asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
-			asset_order_list_vec: Some(asset_order_list_vec),
+	sp_io::TestExternalities::default().execute_with(|| {
+		Bifrost::execute_with(|| {
+			basic_setup();
+			// prepare call variable
+			let asset_order_list_vec: Vec<CurrencyId> =
+				vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+			let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
+				asset_order_list_vec: Some(asset_order_list_vec),
+			});
+			// prepare info variable
+			let extra = ();
+			let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+			let info = xt.get_dispatch_info();
+
+			// prepare post info
+			let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+
+			let corrected_fee = 80;
+			let tip = 8;
+
+			let already_withdrawn =
+				FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, corrected_fee, tip).unwrap();
+
+			assert_eq!(
+				<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
+				10 * dollar::<Runtime>(CURRENCY_ID_0) - 80
+			);
+
+			assert_ok!(FlexibleFee::correct_and_deposit_fee(
+				&CHARLIE,
+				&info,
+				&post_info,
+				corrected_fee,
+				tip,
+				already_withdrawn
+			));
+
+			assert_eq!(
+				<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
+				10 * dollar::<Runtime>(CURRENCY_ID_0) - 80
+			);
 		});
-		// prepare info variable
-		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
-		let info = xt.get_dispatch_info();
-
-		// prepare post info
-		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
-
-		let corrected_fee = 80;
-		let tip = 8;
-
-		let already_withdrawn =
-			FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, corrected_fee, tip).unwrap();
-
-		assert_eq!(
-			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 80
-		);
-
-		assert_ok!(FlexibleFee::correct_and_deposit_fee(
-			&CHARLIE,
-			&info,
-			&post_info,
-			corrected_fee,
-			tip,
-			already_withdrawn
-		));
-
-		assert_eq!(
-			<Runtime as bifrost_flexible_fee::Config>::Currency::free_balance(&CHARLIE),
-			10 * dollar(CURRENCY_ID_0) - 80
-		);
-	});
+	})
 }

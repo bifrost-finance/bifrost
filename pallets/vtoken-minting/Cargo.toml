@@ -34,6 +34,8 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
+env_logger = "0.9.0"
 
 [features]
 default = ["std"]
@@ -47,6 +49,7 @@ std = [
 	"orml-traits/std",
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
+	"bifrost-runtime-common/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

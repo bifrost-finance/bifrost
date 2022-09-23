@@ -20,9 +20,32 @@
 
 #![cfg(test)]
 
+use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
 
-use crate::{mock::*, *};
+#[test]
+fn mint_bnc() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_eq!(Tokens::total_issuance(vBNC), 0);
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), BNC, 200));
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_noop!(
+			VtokenMinting::mint(Some(BOB).into(), BNC, 100),
+			Error::<Runtime>::BelowMinimumMint
+		);
+		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
+		assert_eq!(Balances::free_balance(&entrance_account), 0);
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000));
+		assert_eq!(VtokenMinting::token_pool(BNC), 95000000000);
+		assert_eq!(VtokenMinting::minimum_mint(BNC), 200);
+		assert_eq!(Tokens::total_issuance(vBNC), 95000000000);
+
+		assert_eq!(Balances::free_balance(&entrance_account), 95000000000);
+		let fee_account: AccountId = <Runtime as Config>::FeeAccount::get();
+		assert_eq!(Balances::free_balance(&fee_account), 5000000000);
+	});
+}
 
 #[test]
 fn mint() {
@@ -34,18 +57,18 @@ fn mint() {
 			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::BelowMinimumMint
 		);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100000000000));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
 		assert_eq!(VtokenMinting::token_pool(MOVR), 190000000000000000000);
-		assert_eq!(VtokenMinting::token_pool(KSM), 950);
+		assert_eq!(VtokenMinting::token_pool(KSM), 95000000000);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 200);
-		assert_eq!(Tokens::total_issuance(vKSM), 1950);
+		assert_eq!(Tokens::total_issuance(vKSM), 95000001000);
 
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
-		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 950);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 95000000000);
 		let fee_account: AccountId = <Runtime as Config>::FeeAccount::get();
-		assert_eq!(Tokens::free_balance(KSM, &fee_account), 50);
+		assert_eq!(Tokens::free_balance(KSM, &fee_account), 5000000000);
 	});
 }
 
