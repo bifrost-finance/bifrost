@@ -18,7 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -35,7 +34,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{traits::AccountIdConversion, ArithmeticError, SaturatedConversion},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
@@ -153,7 +152,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
@@ -174,7 +172,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
 			origin: OriginFor<T>,
@@ -195,7 +192,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::close())]
 		pub fn close(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -207,7 +203,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
@@ -230,7 +225,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		fn swap_by_currency_id(
 			system_maker: &AccountIdOf<T>,
 			currency_id: CurrencyId,

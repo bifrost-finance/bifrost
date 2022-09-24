@@ -18,7 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: clear transaction
 
 pub mod migration {
 	pub fn migrate() {
@@ -36,7 +35,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, transactional};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use node_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
 };
@@ -586,7 +585,6 @@ pub mod pallet {
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
 		#[pallet::weight(T::WeightInfo::contribute())]
-		#[transactional]
 		pub fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -637,7 +635,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn confirm_contribute(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -713,7 +710,6 @@ pub mod pallet {
 
 		/// Unlock the reserved vsToken/vsBond after fund success
 		#[pallet::weight(T::WeightInfo::unlock())]
-		#[transactional]
 		pub fn unlock(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -744,7 +740,6 @@ pub mod pallet {
 
 		/// Unlock the reserved vsToken/vsBond after fund success
 		#[pallet::weight(T::WeightInfo::batch_unlock(T::RemoveKeysLimit::get()))]
-		#[transactional]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -796,7 +791,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin.clone())?;
 
@@ -823,7 +817,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::refund())]
-		#[transactional]
 		pub fn refund(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -895,7 +888,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::redeem())]
-		#[transactional]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -956,7 +948,6 @@ pub mod pallet {
 			DispatchClass::Normal,
 			Pays::No
 			))]
-		#[transactional]
 		pub fn dissolve_refunded(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -983,7 +974,6 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		#[transactional]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -1034,7 +1024,6 @@ pub mod pallet {
 			DispatchClass::Normal,
 			Pays::No
 			))]
-		#[transactional]
 		pub fn buyback(
 			origin: OriginFor<T>,
 			#[pallet::compact] value: BalanceOf<T>,
