@@ -9,6 +9,7 @@ on:
       tag:
         description: 'bifrost image tag'
         required: true
+  workflow_call:
 
 jobs:
   buildx:
@@ -72,4 +73,4 @@ jobs:
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache 
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
