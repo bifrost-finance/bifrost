@@ -536,6 +536,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-cross-in-out"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "pallet-balances",
+ "pallet-collective",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [

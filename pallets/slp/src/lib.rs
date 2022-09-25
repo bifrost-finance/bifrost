@@ -462,11 +462,6 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		},
-		LinkedAccountRegistered {
-			currency_id: CurrencyId,
-			who: AccountIdOf<T>,
-			foreign_location: MultiLocation,
-		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -648,32 +643,6 @@ pub mod pallet {
 	#[pallet::getter(fn get_supplement_fee_account_wihtelist)]
 	pub type SupplementFeeAccountWhitelist<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
-
-	/// Mapping a Bifrost account to a multilocation of a outer chain
-	#[pallet::storage]
-	#[pallet::getter(fn account_to_outer_multilocation)]
-	pub type AccountToOuterMultilocation<T> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		CurrencyId,
-		Blake2_128Concat,
-		AccountIdOf<T>,
-		MultiLocation,
-		OptionQuery,
-	>;
-
-	/// Mapping a multilocation of a outer chain to a Bifrost account
-	#[pallet::storage]
-	#[pallet::getter(fn outer_multilocation_to_account)]
-	pub type OuterMultilocationToAccount<T> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		CurrencyId,
-		Blake2_128Concat,
-		MultiLocation,
-		AccountIdOf<T>,
-		OptionQuery,
-	>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1907,42 +1876,6 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			Self::do_fail_validators_by_delegator_query_response(query_id)?;
-			Ok(())
-		}
-
-		// Register the mapping relationship of Bifrost account and account from other chains
-		#[pallet::weight(T::WeightInfo::register_linked_account())]
-		pub fn register_linked_account(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			who: AccountIdOf<T>,
-			foreign_location: Box<MultiLocation>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::AccountRegisterOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				!AccountToOuterMultilocation::<T>::contains_key(&currency_id, who.clone()),
-				Error::<T>::AlreadyExist
-			);
-
-			AccountToOuterMultilocation::<T>::insert(
-				currency_id,
-				who.clone(),
-				foreign_location.clone(),
-			);
-			OuterMultilocationToAccount::<T>::insert(
-				currency_id,
-				foreign_location.clone(),
-				who.clone(),
-			);
-
-			Pallet::<T>::deposit_event(Event::LinkedAccountRegistered {
-				currency_id,
-				who,
-				foreign_location: *foreign_location,
-			});
-
 			Ok(())
 		}
 	}

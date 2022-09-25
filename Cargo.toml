@@ -16,6 +16,7 @@ members = [
 	"pallets/vesting",
 	"pallets/vsbond-auction",
 	"pallets/call-switchgear",
+	"pallets/cross-in-out",
 	"pallets/xcm-interface",
 	"pallets/slp",
 	"pallets/vtoken-minting",
