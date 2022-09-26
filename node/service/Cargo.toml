@@ -93,6 +93,7 @@ jsonrpsee = { version = "0.15.1", features = ["server"] }
 
 # zenlink rpc
 zenlink-protocol-runtime-api = "*"
+zenlink-stable-amm-runtime-api = "*"
 
 # Bifrost rpc
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }

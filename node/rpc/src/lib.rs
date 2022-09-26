@@ -41,7 +41,7 @@ use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpc, LiquidityMiningRpcApi
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
-use node_primitives::{AccountId, Balance, Block, Nonce, ParaId, PoolId};
+use node_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
@@ -51,6 +51,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use substrate_frame_rpc_system::{System, SystemApiServer};
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+use zenlink_stable_amm_rpc::{StableAmm, StableAmmApiServer};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -69,22 +70,23 @@ pub type RpcExtension = jsonrpsee::RpcModule<()>;
 pub fn create_full<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-where
-	C: ProvideRuntimeApi<Block>
+	where
+		C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
 		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
-	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-	C::Api: BlockBuilder<Block>,
-	P: TransactionPool + Sync + Send + 'static,
+		C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+		C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+		C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+		C::Api: FeeRuntimeApi<Block, AccountId>,
+		C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+		C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+		C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+		C::Api: zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
+		C::Api: BlockBuilder<Block>,
+		P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
@@ -96,7 +98,8 @@ where
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(LiquidityMiningRpc::new(client.clone()).into_rpc())?;
-	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
+	module.merge(StableAmm::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -105,21 +108,21 @@ where
 pub fn create_full_polkadot<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-where
-	C: ProvideRuntimeApi<Block>
+	where
+		C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
 		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
-	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-	C::Api: BlockBuilder<Block>,
-	P: TransactionPool + Sync + Send + 'static,
+		C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+		C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+		C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+		C::Api: FeeRuntimeApi<Block, AccountId>,
+		C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+		C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+		C::Api: BlockBuilder<Block>,
+		P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;

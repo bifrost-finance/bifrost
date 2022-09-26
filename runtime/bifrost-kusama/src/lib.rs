@@ -119,6 +119,8 @@ use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler,
 	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
 };
+
+use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, StableAmmApi, ValidateCurrency};
 // Weights used in the runtime.
 // mod weights;
 
@@ -224,16 +226,16 @@ impl Contains<Call> for CallFilter {
 			let is_disabled = match *call {
 				// orml-currencies module
 				Call::Currencies(orml_currencies::Call::transfer {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+									 dest: _,
+									 currency_id,
+									 amount: _,
+								 }) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&currency_id,
 				),
 				Call::Currencies(orml_currencies::Call::transfer_native_currency {
-					dest: _,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+									 dest: _,
+									 amount: _,
+								 }) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&NativeCurrencyId::get(),
 				),
 				// orml-tokens module
@@ -242,17 +244,17 @@ impl Contains<Call> for CallFilter {
 						&currency_id,
 					),
 				Call::Tokens(orml_tokens::Call::transfer_all {
-					dest: _,
-					currency_id,
-					keep_alive: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+								 dest: _,
+								 currency_id,
+								 keep_alive: _,
+							 }) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&currency_id,
 				),
 				Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+								 dest: _,
+								 currency_id,
+								 amount: _,
+							 }) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&currency_id,
 				),
 				// Balances module
@@ -261,9 +263,9 @@ impl Contains<Call> for CallFilter {
 						&NativeCurrencyId::get(),
 					),
 				Call::Balances(pallet_balances::Call::transfer_keep_alive {
-					dest: _,
-					value: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+								   dest: _,
+								   value: _,
+							   }) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&NativeCurrencyId::get(),
 				),
 				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
@@ -304,6 +306,7 @@ parameter_types! {
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
+	pub const StableAmmPalletId: PalletId = PalletId(*b"bf/stamm");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
@@ -393,17 +396,17 @@ parameter_types! {
 
 /// The type used to represent the kinds of proxying allowed.
 #[derive(
-	Copy,
-	Clone,
-	Eq,
-	PartialEq,
-	Ord,
-	PartialOrd,
-	Encode,
-	Decode,
-	RuntimeDebug,
-	MaxEncodedLen,
-	scale_info::TypeInfo,
+Copy,
+Clone,
+Eq,
+PartialEq,
+Ord,
+PartialOrd,
+Encode,
+Decode,
+RuntimeDebug,
+MaxEncodedLen,
+scale_info::TypeInfo,
 )]
 pub enum ProxyType {
 	Any = 0,
@@ -723,7 +726,7 @@ impl pallet_democracy::Config for Runtime {
 	>;
 	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
 	type CancellationOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type CooloffPeriod = CooloffPeriod;
 	type Currency = Balances;
 	type EnactmentPeriod = EnactmentPeriod;
@@ -731,21 +734,21 @@ impl pallet_democracy::Config for Runtime {
 	/// A unanimous council can have the next scheduled referendum be a straight default-carries
 	/// (NTB) vote.
 	type ExternalDefaultOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
 	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
 	type ExternalMajorityOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
 	/// be tabled immediately and with a shorter voting/enactment period.
 	type FastTrackOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
 	type FastTrackVotingPeriod = FastTrackVotingPeriod;
 	type InstantAllowed = InstantAllowed;
 	type InstantOrigin =
-		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
+	pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
 	type LaunchPeriod = LaunchPeriod;
 	type MaxProposals = MaxProposals;
 	type MaxVotes = MaxVotes;
@@ -847,8 +850,8 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-	Call: From<LocalCall>,
+	where
+		Call: From<LocalCall>,
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: Call,
@@ -893,8 +896,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-	Call: From<C>,
+	where
+		Call: From<C>,
 {
 	type OverarchingCall = Call;
 	type Extrinsic = UncheckedExtrinsic;
@@ -974,7 +977,7 @@ impl parachain_staking::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MinBlocksPerRound = MinBlocksPerRound;
 	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -1198,7 +1201,7 @@ impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
 		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
 			if let Some(currency_id) =
-				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(location)
+			BifrostCurrencyIdConvert::<SelfParaChainId>::convert(location)
 			{
 				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
 			}
@@ -1367,6 +1370,7 @@ parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent::<Runtime>(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
+			&CurrencyId::StableLpToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
 			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),  // 0.0001 vKSM
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::RMRK)),
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
@@ -1389,34 +1393,34 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostSalpLiteCrowdloanId::get(),
 		)
-		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&LighteningRedeemPalletId::get(),
 		)
-		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&VsbondAuctionPalletId::get(),
 		)
-		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
+			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
 			AccountIdConversion::<AccountId>::into_account_truncating(
 				&ParachainStakingPalletId::get(),
 			)
-			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostVsbondPalletId::get(),
 		)
-		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SlpEntrancePalletId::get(),
 		)
-		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
+			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
 			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
 			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
 			AccountIdConversion::<AccountId>::into_account_truncating(
 				&SystemStakingPalletId::get(),
 			)
-			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a)
+			.eq(a)
 	}
 }
 
@@ -1574,7 +1578,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 							.into_account_truncating(),
 						index,
 					)
-					.into(),
+						.into(),
 				},
 			),
 		),
@@ -1586,7 +1590,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 					ParachainInfo::get().into_account_truncating(),
 					index,
 				)
-				.into(),
+					.into(),
 			}),
 		),
 	}
@@ -1625,7 +1629,7 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -1655,7 +1659,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type SlotLength = SlotLength;
 	type WeightInfo = bifrost_salp_lite::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1853,7 +1857,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1886,6 +1890,29 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 }
 
+impl zenlink_stable_amm::Config for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type PoolId = u32;
+	type TimeProvider = Timestamp;
+	type EnsurePoolAsset = StableAmmVerifyPoolAsset;
+	type LpGenerate = PoolLpGenerate;
+	type PoolCurrencySymbolLimit = StringLimit;
+	type PalletId = StableAmmPalletId;
+	type WeightInfo = ();
+}
+
+impl zenlink_swap_router::Config for Runtime {
+	type Event = Event;
+	type StablePoolId = u32;
+	type Balance = u128;
+	type CurrencyId = CurrencyId;
+	type NormalAmm = ZenlinkProtocol;
+	type StableAMM = ZenlinkStableAMM;
+	type WeightInfo = ();
+}
+
 impl merkle_distributor::Config for Runtime {
 	type Event = Event;
 	type CurrencyId = CurrencyId;
@@ -1895,6 +1922,29 @@ impl merkle_distributor::Config for Runtime {
 	type PalletId = MerkleDirtributorPalletId;
 	type StringLimit = StringLimit;
 	type WeightInfo = ();
+}
+
+pub struct StableAmmVerifyPoolAsset;
+
+impl ValidateCurrency<CurrencyId> for StableAmmVerifyPoolAsset{
+	fn validate_pooled_currency(_currencies: &[CurrencyId]) -> bool {
+		true
+	}
+
+	fn validate_pool_lp_currency(_currency_id: CurrencyId) -> bool {
+		if Currencies::total_issuance(_currency_id) > 0{
+			return false
+		}
+		true
+	}
+}
+
+pub struct PoolLpGenerate;
+
+impl StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> for PoolLpGenerate {
+	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId {
+		CurrencyId::StableLpToken(pool_id)
+	}
 }
 
 parameter_types! {
@@ -1983,8 +2033,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
 impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
-where
-	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+	where
+		Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
 		if let Ok(currency_id) = asset_id.try_into() {
@@ -2135,6 +2185,8 @@ construct_runtime! {
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
 		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
+		ZenlinkStableAMM: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>} = 82,
+		ZenlinkSwapRouter: zenlink_swap_router::{Pallet, Call, Event<T>} = 83,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
@@ -2397,6 +2449,64 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	impl zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, u128, AccountId, u32> for Runtime{
+		fn get_virtual_price(pool_id: PoolId)->Balance{
+			ZenlinkStableAMM::get_virtual_price(pool_id)
+		}
+
+		fn get_a(pool_id: PoolId)->Balance{
+			ZenlinkStableAMM::get_a(pool_id)
+		}
+
+		fn get_a_precise(pool_id: PoolId)->Balance{
+			ZenlinkStableAMM::get_a(pool_id) * 100
+		}
+
+		fn get_currencies(pool_id: PoolId)->Vec<CurrencyId>{
+			ZenlinkStableAMM::get_currencies(pool_id)
+		}
+
+		fn get_currency(pool_id: PoolId, index: u32)->Option<CurrencyId>{
+			ZenlinkStableAMM::get_currency(pool_id, index)
+		}
+
+		fn get_lp_currency(pool_id: PoolId)->Option<CurrencyId>{
+			ZenlinkStableAMM::get_lp_currency(pool_id)
+		}
+
+		fn get_currency_precision_multipliers(pool_id: PoolId)->Vec<Balance>{
+			ZenlinkStableAMM::get_currency_precision_multipliers(pool_id)
+		}
+
+		fn get_currency_balances(pool_id: PoolId)->Vec<Balance>{
+			ZenlinkStableAMM::get_currency_balances(pool_id)
+		}
+
+		fn get_number_of_currencies(pool_id: PoolId)->u32{
+			ZenlinkStableAMM::get_number_of_currencies(pool_id)
+		}
+
+		fn get_admin_balances(pool_id: PoolId)->Vec<Balance>{
+			ZenlinkStableAMM::get_admin_balances(pool_id)
+		}
+
+		fn calculate_currency_amount(pool_id: PoolId, amounts:Vec<Balance>, deposit: bool)->Balance{
+			ZenlinkStableAMM::stable_amm_calculate_currency_amount(pool_id, &amounts, deposit).unwrap_or_default()
+		}
+
+		fn calculate_swap(pool_id: PoolId, in_index: u32, out_index: u32, in_amount: Balance)->Balance{
+			ZenlinkStableAMM::stable_amm_calculate_swap_amount(pool_id, in_index as usize, out_index as usize, in_amount).unwrap_or_default()
+		}
+
+		fn calculate_remove_liquidity(pool_id: PoolId, amount: Balance)->Vec<Balance>{
+			ZenlinkStableAMM::stable_amm_calculate_remove_liquidity(pool_id, amount).unwrap_or_default()
+		}
+
+		fn calculate_remove_liquidity_one_currency(pool_id: PoolId, amount:Balance, index: u32)->Balance{
+			ZenlinkStableAMM::stable_amm_calculate_remove_liquidity_one_currency(pool_id, amount, index).unwrap_or_default()
 		}
 	}
 

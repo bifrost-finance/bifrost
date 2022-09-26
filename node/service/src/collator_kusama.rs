@@ -70,7 +70,7 @@ type HostFunctions = sp_io::SubstrateHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
 type HostFunctions =
-	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
+(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
 
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub struct BifrostExecutor;
@@ -107,11 +107,11 @@ pub fn new_partial<RuntimeApi>(
 	>,
 	sc_service::Error,
 >
-where
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+		RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 {
 	let telemetry = config
 		.telemetry_endpoints
@@ -240,25 +240,25 @@ async fn start_node_impl<RB, RuntimeApi, BIC>(
 	build_consensus: BIC,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
-where
-	RB: Fn(Arc<FullClient<RuntimeApi>>) -> Result<RpcModule<()>, sc_service::Error>
+	where
+		RB: Fn(Arc<FullClient<RuntimeApi>>) -> Result<RpcModule<()>, sc_service::Error>
 		+ Send
 		+ 'static,
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-	BIC: FnOnce(
-		Arc<FullClient<RuntimeApi>>,
-		Option<&Registry>,
-		Option<TelemetryHandle>,
-		&TaskManager,
-		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>>,
-		Arc<NetworkService<Block, Hash>>,
-		SyncCryptoStorePtr,
-		bool,
-	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+		RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+		BIC: FnOnce(
+			Arc<FullClient<RuntimeApi>>,
+			Option<&Registry>,
+			Option<TelemetryHandle>,
+			&TaskManager,
+			Arc<dyn RelayChainInterface>,
+			Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>>,
+			Arc<NetworkService<Block, Hash>>,
+			SyncCryptoStorePtr,
+			bool,
+		) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
@@ -277,11 +277,11 @@ where
 		collator_options.clone(),
 		hwbench.clone(),
 	)
-	.await
-	.map_err(|e| match e {
-		RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
-		s => s.to_string().into(),
-	})?;
+		.await
+		.map_err(|e| match e {
+			RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+			s => s.to_string().into(),
+		})?;
 	let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 	let force_authoring = parachain_config.force_authoring;
 	let validator = parachain_config.role.is_authority();
@@ -406,11 +406,11 @@ pub async fn start_node<RuntimeApi>(
 	id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+		RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 {
 	start_node_impl(
 		parachain_config,
@@ -485,7 +485,7 @@ where
 		},
 		hwbench,
 	)
-	.await
+		.await
 }
 
 /// Builds a new object suitable for chain operations.
@@ -509,8 +509,8 @@ pub fn new_chain_ops(
 			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
 		}
 		#[cfg(not(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
+		feature = "with-bifrost-kusama-runtime",
+		feature = "with-bifrost-runtime"
 		)))]
 		Err(crate::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into())
 	} else {
@@ -520,28 +520,29 @@ pub fn new_chain_ops(
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
-	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-	+ sp_api::ApiExt<Block>
-	+ sp_block_builder::BlockBuilder<Block>
-	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
-	+ sp_api::Metadata<Block>
-	+ sp_offchain::OffchainWorkerApi<Block>
-	+ sp_session::SessionKeys<Block>
-	+ cumulus_primitives_core::CollectCollationInfo<Block>
-	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
-	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
-	+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
-	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
-	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
-where
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
++ sp_api::ApiExt<Block>
++ sp_block_builder::BlockBuilder<Block>
++ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
++ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
++ sp_api::Metadata<Block>
++ sp_offchain::OffchainWorkerApi<Block>
++ sp_session::SessionKeys<Block>
++ cumulus_primitives_core::CollectCollationInfo<Block>
++ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
++ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
++ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
++ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
++ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
++ zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>
+	where
+		<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
 impl<Api> RuntimeApiCollection for Api
-where
-	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+	where
+		Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
 		// + ParachainHost<Block>
 		+ sp_block_builder::BlockBuilder<Block>
@@ -558,8 +559,9 @@ where
 			AccountId,
 			PoolId,
 		> + bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
-		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>,
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
+		+ zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
+		<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
@@ -567,29 +569,29 @@ where
 ///
 /// For a concrete type there exists [`Client`].
 pub trait AbstractClient<Block, Backend>:
-	BlockchainEvents<Block>
-	+ Sized
-	+ Send
-	+ Sync
-	+ ProvideRuntimeApi<Block>
-	+ HeaderBackend<Block>
-	+ CallApiAt<Block, StateBackend = Backend::State>
-	+ AuxStore
-	+ UsageProvider<Block>
-where
-	Block: BlockT,
-	Backend: BackendT<Block>,
-	Backend::State: sp_api::StateBackend<BlakeTwo256>,
-	Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+BlockchainEvents<Block>
++ Sized
++ Send
++ Sync
++ ProvideRuntimeApi<Block>
++ HeaderBackend<Block>
++ CallApiAt<Block, StateBackend = Backend::State>
++ AuxStore
++ UsageProvider<Block>
+	where
+		Block: BlockT,
+		Backend: BackendT<Block>,
+		Backend::State: sp_api::StateBackend<BlakeTwo256>,
+		Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
 {
 }
 
 impl<Block, Backend, Client> AbstractClient<Block, Backend> for Client
-where
-	Block: BlockT,
-	Backend: BackendT<Block>,
-	Backend::State: sp_api::StateBackend<BlakeTwo256>,
-	Client: BlockchainEvents<Block>
+	where
+		Block: BlockT,
+		Backend: BackendT<Block>,
+		Backend::State: sp_api::StateBackend<BlakeTwo256>,
+		Client: BlockchainEvents<Block>
 		+ ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ AuxStore
@@ -598,7 +600,7 @@ where
 		+ Send
 		+ Sync
 		+ CallApiAt<Block, StateBackend = Backend::State>,
-	Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+		Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
 {
 }
 
@@ -619,12 +621,12 @@ pub trait ExecuteWithClient {
 
 	/// Execute whatever should be executed with the given client instance.
 	fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
-	where
-		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-		Backend: sc_client_api::Backend<Block> + 'static,
-		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Api: RuntimeApiCollection<StateBackend = Backend::State>,
-		Client: AbstractClient<Block, Backend, Api = Api> + 'static;
+		where
+			<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+			Backend: sc_client_api::Backend<Block> + 'static,
+			Backend::State: sp_api::StateBackend<BlakeTwo256>,
+			Api: RuntimeApiCollection<StateBackend = Backend::State>,
+			Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
 /// A handle to a Polkadot client instance.
