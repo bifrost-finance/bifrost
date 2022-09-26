@@ -19,8 +19,7 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -71,7 +70,6 @@ fn bifrost_polkadot_properties() -> Properties {
 
 pub fn bifrost_polkadot_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
-	root_key: AccountId,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -116,7 +114,6 @@ pub fn bifrost_polkadot_genesis(
 		vesting: VestingConfig { vesting: vestings },
 		tokens: TokensConfig { balances: tokens },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
-		sudo: SudoConfig { key: Some(root_key) },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 	}
 }
@@ -145,7 +142,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
 		)],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -208,7 +204,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			),
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -275,16 +270,8 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 		),
 	];
 
-	let root_key: AccountId = hex![
-		// cjAZA391BNi2S1Je7PNGHiX4UoJh3SbknQSDQ7qh3g4Aa9H
-		"2c64a40ec236d0a0823065791946f6254c4577c6110f512614bd6ece1a3fa22b"
-	]
-	.into();
-
-	let balances = vec![(root_key.clone(), 1000 * DOLLARS)];
-
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 
-	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id, vec![], salp_multisig)
+	bifrost_polkadot_genesis(invulnerables, vec![], vec![], id, vec![], salp_multisig)
 }
