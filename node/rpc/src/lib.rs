@@ -70,23 +70,24 @@ pub type RpcExtension = jsonrpsee::RpcModule<()>;
 pub fn create_full<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-	where
-		C: ProvideRuntimeApi<Block>
+where
+	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
 		+ 'static,
-		C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-		C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-		C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
-		C::Api: FeeRuntimeApi<Block, AccountId>,
-		C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-		C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
-		C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-		C::Api: zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
-		C::Api: BlockBuilder<Block>,
-		P: TransactionPool + Sync + Send + 'static,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api:
+		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
@@ -108,21 +109,21 @@ pub fn create_full<C, P>(
 pub fn create_full_polkadot<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-	where
-		C: ProvideRuntimeApi<Block>
+where
+	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
 		+ 'static,
-		C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-		C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-		C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
-		C::Api: FeeRuntimeApi<Block, AccountId>,
-		C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-		C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-		C::Api: BlockBuilder<Block>,
-		P: TransactionPool + Sync + Send + 'static,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;

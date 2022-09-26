@@ -32,7 +32,7 @@ use zenlink_protocol::{AssetId, LOCAL, NATIVE};
 
 use crate::{
 	traits::{CurrencyIdExt, TokenInfo},
-	LeasePeriod, ParaId, TryConvertFrom, PoolId
+	LeasePeriod, ParaId, PoolId, TryConvertFrom,
 };
 
 pub const DOT_TOKEN_ID: u8 = 0u8;
@@ -325,17 +325,17 @@ pub type TokenId = u8;
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(
-Encode,
-Decode,
-MaxEncodedLen,
-Eq,
-PartialEq,
-Copy,
-Clone,
-RuntimeDebug,
-PartialOrd,
-Ord,
-TypeInfo,
+	Encode,
+	Decode,
+	MaxEncodedLen,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	Ord,
+	TypeInfo,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
