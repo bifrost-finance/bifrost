@@ -97,6 +97,5 @@ jobs:
           fields: repo,author,eventName,workflow,ref,commit
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
-  docker-image:
-    needs: [srtool,release]
-    uses: ./.github/workflows/docker-image.yml
+
+
