@@ -128,7 +128,7 @@ pub mod pallet {
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<AccountIdOf> {
 		pub receiving_address: AccountIdOf,
-		pub token_type: CurrencyId,
+		pub token_type: Vec<CurrencyId>,
 		pub tokens_proportion: BTreeMap<AccountIdOf, Perbill>,
 		pub if_auto: bool,
 	}
@@ -143,13 +143,15 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(_bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			// let fee_share = T::FeeSharePalletId::get().into_account_truncating();
-			for (currency_id, info) in DistributionInfos::<T>::iter() {
-				if let Some(e) = Self::execute_distribute(currency_id, &info).err() {
-					log::error!(
-						target: "runtime::fee-share",
-						"Received invalid justification for {:?}",
-						e,
-					);
+			for (_distribution_id, info) in DistributionInfos::<T>::iter() {
+				if info.if_auto {
+					if let Some(e) = Self::execute_distribute_inner(&info).err() {
+						log::error!(
+							target: "runtime::fee-share",
+							"Received invalid justification for {:?}",
+							e,
+						);
+					}
 				}
 			}
 			0
@@ -161,14 +163,13 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_distribution())]
 		pub fn create_distribution(
 			origin: OriginFor<T>,
-			token_type: CurrencyId,
+			token_type: Vec<CurrencyId>,
 			tokens_proportion: Vec<(AccountIdOf<T>, Perbill)>,
 			if_auto: bool,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut total_proportion = Perbill::from_percent(0);
-
 			let tokens_proportion_map: BTreeMap<AccountIdOf<T>, Perbill> = tokens_proportion
 				.into_iter()
 				.map(|(k, v)| {
@@ -181,7 +182,6 @@ pub mod pallet {
 			let distribution_id = Self::distribution_next_id();
 			let receiving_address =
 				T::FeeSharePalletId::get().into_sub_account_truncating(distribution_id);
-
 			let info = Info {
 				receiving_address,
 				token_type,
@@ -198,41 +198,54 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(T::WeightInfo::execute_distribute())]
+		pub fn execute_distribute(
+			origin: OriginFor<T>,
+			distribution_id: DistributionId,
+		) -> DispatchResult {
+			if let Some(info) = Self::distribution_infos(distribution_id) {
+				Self::execute_distribute_inner(&info)?;
+			}
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn execute_distribute(a: u32, infos: &Info<AccountIdOf<T>>) -> DispatchResult {
-			let currency_id = infos.token_type;
-			let ed = T::MultiCurrency::minimum_balance(currency_id);
-			let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
-			// if let Some(infos) = Self::distribution_infos(distribution_id) {
-			infos.tokens_proportion.iter().try_for_each(
-				|(account_to_send, &proportion)| -> DispatchResult {
-					let withdraw_amount = proportion * amount;
-					// let ed = T::MultiCurrency::minimum_balance(currency_id);
+		fn execute_distribute_inner(infos: &Info<AccountIdOf<T>>) -> DispatchResult {
+			// let currency_id =
+			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
+				let ed = T::MultiCurrency::minimum_balance(currency_id);
+				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				// if let Some(infos) = Self::distribution_infos(distribution_id) {
+				infos.tokens_proportion.iter().try_for_each(
+					|(account_to_send, &proportion)| -> DispatchResult {
+						let withdraw_amount = proportion * amount;
+						// let ed = T::MultiCurrency::minimum_balance(currency_id);
 
-					if withdraw_amount < ed {
-						let receiver_balance =
-							T::MultiCurrency::total_balance(currency_id, &account_to_send);
+						if withdraw_amount < ed {
+							let receiver_balance =
+								T::MultiCurrency::total_balance(currency_id, &account_to_send);
 
-						let receiver_balance_after = receiver_balance
-							.checked_add(&withdraw_amount)
-							.ok_or(ArithmeticError::Overflow)?;
-						if receiver_balance_after < ed {
-							// account_to_send = T::TreasuryAccount::get();
-							Err(Error::<T>::ExistentialDeposit)?;
+							let receiver_balance_after = receiver_balance
+								.checked_add(&withdraw_amount)
+								.ok_or(ArithmeticError::Overflow)?;
+							if receiver_balance_after < ed {
+								// account_to_send = T::TreasuryAccount::get();
+								Err(Error::<T>::ExistentialDeposit)?;
+							}
 						}
-					}
-					T::MultiCurrency::transfer(
-						currency_id,
-						&infos.receiving_address,
-						&account_to_send,
-						withdraw_amount,
-					)
-				},
-			)?;
+						T::MultiCurrency::transfer(
+							currency_id,
+							&infos.receiving_address,
+							&account_to_send,
+							withdraw_amount,
+						)
+					},
+				)
+			})
 			// };
-			Ok(())
+			// Ok(())
 		}
 	}
 }

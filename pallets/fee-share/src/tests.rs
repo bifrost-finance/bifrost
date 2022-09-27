@@ -31,9 +31,16 @@ fn on_idle() {
 
 		assert_ok!(FeeShare::create_distribution(
 			Origin::signed(ALICE),
-			KSM,
+			vec![KSM],
 			tokens_proportion,
-			true,
+			false,
 		));
+		let keeper: AccountId =
+			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
+		// assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 0);
+		// FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 0);
+		assert_ok!(FeeShare::execute_distribute(Origin::signed(ALICE), 0));
+		assert_eq!(Tokens::free_balance(KSM, &keeper), 2000);
 	});
 }
