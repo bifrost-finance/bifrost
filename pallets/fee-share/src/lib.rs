@@ -107,8 +107,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		Created { info: Info<AccountIdOf<T>> },
 		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<AccountIdOf<T>> },
-		Closed { currency_id: CurrencyIdOf<T> },
-		Paid { currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
+		EraLengthSet { era_length: BlockNumberFor<T>, next_era: BlockNumberFor<T> },
+		Executed { distribution_id: DistributionId },
 		RedeemFailed { vcurrency_id: CurrencyIdOf<T>, amount: BalanceOf<T> },
 	}
 
@@ -139,20 +139,29 @@ pub mod pallet {
 	#[pallet::getter(fn distribution_next_id)]
 	pub type DistributionNextId<T: Config> = StorageValue<_, DistributionId, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn auto_era)]
+	pub type AutoEra<T: Config> =
+		StorageValue<_, (BlockNumberFor<T>, BlockNumberFor<T>), ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_idle(_bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-			// let fee_share = T::FeeSharePalletId::get().into_account_truncating();
-			for (_distribution_id, info) in DistributionInfos::<T>::iter() {
-				if info.if_auto {
-					if let Some(e) = Self::execute_distribute_inner(&info).err() {
-						log::error!(
-							target: "runtime::fee-share",
-							"Received invalid justification for {:?}",
-							e,
-						);
+		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
+			let (era_length, next_era) = Self::auto_era();
+			if bn.eq(&next_era) {
+				for (_distribution_id, info) in DistributionInfos::<T>::iter() {
+					if info.if_auto {
+						if let Some(e) = Self::execute_distribute_inner(&info).err() {
+							log::error!(
+								target: "runtime::fee-share",
+								"Received invalid justification for {:?}",
+								e,
+							);
+						}
 					}
 				}
+				let next_era = next_era.saturating_add(era_length);
+				AutoEra::<T>::put((era_length, next_era));
 			}
 			0
 		}
@@ -199,21 +208,40 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(T::WeightInfo::set_era_length())]
+		pub fn set_era_length(
+			origin: OriginFor<T>,
+			era_length: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let current_block = frame_system::Pallet::<T>::block_number();
+			let next_era =
+				current_block.checked_add(&era_length).ok_or(ArithmeticError::Overflow)?;
+			AutoEra::<T>::put((era_length, next_era));
+
+			Self::deposit_event(Event::EraLengthSet { era_length, next_era });
+			Ok(())
+		}
+
 		#[pallet::weight(T::WeightInfo::execute_distribute())]
 		pub fn execute_distribute(
 			origin: OriginFor<T>,
 			distribution_id: DistributionId,
 		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
 			if let Some(info) = Self::distribution_infos(distribution_id) {
 				Self::execute_distribute_inner(&info)?;
 			}
+
+			Self::deposit_event(Event::Executed { distribution_id });
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		fn execute_distribute_inner(infos: &Info<AccountIdOf<T>>) -> DispatchResult {
-			// let currency_id =
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
 				let ed = T::MultiCurrency::minimum_balance(currency_id);
 				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
