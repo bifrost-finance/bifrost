@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::MultiLocation;
 use codec::{alloc::collections::BTreeMap, Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
@@ -26,15 +27,15 @@ pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct OneToManyLedger<DelegatorId, ValidatorId, Balance> {
-	pub account: DelegatorId,
-	pub delegations: BTreeMap<ValidatorId, Balance>,
+pub struct OneToManyLedger<Balance> {
+	pub account: MultiLocation,
+	pub delegations: BTreeMap<MultiLocation, Balance>,
 	pub total: Balance,
 	pub less_total: Balance,
 	// request details.
-	pub requests: Vec<OneToManyScheduledRequest<ValidatorId, Balance>>,
+	pub requests: Vec<OneToManyScheduledRequest<Balance>>,
 	// fast check if request exists
-	pub request_briefs: BTreeMap<ValidatorId, (TimeUnit, Balance)>,
+	pub request_briefs: BTreeMap<MultiLocation, (TimeUnit, Balance)>,
 	pub status: OneToManyDelegatorStatus,
 }
 
@@ -45,8 +46,8 @@ pub enum OneToManyDelegatorStatus {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
-pub struct OneToManyScheduledRequest<ValidatorId, Balance> {
-	pub validator: ValidatorId,
+pub struct OneToManyScheduledRequest<Balance> {
+	pub validator: MultiLocation,
 	pub when_executable: TimeUnit,
 	pub action: OneToManyDelegationAction<Balance>,
 }
@@ -59,13 +60,13 @@ pub enum OneToManyDelegationAction<Balance> {
 
 /// A type for Moonbeam ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
+pub struct MoonbeamLedgerUpdateEntry<Balance> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
-	pub delegator_id: DelegatorId,
+	pub delegator_id: MultiLocation,
 	/// The validator id that needs to be update
-	pub validator_id: Option<ValidatorId>,
+	pub validator_id: Option<MultiLocation>,
 	/// Update operation type
 	pub update_operation: MoonbeamLedgerUpdateOperation,
 	#[codec(compact)]

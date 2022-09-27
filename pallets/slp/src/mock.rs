@@ -344,6 +344,7 @@ impl Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ParachainStaking;
+	type AccountRegisterOrigin = EnsureSignedBy<One, AccountId>;
 }
 
 pub struct ExtBuilder {

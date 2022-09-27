@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::MultiLocation;
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
@@ -25,9 +26,9 @@ use sp_std::vec::Vec;
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateLedger<DelegatorId, Balance> {
+pub struct SubstrateLedger<Balance> {
 	/// The delegator account Id
-	pub account: DelegatorId,
+	pub account: MultiLocation,
 	/// The total amount of the delegator's balance that we are currently accounting for.
 	/// It's just `active` plus all the `unlocking` balances.
 	#[codec(compact)]
@@ -53,11 +54,11 @@ pub struct UnlockChunk<Balance> {
 
 /// A type for substrate ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
+pub struct SubstrateLedgerUpdateEntry<Balance> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
-	pub delegator_id: DelegatorId,
+	pub delegator_id: MultiLocation,
 	/// Update operation type
 	pub update_operation: SubstrateLedgerUpdateOperation,
 	/// The unlocking/bonding amount.
@@ -71,13 +72,13 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 
 /// A type for substrate validators by delegator updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
+pub struct SubstrateValidatorsByDelegatorUpdateEntry<HashT> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
-	pub delegator_id: DelegatorId,
+	pub delegator_id: MultiLocation,
 	/// Validators vec to be updated
-	pub validators: Vec<(ValidatorId, HashT)>,
+	pub validators: Vec<(MultiLocation, HashT)>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

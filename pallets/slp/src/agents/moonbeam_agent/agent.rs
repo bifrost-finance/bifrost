@@ -21,11 +21,18 @@ use super::types::{
 	MoonbeamXtokensCall,
 };
 use crate::{
+	agents::SystemCall,
+	pallet::{Error, Event},
 	primitives::{
-		MoonbeamLedgerUpdateOperation, OneToManyDelegationAction, OneToManyLedger,
-		OneToManyScheduledRequest, MOVR,
+		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
+		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
+		OneToManyScheduledRequest, QueryId, XcmOperation, MOVR, TIMEOUT_BLOCKS,
 	},
-	DelegationsOccupied, FeeSources,
+	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
+	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, FeeSources, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
@@ -41,9 +48,7 @@ use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-	},
+	traits::{CheckedAdd, CheckedSub, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -58,20 +63,6 @@ use xcm::{
 };
 use xcm_interface::traits::parachains;
 
-use crate::{
-	agents::SystemCall,
-	pallet::{Error, Event},
-	primitives::{
-		Ledger, MoonbeamLedgerUpdateEntry, OneToManyDelegatorStatus,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation,
-	},
-	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
-	TimeUnit, Validators, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
-};
-
 /// StakingAgent implementation for Moonriver/Moonbeam
 pub struct MoonbeamAgent<T>(PhantomData<T>);
 
@@ -83,31 +74,20 @@ impl<T> MoonbeamAgent<T> {
 
 impl<T: Config>
 	StakingAgent<
-		MultiLocation,
-		MultiLocation,
 		BalanceOf<T>,
-		TimeUnit,
 		AccountIdOf<T>,
-		MultiLocation,
 		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		LedgerUpdateEntry<BalanceOf<T>>,
+		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		Error<T>,
 	> for MoonbeamAgent<T>
 {
 	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
-		DelegatorNextIndex::<T>::mutate(currency_id, |id| -> Result<(), Error<T>> {
-			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
-			*id = option_new_id;
-			Ok(())
-		})?;
-
-		// Generate multi-location by id.
-		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
+		let (new_delegator_id, delegator_multilocation) =
+			Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Add the new delegator into storage
-		Self::add_delegator(&self, new_delegator_id, &delegator_multilocation, currency_id)
+		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -182,7 +162,7 @@ impl<T: Config>
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
 			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 				BTreeMap::new();
-			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+			let new_ledger = OneToManyLedger::<BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
 				less_total: Zero::zero(),
@@ -191,8 +171,7 @@ impl<T: Config>
 				request_briefs: request_briefs_set,
 				status: OneToManyDelegatorStatus::Active,
 			};
-			let moonbeam_ledger =
-				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonbeam(new_ledger);
+			let moonbeam_ledger = Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
 
 			DelegatorLedgers::<T>::insert(currency_id, who, moonbeam_ledger);
 		}
@@ -907,24 +886,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		// Check if the delegator already exists. If yes, return error.
-		ensure!(
-			!DelegatorsIndex2Multilocation::<T>::contains_key(currency_id, index),
-			Error::<T>::AlreadyExist
-		);
-
-		// Ensure delegators count is not greater than maximum.
-		let delegators_count = DelegatorNextIndex::<T>::get(currency_id);
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(delegators_count < mins_maxs.delegators_maximum, Error::<T>::GreaterThanMaximum);
-
-		// Revise two delegator storages.
-		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
-		DelegatorsMultilocation2Index::<T>::insert(currency_id, who, index);
-
-		// create ledger.
-
-		Ok(())
+		Pallet::<T>::inner_add_delegator(index, who, currency_id)
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
@@ -1080,7 +1042,7 @@ impl<T: Config>
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,
-		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
+		entry: LedgerUpdateEntry<BalanceOf<T>>,
 		manual_mode: bool,
 		currency_id: CurrencyId,
 	) -> Result<bool, Error<T>> {
@@ -1110,7 +1072,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)
@@ -1414,7 +1376,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
-		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
+		query_entry: LedgerUpdateEntry<BalanceOf<T>>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		use MoonbeamLedgerUpdateOperation::{
@@ -1647,20 +1609,16 @@ impl<T: Config> MoonbeamAgent<T> {
 									MultiLocation,
 									(TimeUnit, BalanceOf<T>),
 								> = BTreeMap::new();
-								let new_ledger =
-									OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
-										account: old_ledger.clone().account,
-										total: Zero::zero(),
-										less_total: Zero::zero(),
-										delegations: empty_delegation_set,
-										requests: vec![],
-										request_briefs: request_briefs_set,
-										status: OneToManyDelegatorStatus::Active,
-									};
-								let moonbeam_ledger =
-									Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::Moonbeam(
-										new_ledger,
-									);
+								let new_ledger = OneToManyLedger::<BalanceOf<T>> {
+									account: old_ledger.clone().account,
+									total: Zero::zero(),
+									less_total: Zero::zero(),
+									delegations: empty_delegation_set,
+									requests: vec![],
+									request_briefs: request_briefs_set,
+									status: OneToManyDelegatorStatus::Active,
+								};
+								let moonbeam_ledger = Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
 
 								*old_ledger_opt = Some(moonbeam_ledger);
 								// execute request
