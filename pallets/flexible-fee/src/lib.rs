@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: clear transaction
 
 use core::convert::Into;
 
@@ -28,7 +27,6 @@ use frame_support::{
 		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
-	transactional,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, ExtraFeeName, TryConvertFrom};
@@ -152,7 +150,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Set user fee charge assets order.
 		#[pallet::weight(<T as Config>::WeightInfo::set_user_fee_charge_order())]
-		#[transactional]
 		pub fn set_user_fee_charge_order(
 			origin: OriginFor<T>,
 			asset_order_list_vec: Option<Vec<CurrencyIdOf<T>>>,

@@ -22,6 +22,7 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
@@ -34,7 +35,7 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, CurrencyIdMapping, TokenSymbol};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
@@ -57,9 +58,8 @@ pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
@@ -120,14 +120,14 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
 	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Runtime {
-	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
 	type WeightInfo = ();
@@ -135,6 +135,11 @@ impl orml_currencies::Config for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
+	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -150,8 +155,22 @@ impl pallet_balances::Config for Runtime {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		0
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		env_logger::try_init().unwrap_or(());
+
+		log::debug!(
+			"{:?}",currency_id
+		);
+		match currency_id {
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Token(TokenSymbol::KSM) => 0,
+			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
+			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
+			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
+			&CurrencyId::VToken(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
+			_ => AssetIdMaps::<Runtime>::get_currency_metadata(*currency_id)
+				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
+		}
 	};
 }
 impl orml_tokens::Config for Runtime {
@@ -311,13 +330,10 @@ impl ExtBuilder {
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
-			(ALICE, BNC, 100),
-			(BOB, BNC, 100),
-			(CHARLIE, BNC, 100),
-			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, BNC, 1000000000000000000000),
+			(BOB, BNC, 1000000000000),
 			(BOB, vKSM, 1000),
-			(BOB, KSM, 10000000000),
+			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
 		])

@@ -18,7 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -35,7 +34,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{traits::AccountIdConversion, ArithmeticError, SaturatedConversion},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
@@ -125,6 +124,7 @@ pub mod pallet {
 		pub vcurrency_id: CurrencyId,
 		pub annualization: u32,
 		pub granularity: BalanceOf,
+		pub minimum_redeem: BalanceOf,
 	}
 
 	#[pallet::hooks]
@@ -140,7 +140,11 @@ pub mod pallet {
 						e,
 					);
 				}
-				Self::handle_redeem_by_currency_id(&system_maker, &info);
+				let redeem_amount =
+					T::MultiCurrency::free_balance(info.vcurrency_id, &system_maker);
+				if redeem_amount >= info.minimum_redeem {
+					Self::handle_redeem_by_currency_id(&system_maker, &info, redeem_amount);
+				}
 			}
 			0
 		}
@@ -148,7 +152,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
@@ -169,7 +172,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
 			origin: OriginFor<T>,
@@ -190,7 +192,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::close())]
 		pub fn close(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -202,7 +203,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
@@ -225,7 +225,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		fn swap_by_currency_id(
 			system_maker: &AccountIdOf<T>,
 			currency_id: CurrencyId,
@@ -259,9 +258,11 @@ pub mod pallet {
 			)
 		}
 
-		fn handle_redeem_by_currency_id(system_maker: &AccountIdOf<T>, info: &Info<BalanceOf<T>>) {
-			let redeem_amount = T::MultiCurrency::free_balance(info.vcurrency_id, system_maker);
-
+		fn handle_redeem_by_currency_id(
+			system_maker: &AccountIdOf<T>,
+			info: &Info<BalanceOf<T>>,
+			redeem_amount: BalanceOf<T>,
+		) {
 			if let Some(e) = T::VtokenMintingInterface::redeem(
 				system_maker.to_owned(),
 				info.vcurrency_id,

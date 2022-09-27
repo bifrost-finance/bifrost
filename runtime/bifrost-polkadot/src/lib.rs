@@ -66,11 +66,11 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_flexible_fee::{
-	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	fee_dealer::FeeDealer,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, milli, millicent, prod_or_test, AuraId, CouncilCollective,
+	constants::time::*, dollar, milli, millicent, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -138,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 957,
+	spec_version: 958,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -831,11 +831,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightToFee = IdentityFee<Balance>;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type Call = Call;
-	type Event = Event;
-}
-
 // culumus runtime start
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -1156,9 +1151,9 @@ impl orml_currencies::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
-			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1213,7 +1208,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
-	pub RelayXcmBaseWeight: u64 = milli(RelayCurrencyId::get()) as u64;
+	pub RelayXcmBaseWeight: u64 = (100 * milli::<Runtime>(RelayCurrencyId::get())) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -1315,8 +1310,7 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	// type FeeDealer = FlexibleFee;
-	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1373,7 +1367,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 }
 
 parameter_types! {
-	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
+	pub MinContribution: Balance = dollar::<Runtime>(RelayCurrencyId::get()) * 5;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1423,9 +1417,9 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
 	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
-	pub UmpTransactFee: Balance = prod_or_test!(milli(RelayCurrencyId::get()),milli(RelayCurrencyId::get()) * 100);
-	pub StatemineTransferFee: Balance = milli(RelayCurrencyId::get()) * 4;
-	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 4).into();
+	pub UmpTransactFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 100;
+	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 400;
+	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 400).into();
 }
 
 impl xcm_interface::Config for Runtime {
@@ -1720,7 +1714,6 @@ construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 

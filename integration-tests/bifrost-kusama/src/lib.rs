@@ -16,12 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// use node_primitives::{CurrencyId, TokenSymbol};
+#![cfg(test)]
 
-// use crate::{cent, micro};
-
-// #[test]
-// fn cal_currency_unit_by_decimal_should_work() {
-// 	assert_eq!(1 * cent::<Runtime>(CurrencyId::Token(TokenSymbol::DOT)), 100_000_000);
-// 	assert_eq!(1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::ZLK)), 1_000_000_000_000);
-// }
+mod asset_registry;
+mod dollor_tests;
+mod flexible_fee;
+mod kusama_cross_chain_transact;
+mod kusama_cross_chain_transfer;
+mod kusama_integration_tests;
+mod kusama_test_net;
+mod salp;
+mod slp;
+// mod statemine;
+mod treasury;

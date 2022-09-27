@@ -18,7 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: clear transaction
 
 #[cfg(test)]
 mod mock;
@@ -39,7 +38,7 @@ use frame_support::{
 		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
 		DispatchError, Permill, SaturatedConversion,
 	},
-	transactional, BoundedVec, PalletId,
+	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
@@ -325,7 +324,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
@@ -337,7 +335,6 @@ pub mod pallet {
 			Self::mint_inner(exchanger, token_id, token_amount)
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -348,7 +345,6 @@ pub mod pallet {
 			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -507,7 +503,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::rebond_by_unlock_id())]
 		pub fn rebond_by_unlock_id(
 			origin: OriginFor<T>,
@@ -600,7 +595,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_unlock_duration())]
 		pub fn set_unlock_duration(
 			origin: OriginFor<T>,
@@ -618,7 +612,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_minimum_mint(
 			origin: OriginFor<T>,
@@ -653,7 +646,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_minimum_redeem())]
 		pub fn set_minimum_redeem(
 			origin: OriginFor<T>,
@@ -670,7 +662,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_support_rebond_token())]
 		pub fn add_support_rebond_token(
 			origin: OriginFor<T>,
@@ -686,7 +677,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_support_rebond_token())]
 		pub fn remove_support_rebond_token(
 			origin: OriginFor<T>,
@@ -708,7 +698,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_fees())]
 		pub fn set_fees(
 			origin: OriginFor<T>,
@@ -723,7 +712,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_hook_iteration_limit())]
 		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -736,7 +724,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
@@ -751,7 +738,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		#[pallet::weight(0)]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,
@@ -768,7 +754,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
@@ -790,7 +775,6 @@ pub mod pallet {
 			Ok(result)
 		}
 
-		#[transactional]
 		pub fn mint_without_tranfer(
 			exchanger: &AccountIdOf<T>,
 			vtoken_id: CurrencyId,
@@ -826,7 +810,6 @@ pub mod pallet {
 			Ok((token_amount_excluding_fee, vtoken_amount, mint_fee))
 		}
 
-		#[transactional]
 		fn on_initialize_update_ledger(
 			token_id: CurrencyId,
 			account: AccountIdOf<T>,
@@ -965,7 +948,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		fn handle_on_initialize() -> DispatchResult {
 			for currency in OngoingTimeUnit::<T>::iter_keys() {
 				Self::handle_ledger_by_currency(currency)?;
@@ -1033,7 +1015,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		pub fn mint_inner(
 			exchanger: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
@@ -1063,7 +1044,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[transactional]
 		pub fn redeem_inner(
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
@@ -1305,7 +1285,6 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		}
 	}
 
-	#[transactional]
 	fn deduct_unlock_amount(
 		currency_id: CurrencyId,
 		index: u32,
@@ -1446,5 +1425,9 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 
 	fn token_id(vtoken_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 		Self::token_id_inner(vtoken_id)
+	}
+
+	fn get_minimums_redeem(vtoken_id: CurrencyIdOf<T>) -> BalanceOf<T> {
+		MinimumRedeem::<T>::get(vtoken_id)
 	}
 }

@@ -1,6 +1,7 @@
 [workspace]
 members = [
-	"integration-tests",
+	"integration-tests/bifrost-kusama",
+	"integration-tests/bifrost-polkadot",
 	"node/cli",
 	"node/primitives",
 	"node/rpc",
