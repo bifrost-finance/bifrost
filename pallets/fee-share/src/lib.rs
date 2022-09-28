@@ -39,7 +39,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId};
+use node_primitives::{CurrencyId, DistributionId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
@@ -126,8 +126,6 @@ pub mod pallet {
 		pub tokens_proportion: BTreeMap<AccountIdOf, Perbill>,
 		pub if_auto: bool,
 	}
-
-	pub type DistributionId = u32;
 
 	#[pallet::storage]
 	#[pallet::getter(fn distribution_next_id)]
