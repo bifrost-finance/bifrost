@@ -141,10 +141,6 @@ pub mod pallet {
 		type MaxRefundPerBlock: Get<u32>;
 
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
-
-		/// The only origin that can register the connection between a bifrost
-		/// account and an outer chain account.
-		type AccountRegisterOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 	}
 
 	#[pallet::error]

@@ -1877,6 +1877,13 @@ impl bifrost_system_maker::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 }
 
+impl bifrost_cross_in_out::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -2153,6 +2160,7 @@ construct_runtime! {
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 122,
 	}
 }
 
