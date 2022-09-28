@@ -194,12 +194,11 @@ impl orml_tokens::Config for Runtime {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
-	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/sysmk");
+	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
@@ -208,13 +207,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
-	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type TreasuryAccount = TreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
 	type FeeSharePalletId = FeeSharePalletId;
-	type ParachainId = ParaInfo;
-	type VtokenMintingInterface = VtokenMinting;
 }
 
 pub struct ParaInfo;

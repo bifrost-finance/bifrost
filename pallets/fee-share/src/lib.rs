@@ -30,24 +30,20 @@ mod benchmarking;
 
 pub mod weights;
 
-use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, CheckedAdd, Saturating},
-		ArithmeticError, Perbill, SaturatedConversion,
+		ArithmeticError, Perbill,
 	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
+use node_primitives::{CurrencyId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-// use sp_core::U256;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-// use sp_std::{borrow::ToOwned, vec};
 pub use weights::WeightInfo;
-use zenlink_protocol::ExportZenlink;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -79,27 +75,8 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
-		type DexOperator: ExportZenlink<Self::AccountId>;
-
-		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
-
-		#[pallet::constant]
-		type TreasuryAccount: Get<Self::AccountId>;
-
-		#[pallet::constant]
-		type RelayChainToken: Get<CurrencyId>;
-
 		#[pallet::constant]
 		type FeeSharePalletId: Get<PalletId>;
-
-		type ParachainId: Get<ParaId>;
-
-		/// The interface to call VtokenMinting module functions.
-		type VtokenMintingInterface: VtokenMintingInterface<
-			AccountIdOf<Self>,
-			CurrencyIdOf<Self>,
-			BalanceOf<Self>,
-		>;
 	}
 
 	#[pallet::event]

@@ -42,7 +42,43 @@ fn on_idle() {
 		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 0);
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
 		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, 0);
-		// assert_ok!(FeeShare::execute_distribute(Origin::signed(ALICE), 0));
 		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
+	});
+}
+
+#[test]
+fn edit_delete_distribution() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
+
+		assert_ok!(FeeShare::create_distribution(
+			Origin::signed(ALICE),
+			vec![KSM],
+			tokens_proportion.clone(),
+			true,
+		));
+		assert_ok!(FeeShare::edit_distribution(
+			Origin::signed(ALICE),
+			0,
+			None, // Some(vec![KSM]),
+			Some(tokens_proportion),
+			Some(false),
+		));
+		let keeper: AccountId =
+			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
+
+		assert_ok!(FeeShare::set_era_length(Origin::signed(ALICE), 1));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 0);
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, 0);
+		assert_eq!(Tokens::free_balance(KSM, &keeper), 10100);
+		assert_ok!(FeeShare::execute_distribute(Origin::signed(ALICE), 0));
+		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
+
+		if let Some(infos) = FeeShare::distribution_infos(0) {
+			assert_eq!(infos.token_type, vec![KSM])
+		}
+		assert_ok!(FeeShare::delete_distribution(Origin::signed(ALICE), 0));
+		assert_eq!(FeeShare::distribution_infos(0), None);
 	});
 }
