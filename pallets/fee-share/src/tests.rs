@@ -37,7 +37,6 @@ fn on_idle() {
 		));
 		let keeper: AccountId =
 			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
-		// FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number(), 0);
 
 		assert_ok!(FeeShare::set_era_length(Origin::signed(ALICE), 1));
 		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 0);

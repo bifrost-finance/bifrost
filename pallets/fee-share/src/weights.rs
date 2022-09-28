@@ -32,6 +32,7 @@ pub trait WeightInfo {
 	fn edit_distribution() -> Weight;
 	fn set_era_length() -> Weight;
 	fn execute_distribute() -> Weight;
+	fn delete_distribution() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -53,6 +54,10 @@ impl WeightInfo for () {
 	}
 
 	fn execute_distribute() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn delete_distribution() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

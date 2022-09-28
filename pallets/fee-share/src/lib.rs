@@ -105,11 +105,27 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Created { info: Info<AccountIdOf<T>> },
-		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<AccountIdOf<T>> },
-		EraLengthSet { era_length: BlockNumberFor<T>, next_era: BlockNumberFor<T> },
-		Executed { distribution_id: DistributionId },
-		RedeemFailed { vcurrency_id: CurrencyIdOf<T>, amount: BalanceOf<T> },
+		Created {
+			info: Info<AccountIdOf<T>>,
+		},
+		Edited {
+			info: Info<AccountIdOf<T>>,
+		},
+		EraLengthSet {
+			era_length: BlockNumberFor<T>,
+			next_era: BlockNumberFor<T>,
+		},
+		Executed {
+			distribution_id: DistributionId,
+		},
+		Deleted {
+			distribution_id: DistributionId,
+		},
+		ExecuteFailed {
+			distribution_id: DistributionId,
+			info: Info<AccountIdOf<T>>,
+			next_era: BlockNumberFor<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -118,6 +134,7 @@ pub mod pallet {
 		NotSupportProportion,
 		CalculationOverflow,
 		ExistentialDeposit,
+		DistributionNotExist,
 	}
 
 	#[pallet::storage]
@@ -149,9 +166,15 @@ pub mod pallet {
 		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			let (era_length, next_era) = Self::auto_era();
 			if bn.eq(&next_era) {
-				for (_distribution_id, info) in DistributionInfos::<T>::iter() {
+				for (distribution_id, info) in DistributionInfos::<T>::iter() {
 					if info.if_auto {
 						if let Some(e) = Self::execute_distribute_inner(&info).err() {
+							Self::deposit_event(Event::ExecuteFailed {
+								distribution_id,
+								info,
+								next_era,
+							});
+
 							log::error!(
 								target: "runtime::fee-share",
 								"Received invalid justification for {:?}",
@@ -204,7 +227,44 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::Created { info });
+			Ok(())
+		}
 
+		#[pallet::weight(T::WeightInfo::edit_distribution())]
+		pub fn edit_distribution(
+			origin: OriginFor<T>,
+			distribution_id: DistributionId,
+			token_type: Option<Vec<CurrencyId>>,
+			tokens_proportion: Option<Vec<(AccountIdOf<T>, Perbill)>>,
+			if_auto: Option<bool>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mut info = Self::distribution_infos(distribution_id)
+				.ok_or(Error::<T>::DistributionNotExist)?;
+			if let Some(tokens_proportion) = tokens_proportion {
+				let mut total_proportion = Perbill::from_percent(0);
+				let tokens_proportion_map: BTreeMap<AccountIdOf<T>, Perbill> = tokens_proportion
+					.into_iter()
+					.map(|(k, v)| {
+						total_proportion = total_proportion.saturating_add(v);
+						(k, v)
+					})
+					.collect();
+				ensure!(total_proportion.is_one(), Error::<T>::NotSupportProportion);
+				info.tokens_proportion = tokens_proportion_map;
+			}
+
+			if let Some(token_type) = token_type {
+				info.token_type = token_type;
+			}
+
+			if let Some(if_auto) = if_auto {
+				info.if_auto = if_auto;
+			}
+			DistributionInfos::<T>::insert(distribution_id, info.clone());
+
+			Self::deposit_event(Event::Edited { info });
 			Ok(())
 		}
 
@@ -238,6 +298,22 @@ pub mod pallet {
 			Self::deposit_event(Event::Executed { distribution_id });
 			Ok(())
 		}
+
+		#[pallet::weight(T::WeightInfo::delete_distribution())]
+		pub fn delete_distribution(
+			origin: OriginFor<T>,
+			distribution_id: DistributionId,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			if let Some(info) = Self::distribution_infos(distribution_id) {
+				Self::execute_distribute_inner(&info)?;
+				DistributionInfos::<T>::remove(distribution_id);
+			}
+
+			Self::deposit_event(Event::Deleted { distribution_id });
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -245,12 +321,9 @@ pub mod pallet {
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
 				let ed = T::MultiCurrency::minimum_balance(currency_id);
 				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
-				// if let Some(infos) = Self::distribution_infos(distribution_id) {
 				infos.tokens_proportion.iter().try_for_each(
 					|(account_to_send, &proportion)| -> DispatchResult {
-						let withdraw_amount = proportion * amount;
-						// let ed = T::MultiCurrency::minimum_balance(currency_id);
-
+						let withdraw_amount = proportion.mul_floor(amount);
 						if withdraw_amount < ed {
 							let receiver_balance =
 								T::MultiCurrency::total_balance(currency_id, &account_to_send);
@@ -259,7 +332,6 @@ pub mod pallet {
 								.checked_add(&withdraw_amount)
 								.ok_or(ArithmeticError::Overflow)?;
 							if receiver_balance_after < ed {
-								// account_to_send = T::TreasuryAccount::get();
 								Err(Error::<T>::ExistentialDeposit)?;
 							}
 						}
@@ -272,8 +344,6 @@ pub mod pallet {
 					},
 				)
 			})
-			// };
-			// Ok(())
 		}
 	}
 }
