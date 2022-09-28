@@ -1293,6 +1293,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -1300,6 +1302,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "try-runtime-cli",
 ]
 
 [[package]]
