@@ -2163,6 +2163,7 @@ construct_runtime! {
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
+		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 	}
 }
 

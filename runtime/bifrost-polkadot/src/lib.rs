@@ -1787,6 +1787,7 @@ construct_runtime! {
 		TokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
+		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 	}
 }
 
