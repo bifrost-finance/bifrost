@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// mod filecoin_primitives;
+mod filecoin_primitives;
 mod moonbeam_primitives;
 mod polkadot_primitives;
 
-// pub use filecoin_primitives::*;
+pub use filecoin_primitives::*;
 pub use moonbeam_primitives::*;
 pub use polkadot_primitives::*;
 
@@ -38,6 +38,8 @@ pub const BASE_WEIGHT: Weight = 1000;
 pub enum Ledger<Balance> {
 	Substrate(SubstrateLedger<Balance>),
 	Moonbeam(OneToManyLedger<Balance>),
+	ParachainStaking(OneToManyLedger<Balance>),
+	Filecoin(FilecoinLedger<Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.

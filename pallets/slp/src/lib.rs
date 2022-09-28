@@ -19,7 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	agents::{MoonbeamAgent, ParachainStakingAgent},
+	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent},
 	primitives::{QueryId, BASE_WEIGHT},
 };
 pub use crate::{
@@ -31,7 +31,6 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
-pub use agents::PolkadotAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::{
@@ -39,7 +38,7 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, GLMR,
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -75,7 +74,6 @@ type StakingAgentBoxType<T> = Box<
 	dyn StakingAgent<
 		BalanceOf<T>,
 		AccountIdOf<T>,
-		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>>,
 		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		pallet::Error<T>,
@@ -217,6 +215,8 @@ pub mod pallet {
 		DelegatorAlreadyTuned,
 		FeeTooHigh,
 		NotEnoughBalance,
+		VectorTooLong,
+		MultiCurrencyError,
 	}
 
 	#[pallet::event]
@@ -383,6 +383,7 @@ pub mod pallet {
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
 			validators_list: Vec<(MultiLocation, Hash<T>)>,
+			delegator_id: MultiLocation,
 		},
 		XcmDestWeightAndFeeSet {
 			currency_id: CurrencyId,
@@ -1524,12 +1525,13 @@ pub mod pallet {
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
-			ValidatorsByDelegator::<T>::insert(currency_id, who, validators_list.clone());
+			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 				currency_id,
 				validators_list,
+				delegator_id: *who,
 			});
 
 			Ok(())
@@ -1862,6 +1864,7 @@ pub mod pallet {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
 				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
+				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
