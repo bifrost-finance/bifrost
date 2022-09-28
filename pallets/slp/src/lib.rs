@@ -20,11 +20,11 @@
 
 use crate::{
 	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent},
-	primitives::{QueryId, BASE_WEIGHT},
+	primitives::BASE_WEIGHT,
 };
 pub use crate::{
 	primitives::{
-		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
+		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},

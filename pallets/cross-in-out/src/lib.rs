@@ -25,11 +25,11 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
+use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::latest::MultiLocation;
 

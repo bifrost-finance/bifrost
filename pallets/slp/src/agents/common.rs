@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	pallet::Error, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
+	pallet::Error, vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, MinimumsAndMaximums,
 	MultiLocation, Pallet, Validators, Zero,
 };
