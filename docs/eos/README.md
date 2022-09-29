@@ -54,7 +54,7 @@ Follow the instructions to install [eosio](https://developers.eos.io/eosio-home/
 ### 2. Create a dev wallet
 
 **Tips**: 
-> While you're creating wallet, use the following command in case you forget the passoword
+> While you're creating wallet, use the following command in case you forget the password
 ```
 # do not use cleos wallet create --to-console
 $ cleos wallet create --to-file
