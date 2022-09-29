@@ -18,11 +18,9 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, BNC, FIL, KSM, *};
+use crate::{mock::*, primitives::FilecoinLedger, FIL, *};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiCurrency;
 use sp_runtime::WeakBoundedVec;
-use xcm::opaque::latest::NetworkId::Any;
 
 fn mins_maxs_setup() {
 	let mins_and_maxs = MinimumsMaximums {
@@ -42,6 +40,19 @@ fn mins_maxs_setup() {
 	// Set minimums and maximums
 	MinimumsAndMaximums::<Runtime>::insert(FIL, mins_and_maxs);
 }
+
+// fn filecoin_ledger_setup() {
+// 	let location = MultiLocation {
+// 		parents: 100,
+// 		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+// 	};
+
+// 	let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
+// 	let ledger = Ledger::Filecoin(fil_ledger);
+
+// 	// Set delegator ledger
+// 	DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger);
+// }
 
 #[test]
 fn initialize_delegator_should_work() {
@@ -63,5 +74,71 @@ fn initialize_delegator_should_work() {
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(FIL), 1);
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), Some(location.clone()));
 		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location), Some(0));
+	});
+}
+
+#[test]
+fn bond_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		System::set_block_number(1);
+
+		assert_noop!(
+			Slp::bond(
+				Origin::signed(ALICE),
+				FIL,
+				Box::new(location.clone()),
+				1_000_000_000_000,
+				None
+			),
+			Error::<Runtime>::NotExist
+		);
+
+		mins_maxs_setup();
+
+		assert_noop!(
+			Slp::bond(Origin::signed(ALICE), FIL, Box::new(location.clone()), 1_000, None),
+			Error::<Runtime>::LowerThanMinimum
+		);
+
+		assert_noop!(
+			Slp::bond(
+				Origin::signed(ALICE),
+				FIL,
+				Box::new(location.clone()),
+				300_000_000_000_000,
+				None
+			),
+			Error::<Runtime>::ExceedActiveMaximum
+		);
+
+		assert_ok!(Slp::bond(
+			Origin::signed(ALICE),
+			FIL,
+			Box::new(location.clone()),
+			1_000_000_000_000,
+			None
+		));
+
+		let fil_ledger =
+			FilecoinLedger { account: location.clone(), initial_pledge: 1000000000000 };
+		let ledger = Ledger::Filecoin(fil_ledger);
+
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+
+		assert_noop!(
+			Slp::bond(
+				Origin::signed(ALICE),
+				FIL,
+				Box::new(location.clone()),
+				1_000_000_000_000,
+				None
+			),
+			Error::<Runtime>::AlreadyBonded
+		);
 	});
 }

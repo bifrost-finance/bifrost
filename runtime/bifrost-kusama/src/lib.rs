@@ -1126,7 +1126,7 @@ parameter_types! {
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), ((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode().try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
