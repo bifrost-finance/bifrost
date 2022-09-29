@@ -269,7 +269,7 @@ impl<T: Config>
 	fn undelegate(
 		&self,
 		who: &MultiLocation,
-		_targets: &Vec<MultiLocation>,
+		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
@@ -287,8 +287,12 @@ impl<T: Config>
 			let amount = filecoin_ledger.initial_pledge;
 			ensure!(amount == Zero::zero(), Error::<T>::AmountNotZero);
 
+			let validators_by_delegator_vec = ValidatorsByDelegator::<T>::get(currency_id, who)
+				.ok_or(Error::<T>::ValidatorNotBonded)?;
+			ensure!(targets[0] == validators_by_delegator_vec[0].0, Error::<T>::ValidatorError);
+
 			// remove entry.
-			ValidatorsByDelegator::<T>::remove(currency_id, who.clone());
+			ValidatorsByDelegator::<T>::remove(currency_id, who);
 			// query_id is nonsense to filecoin.
 			let query_id = Zero::zero();
 
