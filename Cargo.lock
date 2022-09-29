@@ -605,6 +605,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-fee-share"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=20969f385bf77e41386e8d8aa9626b003a306204)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "zenlink-protocol",
+]
+
+[[package]]
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
@@ -736,6 +765,7 @@ dependencies = [
  "bifrost-cross-in-out",
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
+ "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
@@ -974,6 +1004,7 @@ dependencies = [
  "bifrost-call-switchgear",
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
+ "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",

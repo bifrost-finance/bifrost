@@ -24,6 +24,7 @@ members = [
 	"pallets/vstoken-conversion",
 	"pallets/system-staking",
 	"pallets/system-maker",
+	"pallets/fee-share",
 	"pallets/parachain-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
