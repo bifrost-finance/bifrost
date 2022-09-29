@@ -759,11 +759,16 @@ pub mod pallet {
 }
 
 impl<T: Config> FarmingInfo<BalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
-	fn get_token_shares(pool_id: PoolId, _currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
+	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		if let Some(pool_info) = Self::pool_infos(&pool_id) {
-			pool_info.total_shares
-		} else {
-			Zero::zero()
+			if let Some(token_proportion_value) = pool_info.tokens_proportion.get(&currency_id) {
+				let tokens_proportion_values: Vec<Perbill> =
+					pool_info.tokens_proportion.values().cloned().collect();
+				let native_amount =
+					tokens_proportion_values[0].saturating_reciprocal_mul(pool_info.total_shares);
+				return *token_proportion_value * native_amount;
+			}
 		}
+		Zero::zero()
 	}
 }

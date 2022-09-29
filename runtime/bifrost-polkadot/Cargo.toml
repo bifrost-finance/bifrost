@@ -99,6 +99,7 @@ bifrost-asset-registry = { path = "../../pallets/asset-registry", default-featur
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
+bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -192,6 +193,7 @@ std = [
 	"bifrost-vtoken-minting/std",
 	"bifrost-asset-registry/std",
 	"bifrost-system-maker/std",
+	"bifrost-fee-share/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
