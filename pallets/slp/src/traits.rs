@@ -15,7 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{primitives::QueryId, MultiLocation, TimeUnit, Weight, Xcm};
+use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Weight, Xcm};
 use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;

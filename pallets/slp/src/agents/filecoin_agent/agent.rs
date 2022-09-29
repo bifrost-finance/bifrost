@@ -21,7 +21,7 @@ use crate::{
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
 	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
-	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -93,6 +93,11 @@ impl<T: Config>
 			amount <= mins_maxs.delegator_active_staking_maximum,
 			Error::<T>::ExceedActiveMaximum
 		);
+
+		// Check if the delegator(miner) has bonded an owner.
+		let miners = ValidatorsByDelegator::<T>::get(currency_id, who)
+			.ok_or(Error::<T>::ValidatorNotBonded)?;
+		ensure!(miners.len() == 1, Error::<T>::VectorTooLong);
 
 		// Create a new delegator ledger
 		let ledger =
@@ -231,15 +236,19 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		// Check if it is bonded already.
-		ensure!(
-			DelegatorLedgers::<T>::contains_key(currency_id, who),
-			Error::<T>::DelegatorNotBonded
-		);
 		ensure!(targets.len() == 1, Error::<T>::VectorTooLong);
+		let owner = &targets[0];
 
-		let validators_list =
-			Pallet::<T>::sort_validators_and_remove_duplicates(currency_id, &targets)?;
+		// Need to check whether this validator is in the whitelist.
+		let validators_vec =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+		let multi_hash = T::Hashing::hash(&owner.encode());
+		ensure!(
+			validators_vec.contains(&(owner.clone(), multi_hash)),
+			Error::<T>::ValidatorNotExist
+		);
+
+		let validators_list = vec![(owner.clone(), multi_hash)];
 		// update ledger
 		ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
 

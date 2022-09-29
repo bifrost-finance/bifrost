@@ -41,18 +41,49 @@ fn mins_maxs_setup() {
 	MinimumsAndMaximums::<Runtime>::insert(FIL, mins_and_maxs);
 }
 
-// fn filecoin_ledger_setup() {
-// 	let location = MultiLocation {
-// 		parents: 100,
-// 		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-// 	};
+fn initialize_delegator_setup() {
+	let location = MultiLocation {
+		parents: 100,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
 
-// 	let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
-// 	let ledger = Ledger::Filecoin(fil_ledger);
+	mins_maxs_setup();
+	let _ = Slp::initialize_delegator(Origin::signed(ALICE), FIL, Some(Box::new(location.clone())));
+}
 
-// 	// Set delegator ledger
-// 	DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger);
-// }
+fn delegate_setup() {
+	let location = MultiLocation {
+		parents: 100,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
+
+	let owner_location = MultiLocation {
+		parents: 111,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
+
+	initialize_delegator_setup();
+
+	let _ = Slp::add_validator(Origin::signed(ALICE), FIL, Box::new(owner_location.clone()));
+	let _ = Slp::delegate(
+		Origin::signed(ALICE),
+		FIL,
+		Box::new(location.clone()),
+		vec![owner_location.clone()],
+	);
+}
+
+fn bond_setup() {
+	let location = MultiLocation {
+		parents: 100,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
+
+	delegate_setup();
+
+	let _ =
+		Slp::bond(Origin::signed(ALICE), FIL, Box::new(location.clone()), 1_000_000_000_000, None);
+}
 
 #[test]
 fn initialize_delegator_should_work() {
@@ -98,7 +129,7 @@ fn bond_should_work() {
 			Error::<Runtime>::NotExist
 		);
 
-		mins_maxs_setup();
+		delegate_setup();
 
 		assert_noop!(
 			Slp::bond(Origin::signed(ALICE), FIL, Box::new(location.clone()), 1_000, None),
@@ -140,5 +171,120 @@ fn bond_should_work() {
 			),
 			Error::<Runtime>::AlreadyBonded
 		);
+	});
+}
+
+#[test]
+fn delegate_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		let owner_location = MultiLocation {
+			parents: 111,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		System::set_block_number(1);
+
+		initialize_delegator_setup();
+
+		assert_ok!(Slp::add_validator(
+			Origin::signed(ALICE),
+			FIL,
+			Box::new(owner_location.clone())
+		));
+
+		let multi_hash =
+			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
+		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
+
+		assert_ok!(Slp::delegate(
+			Origin::signed(ALICE),
+			FIL,
+			Box::new(location.clone()),
+			vec![owner_location.clone()]
+		));
+
+		assert_eq!(
+			ValidatorsByDelegator::<Runtime>::get(FIL, location.clone()),
+			Some(validator_list.clone())
+		);
+	});
+}
+
+#[test]
+fn bond_extra_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		assert_noop!(
+			Slp::bond_extra(
+				Origin::signed(ALICE),
+				FIL,
+				Box::new(location.clone()),
+				None,
+				1_000_000_000_000,
+			),
+			Error::<Runtime>::DelegatorNotBonded
+		);
+
+		bond_setup();
+
+		assert_ok!(Slp::bond_extra(
+			Origin::signed(ALICE),
+			FIL,
+			Box::new(location.clone()),
+			None,
+			1_000_000_000_000,
+		));
+
+		let fil_ledger =
+			FilecoinLedger { account: location.clone(), initial_pledge: 2000000000000 };
+		let ledger = Ledger::Filecoin(fil_ledger);
+
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+	});
+}
+
+#[test]
+fn unbond_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		assert_noop!(
+			Slp::unbond(
+				Origin::signed(ALICE),
+				FIL,
+				Box::new(location.clone()),
+				None,
+				500_000_000_000,
+			),
+			Error::<Runtime>::DelegatorNotBonded
+		);
+
+		bond_setup();
+
+		assert_ok!(Slp::unbond(
+			Origin::signed(ALICE),
+			FIL,
+			Box::new(location.clone()),
+			None,
+			500_000_000_000,
+		));
+
+		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 500000000000 };
+		let ledger = Ledger::Filecoin(fil_ledger);
+
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
 	});
 }
