@@ -86,7 +86,7 @@ fn initialize_moonriver_delegator() {
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(MOVR, 0),
@@ -153,7 +153,7 @@ fn moonriver_setup() {
 	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
 
 	// update some MOVR balance to treasury account
 	assert_ok!(Tokens::set_balance(
