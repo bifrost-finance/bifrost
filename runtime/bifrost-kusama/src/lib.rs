@@ -122,7 +122,6 @@ use zenlink_protocol::{
 // Weights used in the runtime.
 // mod weights;
 
-mod migrations;
 mod xcm_config;
 
 use xcm_config::{
@@ -2199,7 +2198,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	migrations::AssetRegistryMigration<Runtime>,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
