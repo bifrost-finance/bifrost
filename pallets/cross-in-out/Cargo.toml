@@ -5,8 +5,12 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.2", default-features = false, features = [
+	"derive",
+] }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
@@ -18,9 +22,10 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.2
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+orml-tokens = { version = "0.4.1-dev" }
+orml-currencies = { version = "0.4.1-dev" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 
 [features]
 default = ["std"]
@@ -32,11 +37,11 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
-	"xcm/std"
+	"xcm/std",
 ]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
-	"frame-system/runtime-benchmarks"
+	"frame-system/runtime-benchmarks",
 ]

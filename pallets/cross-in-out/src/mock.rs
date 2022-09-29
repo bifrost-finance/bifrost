@@ -24,6 +24,7 @@ use frame_support::{
 	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
+use frame_system::EnsureSignedBy;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
@@ -32,7 +33,7 @@ use sp_runtime::{
 	AccountId32,
 };
 
-use crate as bifrost_token_issuer;
+use crate as bifrost_cross_in_out;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -43,7 +44,6 @@ pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -58,8 +58,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>}
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>}
 	}
 );
 
@@ -157,7 +156,7 @@ ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
-impl bifrost_token_issuer::Config for Runtime {
+impl bifrost_cross_in_out::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;

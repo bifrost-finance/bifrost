@@ -65,13 +65,10 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The balance is not enough
 		NotEnoughBalance,
-		/// The account doesn't exist in the whitelist.
 		NotExist,
-		/// The origin is not allowed to perform the operation.
 		NotAllowed,
-		CurrencyNotSupportCrossOut,
+		CurrencyNotSupportCrossInAndOut,
 		NoMultilocationMapping,
 		NoAccountIdMapping,
 		AlreadyExist,
@@ -182,6 +179,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin)?;
 
+			ensure!(
+				CrossCurrencyRegistry::<T>::contains_key(currency_id),
+				Error::<T>::CurrencyNotSupportCrossInAndOut
+			);
+
 			let issue_whitelist =
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
@@ -213,7 +215,7 @@ pub mod pallet {
 
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
-				Error::<T>::CurrencyNotSupportCrossOut
+				Error::<T>::CurrencyNotSupportCrossInAndOut
 			);
 
 			let balance = T::MultiCurrency::free_balance(currency_id, &crosser);
@@ -236,11 +238,16 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			foreign_location: Box<MultiLocation>,
 		) -> DispatchResult {
-			let registeror = ensure_signed(origin)?;
+			let registerer = ensure_signed(origin)?;
 
 			let register_whitelist =
 				Self::get_register_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-			ensure!(register_whitelist.contains(&registeror), Error::<T>::NotAllowed);
+			ensure!(register_whitelist.contains(&registerer), Error::<T>::NotAllowed);
+
+			ensure!(
+				CrossCurrencyRegistry::<T>::contains_key(currency_id),
+				Error::<T>::CurrencyNotSupportCrossInAndOut
+			);
 
 			ensure!(
 				!AccountToOuterMultilocation::<T>::contains_key(&currency_id, who.clone()),
