@@ -56,15 +56,20 @@ impl<T: Config>
 	> for FilecoinAgent<T>
 {
 	// In filecoin world, delegator means miner. Validator is used to store owner info.
-	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		let (new_delegator_id, delegator_multilocation) =
-			Pallet::<T>::inner_initialize_delegator(currency_id)?;
+	fn initialize_delegator(
+		&self,
+		currency_id: CurrencyId,
+		delegator_location_op: Option<Box<MultiLocation>>,
+	) -> Result<MultiLocation, Error<T>> {
+		// Filecoin delegator(miner) account is passed in, not automatically generated.
+		let delegator_multilocation = delegator_location_op.ok_or(Error::<T>::NotExist)?;
+		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
-		Ok(delegator_multilocation)
+		Ok(*delegator_multilocation)
 	}
 
 	/// First time stake some amount to a miner.

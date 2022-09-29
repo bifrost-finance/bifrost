@@ -31,7 +31,11 @@ pub trait StakingAgent<
 >
 {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error>;
+	fn initialize_delegator(
+		&self,
+		currency_id: CurrencyId,
+		delegator_location: Option<Box<MultiLocation>>,
+	) -> Result<MultiLocation, Error>;
 
 	/// First time bonding some amount to a delegator.
 	fn bond(

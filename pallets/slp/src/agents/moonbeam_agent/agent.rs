@@ -43,7 +43,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero},
+	traits::{CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -76,9 +76,15 @@ impl<T: Config>
 		Error<T>,
 	> for MoonbeamAgent<T>
 {
-	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		let (new_delegator_id, delegator_multilocation) =
-			Pallet::<T>::inner_initialize_delegator(currency_id)?;
+	fn initialize_delegator(
+		&self,
+		currency_id: CurrencyId,
+		_delegator_location_op: Option<Box<MultiLocation>>,
+	) -> Result<MultiLocation, Error<T>> {
+		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
+
+		// Generate multi-location by id.
+		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)

@@ -650,12 +650,14 @@ pub mod pallet {
 		pub fn initialize_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
+			delegator_location: Option<Box<MultiLocation>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let delegator_id = staking_agent.initialize_delegator(currency_id)?;
+			let delegator_id =
+				staking_agent.initialize_delegator(currency_id, delegator_location)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });

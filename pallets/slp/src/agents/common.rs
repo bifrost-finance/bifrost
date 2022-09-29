@@ -26,15 +26,13 @@ use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{Convert, UniqueSaturatedFrom, UniqueSaturatedInto},
+	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
-	pub(crate) fn inner_initialize_delegator(
-		currency_id: CurrencyId,
-	) -> Result<(u16, MultiLocation), Error<T>> {
+	pub(crate) fn inner_initialize_delegator(currency_id: CurrencyId) -> Result<u16, Error<T>> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
 		DelegatorNextIndex::<T>::mutate(currency_id, |id| -> Result<(), Error<T>> {
 			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
@@ -42,10 +40,7 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		// Generate multi-location by id.
-		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-
-		Ok((new_delegator_id, delegator_multilocation))
+		Ok(new_delegator_id)
 	}
 
 	/// Add a new serving delegator for a particular currency.
