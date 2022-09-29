@@ -16,16 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod common;
-mod filecoin_agent;
-mod moonbeam_agent;
-mod parachain_staking_agent;
-mod polkadot_agent;
-mod utils;
+use crate::{CurrencyId, MultiLocation};
+use codec::{Decode, Encode};
+use frame_support::RuntimeDebug;
+use scale_info::TypeInfo;
 
-pub use common::*;
-pub use filecoin_agent::*;
-pub use moonbeam_agent::*;
-pub use parachain_staking_agent::*;
-pub use polkadot_agent::*;
-pub use utils::*;
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct FilecoinLedger<Balance> {
+	/// The delegator account Id
+	pub account: MultiLocation,
+	// Initial pledge collateral for the miner
+	#[codec(compact)]
+	pub initial_pledge: Balance,
+}
+
+/// A type for filecoin validator(owner) by delegator(miner) updating entries
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct FilecoinOwnerByMinerEntry {
+	pub currency_id: CurrencyId,
+	pub miner_id: MultiLocation,
+	pub owner_id: MultiLocation,
+}

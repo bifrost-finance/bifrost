@@ -1128,7 +1128,7 @@ parameter_types! {
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode().try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
@@ -1879,13 +1879,19 @@ impl bifrost_system_maker::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type VtokenMintingInterface = VtokenMinting;
 }
-
 impl bifrost_fee_share::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 	type FeeSharePalletId = FeeSharePalletId;
+}
+
+impl bifrost_cross_in_out::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
 }
 
 // Bifrost modules end
@@ -2165,6 +2171,7 @@ construct_runtime! {
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 	}
 }
 

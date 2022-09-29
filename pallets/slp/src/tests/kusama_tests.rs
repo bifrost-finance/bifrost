@@ -18,11 +18,10 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
+use crate::{mock::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-
-use crate::{BNC, KSM, *};
+use xcm::opaque::latest::NetworkId::Any;
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {

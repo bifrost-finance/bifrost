@@ -18,7 +18,19 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use agents::PolkadotAgent;
+use crate::{
+	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent},
+	primitives::BASE_WEIGHT,
+};
+pub use crate::{
+	primitives::{
+		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
+	},
+	traits::{OnRefund, QueryResponseManager, StakingAgent},
+	Junction::AccountId32,
+	Junctions::X1,
+};
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::{
@@ -26,7 +38,7 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, GLMR,
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -35,25 +47,7 @@ use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::{
-	latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm},
-	opaque::latest::{
-		Junction::{AccountKey20, Parachain},
-		Junctions::X2,
-		NetworkId::Any,
-	},
-};
-
-use crate::agents::{MoonbeamAgent, ParachainStakingAgent};
-pub use crate::{
-	primitives::{
-		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
-	},
-	traits::{OnRefund, QueryResponseManager, StakingAgent},
-	Junction::AccountId32,
-	Junctions::X1,
-};
+use xcm::latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm};
 
 use sp_core::H160;
 use sp_io::hashing::blake2_256;
@@ -73,24 +67,15 @@ mod benchmarking;
 pub use pallet::*;
 
 pub type Result<T, E> = core::result::Result<T, E>;
-
-pub type QueryId = u64;
-pub const TIMEOUT_BLOCKS: u32 = 1000;
-pub const BASE_WEIGHT: Weight = 1000;
 type Hash<T> = <T as frame_system::Config>::Hash;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> = Box<
 	dyn StakingAgent<
-		MultiLocation,
-		MultiLocation,
 		BalanceOf<T>,
-		TimeUnit,
 		AccountIdOf<T>,
-		MultiLocation,
-		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		LedgerUpdateEntry<BalanceOf<T>>,
+		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		pallet::Error<T>,
 	>,
 >;
@@ -226,6 +211,8 @@ pub mod pallet {
 		DelegatorAlreadyTuned,
 		FeeTooHigh,
 		NotEnoughBalance,
+		VectorTooLong,
+		MultiCurrencyError,
 	}
 
 	#[pallet::event]
@@ -392,6 +379,7 @@ pub mod pallet {
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
 			validators_list: Vec<(MultiLocation, Hash<T>)>,
+			delegator_id: MultiLocation,
 		},
 		XcmDestWeightAndFeeSet {
 			currency_id: CurrencyId,
@@ -409,12 +397,12 @@ pub mod pallet {
 		DelegatorLedgerSet {
 			currency_id: CurrencyId,
 			delegator: MultiLocation,
-			ledger: Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>,
+			ledger: Option<Ledger<BalanceOf<T>>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
+			entry: LedgerUpdateEntry<BalanceOf<T>>,
 		},
 		DelegatorLedgerQueryResponseFailSuccessfully {
 			#[codec(compact)]
@@ -423,7 +411,7 @@ pub mod pallet {
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+			entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		},
 		ValidatorsByDelegatorQueryResponseFailSuccessfully {
 			#[codec(compact)]
@@ -550,10 +538,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(
-			ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
-			BlockNumberFor<T>,
-		),
+		(ValidatorsByDelegatorUpdateEntry<Hash<T>>, BlockNumberFor<T>),
 	>;
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
@@ -565,7 +550,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Ledger<MultiLocation, BalanceOf<T>, MultiLocation>,
+		Ledger<BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -575,7 +560,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>, BlockNumberFor<T>),
+		(LedgerUpdateEntry<BalanceOf<T>>, BlockNumberFor<T>),
 	>;
 
 	/// Minimum and Maximum constraints for different chains.
@@ -665,12 +650,14 @@ pub mod pallet {
 		pub fn initialize_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
+			delegator_location: Option<Box<MultiLocation>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let delegator_id = staking_agent.initialize_delegator(currency_id)?;
+			let delegator_id =
+				staking_agent.initialize_delegator(currency_id, delegator_location)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });
@@ -1536,12 +1523,13 @@ pub mod pallet {
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
-			ValidatorsByDelegator::<T>::insert(currency_id, who, validators_list.clone());
+			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 				currency_id,
 				validators_list,
+				delegator_id: *who,
 			});
 
 			Ok(())
@@ -1553,7 +1541,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
-			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>, MultiLocation>>>,
+			ledger: Box<Option<Ledger<BalanceOf<T>>>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1867,319 +1855,23 @@ pub mod pallet {
 			}
 		}
 
-		/// Convert native multiLocation to account.
-		pub fn native_multilocation_to_account(
-			who: &MultiLocation,
-		) -> Result<AccountIdOf<T>, Error<T>> {
-			// Get the delegator account id in Kusama/Polkadot network
-			let account_32 = match who {
-				MultiLocation {
-					parents: 0,
-					interior: X1(AccountId32 { network: _network_id, id: account_id }),
-				} => account_id,
-				_ => Err(Error::<T>::AccountNotExist)?,
-			};
-
-			let account = T::AccountId::decode(&mut &account_32[..])
-				.map_err(|_| Error::<T>::DecodingError)?;
-
-			Ok(account)
-		}
-
-		fn get_currency_staking_agent(
+		pub(crate) fn get_currency_staking_agent(
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
 				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
+				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
-
-		pub fn sort_validators_and_remove_duplicates(
-			currency_id: CurrencyId,
-			validators: &Vec<MultiLocation>,
-		) -> Result<Vec<(MultiLocation, Hash<T>)>, Error<T>> {
-			let validators_set =
-				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-			let mut validators_list: Vec<(MultiLocation, Hash<T>)> = vec![];
-			for validator in validators.iter() {
-				// Check if the validator is in the validator whitelist
-				let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
-				ensure!(
-					validators_set.contains(&(validator.clone(), multi_hash)),
-					Error::<T>::ValidatorNotExist
-				);
-
-				// sort the validators and remove duplicates
-				let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-				if let Err(index) = rs {
-					validators_list.insert(index, (validator.clone(), multi_hash));
-				}
-			}
-
-			Ok(validators_list)
-		}
-
-		pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
-			// Get the delegator account id in Kusama/Polkadot network
-			let account_32 = Self::multilocation_to_account_32(who)?;
-			let account = T::AccountId::decode(&mut &account_32[..])
-				.map_err(|_| Error::<T>::DecodingError)?;
-			Ok(account)
-		}
-
-		pub fn multilocation_to_account_32(who: &MultiLocation) -> Result<[u8; 32], Error<T>> {
-			// Get the delegator account id in Kusama/Polkadot network
-			let account_32 = match who {
-				MultiLocation {
-					parents: _,
-					interior: X1(AccountId32 { network: _network_id, id: account_id }),
-				} => account_id,
-				_ => Err(Error::<T>::AccountNotExist)?,
-			};
-			Ok(*account_32)
-		}
-
-		pub fn account_id_to_account_32(account_id: AccountIdOf<T>) -> Result<[u8; 32], Error<T>> {
-			let account_32 = T::AccountId::encode(&account_id)
-				.try_into()
-				.map_err(|_| Error::<T>::EncodingError)?;
-
-			Ok(account_32)
-		}
-
-		pub fn account_32_to_local_location(
-			account_32: [u8; 32],
-		) -> Result<MultiLocation, Error<T>> {
-			let local_location = MultiLocation {
-				parents: 0,
-				interior: X1(AccountId32 { network: Any, id: account_32 }),
-			};
-
-			Ok(local_location)
-		}
-
-		pub fn multilocation_to_local_multilocation(
-			location: &MultiLocation,
-		) -> Result<MultiLocation, Error<T>> {
-			let inside: Junction = match location {
-				MultiLocation {
-					parents: _p,
-					interior: X2(Parachain(_para_id), AccountId32 { network: Any, id: account_32 }),
-				} => AccountId32 { network: Any, id: *account_32 },
-				MultiLocation {
-					parents: _p,
-					interior:
-						X2(Parachain(_para_id), AccountKey20 { network: Any, key: account_20 }),
-				} => AccountKey20 { network: Any, key: *account_20 },
-				MultiLocation {
-					parents: _p,
-					interior: X1(AccountId32 { network: Any, id: account_32 }),
-				} => AccountId32 { network: Any, id: *account_32 },
-				_ => Err(Error::<T>::Unsupported)?,
-			};
-
-			let local_location = MultiLocation { parents: 0, interior: X1(inside) };
-
-			Ok(local_location)
-		}
-
-		pub fn account_32_to_parent_location(
-			account_32: [u8; 32],
-		) -> Result<MultiLocation, Error<T>> {
-			let parent_location = MultiLocation {
-				parents: 1,
-				interior: X1(AccountId32 { network: Any, id: account_32 }),
-			};
-
-			Ok(parent_location)
-		}
-
-		pub fn account_32_to_parachain_location(
-			account_32: [u8; 32],
-			chain_id: u32,
-		) -> Result<MultiLocation, Error<T>> {
-			let parachain_location = MultiLocation {
-				parents: 1,
-				interior: X2(Parachain(chain_id), AccountId32 { network: Any, id: account_32 }),
-			};
-
-			Ok(parachain_location)
-		}
-
-		pub fn multilocation_to_account_20(who: &MultiLocation) -> Result<[u8; 20], Error<T>> {
-			// Get the delegator account id in Moonriver/Moonbeam network
-			let account_20 = match who {
-				MultiLocation {
-					parents: _,
-					interior:
-						X2(Parachain(_), AccountKey20 { network: _network_id, key: account_id }),
-				} => account_id,
-				_ => Err(Error::<T>::AccountNotExist)?,
-			};
-			Ok(*account_20)
-		}
-
-		pub fn multilocation_to_h160_account(who: &MultiLocation) -> Result<H160, Error<T>> {
-			// Get the delegator account id in Moonriver/Moonbeam network
-			let account_20 = Self::multilocation_to_account_20(who)?;
-			let account_h160 =
-				H160::decode(&mut &account_20[..]).map_err(|_| Error::<T>::DecodingError)?;
-			Ok(account_h160)
-		}
-
-		/// **************************************/
-		/// ****** XCM confirming Functions ******/
-		/// **************************************/
-		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
-			let mut counter = 0u32;
-
-			// Deal with DelegatorLedgerXcmUpdateQueue storage
-			for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
-				if counter >= T::MaxTypeEntryPerBlock::get() {
-					break;
-				}
-
-				let updated = Self::get_ledger_update_agent_then_process(query_id, false)?;
-				if updated {
-					counter = counter.saturating_add(1);
-				}
-			}
-
-			// Deal with ValidatorsByDelegator storage
-			for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
-				if counter >= T::MaxTypeEntryPerBlock::get() {
-					break;
-				}
-				let updated =
-					Self::get_validators_by_delegator_update_agent_then_process(query_id, false)?;
-
-				if updated {
-					counter = counter.saturating_add(1);
-				}
-			}
-
-			Ok(counter)
-		}
-
-		pub fn get_ledger_update_agent_then_process(
-			query_id: QueryId,
-			manual_mode: bool,
-		) -> Result<bool, Error<T>> {
-			// See if the query exists. If it exists, call corresponding chain storage update
-			// function.
-			let (entry, timeout) = Self::get_delegator_ledger_update_entry(query_id)
-				.ok_or(Error::<T>::QueryNotExist)?;
-
-			let now = frame_system::Pallet::<T>::block_number();
-			let mut updated = true;
-			if now <= timeout {
-				let currency_id = match entry.clone() {
-					LedgerUpdateEntry::Substrate(substrate_entry) =>
-						Some(substrate_entry.currency_id),
-					LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-					LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-						Some(parachain_staking_entry.currency_id),
-				}
-				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
-
-				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-				updated = staking_agent.check_delegator_ledger_query_response(
-					query_id,
-					entry,
-					manual_mode,
-					currency_id,
-				)?;
-			} else {
-				Self::do_fail_delegator_ledger_query_response(query_id)?;
-			}
-
-			Ok(updated)
-		}
-
-		pub fn get_validators_by_delegator_update_agent_then_process(
-			query_id: QueryId,
-			manual_mode: bool,
-		) -> Result<bool, Error<T>> {
-			// See if the query exists. If it exists, call corresponding chain storage update
-			// function.
-			let (entry, timeout) = Self::get_validators_by_delegator_update_entry(query_id)
-				.ok_or(Error::<T>::QueryNotExist)?;
-
-			let now = frame_system::Pallet::<T>::block_number();
-			let mut updated = true;
-			if now <= timeout {
-				let currency_id = match entry.clone() {
-					ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
-						Some(substrate_entry.currency_id),
-				}
-				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
-
-				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-				updated = staking_agent.check_validators_by_delegator_query_response(
-					query_id,
-					entry,
-					manual_mode,
-				)?;
-			} else {
-				Self::do_fail_validators_by_delegator_query_response(query_id)?;
-			}
-			Ok(updated)
-		}
-
-		fn do_fail_delegator_ledger_query_response(query_id: QueryId) -> Result<(), Error<T>> {
-			// See if the query exists. If it exists, call corresponding chain storage update
-			// function.
-			let (entry, _) = Self::get_delegator_ledger_update_entry(query_id)
-				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry {
-				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-				LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-					Some(parachain_staking_entry.currency_id),
-			}
-			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
-
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.fail_delegator_ledger_query_response(query_id)?;
-
-			Ok(())
-		}
-
-		fn do_fail_validators_by_delegator_query_response(
-			query_id: QueryId,
-		) -> Result<(), Error<T>> {
-			// See if the query exists. If it exists, call corresponding chain storage update
-			// function.
-			let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
-				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry {
-				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
-					Some(substrate_entry.currency_id),
-			}
-			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
-
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.fail_validators_by_delegator_query_response(query_id)?;
-
-			Ok(())
-		}
-
-		pub fn derivative_account_id_20(who: [u8; 20], index: u16) -> H160 {
-			let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-			let sub_id: [u8; 20] = Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-				.expect("infinite length input; no invalid inputs for type; qed");
-
-			H160::from_slice(sub_id.as_slice())
-		}
 	}
-}
 
-impl<T: Config> SlpOperator<CurrencyId> for Pallet<T> {
-	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
-		DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
+	// Functions to be called by other pallets.
+	impl<T: Config> SlpOperator<CurrencyId> for Pallet<T> {
+		fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
+			DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
+		}
 	}
 }

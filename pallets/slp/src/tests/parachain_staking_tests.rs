@@ -80,13 +80,9 @@ fn initialize_parachain_staking_delegator() {
 		};
 
 		// Set minimums and maximums
-		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::signed(ALICE),
-			BNC,
-			Some(mins_and_maxs)
-		));
+		assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), BNC, Some(mins_and_maxs)));
 
-		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC));
+		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC, None));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(BNC), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(BNC, 0),
@@ -153,7 +149,7 @@ fn parachain_staking_setup() {
 	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), BNC, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC,));
+	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), BNC, None));
 
 	// update some BNC balance to treasury account
 	assert_ok!(Tokens::set_balance(
@@ -1129,11 +1125,7 @@ fn parachain_staking_unbond_confirm_works() {
 			Error::<Runtime>::RequestNotDue
 		);
 
-		assert_ok!(Slp::fail_delegator_ledger_query_response(
-			Origin::signed(ALICE),
-			BNC,
-			query_id
-		),);
+		assert_ok!(Slp::fail_delegator_ledger_query_response(Origin::signed(ALICE), BNC, query_id),);
 
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
@@ -1268,11 +1260,7 @@ fn parachain_staking_unbond_all_confirm_works() {
 			Error::<Runtime>::LeavingNotDue
 		);
 
-		assert_ok!(Slp::fail_delegator_ledger_query_response(
-			Origin::signed(ALICE),
-			BNC,
-			query_id
-		),);
+		assert_ok!(Slp::fail_delegator_ledger_query_response(Origin::signed(ALICE), BNC, query_id),);
 
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
@@ -2109,11 +2097,7 @@ fn add_validator_and_remove_validator_works() {
 		};
 
 		// Set minimums and maximums
-		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::signed(ALICE),
-			BNC,
-			Some(mins_and_maxs)
-		));
+		assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), BNC, Some(mins_and_maxs)));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
