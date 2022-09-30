@@ -36,7 +36,8 @@ use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
 use node_primitives::{
-	AccountId, Balance, Block, BlockNumber, CurrencyId,Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
+	AccountId, Balance, Block, BlockNumber, CurrencyId, Hash, Header, Nonce,
+	ParaId as BifrostParaId, PoolId,
 };
 use polkadot_service::CollatorPair;
 use sc_client_api::{AuxStore, Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
