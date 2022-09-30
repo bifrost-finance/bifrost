@@ -629,14 +629,14 @@ pub mod pallet {
 				});
 			}
 
-			match T::RelayChainToken::get() {
+			match token_id {
 				CurrencyId::Token(token_symbol) =>
-					if T::CurrencyIdRegister::check_vstoken_registered(token_symbol) {
-						T::CurrencyIdRegister::register_vstoken_metadata(token_symbol)?;
+					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
+						T::CurrencyIdRegister::register_vtoken_metadata(token_symbol)?;
 					},
 				CurrencyId::Token2(token_id) =>
-					if T::CurrencyIdRegister::check_vstoken2_registered(token_id) {
-						T::CurrencyIdRegister::register_vstoken2_metadata(token_id)?;
+					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
+						T::CurrencyIdRegister::register_vtoken2_metadata(token_id)?;
 					},
 				_ => (),
 			}
