@@ -220,6 +220,8 @@ fn kusama_setup<
 		),
 		validators_reward_maximum: 300u32,
 		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		delegators_maximum: 0,
+		validators_maximum: 0,
 	};
 
 	// Set minimums and maximums
@@ -785,6 +787,8 @@ benchmarks! {
 		delegator_active_staking_maximum: BalanceOf::<T>::unique_saturated_from(200_000_000_000_000_000_000u128),
 		validators_reward_maximum: 300u32,
 		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(500_000_000u128),
+		delegators_maximum: 0,
+		validators_maximum: 0
 	};
 		let call = Call::<T>::set_minimums_and_maximums {
 			currency_id:KSM,

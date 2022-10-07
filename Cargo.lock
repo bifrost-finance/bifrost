@@ -498,6 +498,7 @@ dependencies = [
 name = "bifrost-asset-registry"
 version = "0.8.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

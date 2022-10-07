@@ -216,6 +216,9 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"bifrost-slp/runtime-benchmarks",
+	"bifrost-salp/runtime-benchmarks",
+	"bifrost-vtoken-minting/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 

@@ -1740,6 +1740,7 @@ impl bifrost_asset_registry::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = MoreThanHalfCouncil;
+	type WeightInfo = bifrost_asset_registry::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -2221,6 +2222,7 @@ mod benches {
 		[bifrost_farming, Farming]
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_slp, Slp]
+		[bifrost_asset_registry, AssetRegistry]
 	);
 }
 

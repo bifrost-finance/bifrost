@@ -50,8 +50,13 @@ use xcm_executor::{traits::WeightTrader, Assets};
 
 mod mock;
 mod tests;
+pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 pub use pallet::*;
+pub use weights::WeightInfo;
 
 /// Type alias for currency balance.
 pub type BalanceOf<T> =
@@ -71,6 +76,9 @@ pub mod pallet {
 
 		/// Required origin for registering asset.
 		type RegisterOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Weight information for the extrinsics in this module.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
@@ -178,7 +186,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_foreign_asset())]
 		pub fn register_foreign_asset(
 			origin: OriginFor<T>,
 			location: Box<VersionedMultiLocation>,
@@ -198,7 +206,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::update_foreign_asset())]
 		pub fn update_foreign_asset(
 			origin: OriginFor<T>,
 			foreign_asset_id: ForeignAssetId,
@@ -219,7 +227,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_native_asset())]
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -239,7 +247,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::update_native_asset())]
 		pub fn update_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -259,7 +267,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_token_metadata())]
 		pub fn register_token_metadata(
 			origin: OriginFor<T>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
@@ -273,7 +281,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_vtoken_metadata())]
 		pub fn register_vtoken_metadata(origin: OriginFor<T>, token_id: TokenId) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -288,7 +296,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_vstoken_metadata())]
 		pub fn register_vstoken_metadata(
 			origin: OriginFor<T>,
 			token_id: TokenId,
@@ -306,7 +314,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_vsbond_metadata())]
 		pub fn register_vsbond_metadata(
 			origin: OriginFor<T>,
 			token_id: TokenId,
@@ -335,7 +343,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::weight(1000000)]
+		#[pallet::weight(T::WeightInfo::register_multilocation())]
 		pub fn register_multilocation(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
