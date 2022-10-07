@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2022-10-07, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro.local`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `git-actions`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -74,14 +74,14 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn register_foreign_asset() -> Weight {
-		(23_000_000 as Weight)
+		(116_430_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn update_foreign_asset() -> Weight {
-		(18_000_000 as Weight)
+		(99_783_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
@@ -89,7 +89,7 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn register_native_asset() -> Weight {
-		(22_000_000 as Weight)
+		(112_008_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
@@ -97,32 +97,32 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn update_native_asset() -> Weight {
-		(23_000_000 as Weight)
+		(120_119_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	// Storage: AssetRegistry NextTokenId (r:1 w:1)
 	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:1)
 	fn register_token_metadata() -> Weight {
-		(17_000_000 as Weight)
+		(92_672_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vtoken_metadata() -> Weight {
-		(19_000_000 as Weight)
+		(95_643_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vstoken_metadata() -> Weight {
-		(18_000_000 as Weight)
+		(96_277_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vsbond_metadata() -> Weight {
-		(18_000_000 as Weight)
+		(98_679_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -131,7 +131,7 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry CurrencyIdToWeights (r:0 w:1)
 	fn register_multilocation() -> Weight {
-		(14_000_000 as Weight)
+		(61_509_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
@@ -144,14 +144,14 @@ impl WeightInfo for () {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn register_foreign_asset() -> Weight {
-		(23_000_000 as Weight)
+		(116_430_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn update_foreign_asset() -> Weight {
-		(18_000_000 as Weight)
+		(99_783_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
 	}
@@ -159,7 +159,7 @@ impl WeightInfo for () {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn register_native_asset() -> Weight {
-		(22_000_000 as Weight)
+		(112_008_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
@@ -167,32 +167,32 @@ impl WeightInfo for () {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
 	fn update_native_asset() -> Weight {
-		(23_000_000 as Weight)
+		(120_119_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
 	// Storage: AssetRegistry NextTokenId (r:1 w:1)
 	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:1)
 	fn register_token_metadata() -> Weight {
-		(17_000_000 as Weight)
+		(92_672_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vtoken_metadata() -> Weight {
-		(19_000_000 as Weight)
+		(95_643_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vstoken_metadata() -> Weight {
-		(18_000_000 as Weight)
+		(96_277_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
 	fn register_vsbond_metadata() -> Weight {
-		(18_000_000 as Weight)
+		(98_679_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
@@ -201,7 +201,7 @@ impl WeightInfo for () {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry CurrencyIdToWeights (r:0 w:1)
 	fn register_multilocation() -> Weight {
-		(14_000_000 as Weight)
+		(61_509_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
 	}
