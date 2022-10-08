@@ -2145,7 +2145,7 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>} = 114,
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
