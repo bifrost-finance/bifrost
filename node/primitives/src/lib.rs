@@ -152,6 +152,9 @@ pub enum TimeUnit {
 	SlashingSpan(#[codec(compact)] u32),
 	// Moonriver staking time unit
 	Round(#[codec(compact)] u32),
+	// 1000 blocks. Can be used by Filecoin.
+	// 30 seconds per block. Kblock means 8.33 hours.
+	Kblock(#[codec(compact)] u32),
 }
 
 impl Default for TimeUnit {
@@ -166,6 +169,7 @@ impl PartialEq for TimeUnit {
 			(Self::Era(a), Self::Era(b)) => a.eq(b),
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.eq(b),
 			(Self::Round(a), Self::Round(b)) => a.eq(b),
+			(Self::Kblock(a), Self::Kblock(b)) => a.eq(b),
 			_ => false,
 		}
 	}
@@ -177,6 +181,7 @@ impl Ord for TimeUnit {
 			(Self::Era(a), Self::Era(b)) => a.cmp(b),
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.cmp(b),
 			(Self::Round(a), Self::Round(b)) => a.cmp(b),
+			(Self::Kblock(a), Self::Kblock(b)) => a.cmp(b),
 			_ => sp_std::cmp::Ordering::Less,
 		}
 	}
@@ -188,6 +193,7 @@ impl PartialOrd for TimeUnit {
 			(Self::Era(a), Self::Era(b)) => Some(a.cmp(b)),
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),
 			(Self::Round(a), Self::Round(b)) => Some(a.cmp(b)),
+			(Self::Kblock(a), Self::Kblock(b)) => Some(a.cmp(b)),
 			_ => None,
 		}
 	}
