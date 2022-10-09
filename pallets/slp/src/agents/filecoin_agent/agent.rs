@@ -19,9 +19,9 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, Hash,
-	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -356,16 +356,31 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// Make token from Bifrost chain account to the staking chain account.
-	/// Receiving account must be one of the currency_id delegators.
+	/// For filecoin, transfer_to means transfering newly minted amount to miner
+	/// accounts. It actually burn/withdraw the corresponding amount from entrance_account.
 	fn transfer_to(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// "from" account must be entrance account
+		let from_account = Pallet::<T>::native_multilocation_to_account(from)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
+
+		// "to" account must be one of the delegators(miners) accounts
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// burn the amount
+		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
+			.map_err(|_e| Error::<T>::NotEnoughBalance)?;
+
+		Ok(())
 	}
 
 	/// For filecoin, instead of delegator(miner) account, "who" should be a
