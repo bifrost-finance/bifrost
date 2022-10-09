@@ -235,6 +235,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000),
 		(Token(PHA), 4 * DOLLARS / 100),
 		(Token(MOVR), DOLLARS / 1000_000),
+		(Token(DOT), DOLLARS / 1000_000),
 	];
 	let vcurrency = vec![BNC, KSM, MOVR];
 
@@ -367,6 +368,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000),
 		(Token(PHA), 4 * DOLLARS / 100),
 		(Token(MOVR), DOLLARS / 1000_000),
+		(Token(DOT), DOLLARS / 1000_000),
 	];
 	let vcurrency = vec![BNC, KSM, MOVR];
 
@@ -509,6 +511,7 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000),
 		(Token(PHA), 4 * DOLLARS / 100),
 		(Token(MOVR), DOLLARS / 1000_000),
+		(Token(DOT), DOLLARS / 1000_000),
 	];
 	let vcurrency = vec![BNC, KSM, MOVR];
 
@@ -668,6 +671,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000),
 		(Token(PHA), 4 * DOLLARS / 100),
 		(Token(MOVR), DOLLARS / 1000_000),
+		(Token(DOT), DOLLARS / 1000_000),
 	];
 	let vcurrency = vec![BNC, KSM, MOVR];
 
