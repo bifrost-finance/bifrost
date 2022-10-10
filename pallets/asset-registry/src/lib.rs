@@ -32,8 +32,10 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	AssetIds, CurrencyId, CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister,
-	ForeignAssetId, LeasePeriod, ParaId, TokenId, TokenInfo, TokenSymbol,
+	AssetIds, CurrencyId,
+	CurrencyId::{Native, Token, Token2},
+	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
+	ParaId, TokenId, TokenInfo, TokenSymbol,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
@@ -175,8 +177,8 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub currency: Vec<(CurrencyId, BalanceOf<T>)>,
-		pub vcurrency: Vec<TokenSymbol>,
-		pub vsbond: Vec<(TokenSymbol, u32, u32, u32)>,
+		pub vcurrency: Vec<CurrencyId>,
+		pub vsbond: Vec<(CurrencyId, u32, u32, u32)>,
 		pub phantom: PhantomData<T>,
 	}
 
@@ -216,18 +218,42 @@ pub mod pallet {
 				Pallet::<T>::do_register_metadata(*currency_id, &metadata).expect("Token register");
 			}
 
-			for (symbol, para_id, first_slot, last_slot) in self.vsbond.iter() {
-				AssetIdMaps::<T>::register_vsbond_metadata(
-					*symbol,
-					*para_id,
-					*first_slot,
-					*last_slot,
-				)
-				.expect("VSBond register");
+			for (currency, para_id, first_slot, last_slot) in self.vsbond.iter() {
+				match currency {
+					Token(symbol) | Native(symbol) => {
+						AssetIdMaps::<T>::register_vsbond_metadata(
+							*symbol,
+							*para_id,
+							*first_slot,
+							*last_slot,
+						)
+						.expect("VSBond register");
+					},
+					Token2(token_id) => {
+						AssetIdMaps::<T>::register_vsbond2_metadata(
+							*token_id,
+							*para_id,
+							*first_slot,
+							*last_slot,
+						)
+						.expect("VToken register");
+					},
+					_ => (),
+				}
 			}
 
-			for &symbol in self.vcurrency.iter() {
-				AssetIdMaps::<T>::register_vtoken_metadata(symbol).expect("VToken register");
+			for &currency in self.vcurrency.iter() {
+				match currency {
+					Token(symbol) | Native(symbol) => {
+						AssetIdMaps::<T>::register_vtoken_metadata(symbol)
+							.expect("VToken register");
+					},
+					Token2(token_id) => {
+						AssetIdMaps::<T>::register_vtoken2_metadata(token_id)
+							.expect("VToken register");
+					},
+					_ => (),
+				}
 			}
 
 			AssetIdMaps::<T>::register_vstoken_metadata(TokenSymbol::KSM)

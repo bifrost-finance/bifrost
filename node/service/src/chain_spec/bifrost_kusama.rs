@@ -124,11 +124,7 @@ pub fn bifrost_genesis(
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
 	salp_lite_multisig_key_salp: AccountId,
-	asset_registry: (
-		Vec<(CurrencyId, Balance)>,
-		Vec<TokenSymbol>,
-		Vec<(TokenSymbol, u32, u32, u32)>,
-	),
+	asset_registry: (Vec<(CurrencyId, Balance)>, Vec<CurrencyId>, Vec<(CurrencyId, u32, u32, u32)>),
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -225,48 +221,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let salp_lite_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
-	// Token
-	let currency = vec![
-		(Native(BNC), DOLLARS / 100),
-		(Stable(KUSD), DOLLARS / 10_000),
-		(Token(KSM), DOLLARS / 10_000),
-		(Token(ZLK), DOLLARS / 1000_000),
-		(Token(KAR), DOLLARS / 10_000),
-		(Token(RMRK), DOLLARS / 1000_000),
-		(Token(PHA), 4 * DOLLARS / 100),
-		(Token(MOVR), DOLLARS / 1000_000),
-		(Token(DOT), DOLLARS / 1000_000),
-	];
-	let vcurrency = vec![BNC, KSM, MOVR];
-
-	// vsBond
-	let vsbond = vec![
-		// Token, ParaId, first_slot, last_slot
-		(BNC, 2001u32, 13u32, 20u32),
-		(KSM, 2011, 19, 26),
-		(KSM, 2085, 15, 22),
-		(KSM, 2087, 17, 24),
-		(KSM, 2088, 15, 22),
-		(KSM, 2090, 15, 22),
-		(KSM, 2092, 15, 22),
-		(KSM, 2095, 17, 24),
-		(KSM, 2096, 17, 24),
-		(KSM, 2100, 18, 25),
-		(KSM, 2101, 18, 25),
-		(KSM, 2102, 19, 26),
-		(KSM, 2102, 21, 28),
-		(KSM, 2102, 20, 27),
-		(KSM, 2106, 19, 26),
-		(KSM, 2114, 20, 27),
-		(KSM, 2118, 22, 29),
-		(KSM, 2119, 22, 29),
-		(KSM, 2121, 22, 29),
-		(KSM, 2124, 23, 30),
-		(KSM, 2125, 23, 30),
-		(KSM, 2127, 23, 30),
-		(KSM, 2129, 24, 31),
-	];
-
 	bifrost_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -282,7 +236,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		salp_lite_multisig,
-		(currency, vcurrency, vsbond),
+		(vec![], vec![], vec![]),
 	)
 }
 
@@ -370,34 +324,34 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(MOVR), DOLLARS / 1000_000),
 		(Token(DOT), DOLLARS / 1000_000),
 	];
-	let vcurrency = vec![BNC, KSM, MOVR];
+	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
 
 	// vsBond
 	let vsbond = vec![
 		// Token, ParaId, first_slot, last_slot
-		(BNC, 2001u32, 13u32, 20u32),
-		(KSM, 2011, 19, 26),
-		(KSM, 2085, 15, 22),
-		(KSM, 2087, 17, 24),
-		(KSM, 2088, 15, 22),
-		(KSM, 2090, 15, 22),
-		(KSM, 2092, 15, 22),
-		(KSM, 2095, 17, 24),
-		(KSM, 2096, 17, 24),
-		(KSM, 2100, 18, 25),
-		(KSM, 2101, 18, 25),
-		(KSM, 2102, 19, 26),
-		(KSM, 2102, 21, 28),
-		(KSM, 2102, 20, 27),
-		(KSM, 2106, 19, 26),
-		(KSM, 2114, 20, 27),
-		(KSM, 2118, 22, 29),
-		(KSM, 2119, 22, 29),
-		(KSM, 2121, 22, 29),
-		(KSM, 2124, 23, 30),
-		(KSM, 2125, 23, 30),
-		(KSM, 2127, 23, 30),
-		(KSM, 2129, 24, 31),
+		(Native(BNC), 2001u32, 13u32, 20u32),
+		(Token(KSM), 2011, 19, 26),
+		(Token(KSM), 2085, 15, 22),
+		(Token(KSM), 2087, 17, 24),
+		(Token(KSM), 2088, 15, 22),
+		(Token(KSM), 2090, 15, 22),
+		(Token(KSM), 2092, 15, 22),
+		(Token(KSM), 2095, 17, 24),
+		(Token(KSM), 2096, 17, 24),
+		(Token(KSM), 2100, 18, 25),
+		(Token(KSM), 2101, 18, 25),
+		(Token(KSM), 2102, 19, 26),
+		(Token(KSM), 2102, 21, 28),
+		(Token(KSM), 2102, 20, 27),
+		(Token(KSM), 2106, 19, 26),
+		(Token(KSM), 2114, 20, 27),
+		(Token(KSM), 2118, 22, 29),
+		(Token(KSM), 2119, 22, 29),
+		(Token(KSM), 2121, 22, 29),
+		(Token(KSM), 2124, 23, 30),
+		(Token(KSM), 2125, 23, 30),
+		(Token(KSM), 2127, 23, 30),
+		(Token(KSM), 2129, 24, 31),
 	];
 
 	bifrost_genesis(
@@ -501,48 +455,6 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
 	];
 
-	// Token
-	let currency = vec![
-		(Native(BNC), DOLLARS / 100),
-		(Stable(KUSD), DOLLARS / 10_000),
-		(Token(KSM), DOLLARS / 10_000),
-		(Token(ZLK), DOLLARS / 1000_000),
-		(Token(KAR), DOLLARS / 10_000),
-		(Token(RMRK), DOLLARS / 1000_000),
-		(Token(PHA), 4 * DOLLARS / 100),
-		(Token(MOVR), DOLLARS / 1000_000),
-		(Token(DOT), DOLLARS / 1000_000),
-	];
-	let vcurrency = vec![BNC, KSM, MOVR];
-
-	// vsBond
-	let vsbond = vec![
-		// Token, ParaId, first_slot, last_slot
-		(BNC, 2001u32, 13u32, 20u32),
-		(KSM, 2011, 19, 26),
-		(KSM, 2085, 15, 22),
-		(KSM, 2087, 17, 24),
-		(KSM, 2088, 15, 22),
-		(KSM, 2090, 15, 22),
-		(KSM, 2092, 15, 22),
-		(KSM, 2095, 17, 24),
-		(KSM, 2096, 17, 24),
-		(KSM, 2100, 18, 25),
-		(KSM, 2101, 18, 25),
-		(KSM, 2102, 19, 26),
-		(KSM, 2102, 21, 28),
-		(KSM, 2102, 20, 27),
-		(KSM, 2106, 19, 26),
-		(KSM, 2114, 20, 27),
-		(KSM, 2118, 22, 29),
-		(KSM, 2119, 22, 29),
-		(KSM, 2121, 22, 29),
-		(KSM, 2124, 23, 30),
-		(KSM, 2125, 23, 30),
-		(KSM, 2127, 23, 30),
-		(KSM, 2129, 24, 31),
-	];
-
 	bifrost_genesis(
 		invulnerables,
 		vec![],
@@ -554,7 +466,7 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		salp_lite_multisig,
-		(currency, vcurrency, vsbond),
+		(vec![], vec![], vec![]),
 	)
 }
 
@@ -661,47 +573,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	let salp_lite_multisig: AccountId =
 		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 
-	// Token
-	let currency = vec![
-		(Native(BNC), DOLLARS / 100),
-		(Stable(KUSD), DOLLARS / 10_000),
-		(Token(KSM), DOLLARS / 10_000),
-		(Token(ZLK), DOLLARS / 1000_000),
-		(Token(KAR), DOLLARS / 10_000),
-		(Token(RMRK), DOLLARS / 1000_000),
-		(Token(PHA), 4 * DOLLARS / 100),
-		(Token(MOVR), DOLLARS / 1000_000),
-		(Token(DOT), DOLLARS / 1000_000),
-	];
-	let vcurrency = vec![BNC, KSM, MOVR];
-
-	// vsBond
-	let vsbond = vec![
-		// Token, ParaId, first_slot, last_slot
-		(BNC, 2001u32, 13u32, 20u32),
-		(KSM, 2011, 19, 26),
-		(KSM, 2085, 15, 22),
-		(KSM, 2087, 17, 24),
-		(KSM, 2088, 15, 22),
-		(KSM, 2090, 15, 22),
-		(KSM, 2092, 15, 22),
-		(KSM, 2095, 17, 24),
-		(KSM, 2096, 17, 24),
-		(KSM, 2100, 18, 25),
-		(KSM, 2101, 18, 25),
-		(KSM, 2102, 19, 26),
-		(KSM, 2102, 21, 28),
-		(KSM, 2102, 20, 27),
-		(KSM, 2106, 19, 26),
-		(KSM, 2114, 20, 27),
-		(KSM, 2118, 22, 29),
-		(KSM, 2119, 22, 29),
-		(KSM, 2121, 22, 29),
-		(KSM, 2124, 23, 30),
-		(KSM, 2125, 23, 30),
-		(KSM, 2127, 23, 30),
-		(KSM, 2129, 24, 31),
-	];
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
@@ -714,7 +585,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![], // technical committee membership
 		salp_multisig,
 		salp_lite_multisig,
-		(currency, vcurrency, vsbond),
+		(vec![], vec![], vec![]),
 	)
 }
 
