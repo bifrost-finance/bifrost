@@ -72,6 +72,9 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-kusama-rococo" =>
 			Box::new(service::chain_spec::bifrost_kusama::rococo_testnet_config()?),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-kusama-rococo-local" =>
+			Box::new(service::chain_spec::bifrost_kusama::rococo_local_config()?),
 
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot" =>

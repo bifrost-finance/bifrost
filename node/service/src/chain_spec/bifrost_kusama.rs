@@ -39,7 +39,10 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
 use serde_json as json;
-use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_core::{
+	crypto::{Ss58Codec, UncheckedInto},
+	sr25519,
+};
 use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
@@ -395,7 +398,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn stage_config_genesis(id: ParaId) -> GenesisConfig {
+fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
@@ -466,7 +469,12 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		salp_lite_multisig,
-		(vec![], vec![], vec![]),
+		(vec![
+			(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
+			(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+		],
+		vec![],
+		vec![],)
 	)
 }
 
@@ -474,14 +482,101 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost K Rococo",
 		"bifrost-k-rococo",
-		ChainType::Local,
-		move || stage_config_genesis(PARA_ID.into()),
+		ChainType::Live,
+		move || rococo_testnet_config_genesis(2030.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+	))
+}
+
+fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
+		(
+			// gXCcrjjFX3RPyhHYgwZDmw8oe4JFpd5anko3nTY8VrmnJpe
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			AuraId::from_ss58check("gXCcrjjFX3RPyhHYgwZDmw8oe4JFpd5anko3nTY8VrmnJpe").unwrap(),
+			ENDOWMENT(),
+		),
+		(
+			// ex3LnZb7o3XEyCn7kycUS2Aho3QoHDk5xcTzRKs4WwY1MvQ
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			AuraId::from_ss58check("ex3LnZb7o3XEyCn7kycUS2Aho3QoHDk5xcTzRKs4WwY1MvQ").unwrap(),
+			ENDOWMENT(),
+		),
+		(
+			// ezhQxhdSnw9sacSeYZwU6UTXvinnb6bWjsoXRcyLv84JY7b
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			AuraId::from_ss58check("ezhQxhdSnw9sacSeYZwU6UTXvinnb6bWjsoXRcyLv84JY7b").unwrap(),
+			ENDOWMENT(),
+		),
+		(
+			// cpRV9EbeoyqAfTTu1yumUPtg6NH7ehWwn2mNsViEydqL2Rw
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
+			AuraId::from_ss58check("cpRV9EbeoyqAfTTu1yumUPtg6NH7ehWwn2mNsViEydqL2Rw").unwrap(),
+			ENDOWMENT(),
+		),
+	];
+
+	let endowed_accounts: Vec<AccountId> = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+
+	let salp_multisig: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
+	let salp_lite_multisig: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
+
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+
+	bifrost_genesis(
+		invulnerables,
+		vec![],
+		balances,
+		vec![],
+		id,
+		vec![],
+		council_membership,
+		technical_committee_membership,
+		salp_multisig,
+		salp_lite_multisig,
+		(
+			vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
+				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+			],
+			vec![],
+			vec![],
+		),
+	)
+}
+
+pub fn rococo_local_config() -> Result<ChainSpec, String> {
+	Ok(ChainSpec::from_genesis(
+		"Bifrost K Rococo Local",
+		"bifrost-k-rococo-local",
+		ChainType::Local,
+		move || rococo_local_config_genesis(2030.into()),
+		vec![],
+		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
+		Some(DEFAULT_PROTOCOL_ID),
+		None,
+		Some(bifrost_kusama_properties()),
+		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
 	))
 }
 
