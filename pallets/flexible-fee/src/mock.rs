@@ -92,6 +92,7 @@ impl bifrost_asset_registry::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
+	type WeightInfo = ();
 }
 
 parameter_types! {

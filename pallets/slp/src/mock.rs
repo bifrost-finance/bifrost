@@ -254,6 +254,7 @@ impl bifrost_asset_registry::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type WeightInfo = ();
 }
 
 ord_parameter_types! {

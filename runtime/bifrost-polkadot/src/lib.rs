@@ -138,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 958,
+	spec_version: 959,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1392,7 +1392,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance =
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
@@ -1407,13 +1407,14 @@ impl bifrost_salp::Config for Runtime {
 impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_call_switchgear::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = MoreThanHalfCouncil;
+	type WeightInfo = bifrost_asset_registry::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1510,7 +1511,7 @@ impl bifrost_farming::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_system_maker::Config for Runtime {
@@ -1843,8 +1844,8 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[pallet_vesting, Vesting]
-		[bifrost_call_switchgear, CallSwitchgear],
-		[bifrost_vtoken_minting, VtokenMinting],
+		[bifrost_call_switchgear, CallSwitchgear]
+		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_slp, Slp]
 		[bifrost_salp, Salp]
 	);

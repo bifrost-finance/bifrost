@@ -32,7 +32,7 @@ use zenlink_protocol::{AssetId, LOCAL, NATIVE};
 
 use crate::{
 	traits::{CurrencyIdExt, TokenInfo},
-	LeasePeriod, ParaId, TryConvertFrom,
+	LeasePeriod, ParaId, PoolId, TryConvertFrom,
 };
 
 pub const DOT_TOKEN_ID: u8 = 0u8;
@@ -179,7 +179,7 @@ macro_rules! create_currency_id {
 					| Self::VToken2(tk_id)
 					| Self::VSToken2(tk_id)
 					| Self::VSBond2(tk_id, ..) => tk_id as u64,
-					Self::ForeignAsset(..) | Self::LPToken(..) => 0u64
+					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) => 0u64
 				};
 
 		 		let discr = (c_discr << 8) + t_discr;
@@ -193,6 +193,7 @@ macro_rules! create_currency_id {
 					| Self::Token2(..)
 					| Self::VToken2(..)
 					| Self::VSToken2(..)
+					| Self::StableLpToken(..)
 					=> (0x0000_ffff & discr) as u64,
 					Self::VSBond(_, pid, lp1, lp2) => {
 						// NOTE: ParaId representation
@@ -245,6 +246,7 @@ macro_rules! create_currency_id {
 						let _c2: CurrencyId = c2_u64.try_into().unwrap_or_default();
 						Some(stringify!(_c1.name(), ",", _c2.name()))
 					},
+					CurrencyId::StableLpToken(..) => Some(stringify!("stable_pool_lp",)),
 					_ => None
 				}
 			}
@@ -258,6 +260,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => Some(stringify!($symbol)),)*
 					CurrencyId::LPToken(_ts1, _, _ts2, _) => Some(stringify!(_ts1, ",", _ts2)),
+					CurrencyId::StableLpToken(..) => Some(stringify!("stable_pool_lp_")),
 					_ => None
 				}
 			}
@@ -271,6 +274,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Some($deci),)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => Some($deci),)*
 					CurrencyId::LPToken(..) => Some(1u8),
+					CurrencyId::StableLpToken(..) => Some(1u8),
 					_ => None
 				}
 			}
@@ -351,6 +355,7 @@ pub enum CurrencyId {
 	VToken2(TokenId),
 	VSToken2(TokenId),
 	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
+	StableLpToken(PoolId),
 }
 
 impl Default for CurrencyId {
@@ -419,6 +424,7 @@ impl CurrencyId {
 			Self::VToken2(..) => 9,
 			Self::VSToken2(..) => 10,
 			Self::VSBond2(..) => 11,
+			Self::StableLpToken(..) => 13,
 		}
 	}
 }

@@ -145,7 +145,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
