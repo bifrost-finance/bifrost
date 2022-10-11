@@ -356,18 +356,38 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// Make token from Bifrost chain account to the staking chain account.
-	/// Receiving account must be one of the currency_id delegators.
+	/// For filecoin, transfer_to means transfering newly minted amount to miner
+	/// accounts. It actually burn/withdraw the corresponding amount from entrance_account.
 	fn transfer_to(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// "from" account must be entrance account
+		let from_account = Pallet::<T>::native_multilocation_to_account(from)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
+
+		// "to" account must be one of the delegators(miners) accounts
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// burn the amount
+		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
+			.map_err(|_e| Error::<T>::NotEnoughBalance)?;
+
+		Ok(())
 	}
 
+	/// For filecoin, instead of delegator(miner) account, "who" should be a
+	/// validator(owner) account, since we tune extrange rate once per owner by
+	/// aggregating all its miner accounts' interests.
+	// Filecoin use TimeUnit::Kblock, which means 1000 blocks. Filecoin produces
+	// one block per 30 seconds . Kblock takes around 8.33 hours.
 	fn tune_vtoken_exchange_rate(
 		&self,
 		who: &Option<MultiLocation>,
@@ -376,20 +396,30 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+		let multi_hash = T::Hashing::hash(&who.encode());
 
-		// ensure who is a valid delegator
+		// ensure "who" is a valid validator
+		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
+			ensure!(
+				validator_vec.contains(&(who.clone(), multi_hash)),
+				Error::<T>::ValidatorNotExist
+			);
+		} else {
+			Err(Error::<T>::ValidatorNotExist)?;
+		}
+
+		// Get current TimeUnit.
+		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+			.ok_or(Error::<T>::TimeUnitNotExist)?;
+		// Get DelegatorLatestTuneRecord for the currencyId.
+		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(currency_id, &who);
+		// ensure each delegator can only tune once per TimeUnit at most.
 		ensure!(
-			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
-			Error::<T>::DelegatorNotExist
+			latest_time_unit_op != Some(current_time_unit.clone()),
+			Error::<T>::DelegatorAlreadyTuned
 		);
 
 		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
-
-		// Check whether "who" is an existing delegator.
-		ensure!(
-			DelegatorLedgers::<T>::contains_key(currency_id, who),
-			Error::<T>::DelegatorNotBonded
-		);
 
 		// issue the increased interest amount to the entrance account
 		// Get charged fee value
@@ -408,10 +438,6 @@ impl<T: Config>
 			let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 			T::MultiCurrency::deposit(currency_id, &entrance_account, amount_to_increase)
 				.map_err(|_e| Error::<T>::MultiCurrencyError)?;
-
-			// Get current TimeUnit.
-			let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-				.ok_or(Error::<T>::TimeUnitNotExist)?;
 
 			// Update the DelegatorLatestTuneRecord<T> storage.
 			DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);

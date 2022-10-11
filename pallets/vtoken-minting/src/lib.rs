@@ -769,6 +769,10 @@ pub mod pallet {
 						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
+				TimeUnit::Kblock(kblock_a) => match b {
+					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
 			};
 

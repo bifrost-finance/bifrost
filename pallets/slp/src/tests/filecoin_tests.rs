@@ -414,6 +414,12 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 			Some((1, pct_100))
 		));
 
+		// insert validator into validators list.
+		let multi_hash =
+			<Runtime as frame_system::Config>::Hashing::hash(&location.clone().encode());
+		let validator_list = vec![(location.clone(), multi_hash)];
+		Validators::<Runtime>::insert(FIL, validator_list);
+
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VFIL, &ALICE, 100));
 		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), FIL, 100));
