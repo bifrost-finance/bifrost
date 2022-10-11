@@ -212,6 +212,7 @@ impl bifrost_asset_registry::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type WeightInfo = ();
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
