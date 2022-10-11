@@ -31,7 +31,9 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureSignedBy, RawOrigin};
-use node_primitives::{Amount, Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
+use node_primitives::{
+	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, ParaId, TokenSymbol, TokenSymbol::*,
+};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -69,7 +71,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Config<T>, Event<T>, Storage},
 	}
 );
 
@@ -387,6 +389,32 @@ impl WeightInfo for SalpWeightInfo {
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pub const DOLLARS: Balance = 1_000_000_000_000;
+
+	let currency = vec![
+		(Native(BNC), DOLLARS / 100),
+		(Stable(KUSD), DOLLARS / 10_000),
+		(Token(KSM), DOLLARS / 10_000),
+		(Token(ZLK), DOLLARS / 1000_000),
+		(Token(KAR), DOLLARS / 10_000),
+		(Token(RMRK), DOLLARS / 1000_000),
+		(Token(PHA), 4 * DOLLARS / 100),
+		(Token(MOVR), DOLLARS / 1000_000),
+		(Token(DOT), DOLLARS / 1000_000),
+	];
+	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
+	let vsbond = vec![
+		// Token, ParaId, first_slot, last_slot
+		(CurrencyId::Token(TokenSymbol::KSM), 3000, 2, 9),
+	];
+	bifrost_asset_registry::GenesisConfig::<Test> {
+		currency,
+		vcurrency,
+		vsbond,
+		phantom: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	pallet_sudo::GenesisConfig::<Test> { key: Some(ALICE) }
 		.assimilate_storage(&mut t)
