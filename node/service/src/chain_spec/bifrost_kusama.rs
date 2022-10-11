@@ -469,12 +469,14 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		salp_lite_multisig,
-		(vec![
-			(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
-			(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
-		],
-		vec![],
-		vec![],)
+		(
+			vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
+				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+			],
+			vec![],
+			vec![],
+		),
 	)
 }
 
