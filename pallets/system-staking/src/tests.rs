@@ -17,11 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(test)]
 use crate::{mock::*, *};
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_runtime_common::milli;
 use frame_support::{
 	assert_ok,
 	sp_runtime::{Perbill, Permill},
 };
-use node_primitives::{TimeUnit, VtokenMintingOperator};
+use node_primitives::{TimeUnit, TokenInfo, VtokenMintingOperator};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 #[test]
@@ -119,7 +121,7 @@ fn round_info_should_correct() {
 fn refresh_token_info_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
-
+		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
@@ -153,7 +155,7 @@ fn refresh_token_info_should_work() {
 fn round_process_token() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
-
+		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
@@ -189,7 +191,7 @@ fn round_process_token() {
 fn round_process_token_rollback() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
-
+		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10000));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
@@ -250,4 +252,21 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 
 fn increase_farming_no_gauge(pid: u32) {
 	assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 1000, None));
+}
+
+fn asset_registry() {
+	let items = vec![(KSM, 10 * milli::<Runtime>(KSM))];
+	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
+		(
+			currency_id,
+			AssetMetadata {
+				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				decimals: currency_id.decimals().unwrap_or_default(),
+				minimal_balance: *minimal_balance,
+			},
+		)
+	}) {
+		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
+	}
 }

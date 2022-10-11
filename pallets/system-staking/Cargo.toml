@@ -40,6 +40,7 @@ bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-asset-registry = { path = "../../pallets/asset-registry" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
 
 [features]
 default = ["std"]
@@ -59,6 +60,7 @@ std = [
 	"bifrost-farming/std",
 	"xcm/std",
 	"bifrost-asset-registry/std",
+	"bifrost-runtime-common/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

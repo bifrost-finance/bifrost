@@ -18,8 +18,9 @@
 
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
-	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	CollatorSelectionConfig, CouncilMembershipConfig, GenesisConfig, IndicesConfig,
+	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
+	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -74,6 +75,8 @@ pub fn bifrost_polkadot_genesis(
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
+	council_membership: Vec<AccountId>,
+	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -83,8 +86,14 @@ pub fn bifrost_polkadot_genesis(
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: Default::default(),
-		council_membership: Default::default(),
-		technical_membership: Default::default(),
+		council_membership: CouncilMembershipConfig {
+			members: council_membership.try_into().expect("convert error!"),
+			phantom: Default::default(),
+		},
+		technical_membership: TechnicalMembershipConfig {
+			members: technical_committee_membership.try_into().expect("convert error!"),
+			phantom: Default::default(),
+		},
 		council: Default::default(),
 		technical_committee: Default::default(),
 		treasury: Default::default(),
@@ -134,6 +143,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT())])
 		.collect();
 
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
@@ -146,6 +157,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		council_membership,
+		technical_committee_membership,
 		salp_multisig,
 	)
 }
@@ -193,6 +206,9 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.flat_map(|x| vec![(x.clone(), CurrencyId::Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
 		.collect();
+
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
@@ -208,6 +224,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		council_membership,
+		technical_committee_membership,
 		salp_multisig,
 	)
 }
@@ -273,5 +291,14 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 
-	bifrost_polkadot_genesis(invulnerables, vec![], vec![], id, vec![], salp_multisig)
+	bifrost_polkadot_genesis(
+		invulnerables,
+		vec![],
+		vec![],
+		id,
+		vec![],
+		vec![],
+		vec![],
+		salp_multisig,
+	)
 }

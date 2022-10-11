@@ -32,8 +32,10 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	AssetIds, CurrencyId, CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister,
-	ForeignAssetId, LeasePeriod, ParaId, TokenId, TokenSymbol,
+	AssetIds, CurrencyId,
+	CurrencyId::{Native, Token, Token2},
+	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
+	ParaId, TokenId, TokenInfo, TokenSymbol,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
@@ -171,6 +173,95 @@ pub mod pallet {
 	#[pallet::getter(fn currency_metadatas)]
 	pub type CurrencyMetadatas<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, AssetMetadata<BalanceOf<T>>, OptionQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub currency: Vec<(CurrencyId, BalanceOf<T>)>,
+		pub vcurrency: Vec<CurrencyId>,
+		pub vsbond: Vec<(CurrencyId, u32, u32, u32)>,
+		pub phantom: PhantomData<T>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				currency: Default::default(),
+				vcurrency: Default::default(),
+				vsbond: Default::default(),
+				phantom: PhantomData,
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (currency_id, metadata) in
+				self.currency.iter().map(|(currency_id, minimal_balance)| {
+					(
+						currency_id,
+						AssetMetadata {
+							name: currency_id
+								.name()
+								.map(|s| s.as_bytes().to_vec())
+								.unwrap_or_default(),
+							symbol: currency_id
+								.symbol()
+								.map(|s| s.as_bytes().to_vec())
+								.unwrap_or_default(),
+							decimals: currency_id.decimals().unwrap_or_default(),
+							minimal_balance: *minimal_balance,
+						},
+					)
+				}) {
+				Pallet::<T>::do_register_metadata(*currency_id, &metadata).expect("Token register");
+			}
+
+			for (currency, para_id, first_slot, last_slot) in self.vsbond.iter() {
+				match currency {
+					Token(symbol) | Native(symbol) => {
+						AssetIdMaps::<T>::register_vsbond_metadata(
+							*symbol,
+							*para_id,
+							*first_slot,
+							*last_slot,
+						)
+						.expect("VSBond register");
+					},
+					Token2(token_id) => {
+						AssetIdMaps::<T>::register_vsbond2_metadata(
+							*token_id,
+							*para_id,
+							*first_slot,
+							*last_slot,
+						)
+						.expect("VToken register");
+					},
+					_ => (),
+				}
+			}
+
+			for &currency in self.vcurrency.iter() {
+				match currency {
+					Token(symbol) | Native(symbol) => {
+						AssetIdMaps::<T>::register_vtoken_metadata(symbol)
+							.expect("VToken register");
+					},
+					Token2(token_id) => {
+						AssetIdMaps::<T>::register_vtoken2_metadata(token_id)
+							.expect("VToken register");
+					},
+					_ => (),
+				}
+			}
+
+			AssetIdMaps::<T>::register_vstoken_metadata(TokenSymbol::KSM)
+				.expect("VSToken register");
+			AssetIdMaps::<T>::register_vstoken_metadata(TokenSymbol::DOT)
+				.expect("VSToken register");
+		}
+	}
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]

@@ -21,35 +21,53 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
+use node_primitives::TokenInfo;
 
 #[test]
 fn mint_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_eq!(Tokens::total_issuance(vBNC), 0);
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), BNC, 200));
-		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
-		assert_noop!(
-			VtokenMinting::mint(Some(BOB).into(), BNC, 100),
-			Error::<Runtime>::BelowMinimumMint
-		);
-		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
-		assert_eq!(Balances::free_balance(&entrance_account), 0);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000));
-		assert_eq!(VtokenMinting::token_pool(BNC), 95000000000);
-		assert_eq!(VtokenMinting::minimum_mint(BNC), 200);
-		assert_eq!(Tokens::total_issuance(vBNC), 95000000000);
+		asset_registry();
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000));
+		assert_ok!(VtokenMinting::set_unlock_duration(
+			Origin::signed(ALICE),
+			BNC,
+			TimeUnit::Era(1)
+		));
+		assert_ok!(VtokenMinting::increase_token_pool(BNC, 70000000000));
+		// assert_eq!(VtokenMinting::token_pool(BNC), 70000000000);
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Era(1)));
+		assert_eq!(Tokens::free_balance(vBNC, &BOB), 95000000000);
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vBNC, 20000000000));
+	});
+}
 
-		assert_eq!(Balances::free_balance(&entrance_account), 95000000000);
-		let fee_account: AccountId = <Runtime as Config>::FeeAccount::get();
-		assert_eq!(Balances::free_balance(&fee_account), 5000000000);
+#[test]
+fn redeem_bnc() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		// AssetIdMaps::<Runtime>::register_vtoken_metadata(TokenSymbol::BNC)
+		// 	.expect("VToken register");
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), BNC, 0));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000));
+		assert_ok!(VtokenMinting::set_unlock_duration(
+			Origin::signed(ALICE),
+			BNC,
+			TimeUnit::Era(1)
+		));
+		assert_ok!(VtokenMinting::increase_token_pool(BNC, 70000000000));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Era(1)));
+		assert_eq!(Tokens::free_balance(vBNC, &BOB), 100000000000);
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vBNC, 20000000000));
 	});
 }
 
 #[test]
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 200));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
@@ -336,4 +354,21 @@ fn rebond_by_unlock_id() {
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 300);
 	});
+}
+
+fn asset_registry() {
+	let items = vec![(KSM, 10 * milli::<Runtime>(KSM)), (BNC, 10 * milli::<Runtime>(BNC))];
+	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
+		(
+			currency_id,
+			AssetMetadata {
+				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				decimals: currency_id.decimals().unwrap_or_default(),
+				minimal_balance: *minimal_balance,
+			},
+		)
+	}) {
+		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
+	}
 }
