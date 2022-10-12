@@ -39,10 +39,7 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
 use serde_json as json;
-use sp_core::{
-	crypto::{Ss58Codec, UncheckedInto},
-	sr25519,
-};
+use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
