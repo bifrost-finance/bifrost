@@ -496,33 +496,6 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 }
 
 fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
-		(
-			// gXCcrjjFX3RPyhHYgwZDmw8oe4JFpd5anko3nTY8VrmnJpe
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			AuraId::from_ss58check("gXCcrjjFX3RPyhHYgwZDmw8oe4JFpd5anko3nTY8VrmnJpe").unwrap(),
-			ENDOWMENT(),
-		),
-		(
-			// ex3LnZb7o3XEyCn7kycUS2Aho3QoHDk5xcTzRKs4WwY1MvQ
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			AuraId::from_ss58check("ex3LnZb7o3XEyCn7kycUS2Aho3QoHDk5xcTzRKs4WwY1MvQ").unwrap(),
-			ENDOWMENT(),
-		),
-		(
-			// ezhQxhdSnw9sacSeYZwU6UTXvinnb6bWjsoXRcyLv84JY7b
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			AuraId::from_ss58check("ezhQxhdSnw9sacSeYZwU6UTXvinnb6bWjsoXRcyLv84JY7b").unwrap(),
-			ENDOWMENT(),
-		),
-		(
-			// cpRV9EbeoyqAfTTu1yumUPtg6NH7ehWwn2mNsViEydqL2Rw
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			AuraId::from_ss58check("cpRV9EbeoyqAfTTu1yumUPtg6NH7ehWwn2mNsViEydqL2Rw").unwrap(),
-			ENDOWMENT(),
-		),
-	];
-
 	let endowed_accounts: Vec<AccountId> = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -546,7 +519,18 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
 	bifrost_genesis(
-		invulnerables,
+		vec![
+			(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_from_seed::<AuraId>("Alice"),
+				ENDOWMENT() / 4,
+			),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_from_seed::<AuraId>("Bob"),
+				ENDOWMENT() / 4,
+			),
+		],
 		vec![],
 		balances,
 		vec![],
