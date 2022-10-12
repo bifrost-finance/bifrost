@@ -252,22 +252,25 @@ pub mod pallet {
 
 			for &currency in self.vcurrency.iter() {
 				match currency {
-					Token(symbol) | Native(symbol) => {
+					CurrencyId::VToken(symbol) => {
 						AssetIdMaps::<T>::register_vtoken_metadata(symbol)
 							.expect("VToken register");
 					},
-					Token2(token_id) => {
+					CurrencyId::VToken2(token_id) => {
 						AssetIdMaps::<T>::register_vtoken2_metadata(token_id)
 							.expect("VToken register");
+					},
+					CurrencyId::VSToken(symbol) => {
+						AssetIdMaps::<T>::register_vstoken_metadata(symbol)
+							.expect("VSToken register");
+					},
+					CurrencyId::VSToken2(token_id) => {
+						AssetIdMaps::<T>::register_vstoken2_metadata(token_id)
+							.expect("VSToken register");
 					},
 					_ => (),
 				}
 			}
-
-			AssetIdMaps::<T>::register_vstoken_metadata(TokenSymbol::KSM)
-				.expect("VSToken register");
-			AssetIdMaps::<T>::register_vstoken_metadata(TokenSymbol::DOT)
-				.expect("VSToken register");
 		}
 	}
 

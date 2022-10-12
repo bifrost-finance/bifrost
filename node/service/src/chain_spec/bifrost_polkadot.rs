@@ -220,7 +220,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 	let currency =
 		vec![(Native(TokenSymbol::BNC), DOLLARS / 100), (Token2(DOT_TOKEN_ID), DOLLARS / 1000_000)];
-	let vcurrency = vec![Native(TokenSymbol::BNC), Token2(DOT_TOKEN_ID)];
+	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 
 	bifrost_polkadot_genesis(
 		vec![

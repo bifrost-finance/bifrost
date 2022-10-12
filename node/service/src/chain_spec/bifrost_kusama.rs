@@ -322,9 +322,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000),
 		(Token(PHA), 4 * DOLLARS / 100),
 		(Token(MOVR), DOLLARS / 1000_000),
-		(Token(DOT), DOLLARS / 1000_000),
 	];
-	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
+	let vcurrency = vec![VSToken(KSM), VToken(BNC), VToken(KSM), VToken(MOVR)];
 
 	// vsBond
 	let vsbond = vec![
