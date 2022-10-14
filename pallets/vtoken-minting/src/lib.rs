@@ -819,6 +819,12 @@ pub mod pallet {
 			time_unit: TimeUnit,
 		) -> DispatchResult {
 			if entrance_account_balance >= unlock_amount {
+				T::MultiCurrency::transfer(
+					token_id,
+					&T::EntranceAccount::get().into_account_truncating(),
+					&account,
+					unlock_amount,
+				)?;
 				TokenUnlockLedger::<T>::remove(&token_id, &index);
 
 				TimeUnitUnlockLedger::<T>::mutate_exists(
@@ -862,6 +868,12 @@ pub mod pallet {
 				)?;
 			} else {
 				unlock_amount = entrance_account_balance;
+				T::MultiCurrency::transfer(
+					token_id,
+					&T::EntranceAccount::get().into_account_truncating(),
+					&account,
+					unlock_amount,
+				)?;
 				TokenUnlockLedger::<T>::mutate_exists(
 					&token_id,
 					&index,
@@ -925,13 +937,6 @@ pub mod pallet {
 				.checked_sub(&unlock_amount)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 
-			T::MultiCurrency::transfer(
-				token_id,
-				&T::EntranceAccount::get().into_account_truncating(),
-				&account,
-				unlock_amount,
-			)?;
-
 			UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
 				Ok(())
@@ -970,14 +975,14 @@ pub mod pallet {
 			if let Some((_total_locked, ledger_list, token_id)) =
 				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
 			{
-				let entrance_account_balance = T::MultiCurrency::free_balance(
-					token_id,
-					&T::EntranceAccount::get().into_account_truncating(),
-				);
 				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
 					if let Some((account, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
+						let entrance_account_balance = T::MultiCurrency::free_balance(
+							token_id,
+							&T::EntranceAccount::get().into_account_truncating(),
+						);
 						if entrance_account_balance != BalanceOf::<T>::zero() {
 							Self::on_initialize_update_ledger(
 								token_id,
