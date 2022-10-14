@@ -20,7 +20,7 @@
 
 pub use agents::PolkadotAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, transactional, weights::Weight};
+use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
