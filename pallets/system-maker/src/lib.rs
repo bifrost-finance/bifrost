@@ -34,7 +34,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{traits::AccountIdConversion, ArithmeticError, SaturatedConversion},
-	PalletId,
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
@@ -225,6 +225,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		fn swap_by_currency_id(
 			system_maker: &AccountIdOf<T>,
 			currency_id: CurrencyId,

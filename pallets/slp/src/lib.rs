@@ -20,7 +20,7 @@
 
 pub use agents::PolkadotAgent;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -2034,6 +2034,7 @@ pub mod pallet {
 		/// **************************************/
 		/// ****** XCM confirming Functions ******/
 		/// **************************************/
+		#[transactional]
 		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
 			let mut counter = 0u32;
 

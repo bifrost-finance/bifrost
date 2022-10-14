@@ -38,7 +38,7 @@ use frame_support::{
 		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
 		DispatchError, Permill, SaturatedConversion,
 	},
-	BoundedVec, PalletId,
+	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
@@ -754,6 +754,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
@@ -775,6 +776,7 @@ pub mod pallet {
 			Ok(result)
 		}
 
+		#[transactional]
 		pub fn mint_without_tranfer(
 			exchanger: &AccountIdOf<T>,
 			vtoken_id: CurrencyId,
@@ -810,6 +812,7 @@ pub mod pallet {
 			Ok((token_amount_excluding_fee, vtoken_amount, mint_fee))
 		}
 
+		#[transactional]
 		fn on_initialize_update_ledger(
 			token_id: CurrencyId,
 			account: AccountIdOf<T>,
@@ -953,6 +956,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		fn handle_on_initialize() -> DispatchResult {
 			for currency in OngoingTimeUnit::<T>::iter_keys() {
 				Self::handle_ledger_by_currency(currency)?;
@@ -1020,6 +1024,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		pub fn mint_inner(
 			exchanger: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
@@ -1049,6 +1054,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[transactional]
 		pub fn redeem_inner(
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
@@ -1290,6 +1296,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		}
 	}
 
+	#[transactional]
 	fn deduct_unlock_amount(
 		currency_id: CurrencyId,
 		index: u32,
