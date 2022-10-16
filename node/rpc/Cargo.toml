@@ -29,3 +29,5 @@ bifrost-farming-rpc-api = { path = "../../pallets/farming/rpc" }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api" }
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"
+zenlink-stable-amm-rpc = "*"
+zenlink-stable-amm-runtime-api = "*"
