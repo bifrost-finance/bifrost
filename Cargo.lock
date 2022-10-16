@@ -1790,13 +1790,28 @@ checksum = "86447ad904c7fb335a790c9d7fe3d0d971dc523b8ccd1561a520de9a85302750"
 dependencies = [
  "atty",
  "bitflags",
- "clap_derive",
- "clap_lex",
+ "clap_derive 3.2.18",
+ "clap_lex 0.2.4",
  "indexmap",
  "once_cell",
  "strsim",
  "termcolor",
  "textwrap",
+]
+
+[[package]]
+name = "clap"
+version = "4.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bf8832993da70a4c6d13c581f4463c2bdda27b9bf1c5498dc4365543abe6d6f"
+dependencies = [
+ "atty",
+ "bitflags",
+ "clap_derive 4.0.13",
+ "clap_lex 0.3.0",
+ "once_cell",
+ "strsim",
+ "termcolor",
 ]
 
 [[package]]
@@ -1813,10 +1828,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_derive"
+version = "4.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c42f169caba89a7d512b5418b09864543eeb4d497416c917d7137863bd2076ad"
+dependencies = [
+ "heck",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "clap_lex"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d4198f73e42b4936b35b5bb248d81d2b595ecb170da0bac7655c54eedfa8da8"
 dependencies = [
  "os_str_bytes",
 ]
@@ -2179,7 +2216,7 @@ name = "cumulus-client-cli"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.28#15f48687e545e4b171a0af1065cec59002bc7145"
 dependencies = [
- "clap",
+ "clap 3.2.22",
  "parity-scale-codec",
  "sc-chain-spec",
  "sc-cli",
@@ -3206,7 +3243,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34
 dependencies = [
  "Inflector",
  "chrono",
- "clap",
+ "clap 3.2.22",
  "comfy-table",
  "frame-benchmarking",
  "frame-support",
@@ -5561,7 +5598,7 @@ dependencies = [
 name = "node-cli"
 version = "0.9.60"
 dependencies = [
- "clap",
+ "clap 4.0.15",
  "cumulus-client-cli",
  "cumulus-client-service",
  "cumulus-primitives-core",
@@ -5591,7 +5628,7 @@ name = "node-inspect"
 version = "0.9.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
 dependencies = [
- "clap",
+ "clap 3.2.22",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -7324,7 +7361,7 @@ name = "polkadot-cli"
 version = "0.9.28"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.28#314298c32ac6df996ea8f3fe23fa5d3768340066"
 dependencies = [
- "clap",
+ "clap 3.2.22",
  "frame-benchmarking-cli",
  "futures",
  "log",
@@ -9280,7 +9317,7 @@ version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
 dependencies = [
  "chrono",
- "clap",
+ "clap 3.2.22",
  "fdlimit",
  "futures",
  "hex",
@@ -12052,7 +12089,7 @@ name = "try-runtime-cli"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.28#34a0621761c4a333cb2074ff720f7acbfb92dbb8"
 dependencies = [
- "clap",
+ "clap 3.2.22",
  "jsonrpsee",
  "log",
  "parity-scale-codec",
