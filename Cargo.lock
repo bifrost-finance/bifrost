@@ -5559,7 +5559,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.59"
+version = "0.9.60"
 dependencies = [
  "clap",
  "cumulus-client-cli",
