@@ -38,7 +38,7 @@ use frame_support::{
 		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
 		ArithmeticError, DispatchError, Permill, SaturatedConversion,
 	},
-	BoundedVec, PalletId,
+	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
@@ -754,6 +754,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
@@ -779,6 +780,7 @@ pub mod pallet {
 			Ok(result)
 		}
 
+		#[transactional]
 		pub fn mint_without_tranfer(
 			exchanger: &AccountIdOf<T>,
 			vtoken_id: CurrencyId,
@@ -814,6 +816,7 @@ pub mod pallet {
 			Ok((token_amount_excluding_fee, vtoken_amount, mint_fee))
 		}
 
+		#[transactional]
 		fn on_initialize_update_ledger(
 			token_id: CurrencyId,
 			account: AccountIdOf<T>,
@@ -823,6 +826,12 @@ pub mod pallet {
 			time_unit: TimeUnit,
 		) -> DispatchResult {
 			if entrance_account_balance >= unlock_amount {
+				T::MultiCurrency::transfer(
+					token_id,
+					&T::EntranceAccount::get().into_account_truncating(),
+					&account,
+					unlock_amount,
+				)?;
 				TokenUnlockLedger::<T>::remove(&token_id, &index);
 
 				TimeUnitUnlockLedger::<T>::mutate_exists(
@@ -866,6 +875,12 @@ pub mod pallet {
 				)?;
 			} else {
 				unlock_amount = entrance_account_balance;
+				T::MultiCurrency::transfer(
+					token_id,
+					&T::EntranceAccount::get().into_account_truncating(),
+					&account,
+					unlock_amount,
+				)?;
 				TokenUnlockLedger::<T>::mutate_exists(
 					&token_id,
 					&index,
@@ -965,6 +980,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		fn handle_on_initialize() -> DispatchResult {
 			for currency in OngoingTimeUnit::<T>::iter_keys() {
 				Self::handle_ledger_by_currency(currency)?;
@@ -987,14 +1003,14 @@ pub mod pallet {
 			if let Some((_total_locked, ledger_list, token_id)) =
 				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
 			{
-				let entrance_account_balance = T::MultiCurrency::free_balance(
-					token_id,
-					&T::EntranceAccount::get().into_account_truncating(),
-				);
 				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
 					if let Some((account, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
+						let entrance_account_balance = T::MultiCurrency::free_balance(
+							token_id,
+							&T::EntranceAccount::get().into_account_truncating(),
+						);
 						if entrance_account_balance != BalanceOf::<T>::zero() {
 							Self::on_initialize_update_ledger(
 								token_id,
@@ -1032,6 +1048,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		pub fn mint_inner(
 			exchanger: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
@@ -1061,6 +1078,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[transactional]
 		pub fn redeem_inner(
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
@@ -1302,6 +1320,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		}
 	}
 
+	#[transactional]
 	fn deduct_unlock_amount(
 		currency_id: CurrencyId,
 		index: u32,
