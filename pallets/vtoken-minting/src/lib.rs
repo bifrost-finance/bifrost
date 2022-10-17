@@ -825,11 +825,24 @@ pub mod pallet {
 			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
 		) -> DispatchResult {
+			let ed = T::MultiCurrency::minimum_balance(token_id);
+			let mut account_to_send = account.clone();
+
+			if unlock_amount < ed {
+				let receiver_balance = T::MultiCurrency::total_balance(token_id, &account);
+
+				let receiver_balance_after = receiver_balance
+					.checked_add(&unlock_amount)
+					.ok_or(ArithmeticError::Overflow)?;
+				if receiver_balance_after < ed {
+					account_to_send = T::FeeAccount::get();
+				}
+			}
 			if entrance_account_balance >= unlock_amount {
 				T::MultiCurrency::transfer(
 					token_id,
 					&T::EntranceAccount::get().into_account_truncating(),
-					&account,
+					&account_to_send,
 					unlock_amount,
 				)?;
 				TokenUnlockLedger::<T>::remove(&token_id, &index);
@@ -878,7 +891,7 @@ pub mod pallet {
 				T::MultiCurrency::transfer(
 					token_id,
 					&T::EntranceAccount::get().into_account_truncating(),
-					&account,
+					&account_to_send,
 					unlock_amount,
 				)?;
 				TokenUnlockLedger::<T>::mutate_exists(
@@ -943,26 +956,6 @@ pub mod pallet {
 			entrance_account_balance
 				.checked_sub(&unlock_amount)
 				.ok_or(Error::<T>::CalculationOverflow)?;
-
-			let ed = T::MultiCurrency::minimum_balance(token_id);
-			let mut account_to_send = account.clone();
-
-			if unlock_amount < ed {
-				let receiver_balance = T::MultiCurrency::total_balance(token_id, &account);
-
-				let receiver_balance_after = receiver_balance
-					.checked_add(&unlock_amount)
-					.ok_or(ArithmeticError::Overflow)?;
-				if receiver_balance_after < ed {
-					account_to_send = T::FeeAccount::get();
-				}
-			}
-			T::MultiCurrency::transfer(
-				token_id,
-				&T::EntranceAccount::get().into_account_truncating(),
-				&account_to_send,
-				unlock_amount,
-			)?;
 
 			UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
