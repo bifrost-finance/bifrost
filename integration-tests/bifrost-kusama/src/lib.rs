@@ -28,4 +28,5 @@ mod kusama_test_net;
 mod salp;
 mod slp;
 // mod statemine;
+mod account_id;
 mod treasury;
