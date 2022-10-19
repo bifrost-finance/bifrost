@@ -76,19 +76,19 @@ impl Default for FundStatus {
 #[codec(dumb_trait_bound)]
 pub struct FundInfo<Balance, LeasePeriod> {
 	/// The total amount raised.
-	raised: Balance,
+	pub raised: Balance,
 	/// A hard-cap on the amount that may be contributed.
-	cap: Balance,
+	pub cap: Balance,
 	/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
 	/// BlockNumber.
-	first_slot: LeasePeriod,
+	pub first_slot: LeasePeriod,
 	/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
 	/// BlockNumber.
-	last_slot: LeasePeriod,
+	pub last_slot: LeasePeriod,
 	/// Index used for the child trie of this fund
-	trie_index: TrieIndex,
+	pub trie_index: TrieIndex,
 	/// Fund status
-	status: FundStatus,
+	pub status: FundStatus,
 }
 
 #[frame_support::pallet]
@@ -1145,7 +1145,7 @@ pub mod pallet {
 			child::ChildInfo::new_default(T::Hashing::hash(&buf[..]).as_ref())
 		}
 
-		pub(crate) fn contribution(
+		pub fn contribution(
 			index: TrieIndex,
 			who: &AccountIdOf<T>,
 		) -> (BalanceOf<T>, ContributionStatus<BalanceOf<T>>) {
