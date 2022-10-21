@@ -641,6 +641,10 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	pub fn do_remove_multilocation(location: &MultiLocation) {
+		LocationToCurrencyIds::<T>::remove(location);
+	}
+
 	pub fn do_register_weight(currency_id: CurrencyId, weight: u128) -> DispatchResult {
 		ensure!(
 			CurrencyMetadatas::<T>::get(currency_id).is_some(),
