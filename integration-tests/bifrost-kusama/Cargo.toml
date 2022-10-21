@@ -8,7 +8,7 @@ edition = "2021"
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = { version = "0.4.17" }
-serde = { version = "1.0.143", optional = true }
+serde = { version = "1.0.146", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", optional = true }
 hex-literal = { version = "0.3.4" }
