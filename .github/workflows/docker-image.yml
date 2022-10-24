@@ -28,7 +28,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx
       - name: Add SSH key
-        uses: webfactory/ssh-agent@v0.5.2
+        uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Get current date
