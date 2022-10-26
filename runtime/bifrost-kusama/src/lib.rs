@@ -74,8 +74,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test,
+	AllowRelayedPaidExecutionFromParent, AuraId, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, RelayChainAccountId32Aliases,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
@@ -1023,6 +1024,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	RelayChainAccountId32Aliases<RelayNetwork, AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -1081,6 +1083,7 @@ pub type Barrier = (
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
+	AllowRelayedPaidExecutionFromParent<RelayNetwork>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<

@@ -19,13 +19,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::{AssetIdMaps, Config};
 use frame_support::{
-	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EitherOfDiverse,
+	ensure, parameter_types,
+	sp_runtime::traits::BlockNumberProvider,
+	traits::{EitherOfDiverse, Get},
+	weights::Weight,
 };
 use frame_system::EnsureRoot;
 use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{FixedPointNumber, Perquintill};
+use sp_std::marker::PhantomData;
+use xcm::latest::prelude::*;
+use xcm_executor::traits::ShouldExecute;
 
 pub mod constants;
 
@@ -139,4 +145,67 @@ macro_rules! prod_or_test {
 			$prod
 		}
 	};
+}
+
+/// Extracts the `AccountId32` from the passed `location` if the network
+/// matches or is `NetworkId::Any`.
+pub struct RelayChainAccountId32Aliases<Network, AccountId>(PhantomData<(Network, AccountId)>);
+impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone>
+	xcm_executor::traits::Convert<MultiLocation, AccountId>
+	for RelayChainAccountId32Aliases<Network, AccountId>
+{
+	fn convert(location: MultiLocation) -> Result<AccountId, MultiLocation> {
+		if let MultiLocation { parents: 1, interior: X1(AccountId32 { id, .. }) } = location.clone()
+		{
+			Ok(id.into())
+		} else {
+			Err(location)
+		}
+	}
+
+	fn reverse(who: AccountId) -> Result<MultiLocation, AccountId> {
+		Ok((1, AccountId32 { id: who.into(), network: Network::get() }).into())
+	}
+}
+
+/// Allows execution from `origin` if it is `Parent`.
+pub struct AllowRelayedPaidExecutionFromParent<Network>(PhantomData<Network>);
+impl<Network: Get<NetworkId>> ShouldExecute for AllowRelayedPaidExecutionFromParent<Network> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut Xcm<Call>,
+		max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ()> {
+		ensure!(origin.contains_parents_only(1), ());
+		let mut iter = message.0.iter_mut();
+		let i = iter.next().ok_or(())?;
+		match i {
+			DescendOrigin(X1(Junction::AccountId32 { .. })) => (),
+			_ => return Err(()),
+		}
+		let i = iter.next().ok_or(())?;
+		match i {
+			WithdrawAsset(..) => (),
+			_ => return Err(()),
+		}
+		let i = iter.next().ok_or(())?;
+		match i {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } if *weight >= max_weight => {
+				*weight = max_weight;
+				()
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
+				()
+			},
+			_ => return Err(()),
+		}
+		let i = iter.next().ok_or(())?;
+		match i {
+			Transact { origin_type: OriginKind::SovereignAccount, .. } | DepositAsset { .. } =>
+				Ok(()),
+			_ => Err(()),
+		}
+	}
 }
