@@ -996,6 +996,7 @@ pub type Trader = (
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<DotPerSecond, ToTreasury>,
+	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
