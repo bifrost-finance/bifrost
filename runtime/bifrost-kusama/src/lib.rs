@@ -1888,7 +1888,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
@@ -2294,6 +2294,7 @@ mod benches {
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_slp, Slp]
 		[bifrost_asset_registry, AssetRegistry]
+		[bifrost_fee_share, FeeShare]
 	);
 }
 

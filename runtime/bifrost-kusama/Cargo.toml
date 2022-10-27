@@ -261,6 +261,7 @@ runtime-benchmarks = [
 	"parachain-staking/runtime-benchmarks",
 	"sp-api/disable-logging",
 	"bifrost-cross-in-out/runtime-benchmarks",
+	"bifrost-fee-share/runtime-benchmarks",
 ]
 
 try-runtime = [

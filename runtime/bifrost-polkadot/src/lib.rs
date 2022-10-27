@@ -1531,7 +1531,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
