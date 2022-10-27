@@ -30,6 +30,7 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
+use bifrost_asset_registry::FixedRateOfAsset;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -977,6 +978,7 @@ parameter_types! {
 		// ZLK:KSM = 150:1
 		dot_per_second() * 150 * 1_000_000
 	);
+	pub BasePerSecond: u128 = dot_per_second();
 }
 
 pub struct ToTreasury;
@@ -1487,6 +1489,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {

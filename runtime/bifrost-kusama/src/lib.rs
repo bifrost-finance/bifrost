@@ -1827,6 +1827,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
 	type ParachainStaking = ParachainStaking;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
