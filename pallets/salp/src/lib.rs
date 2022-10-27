@@ -511,7 +511,7 @@ pub mod pallet {
 
 			match T::RelayChainToken::get() {
 				CurrencyId::Token(token_symbol) =>
-					if T::CurrencyIdRegister::check_vsbond_registered(
+					if !T::CurrencyIdRegister::check_vsbond_registered(
 						token_symbol,
 						index,
 						first_slot,
@@ -525,7 +525,7 @@ pub mod pallet {
 						)?;
 					},
 				CurrencyId::Token2(token_id) => {
-					if T::CurrencyIdRegister::check_vsbond2_registered(
+					if !T::CurrencyIdRegister::check_vsbond2_registered(
 						token_id, index, first_slot, last_slot,
 					) {
 						T::CurrencyIdRegister::register_vsbond2_metadata(
@@ -735,6 +735,58 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
 
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::unlock())]
+		pub fn unlock_by_vsbond(
+			origin: OriginFor<T>,
+			who: AccountIdOf<T>,
+			vsbond: CurrencyId,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			let index = match vsbond {
+				CurrencyId::VSBond(token_symbol, paraid, first_slot, last_slot) => {
+					if !T::CurrencyIdRegister::check_vsbond_registered(
+						token_symbol,
+						paraid,
+						first_slot,
+						last_slot,
+					) {
+						return Err(Error::<T>::NotSupportTokenType.into());
+					}
+					paraid
+				},
+				CurrencyId::VSBond2(token_id, paraid, first_slot, last_slot) => {
+					if !T::CurrencyIdRegister::check_vsbond2_registered(
+						token_id, paraid, first_slot, last_slot,
+					) {
+						return Err(Error::<T>::NotSupportTokenType.into());
+					}
+					paraid
+				},
+				_ => return Err(Error::<T>::NotSupportTokenType.into()),
+			};
+
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			let (contributed, _) = Self::contribution(fund.trie_index, &who);
+
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			T::MultiCurrency::unreserve(vs_token, &who, contributed);
+			T::MultiCurrency::unreserve(vs_bond, &who, contributed);
+
+			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
 			Ok(())
 		}
 

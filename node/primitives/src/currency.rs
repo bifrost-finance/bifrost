@@ -39,6 +39,8 @@ pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
+pub const FIL_TOKEN_ID: u8 = 2u8;
+pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

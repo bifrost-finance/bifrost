@@ -18,33 +18,29 @@
 
 use crate::{
 	primitives::{OneToManyDelegationAction, OneToManyLedger, OneToManyScheduledRequest},
-	DelegationsOccupied,
+	DelegationsOccupied, Hash, MultiLocation, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Len};
+use frame_support::ensure;
 use parachain_staking::ParachainStakingInterface;
 // use frame_system::pallet_prelude::BlockNumberFor;
+use crate::{
+	pallet::Error,
+	primitives::{Ledger, OneToManyDelegatorStatus, QueryId, BNC},
+	traits::StakingAgent,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers, LedgerUpdateEntry,
+	MinimumsAndMaximums, Pallet, TimeUnit, Validators,
+};
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-use sp_core::U256;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	traits::{CheckedAdd, CheckedSub, Convert, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::opaque::latest::MultiLocation;
-
-use crate::{
-	pallet::Error,
-	primitives::{Ledger, OneToManyDelegatorStatus, ValidatorsByDelegatorUpdateEntry, BNC},
-	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry,
-	MinimumsAndMaximums, Pallet, QueryId, TimeUnit, Validators,
-};
 
 /// StakingAgent implementation for Moonriver/Moonbeam
 pub struct ParachainStakingAgent<T>(PhantomData<T>);
@@ -57,31 +53,25 @@ impl<T> ParachainStakingAgent<T> {
 
 impl<T: Config>
 	StakingAgent<
-		MultiLocation,
-		MultiLocation,
 		BalanceOf<T>,
-		TimeUnit,
 		AccountIdOf<T>,
-		MultiLocation,
-		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		LedgerUpdateEntry<BalanceOf<T>>,
+		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		Error<T>,
 	> for ParachainStakingAgent<T>
 {
-	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
-		DelegatorNextIndex::<T>::mutate(currency_id, |id| -> Result<(), Error<T>> {
-			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
-			*id = option_new_id;
-			Ok(())
-		})?;
+	fn initialize_delegator(
+		&self,
+		currency_id: CurrencyId,
+		_delegator_location_op: Option<Box<MultiLocation>>,
+	) -> Result<MultiLocation, Error<T>> {
+		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
 
 		// Add the new delegator into storage
-		Self::add_delegator(&self, new_delegator_id, &delegator_multilocation, currency_id)
+		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -156,7 +146,7 @@ impl<T: Config>
 			let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> = BTreeMap::new();
 			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 				BTreeMap::new();
-			let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
+			let new_ledger = OneToManyLedger::<BalanceOf<T>> {
 				account: who.clone(),
 				total: Zero::zero(),
 				less_total: Zero::zero(),
@@ -165,8 +155,7 @@ impl<T: Config>
 				request_briefs: request_briefs_set,
 				status: OneToManyDelegatorStatus::Active,
 			};
-			let parachain_staking_ledger =
-				Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::ParachainStaking(new_ledger);
+			let parachain_staking_ledger = Ledger::<BalanceOf<T>>::ParachainStaking(new_ledger);
 
 			DelegatorLedgers::<T>::insert(currency_id, who, parachain_staking_ledger);
 		}
@@ -792,20 +781,17 @@ impl<T: Config>
 							BTreeMap::new();
 						let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 							BTreeMap::new();
-						let new_ledger =
-							OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<T>> {
-								account: old_ledger.clone().account,
-								total: Zero::zero(),
-								less_total: Zero::zero(),
-								delegations: empty_delegation_set,
-								requests: vec![],
-								request_briefs: request_briefs_set,
-								status: OneToManyDelegatorStatus::Active,
-							};
+						let new_ledger = OneToManyLedger::<BalanceOf<T>> {
+							account: old_ledger.clone().account,
+							total: Zero::zero(),
+							less_total: Zero::zero(),
+							delegations: empty_delegation_set,
+							requests: vec![],
+							request_briefs: request_briefs_set,
+							status: OneToManyDelegatorStatus::Active,
+						};
 						let parachain_staking_ledger =
-							Ledger::<MultiLocation, BalanceOf<T>, MultiLocation>::ParachainStaking(
-								new_ledger,
-							);
+							Ledger::<BalanceOf<T>>::ParachainStaking(new_ledger);
 
 						*old_ledger_opt = Some(parachain_staking_ledger);
 						Ok(())
@@ -962,32 +948,11 @@ impl<T: Config>
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		// Check if the delegator already exists. If yes, return error.
-		ensure!(
-			!DelegatorsIndex2Multilocation::<T>::contains_key(currency_id, index),
-			Error::<T>::AlreadyExist
-		);
-
-		// Ensure delegators count is not greater than maximum.
-		let delegators_count = DelegatorNextIndex::<T>::get(currency_id);
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(delegators_count < mins_maxs.delegators_maximum, Error::<T>::GreaterThanMaximum);
-
-		// Revise two delegator storages.
-		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
-		DelegatorsMultilocation2Index::<T>::insert(currency_id, who, index);
-
-		// create ledger.
-
-		Ok(())
+		Pallet::<T>::inner_add_delegator(index, who, currency_id)
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Check if the delegator exists.
-		let index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
 		// Get the delegator ledger
 		let ledger =
 			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -1001,58 +966,16 @@ impl<T: Config>
 		// Check if ledger total amount is zero. If not, return error.
 		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
 
-		// Remove corresponding storage.
-		DelegatorsIndex2Multilocation::<T>::remove(currency_id, index);
-		DelegatorsMultilocation2Index::<T>::remove(currency_id, who);
-		DelegatorLedgers::<T>::remove(currency_id, who);
-
-		Ok(())
+		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-		// Check if the validator already exists.
-		let validators_set = Validators::<T>::get(currency_id);
-
-		// Ensure validator candidates in the whitelist is not greater than maximum.
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			validators_set.len() as u16 <= mins_maxs.validators_maximum,
-			Error::<T>::GreaterThanMaximum
-		);
-
-		if validators_set.is_none() {
-			Validators::<T>::insert(currency_id, vec![(who, multi_hash)]);
-		} else {
-			// Change corresponding storage.
-			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
-				if let Some(ref mut validator_list) = validator_vec {
-					let rs =
-						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-					if let Err(index) = rs {
-						validator_list.insert(index, (who.clone(), multi_hash));
-					} else {
-						Err(Error::<T>::AlreadyExist)?
-					}
-				}
-				Ok(())
-			})?;
-		}
-
-		Ok(())
+		Pallet::<T>::inner_add_validator(who, currency_id)
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Check if the validator already exists.
-		let validators_set =
-			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-
-		let multi_hash = T::Hashing::hash(&who.encode());
-		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
-
 		// Check all the delegators' delegations, to see whether this specific validator is in use.
 		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
 			if let Ledger::ParachainStaking(parachain_staking_ledger) = ledger {
@@ -1066,17 +989,7 @@ impl<T: Config>
 		}
 
 		// Update corresponding storage.
-		Validators::<T>::mutate(currency_id, |validator_vec| {
-			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-				if let Ok(index) = rs {
-					validator_list.remove(index);
-				}
-			}
-		});
-
-		Ok(())
+		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -1087,34 +1000,16 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
-
 		// Get current VKSM/KSM exchange rate.
 		let vtoken = match currency_id {
 			BNC => Ok(CurrencyId::VToken(TokenSymbol::BNC)),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}?;
 
-		let vtoken_issuance = T::MultiCurrency::total_issuance(vtoken);
-		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
-		// Calculate how much vksm the beneficiary account can get.
-		let amount: u128 = amount.unique_saturated_into();
-		let vtoken_issuance: u128 = vtoken_issuance.unique_saturated_into();
-		let token_pool: u128 = token_pool.unique_saturated_into();
-		let can_get_vtoken = U256::from(amount)
-			.checked_mul(U256::from(vtoken_issuance))
-			.and_then(|n| n.checked_div(U256::from(token_pool)))
-			.and_then(|n| TryInto::<u128>::try_into(n).ok())
-			.unwrap_or_else(Zero::zero);
+		let charge_amount =
+			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
 
-		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
-		// Issue corresponding vksm to beneficiary account.
-		T::MultiCurrency::deposit(
-			vtoken,
-			&beneficiary,
-			BalanceOf::<T>::unique_saturated_from(can_get_vtoken),
-		)?;
-		Ok(())
+		Pallet::<T>::inner_charge_hosting_fee(charge_amount, to, vtoken)
 	}
 
 	/// Deposit some amount as fee to nominator accounts.
@@ -1124,18 +1019,19 @@ impl<T: Config>
 		from: &MultiLocation,
 		to: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> DispatchResult {
+	) -> Result<(), Error<T>> {
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-		T::MultiCurrency::transfer(currency_id, &from_account_id, &to_account_id, amount)?;
+		T::MultiCurrency::transfer(currency_id, &from_account_id, &to_account_id, amount)
+			.map_err(|_e| Error::<T>::MultiCurrencyError)?;
 		Ok(())
 	}
 
 	fn check_delegator_ledger_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation, MultiLocation>,
+		_entry: LedgerUpdateEntry<BalanceOf<T>>,
 		_manual_mode: bool,
 		_currency_id: CurrencyId,
 	) -> Result<bool, Error<T>> {
@@ -1145,7 +1041,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

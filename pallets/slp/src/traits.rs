@@ -15,98 +15,96 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Weight, Xcm};
+use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
 use xcm::opaque::latest::Instruction;
 
-use crate::{Weight, Xcm};
-use node_primitives::CurrencyId;
-
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
-	DelegatorId,
-	ValidatorId,
 	Balance,
-	TimeUnit,
 	AccountId,
-	GenericAccountId,
-	QueryId,
 	LedgerUpdateEntry,
 	ValidatorsByDelegatorUpdateEntry,
 	Error,
 >
 {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(&self, currency_id: CurrencyId) -> Result<DelegatorId, Error>;
+	fn initialize_delegator(
+		&self,
+		currency_id: CurrencyId,
+		delegator_location: Option<Box<MultiLocation>>,
+	) -> Result<MultiLocation, Error>;
 
 	/// First time bonding some amount to a delegator.
 	fn bond(
 		&self,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		amount: Balance,
-		validator: &Option<ValidatorId>,
+		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
 	fn bond_extra(
 		&self,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		amount: Balance,
-		validator: &Option<ValidatorId>,
+		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
 	fn unbond(
 		&self,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		amount: Balance,
-		validator: &Option<ValidatorId>,
+		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
-	fn unbond_all(&self, who: &DelegatorId, currency_id: CurrencyId) -> Result<QueryId, Error>;
+	fn unbond_all(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
 	fn rebond(
 		&self,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		amount: Option<Balance>,
-		validator: &Option<ValidatorId>,
+		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
 	fn delegate(
 		&self,
-		who: &DelegatorId,
-		targets: &Vec<ValidatorId>,
+		who: &MultiLocation,
+		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Remove delegation relationship with some validators.
 	fn undelegate(
 		&self,
-		who: &DelegatorId,
-		targets: &Vec<ValidatorId>,
+		who: &MultiLocation,
+		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
 	fn redelegate(
 		&self,
-		who: &DelegatorId,
-		targets: &Option<Vec<ValidatorId>>,
+		who: &MultiLocation,
+		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
 	fn payout(
 		&self,
-		who: &DelegatorId,
-		validator: &ValidatorId,
+		who: &MultiLocation,
+		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
@@ -114,20 +112,20 @@ pub trait StakingAgent<
 	/// Withdraw the due payout into free balance.
 	fn liquidize(
 		&self,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		when: &Option<TimeUnit>,
-		validator: &Option<ValidatorId>,
+		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
-	fn chill(&self, who: &DelegatorId, currency_id: CurrencyId) -> Result<QueryId, Error>;
+	fn chill(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
 		&self,
-		from: &DelegatorId,
-		to: &DelegatorId,
+		from: &MultiLocation,
+		to: &MultiLocation,
 		amount: Balance,
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
@@ -135,8 +133,8 @@ pub trait StakingAgent<
 	/// Make token from Bifrost chain account to the staking chain account.
 	fn transfer_to(
 		&self,
-		from: &DelegatorId,
-		to: &DelegatorId,
+		from: &MultiLocation,
+		to: &MultiLocation,
 		amount: Balance,
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
@@ -144,7 +142,7 @@ pub trait StakingAgent<
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &Option<DelegatorId>,
+		who: &Option<MultiLocation>,
 		token_amount: Balance,
 		vtoken_amount: Balance,
 		currency_id: CurrencyId,
@@ -158,8 +156,8 @@ pub trait StakingAgent<
 	fn charge_hosting_fee(
 		&self,
 		amount: Balance,
-		from: &GenericAccountId,
-		to: &GenericAccountId,
+		from: &MultiLocation,
+		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult;
 
@@ -167,10 +165,10 @@ pub trait StakingAgent<
 	fn supplement_fee_reserve(
 		&self,
 		amount: Balance,
-		from: &GenericAccountId,
-		to: &GenericAccountId,
+		from: &MultiLocation,
+		to: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> DispatchResult;
+	) -> Result<(), Error>;
 
 	/// ************************************
 	/// Add a new serving delegator for a particular currency.
@@ -178,22 +176,22 @@ pub trait StakingAgent<
 	fn add_delegator(
 		&self,
 		index: u16,
-		who: &DelegatorId,
+		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult;
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_delegator(&self, who: &DelegatorId, currency_id: CurrencyId) -> DispatchResult;
+	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
 	/// ************************************
 	/// Abstraction over a validator manager.
 	/// ************************************
 
 	/// Add a new serving validator for a particular currency.
-	fn add_validator(&self, who: &ValidatorId, currency_id: CurrencyId) -> DispatchResult;
+	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
 	/// Remove an existing serving validator for a particular currency.
-	fn remove_validator(&self, who: &ValidatorId, currency_id: CurrencyId) -> DispatchResult;
+	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
 	/// ************************************
 	/// Abstraction over a QueryResponseChecker.

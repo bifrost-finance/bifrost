@@ -537,6 +537,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-cross-in-out"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
@@ -582,6 +603,35 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
+]
+
+[[package]]
+name = "bifrost-fee-share"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -713,8 +763,10 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-cross-in-out",
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
+ "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
@@ -956,6 +1008,7 @@ dependencies = [
  "bifrost-call-switchgear",
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
+ "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",
@@ -5559,7 +5612,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.60"
+version = "0.9.62"
 dependencies = [
  "clap",
  "cumulus-client-cli",

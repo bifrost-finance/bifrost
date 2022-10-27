@@ -91,8 +91,9 @@ use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
-	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
+	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
+	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
+	TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -124,6 +125,7 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Weights used in the runtime.
 // mod weights;
 
+mod migrations;
 mod xcm_config;
 
 use xcm_config::{
@@ -143,7 +145,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 960,
+	spec_version: 962,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -311,6 +313,7 @@ parameter_types! {
 	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
+	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 }
 
 impl frame_system::Config for Runtime {
@@ -1129,7 +1132,7 @@ parameter_types! {
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode().try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
@@ -1419,7 +1422,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a)
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
 	}
 }
 
@@ -1881,6 +1884,20 @@ impl bifrost_system_maker::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type VtokenMintingInterface = VtokenMinting;
 }
+impl bifrost_fee_share::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+	type FeeSharePalletId = FeeSharePalletId;
+}
+
+impl bifrost_cross_in_out::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+}
 
 // Bifrost modules end
 
@@ -2206,6 +2223,8 @@ construct_runtime! {
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
+		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 	}
 }
 
@@ -2251,7 +2270,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	migrations::AssetRegistryMigration<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

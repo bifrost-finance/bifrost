@@ -87,7 +87,7 @@ fn kusama_setup<
 	assert_ok!(Slp::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::<T>::initialize_delegator(origin.clone(), KSM));
+	assert_ok!(Slp::<T>::initialize_delegator(origin.clone(), KSM, None));
 	//DelegatorNotExist
 
 	// update some KSM balance to treasury account
@@ -248,6 +248,7 @@ benchmarks! {
 		let origin = <T as pallet::Config>::ControlOrigin::successful_origin();
 		let call = Call::<T>::initialize_delegator {
 			currency_id:KSM,
+			delegator_location: None
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {

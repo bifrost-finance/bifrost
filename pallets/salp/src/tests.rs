@@ -280,6 +280,41 @@ fn unlock_should_work() {
 }
 
 #[test]
+fn unlock_by_vsbond_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			true,
+			CONTRIBUTON_INDEX
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
+
+		assert_ok!(Salp::unlock_by_vsbond(Some(BRUCE).into(), BRUCE, vs_bond));
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
+	});
+}
+
+#[test]
 fn contribute_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));

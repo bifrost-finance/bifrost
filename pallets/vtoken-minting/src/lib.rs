@@ -36,7 +36,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
-		DispatchError, Permill, SaturatedConversion,
+		ArithmeticError, DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -770,6 +770,10 @@ pub mod pallet {
 						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
+				TimeUnit::Kblock(kblock_a) => match b {
+					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
 			};
 
@@ -821,11 +825,24 @@ pub mod pallet {
 			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
 		) -> DispatchResult {
+			let ed = T::MultiCurrency::minimum_balance(token_id);
+			let mut account_to_send = account.clone();
+
+			if unlock_amount < ed {
+				let receiver_balance = T::MultiCurrency::total_balance(token_id, &account);
+
+				let receiver_balance_after = receiver_balance
+					.checked_add(&unlock_amount)
+					.ok_or(ArithmeticError::Overflow)?;
+				if receiver_balance_after < ed {
+					account_to_send = T::FeeAccount::get();
+				}
+			}
 			if entrance_account_balance >= unlock_amount {
 				T::MultiCurrency::transfer(
 					token_id,
 					&T::EntranceAccount::get().into_account_truncating(),
-					&account,
+					&account_to_send,
 					unlock_amount,
 				)?;
 				TokenUnlockLedger::<T>::remove(&token_id, &index);
@@ -874,7 +891,7 @@ pub mod pallet {
 				T::MultiCurrency::transfer(
 					token_id,
 					&T::EntranceAccount::get().into_account_truncating(),
-					&account,
+					&account_to_send,
 					unlock_amount,
 				)?;
 				TokenUnlockLedger::<T>::mutate_exists(
@@ -950,7 +967,7 @@ pub mod pallet {
 			Self::deposit_event(Event::RedeemSuccess {
 				unlock_id: *index,
 				token_id,
-				to: account,
+				to: account_to_send,
 				token_amount: unlock_amount,
 			});
 			Ok(())

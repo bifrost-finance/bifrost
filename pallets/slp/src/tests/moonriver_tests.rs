@@ -86,7 +86,7 @@ fn initialize_moonriver_delegator() {
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(MOVR, 0),
@@ -153,7 +153,7 @@ fn moonriver_setup() {
 	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR,));
+	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
 
 	// update some MOVR balance to treasury account
 	assert_ok!(Tokens::set_balance(
@@ -878,7 +878,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
 		let old_request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		let old_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<Runtime>> {
+		let old_ledger = OneToManyLedger::<BalanceOf<Runtime>> {
 			account: subaccount_0_location.clone(),
 			total: Zero::zero(),
 			less_total: Zero::zero(),
@@ -887,8 +887,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 			request_briefs: old_request_briefs_set,
 			status: OneToManyDelegatorStatus::Active,
 		};
-		let movr_ledger =
-			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(old_ledger);
+		let movr_ledger = Ledger::<BalanceOf<Runtime>>::Moonbeam(old_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), movr_ledger);
@@ -1309,7 +1308,7 @@ fn moonriver_unbond_all_confirm_works() {
 		let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		let new_ledger = OneToManyLedger::<MultiLocation, MultiLocation, BalanceOf<Runtime>> {
+		let new_ledger = OneToManyLedger::<BalanceOf<Runtime>> {
 			account: subaccount_0_location.clone(),
 			total: Zero::zero(),
 			less_total: Zero::zero(),
@@ -1318,8 +1317,7 @@ fn moonriver_unbond_all_confirm_works() {
 			request_briefs: request_briefs_set,
 			status: OneToManyDelegatorStatus::Active,
 		};
-		let movr_ledger =
-			Ledger::<MultiLocation, BalanceOf<Runtime>, MultiLocation>::Moonbeam(new_ledger);
+		let movr_ledger = Ledger::<BalanceOf<Runtime>>::Moonbeam(new_ledger);
 
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(MOVR, subaccount_0_location.clone()),

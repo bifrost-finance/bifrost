@@ -102,12 +102,13 @@ bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
 bifrost-system-maker = { path = "../../pallets/system-maker", default-features = false }
-
+bifrost-cross-in-out = { path = "../../pallets/cross-in-out", default-features = false }
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -211,7 +212,9 @@ std = [
 	"bifrost-asset-registry/std",
 	"bifrost-system-staking/std",
 	"bifrost-system-maker/std",
+	"bifrost-cross-in-out/std",
 	"parachain-staking/std",
+	"bifrost-fee-share/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -257,6 +260,7 @@ runtime-benchmarks = [
 	"bifrost-asset-registry/runtime-benchmarks",
 	"parachain-staking/runtime-benchmarks",
 	"sp-api/disable-logging",
+	"bifrost-cross-in-out/runtime-benchmarks",
 ]
 
 try-runtime = [

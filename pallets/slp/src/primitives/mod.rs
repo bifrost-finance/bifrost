@@ -16,41 +16,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+mod filecoin_primitives;
 mod moonbeam_primitives;
-// mod parachain_staking_primitives;
 mod polkadot_primitives;
 
+pub use filecoin_primitives::*;
 pub use moonbeam_primitives::*;
-// pub use parachain_staking_primitives::*;
 pub use polkadot_primitives::*;
 
+use crate::Weight;
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::TimeUnit;
 use scale_info::TypeInfo;
 
+pub type QueryId = u64;
+pub const TIMEOUT_BLOCKS: u32 = 1000;
+pub const BASE_WEIGHT: Weight = 1000;
+
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum Ledger<DelegatorId: PartialEq + Eq, Balance, ValidatorId: PartialEq + Eq> {
-	Substrate(SubstrateLedger<DelegatorId, Balance>),
-	Moonbeam(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
-	ParachainStaking(OneToManyLedger<DelegatorId, ValidatorId, Balance>),
+pub enum Ledger<Balance> {
+	Substrate(SubstrateLedger<Balance>),
+	Moonbeam(OneToManyLedger<Balance>),
+	ParachainStaking(OneToManyLedger<Balance>),
+	Filecoin(FilecoinLedger<Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum LedgerUpdateEntry<Balance, DelegatorId, ValidatorId> {
+pub enum LedgerUpdateEntry<Balance> {
 	/// A type for substrate ledger updating entries
-	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
-	Moonbeam(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
-	ParachainStaking(MoonbeamLedgerUpdateEntry<Balance, DelegatorId, ValidatorId>),
+	Substrate(SubstrateLedgerUpdateEntry<Balance>),
+	Moonbeam(MoonbeamLedgerUpdateEntry<Balance>),
+	ParachainStaking(MoonbeamLedgerUpdateEntry<Balance>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of
 /// currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
+pub enum ValidatorsByDelegatorUpdateEntry<HashT> {
 	/// A type for substrate validators by delegator updating entries
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<HashT>),
 }
 
 /// Different minimum and maximum requirements for different chain

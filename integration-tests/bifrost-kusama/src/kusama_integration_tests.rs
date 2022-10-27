@@ -168,6 +168,20 @@ impl ExtBuilder {
 		)
 		.unwrap();
 
+		<bifrost_asset_registry::GenesisConfig<Runtime> as GenesisBuild<Runtime>>::assimilate_storage(
+			&bifrost_asset_registry::GenesisConfig {
+				currency: vec![
+					(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
+					(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+				],
+				vcurrency: vec![],
+				vsbond: vec![],
+				phantom: Default::default()
+			},
+			&mut t,
+		)
+			.unwrap();
+
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
