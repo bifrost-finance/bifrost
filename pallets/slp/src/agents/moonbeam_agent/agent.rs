@@ -40,7 +40,9 @@ use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
+use node_primitives::{
+	CurrencyId, CurrencyIdMapping, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID,
+};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero},
@@ -1034,10 +1036,12 @@ impl<T: Config> MoonbeamAgent<T> {
 				parents: 1,
 				interior: Junctions::X1(Parachain(parachains::moonriver::ID)),
 			}),
-			GLMR => Ok(MultiLocation {
-				parents: 1,
-				interior: Junctions::X1(Parachain(parachains::moonbeam::ID)),
-			}),
+			GLMR =>
+				if let Some(location) = T::AssetIdMaps::get_multi_location(currency_id) {
+					Ok(location)
+				} else {
+					Err(Error::<T>::NotSupportedCurrencyId)
+				},
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}

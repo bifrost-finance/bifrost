@@ -31,6 +31,7 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_asset_registry::AssetMetadata;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::{
@@ -38,7 +39,8 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, CurrencyIdMapping, SlpOperator, TimeUnit, VtokenMintingOperator,
+	DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -141,6 +143,12 @@ pub mod pallet {
 		type MaxRefundPerBlock: Get<u32>;
 
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
+
+		type AssetIdMaps: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
 	}
 
 	#[pallet::error]
