@@ -87,4 +87,31 @@ impl<T: frame_system::Config> pallet_vesting::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(9 as Weight))
 			.saturating_add(T::DbWeight::get().writes(6 as Weight))
 	}
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
+
+	// Storage: System Account (r:1 w:1)
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
 }

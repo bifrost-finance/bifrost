@@ -52,6 +52,8 @@ pub trait WeightInfo {
 	fn vest_other_unlocked(l: u32) -> Weight;
 	fn vested_transfer(l: u32) -> Weight;
 	fn force_vested_transfer(l: u32) -> Weight;
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight;
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight;
 }
 
 /// Weights for pallet_vesting using the Substrate node and recommended hardware.
@@ -98,6 +100,34 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
+
+	// Storage: System Account (r:1 w:1)
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
 }
 
 // For backwards compatibility and tests
@@ -142,5 +172,35 @@ impl WeightInfo for () {
 			.saturating_add((213_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		(34_042_000 as Weight)
+			// Standard Error: 1_000
+			.saturating_add(83_000 as Weight)
+			.saturating_mul(l as Weight)
+			// Standard Error: 2_000
+			.saturating_add(80_000 as Weight)
+			.saturating_mul(s as Weight)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 }

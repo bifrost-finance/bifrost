@@ -1345,6 +1345,7 @@ impl pallet_vesting::Config for Runtime {
 	type Event = Event;
 	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = ();
+	const MAX_VESTING_SCHEDULES: u32 = 42;
 }
 
 // orml runtime start
