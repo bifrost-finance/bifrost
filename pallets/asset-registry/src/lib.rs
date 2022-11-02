@@ -223,6 +223,9 @@ pub mod pallet {
 						},
 					)
 				}) {
+				if let CurrencyId::Token2(_token_id) = *currency_id {
+					Pallet::<T>::get_next_token_id().expect("Token register");
+				}
 				Pallet::<T>::do_register_metadata(*currency_id, &metadata).expect("Token register");
 			}
 
