@@ -47,8 +47,8 @@ mod bifrost_imports {
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
 		BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
-		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens,
-		TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
+		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, SlpEntrancePalletId,
+		System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig, XcmInterface,
 	};
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;

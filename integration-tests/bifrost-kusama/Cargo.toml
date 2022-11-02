@@ -87,5 +87,5 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
-#statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
+statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "6c02911a3eeb04c342e4eb273d2ffbedd45dabff" }
