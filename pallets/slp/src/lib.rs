@@ -44,10 +44,6 @@ use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-use sp_runtime::traits::{CheckedSub, Convert};
-use sp_std::{boxed::Box, vec, vec::Vec};
-pub use weights::WeightInfo;
-use xcm::latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm};
 
 use sp_core::H160;
 use sp_io::hashing::blake2_256;
