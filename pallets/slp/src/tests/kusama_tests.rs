@@ -21,6 +21,7 @@
 use crate::{mock::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
+use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
 #[test]
@@ -55,14 +56,20 @@ fn set_xcm_dest_weight_and_fee_should_work() {
 
 #[test]
 fn construct_xcm_and_send_as_subaccount_should_work() {
-	let para_chain_account: AccountId =
+	let para_chain_account_right: AccountId =
 		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
 			.into();
+	let para_chain_account: AccountId = ParaId::from(2001).into_account_truncating();
+	assert_eq!(para_chain_account_right, para_chain_account);
 
+	let sub_account_id_right: AccountId =
+		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
+			.into();
 	let sub_account_id = SubAccountIndexMultiLocationConvertor::derivative_account_id(
 		para_chain_account.clone(),
 		0u16,
 	);
+	assert_eq!(sub_account_id_right, sub_account_id);
 
 	// parachain_account 2001: 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
 	// hex: 70617261d1070000000000000000000000000000000000000000000000000000

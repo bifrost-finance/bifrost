@@ -1253,6 +1253,7 @@ dependencies = [
  "pallet-xcm",
  "parachain-staking",
  "parity-scale-codec",
+ "polkadot-parachain",
  "scale-info",
  "serde",
  "sp-arithmetic",
