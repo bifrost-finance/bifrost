@@ -30,4 +30,3 @@ mod slp;
 mod statemine;
 mod treasury;
 mod vtoken_minting;
-mod xcm;
