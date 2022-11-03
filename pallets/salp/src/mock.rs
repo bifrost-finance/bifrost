@@ -392,15 +392,15 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	pub const DOLLARS: Balance = 1_000_000_000_000;
 
 	let currency = vec![
-		(Native(BNC), DOLLARS / 100),
-		(Stable(KUSD), DOLLARS / 10_000),
-		(Token(KSM), DOLLARS / 10_000),
-		(Token(ZLK), DOLLARS / 1000_000),
-		(Token(KAR), DOLLARS / 10_000),
-		(Token(RMRK), DOLLARS / 1000_000),
-		(Token(PHA), 4 * DOLLARS / 100),
-		(Token(MOVR), DOLLARS / 1000_000),
-		(Token(DOT), DOLLARS / 1000_000),
+		(Native(BNC), DOLLARS / 100, None),
+		(Stable(KUSD), DOLLARS / 10_000, None),
+		(Token(KSM), DOLLARS / 10_000, None),
+		(Token(ZLK), DOLLARS / 1000_000, None),
+		(Token(KAR), DOLLARS / 10_000, None),
+		(Token(RMRK), DOLLARS / 1000_000, None),
+		(Token(PHA), 4 * DOLLARS / 100, None),
+		(Token(MOVR), DOLLARS / 1000_000, None),
+		(Token(DOT), DOLLARS / 1000_000, None),
 	];
 	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
 	let vsbond = vec![

@@ -171,8 +171,8 @@ impl ExtBuilder {
 		<bifrost_asset_registry::GenesisConfig<Runtime> as GenesisBuild<Runtime>>::assimilate_storage(
 			&bifrost_asset_registry::GenesisConfig {
 				currency: vec![
-					(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
-					(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+					(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
+					(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 				],
 				vcurrency: vec![],
 				vsbond: vec![],

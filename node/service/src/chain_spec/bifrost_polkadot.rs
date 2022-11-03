@@ -78,7 +78,11 @@ pub fn bifrost_polkadot_genesis(
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
-	asset_registry: (Vec<(CurrencyId, Balance)>, Vec<CurrencyId>, Vec<(CurrencyId, u32, u32, u32)>),
+	asset_registry: (
+		Vec<(CurrencyId, Balance, Option<(String, String, u8)>)>,
+		Vec<CurrencyId>,
+		Vec<(CurrencyId, u32, u32, u32)>,
+	),
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -218,8 +222,14 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-	let currency =
-		vec![(Native(TokenSymbol::BNC), DOLLARS / 100), (Token2(DOT_TOKEN_ID), DOLLARS / 1000_000)];
+	let currency = vec![
+		(Native(TokenSymbol::BNC), DOLLARS / 100, None),
+		(
+			Token2(DOT_TOKEN_ID),
+			DOLLARS / 1000_000,
+			Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
+		),
+	];
 	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 
 	bifrost_polkadot_genesis(
