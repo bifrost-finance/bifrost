@@ -349,6 +349,17 @@ fn create_farming_pool() {
 			Origin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
+			Some((KSM, 1000, gauge_basic_rewards.clone())),
+			2,
+			1,
+			7,
+			6,
+			5
+		));
+		assert_ok!(Farming::create_farming_pool(
+			Origin::signed(ALICE),
+			tokens_proportion.clone(),
+			basic_rewards.clone(),
 			Some((KSM, 1000, gauge_basic_rewards)),
 			2,
 			1,
@@ -356,8 +367,12 @@ fn create_farming_pool() {
 			6,
 			5
 		));
+		if let Some(pool_infos) = Farming::pool_infos(0) {
+			assert_eq!(pool_infos.state, PoolState::UnCharged)
+		};
+		assert_ok!(Farming::kill_pool(Origin::signed(ALICE), 0));
 
-		let pid = 0;
+		let pid = 1;
 		let charge_rewards = vec![(KSM, 300000)];
 		assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
 		if let Some(pool_infos) = Farming::pool_infos(0) {

@@ -643,7 +643,10 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			ensure!(
+				pool_info.state == PoolState::Retired || pool_info.state == PoolState::UnCharged,
+				Error::<T>::InvalidPoolState
+			);
 			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			PoolInfos::<T>::remove(pid);
 
