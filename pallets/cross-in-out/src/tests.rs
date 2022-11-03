@@ -20,6 +20,7 @@
 
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
+use sp_runtime::DispatchError::BadOrigin;
 use xcm::opaque::latest::{Junction, Junctions::X1};
 
 #[test]
@@ -229,5 +230,19 @@ fn change_outer_linked_account_should_work() {
 			KSM,
 			Box::new(location2.clone())
 		));
+	});
+}
+
+#[test]
+fn set_crossing_minimum_amount_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_noop!(
+			CrossInOut::set_crossing_minimum_amount(Origin::signed(BOB), KSM, 100, 100),
+			BadOrigin
+		);
+
+		assert_ok!(CrossInOut::set_crossing_minimum_amount(Origin::signed(ALICE), KSM, 100, 100));
+
+		assert_eq!(CrossingMinimumAmount::<Runtime>::get(KSM), Some((100, 100)));
 	});
 }
