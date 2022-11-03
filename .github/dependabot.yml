@@ -10,6 +10,8 @@ updates:
       - dependency-name: "frame-*"
       - dependency-name: "pallet-*"
       - dependency-name: "try-runtime-*"
+      - dependency-name: "node-inspect"
+      - dependency-name: "parachain-info"
     schedule:
       interval: "daily"
   - package-ecosystem: "github-actions"
