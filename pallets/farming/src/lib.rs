@@ -172,6 +172,7 @@ pub mod pallet {
 		/// withdraw_limit_time exceeded
 		WithdrawLimitCountExceeded,
 		ShareInfoNotExists,
+		CanNotDeposit,
 	}
 
 	#[pallet::storage]
@@ -255,7 +256,7 @@ pub mod pallet {
 					PoolInfos::<T>::insert(pid, &pool_info);
 				},
 				PoolState::Charged => {
-					if n >= pool_info.after_block_to_start ||
+					if n >= pool_info.after_block_to_start &&
 						pool_info.total_shares >= pool_info.min_deposit_to_start
 					{
 						pool_info.block_startup = Some(n);
@@ -398,6 +399,15 @@ pub mod pallet {
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
 				Error::<T>::InvalidPoolState
 			);
+
+			if let PoolState::Charged = pool_info.state {
+				let current_block_number: BlockNumberFor<T> =
+					frame_system::Pallet::<T>::block_number();
+				ensure!(
+					current_block_number >= pool_info.after_block_to_start,
+					Error::<T>::CanNotDeposit
+				);
+			}
 
 			let tokens_proportion_values: Vec<Perbill> =
 				pool_info.tokens_proportion.values().cloned().collect();
@@ -633,7 +643,10 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+			ensure!(
+				pool_info.state == PoolState::Retired || pool_info.state == PoolState::UnCharged,
+				Error::<T>::InvalidPoolState
+			);
 			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
 			PoolInfos::<T>::remove(pid);
 
