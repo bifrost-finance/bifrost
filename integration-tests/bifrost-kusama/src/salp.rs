@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
+use bifrost_asset_registry::AssetIdMaps;
 use bifrost_kusama_runtime::{LeasePeriod, MinContribution, Runtime};
 use bifrost_salp::{Error, FundInfo, FundStatus};
 use frame_support::{assert_noop, assert_ok};
@@ -42,6 +43,11 @@ fn set_confirm_should_work() {
 fn create_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
+			assert_eq!(AssetIdMaps::<Runtime>::check_token_registered(TokenSymbol::KSM), true);
+			assert_eq!(
+				AssetIdMaps::<Runtime>::check_vsbond_registered(TokenSymbol::KSM, 3000, 1, 8),
+				false
+			);
 			// first_slot + 7 >= last_slot
 			assert_ok!(Salp::create(
 				RawOrigin::Root.into(),
@@ -64,6 +70,10 @@ fn create_should_work() {
 					trie_index: 0,
 					status: FundStatus::Ongoing,
 				}
+			);
+			assert_eq!(
+				AssetIdMaps::<Runtime>::check_vsbond_registered(TokenSymbol::KSM, 3000, 1, 8),
+				true
 			);
 		});
 	})

@@ -22,3 +22,4 @@ mod dollor_tests;
 mod polkadot_cross_chain_transfer;
 mod polkadot_integration_tests;
 mod polkadot_test_net;
+mod salp;
