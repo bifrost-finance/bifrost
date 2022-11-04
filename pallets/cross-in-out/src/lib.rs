@@ -25,7 +25,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{ensure, pallet_prelude::*, transactional};
+use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
@@ -72,6 +72,8 @@ pub mod pallet {
 		NoMultilocationMapping,
 		NoAccountIdMapping,
 		AlreadyExist,
+		NoCrossingMinimumSet,
+		AmountLowerThanMinimum,
 	}
 
 	#[pallet::event]
@@ -114,6 +116,11 @@ pub mod pallet {
 		RemovedFromRegisterList {
 			account: AccountIdOf<T>,
 			currency_id: CurrencyId,
+		},
+		CrossingMinimumAmountSet {
+			currency_id: CurrencyId,
+			cross_in_minimum: BalanceOf<T>,
+			cross_out_minimum: BalanceOf<T>,
 		},
 	}
 
@@ -159,6 +166,12 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// minimum crossin and crossout amount【crossinMinimum, crossoutMinimum】
+	#[pallet::storage]
+	#[pallet::getter(fn get_crossing_minimum_amount)]
+	pub type CrossingMinimumAmount<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -169,7 +182,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::cross_in())]
-		#[transactional]
 		pub fn cross_in(
 			origin: OriginFor<T>,
 			location: Box<MultiLocation>,
@@ -183,6 +195,10 @@ pub mod pallet {
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
 				Error::<T>::CurrencyNotSupportCrossInAndOut
 			);
+
+			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
+				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
+			ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
 
 			let issue_whitelist =
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
@@ -205,7 +221,6 @@ pub mod pallet {
 
 		/// Destroy some balance from an account and issue cross-out event.
 		#[pallet::weight(T::WeightInfo::cross_out())]
-		#[transactional]
 		pub fn cross_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -217,6 +232,10 @@ pub mod pallet {
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
 				Error::<T>::CurrencyNotSupportCrossInAndOut
 			);
+
+			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
+				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
+			ensure!(amount >= crossing_minimum_amount.1, Error::<T>::AmountLowerThanMinimum);
 
 			let balance = T::MultiCurrency::free_balance(currency_id, &crosser);
 			ensure!(balance >= amount, Error::<T>::NotEnoughBalance);
@@ -274,8 +293,46 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// Change originally registered linked outer chain multilocation
+		#[pallet::weight(T::WeightInfo::change_outer_linked_account())]
+		pub fn change_outer_linked_account(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			foreign_location: Box<MultiLocation>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			ensure!(
+				CrossCurrencyRegistry::<T>::contains_key(currency_id),
+				Error::<T>::CurrencyNotSupportCrossInAndOut
+			);
+
+			let original_location =
+				Self::account_to_outer_multilocation(currency_id, account.clone())
+					.ok_or(Error::<T>::NotExist)?;
+			ensure!(original_location != *foreign_location.clone(), Error::<T>::AlreadyExist);
+
+			AccountToOuterMultilocation::<T>::insert(
+				currency_id,
+				account.clone(),
+				foreign_location.clone(),
+			);
+			OuterMultilocationToAccount::<T>::insert(
+				currency_id,
+				foreign_location.clone(),
+				account.clone(),
+			);
+
+			Pallet::<T>::deposit_event(Event::LinkedAccountRegistered {
+				currency_id,
+				who: account,
+				foreign_location: *foreign_location,
+			});
+
+			Ok(())
+		}
+
 		#[pallet::weight(T::WeightInfo::register_currency_for_cross_in_out())]
-		#[transactional]
 		pub fn register_currency_for_cross_in_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -293,7 +350,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
-		#[transactional]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -321,7 +377,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
-		#[transactional]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -344,7 +399,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::add_to_register_whitelist())]
-		#[transactional]
 		pub fn add_to_register_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -378,7 +432,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_from_register_whitelist())]
-		#[transactional]
 		pub fn remove_from_register_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -402,6 +455,26 @@ pub mod pallet {
 					}
 				},
 			)?;
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::set_crossing_minimum_amount())]
+		pub fn set_crossing_minimum_amount(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			cross_in_minimum: BalanceOf<T>,
+			cross_out_minimum: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			CrossingMinimumAmount::<T>::insert(currency_id, (cross_in_minimum, cross_out_minimum));
+
+			Self::deposit_event(Event::CrossingMinimumAmountSet {
+				currency_id,
+				cross_in_minimum,
+				cross_out_minimum,
+			});
 
 			Ok(())
 		}
