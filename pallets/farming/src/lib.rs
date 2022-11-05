@@ -668,7 +668,10 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
-				pool_info.state == PoolState::Retired || pool_info.state == PoolState::Ongoing,
+				pool_info.state == PoolState::Retired ||
+					pool_info.state == PoolState::Ongoing ||
+					pool_info.state == PoolState::Charged ||
+					pool_info.state == PoolState::UnCharged,
 				Error::<T>::InvalidPoolState
 			);
 			if let Some(basic_rewards) = basic_rewards {
