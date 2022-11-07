@@ -62,21 +62,21 @@ pub enum MoonbeamUtilityCall<MoonbeamCall> {
 pub enum MoonbeamParachainStakingCall<T: Config> {
 	#[codec(index = 17)]
 	Delegate(H160, BalanceOf<T>, u32, u32),
-	#[codec(index = 18)]
-	ScheduleLeaveDelegators,
 	#[codec(index = 19)]
-	ExecuteLeaveDelegators(H160, u32),
+	ScheduleLeaveDelegators,
 	#[codec(index = 20)]
-	CancelLeaveDelegators,
+	ExecuteLeaveDelegators(H160, u32),
 	#[codec(index = 21)]
-	ScheduleRevokeDelegation(H160),
+	CancelLeaveDelegators,
 	#[codec(index = 22)]
-	DelegatorBondMore(H160, BalanceOf<T>),
+	ScheduleRevokeDelegation(H160),
 	#[codec(index = 23)]
-	ScheduleDelegatorBondLess(H160, BalanceOf<T>),
+	DelegatorBondMore(H160, BalanceOf<T>),
 	#[codec(index = 24)]
-	ExecuteDelegationRequest(H160, H160),
+	ScheduleDelegatorBondLess(H160, BalanceOf<T>),
 	#[codec(index = 25)]
+	ExecuteDelegationRequest(H160, H160),
+	#[codec(index = 26)]
 	CancelDelegationRequest(H160),
 }
 
