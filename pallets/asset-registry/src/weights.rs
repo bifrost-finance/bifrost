@@ -55,8 +55,6 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_asset_registry.
 pub trait WeightInfo {
-	fn register_foreign_asset() -> Weight;
-	fn update_foreign_asset() -> Weight;
 	fn register_native_asset() -> Weight;
 	fn update_native_asset() -> Weight;
 	fn register_token_metadata() -> Weight;
@@ -69,22 +67,6 @@ pub trait WeightInfo {
 /// Weights for bifrost_asset_registry using the Bifrost node and recommended hardware.
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
-	// Storage: AssetRegistry NextForeignAssetId (r:1 w:1)
-	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	fn register_foreign_asset() -> Weight {
-		(116_430_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
-	}
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	fn update_foreign_asset() -> Weight {
-		(99_783_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
 	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
@@ -139,22 +121,6 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	// Storage: AssetRegistry NextForeignAssetId (r:1 w:1)
-	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	fn register_foreign_asset() -> Weight {
-		(116_430_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
-	}
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	fn update_foreign_asset() -> Weight {
-		(99_783_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
-	}
 	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)

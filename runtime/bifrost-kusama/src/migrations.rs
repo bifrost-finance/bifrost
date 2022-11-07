@@ -18,70 +18,120 @@
 
 //! A set of constant values used in Bifrost runtime.
 
-use crate::AssetRegistry;
-use bifrost_asset_registry::Config;
+use bifrost_asset_registry::{AssetMetadatas, Config, CurrencyIdToLocations, NextForeignAssetId};
 use frame_support::{pallet_prelude::Weight, traits::Get};
-use sp_std::vec;
+use node_primitives::{AssetIds, CurrencyId};
 
 pub struct AssetRegistryMigration<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> frame_support::traits::OnRuntimeUpgrade for AssetRegistryMigration<T> {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use node_primitives::CurrencyId::*;
-		use xcm::latest::prelude::*;
-
 		let mut len = Weight::default();
 
-		// Token
-		let items = vec![(
-			Token2(AssetRegistry::next_token_id()),
-			"Tether USD",
-			"USDT",
-			6u8,
-			1_000_u128,
-			MultiLocation::new(1, X3(Parachain(1000), PalletInstance(50), GeneralIndex(1984))),
-			0u128,
-		)];
-		for (currency_id, metadata, location, weight) in items.iter().map(
-			|(currency_id, name, symbol, decimals, minimal_balance, location, weight)| {
-				(
-					currency_id,
-					bifrost_asset_registry::AssetMetadata {
-						name: name.as_bytes().to_vec(),
-						symbol: symbol.as_bytes().to_vec(),
-						decimals: *decimals,
-						minimal_balance: *minimal_balance,
-					},
-					location,
-					weight,
-				)
-			},
-		) {
-			AssetRegistry::do_remove_multilocation(location);
-			AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
-			AssetRegistry::do_register_multilocation(*currency_id, &location)
-				.expect("MultiLocation register");
-			AssetRegistry::do_register_weight(*currency_id, *weight).expect("Weight register");
+		NextForeignAssetId::<T>::kill();
+		for id in 0..4u32 {
+			AssetMetadatas::<T>::remove(AssetIds::ForeignAssetId(id));
+			CurrencyIdToLocations::<T>::remove(CurrencyId::ForeignAsset(id));
+			len += 2
 		}
-		len += (items.len() * 4) as Weight;
 
 		<T as frame_system::Config>::DbWeight::get().reads_writes(len, len)
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
-		log::info!(
-			"try-runtime::pre_upgrade currency_metadatas count: {:?}",
-			bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count()
+		assert!(NextForeignAssetId::<T>::get() == 4, "NextForeignAssetId == 4");
+
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(0)).is_some(),
+			"ForeignAssetId(0) not exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(1)).is_some(),
+			"ForeignAssetId(1) not exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(2)).is_some(),
+			"ForeignAssetId(2) not exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(3)).is_some(),
+			"ForeignAssetId(3) not exist"
 		);
 
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(1)).is_some(),
+			"ForeignAssetId(1) not exist"
+		);
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(2)).is_some(),
+			"ForeignAssetId(2) not exist"
+		);
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(3)).is_some(),
+			"ForeignAssetId(3) not exist"
+		);
+
+		log::info!(
+			"try-runtime::pre_upgrade NextForeignAssetId value: {:?}",
+			NextForeignAssetId::<T>::get()
+		);
+		log::info!(
+			"try-runtime::pre_upgrade AssetMetadatas ForeignAssetId(0): {:?}",
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(0)).is_some()
+		);
+		log::info!(
+			"try-runtime::pre_upgrade CurrencyIdToLocations ForeignAssetId(0): {:?}",
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(0)).is_some()
+		);
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
-		let count = bifrost_asset_registry::CurrencyMetadatas::<T>::iter().count();
-		log::info!("try-runtime::post_upgrade currency_metadatas count: {:?}", count);
+		assert!(NextForeignAssetId::<T>::get() == 0, "NextForeignAssetId == 0");
 
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(0)).is_none(),
+			"ForeignAssetId(0) exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(1)).is_none(),
+			"ForeignAssetId(1) exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(2)).is_none(),
+			"ForeignAssetId(2) exist"
+		);
+		assert!(
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(3)).is_none(),
+			"ForeignAssetId(3) exist"
+		);
+
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(1)).is_none(),
+			"ForeignAssetId(1) exist"
+		);
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(2)).is_none(),
+			"ForeignAssetId(2) exist"
+		);
+		assert!(
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(3)).is_none(),
+			"ForeignAssetId(3) exist"
+		);
+
+		log::info!(
+			"try-runtime::post_upgrade NextForeignAssetId value: {:?}",
+			NextForeignAssetId::<T>::get()
+		);
+		log::info!(
+			"try-runtime::post_upgrade AssetMetadatas ForeignAssetId(0): {:?}",
+			AssetMetadatas::<T>::get(AssetIds::ForeignAssetId(0)).is_some()
+		);
+		log::info!(
+			"try-runtime::post_upgrade CurrencyIdToLocations ForeignAssetId(0): {:?}",
+			CurrencyIdToLocations::<T>::get(CurrencyId::ForeignAsset(0)).is_some()
+		);
 		Ok(())
 	}
 }

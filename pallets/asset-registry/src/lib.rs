@@ -111,18 +111,6 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// The foreign asset registered.
-		ForeignAssetRegistered {
-			asset_id: ForeignAssetId,
-			asset_address: MultiLocation,
-			metadata: AssetMetadata<BalanceOf<T>>,
-		},
-		/// The foreign asset updated.
-		ForeignAssetUpdated {
-			asset_id: ForeignAssetId,
-			asset_address: MultiLocation,
-			metadata: AssetMetadata<BalanceOf<T>>,
-		},
 		/// The asset registered.
 		AssetRegistered { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The asset updated.
@@ -291,47 +279,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::register_foreign_asset())]
-		pub fn register_foreign_asset(
-			origin: OriginFor<T>,
-			location: Box<VersionedMultiLocation>,
-			metadata: Box<AssetMetadata<BalanceOf<T>>>,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			let location: MultiLocation =
-				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
-			let foreign_asset_id = Self::do_register_foreign_asset(&location, &metadata)?;
-
-			Self::deposit_event(Event::<T>::ForeignAssetRegistered {
-				asset_id: foreign_asset_id,
-				asset_address: location,
-				metadata: *metadata,
-			});
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::update_foreign_asset())]
-		pub fn update_foreign_asset(
-			origin: OriginFor<T>,
-			foreign_asset_id: ForeignAssetId,
-			location: Box<VersionedMultiLocation>,
-			metadata: Box<AssetMetadata<BalanceOf<T>>>,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			let location: MultiLocation =
-				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
-			Self::do_update_foreign_asset(foreign_asset_id, &location, &metadata)?;
-
-			Self::deposit_event(Event::<T>::ForeignAssetUpdated {
-				asset_id: foreign_asset_id,
-				asset_address: location,
-				metadata: *metadata,
-			});
-			Ok(())
-		}
-
 		#[pallet::weight(T::WeightInfo::register_native_asset())]
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
@@ -468,92 +415,12 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	fn get_next_foreign_asset_id() -> Result<ForeignAssetId, DispatchError> {
-		NextForeignAssetId::<T>::try_mutate(|current| -> Result<ForeignAssetId, DispatchError> {
-			let id = *current;
-			*current = current.checked_add(One::one()).ok_or(ArithmeticError::Overflow)?;
-			Ok(id)
-		})
-	}
-
 	pub fn get_next_token_id() -> Result<TokenId, DispatchError> {
 		NextTokenId::<T>::try_mutate(|current| -> Result<TokenId, DispatchError> {
 			let id = *current;
 			*current = current.checked_add(One::one()).ok_or(ArithmeticError::Overflow)?;
 			Ok(id)
 		})
-	}
-
-	fn do_register_foreign_asset(
-		location: &MultiLocation,
-		metadata: &AssetMetadata<BalanceOf<T>>,
-	) -> Result<ForeignAssetId, DispatchError> {
-		let foreign_asset_id = Self::get_next_foreign_asset_id()?;
-		LocationToCurrencyIds::<T>::try_mutate(location, |maybe_currency_ids| -> DispatchResult {
-			ensure!(maybe_currency_ids.is_none(), Error::<T>::MultiLocationExisted);
-			*maybe_currency_ids = Some(CurrencyId::ForeignAsset(foreign_asset_id));
-
-			CurrencyIdToLocations::<T>::try_mutate(
-				CurrencyId::ForeignAsset(foreign_asset_id),
-				|maybe_location| -> DispatchResult {
-					ensure!(maybe_location.is_none(), Error::<T>::MultiLocationExisted);
-					*maybe_location = Some(location.clone());
-
-					AssetMetadatas::<T>::try_mutate(
-						AssetIds::ForeignAssetId(foreign_asset_id),
-						|maybe_asset_metadatas| -> DispatchResult {
-							ensure!(maybe_asset_metadatas.is_none(), Error::<T>::AssetIdExisted);
-
-							*maybe_asset_metadatas = Some(metadata.clone());
-							Ok(())
-						},
-					)
-				},
-			)
-		})?;
-
-		Ok(foreign_asset_id)
-	}
-
-	fn do_update_foreign_asset(
-		foreign_asset_id: ForeignAssetId,
-		location: &MultiLocation,
-		metadata: &AssetMetadata<BalanceOf<T>>,
-	) -> DispatchResult {
-		CurrencyIdToLocations::<T>::try_mutate(
-			CurrencyId::ForeignAsset(foreign_asset_id),
-			|maybe_multi_locations| -> DispatchResult {
-				let old_multi_locations =
-					maybe_multi_locations.as_mut().ok_or(Error::<T>::AssetIdNotExists)?;
-
-				AssetMetadatas::<T>::try_mutate(
-					AssetIds::ForeignAssetId(foreign_asset_id),
-					|maybe_asset_metadatas| -> DispatchResult {
-						ensure!(maybe_asset_metadatas.is_some(), Error::<T>::AssetIdNotExists);
-
-						// modify location
-						if location != old_multi_locations {
-							LocationToCurrencyIds::<T>::remove(old_multi_locations.clone());
-							LocationToCurrencyIds::<T>::try_mutate(
-								location,
-								|maybe_currency_ids| -> DispatchResult {
-									ensure!(
-										maybe_currency_ids.is_none(),
-										Error::<T>::MultiLocationExisted
-									);
-									*maybe_currency_ids =
-										Some(CurrencyId::ForeignAsset(foreign_asset_id));
-									Ok(())
-								},
-							)?;
-						}
-						*maybe_asset_metadatas = Some(metadata.clone());
-						*old_multi_locations = location.clone();
-						Ok(())
-					},
-				)
-			},
-		)
 	}
 
 	pub fn do_register_native_asset(
