@@ -17,6 +17,50 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Cross-chain transfer tests within Kusama network.
+
+/*
+fail_validators_by_delegator_query_response
+confirm_validators_by_delegator_query_response
+fail_delegator_ledger_query_response
+confirm_delegator_ledger_query_response
+remove_supplement_fee_account_from_whitelist
+add_supplement_fee_account_to_whitelist
+set_ongoing_time_unit_update_interval
+set_currency_tune_exchange_rate_limit
+set_hosting_fees
+set_currency_delays
+set_minimums_and_maximums
+set_delegator_ledger
+set_validators_by_delegator
+remove_validator
+add_validator
+remove_delegator
+add_delegator
+set_fee_source
+set_operate_origin
+set_xcm_dest_weight_and_fee
+charge_host_fee_and_tune_vtoken_exchange_rate
+supplement_fee_reserve
+refund_currency_due_unbond
+update_ongoing_time_unit
+decrease_token_pool
+increase_token_pool
+transfer_to
+transfer_back
+chill
+liquidize
+payout
+redelegate
+undelegate
+delegate
+rebond
+unbond_all
+unbond
+bond_extra
+bond
+initialize_delegator
+*/
+
 #![cfg(test)]
 
 use bifrost_polkadot_runtime::PolkadotXcm;
@@ -34,10 +78,31 @@ use node_primitives::TimeUnit;
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use pallet_xcm::QueryStatus;
+use polkadot_parachain::primitives::Id as ParaId;
+use sp_runtime::testing::H256;
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
+
+const SUBACCOUNT_0_32: [u8; 32] =
+	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
+const SUBACCOUNT_0_LOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: SUBACCOUNT_0_32 }) };
+const ENTRANCE_ACCOUNT_32: [u8; 32] =
+	hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"];
+const ENTRANCE_ACCOUNT_LOCATION: MultiLocation = MultiLocation {
+	parents: 0,
+	interior: X1(AccountId32 { network: Any, id: ENTRANCE_ACCOUNT_32 }),
+};
+const VALIDATOR_0_32: [u8; 32] =
+	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
+const VALIDATOR_0_LOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_0_32 }) };
+const VALIDATOR_1_32: [u8; 32] =
+	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
+const VALIDATOR_1_LOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_1_32 }) };
 
 /// ****************************************************
 /// *********  Preparation section  ********************
@@ -46,32 +111,34 @@ use crate::{kusama_integration_tests::*, kusama_test_net::*};
 // parachain 2001 subaccount index 0
 pub fn subaccount_0() -> AccountId {
 	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
-	let subaccount_0: AccountId =
-		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
-			.into();
-
-	subaccount_0
+	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"].into()
+}
+pub fn validator_0() -> AccountId {
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"].into()
+}
+pub fn validator_1() -> AccountId {
+	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
+	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"].into()
 }
 
 pub fn para_account_2001() -> AccountId {
 	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
-	let para_account_2001: AccountId =
-		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
-			.into();
+	//70617261d1070000000000000000000000000000000000000000000000000000
+	ParaId::from(2001).into_account_truncating()
+}
 
-	para_account_2001
+pub fn multi_hash_0() -> H256 {
+	<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode())
+}
+
+pub fn multi_hash_1() -> H256 {
+	<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_1_LOCATION.encode())
 }
 
 // Preparation: register sub-account index 0.
 fn register_subaccount_index_0() {
-	let subaccount_0 = subaccount_0();
-
 	Bifrost::execute_with(|| {
-		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 		// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
 		// block)
 		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
@@ -120,7 +187,7 @@ fn register_subaccount_index_0() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			0u16,
-			Box::new(subaccount_0_location.clone()),
+			Box::new(SUBACCOUNT_0_LOCATION),
 		));
 
 		// Register Operation weight and fee
@@ -197,14 +264,9 @@ fn register_subaccount_index_0() {
 }
 
 fn register_delegator_ledger() {
-	let subaccount_0 = subaccount_0();
 	Bifrost::execute_with(|| {
-		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
+			account: SUBACCOUNT_0_LOCATION,
 			total: dollar::<Runtime>(RelayCurrencyId::get()),
 			active: dollar::<Runtime>(RelayCurrencyId::get()),
 			unlocking: vec![],
@@ -215,7 +277,7 @@ fn register_delegator_ledger() {
 		assert_ok!(Slp::set_delegator_ledger(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			Box::new(subaccount_0_location.clone()),
+			Box::new(SUBACCOUNT_0_LOCATION),
 			Box::new(Some(ledger))
 		));
 	});
@@ -224,24 +286,8 @@ fn register_delegator_ledger() {
 #[test]
 fn register_validators() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
-
 		Bifrost::execute_with(|| {
 			let mut valis = vec![];
-
-			let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			let multi_hash_0 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 			let mins_and_maxs = MinimumsMaximums {
 				delegator_bonded_minimum: 100_000_000_000,
@@ -268,24 +314,18 @@ fn register_validators() {
 			assert_ok!(Slp::add_validator(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(validator_0_location.clone()),
+				Box::new(VALIDATOR_0_LOCATION),
 			));
 
-			let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			let multi_hash_1 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
-
 			// The storage is reordered by hash. So we need to adjust the push order here.
-			valis.push((validator_1_location.clone(), multi_hash_1));
-			valis.push((validator_0_location.clone(), multi_hash_0));
+			valis.push((VALIDATOR_1_LOCATION, multi_hash_1()));
+			valis.push((VALIDATOR_0_LOCATION, multi_hash_0()));
 
 			// Set delegator ledger
 			assert_ok!(Slp::add_validator(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(validator_1_location),
+				Box::new(VALIDATOR_1_LOCATION),
 			));
 
 			assert_eq!(Slp::get_validators(RelayCurrencyId::get()), Some(valis));
@@ -400,27 +440,13 @@ fn transfer_to_works() {
 		let subaccount_0 = subaccount_0();
 		let para_account_2001 = para_account_2001();
 
-		let entrance_account: AccountId =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
-		let entrance_account_32 = Slp::account_id_to_account_32(entrance_account.clone()).unwrap();
-		let entrance_account_location: MultiLocation =
-			Slp::account_32_to_local_location(entrance_account_32).unwrap();
-
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// We use transfer_to to transfer some KSM to subaccount_0
 			assert_ok!(Slp::transfer_to(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(entrance_account_location),
-				Box::new(subaccount_0_location),
+				Box::new(ENTRANCE_ACCOUNT_LOCATION),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
 			));
 		});
@@ -448,17 +474,11 @@ fn bond_works() {
 		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
 				None
 			));
@@ -494,17 +514,11 @@ fn bond_extra_works() {
 		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Bond_extra 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond_extra(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				dollar::<Runtime>(RelayCurrencyId::get()),
 			));
@@ -533,46 +547,22 @@ fn unbond_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
 
 		KusamaNet::execute_with(|| {
 			kusama_runtime::Staking::trigger_new_era(0, vec![]);
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				500_000_000_000,
 			));
 		});
 	})
-
-	// Can be uncommented to check if the result is correct.
-	// Due to the reason of private fields for struct UnlockChunk,
-	// it is not able to construct an instance of UnlockChunk directly.
-	// // So the bonded amount should be 2 ksm
-	// KusamaNet::execute_with(|| {
-	// 	assert_eq!(
-	// 		kusama_runtime::Staking::ledger(&subaccount_0),
-	// 		Some(StakingLedger {
-	// 			stash: subaccount_0.clone(),
-	// 			total: dollar::<Runtime>(RelayCurrencyId::get()),
-	// 			active: 500_000_000_000,
-	// 			unlocking: vec![UnlockChunk { value: 500000000000, era: 28 }],
-	// 			claimed_rewards: vec![],
-	// 		})
-	// 	);
-	// });
 }
 
 #[test]
@@ -582,39 +572,16 @@ fn unbond_all_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond the only bonded 1 ksm.
 			assert_ok!(Slp::unbond_all(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 			));
 		});
 	})
-
-	// Can be uncommented to check if the result is correct.
-	// Due to the reason of private fields for struct UnlockChunk,
-	// it is not able to construct an instance of UnlockChunk directly.
-	// KusamaNet::execute_with(|| {
-	// 	assert_eq!(
-	// 		kusama_runtime::Staking::ledger(&subaccount_0),
-	// 		Some(StakingLedger {
-	// 			stash: subaccount_0.clone(),
-	// 			total: dollar::<Runtime>(RelayCurrencyId::get()),
-	// 			active: 0,
-	// 			unlocking: vec![UnlockChunk { value: 1000000000000, era: 28 }],
-	// 			claimed_rewards: vec![],
-	// 		})
-	// 	);
-	// });
 }
 
 #[test]
@@ -627,17 +594,11 @@ fn rebond_works() {
 		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				500_000_000_000,
 			));
@@ -645,7 +606,7 @@ fn rebond_works() {
 			// Update Bifrost local ledger. This should be done by backend services.
 			let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(8) };
 			let sb_ledger = SubstrateLedger {
-				account: subaccount_0_location.clone(),
+				account: SUBACCOUNT_0_LOCATION,
 				total: dollar::<Runtime>(RelayCurrencyId::get()),
 				active: 500_000_000_000,
 				unlocking: vec![chunk],
@@ -655,7 +616,7 @@ fn rebond_works() {
 			assert_ok!(Slp::set_delegator_ledger(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(Some(ledger))
 			));
 
@@ -663,7 +624,7 @@ fn rebond_works() {
 			assert_ok!(Slp::rebond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				Some(500_000_000_000),
 			));
@@ -693,50 +654,28 @@ fn delegate_works() {
 		register_subaccount_index_0();
 		register_validators();
 		register_delegator_ledger();
+
 		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
+		let validator_0 = validator_0();
+		let validator_1 = validator_1();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
-
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
-
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			targets.push(validator_1_location.clone());
+			targets.push(VALIDATOR_0_LOCATION);
+			targets.push(VALIDATOR_1_LOCATION);
 
 			// delegate
 			assert_ok!(Slp::delegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 
 			assert_ok!(Slp::set_validators_by_delegator(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets,
 			));
 		});
@@ -760,36 +699,17 @@ fn undelegate_works() {
 		delegate_works();
 
 		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
+		let validator_1 = validator_1();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
-
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
+			targets.push(VALIDATOR_0_LOCATION);
 
 			// Undelegate validator 0. Only validator 1 left.
 			assert_ok!(Slp::undelegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 		});
@@ -813,43 +733,19 @@ fn redelegate_works() {
 		undelegate_works();
 
 		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
+		let validator_0 = validator_0();
+		let validator_1 = validator_1();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
-
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-
-			targets.push(validator_1_location.clone());
-			targets.push(validator_0_location.clone());
+			targets.push(VALIDATOR_1_LOCATION);
+			targets.push(VALIDATOR_0_LOCATION);
 
 			// Redelegate to a set of validator_0 and validator_1.
 			assert_ok!(Slp::redelegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(targets.clone()),
 			));
 		});
@@ -872,31 +768,14 @@ fn payout_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		register_subaccount_index_0();
 		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::payout(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
-				Box::new(validator_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(VALIDATOR_0_LOCATION),
 				Some(TimeUnit::Era(27))
 			));
 		});
@@ -929,16 +808,10 @@ fn liquidize_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			assert_ok!(Slp::liquidize(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
 				None
 			));
@@ -971,16 +844,10 @@ fn chill_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			assert_ok!(Slp::chill(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 			));
 		});
 
@@ -1020,18 +887,12 @@ fn transfer_back_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 0);
 
 			assert_ok!(Slp::transfer_back(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(exit_account_location),
 				500_000_000_000
 			));
@@ -1076,17 +937,10 @@ fn supplement_fee_reserve_works() {
 				Some((alice_location.clone(), dollar::<Runtime>(RelayCurrencyId::get())))
 			));
 
-			// We use supplement_fee_reserve to transfer some KSM to subaccount_0
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			assert_ok!(Slp::supplement_fee_reserve(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location),
+				Box::new(SUBACCOUNT_0_LOCATION),
 			));
 		});
 
@@ -1107,18 +961,12 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// First call bond function, it will insert a query.
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
 				None
 			));
@@ -1142,7 +990,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Bond,
 						amount: dollar::<Runtime>(RelayCurrencyId::get()),
 						unlock_time: None
@@ -1166,12 +1014,6 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1181,9 +1023,9 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1222,25 +1064,19 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Bond_extra 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond_extra(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				dollar::<Runtime>(RelayCurrencyId::get()),
 			));
 
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1266,7 +1102,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Bond,
 						amount: dollar::<Runtime>(RelayCurrencyId::get()),
 						unlock_time: None
@@ -1290,12 +1126,6 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1305,9 +1135,9 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1343,28 +1173,21 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				500_000_000_000,
 			));
 
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1390,7 +1213,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Unlock,
 						amount: 500_000_000_000,
 						unlock_time: Some(TimeUnit::Era(10))
@@ -1401,12 +1224,6 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1416,9 +1233,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 500_000_000_000,
 					unlocking: vec![UnlockChunk {
@@ -1457,26 +1274,19 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond the only bonded 1 ksm.
 			assert_ok!(Slp::unbond_all(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 			));
 
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1502,7 +1312,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Unlock,
 						amount: dollar::<Runtime>(RelayCurrencyId::get()),
 						unlock_time: Some(TimeUnit::Era(10))
@@ -1513,12 +1323,6 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1528,9 +1332,9 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 0,
 					unlocking: vec![UnlockChunk {
@@ -1569,20 +1373,13 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				500_000_000_000,
 			));
@@ -1590,7 +1387,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			// Update Bifrost local ledger. This should be done by backend services.
 			let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(10) };
 			let sb_ledger = SubstrateLedger {
-				account: subaccount_0_location.clone(),
+				account: SUBACCOUNT_0_LOCATION,
 				total: dollar::<Runtime>(RelayCurrencyId::get()),
 				active: 500_000_000_000,
 				unlocking: vec![chunk],
@@ -1600,7 +1397,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			assert_ok!(Slp::set_delegator_ledger(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(Some(ledger))
 			));
 
@@ -1608,15 +1405,15 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			assert_ok!(Slp::rebond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
 				Some(500_000_000_000),
 			));
 
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 500_000_000_000,
 					unlocking: vec![UnlockChunk {
@@ -1645,7 +1442,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Rebond,
 						amount: 500_000_000_000,
 						unlock_time: None
@@ -1656,12 +1453,6 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1671,9 +1462,9 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: vec![]
@@ -1728,12 +1519,6 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			System::set_block_number(1200);
 
 			// set ongoing era to be 11 which is greater than due era 10.
@@ -1746,15 +1531,15 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			assert_ok!(Slp::liquidize(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
 				None
 			));
 
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 500_000_000_000,
 					unlocking: vec![UnlockChunk {
@@ -1783,7 +1568,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Liquidize,
 						amount: 0,
 						unlock_time: Some(TimeUnit::Era(11))
@@ -1794,12 +1579,6 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
 				Origin::root(),
@@ -1809,9 +1588,9 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: 500_000_000_000,
 					active: 500_000_000_000,
 					unlocking: vec![]
@@ -1858,21 +1637,14 @@ fn fail_delegator_ledger_query_response_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		register_subaccount_index_0();
 		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// First call bond function, it will insert a query.
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
 				None
 			));
@@ -1896,7 +1668,7 @@ fn fail_delegator_ledger_query_response_works() {
 				Some((
 					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 						currency_id: RelayCurrencyId::get(),
-						delegator_id: subaccount_0_location.clone(),
+						delegator_id: SUBACCOUNT_0_LOCATION,
 						update_operation: SubstrateLedgerUpdateOperation::Bond,
 						amount: dollar::<Runtime>(RelayCurrencyId::get()),
 						unlock_time: None
@@ -1907,12 +1679,6 @@ fn fail_delegator_ledger_query_response_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::fail_delegator_ledger_query_response(
 				Origin::root(),
@@ -1922,9 +1688,9 @@ fn fail_delegator_ledger_query_response_works() {
 
 			// Check the ledger update.
 			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(Ledger::Substrate(SubstrateLedger {
-					account: subaccount_0_location.clone(),
+					account: SUBACCOUNT_0_LOCATION,
 					total: 0,
 					active: 0,
 					unlocking: vec![]
@@ -1961,60 +1727,27 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
 			let mut valis = vec![];
+			targets.push(VALIDATOR_0_LOCATION);
+			targets.push(VALIDATOR_1_LOCATION);
 
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
-			let multi_hash_0 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
-
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			targets.push(validator_1_location.clone());
-			let multi_hash_1 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
-
-			valis.push((validator_1_location.clone(), multi_hash_1));
-			valis.push((validator_0_location.clone(), multi_hash_0));
+			valis.push((VALIDATOR_1_LOCATION.clone(), multi_hash_1()));
+			valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0()));
 
 			// delegate
 			assert_ok!(Slp::delegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 
 			// Before data: Delegate nobody.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				None
 			);
 
@@ -2024,7 +1757,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 					ValidatorsByDelegatorUpdateEntry::Substrate(
 						SubstrateValidatorsByDelegatorUpdateEntry {
 							currency_id: RelayCurrencyId::get(),
-							delegator_id: subaccount_0_location.clone(),
+							delegator_id: SUBACCOUNT_0_LOCATION,
 							validators: valis.clone(),
 						}
 					),
@@ -2041,10 +1774,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 
 			// After delegation data.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(valis)
 			);
 
@@ -2058,62 +1788,29 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		delegate_works();
 
-		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
-
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
 			let mut valis_1 = vec![];
 			let mut valis_2 = vec![];
 
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
-			let multi_hash_0 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+			targets.push(VALIDATOR_0_LOCATION);
 
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			let multi_hash_1 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+			valis_1.push((VALIDATOR_1_LOCATION, multi_hash_1()));
 
-			valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
-
-			valis_2.push((validator_1_location.clone(), multi_hash_1));
-			valis_2.push((validator_0_location.clone(), multi_hash_0));
+			valis_2.push((VALIDATOR_1_LOCATION, multi_hash_1()));
+			valis_2.push((VALIDATOR_0_LOCATION, multi_hash_0()));
 
 			// Undelegate validator 0. Only validator 1 left.
 			assert_ok!(Slp::undelegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 
 			// Before data: Delegate 2 validators.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(valis_2)
 			);
 
@@ -2123,7 +1820,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 					ValidatorsByDelegatorUpdateEntry::Substrate(
 						SubstrateValidatorsByDelegatorUpdateEntry {
 							currency_id: RelayCurrencyId::get(),
-							delegator_id: subaccount_0_location.clone(),
+							delegator_id: SUBACCOUNT_0_LOCATION,
 							validators: valis_1.clone(),
 						}
 					),
@@ -2140,10 +1837,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 
 			// After delegation data: delegate only 1 validator.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(valis_1)
 			);
 
@@ -2157,62 +1851,29 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		confirm_validators_by_delegator_query_response_with_undelegate_works();
 
-		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
-
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
 			let mut valis_1 = vec![];
 			let mut valis_2 = vec![];
 
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
-			let multi_hash_0 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+			targets.push(VALIDATOR_0_LOCATION);
+			targets.push(VALIDATOR_1_LOCATION);
 
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			targets.push(validator_1_location.clone());
-			let multi_hash_1 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
-
-			valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
-			valis_2.push((validator_1_location.clone(), multi_hash_1));
-			valis_2.push((validator_0_location.clone(), multi_hash_0));
+			valis_1.push((VALIDATOR_1_LOCATION, multi_hash_1()));
+			valis_2.push((VALIDATOR_1_LOCATION, multi_hash_1()));
+			valis_2.push((VALIDATOR_0_LOCATION, multi_hash_0()));
 
 			// Redelegate to a set of validator_0 and validator_1.
 			assert_ok!(Slp::redelegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(targets.clone()),
 			));
 
 			// Before data: Delegate only 1 validator.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(valis_1)
 			);
 
@@ -2222,7 +1883,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 					ValidatorsByDelegatorUpdateEntry::Substrate(
 						SubstrateValidatorsByDelegatorUpdateEntry {
 							currency_id: RelayCurrencyId::get(),
-							delegator_id: subaccount_0_location.clone(),
+							delegator_id: SUBACCOUNT_0_LOCATION,
 							validators: valis_2.clone(),
 						}
 					),
@@ -2239,10 +1900,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 
 			// After delegation data: delegate 2 validators.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				Some(valis_2)
 			);
 
@@ -2259,60 +1917,28 @@ fn fail_validators_by_delegator_query_response_works() {
 		locally_bond_subaccount_0_1ksm_in_kusama();
 		register_subaccount_index_0();
 		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
-
-		// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-		let validator_0: AccountId =
-			hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
-				.into();
-
-		// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
-		let validator_1: AccountId =
-			hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
-				.into();
 
 		Bifrost::execute_with(|| {
-			let subaccount_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-			let subaccount_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
 			let mut targets = vec![];
 			let mut valis = vec![];
 
-			let validator_0_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-			let validator_0_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_0_32).unwrap();
-			targets.push(validator_0_location.clone());
-			let multi_hash_0 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+			targets.push(VALIDATOR_0_LOCATION);
+			targets.push(VALIDATOR_1_LOCATION);
 
-			let validator_1_32: [u8; 32] =
-				Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-			let validator_1_location: MultiLocation =
-				Slp::account_32_to_parent_location(validator_1_32).unwrap();
-			targets.push(validator_1_location.clone());
-			let multi_hash_1 =
-				<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
-
-			valis.push((validator_1_location.clone(), multi_hash_1));
-			valis.push((validator_0_location.clone(), multi_hash_0));
+			valis.push((VALIDATOR_1_LOCATION, multi_hash_1()));
+			valis.push((VALIDATOR_0_LOCATION, multi_hash_0()));
 
 			// delegate
 			assert_ok!(Slp::delegate(
 				Origin::root(),
 				RelayCurrencyId::get(),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 
 			// check before data: delegate nobody.
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				None
 			);
 
@@ -2322,7 +1948,7 @@ fn fail_validators_by_delegator_query_response_works() {
 					ValidatorsByDelegatorUpdateEntry::Substrate(
 						SubstrateValidatorsByDelegatorUpdateEntry {
 							currency_id: RelayCurrencyId::get(),
-							delegator_id: subaccount_0_location.clone(),
+							delegator_id: SUBACCOUNT_0_LOCATION,
 							validators: valis,
 						}
 					),
@@ -2339,10 +1965,7 @@ fn fail_validators_by_delegator_query_response_works() {
 
 			// check after data
 			assert_eq!(
-				Slp::get_validators_by_delegator(
-					RelayCurrencyId::get(),
-					subaccount_0_location.clone()
-				),
+				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
 				None
 			);
 

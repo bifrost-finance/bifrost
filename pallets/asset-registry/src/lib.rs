@@ -172,7 +172,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub currency: Vec<(CurrencyId, BalanceOf<T>)>,
+		pub currency: Vec<(CurrencyId, BalanceOf<T>, Option<(String, String, u8)>)>,
 		pub vcurrency: Vec<CurrencyId>,
 		pub vsbond: Vec<(CurrencyId, u32, u32, u32)>,
 		pub phantom: PhantomData<T>,
@@ -194,20 +194,28 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for (currency_id, metadata) in
-				self.currency.iter().map(|(currency_id, minimal_balance)| {
+				self.currency.iter().map(|(currency_id, minimal_balance, metadata)| {
 					(
 						currency_id,
-						AssetMetadata {
-							name: currency_id
-								.name()
-								.map(|s| s.as_bytes().to_vec())
-								.unwrap_or_default(),
-							symbol: currency_id
-								.symbol()
-								.map(|s| s.as_bytes().to_vec())
-								.unwrap_or_default(),
-							decimals: currency_id.decimals().unwrap_or_default(),
-							minimal_balance: *minimal_balance,
+						match &metadata {
+							None => AssetMetadata {
+								name: currency_id
+									.name()
+									.map(|s| s.as_bytes().to_vec())
+									.unwrap_or_default(),
+								symbol: currency_id
+									.symbol()
+									.map(|s| s.as_bytes().to_vec())
+									.unwrap_or_default(),
+								decimals: currency_id.decimals().unwrap_or_default(),
+								minimal_balance: *minimal_balance,
+							},
+							Some(metadata) => AssetMetadata {
+								name: metadata.0.as_bytes().to_vec(),
+								symbol: metadata.1.as_bytes().to_vec(),
+								decimals: metadata.2,
+								minimal_balance: *minimal_balance,
+							},
 						},
 					)
 				}) {

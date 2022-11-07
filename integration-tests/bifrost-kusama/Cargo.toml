@@ -8,11 +8,10 @@ edition = "2021"
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = { version = "0.4.17" }
-serde = { version = "1.0.143", optional = true }
+serde = { version = "1.0.147", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", optional = true }
 hex-literal = { version = "0.3.4" }
-smallvec = "1.9.0"
 
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
@@ -87,5 +86,5 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28" }
-#statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
+statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "6c02911a3eeb04c342e4eb273d2ffbedd45dabff" }

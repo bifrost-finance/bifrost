@@ -55,7 +55,7 @@ impl<T: Config>
 		Error<T>,
 	> for FilecoinAgent<T>
 {
-	// In filecoin world, delegator means miner. Validator is used to store owner info.
+	// In filecoin world, delegator means miner. Validator is used to store worker info.
 	fn initialize_delegator(
 		&self,
 		currency_id: CurrencyId,
@@ -94,7 +94,7 @@ impl<T: Config>
 			Error::<T>::ExceedActiveMaximum
 		);
 
-		// Check if the delegator(miner) has bonded an owner.
+		// Check if the delegator(miner) has bonded an worker.
 		let miners = ValidatorsByDelegator::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::ValidatorNotBonded)?;
 		ensure!(miners.len() == 1, Error::<T>::VectorTooLong);
@@ -228,7 +228,7 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// One delegator(miner) can only map to a validator(owner), so targets vec can only contains 1
+	/// One delegator(miner) can only map to a validator(worker), so targets vec can only contains 1
 	/// item.
 	fn delegate(
 		&self,
@@ -237,18 +237,18 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		ensure!(targets.len() == 1, Error::<T>::VectorTooLong);
-		let owner = &targets[0];
+		let worker = &targets[0];
 
 		// Need to check whether this validator is in the whitelist.
 		let validators_vec =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let multi_hash = T::Hashing::hash(&owner.encode());
+		let multi_hash = T::Hashing::hash(&worker.encode());
 		ensure!(
-			validators_vec.contains(&(owner.clone(), multi_hash)),
+			validators_vec.contains(&(worker.clone(), multi_hash)),
 			Error::<T>::ValidatorNotExist
 		);
 
-		let validators_list = vec![(owner.clone(), multi_hash)];
+		let validators_list = vec![(worker.clone(), multi_hash)];
 		// update ledger
 		ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
 
@@ -384,7 +384,7 @@ impl<T: Config>
 	}
 
 	/// For filecoin, instead of delegator(miner) account, "who" should be a
-	/// validator(owner) account, since we tune extrange rate once per owner by
+	/// validator(worker) account, since we tune extrange rate once per worker by
 	/// aggregating all its miner accounts' interests.
 	// Filecoin use TimeUnit::Kblock, which means 1000 blocks. Filecoin produces
 	// one block per 30 seconds . Kblock takes around 8.33 hours.
@@ -474,7 +474,7 @@ impl<T: Config>
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
-	/// Add a new owner for a particular currency.
+	/// Add a new worker for a particular currency.
 	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		Pallet::<T>::inner_add_validator(who, currency_id)
 	}

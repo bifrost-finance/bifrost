@@ -145,7 +145,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 962,
+	spec_version: 964,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1569,6 +1569,7 @@ parameter_types! {
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
 	match currency_id {
+		// AccountKey20 format of Bifrost sibling para account
 		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
 			1,
 			X2(
@@ -1576,7 +1577,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
-						cumulus_primitives_core::ParaId::from(ParachainInfo::get())
+						polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
 							.into_account_truncating(),
 						index,
 					)
@@ -1584,12 +1585,26 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				},
 			),
 		),
-		_ => MultiLocation::new(
+		// Only relay chain use the Bifrost para account with "para"
+		CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
 			1,
 			X1(AccountId32 {
 				network: NetworkId::Any,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
+					index,
+				)
+				.into(),
+			}),
+		),
+		// Other sibling chains use the Bifrost para account with "sibl"
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(
+					polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
+						.into_account_truncating(),
 					index,
 				)
 				.into(),
@@ -1888,7 +1903,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
@@ -2294,6 +2309,7 @@ mod benches {
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_slp, Slp]
 		[bifrost_asset_registry, AssetRegistry]
+		[bifrost_fee_share, FeeShare]
 	);
 }
 

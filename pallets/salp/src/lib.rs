@@ -103,7 +103,9 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, Nonce, ParaId};
+	use node_primitives::{
+		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
+	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
@@ -218,6 +220,7 @@ pub mod pallet {
 		Continued(ParaId, LeasePeriod, LeasePeriod),
 		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
 		Buyback(BalanceOf<T>),
+		VstokenUnlocked(AccountIdOf<T>),
 	}
 
 	#[pallet::error]
@@ -787,6 +790,46 @@ pub mod pallet {
 			T::MultiCurrency::unreserve(vs_bond, &who, contributed);
 
 			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::unlock())]
+		pub fn unlock_vstoken(origin: OriginFor<T>, who: AccountIdOf<T>) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			match T::RelayChainToken::get() {
+				CurrencyId::Token(token_symbol) => {
+					let vsbond_list = vec![
+						VSBond(token_symbol, 2106, 19, 26),
+						VSBond(token_symbol, 2011, 19, 26),
+						VSBond(token_symbol, 2102, 18, 25),
+						VSBond(token_symbol, 2102, 19, 26),
+						VSBond(token_symbol, 2101, 18, 25),
+						VSBond(token_symbol, 2100, 18, 25),
+						VSBond(token_symbol, 2100, 17, 24),
+						VSBond(token_symbol, 2095, 17, 24),
+						VSBond(token_symbol, 2096, 17, 24),
+						VSBond(token_symbol, 2087, 17, 24),
+						VSBond(token_symbol, 2085, 15, 22),
+						VSBond(token_symbol, 2092, 15, 22),
+						VSBond(token_symbol, 2088, 15, 22),
+						VSBond(token_symbol, 2090, 15, 22),
+					];
+
+					let vs_token =
+						T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+							.map_err(|_| Error::<T>::NotSupportTokenType)?;
+					let reserved_vstoken = T::MultiCurrency::reserved_balance(vs_token, &who);
+					T::MultiCurrency::unreserve(vs_token, &who, reserved_vstoken);
+					vsbond_list.into_iter().for_each(|vs_bond| {
+						let reserved_vsbond = T::MultiCurrency::reserved_balance(vs_bond, &who);
+						T::MultiCurrency::unreserve(vs_bond, &who, reserved_vsbond);
+					});
+				},
+				_ => return Err(DispatchError::BadOrigin.into()),
+			}
+
+			Self::deposit_event(Event::<T>::VstokenUnlocked(who));
 			Ok(())
 		}
 

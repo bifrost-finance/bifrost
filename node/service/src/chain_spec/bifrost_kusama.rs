@@ -124,7 +124,11 @@ pub fn bifrost_genesis(
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
 	salp_lite_multisig_key_salp: AccountId,
-	asset_registry: (Vec<(CurrencyId, Balance)>, Vec<CurrencyId>, Vec<(CurrencyId, u32, u32, u32)>),
+	asset_registry: (
+		Vec<(CurrencyId, Balance, Option<(String, String, u8)>)>,
+		Vec<CurrencyId>,
+		Vec<(CurrencyId, u32, u32, u32)>,
+	),
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -314,14 +318,14 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 
 	// Token
 	let currency = vec![
-		(Native(BNC), DOLLARS / 100),
-		(Stable(KUSD), DOLLARS / 10_000),
-		(Token(KSM), DOLLARS / 10_000),
-		(Token(ZLK), DOLLARS / 1000_000),
-		(Token(KAR), DOLLARS / 10_000),
-		(Token(RMRK), DOLLARS / 1000_000),
-		(Token(PHA), 4 * DOLLARS / 100),
-		(Token(MOVR), DOLLARS / 1000_000),
+		(Native(BNC), DOLLARS / 100, None),
+		(Stable(KUSD), DOLLARS / 10_000, None),
+		(Token(KSM), DOLLARS / 10_000, None),
+		(Token(ZLK), DOLLARS / 1000_000, None),
+		(Token(KAR), DOLLARS / 10_000, None),
+		(Token(RMRK), DOLLARS / 1000_000, None),
+		(Token(PHA), 4 * DOLLARS / 100, None),
+		(Token(MOVR), DOLLARS / 1000_000, None),
 	];
 	let vcurrency = vec![VSToken(KSM), VToken(BNC), VToken(KSM), VToken(MOVR)];
 
@@ -467,8 +471,8 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 		salp_lite_multisig,
 		(
 			vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
-				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
+				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 			],
 			vec![],
 			vec![],
@@ -538,8 +542,8 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 		salp_lite_multisig,
 		(
 			vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
-				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
+				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 			],
 			vec![],
 			vec![],

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-
+mod account_id;
 mod asset_registry;
 mod dollor_tests;
 mod flexible_fee;
@@ -27,6 +27,6 @@ mod kusama_integration_tests;
 mod kusama_test_net;
 mod salp;
 mod slp;
-// mod statemine;
-mod account_id;
+mod statemine;
 mod treasury;
+mod vtoken_minting;
