@@ -64,7 +64,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_asset_registry::AssetIdMaps;
+use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::FeeDealer,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -944,14 +944,14 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 >;
 
 parameter_types! {
-	pub DotPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), dot_per_second());
+	pub DotPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), dot_per_second::<Runtime>());
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(SelfParaId::get()), GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:DOT = 80:1
-		dot_per_second() * 80
+		dot_per_second::<Runtime>() * 80
 	);
 	pub BncNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -959,7 +959,7 @@ parameter_types! {
 			X1(GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
 		).into(),
 		// BNC:DOT = 80:1
-		dot_per_second() * 80
+		dot_per_second::<Runtime>() * 80
 	);
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -967,7 +967,7 @@ parameter_types! {
 			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
-		dot_per_second() * 150 * 1_000_000
+		dot_per_second::<Runtime>() * 150 * 1_000_000
 	);
 	pub ZlkNewPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
@@ -975,8 +975,9 @@ parameter_types! {
 			X1(GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
-		dot_per_second() * 150 * 1_000_000
+		dot_per_second::<Runtime>() * 150 * 1_000_000
 	);
+	pub BasePerSecond: u128 = dot_per_second::<Runtime>();
 }
 
 pub struct ToTreasury;
@@ -996,6 +997,7 @@ pub type Trader = (
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<DotPerSecond, ToTreasury>,
+	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
