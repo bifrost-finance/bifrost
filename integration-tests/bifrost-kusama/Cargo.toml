@@ -75,7 +75,7 @@ zenlink-protocol = { version = "*" }
 zenlink-protocol-runtime-api = { version = "*" }
 
 [dev-dependencies]
-env_logger = "0.9.0"
+env_logger = "0.9.3"
 hex = "0.4.0"
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
