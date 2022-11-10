@@ -47,7 +47,6 @@ jobs:
             BUILD_DATE=${{ steps.date.outputs.today }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          ssh: default
       - uses: 8398a7/action-slack@v3
         if: startsWith(github.ref, 'refs/tags/v')
         with:
