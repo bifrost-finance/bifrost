@@ -23,7 +23,7 @@ jobs:
 
       - name: Srtool build
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.5.0
+        uses: chevdor/srtool-actions@v0.6.0
         env:
           BUILD_OPTS: "--features on-chain-release-build"
           PARACHAIN_PALLET_ID: "0x05"
