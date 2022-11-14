@@ -1354,6 +1354,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-ve-minting"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "cumulus-primitives-core",
+ "env_logger",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "bifrost-vesting"
 version = "0.8.0"
 dependencies = [
