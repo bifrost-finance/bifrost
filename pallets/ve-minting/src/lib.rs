@@ -33,13 +33,13 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, Saturating},
-		ArithmeticError, Perbill,
+		traits::{AccountIdConversion, CheckedAdd, Saturating, Zero},
+		ArithmeticError, Perbill, SaturatedConversion,
 	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, Timestamp};
+use node_primitives::{AccountId, CurrencyId, Timestamp}; // BlockNumber, Balance
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
@@ -59,19 +59,26 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::CurrencyId;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct LockedBalance {
+pub struct VeConfig<Balance> {
 	amount: Balance,
-	end: BlockNumber,
+	end: Timestamp,
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct LockedBalance<Balance> {
+	amount: Balance,
+	end: Timestamp,
 }
 
 // pub type Epoch = U256;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
-pub struct Point {
-	bias: Balance, // i128
-	slope: i128,   // dweight / dt
+pub struct Point<Balance, BlockNumber> {
+	bias: Balance,  // i128
+	slope: Balance, // dweight / dt
 	ts: Timestamp,
 	blk: BlockNumber, // block
+	fxs_amt: Balance,
 }
 
 #[frame_support::pallet]
@@ -125,20 +132,35 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn locked)]
-	pub type Locked<T: Config> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, LockedBalance>;
+	pub type Locked<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, LockedBalance<BalanceOf<T>>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn point_history)]
-	pub type PointHistory<T: Config> = StorageMap<_, Twox64Concat, U256, Point>;
+	pub type PointHistory<T: Config> =
+		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_point_history)]
-	pub type UserPointHistory<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, AccountIdOf<T>, Blake2_128Concat, U256, Point>;
+	pub type UserPointHistory<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		AccountId, // AccountIdOf<T>
+		Blake2_128Concat,
+		U256,
+		Point<BalanceOf<T>, BlockNumberFor<T>>,
+		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn user_point_epoch)]
+	pub type UserPointEpoch<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountId, U256, ValueQuery>; // AccountIdOf<T>
 
 	#[pallet::storage]
 	#[pallet::getter(fn slope_changes)]
-	pub type SlopeChanges<T: Config> = StorageMap<_, Twox64Concat, Timestamp, i128>;
+	pub type SlopeChanges<T: Config> =
+		StorageMap<_, Twox64Concat, Timestamp, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -159,11 +181,73 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn _checkpoint(addr: AccountId, old_locked: LockedBalance, new_locked: LockedBalance) {
-			let _u_old = Point::default();
+		fn _checkpoint(
+			addr: AccountId,
+			old_locked: LockedBalance<BalanceOf<T>>,
+			new_locked: LockedBalance<BalanceOf<T>>,
+		) {
+			let mut u_old = Point::default();
+			let mut u_new = Point::default();
+			let old_dslope = BalanceOf::<T>::zero();
+			let new_dslope = BalanceOf::<T>::zero();
+			let g_epoch: U256 = Self::epoch();
+
+			let current_block_number: T::BlockNumber =
+				frame_system::Pallet::<T>::block_number().into(); // BlockNumberFor<T>
+			let current_timestamp: Timestamp =
+				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+			if old_locked.end > current_timestamp && old_locked.amount > BalanceOf::<T>::zero() {
+				u_old.slope = old_locked.amount / MAXTIME;
+				u_old.bias = u_old
+					.slope
+					.saturating_mul((old_locked.end - current_timestamp).saturated_into());
+			}
+			if new_locked.end > current_timestamp && new_locked.amount > BalanceOf::<T>::zero() {
+				u_new.slope = new_locked.amount / MAXTIME;
+				u_new.bias = u_new
+					.slope
+					.saturating_mul((new_locked.end - current_timestamp).saturated_into());
+			}
+
+			old_dslope = Self::slope_changes(old_locked.end);
+			if new_locked.end != 0 {
+				if new_locked.end == old_locked.end {
+					new_dslope = old_dslope
+				} else {
+					new_dslope = Self::slope_changes(new_locked.end)
+				}
+			}
+
+			let last_point: Point<BalanceOf<T>, BlockNumberFor<T>> = Point {
+				bias: Zero::zero(),
+				slope: Zero::zero(),
+				ts: current_timestamp,
+				blk: current_block_number,
+				fxs_amt: Zero::zero(),
+			};
+			if g_epoch > U256::zero() {
+				last_point = Self::point_history(g_epoch);
+				// } else {
+				// 	last_point.fxs_amt = ERC20(Self::token).balanceOf(self)
+			}
+			let last_checkpoint = last_point.ts;
 		}
-		// fn execute_distribute_inner() -> DispatchResult {
-		// 	Ok(())
-		// }
+
+		fn balanceOf(addr: AccountId, _t: Timestamp) -> BalanceOf<T> {
+			let u_epoch = Self::user_point_epoch(addr);
+			if u_epoch == U256::zero() {
+				return Zero::zero();
+			} else {
+				let last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
+					Self::user_point_history(addr, u_epoch);
+				last_point.bias -=
+					last_point.slope.saturating_mul((_t - last_point.ts).saturated_into());
+				// .ok_or(ArithmeticError::Overflow)?;
+				if last_point.bias < Zero::zero() {
+					last_point.bias = Zero::zero();
+				}
+				last_point.bias
+			}
+		}
 	}
 }

@@ -1360,6 +1360,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-runtime-common",
  "bifrost-slp",
+ "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "env_logger",
  "frame-benchmarking",
@@ -1378,6 +1379,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-timestamp",
  "xcm",
 ]
 
