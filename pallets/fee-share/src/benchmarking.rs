@@ -17,3 +17,67 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
+#![cfg(feature = "runtime-benchmarks")]
+
+use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
+use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
+use frame_system::{Pallet as System, RawOrigin};
+use node_primitives::{CurrencyId, TokenSymbol};
+
+use crate::{Pallet as FeeShare, *};
+
+benchmarks! {
+	on_initialize {}:{FeeShare::<T>::on_idle(T::BlockNumber::from(10u32),0);}
+
+	create_distribution {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+	}: _(RawOrigin::Root,
+	token_type.clone(),
+	tokens_proportion.clone(),
+	true)
+
+	edit_distribution {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+		assert_ok!(FeeShare::<T>::create_distribution(
+			RawOrigin::Root.into(),
+			vec![KSM],
+			tokens_proportion.clone(),
+			true,
+		));
+	}: _(RawOrigin::Root,
+		0,
+		None,
+		Some(tokens_proportion.clone()),
+		Some(true))
+	set_era_length {}: _(RawOrigin::Root,T::BlockNumber::from(10u32))
+	execute_distribute {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+		assert_ok!(FeeShare::<T>::create_distribution(
+			RawOrigin::Root.into(),
+			vec![KSM],
+			tokens_proportion.clone(),
+			true,
+		));
+	}: _(RawOrigin::Root,0)
+	delete_distribution {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+		assert_ok!(FeeShare::<T>::create_distribution(
+			RawOrigin::Root.into(),
+			vec![KSM],
+			tokens_proportion.clone(),
+			true,
+		));
+	}: _(RawOrigin::Root,0)
+}

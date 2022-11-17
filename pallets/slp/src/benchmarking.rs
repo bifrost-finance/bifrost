@@ -23,6 +23,7 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
+use xcm::latest::prelude::*;
 
 #[allow(unused_imports)]
 pub use crate::{Pallet as Slp, *};

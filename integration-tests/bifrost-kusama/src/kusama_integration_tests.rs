@@ -47,8 +47,8 @@ mod bifrost_imports {
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
 		BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
-		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens,
-		TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
+		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, SlpEntrancePalletId,
+		System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig, XcmInterface,
 	};
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
@@ -171,8 +171,8 @@ impl ExtBuilder {
 		<bifrost_asset_registry::GenesisConfig<Runtime> as GenesisBuild<Runtime>>::assimilate_storage(
 			&bifrost_asset_registry::GenesisConfig {
 				currency: vec![
-					(CurrencyId::Token(TokenSymbol::DOT), 100_000_000),
-					(CurrencyId::Token(TokenSymbol::KSM), 10_000_000),
+					(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
+					(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 				],
 				vcurrency: vec![],
 				vsbond: vec![],

@@ -25,7 +25,6 @@ use crate::{
 	Junctions::X2,
 };
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
@@ -34,34 +33,35 @@ use crate::{
 };
 use codec::alloc::collections::BTreeMap;
 use node_primitives::Balance;
+use polkadot_parachain::primitives::Sibling;
+use sp_runtime::traits::AccountIdConversion;
 
 #[test]
 fn initialize_moonriver_delegator() {
 	ExtBuilder::default().build().execute_with(|| {
-		// let bifrost_parachain_account_id_20: [u8; 20] =
-		// 	hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
+		let bifrost_parachain_account_id_20_right: [u8; 20] =
+			hex_literal::hex!["7369626cd1070000000000000000000000000000"].into();
 		let bifrost_parachain_account_id_20: [u8; 20] =
-			ParaId::from(2001).into_account_truncating();
+			Sibling::from(2001).into_account_truncating();
+		assert_eq!(bifrost_parachain_account_id_20_right, bifrost_parachain_account_id_20);
 
 		// subaccount_id_0: 0x863c1faef3c3b8f8735ecb7f8ed18996356dd3de
+		let subaccount_id_0_right: [u8; 20] =
+			hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
 		let subaccount_id_0 = Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0);
-		println!("subaccount_id_0: {:?}", subaccount_id_0);
+		assert_eq!(subaccount_id_0_right.as_slice(), subaccount_id_0.0);
 
 		// subaccount_id_1: 0x3afe20b0c85801b74e65586fe7070df827172574
+		let subaccount_id_1_right: [u8; 20] =
+			hex_literal::hex!["3afe20b0c85801b74e65586fe7070df827172574"].into();
 		let subaccount_id_1 = Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 1);
-		println!("subaccountId1: {:?}", subaccount_id_1);
+		assert_eq!(subaccount_id_1_right.as_slice(), subaccount_id_1.0);
 
 		let subaccount0_location = MultiLocation {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 {
-					network: Any,
-					key: [
-						134, 60, 31, 174, 243, 195, 184, 248, 115, 94, 203, 127, 142, 209, 137,
-						150, 53, 109, 211, 222,
-					],
-				},
+				Junction::AccountKey20 { network: Any, key: subaccount_id_0.0 },
 			),
 		};
 

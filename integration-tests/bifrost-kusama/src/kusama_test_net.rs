@@ -67,21 +67,21 @@ decl_test_parachain! {
 	}
 }
 
-// decl_test_parachain! {
-// 	pub struct Statemine {
-// 		Runtime = statemine_runtime::Runtime,
-// 		Origin = statemine_runtime::Origin,
-// 		XcmpMessageHandler = statemine_runtime::XcmpQueue,
-// 		DmpMessageHandler = statemine_runtime::DmpQueue,
-// 		new_ext = para_ext(1000),
-// 	}
-// }
+decl_test_parachain! {
+	pub struct Statemine {
+		Runtime = statemine_runtime::Runtime,
+		Origin = statemine_runtime::Origin,
+		XcmpMessageHandler = statemine_runtime::XcmpQueue,
+		DmpMessageHandler = statemine_runtime::DmpQueue,
+		new_ext = para_ext(1000),
+	}
+}
 
 decl_test_network! {
 	pub struct TestNet {
 		relay_chain = KusamaNet,
 		parachains = vec![
-			// (1000, Statemine),
+			(1000, Statemine),
 			(2001, Bifrost),
 			(2000, Sibling),
 		],

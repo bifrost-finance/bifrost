@@ -34,10 +34,12 @@ pub trait WeightInfo {
 	fn cross_in() -> Weight;
     fn cross_out() -> Weight;
     fn register_linked_account() -> Weight;
+	fn change_outer_linked_account() -> Weight;
 	fn add_to_issue_whitelist() -> Weight;
 	fn remove_from_issue_whitelist() -> Weight;
 	fn add_to_register_whitelist() -> Weight;
 	fn remove_from_register_whitelist() -> Weight;
+	fn set_crossing_minimum_amount() -> Weight;
 }
 
 pub struct BifrostWeight<T>(PhantomData<T>);
@@ -66,6 +68,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 
+	fn change_outer_linked_account() -> Weight {
+		(15_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
 	fn add_to_issue_whitelist() -> Weight {
 		(16_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
@@ -85,6 +93,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	}
 
 	fn remove_from_register_whitelist() -> Weight {
+		(15_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn set_crossing_minimum_amount() -> Weight {
 		(15_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -117,6 +131,12 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 
+	fn change_outer_linked_account() -> Weight {
+		(15_000_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+
 	fn add_to_issue_whitelist() -> Weight {
 		(16_000_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
@@ -136,6 +156,12 @@ impl WeightInfo for () {
 	}
 
 	fn remove_from_register_whitelist() -> Weight {
+		(15_000_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+
+	fn set_crossing_minimum_amount() -> Weight {
 		(15_000_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))

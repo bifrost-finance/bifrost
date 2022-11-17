@@ -63,7 +63,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_asset_registry::AssetIdMaps;
+use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::FeeDealer,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -124,7 +124,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 962,
+	spec_version: 964,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1004,7 +1004,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				AccountKey20 {
 					network: NetworkId::Any,
 					key: Slp::derivative_account_id_20(
-						cumulus_primitives_core::ParaId::from(ParachainInfo::get())
+						polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
 							.into_account_truncating(),
 						index,
 					)
@@ -1012,12 +1012,25 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				},
 			),
 		),
-		_ => MultiLocation::new(
+		// Only relay chain use the Bifrost para account with "para"
+		CurrencyId::Token2(DOT_TOKEN_ID) => MultiLocation::new(
 			1,
 			X1(AccountId32 {
 				network: NetworkId::Any,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
+					index,
+				)
+				.into(),
+			}),
+		),
+		_ => MultiLocation::new(
+			1,
+			X1(AccountId32 {
+				network: NetworkId::Any,
+				id: Utility::derivative_account_id(
+					polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
+						.into_account_truncating(),
 					index,
 				)
 				.into(),
@@ -1174,7 +1187,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
 

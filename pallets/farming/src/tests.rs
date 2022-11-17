@@ -349,21 +349,50 @@ fn create_farming_pool() {
 			Origin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((KSM, 1000, gauge_basic_rewards)),
-			0,
-			0,
+			Some((KSM, 1000, gauge_basic_rewards.clone())),
+			2,
+			1,
 			7,
 			6,
 			5
 		));
+		assert_ok!(Farming::create_farming_pool(
+			Origin::signed(ALICE),
+			tokens_proportion.clone(),
+			basic_rewards.clone(),
+			Some((KSM, 1000, gauge_basic_rewards)),
+			2,
+			1,
+			7,
+			6,
+			5
+		));
+		if let Some(pool_infos) = Farming::pool_infos(0) {
+			assert_eq!(pool_infos.state, PoolState::UnCharged)
+		};
+		assert_ok!(Farming::kill_pool(Origin::signed(ALICE), 0));
 
-		let pid = 0;
+		let pid = 1;
 		let charge_rewards = vec![(KSM, 300000)];
 		assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
+		if let Some(pool_infos) = Farming::pool_infos(0) {
+			assert_eq!(pool_infos.total_shares, 0);
+			assert_eq!(pool_infos.min_deposit_to_start, 2);
+			assert_eq!(pool_infos.state, PoolState::Charged)
+		};
+		assert_err!(
+			Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))),
+			Error::<Runtime>::CanNotDeposit
+		);
+		System::set_block_number(System::block_number() + 3);
 		assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), Some((100, 100))));
-
+		Farming::on_initialize(System::block_number() + 3);
 		Farming::on_initialize(0);
-		Farming::on_initialize(0);
+		if let Some(pool_infos) = Farming::pool_infos(0) {
+			assert_eq!(pool_infos.total_shares, 1000);
+			assert_eq!(pool_infos.min_deposit_to_start, 2);
+			assert_eq!(pool_infos.state, PoolState::Ongoing)
+		};
 		assert_err!(Farming::claim(Origin::signed(ALICE), pid), Error::<Runtime>::CanNotClaim);
 		System::set_block_number(System::block_number() + 6);
 		assert_ok!(Farming::claim(Origin::signed(ALICE), pid));
