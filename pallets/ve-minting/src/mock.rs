@@ -78,9 +78,10 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+		VeMinting: ve_minting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -202,7 +203,7 @@ ord_parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
-impl vtoken_minting::Config for Runtime {
+impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
@@ -226,6 +227,20 @@ impl bifrost_asset_registry::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+}
+
+impl ve_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type VeMintingPalletId = VeMintingPalletId;
+	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 }
 

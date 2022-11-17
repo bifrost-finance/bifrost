@@ -33,7 +33,9 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, Saturating, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
+		},
 		ArithmeticError, Perbill, SaturatedConversion,
 	},
 	PalletId,
@@ -103,6 +105,12 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
+
+		// #[pallet::constant]
+		// type MULTIPLIER: u128;
+
+		// #[pallet::constant]
+		// type WEEK: Timestamp;
 	}
 
 	#[pallet::event]
@@ -161,8 +169,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn slope_changes)]
-	pub type SlopeChanges<T: Config> =
-		StorageMap<_, Twox64Concat, Timestamp, BalanceOf<T>, ValueQuery>;
+	pub type SlopeChanges<T: Config> = StorageMap<_, Twox64Concat, Timestamp, i128, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -173,6 +180,34 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		pub fn set_config(
+			origin: OriginFor<T>,
+			// min_mint: BalanceOf<T>,             // 最小铸造值
+			// min_lock_period: BlockNumberFor<T>, // 最小锁仓期
+			max_time: Option<BalanceOf<T>>, // 最大锁仓期
+			MULTIPLIER: Option<u128>,
+			WEEK: Option<Timestamp>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mut ve_config = Self::ve_configs();
+			if let Some(max_time) = max_time {
+				ve_config.max_time = max_time;
+			};
+			if let Some(MULTIPLIER) = MULTIPLIER {
+				ve_config.MULTIPLIER = MULTIPLIER;
+			};
+			if let Some(WEEK) = WEEK {
+				ve_config.WEEK = WEEK;
+			};
+
+			VeConfigs::<T>::set(ve_config);
+
+			Self::deposit_event(Event::Created {});
+			Ok(())
+		}
+
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn create_distribution(origin: OriginFor<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -190,8 +225,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
-			let mut old_dslope = BalanceOf::<T>::zero();
-			let mut new_dslope = BalanceOf::<T>::zero();
+			let mut old_dslope = 0_i128; //BalanceOf::<T>::zero();
+			let mut new_dslope = 0_i128; //BalanceOf::<T>::zero();
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
 			let current_block_number: BlockNumberFor<T> =
@@ -206,7 +241,12 @@ pub mod pallet {
 					.saturating_mul((old_locked.end - current_timestamp).saturated_into());
 			}
 			if new_locked.end > current_timestamp && new_locked.amount > BalanceOf::<T>::zero() {
-				u_new.slope = new_locked.amount / Self::ve_configs().max_time;
+				u_new.slope = U256::from(new_locked.amount.saturated_into::<u128>())
+					.checked_div(U256::from(Self::ve_configs().max_time.saturated_into::<u128>()))
+					.unwrap_or_default()
+					.as_u128()
+					.unique_saturated_into();
+				// u_new.slope = new_locked.amount / Self::ve_configs().max_time;
 				u_new.bias = u_new
 					.slope
 					.saturating_mul((new_locked.end - current_timestamp).saturated_into());
@@ -250,9 +290,20 @@ pub mod pallet {
 				} else {
 					d_slope = Self::slope_changes(t_i)
 				}
-				last_point.bias -=
-					last_point.slope.saturating_mul((t_i - last_point.ts).saturated_into());
-				last_point.slope += d_slope;
+				last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
+					.checked_sub(
+						U256::from(last_point.slope.saturated_into::<u128>()).saturating_mul(
+							U256::from((t_i - last_point.ts).saturated_into::<u128>()),
+						),
+					)
+					// .checked_div(total_shares)
+					.unwrap_or_default()
+					.as_u128()
+					.unique_saturated_into();
+
+				// last_point.bias -=
+				// 	last_point.slope.saturating_mul((t_i - last_point.ts).saturated_into());
+				last_point.slope += (d_slope as u128).saturated_into();
 				if last_point.bias < Zero::zero() {
 					// This can happen
 					last_point.bias = Zero::zero()
@@ -282,48 +333,51 @@ pub mod pallet {
 					PointHistory::<T>::insert(g_epoch, last_point);
 					// Self::point_history(g_epoch) = last_point
 				}
-				Epoch::<T>::set(g_epoch);
-
-				last_point.slope += u_new.slope - u_old.slope;
-				last_point.bias += u_new.bias - u_old.bias;
-				if last_point.slope < Zero::zero() {
-					last_point.slope = Zero::zero()
-				}
-				if last_point.bias < Zero::zero() {
-					last_point.bias = Zero::zero()
-				}
-				PointHistory::<T>::insert(g_epoch, last_point);
-
-				if old_locked.end > current_timestamp {
-					// old_dslope was <something> - u_old.slope, so we cancel that
-					old_dslope += u_old.slope;
-					if new_locked.end == old_locked.end {
-						old_dslope -= u_new.slope.clone()
-					} // It was a new deposit, not extension
-					SlopeChanges::<T>::insert(old_locked.end, old_dslope);
-				}
-
-				if new_locked.end > current_timestamp {
-					if new_locked.end > old_locked.end {
-						new_dslope -= u_new.slope; // old slope disappeared at this point
-						SlopeChanges::<T>::insert(new_locked.end, new_dslope);
-					}
-					// else: we recorded it already in old_dslope
-				}
-
-				// # Now handle user history
-				let user_epoch = Self::user_point_epoch(addr) + U256::one();
-				UserPointEpoch::<T>::insert(addr, user_epoch);
-				u_new.ts = current_timestamp;
-				u_new.blk = current_block_number;
-				u_new.fxs_amt = Self::locked(addr).amount;
-				// Self::user_point_history(addr, user_epoch) = u_new;
-				UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 			}
+			Epoch::<T>::set(g_epoch);
+
+			last_point.slope += u_new.slope - u_old.slope;
+			last_point.bias += u_new.bias - u_old.bias;
+			if last_point.slope < Zero::zero() {
+				last_point.slope = Zero::zero()
+			}
+			if last_point.bias < Zero::zero() {
+				last_point.bias = Zero::zero()
+			}
+			PointHistory::<T>::insert(g_epoch, last_point);
+
+			if old_locked.end > current_timestamp {
+				// old_dslope was <something> - u_old.slope, so we cancel that
+				old_dslope += u_old.slope.saturated_into::<u128>() as i128;
+				if new_locked.end == old_locked.end {
+					old_dslope -= u_new.slope.clone().saturated_into::<u128>() as i128;
+				} // It was a new deposit, not extension
+				SlopeChanges::<T>::insert(old_locked.end, old_dslope);
+			}
+
+			if new_locked.end > current_timestamp {
+				if new_locked.end > old_locked.end {
+					new_dslope = new_dslope
+						.checked_sub(u_new.slope.saturated_into::<u128>() as i128)
+						.ok_or(ArithmeticError::Overflow)?;
+					// new_dslope -= u_new.slope; old slope disappeared at this point
+					SlopeChanges::<T>::insert(new_locked.end, new_dslope);
+				}
+				// else: we recorded it already in old_dslope
+			}
+
+			// Now handle user history
+			let user_epoch = Self::user_point_epoch(addr) + U256::one();
+			UserPointEpoch::<T>::insert(addr, user_epoch);
+			u_new.ts = current_timestamp;
+			u_new.blk = current_block_number;
+			u_new.fxs_amt = Self::locked(addr).amount;
+			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
+
 			Ok(())
 		}
 
-		fn balanceOf(addr: &AccountId, _t: Timestamp) -> BalanceOf<T> {
+		pub fn balanceOf(addr: &AccountId, _t: Timestamp) -> BalanceOf<T> {
 			let u_epoch = Self::user_point_epoch(addr);
 			if u_epoch == U256::zero() {
 				return Zero::zero();

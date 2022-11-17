@@ -27,9 +27,27 @@ use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
 use node_primitives::TokenInfo;
 
 #[test]
-fn mint_bnc() {
+fn _checkpoint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
+		let old_locked = LockedBalance { amount: 0, end: 0 };
+		let new_locked = LockedBalance { amount: 10000000000000, end: 1668752990696 };
+
+		assert_ok!(VeMinting::set_config(
+			Origin::signed(ALICE),
+			Some(4 * 365 * 86400),
+			Some(10_u128.pow(18)),
+			Some(7 * 86400)
+		));
+		// assert_eq!(VeMinting::ve_configs(), VeConfig::default());
+		// VeMinting::_checkpoint(&BOB, old_locked, new_locked);
+		System::set_block_number(System::block_number() + 20);
+		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
+		// let mut u_point = Point::<BalanceOf<Runtime>, BlockNumberFor<Runtime>>::default();
+		// assert_eq!(VeMinting::user_point_history(&BOB, U256::from(1)), u_point);
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), 0);
 	});
 }
 
