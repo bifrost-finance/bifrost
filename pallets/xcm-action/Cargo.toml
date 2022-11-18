@@ -1,0 +1,49 @@
+[package]
+name = "bifrost-xcm-action"
+description = "A pallet to manage the execution of XCM messages"
+edition = "2021"
+version = "0.1.0"
+publish = false
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+  "derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = [
+  "derive",
+] }
+frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-xtokens = { version = "0.4.1-dev", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+zenlink-protocol = { version = "*", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28", default-features = false }
+xcm-interface = { path = "../xcm-interface", default-features = false }
+
+[dev-dependencies]
+sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+[features]
+default = ["std"]
+std = [
+  "codec/std",
+  "frame-benchmarking?/std",
+  "frame-support/std",
+  "frame-system/std",
+  "scale-info/std",
+  "zenlink-protocol/std",
+  "orml-traits/std",
+  "orml-xtokens/std",
+  "node-primitives/std",
+  "cumulus-primitives-core/std",
+]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+try-runtime = ["frame-support/try-runtime"]

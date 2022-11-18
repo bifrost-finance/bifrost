@@ -26,6 +26,7 @@ members = [
 	"pallets/system-maker",
 	"pallets/fee-share",
 	"pallets/parachain-staking",
+	"pallets/xcm-action",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]

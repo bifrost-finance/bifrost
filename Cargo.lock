@@ -1422,6 +1422,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-xcm-action"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-traits",
+ "orml-xtokens",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "xcm",
+ "xcm-interface",
+ "zenlink-protocol",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
