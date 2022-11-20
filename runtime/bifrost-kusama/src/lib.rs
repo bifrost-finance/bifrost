@@ -1886,6 +1886,21 @@ impl bifrost_system_staking::Config for Runtime {
 	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
+parameter_types! {
+	pub const XcmActionPalletId: PalletId = PalletId(*b"/xcmactn");
+}
+
+impl bifrost_xcm_action::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type DexOperator = ZenlinkProtocol;
+	type VtokenMintingInterface = VtokenMinting;
+	type XcmTransfer = XTokens;
+	type PalletId = XcmActionPalletId;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
+}
+
 impl bifrost_system_maker::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -2240,6 +2255,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
+		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 124,
 	}
 }
 

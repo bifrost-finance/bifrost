@@ -781,6 +781,7 @@ dependencies = [
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
+ "bifrost-xcm-action",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -1425,20 +1426,32 @@ dependencies = [
 name = "bifrost-xcm-action"
 version = "0.1.0"
 dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
  "orml-traits",
  "orml-xtokens",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "xcm-interface",
+ "xcm-simulator",
  "zenlink-protocol",
 ]
 
@@ -13233,6 +13246,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "xcm-simulator"
+version = "0.9.28"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.28#314298c32ac6df996ea8f3fe23fa5d3768340066"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

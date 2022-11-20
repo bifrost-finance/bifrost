@@ -1,3 +1,20 @@
+// This file is part of Bifrost.
+
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -5,8 +22,13 @@ use frame_support::{
 };
 use node_primitives::{CurrencyId, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::{arithmetic::Zero, MultiCurrency, XcmTransfer};
+pub use pallet::*;
+use scale_info::prelude::vec;
 use xcm::{latest::prelude::*, v1::MultiLocation};
 use xcm_interface::traits::parachains;
+
+pub mod weights;
+pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod mock;
@@ -63,6 +85,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
+
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -97,7 +121,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// vtoken-minting mint
-		#[pallet::weight(10_000)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
 			receiver: [u8; 20],
@@ -133,7 +157,7 @@ pub mod pallet {
 		}
 
 		/// vtoken-minting redeem
-		#[pallet::weight(10_000)]
+		#[pallet::weight(<T as Config>::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			vtoken_id: CurrencyIdOf<T>,
@@ -148,7 +172,7 @@ pub mod pallet {
 		}
 
 		/// zenlink inner_swap_assets_for_exact_assets
-		#[pallet::weight(10_000)]
+		#[pallet::weight(<T as Config>::WeightInfo::swap())]
 		pub fn swap(
 			origin: OriginFor<T>,
 			receiver: [u8; 20],
