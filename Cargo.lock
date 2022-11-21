@@ -1430,6 +1430,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-vtoken-minting",
+ "cumulus-pallet-xcm",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",

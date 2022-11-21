@@ -458,6 +458,26 @@ impl bifrost_slp::Config for Test {
 	type ParachainStaking = ();
 }
 
+pub struct XcmFake;
+impl Into<Result<cumulus_pallet_xcm::Origin, XcmFake>> for XcmFake {
+	fn into(self) -> Result<cumulus_pallet_xcm::Origin, XcmFake> {
+		todo!("please test via local-integration-tests")
+	}
+}
+impl From<Origin> for XcmFake {
+	fn from(_: Origin) -> Self {
+		todo!("please test via local-integration-tests")
+	}
+}
+impl SendXcm for XcmFake {
+	fn send_xcm(
+		_destination: impl Into<xcm::latest::MultiLocation>,
+		_message: xcm::latest::Xcm<()>,
+	) -> xcm::latest::SendResult {
+		todo!("please test via local-integration-tests")
+	}
+}
+
 // Pallet xcm-action configuration
 parameter_types! {
 	pub const XcmActionPalletId: PalletId = PalletId(*b"/xcmactn");
@@ -465,6 +485,7 @@ parameter_types! {
 
 impl xcm_action::Config for Test {
 	type Event = Event;
+	type Origin = XcmFake;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;

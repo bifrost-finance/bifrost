@@ -1892,6 +1892,7 @@ parameter_types! {
 
 impl bifrost_xcm_action::Config for Runtime {
 	type Event = Event;
+	type Origin = Origin;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;

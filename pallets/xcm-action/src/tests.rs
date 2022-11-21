@@ -46,13 +46,16 @@ fn test_xcm_action() {
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
 		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10));
 
-		let receiver: [u8; 20] =
-			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		assert_ok!(XcmAction::mint(Origin::signed(ALICE), receiver, KSM, 1000));
-
-		assert_ok!(XcmAction::redeem(Origin::signed(ALICE), vKSM, 100));
-
 		init_zenlink(2001u32);
+
+		// let weight = 4_000_000_000u64;
+		// let addr: [u8; 20] =
+		// 	hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		// let receiver = H160::from(addr);
+		// assert_ok!(XcmAction::mint(Origin::signed(ALICE), receiver, KSM, 1000, weight));
+
+		// assert_ok!(XcmAction::redeem(Origin::signed(ALICE), vKSM, 100));
+
 		// assert_ok!(XcmAction::swap(
 		// 	Origin::signed(ALICE),
 		// 	receiver,

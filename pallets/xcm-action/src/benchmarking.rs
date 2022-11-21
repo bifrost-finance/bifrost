@@ -28,24 +28,26 @@ use node_primitives::{CurrencyId, TokenSymbol};
 benchmarks! {
 	mint {
 	let caller: T::AccountId = whitelisted_caller();
-	let receiver: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-		let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
-	}: _(RawOrigin::Signed(caller.clone()), receiver, KSM, token_amount)
+	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+	let receiver = H160::from(addr);
+	const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
+	}: _(RawOrigin::Signed(caller.clone()), receiver, KSM, token_amount, 4_000_000_000u64)
 
   redeem {
 	let caller: T::AccountId = whitelisted_caller();
 	const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-		let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
+	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
 	}: _(RawOrigin::Signed(caller.clone()), vKSM, token_amount)
 
   swap {
 	let caller: T::AccountId = whitelisted_caller();
-	let receiver: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+	let receiver = H160::from(addr);
+	const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-		let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
-	}: _(RawOrigin::Signed(caller.clone()), receiver, token_amount, token_amount, KSM, vKSM)
+	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
+	}: _(RawOrigin::Signed(caller.clone()), receiver, token_amount, token_amount, KSM, vKSM, 4_000_000_000u64)
 }
 
 impl_benchmark_test_suite!(
