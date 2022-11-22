@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
+use codec::Decode;
 use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -98,18 +99,19 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		XcmMinted {
 			para_id: ParaId,
-			receiver: H160,
+			caller: H160,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
 		XcmRedeemed {
 			para_id: ParaId,
+			caller: H160,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		},
 		XcmSwapped {
 			para_id: ParaId,
-			receiver: H160,
+			caller: H160,
 			amount_in_max: BalanceOf<T>,
 			amount_out: BalanceOf<T>,
 			in_currency_id: CurrencyIdOf<T>,
@@ -123,6 +125,8 @@ pub mod pallet {
 		TokenNotFoundInVtokenMinting,
 		/// Token not found in zenlink
 		TokenNotFoundInZenlink,
+		/// Accountid decode error
+		DecodingError,
 	}
 
 	#[pallet::call]
@@ -131,14 +135,16 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
-			receiver: H160,
+			caller: H160,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			weight: u64,
 		) -> DispatchResultWithPostInfo {
 			// Only accept calls from other chains
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
-			let who = ensure_signed(origin)?; // use the derivative acount from OriginConverter
+			ensure_signed(origin)?;
+			let who = Self::generate_account_id(para, caller)?;
+
 			T::VtokenMintingInterface::mint(who.clone(), token_id, token_amount)?;
 			let vtoken_id = T::VtokenMintingInterface::vtoken_id(token_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
@@ -153,7 +159,7 @@ pub mod pallet {
 						parents: 1,
 						interior: X2(
 							Parachain(para.into()),
-							Junction::AccountKey20 { network: Any, key: receiver.to_fixed_bytes() },
+							Junction::AccountKey20 { network: Any, key: caller.to_fixed_bytes() },
 						),
 					},
 					weight,
@@ -163,7 +169,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::XcmMinted {
 				para_id: para.into(),
-				receiver,
+				caller,
 				token_id,
 				token_amount,
 			});
@@ -175,15 +181,19 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
+			caller: H160,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
-			let who = ensure_signed(origin)?; // use the derivative acount from OriginConverter
+			ensure_signed(origin)?;
+			let who = Self::generate_account_id(para, caller)?;
+
 			T::VtokenMintingInterface::redeem(who.clone(), vtoken_id, vtoken_amount)?;
 
 			Self::deposit_event(Event::XcmRedeemed {
 				para_id: para.into(),
+				caller,
 				vtoken_id,
 				vtoken_amount,
 			});
@@ -195,7 +205,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::swap())]
 		pub fn swap(
 			origin: OriginFor<T>,
-			receiver: H160,
+			caller: H160,
 			amount_in_max: BalanceOf<T>,
 			amount_out: BalanceOf<T>,
 			in_currency_id: CurrencyIdOf<T>,
@@ -203,7 +213,8 @@ pub mod pallet {
 			weight: u64,
 		) -> DispatchResultWithPostInfo {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
-			let who = ensure_signed(origin)?;
+			ensure_signed(origin)?;
+			let who = Self::generate_account_id(para, caller)?;
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(in_currency_id, T::ParachainId::get().into())
@@ -232,7 +243,7 @@ pub mod pallet {
 						parents: 1,
 						interior: X2(
 							Parachain(para.into()),
-							Junction::AccountKey20 { network: Any, key: receiver.to_fixed_bytes() },
+							Junction::AccountKey20 { network: Any, key: caller.to_fixed_bytes() },
 						),
 					},
 					weight,
@@ -242,7 +253,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::XcmSwapped {
 				para_id: para.into(),
-				receiver,
+				caller,
 				amount_in_max,
 				amount_out,
 				in_currency_id,
@@ -251,5 +262,15 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	pub fn generate_account_id(para: ParaId, address: H160) -> Result<AccountIdOf<T>, Error<T>> {
+		let mut account_32 = [0u8; 32];
+		account_32[0..20].copy_from_slice(&address[..]);
+		let para_bytes = u32::from(para).to_be_bytes();
+		account_32[20..24].copy_from_slice(&para_bytes);
+		T::AccountId::decode(&mut &account_32[..]).map_err(|_| Error::<T>::DecodingError)
 	}
 }
