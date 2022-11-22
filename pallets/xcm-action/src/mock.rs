@@ -490,6 +490,7 @@ impl xcm_action::Config for Test {
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type XcmTransfer = XTokens;
+	type CurrencyIdConvert = ();
 	type PalletId = XcmActionPalletId;
 	type ParachainId = ParachainId;
 	type WeightInfo = ();

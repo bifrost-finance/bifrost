@@ -28,6 +28,8 @@ use orml_traits::{arithmetic::Zero, MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::prelude::vec;
 use sp_core::H160;
+use sp_runtime::traits::Convert;
+use sp_std::boxed::Box;
 use xcm::{latest::prelude::*, v1::MultiLocation};
 
 pub mod weights;
@@ -84,6 +86,9 @@ pub mod pallet {
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
+		/// Convert MultiLocation to `T::CurrencyId`.
+		type CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyIdOf<Self>>>;
+
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -127,6 +132,8 @@ pub mod pallet {
 		TokenNotFoundInZenlink,
 		/// Accountid decode error
 		DecodingError,
+		/// Multilocation to Curency id convert error
+		CurrencyIdConvert,
 	}
 
 	#[pallet::call]
@@ -136,7 +143,7 @@ pub mod pallet {
 		pub fn mint(
 			origin: OriginFor<T>,
 			caller: H160,
-			token_id: CurrencyIdOf<T>,
+			token_id: Box<MultiLocation>,
 			token_amount: BalanceOf<T>,
 			weight: u64,
 		) -> DispatchResultWithPostInfo {
@@ -144,9 +151,11 @@ pub mod pallet {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
+			let currency_id = T::CurrencyIdConvert::convert(*token_id)
+				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
-			T::VtokenMintingInterface::mint(who.clone(), token_id, token_amount)?;
-			let vtoken_id = T::VtokenMintingInterface::vtoken_id(token_id)
+			T::VtokenMintingInterface::mint(who.clone(), currency_id, token_amount)?;
+			let vtoken_id = T::VtokenMintingInterface::vtoken_id(currency_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 			// success
 			let vtoken_balance = T::MultiCurrency::free_balance(vtoken_id, &who);
@@ -170,7 +179,7 @@ pub mod pallet {
 			Self::deposit_event(Event::XcmMinted {
 				para_id: para.into(),
 				caller,
-				token_id,
+				token_id: currency_id,
 				token_amount,
 			});
 
@@ -182,19 +191,22 @@ pub mod pallet {
 		pub fn redeem(
 			origin: OriginFor<T>,
 			caller: H160,
-			vtoken_id: CurrencyIdOf<T>,
+			vtoken_id: Box<MultiLocation>,
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
 
-			T::VtokenMintingInterface::redeem(who.clone(), vtoken_id, vtoken_amount)?;
+			let currency_id = T::CurrencyIdConvert::convert(*vtoken_id)
+				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
+
+			T::VtokenMintingInterface::redeem(who.clone(), currency_id, vtoken_amount)?;
 
 			Self::deposit_event(Event::XcmRedeemed {
 				para_id: para.into(),
 				caller,
-				vtoken_id,
+				vtoken_id: currency_id,
 				vtoken_amount,
 			});
 
@@ -208,13 +220,18 @@ pub mod pallet {
 			caller: H160,
 			amount_in_max: BalanceOf<T>,
 			amount_out: BalanceOf<T>,
-			in_currency_id: CurrencyIdOf<T>,
-			out_currency_id: CurrencyIdOf<T>,
+			in_asset_id: Box<MultiLocation>,
+			out_asset_id: Box<MultiLocation>,
 			weight: u64,
 		) -> DispatchResultWithPostInfo {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
+
+			let in_currency_id = T::CurrencyIdConvert::convert(*in_asset_id)
+				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
+			let out_currency_id = T::CurrencyIdConvert::convert(*out_asset_id)
+				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(in_currency_id, T::ParachainId::get().into())
