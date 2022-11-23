@@ -293,6 +293,7 @@ pub mod pallet {
 			caller: H160,
 			token_id: Box<MultiLocation>,
 			token_amount: BalanceOf<T>,
+			weight: u64,
 		) -> DispatchResultWithPostInfo {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
 			ensure_signed(origin)?;
@@ -302,6 +303,24 @@ pub mod pallet {
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			T::VtokenMintingInterface::rebond(who.clone(), currency_id, token_amount)?;
+
+			let out_balance = T::MultiCurrency::free_balance(currency_id, &who);
+			if out_balance != BalanceOf::<T>::zero() {
+				T::XcmTransfer::transfer(
+					who,
+					currency_id,
+					out_balance,
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Parachain(para.into()),
+							Junction::AccountKey20 { network: Any, key: caller.to_fixed_bytes() },
+						),
+					},
+					weight,
+				)
+				.ok();
+			}
 
 			Self::deposit_event(Event::XcmClaimed {
 				para_id: para.into(),
