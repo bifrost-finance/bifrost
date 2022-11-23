@@ -122,6 +122,12 @@ pub mod pallet {
 			in_currency_id: CurrencyIdOf<T>,
 			out_currency_id: CurrencyIdOf<T>,
 		},
+		XcmClaimed {
+			para_id: ParaId,
+			caller: H160,
+			token_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -275,6 +281,33 @@ pub mod pallet {
 				amount_out,
 				in_currency_id,
 				out_currency_id,
+			});
+
+			Ok(().into())
+		}
+
+		/// vtoken-minting rebond
+		#[pallet::weight(<T as Config>::WeightInfo::claim())]
+		pub fn claim(
+			origin: OriginFor<T>,
+			caller: H160,
+			token_id: Box<MultiLocation>,
+			token_amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
+			ensure_signed(origin)?;
+			let who = Self::generate_account_id(para, caller)?;
+
+			let currency_id = T::CurrencyIdConvert::convert(*token_id)
+				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
+
+			T::VtokenMintingInterface::rebond(who.clone(), currency_id, token_amount)?;
+
+			Self::deposit_event(Event::XcmClaimed {
+				para_id: para.into(),
+				caller,
+				token_id: currency_id,
+				token_amount,
 			});
 
 			Ok(().into())

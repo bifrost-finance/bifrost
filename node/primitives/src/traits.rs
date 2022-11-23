@@ -309,6 +309,11 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> DispatchResultWithPostInfo;
+	fn rebond(
+		exchanger: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+	) -> DispatchResultWithPostInfo;
 	fn token_to_vtoken(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,

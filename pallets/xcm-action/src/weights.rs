@@ -56,6 +56,7 @@ pub trait WeightInfo {
   fn mint() -> Weight;
   fn redeem() -> Weight;
   fn swap() -> Weight;
+	fn claim() -> Weight;
 }
 
 /// Weights for bifrost_system_staking using the Bifrost node and recommended hardware.
@@ -70,6 +71,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	fn swap() -> Weight {
 		(24_000_000 as Weight)
 	}
+	fn claim() -> Weight {
+		(19_000_000 as Weight)
+	}
 }
 
 // For backwards compatibility and tests
@@ -82,5 +86,8 @@ impl WeightInfo for () {
 	}
 	fn swap() -> Weight {
 		(24_000_000 as Weight)
+	}
+	fn claim() -> Weight {
+		(19_000_000 as Weight)
 	}
 }
