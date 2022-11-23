@@ -117,7 +117,7 @@ pub mod parachains {
 
 	pub mod moonriver {
 		pub const ID: u32 = 2023;
-		pub const PALLET_ID: u8 = 10;
+		pub const PALLET_ID: u8 = 3;
 	}
 
 	/********************* */

@@ -1016,6 +1016,45 @@ parameter_types! {
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
+pub struct AccountKey20Aliases<Network, AccountId>(PhantomData<(Network, AccountId)>);
+impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone>
+	xcm_executor::traits::Convert<MultiLocation, AccountId>
+	for AccountKey20Aliases<Network, AccountId>
+{
+	fn convert(location: MultiLocation) -> Result<AccountId, MultiLocation> {
+		let key20 = match location {
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(_id), AccountKey20 { key: key20, network: NetworkId::Any }),
+			} => key20,
+			_ => return Err(location),
+		};
+		log::trace!(
+			target: "xcm::AccountKey20Aliases::convert",
+			"key20: {:?}",
+			key20,
+		);
+		let mut key32 = [0u8; 32];
+		key32[..20].copy_from_slice(&key20);
+		Ok(key32.into())
+	}
+
+	fn reverse(who: AccountId) -> Result<MultiLocation, AccountId> {
+		let key32: [u8; 32] = who.into();
+		log::trace!(
+			target: "xcm::AccountKey20Aliases::reverse",
+			"key32: {:?}",
+			key32,
+		);
+		let mut key20 = [0u8; 20];
+		key20.copy_from_slice(&key32[..20]);
+		Ok(MultiLocation::new(
+			1,
+			X2(Parachain(2023), AccountKey20 { key: key20, network: Network::get() }),
+		))
+	}
+}
+
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
@@ -1024,6 +1063,8 @@ pub type LocationToAccountId = (
 	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// If we receive a MultiLocation of type AccountKey20, just generate a native account
+	AccountKey20Aliases<RelayNetwork, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
@@ -1079,8 +1120,54 @@ match_types! {
 	};
 }
 
+pub struct AllowDescendOriginFromLocal<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> xcm_executor::traits::ShouldExecute
+	for AllowDescendOriginFromLocal<T>
+{
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut Xcm<Call>,
+		max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ()> {
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowDescendOriginFromLocal origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
+		frame_support::ensure!(T::contains(origin), ());
+		let mut iter = message.0.iter_mut();
+		let mut i = iter.next().ok_or(())?;
+		match i {
+			DescendOrigin(..) => (),
+			_ => return Err(()),
+		}
+
+		i = iter.next().ok_or(())?;
+		match i {
+			WithdrawAsset(..) => (),
+			_ => return Err(()),
+		}
+
+		i = iter.next().ok_or(())?;
+		match i {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } if *weight >= max_weight => {
+				*weight = max_weight;
+				Ok(())
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
+				Ok(())
+			},
+			_ => Err(()),
+		}
+	}
+}
+
 pub type Barrier = (
 	TakeWeightCredit,
+	AllowDescendOriginFromLocal<Everything>,
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
