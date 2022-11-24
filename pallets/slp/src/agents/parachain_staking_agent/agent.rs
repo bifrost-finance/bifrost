@@ -905,24 +905,34 @@ impl<T: Config>
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		let from_account = Pallet::<T>::multilocation_to_account(from)?;
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
+		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
+			.map_err(|_| Error::<T>::Unexpected)?;
+
+		Ok(())
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
 	/// Receiving account must be one of the KSM delegators.
 	fn transfer_to(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		let from_account = Pallet::<T>::multilocation_to_account(from)?;
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
+		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
+			.map_err(|_| Error::<T>::Unexpected)?;
+
+		Ok(())
 	}
 
 	fn tune_vtoken_exchange_rate(
