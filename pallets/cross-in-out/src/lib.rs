@@ -21,22 +21,27 @@
 #![allow(clippy::unused_unit)]
 #![allow(deprecated)] // TODO: clear transaction
 
-// pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 extern crate alloc;
-
+use crate::types::{SigType, SignatureStruct};
 use alloc::vec::Vec;
-use frame_support::{ensure, pallet_prelude::*};
+use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::Convert};
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
+use fvm_sdk::crypto::verify_signature;
+use fvm_shared::{
+	address::Address,
+	crypto::signature::{Signature, SignatureType},
+};
+use node_primitives::{CurrencyId, FIL};
 use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
-use xcm::latest::MultiLocation;
+use xcm::opaque::latest::{Junction, Junctions::X1, MultiLocation};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 mod mock;
 mod tests;
+mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -59,6 +64,9 @@ pub mod pallet {
 		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
+		// convert multi location to foreign account Id	string
+		type ForeignAccountIdConverter: Convert<MultiLocation, Vec<u8>>;
+
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 	}
@@ -74,6 +82,11 @@ pub mod pallet {
 		AlreadyExist,
 		NoCrossingMinimumSet,
 		AmountLowerThanMinimum,
+		SignatureVerificationFailed,
+		SignatureNotProvided,
+		InvalidSignature,
+		NotSupportedCurrencyId,
+		AccountIdConversionFailed,
 	}
 
 	#[pallet::event]
@@ -94,7 +107,7 @@ pub mod pallet {
 		},
 		CurrencyRegistered {
 			currency_id: CurrencyId,
-			operation: Option<()>,
+			privileged: Option<bool>,
 		},
 		AddedToIssueList {
 			account: AccountIdOf<T>,
@@ -125,9 +138,12 @@ pub mod pallet {
 	}
 
 	/// To store currencies that support indirect cross-in and cross-out.
+	///
+	/// 【currenyId, privilaged】, privilaged is bool type, meaning whether it is open for every
+	/// account to register account connection. Or it is a privilaged action for some accounts.
 	#[pallet::storage]
 	#[pallet::getter(fn get_cross_currency_registry)]
-	pub type CrossCurrencyRegistry<T> = StorageMap<_, Blake2_128Concat, CurrencyId, ()>;
+	pub type CrossCurrencyRegistry<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Option<bool>>;
 
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
@@ -256,12 +272,9 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: AccountIdOf<T>,
 			foreign_location: Box<MultiLocation>,
+			signature: Option<SignatureStruct>,
 		) -> DispatchResult {
 			let registerer = ensure_signed(origin)?;
-
-			let register_whitelist =
-				Self::get_register_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-			ensure!(register_whitelist.contains(&registerer), Error::<T>::NotAllowed);
 
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
@@ -273,61 +286,64 @@ pub mod pallet {
 				Error::<T>::AlreadyExist
 			);
 
-			AccountToOuterMultilocation::<T>::insert(
-				currency_id,
-				who.clone(),
-				foreign_location.clone(),
-			);
-			OuterMultilocationToAccount::<T>::insert(
-				currency_id,
-				foreign_location.clone(),
-				who.clone(),
-			);
+			if let Some(Some(priviliged)) = CrossCurrencyRegistry::<T>::get(currency_id) {
+				// If it is only allowed to be registered by the priviliged account
+				if priviliged {
+					let register_whitelist =
+						Self::get_register_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
+					ensure!(register_whitelist.contains(&registerer), Error::<T>::NotAllowed);
+				// If the registration is open for all accounts.
+				} else {
+					ensure!(registerer == who, Error::<T>::NotAllowed);
 
-			Pallet::<T>::deposit_event(Event::LinkedAccountRegistered {
-				currency_id,
-				who,
-				foreign_location: *foreign_location,
-			});
+					if let Some(s) = signature {
+						if currency_id == FIL {
+							let tp = if let SigType::FilecoinSecp256k1 = s.sig_type {
+								SignatureType::Secp256k1
+							} else {
+								SignatureType::BLS
+							};
 
-			Ok(())
-		}
+							let sig = Signature { sig_type: tp, bytes: s.bytes };
 
-		// Change originally registered linked outer chain multilocation
-		#[pallet::weight(T::WeightInfo::change_outer_linked_account())]
-		pub fn change_outer_linked_account(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			foreign_location: Box<MultiLocation>,
-		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
+							let message = Self::get_message(
+								currency_id,
+								who.clone(),
+								foreign_location.clone(),
+							)?;
 
-			ensure!(
-				CrossCurrencyRegistry::<T>::contains_key(currency_id),
-				Error::<T>::CurrencyNotSupportCrossInAndOut
-			);
+							let valid = Self::filecoin_verify_signature(
+								&message,
+								&sig,
+								foreign_location.clone(),
+							)?;
 
-			let original_location =
-				Self::account_to_outer_multilocation(currency_id, account.clone())
-					.ok_or(Error::<T>::NotExist)?;
-			ensure!(original_location != *foreign_location.clone(), Error::<T>::AlreadyExist);
+							ensure!(valid, Error::<T>::InvalidSignature);
+						} else {
+							Err(Error::<T>::NotSupportedCurrencyId)?;
+						}
+					} else {
+						Err(Error::<T>::SignatureNotProvided)?;
+					}
+				}
 
-			AccountToOuterMultilocation::<T>::insert(
-				currency_id,
-				account.clone(),
-				foreign_location.clone(),
-			);
-			OuterMultilocationToAccount::<T>::insert(
-				currency_id,
-				foreign_location.clone(),
-				account.clone(),
-			);
+				AccountToOuterMultilocation::<T>::insert(
+					currency_id,
+					who.clone(),
+					foreign_location.clone(),
+				);
+				OuterMultilocationToAccount::<T>::insert(
+					currency_id,
+					foreign_location.clone(),
+					who.clone(),
+				);
 
-			Pallet::<T>::deposit_event(Event::LinkedAccountRegistered {
-				currency_id,
-				who: account,
-				foreign_location: *foreign_location,
-			});
+				Pallet::<T>::deposit_event(Event::LinkedAccountRegistered {
+					currency_id,
+					who,
+					foreign_location: *foreign_location,
+				});
+			}
 
 			Ok(())
 		}
@@ -336,15 +352,17 @@ pub mod pallet {
 		pub fn register_currency_for_cross_in_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			operation: Option<()>,
+			privileged: Option<bool>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			CrossCurrencyRegistry::<T>::mutate_exists(currency_id, |registration| {
-				*registration = operation;
+			let privilage_op = if let Some(_) = privileged { Some(privileged) } else { None };
+
+			CrossCurrencyRegistry::<T>::mutate_exists(currency_id, |old_privilaged| {
+				*old_privilaged = privilage_op;
 			});
 
-			Self::deposit_event(Event::CurrencyRegistered { currency_id, operation });
+			Self::deposit_event(Event::CurrencyRegistered { currency_id, privileged });
 
 			Ok(())
 		}
@@ -477,6 +495,34 @@ pub mod pallet {
 			});
 
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		fn get_message(
+			currency_id: CurrencyId,
+			who: AccountIdOf<T>,
+			foreign_location: Box<MultiLocation>,
+		) -> Result<Vec<u8>, Error<T>> {
+			let mut message = Vec::new();
+			message.extend_from_slice(&currency_id.encode());
+			message.extend_from_slice(&who.encode());
+			message.extend_from_slice(&foreign_location.encode());
+			Ok(message)
+		}
+
+		fn filecoin_verify_signature(
+			message: &Vec<u8>,
+			signature: &Signature,
+			foreign_location: Box<MultiLocation>,
+		) -> Result<bool, Error<T>> {
+			let foreign_account_id = T::ForeignAccountIdConverter::convert(*foreign_location);
+			let signer = Address::from_bytes(&foreign_account_id[..])
+				.map_err(|_| Error::<T>::AccountIdConversionFailed)?;
+
+			let valid = verify_signature(signature, &signer, message)
+				.map_err(|_| Error::<T>::SignatureVerificationFailed)?;
+			Ok(valid)
 		}
 	}
 }
