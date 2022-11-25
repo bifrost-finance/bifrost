@@ -690,6 +690,9 @@ fn parachain_staking_transfer_back_works() {
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
 
+		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
+		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location.clone(), 0);
+
 		assert_ok!(Currencies::update_balance(Origin::root(), CHARLIE, BNC, 1000_000_000_000_000,));
 
 		assert_ok!(Slp::transfer_back(
@@ -712,6 +715,7 @@ fn parachain_staking_transfer_to_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		parachain_staking_setup();
+
 		let entrance_account_id_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
 				.into();
@@ -720,6 +724,9 @@ fn parachain_staking_transfer_to_works() {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
 		};
+
+		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
+		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location.clone(), 0);
 
 		assert_ok!(Currencies::update_balance(
 			Origin::root(),
