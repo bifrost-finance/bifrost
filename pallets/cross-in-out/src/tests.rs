@@ -175,7 +175,10 @@ fn register_linked_account_should_work_privileged() {
 #[test]
 fn register_linked_account_should_work_not_privileged() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let signature_string_1 = "7378a3f4520724f3071bded68a20ff892934f54656d8e1534da6bbfe18adcd8c5b44af0e803cdaa5561dabde9555eb0f9bd6a2019809032176d9113fb014ce7701";
+		let account_1 :AccountId =
+		hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
+			.into();
+		let signature_string_1 = "18c304d23662d0f5f8cddb53eb116b54ae9162125cd7c0817ffd269a2a6b9ba254bf64466bb63cdbf888f1baace1f80223a88bf90c9607934d24cf76e41a796d00";
 		let fil_account_1 = b"f1zo5z5sv6b4mccyop22syrboy5332ya2h5s6gxca".to_vec();
 		let fil_account_1_WeakBoundedVec = WeakBoundedVec::force_from(fil_account_1, None);
 		let location =
@@ -192,30 +195,30 @@ fn register_linked_account_should_work_not_privileged() {
 
 		assert_noop!(
 			CrossInOut::register_linked_account(
-				Origin::signed(ALICE),
-				KSM,
-				BOB,
+				Origin::signed(account_1.clone()),
+				FIL,
+				account_1.clone(),
 				Box::new(location.clone()),
 				Some(signature_1.clone())
 			),
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
 
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, Some(false));
+		CrossCurrencyRegistry::<Runtime>::insert(FIL, Some(false));
 
 		assert_ok!(CrossInOut::register_linked_account(
-			Origin::signed(ALICE),
-			KSM,
-			ALICE,
+			Origin::signed(account_1.clone()),
+			FIL,
+			account_1.clone(),
 			Box::new(location.clone()),
 			Some(signature_1.clone())
 		));
 
 		assert_noop!(
 			CrossInOut::register_linked_account(
-				Origin::signed(ALICE),
-				KSM,
-				ALICE,
+				Origin::signed(account_1.clone()),
+				FIL,
+				account_1.clone(),
 				Box::new(location2),
 				Some(signature_1)
 			),

@@ -33,6 +33,7 @@ use fvm_shared::{
 use node_primitives::{CurrencyId, FIL};
 use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
+use std::str::FromStr;
 pub use types::ForeignAccountIdConverter;
 pub use weights::WeightInfo;
 use xcm::opaque::latest::{Junction, Junctions::X1, MultiLocation};
@@ -87,6 +88,7 @@ pub mod pallet {
 		InvalidSignature,
 		NotSupportedCurrencyId,
 		AccountIdConversionFailed,
+		Unexpected,
 	}
 
 	#[pallet::event]
@@ -505,10 +507,36 @@ pub mod pallet {
 			foreign_location: Box<MultiLocation>,
 		) -> Result<Vec<u8>, Error<T>> {
 			let mut message = Vec::new();
-			message.extend_from_slice(&currency_id.encode());
+
+			// Currency string
+			let currency_str = match currency_id {
+				FIL => Ok(String::from("FIL")),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}?;
+			message.extend_from_slice(&currency_str.encode());
+
+			// Bifrost public key
 			message.extend_from_slice(&who.encode());
-			message.extend_from_slice(&foreign_location.encode());
+
+			// Filecoin address
+			let foreign_account_id = T::ForeignAccountIdConverter::convert(foreign_location)
+				.ok_or(Error::<T>::AccountIdConversionFailed)?;
+			message.extend_from_slice(&foreign_account_id.encode());
+
+			#[cfg(feature = "std")]
+			println!("message: {:?}", hex::encode(&message));
+
 			Ok(message)
+		}
+
+		fn get_signer_address(signer: &Vec<u8>) -> Result<Address, Error<T>> {
+			let signer_address =
+				std::str::from_utf8(signer).map_err(|_| Error::<T>::AccountIdConversionFailed)?;
+
+			let signer = Address::from_str(signer_address)
+				.map_err(|_| Error::<T>::AccountIdConversionFailed)?;
+
+			Ok(signer)
 		}
 
 		fn filecoin_verify_signature(
@@ -518,8 +546,8 @@ pub mod pallet {
 		) -> Result<bool, Error<T>> {
 			let foreign_account_id = T::ForeignAccountIdConverter::convert(foreign_location)
 				.ok_or(Error::<T>::AccountIdConversionFailed)?;
-			let signer = Address::from_bytes(&foreign_account_id[..])
-				.map_err(|_| Error::<T>::AccountIdConversionFailed)?;
+
+			let signer = Self::get_signer_address(&foreign_account_id)?;
 
 			let valid = signature.verify(&message[..], &signer).is_ok();
 

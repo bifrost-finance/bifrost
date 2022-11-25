@@ -586,6 +586,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "fvm_shared",
+ "hex",
+ "hex-literal",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
