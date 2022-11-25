@@ -117,3 +117,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "20969f385bf77e41386e8d8aa9626b003a306204" }
+funty = { git = "https://github.com/bitvecto-rs/funty/", rev = "7ef0d890fbcd8b3def1635ac1a877fc298488446" }

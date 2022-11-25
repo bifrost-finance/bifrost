@@ -26,7 +26,6 @@ use crate::types::{SigType, SignatureStruct};
 use alloc::vec::Vec;
 use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::Convert};
 use frame_system::pallet_prelude::*;
-use fvm_sdk::crypto::verify_signature;
 use fvm_shared::{
 	address::Address,
 	crypto::signature::{Signature, SignatureType},
@@ -34,6 +33,7 @@ use fvm_shared::{
 use node_primitives::{CurrencyId, FIL};
 use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
+pub use types::ForeignAccountIdConverter;
 pub use weights::WeightInfo;
 use xcm::opaque::latest::{Junction, Junctions::X1, MultiLocation};
 
@@ -521,8 +521,8 @@ pub mod pallet {
 			let signer = Address::from_bytes(&foreign_account_id[..])
 				.map_err(|_| Error::<T>::AccountIdConversionFailed)?;
 
-			let valid = verify_signature(signature, &signer, message)
-				.map_err(|_| Error::<T>::SignatureVerificationFailed)?;
+			let valid = signature.verify(&message[..], &signer).is_ok();
+
 			Ok(valid)
 		}
 	}

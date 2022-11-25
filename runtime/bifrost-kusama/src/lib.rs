@@ -68,6 +68,7 @@ use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+use bifrost_cross_in_out::ForeignAccountIdConverter;
 #[allow(unused_imports)]
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
@@ -1911,6 +1912,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ForeignAccountIdConverter = ForeignAccountIdConverter<Runtime>;
 	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
 }
 
