@@ -36,7 +36,7 @@ fn cross_in_and_cross_out_should_work() {
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
 
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
+		CrossCurrencyRegistry::<Runtime>::insert(KSM, Some(true));
 
 		assert_noop!(
 			CrossInOut::cross_in(Origin::signed(ALICE), Box::new(location.clone()), KSM, 100, None),
@@ -113,7 +113,7 @@ fn add_to_and_remove_from_register_whitelist_should_work() {
 }
 
 #[test]
-fn register_linked_account_should_work() {
+fn register_linked_account_should_work_privileged() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation {
 			parents: 100,
@@ -130,30 +130,33 @@ fn register_linked_account_should_work() {
 				Origin::signed(ALICE),
 				KSM,
 				BOB,
-				Box::new(location.clone())
+				Box::new(location.clone()),
+				None
 			),
-			Error::<Runtime>::NotAllowed
+			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
 
-		RegisterWhiteList::<Runtime>::insert(KSM, vec![ALICE]);
+		CrossCurrencyRegistry::<Runtime>::insert(KSM, Some(true));
 
 		assert_noop!(
 			CrossInOut::register_linked_account(
 				Origin::signed(ALICE),
 				KSM,
 				BOB,
-				Box::new(location.clone())
+				Box::new(location.clone()),
+				None
 			),
-			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
+			Error::<Runtime>::NotAllowed
 		);
 
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
+		RegisterWhiteList::<Runtime>::insert(KSM, vec![ALICE]);
 
 		assert_ok!(CrossInOut::register_linked_account(
 			Origin::signed(ALICE),
 			KSM,
 			ALICE,
-			Box::new(location.clone())
+			Box::new(location.clone()),
+			None
 		));
 
 		assert_noop!(
@@ -161,7 +164,60 @@ fn register_linked_account_should_work() {
 				Origin::signed(ALICE),
 				KSM,
 				ALICE,
-				Box::new(location2)
+				Box::new(location2),
+				None
+			),
+			Error::<Runtime>::AlreadyExist
+		);
+	});
+}
+
+#[test]
+fn register_linked_account_should_work_not_privileged() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let signature_string_1 = "7378a3f4520724f3071bded68a20ff892934f54656d8e1534da6bbfe18adcd8c5b44af0e803cdaa5561dabde9555eb0f9bd6a2019809032176d9113fb014ce7701";
+		let fil_account_1 = b"f1zo5z5sv6b4mccyop22syrboy5332ya2h5s6gxca".to_vec();
+		let fil_account_1_WeakBoundedVec = WeakBoundedVec::force_from(fil_account_1, None);
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::GeneralKey(fil_account_1_WeakBoundedVec)) };
+		let signature_1 = SignatureStruct {
+			sig_type: SigType::FilecoinSecp256k1,
+			bytes: signature_string_1.as_bytes().to_vec(),
+		};
+		
+		let fil_account_2 = b"f16gxwt6w2bwvqng4cdybr7wp3zcma6zac4gaecfi".to_vec();
+		let fil_account_2_WeakBoundedVec = WeakBoundedVec::force_from(fil_account_2, None);
+		let location2 =
+			MultiLocation { parents: 111, interior: X1(Junction::GeneralKey(fil_account_2_WeakBoundedVec)) };
+
+		assert_noop!(
+			CrossInOut::register_linked_account(
+				Origin::signed(ALICE),
+				KSM,
+				BOB,
+				Box::new(location.clone()),
+				Some(signature_1.clone())
+			),
+			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
+		);
+
+		CrossCurrencyRegistry::<Runtime>::insert(KSM, Some(false));
+
+		assert_ok!(CrossInOut::register_linked_account(
+			Origin::signed(ALICE),
+			KSM,
+			ALICE,
+			Box::new(location.clone()),
+			Some(signature_1.clone())
+		));
+
+		assert_noop!(
+			CrossInOut::register_linked_account(
+				Origin::signed(ALICE),
+				KSM,
+				ALICE,
+				Box::new(location2),
+				Some(signature_1)
 			),
 			Error::<Runtime>::AlreadyExist
 		);
@@ -174,10 +230,10 @@ fn register_currency_for_cross_in_out_should_work() {
 		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
 			Origin::signed(ALICE),
 			KSM,
-			Some(())
+			Some(true)
 		));
 
-		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), Some(()));
+		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), Some(Some(true)));
 
 		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
 			Origin::signed(ALICE),
@@ -186,50 +242,6 @@ fn register_currency_for_cross_in_out_should_work() {
 		));
 
 		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), None);
-	});
-}
-
-#[test]
-fn change_outer_linked_account_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
-
-		let location2 = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
-
-		AccountToOuterMultilocation::<Runtime>::insert(KSM, BOB, location.clone());
-		OuterMultilocationToAccount::<Runtime>::insert(KSM, location.clone(), BOB);
-
-		assert_noop!(
-			CrossInOut::change_outer_linked_account(
-				Origin::signed(BOB),
-				KSM,
-				Box::new(location.clone())
-			),
-			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
-		);
-
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
-
-		assert_noop!(
-			CrossInOut::change_outer_linked_account(
-				Origin::signed(BOB),
-				KSM,
-				Box::new(location.clone())
-			),
-			Error::<Runtime>::AlreadyExist
-		);
-
-		assert_ok!(CrossInOut::change_outer_linked_account(
-			Origin::signed(BOB),
-			KSM,
-			Box::new(location2.clone())
-		));
 	});
 }
 

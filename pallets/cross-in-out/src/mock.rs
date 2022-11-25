@@ -19,6 +19,7 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use crate::types::ForeignAccountIdConverter;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	traits::{GenesisBuild, Nothing},
@@ -160,6 +161,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ForeignAccountIdConverter = ForeignAccountIdConverter<Runtime>;
 	type WeightInfo = ();
 }
 

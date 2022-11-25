@@ -65,7 +65,7 @@ pub mod pallet {
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		// convert multi location to foreign account Id	string
-		type ForeignAccountIdConverter: Convert<MultiLocation, Vec<u8>>;
+		type ForeignAccountIdConverter: Convert<Box<MultiLocation>, Option<Vec<u8>>>;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -516,7 +516,8 @@ pub mod pallet {
 			signature: &Signature,
 			foreign_location: Box<MultiLocation>,
 		) -> Result<bool, Error<T>> {
-			let foreign_account_id = T::ForeignAccountIdConverter::convert(*foreign_location);
+			let foreign_account_id = T::ForeignAccountIdConverter::convert(foreign_location)
+				.ok_or(Error::<T>::AccountIdConversionFailed)?;
 			let signer = Address::from_bytes(&foreign_account_id[..])
 				.map_err(|_| Error::<T>::AccountIdConversionFailed)?;
 

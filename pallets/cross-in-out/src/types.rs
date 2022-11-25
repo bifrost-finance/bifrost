@@ -36,7 +36,7 @@ pub enum SigType {
 	FilecoinBLS,
 }
 
-struct ForeignAccountIdConverter<T>(PhantomData<T>);
+pub struct ForeignAccountIdConverter<T>(PhantomData<T>);
 impl<T> Convert<Box<MultiLocation>, Option<Vec<u8>>> for ForeignAccountIdConverter<T> {
 	fn convert(location: Box<MultiLocation>) -> Option<Vec<u8>> {
 		match *location {
