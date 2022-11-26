@@ -1984,7 +1984,7 @@ impl bifrost_xcm_action::Config for Runtime {
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type XcmTransfer = XTokens;
-	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type PalletId = XcmActionPalletId;
 	type ParachainId = SelfParaChainId;
 	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;

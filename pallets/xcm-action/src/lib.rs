@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
+use bifrost_asset_registry::AssetMetadata;
 use codec::Decode;
 use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
 use cumulus_primitives_core::ParaId;
@@ -23,12 +24,11 @@ use frame_support::{
 	dispatch::DispatchResultWithPostInfo, sp_runtime::SaturatedConversion, traits::Get, PalletId,
 };
 use frame_system::Config as SystemConfig;
-use node_primitives::{CurrencyId, TryConvertFrom, VtokenMintingInterface};
+use node_primitives::{CurrencyId, CurrencyIdMapping, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::{arithmetic::Zero, MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::prelude::vec;
 use sp_core::H160;
-use sp_runtime::traits::Convert;
 use sp_std::boxed::Box;
 use xcm::{latest::prelude::*, v1::MultiLocation};
 
@@ -87,7 +87,11 @@ pub mod pallet {
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		/// Convert MultiLocation to `T::CurrencyId`.
-		type CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyIdOf<Self>>>;
+		type CurrencyIdConvert: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
 
 		/// ModuleID for creating sub account
 		#[pallet::constant]
@@ -157,7 +161,7 @@ pub mod pallet {
 			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
-			let currency_id = T::CurrencyIdConvert::convert(*token_id)
+			let currency_id = T::CurrencyIdConvert::get_currency_id(*token_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			T::VtokenMintingInterface::mint(who.clone(), currency_id, token_amount)?;
@@ -204,7 +208,7 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
 
-			let currency_id = T::CurrencyIdConvert::convert(*vtoken_id)
+			let currency_id = T::CurrencyIdConvert::get_currency_id(*vtoken_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			T::VtokenMintingInterface::redeem(who.clone(), currency_id, vtoken_amount)?;
@@ -234,9 +238,9 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
 
-			let in_currency_id = T::CurrencyIdConvert::convert(*in_asset_id)
+			let in_currency_id = T::CurrencyIdConvert::get_currency_id(*in_asset_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
-			let out_currency_id = T::CurrencyIdConvert::convert(*out_asset_id)
+			let out_currency_id = T::CurrencyIdConvert::get_currency_id(*out_asset_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			let in_asset_id: AssetId =
@@ -299,7 +303,7 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			let who = Self::generate_account_id(para, caller)?;
 
-			let currency_id = T::CurrencyIdConvert::convert(*token_id)
+			let currency_id = T::CurrencyIdConvert::get_currency_id(*token_id)
 				.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
 
 			T::VtokenMintingInterface::rebond(who.clone(), currency_id, token_amount)?;

@@ -30,6 +30,7 @@ hex-literal = "0.3.4"
 cumulus-pallet-xcm = { default-features = false, git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
 sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [dev-dependencies]
 sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -37,7 +38,6 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
 bifrost-vtoken-minting = { path = "../vtoken-minting", default-features = false }
 bifrost-slp = { path = "../slp", default-features = false }
-bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 cumulus-primitives-core = { default-features = false, git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28" }
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
@@ -65,6 +65,7 @@ std = [
   "cumulus-pallet-xcm/std",
   "sp-core/std",
   "sp-runtime/std",
+  "bifrost-asset-registry/std",
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]
