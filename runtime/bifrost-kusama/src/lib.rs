@@ -1064,7 +1064,7 @@ pub type LocationToAccountId = (
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// If we receive a MultiLocation of type AccountKey20, just generate a native account
-	AccountKey20Aliases<RelayNetwork, AccountId>,
+	// AccountKey20Aliases<RelayNetwork, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
