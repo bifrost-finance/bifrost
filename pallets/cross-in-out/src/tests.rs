@@ -178,14 +178,14 @@ fn register_linked_account_should_work_not_privileged() {
 		let account_1 :AccountId =
 		hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
 			.into();
-		let signature_string_1 = "18c304d23662d0f5f8cddb53eb116b54ae9162125cd7c0817ffd269a2a6b9ba254bf64466bb63cdbf888f1baace1f80223a88bf90c9607934d24cf76e41a796d00";
+		let signature_string_1: Vec<u8> = hex_literal::hex!["18c304d23662d0f5f8cddb53eb116b54ae9162125cd7c0817ffd269a2a6b9ba254bf64466bb63cdbf888f1baace1f80223a88bf90c9607934d24cf76e41a796d00"].into();
 		let fil_account_1 = b"f1zo5z5sv6b4mccyop22syrboy5332ya2h5s6gxca".to_vec();
 		let fil_account_1_WeakBoundedVec = WeakBoundedVec::force_from(fil_account_1, None);
 		let location =
 			MultiLocation { parents: 100, interior: X1(Junction::GeneralKey(fil_account_1_WeakBoundedVec)) };
 		let signature_1 = SignatureStruct {
 			sig_type: SigType::FilecoinSecp256k1,
-			bytes: signature_string_1.as_bytes().to_vec(),
+			bytes: signature_string_1,
 		};
 		
 		let fil_account_2 = b"f16gxwt6w2bwvqng4cdybr7wp3zcma6zac4gaecfi".to_vec();
