@@ -132,6 +132,12 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
+		CheckOrigin {
+			para_id: ParaId,
+			caller: H160,
+			generated_account: AccountIdOf<T>,
+			origin: AccountIdOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -331,6 +337,22 @@ pub mod pallet {
 				caller,
 				token_id: currency_id,
 				token_amount,
+			});
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(<T as Config>::WeightInfo::check_origin())]
+		pub fn check_origin(origin: OriginFor<T>, caller: H160) -> DispatchResultWithPostInfo {
+			let para = ensure_sibling_para(<T as Config>::Origin::from(origin.clone()))?;
+			let origin_who = ensure_signed(origin)?;
+			let who = Self::generate_account_id(para, caller)?;
+
+			Self::deposit_event(Event::CheckOrigin {
+				para_id: para.into(),
+				caller,
+				generated_account: who,
+				origin: origin_who,
 			});
 
 			Ok(().into())
