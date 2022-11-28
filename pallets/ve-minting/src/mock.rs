@@ -237,6 +237,7 @@ parameter_types! {
 impl ve_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type Currency = Balances;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VeMintingPalletId = VeMintingPalletId;
 	// type CurrencyIdConversion = AssetIdMaps<Runtime>;

@@ -38,6 +38,7 @@ use frame_support::{
 		},
 		ArithmeticError, Perbill, SaturatedConversion,
 	},
+	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -48,9 +49,12 @@ use sp_core::U256;
 // use sp_std::vec::Vec;
 pub use weights::WeightInfo;
 
+pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
+
 #[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T: Config> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+// type BalanceOf<T> =
+// 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -98,6 +102,9 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+		type Currency: Currency<Self::AccountId>
+			// + ReservableCurrency<Self::AccountId>
+			+ LockableCurrency<Self::AccountId>;
 
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
@@ -117,6 +124,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Created {},
+		Minted { addr: AccountIdOf<T>, value: BalanceOf<T>, end: Timestamp, timestamp: Timestamp },
+		Supply { supply_before: BalanceOf<T>, supply: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -126,6 +135,7 @@ pub mod pallet {
 		CalculationOverflow,
 		ExistentialDeposit,
 		DistributionNotExist,
+		NotExpire,
 	}
 
 	#[pallet::storage]
@@ -143,7 +153,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn locked)]
 	pub type Locked<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountId, LockedBalance<BalanceOf<T>>, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, LockedBalance<BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn point_history)]
@@ -155,7 +165,7 @@ pub mod pallet {
 	pub type UserPointHistory<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
-		AccountId, // AccountIdOf<T>
+		AccountIdOf<T>,
 		Blake2_128Concat,
 		U256,
 		Point<BalanceOf<T>, BlockNumberFor<T>>,
@@ -165,7 +175,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn user_point_epoch)]
 	pub type UserPointEpoch<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountId, U256, ValueQuery>; // AccountIdOf<T>
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, U256, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn slope_changes)]
@@ -219,14 +229,14 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn _checkpoint(
-			addr: &AccountId,
+			addr: &AccountIdOf<T>,
 			old_locked: LockedBalance<BalanceOf<T>>,
 			new_locked: LockedBalance<BalanceOf<T>>,
 		) -> DispatchResult {
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
-			let mut old_dslope = 0_i128; //BalanceOf::<T>::zero();
-			let mut new_dslope = 0_i128; //BalanceOf::<T>::zero();
+			let mut old_dslope = 0_i128;
+			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
 			let current_block_number: BlockNumberFor<T> =
@@ -377,7 +387,65 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn balanceOf(addr: &AccountId, _t: Timestamp) -> BalanceOf<T> {
+		pub fn _deposit_for(
+			addr: &AccountIdOf<T>,
+			value: BalanceOf<T>,
+			unlock_time: Timestamp,
+			locked_balance: LockedBalance<BalanceOf<T>>,
+		) -> DispatchResult {
+			let current_timestamp: Timestamp =
+				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+
+			let mut _locked = locked_balance;
+			let supply_before = Self::supply();
+			Supply::<T>::set(supply_before + value);
+
+			let old_locked = _locked.clone();
+			_locked.amount += value;
+			if unlock_time != 0 {
+				_locked.end = unlock_time
+			}
+			Locked::<T>::insert(addr, _locked.clone());
+			Self::_checkpoint(addr, old_locked, _locked.clone())?;
+
+			if value != BalanceOf::<T>::zero() {
+				T::Currency::extend_lock(COLLATOR_LOCK_ID, addr, value, WithdrawReasons::all());
+			}
+
+			Self::deposit_event(Event::Minted {
+				addr: addr.clone(),
+				value,
+				end: _locked.end,
+				timestamp: current_timestamp,
+			});
+			Self::deposit_event(Event::Supply { supply_before, supply: supply_before + value });
+			Ok(())
+		}
+
+		pub fn withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
+			let mut _locked = Self::locked(addr);
+			let current_timestamp: Timestamp =
+				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+			ensure!(current_timestamp > _locked.end, Error::<T>::NotExpire);
+			let value = _locked.amount;
+			let old_locked: LockedBalance<BalanceOf<T>> = _locked.clone();
+			_locked.end = Zero::zero();
+			_locked.amount = Zero::zero();
+			Locked::<T>::insert(addr, _locked.clone());
+
+			let supply_before = Self::supply();
+			Supply::<T>::set(supply_before - value);
+
+			Self::_checkpoint(addr, old_locked, _locked.clone())?;
+
+			// TODO: set_lock
+			T::Currency::set_lock(COLLATOR_LOCK_ID, addr, Zero::zero(), WithdrawReasons::all());
+
+			Self::deposit_event(Event::Supply { supply_before, supply: supply_before - value });
+			Ok(())
+		}
+
+		pub fn balanceOf(addr: &AccountIdOf<T>, _t: Timestamp) -> BalanceOf<T> {
 			let u_epoch = Self::user_point_epoch(addr);
 			if u_epoch == U256::zero() {
 				return Zero::zero();
