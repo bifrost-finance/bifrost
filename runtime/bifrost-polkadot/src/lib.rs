@@ -93,7 +93,10 @@ pub use node_primitives::{
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
+use orml_traits::{
+	currency::MutationHooks, location::AbsoluteReserveProvider, parameter_type_with_key,
+	MultiCurrency,
+};
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
@@ -1207,6 +1210,18 @@ parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
+pub struct CurrencyHooks;
+impl MutationHooks<AccountId, CurrencyId, Balance> for CurrencyHooks {
+	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
+	type OnSlash = ();
+	type PreDeposit = ();
+	type PostDeposit = ();
+	type PreTransfer = ();
+	type PostTransfer = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+}
+
 impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
@@ -1218,7 +1233,7 @@ impl orml_tokens::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type CurrencyHooks = ();
+	type CurrencyHooks = CurrencyHooks;
 }
 
 parameter_types! {
@@ -1871,7 +1886,13 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	(
+		// "Bound uses of call" <https://github.com/paritytech/polkadot/pull/5729>
+		pallet_preimage::migration::v1::Migration<Runtime>,
+		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+		pallet_democracy::migrations::v1::Migration<Runtime>,
+		pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
