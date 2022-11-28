@@ -43,6 +43,7 @@ use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
 // MultiLocation in the future.
 use xcm::{
+	latest::Weight as XcmWeight,
 	opaque::latest::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
 	v1::MultiLocation,
 	VersionedMultiLocation,
@@ -801,7 +802,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 /// The constant `FixedRate` type parameter should be the concrete fungible ID and the amount of it
 /// required for one second of weight.
 pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
-	weight: u64,
+	weight: XcmWeight,
 	amount: u128,
 	ed_ratio: FixedU128,
 	multi_location: Option<MultiLocation>,
@@ -823,7 +824,7 @@ where
 		}
 	}
 
-	fn buy_weight(&mut self, weight: u64, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(&mut self, weight: XcmWeight, payment: Assets) -> Result<Assets, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -875,7 +876,7 @@ where
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: u64) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: XcmWeight) -> Option<MultiAsset> {
 		log::trace!(
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location

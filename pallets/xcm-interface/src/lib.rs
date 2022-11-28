@@ -66,7 +66,10 @@ pub mod pallet {
 		DispatchError,
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
-	use xcm::{latest::prelude::*, DoubleEncoded, VersionedXcm};
+	use xcm::{
+		latest::{prelude::*, Weight as XcmWeight},
+		DoubleEncoded, VersionedXcm,
+	};
 
 	use super::*;
 	use crate::traits::*;
@@ -109,13 +112,13 @@ pub mod pallet {
 		type StatemineTransferFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type StatemineTransferWeight: Get<u64>;
+		type StatemineTransferWeight: Get<XcmWeight>;
 
 		#[pallet::constant]
 		type ContributionFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type ContributionWeight: Get<u64>;
+		type ContributionWeight: Get<XcmWeight>;
 	}
 
 	#[pallet::error]
@@ -129,7 +132,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmDestWeightUpdated(XcmInterfaceOperation, u64),
+		XcmDestWeightUpdated(XcmInterfaceOperation, XcmWeight),
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
 		XcmFeeUpdated(XcmInterfaceOperation, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
@@ -142,7 +145,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (u64, BalanceOf<T>), OptionQuery>;
+		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (XcmWeight, BalanceOf<T>), OptionQuery>;
 
 	/// Tracker for the next nonce index
 	#[pallet::storage]
@@ -170,7 +173,7 @@ pub mod pallet {
 			))]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(XcmInterfaceOperation, Option<u64>, Option<BalanceOf<T>>)>,
+			updates: Vec<(XcmInterfaceOperation, Option<XcmWeight>, Option<BalanceOf<T>>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -304,7 +307,7 @@ pub mod pallet {
 
 		pub(crate) fn build_ump_transact(
 			call: DoubleEncoded<()>,
-			weight: u64,
+			weight: XcmWeight,
 			fee: BalanceOf<T>,
 			nonce: Nonce,
 		) -> Result<(MessageId, Xcm<()>), Error<T>> {

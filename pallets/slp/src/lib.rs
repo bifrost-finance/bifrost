@@ -50,7 +50,9 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::latest::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Xcm};
+use xcm::latest::{
+	ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm,
+};
 
 mod agents;
 pub mod migration;
@@ -383,7 +385,7 @@ pub mod pallet {
 		XcmDestWeightAndFeeSet {
 			currency_id: CurrencyId,
 			operation: XcmOperation,
-			weight_and_fee: Option<(u64, BalanceOf<T>)>,
+			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
 		},
 		OperateOriginSet {
 			currency_id: CurrencyId,
@@ -458,7 +460,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		XcmOperation,
-		(u64, BalanceOf<T>),
+		(XcmWeight, BalanceOf<T>),
 		OptionQuery,
 	>;
 
@@ -1107,7 +1109,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
 
-			let mut extra_weight = 0u64;
+			let mut extra_weight = 0 as XcmWeight;
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
@@ -1355,7 +1357,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			operation: XcmOperation,
-			weight_and_fee: Option<(u64, BalanceOf<T>)>,
+			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
