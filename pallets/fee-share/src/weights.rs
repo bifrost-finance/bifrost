@@ -58,40 +58,40 @@ pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: FeeShare AutoEra (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(27_563_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(27_563_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
 	}
 	// Storage: FeeShare DistributionNextId (r:1 w:1)
 	// Storage: FeeShare DistributionInfos (r:0 w:1)
 	fn create_distribution() -> Weight {
-		(216_370_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(216_370_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: FeeShare DistributionInfos (r:1 w:1)
 	fn edit_distribution() -> Weight {
-		(224_055_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(224_055_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: FeeShare AutoEra (r:0 w:1)
 	fn set_era_length() -> Weight {
-		(157_288_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(157_288_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: FeeShare DistributionInfos (r:1 w:0)
 	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:0)
 	fn execute_distribute() -> Weight {
-		(308_936_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+		Weight::from_ref_time(308_936_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
 	}
 	// Storage: FeeShare DistributionInfos (r:1 w:1)
 	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:0)
 	fn delete_distribution() -> Weight {
-		(318_504_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(318_504_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }

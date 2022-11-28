@@ -25,11 +25,11 @@ use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 #[derive(Debug, Parser)]
 pub enum Subcommand {
 	/// Key management cli utilities
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	Key(KeySubcommand),
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
-	#[clap(
+	#[command(
 		name = "inspect",
 		about = "Decode given block or extrinsic using current native runtime."
 	)]
@@ -37,7 +37,7 @@ pub enum Subcommand {
 
 	/// Sub-commands concerned with benchmarking.
 	/// The pallet benchmarking moved to the `pallet` sub-command.
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
 	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
@@ -83,19 +83,19 @@ pub enum Subcommand {
 }
 
 #[derive(Debug, Parser)]
-#[clap(
+#[command(
 	propagate_version = true,
 	args_conflicts_with_subcommands = true,
 	subcommand_negates_reqs = true
 )]
 pub struct Cli {
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	pub subcommand: Option<Subcommand>,
 
-	#[clap(flatten)]
+	#[command(flatten)]
 	pub run: cumulus_client_cli::RunCmd,
 
-	#[clap(long)]
+	#[arg(long)]
 	pub sealing: Option<String>,
 
 	/// Disable automatic hardware benchmarks.

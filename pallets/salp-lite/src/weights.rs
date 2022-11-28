@@ -65,9 +65,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	fn redeem() -> Weight {
-		(61_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(61_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(6 as u64))
+			.saturating_add(T::DbWeight::get().writes(6 as u64))
 	}
 	// Storage: SalpLite FailedFundsToRefund (r:1 w:0)
 	// Storage: SalpLite Funds (r:1 w:1)
@@ -75,9 +75,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	fn refund() -> Weight {
-		(66_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(66_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(7 as u64))
+			.saturating_add(T::DbWeight::get().writes(6 as u64))
 	}
 }
 
@@ -88,9 +88,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	fn redeem() -> Weight {
-		(61_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(61_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(6 as u64))
+			.saturating_add(RocksDbWeight::get().writes(6 as u64))
 	}
 	// Storage: SalpLite FailedFundsToRefund (r:1 w:0)
 	// Storage: SalpLite Funds (r:1 w:1)
@@ -98,8 +98,8 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	fn refund() -> Weight {
-		(66_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(66_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(7 as u64))
+			.saturating_add(RocksDbWeight::get().writes(6 as u64))
 	}
 }

@@ -38,7 +38,7 @@ use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get, weights::Weight};
+use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
 use orml_traits::MultiCurrency;
@@ -1132,7 +1132,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		who: &MultiLocation,
 		query_id: QueryId,
 		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, u64), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -1164,7 +1164,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, u64), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -1702,7 +1702,7 @@ impl<T: Config>
 	fn construct_xcm_message(
 		call: MoonbeamCall<T>,
 		extra_fee: BalanceOf<T>,
-		weight: Weight,
+		weight: u64,
 		currency_id: CurrencyId,
 	) -> Result<Xcm<()>, Error<T>> {
 		let multi = Self::get_glmr_local_multilocation(currency_id)?;
@@ -1723,7 +1723,7 @@ impl<T: Config>
 			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
-				max_assets: u32::max_value(),
+				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(Parachain(T::ParachainId::get().into())),

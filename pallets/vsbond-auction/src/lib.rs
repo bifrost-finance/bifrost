@@ -31,9 +31,7 @@ use core::fmt::Debug;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{
-			AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero,
-		},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Zero},
 		FixedPointNumber, FixedU128,
 	},
 	PalletId,
@@ -124,7 +122,8 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> {
-		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self, I>>
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The currency type that buyer to pay
 		#[pallet::constant]
@@ -153,7 +152,7 @@ pub mod pallet {
 		type TreasuryAccount: Get<Self::AccountId>;
 
 		/// The only origin that can modify transaction fee rate
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::error]

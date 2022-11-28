@@ -17,11 +17,14 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_flexible_fee::UserFeeChargeOrderList;
-use bifrost_kusama_runtime::{Call, Currencies, FlexibleFee, Origin, Runtime, ZenlinkProtocol};
+use bifrost_kusama_runtime::{
+	Currencies, FlexibleFee, Runtime, RuntimeCall, RuntimeOrigin, ZenlinkProtocol,
+};
 use bifrost_runtime_common::{dollar, milli};
 use frame_support::{
 	assert_ok,
-	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
+	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
+	weights::Weight,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{AccountId, CurrencyId, TokenSymbol, TryConvertFrom};
@@ -47,31 +50,31 @@ fn basic_setup() {
 	// Deposit some money in Alice, Bob and Charlie's accounts.
 	// Alice
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		ALICE.into(),
 		CURRENCY_ID_0,
 		10 * milli::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		ALICE.into(),
 		CURRENCY_ID_1,
 		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		ALICE.into(),
 		CURRENCY_ID_2,
 		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		ALICE.into(),
 		CURRENCY_ID_3,
 		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		ALICE.into(),
 		CURRENCY_ID_4,
 		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
@@ -79,31 +82,31 @@ fn basic_setup() {
 
 	// Bob
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		BOB.into(),
 		CURRENCY_ID_0,
 		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		BOB.into(),
 		CURRENCY_ID_1,
 		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		BOB.into(),
 		CURRENCY_ID_2,
 		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		BOB.into(),
 		CURRENCY_ID_3,
 		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		BOB.into(),
 		CURRENCY_ID_4,
 		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
@@ -111,31 +114,31 @@ fn basic_setup() {
 
 	// Charlie
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_0,
 		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_1,
 		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_2,
 		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_3,
 		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		CHARLIE.into(),
 		CURRENCY_ID_4,
 		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
@@ -143,31 +146,31 @@ fn basic_setup() {
 
 	// Dick
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		DICK.into(),
 		CURRENCY_ID_0,
 		10 * dollar::<Runtime>(CURRENCY_ID_0) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		DICK.into(),
 		CURRENCY_ID_1,
 		10 * dollar::<Runtime>(CURRENCY_ID_1) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		DICK.into(),
 		CURRENCY_ID_2,
 		10 * dollar::<Runtime>(CURRENCY_ID_2) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		DICK.into(),
 		CURRENCY_ID_3,
 		100 * dollar::<Runtime>(CURRENCY_ID_3) as i128
 	));
 	assert_ok!(Currencies::update_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		DICK.into(),
 		CURRENCY_ID_4,
 		10 * dollar::<Runtime>(CURRENCY_ID_4) as i128
@@ -187,25 +190,25 @@ fn basic_setup() {
 		AssetId::try_convert_from(CURRENCY_ID_4, parachain_id).unwrap();
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_1_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_2_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_3_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_4_currency_id
 	));
@@ -213,7 +216,7 @@ fn basic_setup() {
 	let mut deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() +
 		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_1_currency_id,
 		1 * dollar::<Runtime>(CURRENCY_ID_0),
@@ -227,7 +230,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Runtime>>::block_number() +
 		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_2_currency_id,
 		1 * dollar::<Runtime>(CURRENCY_ID_0),
@@ -241,7 +244,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Runtime>>::block_number() +
 		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_3_currency_id,
 		1 * dollar::<Runtime>(CURRENCY_ID_0),
@@ -255,7 +258,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Runtime>>::block_number() +
 		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_4_currency_id,
 		1 * dollar::<Runtime>(CURRENCY_ID_0),
@@ -270,7 +273,7 @@ fn basic_setup() {
 fn set_user_fee_charge_order_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		Bifrost::execute_with(|| {
-			let origin_signed_alice = Origin::signed(ALICE);
+			let origin_signed_alice = RuntimeOrigin::signed(ALICE);
 			let mut asset_order_list_vec: Vec<CurrencyId> =
 				vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 			assert_ok!(FlexibleFee::set_user_fee_charge_order(
@@ -297,9 +300,10 @@ fn withdraw_fee_should_work() {
 			// prepare call variable
 			let asset_order_list_vec: Vec<CurrencyId> =
 				vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-			let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
-				asset_order_list_vec: Some(asset_order_list_vec),
-			});
+			let call =
+				RuntimeCall::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
+					asset_order_list_vec: Some(asset_order_list_vec),
+				});
 
 			// prepare info variable
 			let extra = ();
@@ -325,16 +329,20 @@ fn correct_and_deposit_fee_should_work() {
 			// prepare call variable
 			let asset_order_list_vec: Vec<CurrencyId> =
 				vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-			let call = Call::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
-				asset_order_list_vec: Some(asset_order_list_vec),
-			});
+			let call =
+				RuntimeCall::FlexibleFee(bifrost_flexible_fee::Call::set_user_fee_charge_order {
+					asset_order_list_vec: Some(asset_order_list_vec),
+				});
 			// prepare info variable
 			let extra = ();
 			let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 			let info = xt.get_dispatch_info();
 
 			// prepare post info
-			let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+			let post_info = PostDispatchInfo {
+				actual_weight: Some(Weight::from_ref_time(20)),
+				pays_fee: Pays::Yes,
+			};
 
 			let corrected_fee = 80;
 			let tip = 8;

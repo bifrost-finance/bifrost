@@ -115,7 +115,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
 		/// ```ModuleId(*b"py/cfund")```
@@ -159,7 +159,7 @@ pub mod pallet {
 
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
-		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
@@ -172,7 +172,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type BuybackPalletId: Get<PalletId>;
 
-		type DexOperator: ExportZenlink<Self::AccountId>;
+		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 

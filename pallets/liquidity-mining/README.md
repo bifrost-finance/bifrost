@@ -22,11 +22,11 @@ In the graph above:
 
 ### General Flow(The Pool)
 
-1.  The authorized account calls `create_*_pool` to create a liquidity-pool, which is at `Uncharged` state initially, 
+1.  The authorized account calls `create_*_pool` to create a liquidity-pool, which is at `Uncharged` state initially,
     must be charged before users are permitted to do mining operations.
     1.  Want to delete the pool? Call `kill_pool` to kill the pool which is at `Uncharged` state, then recreate a new one;
 
-2.  Someone charges the pool has created above, which state will transform to `Charged`; Meanwhile, users are permitted to 
+2.  Someone charges the pool has created above, which state will transform to `Charged`; Meanwhile, users are permitted to
     do `deposit` operation on the pool;
     1.  Want to delete the pool?, Call `force_retire_pool` to retire the pool which is at `Charged`;
 

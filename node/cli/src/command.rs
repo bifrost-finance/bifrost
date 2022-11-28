@@ -355,16 +355,10 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node::<RuntimeApi>(
-							config,
-							polkadot_config,
-							collator_options,
-							id,
-							hwbench,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
+						start_node(config, polkadot_config, collator_options, id, hwbench)
+							.await
+							.map(|r| r.0)
+							.map_err(Into::into)
 					}
 				})
 			})
@@ -398,15 +392,24 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial::<RuntimeApi>(&config, false)?;
+							let partials = new_partial(&config, false)?;
 							cmd.run(partials.client)
 						}
 					})
 				}),
+				#[cfg(not(feature = "runtime-benchmarks"))]
+				BenchmarkCmd::Storage(_) =>
+					return Err(sc_cli::Error::Input(
+						"Compile with --features=runtime-benchmarks \
+						to enable storage benchmarks."
+							.into(),
+					)
+					.into()),
+				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial::<RuntimeApi>(&config, false)?;
+							let partials = new_partial(&config, false)?;
 							let db = partials.backend.expose_db();
 							let storage = partials.backend.expose_storage();
 							cmd.run(config, partials.client.clone(), db, storage)
@@ -588,7 +591,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn base_path(&self) -> Result<Option<BasePath>> {
 		Ok(self
 			.shared_params()
-			.base_path()
+			.base_path()?
 			.or_else(|| self.base_path.clone().map(Into::into)))
 	}
 
@@ -639,8 +642,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.transaction_pool(is_dev)
 	}
 
-	fn state_cache_child_ratio(&self) -> Result<Option<usize>> {
-		self.base.base.state_cache_child_ratio()
+	fn trie_cache_maximum_size(&self) -> Result<Option<usize>> {
+		self.base.base.trie_cache_maximum_size()
 	}
 
 	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {

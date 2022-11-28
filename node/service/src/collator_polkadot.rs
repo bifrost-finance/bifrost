@@ -16,16 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![warn(unused_extern_crates)]
-
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{sync::Arc, time::Duration};
 
-// rpc
-use jsonrpsee::RpcModule;
-
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_polkadot_runtime;
+use bifrost_polkadot_runtime::RuntimeApi;
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -36,7 +32,7 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
-use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
+use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 use node_primitives::{
 	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
 };
@@ -51,10 +47,10 @@ use sc_service::{
 	TaskManager,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{CallApiAt, ConstructRuntimeApi, NumberFor, ProvideRuntimeApi};
+use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_consensus::BlockStatus;
-use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
+use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
@@ -64,6 +60,7 @@ use sp_runtime::{
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
+use zenlink_protocol::AssetId;
 
 use crate::{IdentifyVariant, UNKNOWN_RUNTIME};
 
@@ -90,31 +87,23 @@ impl sc_executor::NativeExecutionDispatch for BifrostPolkadotExecutor {
 }
 
 pub type FullBackend = TFullBackend<Block>;
-
-type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
-
+pub type FullClient = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 
-pub fn new_partial<RuntimeApi>(
+pub fn new_partial(
 	config: &Configuration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
-		FullClient<RuntimeApi>,
+		FullClient,
 		FullBackend,
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>,
+		sc_transaction_pool::FullPool<Block, FullClient>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
 	sc_service::Error,
->
-where
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-{
+> {
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -170,7 +159,7 @@ where
 	} else {
 		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
+		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(
 			cumulus_client_consensus_aura::ImportQueueParams {
 				block_import: client.clone(),
 				client: client.clone(),
@@ -182,10 +171,9 @@ where
 						slot_duration,
 					);
 
-					Ok((timestamp, slot))
+					Ok((slot, timestamp))
 				},
 				registry: config.prometheus_registry(),
-				can_author_with: sp_consensus::AlwaysCanAuthor,
 				spawner: &task_manager.spawn_essential_handle(),
 				telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
 			},
@@ -213,10 +201,8 @@ async fn build_relay_chain_interface(
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
 	match collator_options.relay_chain_rpc_url {
-		Some(relay_chain_url) => {
-			let client = create_client_and_start_worker(relay_chain_url, task_manager).await?;
-			Ok((Arc::new(RelayChainRpcInterface::new(client)) as Arc<_>, None))
-		},
+		Some(relay_chain_url) =>
+			build_minimal_relay_chain_node(polkadot_config, task_manager, relay_chain_url).await,
 		None => build_inprocess_relay_chain(
 			polkadot_config,
 			parachain_config,
@@ -227,41 +213,87 @@ async fn build_relay_chain_interface(
 	}
 }
 
+fn build_consensus(
+	client: Arc<FullClient>,
+	prometheus_registry: Option<&Registry>,
+	telemetry: Option<TelemetryHandle>,
+	task_manager: &TaskManager,
+	relay_chain_interface: Arc<dyn RelayChainInterface>,
+	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
+	sync_oracle: Arc<NetworkService<Block, Hash>>,
+	keystore: SyncCryptoStorePtr,
+	force_authoring: bool,
+	id: ParaId,
+) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error> {
+	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+
+	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+		task_manager.spawn_handle(),
+		client.clone(),
+		transaction_pool,
+		prometheus_registry,
+		telemetry.clone(),
+	);
+
+	let params = BuildAuraConsensusParams {
+		proposer_factory,
+		create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
+			let relay_chain_interface = relay_chain_interface.clone();
+			async move {
+				let parachain_inherent =
+					cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+						relay_parent,
+						&relay_chain_interface,
+						&validation_data,
+						id,
+					)
+					.await;
+				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+				let slot =
+					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+						*timestamp,
+						slot_duration,
+					);
+
+				let parachain_inherent = parachain_inherent.ok_or_else(|| {
+					Box::<dyn std::error::Error + Send + Sync>::from(
+						"Failed to create parachain inherent",
+					)
+				})?;
+				Ok((slot, timestamp, parachain_inherent))
+			}
+		},
+		block_import: client.clone(),
+		para_client: client,
+		backoff_authoring_blocks: Option::<()>::None,
+		sync_oracle,
+		keystore,
+		force_authoring,
+		slot_duration,
+		// We got around 500ms for proposing
+		block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+		// And a maximum of 750ms if slots are skipped
+		max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+		telemetry,
+	};
+
+	Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(params))
+}
+
 /// Start a node with the given parachain `Configuration` and relay chain
 /// `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the
 /// runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
-async fn start_node_impl<RB, RuntimeApi, BIC>(
+async fn start_node_impl(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
 	id: ParaId,
-	_rpc_ext_builder: RB,
-	build_consensus: BIC,
 	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
-where
-	RB: Fn(Arc<FullClient<RuntimeApi>>) -> Result<RpcModule<()>, sc_service::Error>
-		+ Send
-		+ 'static,
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-	BIC: FnOnce(
-		Arc<FullClient<RuntimeApi>>,
-		Option<&Registry>,
-		Option<TelemetryHandle>,
-		&TaskManager,
-		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>>,
-		Arc<NetworkService<Block, Hash>>,
-		SyncCryptoStorePtr,
-		bool,
-	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
-{
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, false)?;
@@ -290,7 +322,7 @@ where
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-	let (network, system_rpc_tx, start_network) =
+	let (network, system_rpc_tx, tx_handler_controller, start_network) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &parachain_config,
 			client: client.clone(),
@@ -327,6 +359,7 @@ where
 		backend: backend.clone(),
 		network: network.clone(),
 		system_rpc_tx,
+		tx_handler_controller,
 		telemetry: telemetry.as_mut(),
 	})?;
 
@@ -361,6 +394,7 @@ where
 			network,
 			params.keystore_container.sync_keystore(),
 			force_authoring,
+			id,
 		)?;
 
 		let spawner = task_manager.spawn_handle();
@@ -389,7 +423,6 @@ where
 			relay_chain_interface,
 			import_queue,
 			relay_chain_slot_duration,
-			collator_options,
 		};
 
 		start_full_node(params)?;
@@ -401,93 +434,14 @@ where
 }
 
 /// Start a normal parachain node.
-pub async fn start_node<RuntimeApi>(
+pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
 	id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-{
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		collator_options,
-		id,
-		|_| Ok(RpcModule::new(())),
-		|client,
-		 prometheus_registry,
-		 telemetry,
-		 task_manager,
-		 relay_chain_interface,
-		 transaction_pool,
-		 sync_oracle,
-		 keystore,
-		 force_authoring| {
-			let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
-			let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
-				task_manager.spawn_handle(),
-				client.clone(),
-				transaction_pool,
-				prometheus_registry,
-				telemetry.clone(),
-			);
-
-			Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
-				BuildAuraConsensusParams {
-					proposer_factory,
-					create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
-						let relay_chain_interface = relay_chain_interface.clone();
-						async move {
-							let parachain_inherent =
-								cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
-									relay_parent,
-									&relay_chain_interface,
-									&validation_data,
-									id,
-								).await;
-
-							let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-
-							let slot =
-								sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-									*timestamp,
-									slot_duration,
-								);
-
-							let parachain_inherent = parachain_inherent.ok_or_else(|| {
-								Box::<dyn std::error::Error + Send + Sync>::from(
-									"Failed to create parachain inherent",
-								)
-							})?;
-
-							Ok((timestamp, slot, parachain_inherent))
-						}
-					},
-					block_import: client.clone(),
-					para_client: client,
-					backoff_authoring_blocks: Option::<()>::None,
-					sync_oracle,
-					keystore,
-					force_authoring,
-					slot_duration,
-					// We got around 500ms for proposing
-					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
-					// And a maximum of 750ms if slots are skipped
-					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
-					telemetry,
-				},
-			))
-		},
-		hwbench,
-	)
-	.await
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
+	start_node_impl(parachain_config, polkadot_config, collator_options, id, hwbench).await
 }
 
 /// Builds a new object suitable for chain operations.
@@ -507,7 +461,7 @@ pub fn new_chain_ops(
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<bifrost_polkadot_runtime::RuntimeApi>(config, false)?;
+				new_partial(config, false)?;
 			Ok((Arc::new(Client::BifrostPolkadot(client)), backend, import_queue, task_manager))
 		}
 		#[cfg(not(any(
@@ -534,7 +488,7 @@ pub trait RuntimeApiCollection:
 	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
 	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
 	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
-	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
+	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, AssetId>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
@@ -555,7 +509,7 @@ where
 		+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
 		+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
 		+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
-		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>,
+		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, AssetId>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
@@ -659,7 +613,7 @@ macro_rules! with_client {
 pub enum Client {
 	#[cfg(feature = "with-bifrost-polkadot-runtime")]
 	#[allow(dead_code)]
-	BifrostPolkadot(Arc<FullClient<bifrost_polkadot_runtime::RuntimeApi>>),
+	BifrostPolkadot(Arc<FullClient>),
 }
 
 impl ClientHandle for Client {
@@ -783,63 +737,63 @@ impl sc_client_api::BlockBackend<Block> for Client {
 impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 	fn storage(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<StorageData>> {
 		with_client! {
 			self,
 			client,
 			{
-				client.storage(id, key)
+				client.storage(hash, key)
 			}
 		}
 	}
 
 	fn storage_keys(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<StorageKey>> {
 		with_client! {
 			self,
 			client,
 			{
-				client.storage_keys(id, key_prefix)
+				client.storage_keys(hash, key_prefix)
 			}
 		}
 	}
 
 	fn storage_hash(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		with_client! {
 			self,
 			client,
 			{
-				client.storage_hash(id, key)
+				client.storage_hash(hash, key)
 			}
 		}
 	}
 
 	fn storage_pairs(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<(StorageKey, StorageData)>> {
 		with_client! {
 			self,
 			client,
 			{
-				client.storage_pairs(id, key_prefix)
+				client.storage_pairs(hash, key_prefix)
 			}
 		}
 	}
 
 	fn storage_keys_iter<'a>(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		prefix: Option<&'a StorageKey>,
 		start_key: Option<&StorageKey>,
 	) -> sp_blockchain::Result<
@@ -849,14 +803,14 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			self,
 			client,
 			{
-				client.storage_keys_iter(id, prefix, start_key)
+				client.storage_keys_iter(hash, prefix, start_key)
 			}
 		}
 	}
 
 	fn child_storage(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		child_info: &ChildInfo,
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<StorageData>> {
@@ -864,14 +818,14 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			self,
 			client,
 			{
-				client.child_storage(id, child_info, key)
+				client.child_storage(hash, child_info, key)
 			}
 		}
 	}
 
 	fn child_storage_keys(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		child_info: &ChildInfo,
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<StorageKey>> {
@@ -879,14 +833,14 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			self,
 			client,
 			{
-				client.child_storage_keys(id, child_info, key_prefix)
+				client.child_storage_keys(hash, child_info, key_prefix)
 			}
 		}
 	}
 
 	fn child_storage_keys_iter<'a>(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		child_info: ChildInfo,
 		prefix: Option<&'a StorageKey>,
 		start_key: Option<&StorageKey>,
@@ -897,14 +851,14 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			self,
 			client,
 			{
-				client.child_storage_keys_iter(id, child_info, prefix, start_key)
+				client.child_storage_keys_iter(hash, child_info, prefix, start_key)
 			}
 		}
 	}
 
 	fn child_storage_hash(
 		&self,
-		id: &BlockId<Block>,
+		hash: &<Block as BlockT>::Hash,
 		child_info: &ChildInfo,
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
@@ -912,7 +866,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			self,
 			client,
 			{
-				client.child_storage_hash(id, child_info, key)
+				client.child_storage_hash(hash, child_info, key)
 			}
 		}
 	}

@@ -64,27 +64,27 @@ pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: CallSwitchgear SwitchedOffTransactions (r:1 w:1)
 	fn switchoff_transaction() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear SwitchedOffTransactions (r:1 w:1)
 	fn switchon_transaction() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear DisabledTransfers (r:1 w:1)
 	fn disable_transfers() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear DisabledTransfers (r:1 w:1)
 	fn enable_transfers() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }
 
@@ -92,26 +92,26 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 impl WeightInfo for () {
 	// Storage: CallSwitchgear SwitchedOffTransactions (r:1 w:1)
 	fn switchoff_transaction() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear SwitchedOffTransactions (r:1 w:1)
 	fn switchon_transaction() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear DisabledTransfers (r:1 w:1)
 	fn disable_transfers() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: CallSwitchgear DisabledTransfers (r:1 w:1)
 	fn enable_transfers() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 }

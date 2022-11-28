@@ -85,12 +85,12 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Currency operations handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The only origin that can modify pallet params
-		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -114,7 +114,7 @@ pub mod pallet {
 		type XcmRouter: SendXcm;
 
 		/// XCM executor.
-		type XcmExecutor: ExecuteXcm<Self::Call>;
+		type XcmExecutor: ExecuteXcm<Self::RuntimeCall>;
 
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
@@ -383,7 +383,7 @@ pub mod pallet {
 		XcmDestWeightAndFeeSet {
 			currency_id: CurrencyId,
 			operation: XcmOperation,
-			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+			weight_and_fee: Option<(u64, BalanceOf<T>)>,
 		},
 		OperateOriginSet {
 			currency_id: CurrencyId,
@@ -449,7 +449,7 @@ pub mod pallet {
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
 	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
 	///
-	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (Weight, Balance)
+	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (u64, Balance)
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
@@ -458,7 +458,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		XcmOperation,
-		(Weight, BalanceOf<T>),
+		(u64, BalanceOf<T>),
 		OptionQuery,
 	>;
 
@@ -634,7 +634,7 @@ pub mod pallet {
 			let counter = Self::process_query_entry_records().unwrap_or(0);
 
 			// Calculate weight
-			BASE_WEIGHT.saturating_mul(counter.into())
+			Weight::from_ref_time(BASE_WEIGHT.saturating_mul(counter.into()))
 		}
 	}
 
@@ -1107,7 +1107,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
 
-			let mut extra_weight = 0 as Weight;
+			let mut extra_weight = 0u64;
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
@@ -1170,7 +1170,11 @@ pub mod pallet {
 			}
 
 			if extra_weight != 0 {
-				Ok(Some(T::WeightInfo::refund_currency_due_unbond() + extra_weight).into())
+				Ok(Some(
+					T::WeightInfo::refund_currency_due_unbond() +
+						Weight::from_ref_time(extra_weight),
+				)
+				.into())
 			} else {
 				Ok(().into())
 			}
@@ -1351,7 +1355,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			operation: XcmOperation,
-			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+			weight_and_fee: Option<(u64, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;

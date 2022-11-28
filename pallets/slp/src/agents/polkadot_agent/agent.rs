@@ -36,7 +36,7 @@ use codec::Encode;
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get, weights::Weight};
+use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID};
 use sp_runtime::{
@@ -1041,7 +1041,7 @@ impl<T: Config>
 	fn construct_xcm_message(
 		call: SubstrateCall<T>,
 		extra_fee: BalanceOf<T>,
-		weight: Weight,
+		weight: u64,
 		_currency_id: CurrencyId,
 		// response_back_location: MultiLocation
 	) -> Result<Xcm<()>, Error<T>> {
@@ -1058,7 +1058,7 @@ impl<T: Config>
 
 // for kusama call
 impl<T: Config> InstructionBuilder<KusamaCall<T>> for PolkadotAgent<T> {
-	fn construct_instruction(call: KusamaCall<T>, weight: Weight) -> Instruction {
+	fn construct_instruction(call: KusamaCall<T>, weight: u64) -> Instruction {
 		Transact {
 			origin_type: OriginKind::SovereignAccount,
 			require_weight_at_most: weight,
@@ -1069,7 +1069,7 @@ impl<T: Config> InstructionBuilder<KusamaCall<T>> for PolkadotAgent<T> {
 
 // for polkadot call
 impl<T: Config> InstructionBuilder<PolkadotCall<T>> for PolkadotAgent<T> {
-	fn construct_instruction(call: PolkadotCall<T>, weight: Weight) -> Instruction {
+	fn construct_instruction(call: PolkadotCall<T>, weight: u64) -> Instruction {
 		Transact {
 			origin_type: OriginKind::SovereignAccount,
 			require_weight_at_most: weight,
@@ -1086,7 +1086,7 @@ impl<T: Config> PolkadotAgent<T> {
 		who: &MultiLocation,
 		query_id: QueryId,
 		currency_id: CurrencyId,
-	) -> Result<(SubstrateCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(SubstrateCall<T>, BalanceOf<T>, u64), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -1140,7 +1140,7 @@ impl<T: Config> PolkadotAgent<T> {
 		call: SubstrateCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(SubstrateCall<T>, BalanceOf<T>, Weight), Error<T>> {
+	) -> Result<(SubstrateCall<T>, BalanceOf<T>, u64), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;

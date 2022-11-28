@@ -32,16 +32,16 @@ parameter_types!(
 
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = Everything;
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type Hash = sp_runtime::testing::H256;
 	type Hashing = sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
 	type Header = sp_runtime::testing::Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -64,7 +64,7 @@ parameter_types! {
 impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type MaxLocks = ();
@@ -77,7 +77,7 @@ ord_parameter_types! {
 	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
 }
 impl asset_registry::Config for Runtime {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 	type WeightInfo = ();

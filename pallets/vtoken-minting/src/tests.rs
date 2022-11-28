@@ -32,7 +32,7 @@ fn mint_bnc() {
 		asset_registry();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			BNC,
 			TimeUnit::Era(1)
 		));
@@ -50,10 +50,10 @@ fn redeem_bnc() {
 		asset_registry();
 		// AssetIdMaps::<Runtime>::register_vtoken_metadata(TokenSymbol::BNC)
 		// 	.expect("VToken register");
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), BNC, 0));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), BNC, 0));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			BNC,
 			TimeUnit::Era(1)
 		));
@@ -68,9 +68,9 @@ fn redeem_bnc() {
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 200));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 200));
 		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_noop!(
 			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::BelowMinimumMint
@@ -94,15 +94,15 @@ fn mint() {
 fn redeem() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		pub const FEE: Permill = Permill::from_percent(2);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(1)
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 90));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 90));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
 		assert_noop!(
 			VtokenMinting::redeem(Some(BOB).into(), vKSM, 80),
@@ -117,22 +117,22 @@ fn redeem() {
 		assert_eq!(VtokenMinting::token_pool(KSM), 1686); // 1000 + 980 - 98 - 196
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 294); // 98 + 196
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			TimeUnit::Round(1)
 		));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(MOVR, TimeUnit::Round(1)));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 300000000000000000000));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vMOVR, 20000000000000000000));
-		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), MOVR));
+		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), MOVR));
 		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), MOVR, 19000000000000000000));
 		assert_ok!(VtokenMinting::set_min_time_unit(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			TimeUnit::Round(1)
 		));
 		assert_eq!(VtokenMinting::min_time_unit(MOVR), TimeUnit::Round(1));
-		assert_ok!(VtokenMinting::set_unlocking_total(Origin::signed(ALICE), MOVR, 1000));
+		assert_ok!(VtokenMinting::set_unlocking_total(RuntimeOrigin::signed(ALICE), MOVR, 1000));
 		assert_eq!(VtokenMinting::unlocking_total(MOVR), 1000);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 980);
@@ -158,9 +158,9 @@ fn redeem() {
 fn rebond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		pub const FEE: Permill = Permill::from_percent(0);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(0)
 		));
@@ -179,7 +179,7 @@ fn rebond() {
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
 		);
-		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), KSM));
+		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), KSM));
 		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), KSM, 200));
 		assert_eq!(
 			VtokenMinting::time_unit_unlock_ledger(TimeUnit::Era(1), KSM),
@@ -202,16 +202,16 @@ fn rebond() {
 fn movr() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
-		assert_ok!(VtokenMinting::set_hook_iteration_limit(Origin::signed(ALICE), 10));
+		assert_ok!(VtokenMinting::set_hook_iteration_limit(RuntimeOrigin::signed(ALICE), 10));
 		assert_ok!(VtokenMinting::set_min_time_unit(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			TimeUnit::Round(1)
 		));
 		pub const FEE: Permill = Permill::from_percent(2);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			TimeUnit::Round(1)
 		));
@@ -232,7 +232,7 @@ fn movr() {
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 0), None);
 		assert_ok!(VtokenMinting::mint(Some(CHARLIE).into(), MOVR, 30000000000000000000000));
 		assert_ok!(VtokenMinting::redeem(Some(CHARLIE).into(), vMOVR, 20000000000000000000000));
-		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), MOVR));
+		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), MOVR));
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 0), None);
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 1), None);
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 2), None);
@@ -250,11 +250,11 @@ fn hook() {
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(3)));
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(3)));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(1)
 		));
-		assert_ok!(VtokenMinting::set_hook_iteration_limit(Origin::signed(ALICE), 1));
+		assert_ok!(VtokenMinting::set_hook_iteration_limit(RuntimeOrigin::signed(ALICE), 1));
 		assert_eq!(VtokenMinting::unlock_duration(KSM), Some(TimeUnit::Era(1)));
 		VtokenMinting::on_initialize(100);
 		VtokenMinting::on_initialize(100);
@@ -272,7 +272,7 @@ fn hook() {
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
 		);
-		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), KSM));
+		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), KSM));
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 300);
 		VtokenMinting::on_initialize(100);
@@ -314,7 +314,7 @@ fn hook() {
 fn rebond_by_unlock_id() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(0)
 		));
@@ -333,7 +333,7 @@ fn rebond_by_unlock_id() {
 			VtokenMinting::rebond_by_unlock_id(Some(BOB).into(), KSM, 0),
 			Error::<Runtime>::InvalidRebondToken
 		);
-		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::signed(ALICE), KSM));
+		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), KSM));
 		assert_noop!(
 			VtokenMinting::rebond_by_unlock_id(Some(ALICE).into(), KSM, 0),
 			Error::<Runtime>::CanNotRebond

@@ -83,10 +83,10 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 
 		let mut candidate_count = 0u32;
 
-		for &ref candidate in &T::ToMigrateInvulnables::get() {
+		for candidate in &T::ToMigrateInvulnables::get() {
 			candidate_count += 1u32;
 			if let Err(error) = <Pallet<T>>::join_candidates(
-				T::Origin::from(Some(candidate.clone()).into()),
+				T::RuntimeOrigin::from(Some(candidate.clone()).into()),
 				endowment,
 				candidate_count,
 			) {
@@ -115,7 +115,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 		// Snapshot total stake
 		<Staked<T>>::insert(1u32, <Total<T>>::get());
 		let db_weight = T::DbWeight::get();
-		db_weight.reads(5) + db_weight.writes(2) + 250_000_000_000
+		db_weight.reads(5) + db_weight.writes(2) + Weight::from_ref_time(250_000_000_000 as u64)
 	}
 
 	#[cfg(feature = "try-runtime")]
@@ -197,8 +197,8 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 			storage item"
 		);
 
-		let mut reads: Weight = 0;
-		let mut writes: Weight = 0;
+		let mut reads: u64 = 0;
+		let mut writes: u64 = 0;
 
 		let mut scheduled_requests: BTreeMap<
 			AccountIdOf<T>,
@@ -206,8 +206,8 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 		> = BTreeMap::new();
 		<DelegatorState<T>>::translate(
 			|delegator, old_state: OldDelegator<AccountIdOf<T>, BalanceOf<T>>| {
-				reads = reads.saturating_add(1);
-				writes = writes.saturating_add(1);
+				reads = reads.saturating_add(1u64);
+				writes = writes.saturating_add(1u64);
 
 				for (collator, request) in old_state.requests.requests.into_iter() {
 					let action = match request.action {
@@ -234,7 +234,7 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 			},
 		);
 
-		writes = writes.saturating_add(scheduled_requests.len() as Weight); // 1 write per request
+		writes = writes.saturating_add(scheduled_requests.len() as u64); // 1 write per request
 		for (collator, requests) in scheduled_requests {
 			<DelegationScheduledRequests<T>>::insert(collator, requests);
 		}
@@ -266,7 +266,8 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 					&*format!("expected_collator-{:?}_delegator-{:?}_request", collator, state.id,),
 				);
 			}
-			expected_delegator_state_entries = expected_delegator_state_entries.saturating_add(1);
+			expected_delegator_state_entries =
+				expected_delegator_state_entries.saturating_add(1 as u64);
 			expected_requests =
 				expected_requests.saturating_add(state.requests.requests.len() as u64);
 		}
@@ -357,20 +358,14 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 			Twox64Concat,
 		>(pallet_prefix, top_delegations_prefix)
 		.collect();
-		let migrated_candidates_top_count: Weight = stored_top_delegations
-			.len()
-			.try_into()
-			.expect("There are between 0 and 2**64 mappings stored.");
+		let migrated_candidates_top_count = stored_top_delegations.len() as u64;
 		let stored_bottom_delegations: Vec<_> = storage_key_iter::<
 			AccountIdOf<T>,
 			Delegations<AccountIdOf<T>, BalanceOf<T>>,
 			Twox64Concat,
 		>(pallet_prefix, bottom_delegations_prefix)
 		.collect();
-		let migrated_candidates_bottom_count: Weight = stored_bottom_delegations
-			.len()
-			.try_into()
-			.expect("There are between 0 and 2**64 mappings stored.");
+		let migrated_candidates_bottom_count = stored_bottom_delegations.len() as u64;
 		fn fix_delegations<T: Config>(
 			delegations: Delegations<AccountIdOf<T>, BalanceOf<T>>,
 		) -> Delegations<AccountIdOf<T>, BalanceOf<T>> {
@@ -404,7 +399,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 		let top = migrated_candidates_top_count.saturating_mul(3 * weight.write + 3 * weight.read);
 		let bottom = migrated_candidates_bottom_count.saturating_mul(weight.write + weight.read);
 		// 20% max block weight as margin for error
-		top + bottom + 100_000_000_000
+		Weight::from_ref_time(top.saturating_add(bottom).saturating_add(100_000_000_000))
 	}
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
@@ -786,7 +781,7 @@ impl<T: Config> OnRuntimeUpgrade for PurgeStaleStorage<T> {
 			<Points<T>>::remove(i);
 		}
 		// 5% of the max block weight as safety margin for computation
-		db_weight.reads(reads) + db_weight.writes(writes) + 25_000_000_000
+		Weight::from_ref_time(25_000_000_000).saturating_add(db_weight.reads_writes(reads, writes))
 	}
 
 	#[cfg(feature = "try-runtime")]

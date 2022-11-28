@@ -71,13 +71,13 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId>;
 
 		/// Required origin for registering asset.
-		type RegisterOrigin: EnsureOrigin<Self::Origin>;
+		type RegisterOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -801,7 +801,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 /// The constant `FixedRate` type parameter should be the concrete fungible ID and the amount of it
 /// required for one second of weight.
 pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
-	weight: Weight,
+	weight: u64,
 	amount: u128,
 	ed_ratio: FixedU128,
 	multi_location: Option<MultiLocation>,
@@ -823,7 +823,7 @@ where
 		}
 	}
 
-	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(&mut self, weight: u64, payment: Assets) -> Result<Assets, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -847,7 +847,7 @@ where
 					// The WEIGHT_PER_SECOND is non-zero.
 					let weight_ratio = FixedU128::saturating_from_rational(
 						weight as u128,
-						WEIGHT_PER_SECOND as u128,
+						WEIGHT_PER_SECOND.ref_time(),
 					);
 					let amount = ed_ratio
 						.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
@@ -875,14 +875,14 @@ where
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: u64) -> Option<MultiAsset> {
 		log::trace!(
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
 		);
 		let weight = weight.min(self.weight);
 		let weight_ratio =
-			FixedU128::saturating_from_rational(weight as u128, WEIGHT_PER_SECOND as u128);
+			FixedU128::saturating_from_rational(weight as u128, WEIGHT_PER_SECOND.ref_time());
 		let amount = self
 			.ed_ratio
 			.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));

@@ -67,15 +67,15 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
-		type DexOperator: ExportZenlink<Self::AccountId>;
+		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
@@ -146,7 +146,7 @@ pub mod pallet {
 					Self::handle_redeem_by_currency_id(&system_maker, &info, redeem_amount);
 				}
 			}
-			0
+			Weight::zero()
 		}
 	}
 

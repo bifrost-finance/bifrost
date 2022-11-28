@@ -64,7 +64,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
 		/// Event
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
@@ -77,7 +77,7 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
-		type DexOperator: ExportZenlink<Self::AccountId>;
+		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>, CurrencyIdOf<Self>>;
 		/// Filter if this transaction needs to be deducted extra fee besides basic transaction fee,
 		/// and get the name of the fee
@@ -115,7 +115,7 @@ pub mod pallet {
 	pub type PositiveImbalanceOf<T> =
 		<<T as Config>::Currency as Currency<AccountIdOf<T>>>::PositiveImbalance;
 
-	pub type CallOf<T> = <T as frame_system::Config>::Call;
+	pub type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -203,8 +203,8 @@ where
 	/// Note: The `fee` already includes the `tip`.
 	fn withdraw_fee(
 		who: &T::AccountId,
-		call: &T::Call,
-		_info: &DispatchInfoOf<T::Call>,
+		call: &T::RuntimeCall,
+		_info: &DispatchInfoOf<T::RuntimeCall>,
 		fee: Self::Balance,
 		tip: Self::Balance,
 	) -> Result<Self::LiquidityInfo, TransactionValidityError> {
@@ -254,8 +254,8 @@ where
 			rs = Ok(Some(NegativeImbalanceOf::<T>::zero()));
 		}
 
-		// See if the this Call needs to pay extra fee
-		let (fee_name, if_extra_fee) = T::ExtraFeeMatcher::get_fee_info(call.clone());
+		// See if the this RuntimeCall needs to pay extra fee
+		let (fee_name, if_extra_fee) = T::ExtraFeeMatcher::get_fee_info(&call);
 		if if_extra_fee {
 			// We define 77 as the error of extra fee deduction failure.
 			let (extra_fee_currency, extra_fee_amount) =
@@ -279,8 +279,8 @@ where
 	/// Note: The `fee` already includes the `tip`.
 	fn correct_and_deposit_fee(
 		who: &T::AccountId,
-		_dispatch_info: &DispatchInfoOf<T::Call>,
-		_post_info: &PostDispatchInfoOf<T::Call>,
+		_dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
+		_post_info: &PostDispatchInfoOf<T::RuntimeCall>,
 		corrected_fee: Self::Balance,
 		tip: Self::Balance,
 		already_withdrawn: Self::LiquidityInfo,
@@ -299,7 +299,7 @@ where
 				.offset(refund_imbalance)
 				.same()
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-			// Call someone else to handle the imbalance (fee and tip separately)
+			// RuntimeCall someone else to handle the imbalance (fee and tip separately)
 			let imbalances = adjusted_paid.split(tip);
 			T::OnUnbalanced::on_unbalanceds(
 				Some(imbalances.0).into_iter().chain(Some(imbalances.1)),

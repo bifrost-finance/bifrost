@@ -10,15 +10,15 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 jsonrpsee = { version = "0.15.1", features = ["server"] }
 node-primitives = { path = "../primitives" }
-sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
+substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
 bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
@@ -27,6 +27,7 @@ bifrost-liquidity-mining-rpc-api = { path = "../../pallets/liquidity-mining/rpc"
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
 bifrost-farming-rpc-api = { path = "../../pallets/farming/rpc" }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api" }
+zenlink-protocol = "*"
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"
 zenlink-stable-amm-rpc = "*"

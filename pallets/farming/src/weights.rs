@@ -67,50 +67,50 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Farming PoolInfos (r:1 w:0)
 	// Storage: Farming GaugePoolInfos (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
 	}
 	// Storage: Farming PoolNextId (r:1 w:1)
 	// Storage: Farming GaugePoolNextId (r:1 w:1)
 	// Storage: Farming GaugePoolInfos (r:0 w:1)
 	// Storage: Farming PoolInfos (r:0 w:1)
 	fn create_farming_pool() -> Weight {
-		(22_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(22_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn deposit() -> Weight {
-		(53_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(53_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(5 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn withdraw() -> Weight {
-		(30_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(30_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	// Storage: Farming GaugeInfos (r:1 w:0)
 	fn claim() -> Weight {
-		(31_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(31_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Farming GaugePoolInfos (r:1 w:1)
 	// Storage: Farming GaugeInfos (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:0)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
 	fn gauge_withdraw() -> Weight {
-		(32_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(32_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 }
 
@@ -119,49 +119,49 @@ impl WeightInfo for () {
 	// Storage: Farming PoolInfos (r:1 w:0)
 	// Storage: Farming GaugePoolInfos (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
 	}
 	// Storage: Farming PoolNextId (r:1 w:1)
 	// Storage: Farming GaugePoolNextId (r:1 w:1)
 	// Storage: Farming GaugePoolInfos (r:0 w:1)
 	// Storage: Farming PoolInfos (r:0 w:1)
 	fn create_farming_pool() -> Weight {
-		(22_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(22_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn deposit() -> Weight {
-		(53_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(53_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(5 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	fn withdraw() -> Weight {
-		(30_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(30_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Farming PoolInfos (r:1 w:1)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
 	// Storage: Farming GaugeInfos (r:1 w:0)
 	fn claim() -> Weight {
-		(31_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(31_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Farming GaugePoolInfos (r:1 w:1)
 	// Storage: Farming GaugeInfos (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:0)
 	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
 	fn gauge_withdraw() -> Weight {
-		(32_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(32_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 }

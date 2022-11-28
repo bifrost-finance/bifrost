@@ -122,13 +122,13 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Overarching event type
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// The currency type
 		type Currency: Currency<Self::AccountId>
 			+ ReservableCurrency<Self::AccountId>
 			+ LockableCurrency<Self::AccountId>;
 		/// The origin for monetary governance
-		type MonetaryGovernanceOrigin: EnsureOrigin<Self::Origin>;
+		type MonetaryGovernanceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Minimum number of blocks per round
 		#[pallet::constant]
 		type MinBlocksPerRound: Get<u32>;
@@ -638,7 +638,7 @@ pub mod pallet {
 				);
 				candidate_count = candidate_count.saturating_add(1u32);
 				if let Err(error) = <Pallet<T>>::join_candidates(
-					T::Origin::from(Some(candidate.clone()).into()),
+					T::RuntimeOrigin::from(Some(candidate.clone()).into()),
 					balance,
 					candidate_count,
 				) {
@@ -660,7 +660,7 @@ pub mod pallet {
 				let dd_count =
 					if let Some(x) = del_delegation_count.get(delegator) { *x } else { 0u32 };
 				if let Err(error) = <Pallet<T>>::delegate(
-					T::Origin::from(Some(delegator.clone()).into()),
+					T::RuntimeOrigin::from(Some(delegator.clone()).into()),
 					target.clone(),
 					balance,
 					cd_count,
@@ -943,8 +943,8 @@ pub mod pallet {
 			let return_stake = |bond: Bond<AccountIdOf<T>, BalanceOf<T>>| -> DispatchResult {
 				// remove delegation from delegator state
 				let mut delegator = DelegatorState::<T>::get(&bond.owner).expect(
-					"Collator state and delegator state are consistent. 
-						Collator state has a record of this delegation. Therefore, 
+					"Collator state and delegator state are consistent.
+						Collator state has a record of this delegation. Therefore,
 						Delegator state also has a record. qed.",
 				);
 
@@ -1270,8 +1270,8 @@ pub mod pallet {
 				2 * delegators.len() as u64,
 				3 * delegators.len() as u64
 			)
-			.saturating_add((delegators.len() as Weight).saturating_mul(100_000_000 as Weight))
-			.saturating_add(50_000_000 as Weight)
+			.saturating_add(Weight::from_ref_time(delegators.len() as u64).saturating_mul(100_000_000 as u64))
+			.saturating_add(Weight::from_ref_time(50_000_000 as u64))
 		)]
 		pub fn hotfix_migrate_delegators_from_reserve_to_locks(
 			origin: OriginFor<T>,
@@ -1310,8 +1310,8 @@ pub mod pallet {
 				2 * collators.len() as u64,
 				3 * collators.len() as u64
 			)
-			.saturating_add((collators.len() as Weight).saturating_mul(100_000_000 as Weight))
-			.saturating_add(50_000_000 as Weight)
+			.saturating_add(Weight::from_ref_time(collators.len() as u64).saturating_mul(100_000_000 as u64))
+			.saturating_add(Weight::from_ref_time(50_000_000 as u64))
 		)]
 		pub fn hotfix_migrate_collators_from_reserve_to_locks(
 			origin: OriginFor<T>,
@@ -1524,7 +1524,7 @@ pub mod pallet {
 
 			// don't underflow uint
 			if now < delay {
-				return 0u64;
+				return Weight::zero();
 			}
 
 			let paid_for_round = now.saturating_sub(delay);
@@ -1539,7 +1539,7 @@ pub mod pallet {
 				}
 				result.1 // weight consumed by pay_one_collator_reward
 			} else {
-				0u64
+				Weight::zero()
 			}
 		}
 
@@ -1561,7 +1561,7 @@ pub mod pallet {
 				// 2. we called pay_one_collator_reward when we were actually done with deferred
 				//    payouts
 				log::warn!("pay_one_collator_reward called with no <Points<T>> for the round!");
-				return (None, 0u64);
+				return (None, Weight::zero());
 			}
 
 			let mint = |amt: BalanceOf<T>, to: AccountIdOf<T>| {
@@ -1596,7 +1596,7 @@ pub mod pallet {
 			if let Some((collator, pts)) =
 				<AwardedPts<T>>::iter_prefix(paid_for_round).drain().next()
 			{
-				let mut extra_weight = 0;
+				let mut extra_weight = Weight::zero();
 				let pct_due = Perbill::from_rational(pts, total_points);
 				let total_paid = pct_due * payout_info.total_staking_reward;
 				let mut amt_due = total_paid;
@@ -1640,7 +1640,7 @@ pub mod pallet {
 			} else {
 				// Note that we don't clean up storage here; it is cleaned up in
 				// handle_delayed_payouts()
-				(None, 0u64)
+				(None, Weight::zero())
 			}
 		}
 

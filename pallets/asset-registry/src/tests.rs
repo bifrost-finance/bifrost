@@ -22,7 +22,9 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
-use mock::{AssetRegistry, CouncilAccount, Event, ExtBuilder, Origin, Runtime, System};
+use mock::{
+	AssetRegistry, CouncilAccount, ExtBuilder, Runtime, RuntimeEvent, RuntimeOrigin, System,
+};
 use primitives::TokenSymbol;
 
 #[test]
@@ -70,7 +72,7 @@ fn register_native_asset_works() {
 		));
 
 		assert_ok!(AssetRegistry::register_native_asset(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
 			Box::new(v0_location.clone()),
 			Box::new(AssetMetadata {
@@ -80,7 +82,7 @@ fn register_native_asset_works() {
 				minimal_balance: 1,
 			})
 		));
-		System::assert_last_event(Event::AssetRegistry(crate::Event::AssetRegistered {
+		System::assert_last_event(RuntimeEvent::AssetRegistry(crate::Event::AssetRegistered {
 			asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
 			metadata: AssetMetadata {
 				name: b"Token Name".to_vec(),
@@ -104,7 +106,7 @@ fn register_native_asset_works() {
 		// Can't duplicate
 		assert_noop!(
 			AssetRegistry::register_native_asset(
-				Origin::signed(CouncilAccount::get()),
+				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token(TokenSymbol::DOT),
 				Box::new(v0_location),
 				Box::new(AssetMetadata {
@@ -127,7 +129,7 @@ fn update_native_asset_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			AssetRegistry::update_native_asset(
-				Origin::signed(CouncilAccount::get()),
+				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token(TokenSymbol::DOT),
 				Box::new(v0_location.clone()),
 				Box::new(AssetMetadata {
@@ -141,7 +143,7 @@ fn update_native_asset_works() {
 		);
 
 		assert_ok!(AssetRegistry::register_native_asset(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
 			Box::new(v0_location.clone()),
 			Box::new(AssetMetadata {
@@ -153,7 +155,7 @@ fn update_native_asset_works() {
 		));
 
 		assert_ok!(AssetRegistry::update_native_asset(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
 			Box::new(v0_location.clone()),
 			Box::new(AssetMetadata {
@@ -164,7 +166,7 @@ fn update_native_asset_works() {
 			})
 		));
 
-		System::assert_last_event(Event::AssetRegistry(crate::Event::AssetUpdated {
+		System::assert_last_event(RuntimeEvent::AssetRegistry(crate::Event::AssetUpdated {
 			asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
 			metadata: AssetMetadata {
 				name: b"New Token Name".to_vec(),
@@ -199,7 +201,7 @@ fn register_token_metadata_should_work() {
 		};
 
 		assert_ok!(AssetRegistry::register_token_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			Box::new(metadata.clone())
 		));
 
@@ -223,17 +225,20 @@ fn register_vtoken_metadata_should_work() {
 			minimal_balance: 0,
 		};
 		assert_noop!(
-			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			AssetRegistry::register_vtoken_metadata(
+				RuntimeOrigin::signed(CouncilAccount::get()),
+				1
+			),
 			Error::<Runtime>::CurrencyIdNotExists
 		);
 
 		assert_ok!(AssetRegistry::register_token_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			Box::new(metadata.clone())
 		));
 
 		assert_ok!(AssetRegistry::register_vtoken_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			0
 		));
 
@@ -260,17 +265,20 @@ fn register_vstoken_metadata_should_work() {
 			minimal_balance: 0,
 		};
 		assert_noop!(
-			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			AssetRegistry::register_vtoken_metadata(
+				RuntimeOrigin::signed(CouncilAccount::get()),
+				1
+			),
 			Error::<Runtime>::CurrencyIdNotExists
 		);
 
 		assert_ok!(AssetRegistry::register_token_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			Box::new(metadata.clone())
 		));
 
 		assert_ok!(AssetRegistry::register_vstoken_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			0
 		));
 
@@ -294,17 +302,20 @@ fn register_vsbond_metadata_should_work() {
 		let v_metadata =
 			AssetMetadata { name: name.clone(), symbol: name, decimals: 12, minimal_balance: 0 };
 		assert_noop!(
-			AssetRegistry::register_vtoken_metadata(Origin::signed(CouncilAccount::get()), 1),
+			AssetRegistry::register_vtoken_metadata(
+				RuntimeOrigin::signed(CouncilAccount::get()),
+				1
+			),
 			Error::<Runtime>::CurrencyIdNotExists
 		);
 
 		assert_ok!(AssetRegistry::register_token_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			Box::new(metadata.clone())
 		));
 
 		assert_ok!(AssetRegistry::register_vsbond_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			0,
 			2001,
 			10,
@@ -336,7 +347,7 @@ fn register_multilocation_should_work() {
 
 		assert_noop!(
 			AssetRegistry::register_multilocation(
-				Origin::signed(CouncilAccount::get()),
+				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
 				2000_000_000
@@ -345,12 +356,12 @@ fn register_multilocation_should_work() {
 		);
 
 		assert_ok!(AssetRegistry::register_token_metadata(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			Box::new(metadata.clone())
 		));
 
 		assert_ok!(AssetRegistry::register_multilocation(
-			Origin::signed(CouncilAccount::get()),
+			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token2(0),
 			Box::new(location.clone()),
 			2000_000_000
@@ -358,7 +369,7 @@ fn register_multilocation_should_work() {
 
 		assert_noop!(
 			AssetRegistry::register_multilocation(
-				Origin::signed(CouncilAccount::get()),
+				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
 				2000_000_000

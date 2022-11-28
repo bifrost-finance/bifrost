@@ -63,11 +63,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
@@ -157,7 +157,7 @@ pub mod pallet {
 				let next_era = next_era.saturating_add(era_length);
 				AutoEra::<T>::put((era_length, next_era));
 			}
-			0
+			Weight::zero()
 		}
 	}
 

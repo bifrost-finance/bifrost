@@ -25,7 +25,7 @@ use frame_system::EnsureRoot;
 use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::{FixedPointNumber, Perquintill};
+use sp_runtime::{traits::Bounded, FixedPointNumber, Perquintill};
 
 pub mod constants;
 
@@ -57,10 +57,17 @@ parameter_types! {
 	/// that combined with `AdjustmentVariable`, we can recover from the minimum.
 	/// See `multiplier_can_grow_from_zero`.
 	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
+	/// The maximum amount of the multiplier.
+	pub MaximumMultiplier: Multiplier = Bounded::max_value();
 }
 
-pub type SlowAdjustingFeeUpdate<R> =
-	TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+pub type SlowAdjustingFeeUpdate<R> = TargetedFeeAdjustment<
+	R,
+	TargetBlockFullness,
+	AdjustmentVariable,
+	MinimumMultiplier,
+	MaximumMultiplier,
+>;
 
 pub type CouncilCollective = pallet_collective::Instance1;
 

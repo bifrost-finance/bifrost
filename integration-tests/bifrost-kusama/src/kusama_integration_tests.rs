@@ -21,7 +21,7 @@ use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use frame_support::{
 	assert_ok,
 	traits::{GenesisBuild, OnFinalize, OnInitialize},
-	weights::constants::*,
+	weights::{constants::*, Weight},
 };
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
@@ -45,10 +45,11 @@ use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
 mod bifrost_imports {
 	pub use bifrost_kusama_runtime::{
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
-		BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
-		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
-		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, Slp, SlpEntrancePalletId,
-		System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig, XcmInterface,
+		BlockNumber, Currencies, CurrencyId, ExistentialDeposit, ExistentialDeposits,
+		NativeCurrencyId, OriginCaller, ParachainInfo, ParachainSystem, Proxy, RelayCurrencyId,
+		Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Salp, Scheduler, Session, SlotLength,
+		Slp, SlpEntrancePalletId, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens,
+		XcmConfig, XcmInterface,
 	};
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
@@ -72,7 +73,7 @@ fn _set_relaychain_block_number(number: BlockNumber) {
 		RelayStateSproofBuilder::default().into_state_root_and_proof();
 
 	assert_ok!(ParachainSystem::set_validation_data(
-		Origin::none(),
+		RuntimeOrigin::none(),
 		cumulus_primitives_parachain_inherent::ParachainInherentData {
 			validation_data: cumulus_primitives_core::PersistedValidationData {
 				parent_head: Default::default(),
@@ -190,7 +191,7 @@ impl ExtBuilder {
 
 #[test]
 fn sanity_check_weight_per_time_constants_are_as_expected() {
-	assert_eq!(WEIGHT_PER_SECOND, 1_000_000_000_000);
+	assert_eq!(WEIGHT_PER_SECOND, Weight::from_ref_time(1_000_000_000_000));
 	assert_eq!(WEIGHT_PER_MILLIS, WEIGHT_PER_SECOND / 1000);
 	assert_eq!(WEIGHT_PER_MICROS, WEIGHT_PER_MILLIS / 1000);
 	assert_eq!(WEIGHT_PER_NANOS, WEIGHT_PER_MICROS / 1000);

@@ -105,9 +105,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorsIndex2Multilocation (r:1 w:1)
 	// Storage: Slp DelegatorsMultilocation2Index (r:0 w:1)
 	fn initialize_delegator() -> Weight {
-		(118_409_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(118_409_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
@@ -124,9 +124,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn bond() -> Weight {
-		(292_945_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(292_945_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(6 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -143,9 +143,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn bond_extra() -> Weight {
-		(296_801_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(296_801_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -162,9 +162,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn rebond() -> Weight {
-		(307_701_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(307_701_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -182,9 +182,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn delegate() -> Weight {
-		(326_573_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(326_573_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -202,9 +202,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn redelegate() -> Weight {
-		(321_530_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(321_530_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -216,9 +216,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn payout() -> Weight {
-		(224_830_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(224_830_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -234,9 +234,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn liquidize() -> Weight {
-		(282_779_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(11 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(282_779_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(11 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -248,34 +248,34 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn transfer_back() -> Weight {
-		(216_032_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(216_032_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
-		(80_744_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_744_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn decrease_token_pool() -> Weight {
-		(83_656_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(83_656_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OngoingTimeUnitUpdateInterval (r:1 w:0)
 	// Storage: Slp LastTimeUpdatedOngoingTimeUnit (r:1 w:1)
 	// Storage: VtokenMinting OngoingTimeUnit (r:1 w:1)
 	fn update_ongoing_time_unit() -> Weight {
-		(119_284_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(119_284_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Tokens Accounts (r:1 w:0)
 	fn refund_currency_due_unbond() -> Weight {
-		(38_305_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(38_305_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp CurrencyTuneExchangeRateLimit (r:1 w:0)
@@ -288,131 +288,131 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLatestTuneRecord (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Weight {
-		(289_741_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(10 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(289_741_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(10 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn confirm_delegator_ledger_query_response() -> Weight {
-		(171_655_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(171_655_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn fail_delegator_ledger_query_response() -> Weight {
-		(139_343_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(139_343_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp XcmDestWeightAndFee (r:1 w:1)
 	fn set_xcm_dest_weight_and_fee() -> Weight {
-		(78_346_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(78_346_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:1)
 	fn set_operate_origin() -> Weight {
-		(74_738_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(74_738_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp FeeSources (r:1 w:1)
 	fn set_fee_source() -> Weight {
-		(74_476_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(74_476_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp DelegatorsIndex2Multilocation (r:1 w:1)
 	// Storage: Slp DelegatorsMultilocation2Index (r:0 w:1)
 	fn add_delegator() -> Weight {
-		(90_437_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(90_437_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	// Storage: Slp DelegatorsIndex2Multilocation (r:0 w:1)
 	fn remove_delegator() -> Weight {
-		(147_695_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(147_695_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
 	// Storage: Slp Validators (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegator (r:0 w:1)
 	fn set_validators_by_delegator() -> Weight {
-		(155_673_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(155_673_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	fn set_delegator_ledger() -> Weight {
-		(115_068_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(115_068_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp Validators (r:1 w:1)
 	fn add_validator() -> Weight {
-		(90_428_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(90_428_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp Validators (r:1 w:1)
 	// Storage: Slp ValidatorsByDelegator (r:1 w:0)
 	fn remove_validator() -> Weight {
-		(114_643_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(114_643_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:1)
 	fn set_minimums_and_maximums() -> Weight {
-		(80_102_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_102_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp CurrencyDelays (r:1 w:1)
 	fn set_currency_delays() -> Weight {
-		(78_464_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(78_464_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp HostingFees (r:1 w:1)
 	fn set_hosting_fees() -> Weight {
-		(80_213_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_213_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp CurrencyTuneExchangeRateLimit (r:1 w:1)
 	fn set_currency_tune_exchange_rate_limit() -> Weight {
-		(75_149_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(75_149_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OngoingTimeUnitUpdateInterval (r:1 w:1)
 	// Storage: Slp LastTimeUpdatedOngoingTimeUnit (r:0 w:1)
 	fn set_ongoing_time_unit_update_interval() -> Weight {
-		(80_595_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(80_595_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp SupplementFeeAccountWhitelist (r:1 w:1)
 	fn add_supplement_fee_account_to_whitelist() -> Weight {
-		(85_169_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(85_169_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp SupplementFeeAccountWhitelist (r:1 w:1)
 	fn remove_supplement_fee_account_from_whitelist() -> Weight {
-		(85_678_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(85_678_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -431,9 +431,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn unbond() -> Weight {
-		(336_243_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(14 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(336_243_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(14 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -451,9 +451,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn unbond_all() -> Weight {
-		(316_814_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(316_814_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -470,9 +470,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn undelegate() -> Weight {
-		(299_919_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(299_919_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -487,9 +487,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn transfer_to() -> Weight {
-		(318_442_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(318_442_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -507,9 +507,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn chill() -> Weight {
-		(291_222_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(291_222_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -525,26 +525,26 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn supplement_fee_reserve() -> Weight {
-		(313_332_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(313_332_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegator (r:0 w:1)
 	fn confirm_validators_by_delegator_query_response() -> Weight {
-		(159_543_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(159_543_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn fail_validators_by_delegator_query_response() -> Weight {
-		(142_245_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(142_245_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }
 
@@ -555,9 +555,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorsIndex2Multilocation (r:1 w:1)
 	// Storage: Slp DelegatorsMultilocation2Index (r:0 w:1)
 	fn initialize_delegator() -> Weight {
-		(118_409_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(118_409_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
@@ -574,9 +574,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn bond() -> Weight {
-		(292_945_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(292_945_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(6 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -593,9 +593,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn bond_extra() -> Weight {
-		(296_801_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(296_801_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -612,9 +612,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn rebond() -> Weight {
-		(307_701_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(307_701_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -632,9 +632,9 @@ impl WeightInfo for () {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn delegate() -> Weight {
-		(326_573_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(326_573_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -652,9 +652,9 @@ impl WeightInfo for () {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn redelegate() -> Weight {
-		(321_530_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(321_530_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -666,9 +666,9 @@ impl WeightInfo for () {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn payout() -> Weight {
-		(224_830_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(224_830_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -684,9 +684,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn liquidize() -> Weight {
-		(282_779_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(11 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(282_779_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(11 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -698,34 +698,34 @@ impl WeightInfo for () {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn transfer_back() -> Weight {
-		(216_032_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(216_032_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
-		(80_744_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_744_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn decrease_token_pool() -> Weight {
-		(83_656_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(83_656_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OngoingTimeUnitUpdateInterval (r:1 w:0)
 	// Storage: Slp LastTimeUpdatedOngoingTimeUnit (r:1 w:1)
 	// Storage: VtokenMinting OngoingTimeUnit (r:1 w:1)
 	fn update_ongoing_time_unit() -> Weight {
-		(119_284_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(119_284_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Tokens Accounts (r:1 w:0)
 	fn refund_currency_due_unbond() -> Weight {
-		(38_305_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(38_305_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp CurrencyTuneExchangeRateLimit (r:1 w:0)
@@ -738,131 +738,131 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLatestTuneRecord (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Weight {
-		(289_741_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(10 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(289_741_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(10 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn confirm_delegator_ledger_query_response() -> Weight {
-		(171_655_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(171_655_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn fail_delegator_ledger_query_response() -> Weight {
-		(139_343_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(139_343_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp XcmDestWeightAndFee (r:1 w:1)
 	fn set_xcm_dest_weight_and_fee() -> Weight {
-		(78_346_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(78_346_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:1)
 	fn set_operate_origin() -> Weight {
-		(74_738_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(74_738_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp FeeSources (r:1 w:1)
 	fn set_fee_source() -> Weight {
-		(74_476_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(74_476_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp DelegatorsIndex2Multilocation (r:1 w:1)
 	// Storage: Slp DelegatorsMultilocation2Index (r:0 w:1)
 	fn add_delegator() -> Weight {
-		(90_437_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(90_437_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:1)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	// Storage: Slp DelegatorsIndex2Multilocation (r:0 w:1)
 	fn remove_delegator() -> Weight {
-		(147_695_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(147_695_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
 	// Storage: Slp Validators (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegator (r:0 w:1)
 	fn set_validators_by_delegator() -> Weight {
-		(155_673_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(155_673_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:1)
 	fn set_delegator_ledger() -> Weight {
-		(115_068_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(115_068_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp Validators (r:1 w:1)
 	fn add_validator() -> Weight {
-		(90_428_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(90_428_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp Validators (r:1 w:1)
 	// Storage: Slp ValidatorsByDelegator (r:1 w:0)
 	fn remove_validator() -> Weight {
-		(114_643_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(114_643_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp MinimumsAndMaximums (r:1 w:1)
 	fn set_minimums_and_maximums() -> Weight {
-		(80_102_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_102_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp CurrencyDelays (r:1 w:1)
 	fn set_currency_delays() -> Weight {
-		(78_464_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(78_464_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp HostingFees (r:1 w:1)
 	fn set_hosting_fees() -> Weight {
-		(80_213_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(80_213_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp CurrencyTuneExchangeRateLimit (r:1 w:1)
 	fn set_currency_tune_exchange_rate_limit() -> Weight {
-		(75_149_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(75_149_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OngoingTimeUnitUpdateInterval (r:1 w:1)
 	// Storage: Slp LastTimeUpdatedOngoingTimeUnit (r:0 w:1)
 	fn set_ongoing_time_unit_update_interval() -> Weight {
-		(80_595_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(80_595_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp SupplementFeeAccountWhitelist (r:1 w:1)
 	fn add_supplement_fee_account_to_whitelist() -> Weight {
-		(85_169_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(85_169_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp SupplementFeeAccountWhitelist (r:1 w:1)
 	fn remove_supplement_fee_account_from_whitelist() -> Weight {
-		(85_678_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(85_678_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -881,9 +881,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn unbond() -> Weight {
-		(336_243_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(14 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(336_243_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(14 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -901,9 +901,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn unbond_all() -> Weight {
-		(316_814_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(316_814_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorLedgers (r:1 w:0)
@@ -920,9 +920,9 @@ impl WeightInfo for () {
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn undelegate() -> Weight {
-		(299_919_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(299_919_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -937,9 +937,9 @@ impl WeightInfo for () {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn transfer_to() -> Weight {
-		(318_442_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(318_442_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -957,9 +957,9 @@ impl WeightInfo for () {
 	// Storage: Slp DelegatorLedgerXcmUpdateQueue (r:0 w:1)
 	// Storage: PolkadotXcm Queries (r:0 w:1)
 	fn chill() -> Weight {
-		(291_222_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(291_222_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp DelegatorsMultilocation2Index (r:1 w:0)
@@ -975,25 +975,25 @@ impl WeightInfo for () {
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	fn supplement_fee_reserve() -> Weight {
-		(313_332_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(313_332_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegator (r:0 w:1)
 	fn confirm_validators_by_delegator_query_response() -> Weight {
-		(159_543_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(159_543_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Slp OperateOrigins (r:1 w:0)
 	// Storage: Slp ValidatorsByDelegatorXcmUpdateQueue (r:1 w:1)
 	// Storage: PolkadotXcm Queries (r:1 w:0)
 	fn fail_validators_by_delegator_query_response() -> Weight {
-		(142_245_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(142_245_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 }

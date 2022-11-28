@@ -31,7 +31,7 @@ fn set_xcm_dest_weight_and_fee_should_work() {
 
 		// Insert a new record.
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			XcmOperation::Bond,
 			Some((5_000_000_000, 5_000_000_000))
@@ -44,7 +44,7 @@ fn set_xcm_dest_weight_and_fee_should_work() {
 
 		// Delete a record.
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			XcmOperation::Bond,
 			None
@@ -90,7 +90,7 @@ fn set_fee_source_works() {
 
 		// Insert a new record.
 		assert_ok!(Slp::set_fee_source(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Some((alice_location.clone(), 1_000_000_000_000))
 		));
@@ -106,7 +106,7 @@ fn supplement_fee_reserve_works() {
 		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
 		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			BNC,
 			Some((alice_location.clone(), 10))
 		));
@@ -118,13 +118,21 @@ fn supplement_fee_reserve_works() {
 		assert_eq!(Balances::free_balance(&BOB), 0);
 
 		assert_noop!(
-			Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(alice_location)),
+			Slp::supplement_fee_reserve(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(alice_location)
+			),
 			Error::<Runtime>::DestAccountNotValid
 		);
 
-		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), BNC, Some(BOB)));
+		assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), BNC, Some(BOB)));
 
-		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, Box::new(bob_location)));
+		assert_ok!(Slp::supplement_fee_reserve(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Box::new(bob_location)
+		));
 
 		assert_eq!(Balances::free_balance(&ALICE), 90);
 		assert_eq!(Balances::free_balance(&BOB), 10);
@@ -174,7 +182,7 @@ fn remove_delegator_works() {
 		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location.clone(), ledger);
 
 		assert_ok!(Slp::remove_delegator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Box::new(subaccount_0_location.clone())
 		));
@@ -199,7 +207,7 @@ fn decrease_token_pool_works() {
 		bifrost_vtoken_minting::TokenPool::<Runtime>::insert(KSM, 100);
 
 		// Decrease token pool by 10.
-		assert_ok!(Slp::decrease_token_pool(Origin::signed(ALICE), KSM, 10));
+		assert_ok!(Slp::decrease_token_pool(RuntimeOrigin::signed(ALICE), KSM, 10));
 
 		// Check the value after decreasing
 		assert_eq!(VtokenMinting::token_pool(KSM), 90);
@@ -213,7 +221,7 @@ fn update_ongoing_time_unit_works() {
 		// Set the era to be 8.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(8));
 		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Some(600)
 		));
@@ -221,7 +229,11 @@ fn update_ongoing_time_unit_works() {
 		System::set_block_number(650);
 
 		// Update the era to be 9.
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), KSM, TimeUnit::Era(9)));
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			TimeUnit::Era(9)
+		));
 
 		// Check the value after updating.
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(9)));
@@ -235,7 +247,7 @@ fn refund_currency_due_unbond_works() {
 		// get entrance and exit accounts
 		let (entrance_acc, exit_acc) = VtokenMinting::get_entrance_and_exit_accounts();
 		// Set exit account balance to be 50.
-		assert_ok!(Tokens::set_balance(Origin::root(), exit_acc.clone(), KSM, 50, 0));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), exit_acc.clone(), KSM, 50, 0));
 
 		// set current era to be 100.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
@@ -325,7 +337,7 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(Currencies::total_issuance(VKSM), 0);
 
 		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// After: check pool_token amount
 		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
@@ -387,13 +399,13 @@ fn refund_currency_due_unbond_works() {
 		);
 
 		// Set some more balance to exit account.
-		assert_ok!(Tokens::set_balance(Origin::root(), exit_acc.clone(), KSM, 30, 0));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), exit_acc.clone(), KSM, 30, 0));
 
 		// set era to 110
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(110));
 
 		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// Check storages
 		assert_eq!(
@@ -413,7 +425,7 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
 		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
 		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 13);
-		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// check account balances
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
@@ -479,25 +491,25 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Some((pct, treasury_location))
 		));
 
 		let pct_100 = Permill::from_percent(100);
 		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Some((1, pct_100))
 		));
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VKSM, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), KSM, 100));
+		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), KSM, 100));
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			100,
 			Some(subaccount_0_location.clone())
@@ -531,7 +543,7 @@ fn set_hosting_fees_works() {
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			Some((pct, treasury_location.clone()))
 		));
