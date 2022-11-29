@@ -461,5 +461,49 @@ pub mod pallet {
 				last_point.bias
 			}
 		}
+
+		pub fn totalSupply(t: Timestamp) -> BalanceOf<T> {
+			let g_epoch: U256 = Self::epoch();
+			let last_point = Self::point_history(g_epoch);
+			supply_at(last_point, t)
+		}
+
+		pub fn supply_at(
+			point: Point<BalanceOf<T>, BlockNumberFor<T>>,
+			t: Timestamp,
+		) -> BalanceOf<T> {
+			let mut last_point = point;
+			let mut t_i: Timestamp = (last_point.ts / ve_config.WEEK) * ve_config.WEEK;
+			for i in 0..255 {
+				t_i += ve_config.WEEK;
+				let mut d_slope = Zero::zero();
+				if t_i > t {
+					t_i = t
+				} else {
+					d_slope = Self::slope_changes(t_i)
+				}
+
+				last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
+					.checked_sub(
+						U256::from(last_point.slope.saturated_into::<u128>()).saturating_mul(
+							U256::from((t_i - last_point.ts).saturated_into::<u128>()),
+						),
+					)
+					.unwrap_or_default()
+					.as_u128()
+					.unique_saturated_into();
+
+				if t_i == t {
+					break;
+				}
+				last_point.slope += d_slope;
+				last_point.ts = t_i
+			}
+
+			if last_point.bias < Zero::zero() {
+				last_point.bias = Zero::zero()
+			}
+			last_point.bias
+		}
 	}
 }
