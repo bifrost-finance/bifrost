@@ -451,7 +451,7 @@ pub mod pallet {
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
 	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
 	///
-	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (u64, Balance)
+	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (XcmWeight, Balance)
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<

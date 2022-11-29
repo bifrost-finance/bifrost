@@ -48,7 +48,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
+	latest::{prelude::*, Weight as XcmWeight},
 	opaque::latest::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
@@ -1132,7 +1132,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		who: &MultiLocation,
 		query_id: QueryId,
 		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, u64), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -1164,7 +1164,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, u64), Error<T>> {
+	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -1702,7 +1702,7 @@ impl<T: Config>
 	fn construct_xcm_message(
 		call: MoonbeamCall<T>,
 		extra_fee: BalanceOf<T>,
-		weight: u64,
+		weight: XcmWeight,
 		currency_id: CurrencyId,
 	) -> Result<Xcm<()>, Error<T>> {
 		let multi = Self::get_glmr_local_multilocation(currency_id)?;

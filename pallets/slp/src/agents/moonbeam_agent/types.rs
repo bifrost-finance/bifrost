@@ -25,7 +25,7 @@ use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::VersionedMultiLocation;
 
-use crate::{BalanceOf, Config};
+use crate::{BalanceOf, Config, XcmWeight};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {
@@ -83,7 +83,7 @@ pub enum MoonbeamParachainStakingCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, u64),
+	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, XcmWeight),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
