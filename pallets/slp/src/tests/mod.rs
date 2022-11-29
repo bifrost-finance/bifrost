@@ -17,13 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[cfg(test)]
+mod filecoin_tests;
+#[cfg(test)]
 mod kusama_tests;
 #[cfg(test)]
 mod moonriver_tests;
-// #[cfg(test)]
-// mod parachain_staking_tests;
 #[cfg(test)]
-mod filecoin_tests;
+mod parachain_staking_tests;
 
 #[cfg(test)]
 pub use kusama_tests::*;
