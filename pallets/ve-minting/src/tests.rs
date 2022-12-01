@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, *};
+use crate::{mock::*, traits::VeMintingInterface, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
@@ -47,7 +47,7 @@ fn _checkpoint() {
 		// assert_eq!(VeMinting::user_point_history(&BOB, U256::from(1)), u_point);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), 0);
+		assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), Ok(0));
 	});
 }
 

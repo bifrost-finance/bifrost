@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod traits;
 pub mod weights;
 
 use frame_support::{
@@ -36,7 +37,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, Perbill, SaturatedConversion,
+		ArithmeticError, DispatchError, Perbill, SaturatedConversion,
 	},
 	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
 	PalletId,
