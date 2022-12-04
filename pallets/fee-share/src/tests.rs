@@ -30,7 +30,7 @@ fn on_idle() {
 		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
 
 		assert_ok!(FeeShare::create_distribution(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			vec![KSM],
 			tokens_proportion,
 			true,
@@ -38,10 +38,10 @@ fn on_idle() {
 		let keeper: AccountId =
 			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
 
-		assert_ok!(FeeShare::set_era_length(Origin::signed(ALICE), 1));
-		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 0);
+		assert_ok!(FeeShare::set_era_length(RuntimeOrigin::signed(ALICE), 1));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, Weight::zero());
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
-		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, 0);
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, Weight::zero());
 		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
 	});
 }
@@ -52,13 +52,13 @@ fn edit_delete_distribution() {
 		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
 
 		assert_ok!(FeeShare::create_distribution(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			vec![KSM],
 			tokens_proportion.clone(),
 			true,
 		));
 		assert_ok!(FeeShare::edit_distribution(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			0,
 			None, // Some(vec![KSM]),
 			Some(tokens_proportion),
@@ -67,18 +67,18 @@ fn edit_delete_distribution() {
 		let keeper: AccountId =
 			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
 
-		assert_ok!(FeeShare::set_era_length(Origin::signed(ALICE), 1));
-		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, 0);
+		assert_ok!(FeeShare::set_era_length(RuntimeOrigin::signed(ALICE), 1));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, Weight::zero());
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
-		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, 0);
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, Weight::zero());
 		assert_eq!(Tokens::free_balance(KSM, &keeper), 10100);
-		assert_ok!(FeeShare::execute_distribute(Origin::signed(ALICE), 0));
+		assert_ok!(FeeShare::execute_distribute(RuntimeOrigin::signed(ALICE), 0));
 		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
 
 		if let Some(infos) = FeeShare::distribution_infos(0) {
 			assert_eq!(infos.token_type, vec![KSM])
 		}
-		assert_ok!(FeeShare::delete_distribution(Origin::signed(ALICE), 0));
+		assert_ok!(FeeShare::delete_distribution(RuntimeOrigin::signed(ALICE), 0));
 		assert_eq!(FeeShare::distribution_infos(0), None);
 	});
 }

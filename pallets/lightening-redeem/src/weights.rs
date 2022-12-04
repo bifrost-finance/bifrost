@@ -67,41 +67,41 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn add_ksm_to_pool() -> Weight {
-		(42_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(42_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 	// Storage: LighteningRedeem PoolAmount (r:1 w:1)
 	// Storage: LighteningRedeem ExchangePriceDiscount (r:1 w:0)
 	// Storage: Tokens Accounts (r:6 w:6)
 	// Storage: System Account (r:1 w:1)
 	fn exchange_for_ksm() -> Weight {
-		(90_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(90_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(8 as u64))
 	}
 	// Storage: LighteningRedeem ExchangePriceDiscount (r:1 w:1)
 	fn edit_exchange_price() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem TokenReleasePerDay (r:1 w:1)
 	fn edit_release_per_day() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem StartEndReleaseBlock (r:1 w:1)
 	fn edit_release_start_and_end_block() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem StartEndReleaseBlock (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(2_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(2_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
 	}
 }
 
@@ -110,40 +110,40 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn add_ksm_to_pool() -> Weight {
-		(42_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(42_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 	// Storage: LighteningRedeem PoolAmount (r:1 w:1)
 	// Storage: LighteningRedeem ExchangePriceDiscount (r:1 w:0)
 	// Storage: Tokens Accounts (r:6 w:6)
 	// Storage: System Account (r:1 w:1)
 	fn exchange_for_ksm() -> Weight {
-		(90_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(90_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(8 as u64))
 	}
 	// Storage: LighteningRedeem ExchangePriceDiscount (r:1 w:1)
 	fn edit_exchange_price() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem TokenReleasePerDay (r:1 w:1)
 	fn edit_release_per_day() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem StartEndReleaseBlock (r:1 w:1)
 	fn edit_release_start_and_end_block() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: LighteningRedeem StartEndReleaseBlock (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(2_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(2_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 	}
 }

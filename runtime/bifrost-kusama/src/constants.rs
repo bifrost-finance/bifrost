@@ -45,7 +45,7 @@ pub mod currency {
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
 			let p = base_tx_fee::<Runtime>();
-			let q = Balance::from(ExtrinsicBaseWeight::get());
+			let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
 				negative: false,
@@ -64,8 +64,8 @@ pub mod currency {
 	}
 
 	pub fn ksm_per_second<Runtime: bifrost_asset_registry::Config>() -> u128 {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		let base_tx_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
 		let fee_per_second = base_tx_per_second * xcm_base_tx_fee::<Runtime>();
 		fee_per_second / 100
 	}

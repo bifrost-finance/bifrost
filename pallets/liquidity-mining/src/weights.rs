@@ -72,9 +72,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn charge() -> Weight {
-		(71_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(71_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(6 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -82,9 +82,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: System Account (r:1 w:1)
 	fn deposit() -> Weight {
-		(77_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(77_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -92,9 +92,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn redeem() -> Weight {
-		(131_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(131_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -102,9 +102,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn redeem_all() -> Weight {
-		(130_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(130_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -112,9 +112,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn volunteer_to_redeem() -> Weight {
-		(138_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(138_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -122,9 +122,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn claim() -> Weight {
-		(72_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(72_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(6 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -132,17 +132,17 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:5 w:4)
 	// Storage: System Account (r:2 w:1)
 	fn unlock() -> Weight {
-		(90_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(10 as Weight))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(90_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(10 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
 	// Storage: LiquidityMining TotalDepositDataV200 (r:1 w:1)
 	fn cancel_unlock() -> Weight {
-		(31_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(31_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 }
 
@@ -154,9 +154,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn charge() -> Weight {
-		(71_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(71_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(6 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -164,9 +164,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: System Account (r:1 w:1)
 	fn deposit() -> Weight {
-		(77_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(77_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -174,9 +174,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn redeem() -> Weight {
-		(131_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(131_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -184,9 +184,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn redeem_all() -> Weight {
-		(130_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(130_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -194,9 +194,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:2 w:1)
 	fn volunteer_to_redeem() -> Weight {
-		(138_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(138_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -204,9 +204,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn claim() -> Weight {
-		(72_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(72_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(6 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
@@ -214,16 +214,16 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:5 w:4)
 	// Storage: System Account (r:2 w:1)
 	fn unlock() -> Weight {
-		(90_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(10 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(90_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(10 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: LiquidityMining PalletVersion (r:1 w:0)
 	// Storage: LiquidityMining TotalPoolInfosV200 (r:1 w:1)
 	// Storage: LiquidityMining TotalDepositDataV200 (r:1 w:1)
 	fn cancel_unlock() -> Weight {
-		(31_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(31_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 }

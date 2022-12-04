@@ -197,10 +197,10 @@ pub mod v2 {
 				log::info!(" >>> migration completed!");
 
 				let total_nums = tp_nums + td_nums;
-				T::DbWeight::get().reads_writes(total_nums as Weight + 1, total_nums as Weight + 1)
+				T::DbWeight::get().reads_writes(total_nums as u64 + 1, total_nums as u64 + 1)
 			} else {
 				log::info!(" >>> unused migration!");
-				0
+				Weight::zero()
 			}
 		}
 

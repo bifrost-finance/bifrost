@@ -170,7 +170,7 @@ fn increase_pid_when_create_pool_should_work() {
 fn create_pool_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		let wrong_origins: [OriginFor<Test>; 3] =
-			[Origin::root(), Origin::none(), Some(INVESTOR).into()];
+			[RuntimeOrigin::root(), RuntimeOrigin::none(), Some(INVESTOR).into()];
 
 		for wrong_origin in wrong_origins {
 			assert_noop!(
@@ -402,8 +402,8 @@ fn charge_with_wrong_origin_should_fail() {
 			LM::charge(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0),
 			DispatchError::BadOrigin
 		);
-		assert_noop!(LM::charge(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::charge(Origin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::charge(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::charge(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -537,8 +537,8 @@ fn kill_pool_with_wrong_origin_should_fail() {
 		));
 
 		assert_noop!(LM::kill_pool(Some(USER_1).into(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::kill_pool(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::kill_pool(Origin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::kill_pool(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::kill_pool(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -981,8 +981,8 @@ fn deposit_with_wrong_origin_should_fail() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
-		assert_noop!(LM::deposit(Origin::root(), 0, 1_000_000), DispatchError::BadOrigin);
-		assert_noop!(LM::deposit(Origin::none(), 0, 1_000_000), DispatchError::BadOrigin);
+		assert_noop!(LM::deposit(RuntimeOrigin::root(), 0, 1_000_000), DispatchError::BadOrigin);
+		assert_noop!(LM::deposit(RuntimeOrigin::none(), 0, 1_000_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -1330,8 +1330,8 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 #[test]
 fn redeem_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(LM::redeem_all(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::redeem_all(Origin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::redeem_all(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::redeem_all(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -1505,7 +1505,7 @@ fn volunteer_to_redeem_should_work() {
 		run_to_block(DAYS);
 
 		assert_ok!(LM::volunteer_to_redeem(Some(RICHER).into(), 0, Some(USER_1)));
-		assert_ok!(LM::volunteer_to_redeem(Origin::root(), 0, None));
+		assert_ok!(LM::volunteer_to_redeem(RuntimeOrigin::root(), 0, None));
 
 		let pbpd = FixedU128::from((PER_BLOCK, 2 * UNIT));
 		let reward_to_user =
@@ -1565,7 +1565,10 @@ fn volunteer_to_redeem_with_wrong_pid_should_fail() {
 
 		run_to_block(DAYS);
 
-		assert_noop!(LM::volunteer_to_redeem(Origin::none(), 1, None), Error::<T>::InvalidPoolId);
+		assert_noop!(
+			LM::volunteer_to_redeem(RuntimeOrigin::none(), 1, None),
+			Error::<T>::InvalidPoolId
+		);
 	});
 }
 
@@ -1585,7 +1588,7 @@ fn volunteer_to_redeem_with_wrong_state_should_fail() {
 		));
 
 		assert_noop!(
-			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			LM::volunteer_to_redeem(RuntimeOrigin::none(), 0, None),
 			Error::<T>::InvalidPoolState
 		);
 
@@ -1593,7 +1596,7 @@ fn volunteer_to_redeem_with_wrong_state_should_fail() {
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
 		assert_noop!(
-			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			LM::volunteer_to_redeem(RuntimeOrigin::none(), 0, None),
 			Error::<T>::InvalidPoolState
 		);
 
@@ -1602,7 +1605,7 @@ fn volunteer_to_redeem_with_wrong_state_should_fail() {
 		run_to_block(100);
 
 		assert_noop!(
-			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			LM::volunteer_to_redeem(RuntimeOrigin::none(), 0, None),
 			Error::<T>::InvalidPoolState
 		);
 	});
@@ -1738,8 +1741,8 @@ fn claim_with_wrong_origin_should_fail() {
 
 		run_to_block(DAYS);
 
-		assert_noop!(LM::claim(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::claim(Origin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::claim(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::claim(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -2052,8 +2055,8 @@ fn force_retire_pool_with_wrong_origin_should_fail() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
-		assert_noop!(LM::force_retire_pool(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(LM::force_retire_pool(Origin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::force_retire_pool(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::force_retire_pool(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
 		assert_noop!(LM::force_retire_pool(Some(INVESTOR).into(), 0), DispatchError::BadOrigin);
 	});
 }
@@ -3763,11 +3766,35 @@ fn fuck_bug() {
 		const DEPOSIT_TOKEN_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 		const DEPOSIT_TOKEN_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 
-		assert_ok!(Tokens::set_balance(Origin::root(), ALICE, REWARD_TOKEN, INIT_AMOUNT, 0));
-		assert_ok!(Tokens::set_balance(Origin::root(), BOB, DEPOSIT_TOKEN_1, 0, INIT_AMOUNT));
-		assert_ok!(Tokens::set_balance(Origin::root(), BOB, DEPOSIT_TOKEN_2, 0, INIT_AMOUNT));
-		assert_ok!(Tokens::set_balance(Origin::root(), CHARLIE, DEPOSIT_TOKEN_1, 0, INIT_AMOUNT));
-		assert_ok!(Tokens::set_balance(Origin::root(), CHARLIE, DEPOSIT_TOKEN_2, 0, INIT_AMOUNT));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, REWARD_TOKEN, INIT_AMOUNT, 0));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			BOB,
+			DEPOSIT_TOKEN_1,
+			0,
+			INIT_AMOUNT
+		));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			BOB,
+			DEPOSIT_TOKEN_2,
+			0,
+			INIT_AMOUNT
+		));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			CHARLIE,
+			DEPOSIT_TOKEN_1,
+			0,
+			INIT_AMOUNT
+		));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			CHARLIE,
+			DEPOSIT_TOKEN_2,
+			0,
+			INIT_AMOUNT
+		));
 
 		run_to_block(134);
 

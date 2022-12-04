@@ -27,45 +27,6 @@ use xcm_emulator::TestExt;
 const USDT: u128 = 1_000_000;
 
 #[test]
-fn statemine() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// env_logger::init();
-		Statemine::execute_with(|| {
-			use frame_support::traits::Currency;
-			use statemine_runtime::*;
-
-			let origin = Origin::signed(ALICE.into());
-
-			statemine_runtime::Balances::make_free_balance_be(&ALICE.into(), 10 * 10_000_000_000);
-
-			// need to have some KSM to be able to receive user assets
-			statemine_runtime::Balances::make_free_balance_be(
-				&Sibling::from(2001).into_account_truncating(),
-				10 * 10_000_000_000,
-			);
-
-			assert_ok!(Assets::create(origin.clone(), 0, MultiAddress::Id(ALICE.into()), 10));
-
-			assert_ok!(Assets::mint(origin.clone(), 0, MultiAddress::Id(ALICE.into()), 1000));
-
-			System::reset_events();
-
-			let para_acc: AccountId = Sibling::from(2001).into_account_truncating();
-			println!("{:?}", para_acc);
-
-			assert_ok!(PolkadotXcm::reserve_transfer_assets(
-				origin.clone(),
-				Box::new(MultiLocation::new(1, X1(Parachain(2001))).into()),
-				Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
-				Box::new((X2(PalletInstance(50), GeneralIndex(0)), 100).into()),
-				0
-			));
-			println!("{:?}", System::events());
-		});
-	})
-}
-
-#[test]
 fn cross_usdt() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		TestNet::reset();
@@ -79,7 +40,7 @@ fn cross_usdt() {
 			};
 
 			assert_ok!(AssetRegistry::register_token_metadata(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				Box::new(metadata.clone())
 			));
 
@@ -90,7 +51,7 @@ fn cross_usdt() {
 			});
 
 			assert_ok!(AssetRegistry::register_multilocation(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
 				0
@@ -101,7 +62,7 @@ fn cross_usdt() {
 			use frame_support::traits::Currency;
 			use statemine_runtime::*;
 
-			let origin = Origin::signed(ALICE.into());
+			let origin = RuntimeOrigin::signed(ALICE.into());
 
 			statemine_runtime::Balances::make_free_balance_be(&ALICE.into(), 10 * 10_000_000_000);
 
@@ -159,7 +120,7 @@ fn cross_usdt() {
 			);
 
 			assert_ok!(XcmInterface::transfer_statemine_assets(
-				Origin::signed(ALICE.into()),
+				RuntimeOrigin::signed(ALICE.into()),
 				5 * USDT,
 				1984,
 				Some(sp_runtime::AccountId32::from(ALICE))

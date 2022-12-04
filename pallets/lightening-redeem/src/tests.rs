@@ -33,7 +33,7 @@ fn initialize_pool() {
 		pallet_collective::RawOrigin::Members(2, 3).into(),
 		BalanceOf::<Runtime>::unique_saturated_from(50)
 	));
-	assert_ok!(LighteningRedeem::add_ksm_to_pool(Origin::signed(ALICE), 100));
+	assert_ok!(LighteningRedeem::add_ksm_to_pool(RuntimeOrigin::signed(ALICE), 100));
 }
 
 #[test]
@@ -41,7 +41,11 @@ fn edit_release_start_and_end_block_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		// Charlie doesn't have the permission to edit.
 		assert_noop!(
-			LighteningRedeem::edit_release_start_and_end_block(Origin::signed(CHARLIE), 10, 15000),
+			LighteningRedeem::edit_release_start_and_end_block(
+				RuntimeOrigin::signed(CHARLIE),
+				10,
+				15000
+			),
 			BadOrigin
 		);
 
@@ -65,7 +69,10 @@ fn edit_exchange_price_should_work() {
 		assert_eq!(original_price, 90);
 
 		// Charlie doesn't have the permission to edit.
-		assert_noop!(LighteningRedeem::edit_exchange_price(Origin::signed(CHARLIE), 80), BadOrigin);
+		assert_noop!(
+			LighteningRedeem::edit_exchange_price(RuntimeOrigin::signed(CHARLIE), 80),
+			BadOrigin
+		);
 
 		assert_ok!(LighteningRedeem::edit_exchange_price(
 			pallet_collective::RawOrigin::Members(2, 3).into(),
@@ -90,7 +97,7 @@ fn edit_release_per_day_should_work() {
 		// Charlie doesn't have the permission to edit.
 		assert_noop!(
 			LighteningRedeem::edit_release_per_day(
-				Origin::signed(CHARLIE),
+				RuntimeOrigin::signed(CHARLIE),
 				BalanceOf::<Runtime>::unique_saturated_from(50 * TRILLION)
 			),
 			BadOrigin
@@ -114,12 +121,12 @@ fn add_ksm_to_pool_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		// Charlie doesn't have KSM.
 		assert_noop!(
-			LighteningRedeem::add_ksm_to_pool(Origin::signed(CHARLIE), 80),
+			LighteningRedeem::add_ksm_to_pool(RuntimeOrigin::signed(CHARLIE), 80),
 			Error::<Runtime>::NotEnoughBalance
 		);
 
 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-		assert_ok!(LighteningRedeem::add_ksm_to_pool(Origin::signed(ALICE), 80));
+		assert_ok!(LighteningRedeem::add_ksm_to_pool(RuntimeOrigin::signed(ALICE), 80));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 20);
 
 		let pool_account = <Runtime as crate::Config>::PalletId::get().into_account_truncating();
@@ -137,7 +144,7 @@ fn exchange_for_ksm_should_work() {
 		// In block 9, the pool still dosn't have any KSM which can be redeemed.
 		run_to_block(20);
 		assert_noop!(
-			LighteningRedeem::exchange_for_ksm(Origin::signed(CHARLIE), 90),
+			LighteningRedeem::exchange_for_ksm(RuntimeOrigin::signed(CHARLIE), 90),
 			Error::<Runtime>::ExceedPoolAmount
 		);
 
@@ -145,7 +152,7 @@ fn exchange_for_ksm_should_work() {
 		assert_eq!(LighteningRedeem::get_pool_amount(), 50);
 		// Charlie doesn't have vsKSM and vsBond.
 		assert_noop!(
-			LighteningRedeem::exchange_for_ksm(Origin::signed(CHARLIE), 30),
+			LighteningRedeem::exchange_for_ksm(RuntimeOrigin::signed(CHARLIE), 30),
 			Error::<Runtime>::NotEnoughBalance
 		);
 
@@ -164,7 +171,7 @@ fn exchange_for_ksm_should_work() {
 		assert_eq!(LighteningRedeem::get_pool_amount(), 100);
 
 		// perform the exchange
-		assert_ok!(LighteningRedeem::exchange_for_ksm(Origin::signed(BOB), 90));
+		assert_ok!(LighteningRedeem::exchange_for_ksm(RuntimeOrigin::signed(BOB), 90));
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 0);
 		assert_eq!(Tokens::free_balance(vsBond, &BOB), 0);
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 90);

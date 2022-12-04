@@ -99,11 +99,6 @@ generate-all-weights: generate-bifrost-kusama-weights generate-bifrost-polkadot-
 build-all-release-with-bench: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
 
-# Run dev chain
-.PHONY: run-dev-manual-seal # run dev manual seal
-run-dev:
-	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
-
 # Build docker image
 .PHONY: build-docker-image # build docker image
 build-docker-image:

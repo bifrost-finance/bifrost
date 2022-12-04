@@ -21,7 +21,7 @@ use sp_runtime::{traits::AccountIdConversion, AccountId32};
 use xcm_emulator::TestExt;
 
 use crate::{
-	kusama_integration_tests::{Origin, RelayCurrencyId, TimeUnit, ALICE, BLOCKS_PER_YEAR},
+	kusama_integration_tests::{RelayCurrencyId, RuntimeOrigin, TimeUnit, ALICE, BLOCKS_PER_YEAR},
 	kusama_test_net::{Bifrost, KusamaNet},
 };
 use node_primitives::{AccountId, CurrencyId, TokenSymbol, TryConvertFrom, VtokenMintingOperator};
@@ -43,7 +43,7 @@ fn kusama_treasury_propose_spend() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		KusamaNet::execute_with(|| {
 			assert_ok!(kusama_runtime::Treasury::propose_spend(
-				kusama_runtime::Origin::signed(ALICE.into()),
+				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
 				50_000_000_000_000_000,
 				sp_runtime::MultiAddress::Id(para_account_2001()),
 			));
@@ -61,14 +61,14 @@ fn bifrost_treasury_operations() {
 			let treasury_derivative_account_id =
 				bifrost_kusama_runtime::Utility::derivative_account_id(treasury_account.clone(), 0);
 			assert_ok!(bifrost_kusama_runtime::Tokens::set_balance(
-				bifrost_kusama_runtime::Origin::root(),
+				bifrost_kusama_runtime::RuntimeOrigin::root(),
 				sp_runtime::MultiAddress::Id(treasury_derivative_account_id.clone()),
 				RelayCurrencyId::get(),
 				50_000_000_000_000_000,
 				0,
 			));
 			assert_ok!(bifrost_kusama_runtime::Tokens::force_transfer(
-				bifrost_kusama_runtime::Origin::root(),
+				bifrost_kusama_runtime::RuntimeOrigin::root(),
 				sp_runtime::MultiAddress::Id(treasury_derivative_account_id),
 				sp_runtime::MultiAddress::Id(treasury_account.clone()),
 				RelayCurrencyId::get(),
@@ -76,19 +76,19 @@ fn bifrost_treasury_operations() {
 			));
 
 			assert_ok!(bifrost_kusama_runtime::VtokenMinting::mint(
-				bifrost_kusama_runtime::Origin::signed(treasury_account.clone()),
+				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account.clone()),
 				RelayCurrencyId::get(),
 				25_000_000_000_000_000,
 			));
 
 			assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::create_pair(
-				bifrost_kusama_runtime::Origin::root(),
+				bifrost_kusama_runtime::RuntimeOrigin::root(),
 				zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
 				zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 			));
 
 			assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::add_liquidity(
-				bifrost_kusama_runtime::Origin::signed(treasury_account.clone()),
+				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account.clone()),
 				zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
 				zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 				25_000_000_000_000_000,
@@ -109,7 +109,7 @@ fn bifrost_treasury_operations() {
 			);
 
 			assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::remove_liquidity(
-				bifrost_kusama_runtime::Origin::signed(treasury_account.clone()),
+				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account.clone()),
 				zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
 				zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
 				lp,
@@ -120,7 +120,7 @@ fn bifrost_treasury_operations() {
 			));
 
 			assert_ok!(bifrost_kusama_runtime::VtokenMinting::set_unlock_duration(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				KSM,
 				TimeUnit::Era(0)
 			));
@@ -130,7 +130,7 @@ fn bifrost_treasury_operations() {
 			));
 
 			assert_ok!(bifrost_kusama_runtime::VtokenMinting::redeem(
-				bifrost_kusama_runtime::Origin::signed(treasury_account),
+				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account),
 				VKSM,
 				0,
 			));

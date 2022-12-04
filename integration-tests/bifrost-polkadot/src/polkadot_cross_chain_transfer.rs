@@ -28,7 +28,7 @@ use crate::{
 	polkadot_test_net::{register_token2_asset, Bifrost, PolkadotNet, DOT_TOKEN_ID},
 };
 use bifrost_polkadot_runtime::{
-	AccountId, Balances, Origin, RelayCurrencyId, Runtime, Tokens, XTokens,
+	AccountId, Balances, RelayCurrencyId, Runtime, RuntimeOrigin, Tokens, XTokens,
 };
 use bifrost_runtime_common::dollar;
 
@@ -38,7 +38,7 @@ fn transfer_from_relay_chain() {
 		register_token2_asset();
 		PolkadotNet::execute_with(|| {
 			assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
-				polkadot_runtime::Origin::signed(ALICE.into()),
+				polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new(VersionedMultiLocation::V1(X1(Parachain(2010)).into())),
 				Box::new(VersionedMultiLocation::V1(
 					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any }).into()
@@ -70,14 +70,14 @@ fn transfer_to_relay_chain() {
 
 		Bifrost::execute_with(|| {
 			assert_ok!(XTokens::transfer(
-				Origin::signed(ALICE.into()),
+				RuntimeOrigin::signed(ALICE.into()),
 				RelayCurrencyId::get(),
 				2 * dollar::<Runtime>(RelayCurrencyId::get()),
 				Box::new(xcm::VersionedMultiLocation::V1(MultiLocation::new(
 					1,
 					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
 				))),
-				4_000_000_000
+				xcm_emulator::Limited(4_000_000_000)
 			));
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
@@ -88,7 +88,7 @@ fn transfer_to_relay_chain() {
 		PolkadotNet::execute_with(|| {
 			assert_eq!(
 				polkadot_runtime::Balances::free_balance(&AccountId::from(BOB)),
-				19530582548
+				19573469824
 			);
 		});
 	})
@@ -101,7 +101,7 @@ fn transfer_to_sibling() {
 
 		Bifrost::execute_with(|| {
 			assert_ok!(XTokens::transfer(
-				Origin::signed(ALICE.into()),
+				RuntimeOrigin::signed(ALICE.into()),
 				CurrencyId::Token2(DOT_TOKEN_ID),
 				2 * dollar::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)),
 				Box::new(
@@ -114,7 +114,7 @@ fn transfer_to_sibling() {
 					)
 					.into()
 				),
-				1_000_000_000,
+				xcm_emulator::Limited(1_000_000_000),
 			));
 
 			assert_eq!(

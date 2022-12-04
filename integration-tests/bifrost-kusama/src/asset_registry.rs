@@ -33,7 +33,7 @@ fn register_native_asset_works() {
 			));
 
 			assert_ok!(AssetRegistry::register_native_asset(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				CurrencyId::Token(TokenSymbol::DOT),
 				Box::new(v0_location.clone()),
 				Box::new(AssetMetadata {
@@ -43,7 +43,7 @@ fn register_native_asset_works() {
 					minimal_balance: 1,
 				})
 			));
-			System::assert_last_event(bifrost_kusama_runtime::Event::AssetRegistry(
+			System::assert_last_event(bifrost_kusama_runtime::RuntimeEvent::AssetRegistry(
 				Event::AssetRegistered {
 					asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
 					metadata: AssetMetadata {
@@ -69,7 +69,7 @@ fn register_native_asset_works() {
 			// Can't duplicate
 			assert_noop!(
 				AssetRegistry::register_native_asset(
-					Origin::root(),
+					RuntimeOrigin::root(),
 					CurrencyId::Token(TokenSymbol::DOT),
 					Box::new(v0_location.clone()),
 					Box::new(AssetMetadata {
@@ -94,7 +94,7 @@ fn update_native_asset_works() {
 			));
 			assert_noop!(
 				AssetRegistry::update_native_asset(
-					Origin::root(),
+					RuntimeOrigin::root(),
 					CurrencyId::Token(TokenSymbol::DOT),
 					Box::new(v0_location.clone()),
 					Box::new(AssetMetadata {
@@ -111,7 +111,7 @@ fn update_native_asset_works() {
 				xcm::v0::Junction::Parachain(2000),
 			));
 			assert_ok!(AssetRegistry::register_native_asset(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				CurrencyId::Token(TokenSymbol::DOT),
 				Box::new(new_location.clone()),
 				Box::new(AssetMetadata {
@@ -123,7 +123,7 @@ fn update_native_asset_works() {
 			));
 
 			assert_ok!(AssetRegistry::update_native_asset(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				CurrencyId::Token(TokenSymbol::DOT),
 				Box::new(new_location.clone()),
 				Box::new(AssetMetadata {
@@ -134,7 +134,7 @@ fn update_native_asset_works() {
 				})
 			));
 
-			System::assert_last_event(bifrost_kusama_runtime::Event::AssetRegistry(
+			System::assert_last_event(bifrost_kusama_runtime::RuntimeEvent::AssetRegistry(
 				Event::AssetUpdated {
 					asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
 					metadata: AssetMetadata {
@@ -173,7 +173,7 @@ fn register_token_metadata() {
 			};
 
 			assert_ok!(AssetRegistry::register_token_metadata(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				Box::new(metadata.clone())
 			));
 
@@ -202,16 +202,16 @@ fn register_vtoken_metadata() {
 				minimal_balance: 0,
 			};
 			assert_noop!(
-				AssetRegistry::register_vtoken_metadata(Origin::root(), 1),
+				AssetRegistry::register_vtoken_metadata(RuntimeOrigin::root(), 1),
 				Error::<Runtime>::CurrencyIdNotExists
 			);
 
 			assert_ok!(AssetRegistry::register_token_metadata(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				Box::new(metadata.clone())
 			));
 
-			assert_ok!(AssetRegistry::register_vtoken_metadata(Origin::root(), 0));
+			assert_ok!(AssetRegistry::register_vtoken_metadata(RuntimeOrigin::root(), 0));
 
 			assert_eq!(
 				CurrencyMetadatas::<Runtime>::get(CurrencyId::VToken2(0)),
@@ -239,16 +239,22 @@ fn register_vsbond_metadata() {
 				minimal_balance: 0,
 			};
 			assert_noop!(
-				AssetRegistry::register_vtoken_metadata(Origin::root(), 1),
+				AssetRegistry::register_vtoken_metadata(RuntimeOrigin::root(), 1),
 				Error::<Runtime>::CurrencyIdNotExists
 			);
 
 			assert_ok!(AssetRegistry::register_token_metadata(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				Box::new(metadata.clone())
 			));
 
-			assert_ok!(AssetRegistry::register_vsbond_metadata(Origin::root(), 0, 2001, 10, 20));
+			assert_ok!(AssetRegistry::register_vsbond_metadata(
+				RuntimeOrigin::root(),
+				0,
+				2001,
+				10,
+				20
+			));
 
 			assert_eq!(
 				CurrencyMetadatas::<Runtime>::get(CurrencyId::VSBond2(0, 2001, 10, 20)),
@@ -277,7 +283,7 @@ fn register_multilocation() {
 
 			assert_noop!(
 				AssetRegistry::register_multilocation(
-					Origin::root(),
+					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
 					2000_000_000
@@ -286,12 +292,12 @@ fn register_multilocation() {
 			);
 
 			assert_ok!(AssetRegistry::register_token_metadata(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				Box::new(metadata.clone())
 			));
 
 			assert_ok!(AssetRegistry::register_multilocation(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
 				2000_000_000
@@ -299,7 +305,7 @@ fn register_multilocation() {
 
 			assert_noop!(
 				AssetRegistry::register_multilocation(
-					Origin::root(),
+					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
 					2000_000_000

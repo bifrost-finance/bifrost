@@ -70,18 +70,18 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction TotalOrderInfos (r:0 w:1)
 	fn create_order() -> Weight {
-		(58_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(58_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(6 as u64))
+			.saturating_add(T::DbWeight::get().writes(6 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction UserOrderIds (r:1 w:1)
 	fn revoke_order() -> Weight {
-		(51_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(51_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(5 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: VSBondAuction TransactionFee (r:1 w:0)
@@ -89,24 +89,24 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction UserOrderIds (r:1 w:1)
 	fn clinch_order() -> Weight {
-		(80_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(80_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: VSBondAuction TransactionFee (r:1 w:0)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: System Account (r:1 w:0)
 	fn partial_clinch_order() -> Weight {
-		(66_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(66_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(7 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: VSBondAuction TransactionFee (r:1 w:1)
 	fn set_buy_and_sell_transaction_fee_rate() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }
 
@@ -119,18 +119,18 @@ impl WeightInfo for () {
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction TotalOrderInfos (r:0 w:1)
 	fn create_order() -> Weight {
-		(58_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(6 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(58_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(6 as u64))
+			.saturating_add(RocksDbWeight::get().writes(6 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction UserOrderIds (r:1 w:1)
 	fn revoke_order() -> Weight {
-		(51_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(51_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(5 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: VSBondAuction TransactionFee (r:1 w:0)
@@ -138,23 +138,23 @@ impl WeightInfo for () {
 	// Storage: System Account (r:1 w:1)
 	// Storage: VSBondAuction UserOrderIds (r:1 w:1)
 	fn clinch_order() -> Weight {
-		(80_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(80_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	// Storage: VSBondAuction TransactionFee (r:1 w:0)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: System Account (r:1 w:0)
 	fn partial_clinch_order() -> Weight {
-		(66_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(66_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(7 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: VSBondAuction TransactionFee (r:1 w:1)
 	fn set_buy_and_sell_transaction_fee_rate() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 }

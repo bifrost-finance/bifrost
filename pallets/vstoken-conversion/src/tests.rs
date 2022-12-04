@@ -34,7 +34,7 @@ fn vsksm_convert_to_vsbond() {
 				vstoken_exchange_fee: 10,
 				vsbond_exchange_fee_of_vstoken: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(RuntimeOrigin::root(), EXCHANGE_FEE));
 		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE,
@@ -42,7 +42,7 @@ fn vsksm_convert_to_vsbond() {
 			vstoken_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 			// vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
-		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 1));
+		assert_ok!(VstokenConversion::set_relaychain_lease(RuntimeOrigin::signed(ALICE), 1));
 		assert_noop!(
 			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 1000, 1),
 			Error::<Runtime>::NotEnoughBalance
@@ -51,7 +51,11 @@ fn vsksm_convert_to_vsbond() {
 			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
 			Error::<Runtime>::CalculationOverflow
 		);
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
+		assert_ok!(VstokenConversion::set_exchange_rate(
+			RuntimeOrigin::signed(ALICE),
+			8,
+			EXCHANGE_RATE
+		));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		assert_noop!(
 			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
@@ -75,9 +79,9 @@ fn vsksm_convert_to_vsbond() {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE_0,
 			vstoken_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE_0,
 		};
-		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 11));
+		assert_ok!(VstokenConversion::set_relaychain_lease(RuntimeOrigin::signed(ALICE), 11));
 		assert_ok!(VstokenConversion::set_exchange_rate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			-2,
 			EXCHANGE_RATE_0
 		));
@@ -96,14 +100,18 @@ fn vsbond_convert_to_vsksm() {
 				vstoken_exchange_fee: 10,
 				vsbond_exchange_fee_of_vstoken: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(RuntimeOrigin::root(), EXCHANGE_FEE));
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE,
 			vstoken_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
-		assert_ok!(VstokenConversion::set_relaychain_lease(Origin::signed(ALICE), 1));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
+		assert_ok!(VstokenConversion::set_relaychain_lease(RuntimeOrigin::signed(ALICE), 1));
+		assert_ok!(VstokenConversion::set_exchange_rate(
+			RuntimeOrigin::signed(ALICE),
+			8,
+			EXCHANGE_RATE
+		));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		let vsbond_account: AccountId =
 			<Runtime as Config>::VsbondAccount::get().into_account_truncating();

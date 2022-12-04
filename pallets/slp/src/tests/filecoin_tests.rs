@@ -53,7 +53,11 @@ fn initialize_delegator_setup() {
 	};
 
 	mins_maxs_setup();
-	let _ = Slp::initialize_delegator(Origin::signed(ALICE), FIL, Some(Box::new(location.clone())));
+	let _ = Slp::initialize_delegator(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Some(Box::new(location.clone())),
+	);
 }
 
 fn delegate_setup() {
@@ -69,9 +73,9 @@ fn delegate_setup() {
 
 	initialize_delegator_setup();
 
-	let _ = Slp::add_validator(Origin::signed(ALICE), FIL, Box::new(owner_location.clone()));
+	let _ = Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location.clone()));
 	let _ = Slp::delegate(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		FIL,
 		Box::new(location.clone()),
 		vec![owner_location.clone()],
@@ -86,8 +90,13 @@ fn bond_setup() {
 
 	delegate_setup();
 
-	let _ =
-		Slp::bond(Origin::signed(ALICE), FIL, Box::new(location.clone()), 1_000_000_000_000, None);
+	let _ = Slp::bond(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Box::new(location.clone()),
+		1_000_000_000_000,
+		None,
+	);
 }
 
 #[test]
@@ -102,7 +111,7 @@ fn initialize_delegator_should_work() {
 
 		mins_maxs_setup();
 		assert_ok!(Slp::initialize_delegator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Some(Box::new(location.clone()))
 		));
@@ -125,7 +134,7 @@ fn bond_should_work() {
 
 		assert_noop!(
 			Slp::bond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				1_000_000_000_000,
@@ -137,13 +146,13 @@ fn bond_should_work() {
 		delegate_setup();
 
 		assert_noop!(
-			Slp::bond(Origin::signed(ALICE), FIL, Box::new(location.clone()), 1_000, None),
+			Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone()), 1_000, None),
 			Error::<Runtime>::LowerThanMinimum
 		);
 
 		assert_noop!(
 			Slp::bond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				300_000_000_000_000,
@@ -153,7 +162,7 @@ fn bond_should_work() {
 		);
 
 		assert_ok!(Slp::bond(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			1_000_000_000_000,
@@ -168,7 +177,7 @@ fn bond_should_work() {
 
 		assert_noop!(
 			Slp::bond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				1_000_000_000_000,
@@ -197,7 +206,7 @@ fn delegate_should_work() {
 		initialize_delegator_setup();
 
 		assert_ok!(Slp::add_validator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(owner_location.clone())
 		));
@@ -208,7 +217,7 @@ fn delegate_should_work() {
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		assert_ok!(Slp::delegate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			vec![owner_location.clone()]
@@ -231,7 +240,7 @@ fn bond_extra_should_work() {
 
 		assert_noop!(
 			Slp::bond_extra(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				None,
@@ -243,7 +252,7 @@ fn bond_extra_should_work() {
 		bond_setup();
 
 		assert_ok!(Slp::bond_extra(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			None,
@@ -268,7 +277,7 @@ fn unbond_should_work() {
 
 		assert_noop!(
 			Slp::unbond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				None,
@@ -280,7 +289,7 @@ fn unbond_should_work() {
 		bond_setup();
 
 		assert_ok!(Slp::unbond(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			None,
@@ -314,7 +323,7 @@ fn undelegate_should_work() {
 
 		assert_noop!(
 			Slp::undelegate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				vec![owner_location.clone()]
@@ -334,7 +343,7 @@ fn undelegate_should_work() {
 
 		assert_noop!(
 			Slp::undelegate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				vec!(owner_location.clone())
@@ -349,7 +358,7 @@ fn undelegate_should_work() {
 
 		assert_noop!(
 			Slp::undelegate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location.clone()),
 				vec![other_location.clone()]
@@ -358,7 +367,7 @@ fn undelegate_should_work() {
 		);
 
 		assert_ok!(Slp::undelegate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			vec![owner_location.clone()]
@@ -384,7 +393,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 
 		assert_noop!(
 			Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				FIL,
 				100,
 				Some(location.clone())
@@ -402,14 +411,14 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Some((pct, treasury_location))
 		));
 
 		let pct_100 = Permill::from_percent(100);
 		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Some((1, pct_100))
 		));
@@ -422,13 +431,13 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VFIL, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), FIL, 100));
+		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), FIL, 100));
 
 		bond_setup();
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			100,
 			Some(location.clone())
@@ -457,7 +466,7 @@ fn remove_delegator_should_work() {
 		};
 
 		assert_noop!(
-			Slp::remove_delegator(Origin::signed(ALICE), FIL, Box::new(location.clone())),
+			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone())),
 			Error::<Runtime>::DelegatorNotBonded
 		);
 
@@ -471,7 +480,7 @@ fn remove_delegator_should_work() {
 		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
 
 		assert_noop!(
-			Slp::remove_delegator(Origin::signed(ALICE), FIL, Box::new(location.clone())),
+			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone())),
 			Error::<Runtime>::AmountNotZero
 		);
 
@@ -480,7 +489,11 @@ fn remove_delegator_should_work() {
 		let ledger1 = Ledger::Filecoin(fil_ledger1);
 		DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger1);
 
-		assert_ok!(Slp::remove_delegator(Origin::signed(ALICE), FIL, Box::new(location.clone())));
+		assert_ok!(Slp::remove_delegator(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			Box::new(location.clone())
+		));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), None);
 		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location.clone()), None);
@@ -502,7 +515,11 @@ fn remove_validator_should_work() {
 		};
 
 		assert_noop!(
-			Slp::remove_validator(Origin::signed(ALICE), FIL, Box::new(owner_location.clone())),
+			Slp::remove_validator(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(owner_location.clone())
+			),
 			Error::<Runtime>::ValidatorSetNotExist
 		);
 
@@ -514,7 +531,11 @@ fn remove_validator_should_work() {
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		assert_noop!(
-			Slp::remove_validator(Origin::signed(ALICE), FIL, Box::new(owner_location.clone())),
+			Slp::remove_validator(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(owner_location.clone())
+			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
 
@@ -524,14 +545,14 @@ fn remove_validator_should_work() {
 		DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger);
 
 		assert_ok!(Slp::undelegate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location.clone()),
 			vec![owner_location.clone()]
 		));
 
 		assert_ok!(Slp::remove_validator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(owner_location.clone())
 		));

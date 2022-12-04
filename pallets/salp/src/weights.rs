@@ -75,9 +75,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn contribute() -> Weight {
-		(63_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(11 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(63_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(11 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: Salp FailedFundsToRefund (r:1 w:0)
 	// Storage: Salp Funds (r:1 w:1)
@@ -86,17 +86,17 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn refund() -> Weight {
-		(109_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(10 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(109_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(10 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:0)
 	fn unlock() -> Weight {
-		(44_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(44_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
@@ -599,12 +599,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: unknown [0xf98428e38450dcc80131bed1b84059f80938df6d2941d17917c968e553afa753] (r:1 w:0)
 	/// The range of component `k` is `[1, 500]`.
 	fn batch_unlock(k: u32, ) -> Weight {
-		(95_555_000 as Weight)
+		Weight::from_ref_time(95_555_000 as u64)
 			// Standard Error: 80_000
-			.saturating_add((23_675_000 as Weight).saturating_mul(k as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().reads((3 as Weight).saturating_mul(k as Weight)))
-			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(k as Weight)))
+			.saturating_add(Weight::from_ref_time(23_675_000 as u64).saturating_mul(k as u64))
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().reads((3 as u64).saturating_mul(k as u64)))
+			.saturating_add(T::DbWeight::get().writes((2 as u64).saturating_mul(k as u64)))
 	}
 	// Storage: Salp Funds (r:1 w:1)
 	// Storage: Salp RedeemPool (r:1 w:1)
@@ -612,9 +612,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn redeem() -> Weight {
-		(89_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(89_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 }
 
@@ -632,9 +632,9 @@ impl WeightInfo for () {
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn contribute() -> Weight {
-		(63_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(11 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(63_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(11 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: Salp FailedFundsToRefund (r:1 w:0)
 	// Storage: Salp Funds (r:1 w:1)
@@ -643,17 +643,17 @@ impl WeightInfo for () {
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn refund() -> Weight {
-		(109_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(10 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(109_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(10 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:0)
 	fn unlock() -> Weight {
-		(44_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(44_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
@@ -1156,12 +1156,12 @@ impl WeightInfo for () {
 	// Storage: unknown [0xf98428e38450dcc80131bed1b84059f80938df6d2941d17917c968e553afa753] (r:1 w:0)
 	/// The range of component `k` is `[1, 500]`.
 	fn batch_unlock(k: u32, ) -> Weight {
-		(95_555_000 as Weight)
+		Weight::from_ref_time(95_555_000 as u64)
 			// Standard Error: 80_000
-			.saturating_add((23_675_000 as Weight).saturating_mul(k as Weight))
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().reads((3 as Weight).saturating_mul(k as Weight)))
-			.saturating_add(RocksDbWeight::get().writes((2 as Weight).saturating_mul(k as Weight)))
+			.saturating_add(Weight::from_ref_time(23_675_000 as u64).saturating_mul(k as u64))
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().reads((3 as u64).saturating_mul(k as u64)))
+			.saturating_add(RocksDbWeight::get().writes((2 as u64).saturating_mul(k as u64)))
 	}
 	// Storage: Salp Funds (r:1 w:1)
 	// Storage: Salp RedeemPool (r:1 w:1)
@@ -1169,8 +1169,8 @@ impl WeightInfo for () {
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	fn redeem() -> Weight {
-		(89_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(89_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 }

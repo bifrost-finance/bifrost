@@ -15,11 +15,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Weight, Xcm};
+use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
 use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
-use xcm::opaque::latest::Instruction;
+use xcm::{latest::Weight as XcmWeight, opaque::latest::Instruction};
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -224,14 +224,14 @@ pub trait XcmBuilder<Balance, ChainCallType, Error> {
 	fn construct_xcm_message(
 		call: ChainCallType,
 		extra_fee: Balance,
-		weight: Weight,
+		weight: XcmWeight,
 		currency_id: CurrencyId,
 		// response_back_location: AccountId
 	) -> Result<Xcm<()>, Error>;
 }
 
 pub trait InstructionBuilder<ChainCallType> {
-	fn construct_instruction(call: ChainCallType, weight: Weight) -> Instruction;
+	fn construct_instruction(call: ChainCallType, weight: XcmWeight) -> Instruction;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
@@ -244,19 +244,11 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 }
 
 pub trait OnRefund<AccountId, CurrencyId, Balance> {
-	fn on_refund(
-		token_id: CurrencyId,
-		to: AccountId,
-		token_amount: Balance,
-	) -> frame_support::pallet_prelude::Weight;
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> XcmWeight;
 }
 
 impl<AccountId, CurrencyId, Balance> OnRefund<AccountId, CurrencyId, Balance> for () {
-	fn on_refund(
-		_token_id: CurrencyId,
-		_to: AccountId,
-		_token_amount: Balance,
-	) -> frame_support::pallet_prelude::Weight {
+	fn on_refund(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> XcmWeight {
 		0
 	}
 }

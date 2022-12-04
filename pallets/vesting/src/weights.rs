@@ -58,89 +58,89 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn vest_locked(l: u32) -> Weight {
-		(57_472_000 as Weight)
-			.saturating_add((155_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(57_472_000 as u64)
+			.saturating_add(Weight::from_ref_time(155_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 
 	fn vest_unlocked(l: u32) -> Weight {
-		(61_681_000 as Weight)
-			.saturating_add((138_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(61_681_000 as u64)
+			.saturating_add(Weight::from_ref_time(138_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 
 	fn vest_other_locked(l: u32) -> Weight {
-		(56_910_000 as Weight)
-			.saturating_add((160_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(56_910_000 as u64)
+			.saturating_add(Weight::from_ref_time(160_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 
 	fn vest_other_unlocked(l: u32) -> Weight {
-		(61_319_000 as Weight)
-			.saturating_add((144_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(61_319_000 as u64)
+			.saturating_add(Weight::from_ref_time(144_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 
 	fn vested_transfer(l: u32) -> Weight {
-		(124_996_000 as Weight)
-			.saturating_add((209_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(124_996_000 as u64)
+			.saturating_add(Weight::from_ref_time(209_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 
 	fn force_vested_transfer(l: u32) -> Weight {
-		(123_911_000 as Weight)
-			.saturating_add((213_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(123_911_000 as u64)
+			.saturating_add(Weight::from_ref_time(213_000 as u64).saturating_mul(l as u64))
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn vest_locked(l: u32) -> Weight {
-		(57_472_000 as Weight)
-			.saturating_add((155_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(57_472_000 as u64)
+			.saturating_add(Weight::from_ref_time(155_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 
 	fn vest_unlocked(l: u32) -> Weight {
-		(61_681_000 as Weight)
-			.saturating_add((138_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(61_681_000 as u64)
+			.saturating_add(Weight::from_ref_time(138_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 
 	fn vest_other_locked(l: u32) -> Weight {
-		(56_910_000 as Weight)
-			.saturating_add((160_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(56_910_000 as u64)
+			.saturating_add(Weight::from_ref_time(160_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 
 	fn vest_other_unlocked(l: u32) -> Weight {
-		(61_319_000 as Weight)
-			.saturating_add((144_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(61_319_000 as u64)
+			.saturating_add(Weight::from_ref_time(144_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 
 	fn vested_transfer(l: u32) -> Weight {
-		(124_996_000 as Weight)
-			.saturating_add((209_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(124_996_000 as u64)
+			.saturating_add(Weight::from_ref_time(209_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 
 	fn force_vested_transfer(l: u32) -> Weight {
-		(123_911_000 as Weight)
-			.saturating_add((213_000 as Weight).saturating_mul(l as Weight))
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(123_911_000 as u64)
+			.saturating_add(Weight::from_ref_time(213_000 as u64).saturating_mul(l as u64))
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 }

@@ -30,7 +30,7 @@ pub struct MiscFeeHandler<T, FeeCurrency, FeeAmount, FeeFilter>(
 );
 
 impl<T: Config, FeeCurrency, FeeAmount, FeeFilter>
-	FeeDeductor<T::AccountId, CurrencyIdOf<T>, PalletBalanceOf<T>, T::Call>
+	FeeDeductor<T::AccountId, CurrencyIdOf<T>, PalletBalanceOf<T>, T::RuntimeCall>
 	for MiscFeeHandler<T, FeeCurrency, FeeAmount, FeeFilter>
 where
 	FeeCurrency: Get<CurrencyIdOf<T>>,
@@ -40,7 +40,7 @@ where
 	fn deduct_fee(
 		who: &T::AccountId,
 		receiver: &T::AccountId,
-		call: &T::Call,
+		call: &T::RuntimeCall,
 	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
 		// If this call matches a specific extra-fee call
 		if FeeFilter::contains(call) {
@@ -55,22 +55,22 @@ where
 	}
 }
 
-pub trait FeeDeductor<AccountId, CurrencyId, Balance, Call> {
+pub trait FeeDeductor<AccountId, CurrencyId, Balance, RuntimeCall> {
 	fn deduct_fee(
 		who: &AccountId,
 		receiver: &AccountId,
-		call: &Call,
+		call: &RuntimeCall,
 	) -> Result<(CurrencyId, Balance), DispatchError>;
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(30)]
-impl<AccountId, CurrencyId, Balance, Call> FeeDeductor<AccountId, CurrencyId, Balance, Call>
-	for Tuple
+impl<AccountId, CurrencyId, Balance, RuntimeCall>
+	FeeDeductor<AccountId, CurrencyId, Balance, RuntimeCall> for Tuple
 {
 	fn deduct_fee(
 		who: &AccountId,
 		receiver: &AccountId,
-		call: &Call,
+		call: &RuntimeCall,
 	) -> Result<(CurrencyId, Balance), DispatchError> {
 		for_tuples!(
 			#(
@@ -84,12 +84,12 @@ impl<AccountId, CurrencyId, Balance, Call> FeeDeductor<AccountId, CurrencyId, Ba
 	}
 }
 
-pub trait NameGetter<Call> {
-	fn get_name(call: &Call) -> ExtraFeeName;
+pub trait NameGetter<RuntimeCall> {
+	fn get_name(call: &RuntimeCall) -> ExtraFeeName;
 }
 
-pub trait FeeGetter<Call> {
-	fn get_fee_info(call: &Call) -> (ExtraFeeName, bool);
+pub trait FeeGetter<RuntimeCall> {
+	fn get_fee_info(call: &RuntimeCall) -> (ExtraFeeName, bool);
 }
 
 pub struct ExtraFeeMatcher<T, FeeNameGetter, AggregateExtraFeeFilter>(
@@ -102,7 +102,7 @@ where
 	AggregateExtraFeeFilter: Contains<CallOf<T>>,
 {
 	fn get_fee_info(call: &CallOf<T>) -> (ExtraFeeName, bool) {
-		let fee_name = FeeNameGetter::get_name(call.clone());
+		let fee_name = FeeNameGetter::get_name(&call);
 		let if_extra_fee = AggregateExtraFeeFilter::contains(call);
 
 		(fee_name, if_extra_fee)

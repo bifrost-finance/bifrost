@@ -61,8 +61,8 @@ pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: FlexibleFee UserFeeChargeOrderList (r:0 w:1)
 	fn set_user_fee_charge_order() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }
 
@@ -70,7 +70,7 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 impl WeightInfo for () {
 	// Storage: FlexibleFee UserFeeChargeOrderList (r:0 w:1)
 	fn set_user_fee_charge_order() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 }

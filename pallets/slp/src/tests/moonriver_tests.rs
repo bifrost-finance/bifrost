@@ -81,12 +81,12 @@ fn initialize_moonriver_delegator() {
 
 		// Set minimums and maximums
 		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
+		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), MOVR, None));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(MOVR), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(MOVR, 0),
@@ -120,20 +120,28 @@ fn moonriver_setup() {
 	};
 
 	// set operate_origins
-	assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(ALICE)));
+	assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), MOVR, Some(ALICE)));
 
 	// Set OngoingTimeUnitUpdateInterval as 1/3 round(600 blocks per round, 12 seconds per block)
-	assert_ok!(Slp::set_ongoing_time_unit_update_interval(Origin::signed(ALICE), MOVR, Some(200)));
+	assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+		RuntimeOrigin::signed(ALICE),
+		MOVR,
+		Some(200)
+	));
 
 	System::set_block_number(300);
 
 	// Initialize ongoing timeunit as 1.
-	assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(1)));
+	assert_ok!(Slp::update_ongoing_time_unit(
+		RuntimeOrigin::signed(ALICE),
+		MOVR,
+		TimeUnit::Round(1)
+	));
 
 	// Initialize currency delays.
 	let delay =
 		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
-	assert_ok!(Slp::set_currency_delays(Origin::signed(ALICE), MOVR, Some(delay)));
+	assert_ok!(Slp::set_currency_delays(RuntimeOrigin::signed(ALICE), MOVR, Some(delay)));
 
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 100_000_000_000,
@@ -150,14 +158,18 @@ fn moonriver_setup() {
 	};
 
 	// Set minimums and maximums
-	assert_ok!(Slp::set_minimums_and_maximums(Origin::signed(ALICE), MOVR, Some(mins_and_maxs)));
+	assert_ok!(Slp::set_minimums_and_maximums(
+		RuntimeOrigin::signed(ALICE),
+		MOVR,
+		Some(mins_and_maxs)
+	));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(Origin::signed(ALICE), MOVR, None));
+	assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), MOVR, None));
 
 	// update some MOVR balance to treasury account
 	assert_ok!(Tokens::set_balance(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		treasury_account_id_32.into(),
 		MOVR,
 		1_000_000_000_000_000_000,
@@ -166,90 +178,90 @@ fn moonriver_setup() {
 
 	// Set fee source
 	assert_ok!(Slp::set_fee_source(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		Some((treasury_location, 1_000_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Bond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::BondExtra,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Unbond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Chill,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Rebond,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Undelegate,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::CancelLeave,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Liquidize,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::ExecuteLeave,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::TransferBack,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::XtokensTransferBack,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
@@ -257,7 +269,7 @@ fn moonriver_setup() {
 
 	// Set delegator ledger
 	assert_ok!(Slp::add_validator(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		Box::new(validator_0_location.clone()),
 	));
@@ -294,7 +306,7 @@ fn moonriver_bond_works() {
 		moonriver_setup();
 		assert_noop!(
 			Slp::bond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
@@ -356,7 +368,7 @@ fn moonriver_bond_extra_works() {
 
 		assert_noop!(
 			Slp::bond_extra(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
@@ -418,7 +430,7 @@ fn moonriver_unbond_works() {
 
 		assert_noop!(
 			Slp::unbond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
@@ -479,7 +491,7 @@ fn moonriver_unbond_all_works() {
 		DelegatorLedgers::<Runtime>::insert(MOVR, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
-			Slp::unbond_all(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location),),
+			Slp::unbond_all(RuntimeOrigin::signed(ALICE), MOVR, Box::new(subaccount_0_location),),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -546,7 +558,7 @@ fn moonriver_rebond_works() {
 
 		assert_noop!(
 			Slp::rebond(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location.clone()),
@@ -620,7 +632,7 @@ fn moonriver_undelegate_works() {
 
 		assert_noop!(
 			Slp::undelegate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
@@ -690,7 +702,12 @@ fn moonriver_redelegate_works() {
 		DelegatorLedgers::<Runtime>::insert(MOVR, Box::new(subaccount_0_location.clone()), ledger);
 
 		assert_noop!(
-			Slp::redelegate(Origin::signed(ALICE), MOVR, Box::new(subaccount_0_location), None),
+			Slp::redelegate(
+				RuntimeOrigin::signed(ALICE),
+				MOVR,
+				Box::new(subaccount_0_location),
+				None
+			),
 			Error::<Runtime>::XcmFailure
 		);
 	});
@@ -759,7 +776,7 @@ fn moonriver_liquidize_works() {
 
 		assert_noop!(
 			Slp::liquidize(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
@@ -770,11 +787,15 @@ fn moonriver_liquidize_works() {
 
 		System::set_block_number(500);
 
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			TimeUnit::Round(24)
+		));
 
 		assert_noop!(
 			Slp::liquidize(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
@@ -820,7 +841,7 @@ fn moonriver_liquidize_works() {
 
 		assert_noop!(
 			Slp::liquidize(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
@@ -831,11 +852,15 @@ fn moonriver_liquidize_works() {
 
 		System::set_block_number(700);
 
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			TimeUnit::Round(48)
+		));
 
 		assert_noop!(
 			Slp::liquidize(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
 				None,
@@ -912,7 +937,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -961,7 +986,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1066,7 +1091,7 @@ fn moonriver_unbond_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1124,12 +1149,16 @@ fn moonriver_unbond_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(
+				RuntimeOrigin::signed(ALICE),
+				MOVR,
+				query_id
+			),
 			Error::<Runtime>::RequestNotDue
 		);
 
 		assert_ok!(Slp::fail_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		),);
@@ -1139,7 +1168,11 @@ fn moonriver_unbond_confirm_works() {
 		System::set_block_number(500);
 
 		// Not working because time is not right.
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(24)));
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			TimeUnit::Round(24)
+		));
 
 		let query_id = 4;
 		let update_entry_4 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
@@ -1159,7 +1192,7 @@ fn moonriver_unbond_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1263,12 +1296,16 @@ fn moonriver_unbond_all_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(
+				RuntimeOrigin::signed(ALICE),
+				MOVR,
+				query_id
+			),
 			Error::<Runtime>::LeavingNotDue
 		);
 
 		assert_ok!(Slp::fail_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		),);
@@ -1278,7 +1315,11 @@ fn moonriver_unbond_all_confirm_works() {
 		System::set_block_number(500);
 
 		// Not working because time is not right.
-		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), MOVR, TimeUnit::Round(48)));
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			TimeUnit::Round(48)
+		));
 
 		let query_id = 6;
 		let update_entry_6 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
@@ -1298,7 +1339,7 @@ fn moonriver_unbond_all_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1406,7 +1447,7 @@ fn moonriver_rebond_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1517,7 +1558,7 @@ fn moonriver_undelegate_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1578,7 +1619,11 @@ fn moonriver_undelegate_confirm_works() {
 		);
 
 		assert_noop!(
-			Slp::confirm_delegator_ledger_query_response(Origin::signed(ALICE), MOVR, query_id),
+			Slp::confirm_delegator_ledger_query_response(
+				RuntimeOrigin::signed(ALICE),
+				MOVR,
+				query_id
+			),
 			Error::<Runtime>::RequestNotDue
 		);
 
@@ -1600,7 +1645,7 @@ fn moonriver_undelegate_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1693,7 +1738,7 @@ fn moonriver_redelegate_confirm_works() {
 
 		assert_noop!(
 			Slp::redelegate(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None
@@ -1719,7 +1764,7 @@ fn moonriver_redelegate_confirm_works() {
 		);
 
 		assert_ok!(Slp::confirm_delegator_ledger_query_response(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			query_id
 		));
@@ -1778,7 +1823,7 @@ fn moonriver_transfer_back_works() {
 
 		assert_noop!(
 			Slp::transfer_back(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				Box::new(exit_account_location.clone()),
@@ -1816,7 +1861,7 @@ fn moonriver_transfer_to_works() {
 
 		assert_noop!(
 			Slp::transfer_to(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(entrance_account_location.clone()),
 				Box::new(subaccount_0_location.clone()),
@@ -1870,7 +1915,7 @@ fn supplement_fee_account_whitelist_works() {
 				.into();
 		let source_location = Slp::account_32_to_local_location(source_account_id_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Some((source_location.clone(), 1_000_000_000_000_000_000))
 		));
@@ -1878,7 +1923,7 @@ fn supplement_fee_account_whitelist_works() {
 		// Dest should be one of delegators, operateOrigins or accounts in the whitelist.
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 			),
@@ -1887,7 +1932,7 @@ fn supplement_fee_account_whitelist_works() {
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(entrance_account_location.clone()),
 			),
@@ -1895,11 +1940,15 @@ fn supplement_fee_account_whitelist_works() {
 		);
 
 		// register entrance_account_location as operateOrigin
-		assert_ok!(Slp::set_operate_origin(Origin::signed(ALICE), MOVR, Some(entrance_account_id)));
+		assert_ok!(Slp::set_operate_origin(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Some(entrance_account_id)
+		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(entrance_account_location.clone()),
 			),
@@ -1908,7 +1957,7 @@ fn supplement_fee_account_whitelist_works() {
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(exit_account_location.clone()),
 			),
@@ -1917,14 +1966,14 @@ fn supplement_fee_account_whitelist_works() {
 
 		// register exit_account_location into whitelist
 		assert_ok!(Slp::add_supplement_fee_account_to_whitelist(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(exit_account_location.clone()),
 			),
@@ -1933,14 +1982,14 @@ fn supplement_fee_account_whitelist_works() {
 
 		// remove exit_account_location from whitelist
 		assert_ok!(Slp::remove_supplement_fee_account_from_whitelist(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Box::new(exit_account_location.clone()),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
-				Origin::signed(ALICE),
+				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(exit_account_location.clone()),
 			),
@@ -2033,25 +2082,25 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Some((pct, treasury_location))
 		));
 
 		let pct_100 = Permill::from_percent(100);
 		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Some((1, pct_100))
 		));
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VMOVR, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), MOVR, 100));
+		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), MOVR, 100));
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			100,
 			Some(subaccount_0_location.clone())
@@ -2108,14 +2157,14 @@ fn add_validator_and_remove_validator_works() {
 
 		// Set minimums and maximums
 		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Some(mins_and_maxs)
 		));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Box::new(validator_0_location.clone()),
 		));
@@ -2126,7 +2175,7 @@ fn add_validator_and_remove_validator_works() {
 		assert_eq!(Slp::get_validators(MOVR), Some(valis));
 
 		assert_ok!(Slp::remove_validator(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			MOVR,
 			Box::new(validator_0_location.clone()),
 		));
