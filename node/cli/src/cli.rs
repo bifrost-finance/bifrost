@@ -95,9 +95,6 @@ pub struct Cli {
 	#[command(flatten)]
 	pub run: cumulus_client_cli::RunCmd,
 
-	#[arg(long)]
-	pub sealing: Option<String>,
-
 	/// Disable automatic hardware benchmarks.
 	///
 	/// By default these benchmarks are automatically ran at startup and measure
@@ -105,12 +102,12 @@ pub struct Cli {
 	///
 	/// The results are then printed out in the logs, and also sent as part of
 	/// telemetry, if telemetry is enabled.
-	#[clap(long)]
+	#[arg(long)]
 	pub no_hardware_benchmarks: bool,
 
 	/// Relay chain arguments
-	#[clap(raw = true, conflicts_with = "relay-chain-rpc-url")]
-	pub relaychain_args: Vec<String>,
+	#[arg(raw = true)]
+	pub relay_chain_args: Vec<String>,
 }
 
 #[derive(Debug)]
