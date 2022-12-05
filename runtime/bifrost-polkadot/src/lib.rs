@@ -104,7 +104,7 @@ use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::latest::prelude::*;
+use xcm::latest::{prelude::*, Weight as XcmWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin,
@@ -931,7 +931,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: u64 = 200_000_000;
+	pub UnitWeightCost: XcmWeight = 200_000_000;
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -2030,7 +2030,7 @@ impl_runtime_apis! {
 	}
 
 	// zenlink runtime outer apis
-	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId,ZenlinkAssetId> for Runtime {
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, ZenlinkAssetId> for Runtime {
 
 		fn get_balance(
 			asset_id: ZenlinkAssetId,
@@ -2048,7 +2048,7 @@ impl_runtime_apis! {
 		fn get_pair_by_asset_id(
 			asset_0: ZenlinkAssetId,
 			asset_1: ZenlinkAssetId
-		) -> Option<PairInfo<AccountId, AssetBalance,ZenlinkAssetId>> {
+		) -> Option<PairInfo<AccountId, AssetBalance, ZenlinkAssetId>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
 		}
 
