@@ -16,12 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::*;
+use crate::{traits::VeMintingInterface, *};
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
-pub struct IncentiveConfigs<Balance> {
+pub struct IncentiveConfig<Balance> {
 	rewardRate: Balance,
 	rewardPerTokenStored: Balance,
 	rewardsDuration: Timestamp,
@@ -29,72 +29,61 @@ pub struct IncentiveConfigs<Balance> {
 	lastUpdateTime: Timestamp,
 }
 
-#[frame_support::pallet]
-pub mod pallet {
-	use super::*;
-
-	#[pallet::storage]
-	#[pallet::getter(fn incentive_configs)]
-	pub type IncentiveConfigs<T: Config> =
-		StorageValue<_, IncentiveConfigs<BalanceOf<T>>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn user_reward_per_token_paid)]
-	pub type UserRewardPerTokenPaid<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountId, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn rewards)]
-	pub type Rewards<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountId, BalanceOf<T>, ValueQuery>;
-
-	impl<T: Config> Pallet<T> {
-		pub fn lastTimeRewardApplicable() -> Timestamp {
-			let current_timestamp: Timestamp =
-				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-			if current_timestamp < periodFinish {
-				current_timestamp
-			} else {
-				Self::incentive_configs().periodFinish
-			}
+impl<T: Config> Pallet<T> {
+	pub fn lastTimeRewardApplicable() -> Timestamp {
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		if current_timestamp < Self::incentive_configs().periodFinish {
+			current_timestamp
+		} else {
+			Self::incentive_configs().periodFinish
 		}
+	}
 
-		pub fn rewardPerToken() -> BalanceOf<T> {
-			let current_timestamp: Timestamp =
-				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-			let _totalSupply = Self::totalSupply(current_timestamp);
-			if (_totalSupply == 0) {
-				return Self::incentive_configs().rewardPerTokenStored;
-			}
-			return Self::incentive_configs().rewardPerTokenStored.add(
-				Self::lastTimeRewardApplicable()
-					.sub(Self::incentive_configs().lastUpdateTime)
-					.mul(Self::incentive_configs().rewardRate)
-					// .mul(1e18)
-					.div(_totalSupply),
-			);
+	pub fn rewardPerToken() -> BalanceOf<T> {
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let _totalSupply = Self::totalSupply(current_timestamp);
+		if _totalSupply == BalanceOf::<T>::zero() {
+			return Self::incentive_configs().rewardPerTokenStored;
 		}
+		return Self::incentive_configs().rewardPerTokenStored.saturating_add(
+			Self::lastTimeRewardApplicable()
+				.saturated_into::<BalanceOf<T>>()
+				.saturating_sub(
+					Self::incentive_configs().lastUpdateTime.saturated_into::<BalanceOf<T>>(),
+				)
+				.saturating_mul(Self::incentive_configs().rewardRate)
+				// .mul(1e18)
+				.checked_div(&_totalSupply)
+				.unwrap_or_default(), // .ok_or(Error::<T>::CalculationOverflow)?,
+		);
+	}
 
-		pub fn earned(addr: &AccountId) -> BalanceOf<T> {
-			return Self::balanceOf(addr)
-				.mul(Self::rewardPerToken().sub(Self::user_reward_per_token_paid(addr)))
-				// .div(1e18)
-				.add(Self::rewards(addr));
-		}
+	pub fn earned(addr: &AccountIdOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		Ok(Self::balanceOf(addr, current_timestamp)?
+			.saturating_mul(
+				Self::rewardPerToken().saturating_sub(Self::user_reward_per_token_paid(addr)),
+			)
+			// .div(1e18)
+			.saturating_add(Self::rewards(addr)))
+	}
 
-		pub fn updateReward(addr: &AccountId) {
-			let rewardPerTokenStored = rewardPerToken();
-			IncentiveConfigs::<T>::mutate(|item| {
-				item.rewardPerTokenStored = rewardPerTokenStored;
-				item.lastUpdateTime = lastTimeRewardApplicable();
-			});
-			// let lastUpdateTime = lastTimeRewardApplicable();
-			// if (account != address(0)) {
-			// rewards[account] = earned(account);
-			Rewards::<T>::insert(addr, Self::earned(addr));
-			UserRewardPerTokenPaid::<T>::insert(addr, rewardPerTokenStored);
-			// Self::user_reward_per_token_paid(addr) = rewardPerTokenStored;
-			// }
-		}
+	pub fn updateReward(addr: &AccountIdOf<T>) -> DispatchResult {
+		let rewardPerTokenStored = Self::rewardPerToken();
+		IncentiveConfigs::<T>::mutate(|item| {
+			item.rewardPerTokenStored = rewardPerTokenStored;
+			item.lastUpdateTime = Self::lastTimeRewardApplicable();
+		});
+		// let lastUpdateTime = lastTimeRewardApplicable();
+		// if (account != address(0)) {
+		// rewards[account] = earned(account);
+		Rewards::<T>::insert(addr, Self::earned(addr)?);
+		UserRewardPerTokenPaid::<T>::insert(addr, rewardPerTokenStored);
+		// Self::user_reward_per_token_paid(addr) = rewardPerTokenStored;
+		// }
+		Ok(())
 	}
 }

@@ -51,6 +51,36 @@ fn _checkpoint() {
 	});
 }
 
+#[test]
+fn update_reward() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		assert_ok!(VeMinting::set_config(
+			Origin::signed(ALICE),
+			Some(4 * 365 * 86400 * 1000),
+			Some(10_u128.pow(12)),
+			Some(7 * 86400)
+		));
+
+		System::set_block_number(System::block_number() + 20);
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		log::debug!("{:?}", System::block_number());
+		System::set_block_number(System::block_number() + 20);
+		log::debug!("{:?}", System::block_number());
+		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1670752990696));
+		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+
+		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
+		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+		assert_ok!(VeMinting::updateReward(&BOB));
+
+		// 	assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), Ok(0));
+		// 	assert_eq!(VeMinting::balanceOfAt(&BOB, 0), Ok(0));
+		// 	assert_eq!(VeMinting::balanceOfAt(&BOB, System::block_number()), Ok(0));
+	});
+}
+
 fn asset_registry() {
 	let items = vec![(KSM, 10 * milli::<Runtime>(KSM)), (BNC, 10 * milli::<Runtime>(BNC))];
 	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {

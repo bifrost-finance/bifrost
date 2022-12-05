@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod incentive;
 pub mod traits;
 pub mod weights;
 
@@ -35,7 +36,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
+			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Saturating,
+			UniqueSaturatedInto, Zero,
 		},
 		ArithmeticError, DispatchError, Perbill, SaturatedConversion,
 	},
@@ -43,11 +45,11 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
+pub use incentive::*;
 use node_primitives::{AccountId, CurrencyId, Timestamp}; // BlockNumber, Balance
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
-// use sp_std::vec::Vec;
 pub use weights::WeightInfo;
 
 pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
@@ -68,7 +70,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance> {
 	amount: Balance,
-	max_time: Balance,
+	max_time: Timestamp,
 	MULTIPLIER: u128,
 	WEEK: Timestamp,
 }
@@ -182,6 +184,22 @@ pub mod pallet {
 	#[pallet::getter(fn slope_changes)]
 	pub type SlopeChanges<T: Config> = StorageMap<_, Twox64Concat, Timestamp, i128, ValueQuery>;
 
+	// Incentive
+	#[pallet::storage]
+	#[pallet::getter(fn incentive_configs)]
+	pub type IncentiveConfigs<T: Config> =
+		StorageValue<_, IncentiveConfig<BalanceOf<T>>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn user_reward_per_token_paid)]
+	pub type UserRewardPerTokenPaid<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn rewards)]
+	pub type Rewards<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(_bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
@@ -196,7 +214,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			// min_mint: BalanceOf<T>,             // 最小铸造值
 			// min_lock_period: BlockNumberFor<T>, // 最小锁仓期
-			max_time: Option<BalanceOf<T>>, // 最大锁仓期
+			max_time: Option<Timestamp>, // 最大锁仓期
 			MULTIPLIER: Option<u128>,
 			WEEK: Option<Timestamp>,
 		) -> DispatchResult {
@@ -246,7 +264,10 @@ pub mod pallet {
 				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 
 			if old_locked.end > current_timestamp && old_locked.amount > BalanceOf::<T>::zero() {
-				u_old.slope = old_locked.amount / Self::ve_configs().max_time;
+				u_old.slope = old_locked
+					.amount
+					.checked_div(&Self::ve_configs().max_time.saturated_into::<BalanceOf<T>>())
+					.ok_or(Error::<T>::CalculationOverflow)?;
 				u_old.bias = u_old
 					.slope
 					.saturating_mul((old_locked.end - current_timestamp).saturated_into());
@@ -383,6 +404,8 @@ pub mod pallet {
 			u_new.ts = current_timestamp;
 			u_new.blk = current_block_number;
 			u_new.fxs_amt = Self::locked(addr).amount;
+			log::debug!("_checkpoint:{:?}", u_new);
+
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 
 			Ok(())
@@ -407,6 +430,8 @@ pub mod pallet {
 				_locked.end = unlock_time
 			}
 			Locked::<T>::insert(addr, _locked.clone());
+			log::debug!("_deposit_for:{:?}", _locked);
+
 			Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 			if value != BalanceOf::<T>::zero() {

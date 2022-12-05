@@ -28,6 +28,7 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn totalSupply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
+	fn create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult;
 }
 
 // impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T>
@@ -36,6 +37,28 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
 	for Pallet<T>
 {
+	fn create_lock(
+		addr: &AccountIdOf<T>,
+		_value: BalanceOf<T>,
+		_unlock_time: Timestamp,
+	) -> DispatchResult {
+		let ve_config = Self::ve_configs();
+		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
+
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		ensure!(_unlock_time > current_timestamp, Error::<T>::NotExpire);
+		ensure!(
+			_unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
+			Error::<T>::NotExpire
+		);
+		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::NotExpire); // Withdraw old tokens first
+		ensure!(_value > BalanceOf::<T>::zero(), Error::<T>::NotExpire); // need non-zero value
+
+		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
+		Self::_deposit_for(addr, _value, unlock_time, _locked)
+	}
+
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
 		Self::_deposit_for(addr, value, 0, _locked)
@@ -71,8 +94,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		} else {
 			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
 				Self::user_point_history(addr, u_epoch);
-			last_point.bias -=
-				last_point.slope.saturating_mul((_t - last_point.ts).saturated_into());
+			log::debug!("{:?}::{:?}::{:?}", _t, last_point.ts, last_point.bias);
+
+			last_point.bias -= last_point
+				.slope
+				.saturating_mul((_t.saturating_sub(last_point.ts)).saturated_into());
 			// .ok_or(ArithmeticError::Overflow)?;
 			if last_point.bias < Zero::zero() {
 				last_point.bias = Zero::zero();
@@ -87,7 +113,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let current_block_number: BlockNumberFor<T> =
 			frame_system::Pallet::<T>::block_number().into();
-		ensure!(_block < current_block_number, Error::<T>::NotExpire);
+		ensure!(_block <= current_block_number, Error::<T>::NotExpire);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 
