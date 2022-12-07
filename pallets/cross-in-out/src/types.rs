@@ -32,8 +32,8 @@ pub struct SignatureStruct {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum SigType {
-	FilecoinSecp256k1,
-	FilecoinBLS,
+	FilecoinSecp256k1 = 1,
+	FilecoinBLS = 3,
 }
 
 pub struct ForeignAccountIdConverter<T>(PhantomData<T>);
