@@ -17,9 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
-#![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::{Convert, Junction, MultiLocation, X1};
+use crate::{Box, Convert, Junction, MultiLocation, Vec, X1};
 use codec::{Decode, Encode};
 use frame_support::{pallet_prelude::PhantomData, RuntimeDebug};
 use scale_info::TypeInfo;

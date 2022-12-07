@@ -33,10 +33,10 @@ pub use types::ForeignAccountIdConverter;
 pub use weights::WeightInfo;
 use xcm::opaque::latest::{Junction, Junctions::X1, MultiLocation};
 
-use bls_signatures::{PublicKey as BlsPubKey, Serialize, Signature as BlsSignature};
+// use bls_signatures::{PublicKey as BlsPubKey, Serialize, Signature as BlsSignature};
 use data_encoding::Encoding;
 use data_encoding_macro::new_encoding;
-use libsecp256k1::{recover, Message, PublicKey, RecoveryId, Signature as EcsdaSignature};
+use libsecp256k1::{recover, Message, RecoveryId, Signature as EcsdaSignature};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -125,6 +125,7 @@ pub mod pallet {
 		InvalidPayload,
 		InvalidLength,
 		InvalidAddress,
+		BlsSignatureNotSupported,
 	}
 
 	#[pallet::event]
@@ -548,42 +549,43 @@ pub mod pallet {
 			address: &Vec<u8>,
 		) -> Result<bool, Error<T>> {
 			let add_str =
-				std::str::from_utf8(address).map_err(|_e| Error::<T>::ConversionFailed)?;
+				alloc::str::from_utf8(address).map_err(|_e| Error::<T>::ConversionFailed)?;
 			let pubkey_payload = Self::parse_address(add_str)?;
 
 			match signature.sig_type {
 				SigType::FilecoinBLS =>
-					Self::verify_bls_sig(&signature.bytes[..], &message[..], &pubkey_payload),
+				// Self::verify_bls_sig(&signature.bytes[..], &message[..], &pubkey_payload),
+					Err(Error::<T>::BlsSignatureNotSupported),
 				SigType::FilecoinSecp256k1 =>
 					Self::verify_secp256k1_sig(&signature.bytes[..], &message[..], &pubkey_payload),
 			}
 		}
 
-		/// Returns `String` error if a bls signature is invalid.
-		pub fn verify_bls_sig(
-			signature: &[u8],
-			data: &[u8],
-			pubkey: &[u8],
-		) -> Result<bool, Error<T>> {
-			// ensure pubkey is correct length
-			ensure!(pubkey.len() == BLS_PUB_LEN, Error::<T>::InvalidPublicKeyLength);
+		// /// Returns `String` error if a bls signature is invalid.
+		// pub fn verify_bls_sig(
+		// 	signature: &[u8],
+		// 	data: &[u8],
+		// 	pubkey: &[u8],
+		// ) -> Result<bool, Error<T>> {
+		// 	// ensure pubkey is correct length
+		// 	ensure!(pubkey.len() == BLS_PUB_LEN, Error::<T>::InvalidPublicKeyLength);
 
-			let pub_k = pubkey.to_vec();
+		// 	let pub_k = pubkey.to_vec();
 
-			// generate public key object from bytes
-			let pk = BlsPubKey::from_bytes(&pub_k).map_err(|_e| Error::<T>::InvalidPublicKey)?;
+		// 	// generate public key object from bytes
+		// 	let pk = BlsPubKey::from_bytes(&pub_k).map_err(|_e| Error::<T>::InvalidPublicKey)?;
 
-			// generate signature struct from bytes
-			let sig =
-				BlsSignature::from_bytes(signature).map_err(|_e| Error::<T>::InvalidSignature)?;
+		// 	// generate signature struct from bytes
+		// 	let sig =
+		// 		BlsSignature::from_bytes(signature).map_err(|_e| Error::<T>::InvalidSignature)?;
 
-			// BLS verify hash against key
-			if bls_signatures::verify_messages(&sig, &[data], &[pk]) {
-				Ok(true)
-			} else {
-				Ok(false)
-			}
-		}
+		// 	// BLS verify hash against key
+		// 	if bls_signatures::verify_messages(&sig, &[data], &[pk]) {
+		// 		Ok(true)
+		// 	} else {
+		// 		Ok(false)
+		// 	}
+		// }
 
 		/// Returns `String` error if a secp256k1 signature is invalid.
 		pub fn verify_secp256k1_sig(

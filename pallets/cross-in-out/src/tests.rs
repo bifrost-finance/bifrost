@@ -244,11 +244,13 @@ fn change_outer_linked_account_should_work() {
 			parents: 100,
 			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
 		};
-		
+
 		let fil_account_2 = b"f16gxwt6w2bwvqng4cdybr7wp3zcma6zac4gaecfi".to_vec();
 		let fil_account_2_WeakBoundedVec = WeakBoundedVec::force_from(fil_account_2, None);
-		let location2 =
-			MultiLocation { parents: 111, interior: X1(Junction::GeneralKey(fil_account_2_WeakBoundedVec)) };
+		let location2 = MultiLocation {
+			parents: 111,
+			interior: X1(Junction::GeneralKey(fil_account_2_WeakBoundedVec)),
+		};
 
 		assert_noop!(
 			CrossInOut::change_outer_linked_account(
@@ -277,14 +279,8 @@ fn change_outer_linked_account_should_work() {
 			),
 			Error::<Runtime>::AlreadyExist
 		);
-	});
-}
 
-		assert_ok!(CrossInOut::change_outer_linked_account(
-			RuntimeOrigin::signed(BOB),
-			KSM,
-			None
-		));
+		assert_ok!(CrossInOut::change_outer_linked_account(RuntimeOrigin::signed(BOB), KSM, None));
 
 		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), None);
 	});

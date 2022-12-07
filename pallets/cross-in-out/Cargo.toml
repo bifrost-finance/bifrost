@@ -18,8 +18,8 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.32", default-features = false }
-libsecp256k1 = { version = "0.7" , default-features = false }
-bls-signatures = { version = "0.12", default-features = false, features = ["blst"] }
+libsecp256k1 = { version = "0.7" , default-features = false,features = ["static-context"] }
+# bls-signatures = { version = "0.12", default-features = false, features = ["blst"] }
 blake2b_simd = {version = "1.0.0", default-features = false}
 data-encoding = { version = "2.3.2", default-features = false, features = ["alloc"]}
 data-encoding-macro = { version = "0.1.12", default-features = false}
