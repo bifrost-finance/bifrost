@@ -145,7 +145,11 @@ fn contribute_should_work() {
 				SlotLength::get()
 			));
 			//MinContribution 0.1 KSM
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			//7200 1 day
 			let (contributed, status) = Salp::contribution(0, &AccountId::from(BOB));
 			assert_eq!(contributed, 0);
@@ -161,7 +165,7 @@ fn contribute_should_work() {
 			);
 
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				sp_runtime::AccountId32::from(BOB),
 				3_000,
 				true,
@@ -228,10 +232,14 @@ fn double_contribute_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 5 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -239,20 +247,24 @@ fn double_contribute_should_work() {
 			));
 
 			assert_noop!(
-				Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 5 * KSM),
+				Salp::contribute(RuntimeOrigin::signed(AccountId::new(BOB)), 3_000, 5 * KSM),
 				Error::<Runtime>::CapExceeded
 			);
 
 			assert_noop!(
 				Salp::contribute(
-					Origin::signed(AccountId::new(BOB)),
+					RuntimeOrigin::signed(AccountId::new(BOB)),
 					3_000,
 					MinContribution::get() - 1
 				),
 				Error::<Runtime>::ContributionTooSmall
 			);
 
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 2 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				2 * KSM
+			));
 
 			let (contributed, status) = Salp::contribution(0, &sp_runtime::AccountId32::from(BOB));
 			assert_eq!(contributed, 1 * KSM);
@@ -324,9 +336,13 @@ fn fund_retire_withdraw_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -358,9 +374,13 @@ fn fund_fail_withdraw_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -391,9 +411,13 @@ fn continue_fund_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -448,9 +472,13 @@ fn refund_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -476,7 +504,7 @@ fn refund_should_work() {
 			assert_ok!(Salp::withdraw(RawOrigin::Root.into(), 3_000));
 			//fund_fail-> withdraw -> RefundWithdrew
 			assert_ok!(Salp::refund(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				3_000,
 				1,
 				SlotLength::get(),
@@ -532,9 +560,13 @@ fn redeem_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -562,7 +594,7 @@ fn redeem_should_work() {
 				1 * KSM
 			);
 
-			assert_ok!(Salp::redeem(Origin::signed(AccountId::new(BOB)), 3_000, KSM / 2));
+			assert_ok!(Salp::redeem(RuntimeOrigin::signed(AccountId::new(BOB)), 3_000, KSM / 2));
 
 			//check free balance 0.5 ksm
 			assert_eq!(Salp::redeem_pool(), KSM / 2);
@@ -597,12 +629,12 @@ fn redeem_with_speical_vsbond_should_work() {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 2001, 1000_000_000_000, 13, 20));
 			assert_ok!(Salp::contribute(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				2001,
 				100_000_000_000
 			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				2001,
 				true,
@@ -611,7 +643,7 @@ fn redeem_with_speical_vsbond_should_work() {
 
 			assert_ok!(Salp::fund_success(RawOrigin::Root.into(), 2001));
 			assert_ok!(Salp::unlock(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				2001
 			));
@@ -649,8 +681,12 @@ fn redeem_with_speical_vsbond_should_work() {
 				&AccountId::new(CATHI),
 				500_000_000
 			));
-			assert_ok!(Salp::redeem(Origin::signed(AccountId::new(BOB)), 2001, 500_000_000));
-			assert_ok!(Salp::redeem(Origin::signed(AccountId::new(CATHI)), 2001, 500_000_000));
+			assert_ok!(Salp::redeem(RuntimeOrigin::signed(AccountId::new(BOB)), 2001, 500_000_000));
+			assert_ok!(Salp::redeem(
+				RuntimeOrigin::signed(AccountId::new(CATHI)),
+				2001,
+				500_000_000
+			));
 		});
 	})
 }
@@ -660,9 +696,13 @@ fn dissolve_refunded_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		SalpTest::execute_with(|| {
 			assert_ok!(Salp::create(RawOrigin::Root.into(), 3_000, 10 * KSM, 1, SlotLength::get()));
-			assert_ok!(Salp::contribute(Origin::signed(AccountId::new(BOB)), 3_000, 1 * KSM));
+			assert_ok!(Salp::contribute(
+				RuntimeOrigin::signed(AccountId::new(BOB)),
+				3_000,
+				1 * KSM
+			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -717,12 +757,12 @@ fn dissolve_should_work() {
 				SlotLength::get()
 			));
 			assert_ok!(Salp::contribute(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				3_000,
 				100_000_000_000
 			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -752,12 +792,12 @@ fn batch_unlock_should_work() {
 				SlotLength::get()
 			));
 			assert_ok!(Salp::contribute(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				3_000,
 				100_000_000_000
 			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
@@ -765,7 +805,7 @@ fn batch_unlock_should_work() {
 			));
 
 			assert_ok!(Salp::fund_success(RawOrigin::Root.into(), 3_000));
-			assert_ok!(Salp::batch_unlock(Origin::signed(AccountId::new(ALICE)), 3_000));
+			assert_ok!(Salp::batch_unlock(RuntimeOrigin::signed(AccountId::new(ALICE)), 3_000));
 		})
 	})
 }
@@ -782,19 +822,19 @@ fn unlock_when_fund_ongoing_should_work() {
 				SlotLength::get()
 			));
 			assert_ok!(Salp::contribute(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				3_000,
 				100_000_000_000
 			));
 			assert_ok!(Salp::confirm_contribute(
-				Origin::signed(AccountId::new(ALICE)),
+				RuntimeOrigin::signed(AccountId::new(ALICE)),
 				AccountId::new(BOB),
 				3_000,
 				true,
 				CONTRIBUTON_INDEX
 			));
 			assert_ok!(Salp::unlock(
-				Origin::signed(AccountId::new(BOB)),
+				RuntimeOrigin::signed(AccountId::new(BOB)),
 				AccountId::new(BOB),
 				3_000
 			));

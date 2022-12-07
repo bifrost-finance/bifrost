@@ -30,7 +30,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 fn token_config_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -53,7 +53,7 @@ fn token_config_should_work() {
 fn delete_token_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -64,7 +64,7 @@ fn delete_token_should_work() {
 		));
 
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			MOVR,
 			Some(2),
 			Some(Permill::from_percent(80)),
@@ -75,7 +75,7 @@ fn delete_token_should_work() {
 		));
 
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			MOVR,
 			Some(2),
 			Some(Permill::from_percent(80)),
@@ -85,7 +85,7 @@ fn delete_token_should_work() {
 			None,
 		));
 
-		assert_ok!(SystemStaking::delete_token(Origin::root(), MOVR,));
+		assert_ok!(SystemStaking::delete_token(RuntimeOrigin::root(), MOVR,));
 
 		assert!(<TokenStatus<Runtime>>::get(MOVR).is_none());
 		assert!(<TokenStatus<Runtime>>::get(KSM).is_some());
@@ -101,7 +101,7 @@ fn round_info_should_correct() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		System::set_block_number(System::block_number() + 1000);
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -122,20 +122,20 @@ fn refresh_token_info_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
 		asset_registry();
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 10));
 		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(1)
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10));
 
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -145,7 +145,7 @@ fn refresh_token_info_should_work() {
 			Some(vec![Perbill::from_percent(100)]),
 		));
 
-		assert_ok!(SystemStaking::refresh_token_info(Origin::root(), KSM));
+		assert_ok!(SystemStaking::refresh_token_info(RuntimeOrigin::root(), KSM));
 		let token_info = <TokenStatus<Runtime>>::get(KSM).unwrap();
 		assert_eq!(token_info.new_config, token_info.current_config);
 	});
@@ -156,20 +156,20 @@ fn round_process_token() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
 		asset_registry();
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 10));
 		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(1)
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10));
 
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -192,20 +192,20 @@ fn round_process_token_rollback() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
 		asset_registry();
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::signed(ALICE), KSM, 10000));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 10000));
 		pub const FEE: Permill = Permill::from_percent(5);
-		assert_ok!(VtokenMinting::set_fees(Origin::root(), FEE, FEE));
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_ok!(VtokenMinting::set_unlock_duration(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Era(1)
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::signed(ALICE), vKSM, 10000));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10000));
 
 		assert_ok!(SystemStaking::token_config(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			KSM,
 			Some(1),
 			Some(Permill::from_percent(80)),
@@ -232,7 +232,7 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let gauge_basic_rewards = vec![(KSM, 1000)];
 
 	assert_ok!(Farming::create_farming_pool(
-		Origin::signed(ALICE),
+		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
 		Some((KSM, 1000, gauge_basic_rewards)),
@@ -245,13 +245,13 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 100000)];
-	assert_ok!(Farming::charge(Origin::signed(BOB), pid, charge_rewards));
-	assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, tokens.clone(), None));
+	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens.clone(), None));
 	(pid, tokens)
 }
 
 fn increase_farming_no_gauge(pid: u32) {
-	assert_ok!(Farming::deposit(Origin::signed(ALICE), pid, 1000, None));
+	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, 1000, None));
 }
 
 fn asset_registry() {

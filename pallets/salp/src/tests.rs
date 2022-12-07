@@ -39,7 +39,7 @@ fn create_fund_should_work() {
 fn create_fund_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Salp::create(Origin::none(), 3_000, 1_000, 1, SlotLength::get()),
+			Salp::create(RuntimeOrigin::none(), 3_000, 1_000, 1, SlotLength::get()),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -93,7 +93,7 @@ fn set_fund_success_should_work() {
 fn set_fund_success_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_success(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::fund_success(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	})
 }
 
@@ -133,7 +133,7 @@ fn set_fund_fail_should_work() {
 fn set_fund_fail_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_fail(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::fund_fail(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -172,7 +172,7 @@ fn set_fund_retire_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(Salp::fund_retire(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::fund_retire(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -219,7 +219,7 @@ fn set_fund_end_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::fund_end(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::fund_end(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -513,10 +513,10 @@ fn confirm_contribute_later_should_work() {
 fn contribute_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::contribute(Origin::none(), 3_000, 100), DispatchError::BadOrigin);
+		assert_noop!(Salp::contribute(RuntimeOrigin::none(), 3_000, 100), DispatchError::BadOrigin);
 
 		assert_noop!(
-			Salp::confirm_contribute(Origin::none(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
+			Salp::confirm_contribute(RuntimeOrigin::none(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -732,7 +732,7 @@ fn withdraw_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::withdraw(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::withdraw(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -873,11 +873,11 @@ fn refund_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
 		assert_noop!(
-			Salp::refund(Origin::root(), 3_000, 1, SlotLength::get(), 100),
+			Salp::refund(RuntimeOrigin::root(), 3_000, 1, SlotLength::get(), 100),
 			DispatchError::BadOrigin
 		);
 		assert_noop!(
-			Salp::refund(Origin::none(), 3_000, 1, SlotLength::get(), 100),
+			Salp::refund(RuntimeOrigin::none(), 3_000, 1, SlotLength::get(), 100),
 			DispatchError::BadOrigin
 		);
 
@@ -941,7 +941,7 @@ fn dissolve_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::dissolve(Origin::none(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::dissolve(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -1146,8 +1146,8 @@ fn redeem_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::redeem(Origin::root(), 3_000, 50), DispatchError::BadOrigin);
-		assert_noop!(Salp::redeem(Origin::none(), 3_000, 50), DispatchError::BadOrigin);
+		assert_noop!(Salp::redeem(RuntimeOrigin::root(), 3_000, 50), DispatchError::BadOrigin);
+		assert_noop!(Salp::redeem(RuntimeOrigin::none(), 3_000, 50), DispatchError::BadOrigin);
 	});
 }
 
@@ -1485,14 +1485,14 @@ fn refund_meanwhile_issue_should_work() {
 		let asset_1_currency_id: AssetId =
 			AssetId::try_convert_from(CurrencyId::VSToken(TokenSymbol::KSM), para_id).unwrap();
 		assert_ok!(ZenlinkProtocol::create_pair(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			asset_0_currency_id,
 			asset_1_currency_id
 		));
 		let deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
 			<Test as frame_system::Config>::BlockNumber::from(100u32);
 		assert_ok!(ZenlinkProtocol::add_liquidity(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			asset_0_currency_id,
 			asset_1_currency_id,
 			1000,

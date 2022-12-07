@@ -79,10 +79,10 @@ pub fn migrate_orders<T: Config<I>, I: 'static>() -> Weight {
 	}
 
 	// one storage read + two account balance changes
-	let ok_weight =
-		ok_count.saturating_mul(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(2));
-	let err_weight =
-		err_count.saturating_mul(T::DbWeight::get().reads(1) + T::WeightInfo::revoke_order());
+	let ok_weight = (T::DbWeight::get().reads(1) + T::DbWeight::get().writes(2))
+		.saturating_mul(ok_count as u64);
+	let err_weight = (T::DbWeight::get().reads(1) + T::WeightInfo::revoke_order())
+		.saturating_mul(err_count as u64);
 
 	ok_weight + err_weight
 }

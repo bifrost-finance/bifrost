@@ -69,43 +69,43 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: SystemStaking Round (r:1 w:0)
 	// Storage: SystemStaking TokenStatus (r:2 w:0)
 	fn on_initialize() -> Weight {
-		(12_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+		Weight::from_ref_time(12_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:1)
 	// Storage: SystemStaking TokenList (r:1 w:1)
 	fn token_config() -> Weight {
-		(18_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(18_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:0)
 	fn refresh_token_info() -> Weight {
-		(19_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(19_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:0)
 	// Storage: Tokens Accounts (r:1 w:0)
 	// Storage: VtokenMinting TokenPool (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:0)
 	fn payout() -> Weight {
-		(24_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+		Weight::from_ref_time(24_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
 	}
 	fn on_redeem_success() -> Weight {
-		(1_000_000 as Weight)
+		Weight::from_ref_time(1_000_000 as u64)
 	}
 	fn on_redeemed() -> Weight {
-		(0 as Weight)
+		Weight::from_ref_time(0 as u64)
 	}
 	// Storage: SystemStaking TokenList (r:1 w:1)
 	// Storage: SystemStaking TokenStatus (r:0 w:1)
 	fn delete_token() -> Weight {
-		(7_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(7_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
 }
 
@@ -115,42 +115,42 @@ impl WeightInfo for () {
 	// Storage: SystemStaking Round (r:1 w:0)
 	// Storage: SystemStaking TokenStatus (r:2 w:0)
 	fn on_initialize() -> Weight {
-		(12_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
+		Weight::from_ref_time(12_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:1)
 	// Storage: SystemStaking TokenList (r:1 w:1)
 	fn token_config() -> Weight {
-		(18_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(18_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:1)
 	// Storage: Farming PoolInfos (r:1 w:0)
 	fn refresh_token_info() -> Weight {
-		(19_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(19_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:0)
 	// Storage: Tokens Accounts (r:1 w:0)
 	// Storage: VtokenMinting TokenPool (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:0)
 	fn payout() -> Weight {
-		(24_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
+		Weight::from_ref_time(24_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
 	}
 	fn on_redeem_success() -> Weight {
-		(1_000_000 as Weight)
+		Weight::from_ref_time(1_000_000 as u64)
 	}
 	fn on_redeemed() -> Weight {
-		(0 as Weight)
+		Weight::from_ref_time(0 as u64)
 	}
 	// Storage: SystemStaking TokenList (r:1 w:1)
 	// Storage: SystemStaking TokenStatus (r:0 w:1)
 	fn delete_token() -> Weight {
-		(7_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(7_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
 }

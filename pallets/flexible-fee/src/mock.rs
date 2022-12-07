@@ -45,7 +45,10 @@ use sp_runtime::{
 	AccountId32, SaturatedConversion,
 };
 use xcm_interface::traits::XcmHelper;
-use zenlink_protocol::{AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMultiAssets};
+use zenlink_protocol::{
+	AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate,
+	ZenlinkMultiAssets,
+};
 
 use super::*;
 use crate as flexible_fee;
@@ -63,7 +66,7 @@ pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
 
 pub type Balance = u64;
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
-pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, Call, ()>;
+pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, RuntimeCall, ()>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -89,7 +92,7 @@ ord_parameter_types! {
 }
 
 impl bifrost_asset_registry::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
@@ -107,9 +110,9 @@ impl system::Config for Test {
 	type BlockLength = ();
 	type BlockNumber = u32;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -119,7 +122,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
@@ -138,7 +141,7 @@ impl pallet_transaction_payment::Config for Test {
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = IdentityFee<Balance>;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 }
 
 parameter_types! {
@@ -149,7 +152,7 @@ impl balances::Config for Test {
 	type AccountStore = System;
 	type Balance = u64;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = ();
 	type MaxReserves = ();
@@ -173,25 +176,24 @@ impl orml_tokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type DustRemovalWhitelist = Nothing;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
-	type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type CurrencyHooks = ();
 }
 
 // Aggregate name getter to get fee names if the call needs to pay extra fees.
 // If any call need to pay extra fees, it should be added as an item here.
 // Used together with AggregateExtraFeeFilter below.
 pub struct FeeNameGetter;
-impl NameGetter<Call> for FeeNameGetter {
-	fn get_name(c: &Call) -> ExtraFeeName {
+impl NameGetter<RuntimeCall> for FeeNameGetter {
+	fn get_name(c: &RuntimeCall) -> ExtraFeeName {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) =>
+				ExtraFeeName::SalpContribute,
 			_ => ExtraFeeName::NoExtraFee,
 		}
 	}
@@ -200,20 +202,20 @@ impl NameGetter<Call> for FeeNameGetter {
 // Aggregate filter to filter if the call needs to pay extra fees
 // If any call need to pay extra fees, it should be added as an item here.
 pub struct AggregateExtraFeeFilter;
-impl Contains<Call> for AggregateExtraFeeFilter {
-	fn contains(c: &Call) -> bool {
+impl Contains<RuntimeCall> for AggregateExtraFeeFilter {
+	fn contains(c: &RuntimeCall) -> bool {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
 			_ => false,
 		}
 	}
 }
 
 pub struct ContributeFeeFilter;
-impl Contains<Call> for ContributeFeeFilter {
-	fn contains(c: &Call) -> bool {
+impl Contains<RuntimeCall> for ContributeFeeFilter {
+	fn contains(c: &RuntimeCall) -> bool {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
 			_ => false,
 		}
 	}
@@ -231,7 +233,7 @@ impl crate::Config for Test {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
 	type FeeDealer = FlexibleFee;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
@@ -273,15 +275,17 @@ parameter_types! {
 }
 
 impl zenlink_protocol::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
-
 	type TargetChains = ();
 	type XcmExecutor = ();
-	type Conversion = ();
 	type WeightInfo = ();
+	type AssetId = ZenlinkAssetId;
+	type LpGenerate = PairLpGenerate<Self>;
+	type AccountIdConverter = ();
+	type AssetIdConverter = AssetIdConverter;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
@@ -439,7 +443,7 @@ parameter_types! {
 
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;

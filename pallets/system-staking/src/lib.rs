@@ -67,11 +67,11 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
@@ -539,7 +539,7 @@ impl<T: Config> Pallet<T> {
 	) -> Weight {
 		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 		if pallet_account != to {
-			return 0 as Weight;
+			return Weight::zero();
 		}
 		let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
 			state
@@ -595,7 +595,7 @@ impl<T: Config> Pallet<T> {
 	) -> Weight {
 		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 		if pallet_account != address {
-			return 0 as Weight;
+			return Weight::zero();
 		}
 		let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
 			state

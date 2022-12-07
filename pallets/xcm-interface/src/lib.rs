@@ -57,7 +57,7 @@ pub(crate) type BalanceOf<T: Config> =
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{pallet_prelude::*, weights::Weight};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use scale_info::TypeInfo;
@@ -66,7 +66,10 @@ pub mod pallet {
 		DispatchError,
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
-	use xcm::{latest::prelude::*, DoubleEncoded, VersionedXcm};
+	use xcm::{
+		latest::{prelude::*, Weight as XcmWeight},
+		DoubleEncoded, VersionedXcm,
+	};
 
 	use super::*;
 	use crate::traits::*;
@@ -79,14 +82,14 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
 			+ MultiCurrency<AccountIdOf<Self>>
 			+ MultiReservableCurrency<AccountIdOf<Self>>;
 
 		/// Origin represented Governance
-		type UpdateOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type UpdateOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		/// The currency id of the RelayChain
 		#[pallet::constant]
@@ -97,7 +100,7 @@ pub mod pallet {
 		type ParachainSovereignAccount: Get<AccountIdOf<Self>>;
 
 		/// XCM executor.
-		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
+		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::RuntimeCall>;
 
 		/// Convert `T::AccountId` to `MultiLocation`.
 		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
@@ -109,13 +112,13 @@ pub mod pallet {
 		type StatemineTransferFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type StatemineTransferWeight: Get<Weight>;
+		type StatemineTransferWeight: Get<XcmWeight>;
 
 		#[pallet::constant]
 		type ContributionFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type ContributionWeight: Get<Weight>;
+		type ContributionWeight: Get<XcmWeight>;
 	}
 
 	#[pallet::error]
@@ -129,7 +132,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmDestWeightUpdated(XcmInterfaceOperation, Weight),
+		XcmDestWeightUpdated(XcmInterfaceOperation, XcmWeight),
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
 		XcmFeeUpdated(XcmInterfaceOperation, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
@@ -142,7 +145,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
+		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (XcmWeight, BalanceOf<T>), OptionQuery>;
 
 	/// Tracker for the next nonce index
 	#[pallet::storage]
@@ -170,7 +173,7 @@ pub mod pallet {
 			))]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
+			updates: Vec<(XcmInterfaceOperation, Option<XcmWeight>, Option<BalanceOf<T>>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -304,7 +307,7 @@ pub mod pallet {
 
 		pub(crate) fn build_ump_transact(
 			call: DoubleEncoded<()>,
-			weight: Weight,
+			weight: XcmWeight,
 			fee: BalanceOf<T>,
 			nonce: Nonce,
 		) -> Result<(MessageId, Xcm<()>), Error<T>> {

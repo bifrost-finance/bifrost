@@ -33,6 +33,6 @@ pub trait WeightInfo {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn on_initialize() -> Weight {
-		(50_000_000 as Weight)
+		Weight::from_ref_time(50_000_000 as u64)
 	}
 }

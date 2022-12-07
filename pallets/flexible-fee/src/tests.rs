@@ -25,8 +25,9 @@ use node_primitives::TryConvertFrom;
 // use balances::Call as BalancesCall;
 use frame_support::{
 	assert_noop, assert_ok,
+	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
 	traits::WithdrawReasons,
-	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
+	weights::Weight,
 };
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
@@ -86,25 +87,25 @@ fn basic_setup() {
 	let asset_4_currency_id: AssetId = AssetId::try_convert_from(CURRENCY_ID_4, para_id).unwrap();
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_1_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_2_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_3_currency_id
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::root(),
+		RuntimeOrigin::root(),
 		asset_0_currency_id,
 		asset_4_currency_id
 	));
@@ -112,7 +113,7 @@ fn basic_setup() {
 	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_1_currency_id,
 		1000,
@@ -126,7 +127,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_2_currency_id,
 		1000,
@@ -140,7 +141,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_3_currency_id,
 		1000,
@@ -154,7 +155,7 @@ fn basic_setup() {
 	deadline = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
-		Origin::signed(DICK),
+		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
 		asset_4_currency_id,
 		1000,
@@ -168,7 +169,7 @@ fn basic_setup() {
 #[test]
 fn set_user_fee_charge_order_should_work() {
 	new_test_ext().execute_with(|| {
-		let origin_signed_alice = Origin::signed(ALICE);
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
 		let mut asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 		assert_ok!(FlexibleFee::set_user_fee_charge_order(
@@ -188,7 +189,7 @@ fn set_user_fee_charge_order_should_work() {
 #[test]
 fn inner_get_user_fee_charge_order_list_should_work() {
 	new_test_ext().execute_with(|| {
-		let origin_signed_alice = Origin::signed(ALICE);
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
 		let mut asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 
@@ -216,7 +217,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
-		let origin_signed_bob = Origin::signed(BOB);
+		let origin_signed_bob = RuntimeOrigin::signed(BOB);
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
@@ -237,12 +238,12 @@ fn ensure_can_charge_fee_should_work() {
 		);
 
 		let _ = FlexibleFee::set_user_fee_charge_order(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			Some(default_order_list.clone()),
 		);
 
 		let _ = FlexibleFee::set_user_fee_charge_order(
-			Origin::signed(CHARLIE),
+			RuntimeOrigin::signed(CHARLIE),
 			Some(default_order_list.clone()),
 		);
 
@@ -279,7 +280,7 @@ fn withdraw_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+		let call = RuntimeCall::FlexibleFee(crate::Call::set_user_fee_charge_order {
 			asset_order_list_vec: Some(asset_order_list_vec),
 		});
 
@@ -303,7 +304,7 @@ fn correct_and_deposit_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+		let call = RuntimeCall::FlexibleFee(crate::Call::set_user_fee_charge_order {
 			asset_order_list_vec: Some(asset_order_list_vec),
 		});
 		// prepare info variable
@@ -312,7 +313,10 @@ fn correct_and_deposit_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// prepare post info
-		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+		let post_info = PostDispatchInfo {
+			actual_weight: Some(Weight::from_ref_time(20)),
+			pays_fee: Pays::Yes,
+		};
 
 		let corrected_fee = 80;
 		let tip = 8;
@@ -416,7 +420,7 @@ fn withdraw_fee_should_work_v2() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+		let call = RuntimeCall::FlexibleFee(crate::Call::set_user_fee_charge_order {
 			asset_order_list_vec: Some(asset_order_list_vec),
 		});
 
@@ -455,7 +459,7 @@ fn correct_and_deposit_fee_should_work_v2() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+		let call = RuntimeCall::FlexibleFee(crate::Call::set_user_fee_charge_order {
 			asset_order_list_vec: Some(asset_order_list_vec),
 		});
 		// prepare info variable
@@ -464,7 +468,10 @@ fn correct_and_deposit_fee_should_work_v2() {
 		let info = xt.get_dispatch_info();
 
 		// prepare post info
-		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+		let post_info = PostDispatchInfo {
+			actual_weight: Some(Weight::from_ref_time(20)),
+			pays_fee: Pays::Yes,
+		};
 
 		let corrected_fee = 80;
 		let tip = 8;
@@ -516,7 +523,7 @@ fn deduct_salp_fee_should_work() {
 		let para_id = 2001;
 		let value = 1_000_000_000_000;
 
-		let call = Call::Salp(bifrost_salp::Call::contribute { index: para_id, value });
+		let call = RuntimeCall::Salp(bifrost_salp::Call::contribute { index: para_id, value });
 
 		// prepare info variable
 		let extra = ();

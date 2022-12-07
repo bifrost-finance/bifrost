@@ -31,8 +31,9 @@ use crate::{
 	pallet::Error,
 	primitives::{Ledger, OneToManyDelegatorStatus, QueryId, BNC},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers, LedgerUpdateEntry,
-	MinimumsAndMaximums, Pallet, TimeUnit, Validators,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators,
 };
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -905,24 +906,55 @@ impl<T: Config>
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let from_account = Pallet::<T>::multilocation_to_account(from)?;
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
+
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(to_account == exit_account, Error::<T>::InvalidAccount);
+
+		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
+			.map_err(|_| Error::<T>::Unexpected)?;
+
+		Ok(())
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
 	/// Receiving account must be one of the KSM delegators.
 	fn transfer_to(
 		&self,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// Make sure receiving account is one of the KSM delegators.
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Make sure from account is the entrance account of vtoken-minting module.
+		let from_account = Pallet::<T>::multilocation_to_account(from)?;
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
+		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
+			.map_err(|_| Error::<T>::Unexpected)?;
+
+		Ok(())
 	}
 
 	fn tune_vtoken_exchange_rate(

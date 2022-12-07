@@ -25,11 +25,11 @@ use crate::{kusama_integration_tests::*, kusama_test_net::*};
 #[test]
 fn relaychain_transact_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		let remark = kusama_runtime::Call::System(
-			frame_system::Call::<kusama_runtime::Runtime>::remark_with_event {
-				remark: "Hello from Bifrost!".as_bytes().to_vec(),
-			},
-		);
+		let remark = kusama_runtime::RuntimeCall::System(frame_system::Call::<
+			kusama_runtime::Runtime,
+		>::remark_with_event {
+			remark: "Hello from Bifrost!".as_bytes().to_vec(),
+		});
 
 		let asset: MultiAsset =
 			MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(8000000000) };
@@ -49,10 +49,10 @@ fn relaychain_transact_works() {
 		});
 
 		KusamaNet::execute_with(|| {
-			use kusama_runtime::{Event, System};
+			use kusama_runtime::{RuntimeEvent, System};
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
-				Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+				RuntimeEvent::System(frame_system::Event::Remarked { sender: _, hash: _ })
 			)));
 		});
 	})

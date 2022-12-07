@@ -120,7 +120,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The currency trait.
 		type Currency: LockableCurrency<Self::AccountId>;
@@ -610,8 +610,6 @@ mod tests {
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
-		pub BlockWeights: frame_system::limits::BlockWeights =
-			frame_system::limits::BlockWeights::simple_max(1024);
 	}
 	impl frame_system::Config for Test {
 		type AccountData = pallet_balances::AccountData<u64>;
@@ -621,9 +619,9 @@ mod tests {
 		type BlockLength = ();
 		type BlockNumber = u64;
 		type BlockWeights = ();
-		type Call = Call;
+		type RuntimeCall = RuntimeCall;
 		type DbWeight = ();
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
 		type Header = Header;
@@ -632,7 +630,7 @@ mod tests {
 		type OnKilledAccount = ();
 		type OnNewAccount = ();
 		type OnSetCode = ();
-		type Origin = Origin;
+		type RuntimeOrigin = RuntimeOrigin;
 		type PalletInfo = PalletInfo;
 		type SS58Prefix = ();
 		type SystemWeightInfo = ();
@@ -646,7 +644,7 @@ mod tests {
 		type AccountStore = System;
 		type Balance = u64;
 		type DustRemoval = ();
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type ExistentialDeposit = ExistentialDeposit;
 		type MaxLocks = MaxLocks;
 		type MaxReserves = ();
@@ -660,7 +658,7 @@ mod tests {
 	impl Config for Test {
 		type BlockNumberToBalance = Identity;
 		type Currency = Balances;
-		type Event = Event;
+		type RuntimeEvent = RuntimeEvent;
 		type MinVestedTransfer = MinVestedTransfer;
 		type WeightInfo = ();
 	}
@@ -746,7 +744,7 @@ mod tests {
 			System::set_block_number(10);
 			assert_eq!(System::block_number(), 10);
 
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 0));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 0));
 
 			// Account 1 has fully vested by block 10
 			assert_eq!(Vesting::vesting_balance(&1), Some(0));
@@ -769,7 +767,7 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 			System::set_block_number(11);
 			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
@@ -785,7 +783,7 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 			System::set_block_number(11);
 			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
@@ -799,7 +797,7 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 			System::set_block_number(11);
 			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
@@ -820,7 +818,7 @@ mod tests {
 			let user2_free_balance = Balances::free_balance(&2);
 			assert_eq!(user2_free_balance, 300); // Account 2 has 100 more free balance than normal
 
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 			System::set_block_number(11);
 
 			// Account 1 has only 5 units vested at block 1 (plus 150 unvested)
@@ -883,7 +881,7 @@ mod tests {
 			// Account 4 has 5 * 256 locked.
 			assert_eq!(Vesting::vesting_balance(&4), Some(256 * 5));
 
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 0));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 0));
 
 			System::set_block_number(20);
 			assert_eq!(System::block_number(), 20);
@@ -983,7 +981,7 @@ mod tests {
 			System::set_block_number(30);
 			assert_eq!(System::block_number(), 30);
 
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 
 			assert_eq!(Vesting::vesting_balance(&4), Some(64 * 10));
 		});
@@ -1037,7 +1035,7 @@ mod tests {
 	#[test]
 	fn set_vesting_per_block_should_work() {
 		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 1));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 1));
 
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 256 * 10); // Account 1 has free balance
@@ -1059,7 +1057,7 @@ mod tests {
 			assert_eq!(Vesting::vesting_balance(&1), Some(128 * 5));
 
 			// Change the per_block of account 1 to  256
-			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 256));
+			assert_ok!(Vesting::set_vesting_per_block(RuntimeOrigin::root(), 1, 256));
 
 			System::set_block_number(7);
 			assert_eq!(System::block_number(), 7);
@@ -1082,7 +1080,7 @@ mod tests {
 				})),
 			);
 
-			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 10));
+			assert_ok!(Vesting::set_vesting_per_block(RuntimeOrigin::root(), 1, 10));
 
 			System::set_block_number(8);
 			assert_eq!(System::block_number(), 8);
@@ -1100,7 +1098,7 @@ mod tests {
 			assert_eq!(System::block_number(), 46);
 
 			assert_eq!(
-				Vesting::set_vesting_per_block(Origin::root(), 1, 20),
+				Vesting::set_vesting_per_block(RuntimeOrigin::root(), 1, 20),
 				Err(DispatchError::Module(ModuleError {
 					index: 2,
 					error: [0, 0, 0, 0],
@@ -1113,7 +1111,7 @@ mod tests {
 	#[test]
 	fn set_vesting_per_block_before_and_after_original_start_block_should_work() {
 		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			assert_ok!(Vesting::init_vesting_start_at(RuntimeOrigin::root(), 10));
 
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 256 * 10); // Account 1 has free balance
@@ -1132,7 +1130,7 @@ mod tests {
 			assert_eq!(System::block_number(), 6);
 
 			// Change the per_block of account 1 to  256
-			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 256));
+			assert_ok!(Vesting::set_vesting_per_block(RuntimeOrigin::root(), 1, 256));
 
 			let user2_vesting_schedule = VestingInfo {
 				locked: 256 * 5,
@@ -1145,7 +1143,7 @@ mod tests {
 			System::set_block_number(12);
 			assert_eq!(System::block_number(), 12);
 
-			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 128));
+			assert_ok!(Vesting::set_vesting_per_block(RuntimeOrigin::root(), 1, 128));
 
 			let user3_vesting_schedule = VestingInfo {
 				locked: 256 * 5 - 256 * 2,
@@ -1161,7 +1159,7 @@ mod tests {
 	fn set_cliff_should_work() {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			assert_ok!(Vesting::vest(Some(1).into()));
-			assert_ok!(Vesting::force_set_cliff(Origin::root(), 1, 10));
+			assert_ok!(Vesting::force_set_cliff(RuntimeOrigin::root(), 1, 10));
 			assert_noop!(Vesting::vest(Some(1).into()), Error::<Test>::WrongCliffVesting);
 			assert_noop!(Vesting::vest_other(Some(2).into(), 1), Error::<Test>::WrongCliffVesting);
 			System::set_block_number(10);

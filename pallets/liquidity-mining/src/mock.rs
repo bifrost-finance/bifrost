@@ -62,8 +62,6 @@ parameter_types! {
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
-	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for Test {
@@ -74,9 +72,9 @@ impl frame_system::Config for Test {
 	type BlockLength = ();
 	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -85,7 +83,7 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
@@ -108,7 +106,7 @@ impl pallet_balances::Config for Test {
 	type Balance = Balance;
 	type DustRemoval = ();
 	/// The ubiquitous event type.
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
@@ -151,16 +149,14 @@ impl orml_tokens::Config for Test {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
-	type OnDust = orml_tokens::TransferDust<Test, BifrostTreasuryFakeAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type DustRemovalWhitelist = DustRemovalWhitelist;
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type CurrencyHooks = ();
 }
 
 parameter_types! {
@@ -172,12 +168,12 @@ parameter_types! {
 type TechnicalCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<TechnicalCollective> for Test {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MaxMembers = TechnicalMaxMembers;
 	type MaxProposals = TechnicalMaxProposals;
 	type MotionDuration = TechnicalMotionDuration;
-	type Origin = Origin;
-	type Proposal = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Test>;
 }
 
@@ -193,7 +189,7 @@ parameter_types! {
 }
 
 impl lm::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type MultiCurrency = Tokens;
 	type RelayChainTokenSymbol = RelayChainTokenSymbol;

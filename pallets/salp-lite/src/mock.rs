@@ -67,8 +67,6 @@ parameter_types! {
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
-	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for Test {
@@ -79,9 +77,9 @@ impl frame_system::Config for Test {
 	type BlockLength = ();
 	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -90,7 +88,7 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
@@ -113,7 +111,7 @@ impl pallet_balances::Config for Test {
 	type Balance = Balance;
 	type DustRemoval = ();
 	/// The ubiquitous event type.
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
@@ -128,11 +126,11 @@ parameter_types! {
 }
 
 impl pallet_multisig::Config for Test {
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type Currency = Balances;
 	type DepositBase = DepositBase;
 	type DepositFactor = DepositFactor;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MaxSignatories = MaxSignatories;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Test>;
 }
@@ -148,15 +146,13 @@ impl orml_tokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type DustRemovalWhitelist = Nothing;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
-	type OnDust = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type CurrencyHooks = ();
 }
 
 pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
@@ -186,20 +182,20 @@ parameter_types! {
 }
 
 pub struct EnsureConfirmAsGovernance;
-impl EnsureOrigin<Origin> for EnsureConfirmAsGovernance {
+impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	type Success = AccountId;
 
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+	fn try_origin(o: RuntimeOrigin) -> Result<Self::Success, RuntimeOrigin> {
+		Into::<Result<RawOrigin<AccountId>, RuntimeOrigin>>::into(o).and_then(|o| match o {
 			RawOrigin::Signed(who) => Ok(who),
 			RawOrigin::Root => Ok(ConfirmMuitiSigAccount::get()),
-			r => Err(Origin::from(r)),
+			r => Err(RuntimeOrigin::from(r)),
 		})
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	fn successful_origin() -> RuntimeOrigin {
+		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
 	}
 }
 
@@ -218,7 +214,7 @@ impl WeightToFeePolynomial for WeightToFee {
 
 impl salp::Config for Test {
 	type BancorPool = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
@@ -235,11 +231,11 @@ impl salp::Config for Test {
 pub struct SalpWeightInfo;
 impl WeightInfo for SalpWeightInfo {
 	fn redeem() -> Weight {
-		0
+		Weight::zero()
 	}
 
 	fn refund() -> Weight {
-		0
+		Weight::zero()
 	}
 }
 

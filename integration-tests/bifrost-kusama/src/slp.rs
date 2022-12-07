@@ -142,7 +142,7 @@ fn register_subaccount_index_0() {
 		// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
 		// block)
 		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			Some(600)
 		));
@@ -151,7 +151,7 @@ fn register_subaccount_index_0() {
 
 		// Initialize ongoing timeunit as 0.
 		assert_ok!(Slp::update_ongoing_time_unit(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			TimeUnit::Era(0)
 		));
@@ -159,7 +159,11 @@ fn register_subaccount_index_0() {
 		// Initialize currency delays.
 		let delay =
 			Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
-		assert_ok!(Slp::set_currency_delays(Origin::root(), RelayCurrencyId::get(), Some(delay)));
+		assert_ok!(Slp::set_currency_delays(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Some(delay)
+		));
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -177,14 +181,14 @@ fn register_subaccount_index_0() {
 
 		// Set minimums and maximums
 		assert_ok!(Slp::set_minimums_and_maximums(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			Some(mins_and_maxs)
 		));
 
 		// First to setup index-multilocation relationship of subaccount_0
 		assert_ok!(Slp::add_delegator(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			0u16,
 			Box::new(SUBACCOUNT_0_LOCATION),
@@ -192,70 +196,70 @@ fn register_subaccount_index_0() {
 
 		// Register Operation weight and fee
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferTo,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Bond,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::BondExtra,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Unbond,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Rebond,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Delegate,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Payout,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Liquidize,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Chill,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferBack,
 			Some((20_000_000_000, 10_000_000_000)),
@@ -275,7 +279,7 @@ fn register_delegator_ledger() {
 
 		// Set delegator ledger
 		assert_ok!(Slp::set_delegator_ledger(
-			Origin::root(),
+			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			Box::new(SUBACCOUNT_0_LOCATION),
 			Box::new(Some(ledger))
@@ -305,14 +309,14 @@ fn register_validators() {
 
 			// Set minimums and maximums
 			assert_ok!(Slp::set_minimums_and_maximums(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Some(mins_and_maxs)
 			));
 
 			// Set delegator ledger
 			assert_ok!(Slp::add_validator(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(VALIDATOR_0_LOCATION),
 			));
@@ -323,7 +327,7 @@ fn register_validators() {
 
 			// Set delegator ledger
 			assert_ok!(Slp::add_validator(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(VALIDATOR_1_LOCATION),
 			));
@@ -347,7 +351,7 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 		// Cross-chain transfer some KSM to Bob account in Bifrost
 		KusamaNet::execute_with(|| {
 			assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-				kusama_runtime::Origin::signed(ALICE.into()),
+				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new(VersionedMultiLocation::V1(X1(Parachain(2001)).into())),
 				Box::new(VersionedMultiLocation::V1(
 					X1(Junction::AccountId32 { id: entrance_account_32, network: NetworkId::Any })
@@ -386,7 +390,7 @@ fn transfer_2_ksm_to_subaccount_in_kusama() {
 
 		KusamaNet::execute_with(|| {
 			assert_ok!(kusama_runtime::Balances::transfer(
-				kusama_runtime::Origin::signed(ALICE.into()),
+				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
 				MultiAddress::Id(subaccount_0.clone()),
 				2 * dollar::<Runtime>(RelayCurrencyId::get())
 			));
@@ -407,7 +411,7 @@ fn locally_bond_subaccount_0_1ksm_in_kusama() {
 
 		KusamaNet::execute_with(|| {
 			assert_ok!(kusama_runtime::Staking::bond(
-				kusama_runtime::Origin::signed(subaccount_0.clone()),
+				kusama_runtime::RuntimeOrigin::signed(subaccount_0.clone()),
 				MultiAddress::Id(subaccount_0.clone()),
 				dollar::<Runtime>(RelayCurrencyId::get()),
 				pallet_staking::RewardDestination::<AccountId>::Staked,
@@ -420,7 +424,7 @@ fn locally_bond_subaccount_0_1ksm_in_kusama() {
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 		});
@@ -443,7 +447,7 @@ fn transfer_to_works() {
 		Bifrost::execute_with(|| {
 			// We use transfer_to to transfer some KSM to subaccount_0
 			assert_ok!(Slp::transfer_to(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(ENTRANCE_ACCOUNT_LOCATION),
 				Box::new(SUBACCOUNT_0_LOCATION),
@@ -460,7 +464,7 @@ fn transfer_to_works() {
 			// Why not the transferred amount reach the sub-account?
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999988476752
+				2999989594258
 			);
 		});
 	})
@@ -476,7 +480,7 @@ fn bond_works() {
 		Bifrost::execute_with(|| {
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
@@ -492,13 +496,16 @@ fn bond_works() {
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 
 			assert!(kusama_runtime::System::events().iter().any(|r| matches!(
 				r.event,
-				kusama_runtime::Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+				kusama_runtime::RuntimeEvent::System(frame_system::Event::Remarked {
+					sender: _,
+					hash: _
+				})
 			)));
 		});
 	})
@@ -516,7 +523,7 @@ fn bond_extra_works() {
 		Bifrost::execute_with(|| {
 			// Bond_extra 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond_extra(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -533,7 +540,7 @@ fn bond_extra_works() {
 					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 		});
@@ -555,7 +562,7 @@ fn unbond_works() {
 		Bifrost::execute_with(|| {
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -576,7 +583,7 @@ fn unbond_all_works() {
 		Bifrost::execute_with(|| {
 			// Unbond the only bonded 1 ksm.
 			assert_ok!(Slp::unbond_all(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 			));
@@ -596,7 +603,7 @@ fn rebond_works() {
 		Bifrost::execute_with(|| {
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -614,7 +621,7 @@ fn rebond_works() {
 			let ledger = Ledger::Substrate(sb_ledger);
 
 			assert_ok!(Slp::set_delegator_ledger(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(Some(ledger))
@@ -622,7 +629,7 @@ fn rebond_works() {
 
 			// rebond 0.5 ksm.
 			assert_ok!(Slp::rebond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -639,7 +646,7 @@ fn rebond_works() {
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 		});
@@ -666,14 +673,14 @@ fn delegate_works() {
 
 			// delegate
 			assert_ok!(Slp::delegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
 			));
 
 			assert_ok!(Slp::set_validators_by_delegator(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets,
@@ -707,7 +714,7 @@ fn undelegate_works() {
 
 			// Undelegate validator 0. Only validator 1 left.
 			assert_ok!(Slp::undelegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
@@ -743,7 +750,7 @@ fn redelegate_works() {
 
 			// Redelegate to a set of validator_0 and validator_1.
 			assert_ok!(Slp::redelegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(targets.clone()),
@@ -772,7 +779,7 @@ fn payout_works() {
 		Bifrost::execute_with(|| {
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::payout(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(VALIDATOR_0_LOCATION),
@@ -809,7 +816,7 @@ fn liquidize_works() {
 
 		Bifrost::execute_with(|| {
 			assert_ok!(Slp::liquidize(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
@@ -845,7 +852,7 @@ fn chill_works() {
 
 		Bifrost::execute_with(|| {
 			assert_ok!(Slp::chill(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 			));
@@ -882,7 +889,7 @@ fn transfer_back_works() {
 
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				1999215574218
+				1999291646569
 			);
 		});
 
@@ -890,7 +897,7 @@ fn transfer_back_works() {
 			assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 0);
 
 			assert_ok!(Slp::transfer_back(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(exit_account_location),
@@ -906,7 +913,7 @@ fn transfer_back_works() {
 			);
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				2498431148436
+				2498583293138
 			);
 		});
 
@@ -932,13 +939,13 @@ fn supplement_fee_reserve_works() {
 			// set fee source
 			let alice_location = Slp::account_32_to_local_location(ALICE).unwrap();
 			assert_ok!(Slp::set_fee_source(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Some((alice_location.clone(), dollar::<Runtime>(RelayCurrencyId::get())))
 			));
 
 			assert_ok!(Slp::supplement_fee_reserve(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 			));
@@ -947,7 +954,7 @@ fn supplement_fee_reserve_works() {
 		KusamaNet::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999988476752
+				2999989594258
 			);
 		});
 	})
@@ -964,7 +971,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			// First call bond function, it will insert a query.
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
@@ -1008,7 +1015,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 					total: dollar::<Runtime>(RelayCurrencyId::get()),
 					active: dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 		});
@@ -1016,7 +1023,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1066,7 +1073,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		Bifrost::execute_with(|| {
 			// Bond_extra 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond_extra(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -1120,7 +1127,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: vec![],
+					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
 		});
@@ -1128,7 +1135,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1177,7 +1184,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		Bifrost::execute_with(|| {
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -1226,7 +1233,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1278,7 +1285,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		Bifrost::execute_with(|| {
 			// Unbond the only bonded 1 ksm.
 			assert_ok!(Slp::unbond_all(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 			));
@@ -1325,7 +1332,7 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1377,7 +1384,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		Bifrost::execute_with(|| {
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -1395,7 +1402,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			let ledger = Ledger::Substrate(sb_ledger);
 
 			assert_ok!(Slp::set_delegator_ledger(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Box::new(Some(ledger))
@@ -1403,7 +1410,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 
 			// rebond 0.5 ksm.
 			assert_ok!(Slp::rebond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				None,
@@ -1455,7 +1462,7 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				1
 			));
@@ -1523,13 +1530,13 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 
 			// set ongoing era to be 11 which is greater than due era 10.
 			assert_ok!(Slp::update_ongoing_time_unit(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				TimeUnit::Era(11)
 			));
 
 			assert_ok!(Slp::liquidize(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
@@ -1581,7 +1588,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				1
 			));
@@ -1642,7 +1649,7 @@ fn fail_delegator_ledger_query_response_works() {
 			// First call bond function, it will insert a query.
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				dollar::<Runtime>(RelayCurrencyId::get()),
@@ -1681,7 +1688,7 @@ fn fail_delegator_ledger_query_response_works() {
 		Bifrost::execute_with(|| {
 			// Call confirm_delegator_ledger_query_response.
 			assert_ok!(Slp::fail_delegator_ledger_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1739,7 +1746,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 
 			// delegate
 			assert_ok!(Slp::delegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
@@ -1767,7 +1774,7 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 
 			// confirm call
 			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0
 			));
@@ -1802,7 +1809,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 
 			// Undelegate validator 0. Only validator 1 left.
 			assert_ok!(Slp::undelegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
@@ -1830,7 +1837,7 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 
 			// confirm call
 			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				1,
 			));
@@ -1865,7 +1872,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 
 			// Redelegate to a set of validator_0 and validator_1.
 			assert_ok!(Slp::redelegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(targets.clone()),
@@ -1893,7 +1900,7 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 
 			// confirm call
 			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				2,
 			));
@@ -1930,7 +1937,7 @@ fn fail_validators_by_delegator_query_response_works() {
 
 			// delegate
 			assert_ok!(Slp::delegate(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				targets.clone(),
@@ -1958,7 +1965,7 @@ fn fail_validators_by_delegator_query_response_works() {
 
 			// call fail function
 			assert_ok!(Slp::fail_validators_by_delegator_query_response(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
 				0,
 			));
