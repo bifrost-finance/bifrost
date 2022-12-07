@@ -1635,7 +1635,7 @@ impl zenlink_protocol::Config for Runtime {
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
-	type AccountIdConverter = ();
+	type AccountIdConverter = ZenlinkLocationToAccountId;
 	type AssetIdConverter = AssetIdConverter;
 }
 
