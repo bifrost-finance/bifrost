@@ -71,19 +71,53 @@ impl<T: Config> Pallet<T> {
 			.saturating_add(Self::rewards(addr)))
 	}
 
-	pub fn updateReward(addr: &AccountIdOf<T>) -> DispatchResult {
+	pub fn updateReward(addr: Option<AccountIdOf<T>>) -> DispatchResult {
 		let rewardPerTokenStored = Self::rewardPerToken();
 		IncentiveConfigs::<T>::mutate(|item| {
 			item.rewardPerTokenStored = rewardPerTokenStored;
 			item.lastUpdateTime = Self::lastTimeRewardApplicable();
 		});
-		// let lastUpdateTime = lastTimeRewardApplicable();
-		// if (account != address(0)) {
-		// rewards[account] = earned(account);
-		Rewards::<T>::insert(addr, Self::earned(addr)?);
-		UserRewardPerTokenPaid::<T>::insert(addr, rewardPerTokenStored);
-		// Self::user_reward_per_token_paid(addr) = rewardPerTokenStored;
-		// }
+		if let Some(address) = addr {
+			Rewards::<T>::insert(&address, Self::earned(&address)?);
+			UserRewardPerTokenPaid::<T>::insert(&address, rewardPerTokenStored);
+		}
+		Ok(())
+	}
+
+	// Motion
+	pub fn notifyRewardAmount(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
+		Self::updateReward(None);
+		let mut conf = Self::incentive_configs();
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		// let mut rewardRate;
+		if current_timestamp >= conf.periodFinish {
+			conf.rewardRate = reward
+				.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+				.ok_or(Error::<T>::CalculationOverflow)?;
+		} else {
+			let remaining = conf
+				.periodFinish
+				.saturating_sub(current_timestamp)
+				.saturated_into::<BalanceOf<T>>();
+			let leftover: BalanceOf<T> = remaining.saturating_mul(conf.rewardRate);
+			conf.rewardRate = reward
+				.saturating_add(leftover)
+				.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+				.ok_or(Error::<T>::CalculationOverflow)?;
+		}
+		let balance = Self::balanceOf(addr, current_timestamp)?;
+		ensure!(
+			conf.rewardRate <=
+				balance
+					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+					.ok_or(Error::<T>::CalculationOverflow)?,
+			Error::<T>::NotExpire
+		);
+		conf.lastUpdateTime = current_timestamp;
+		conf.periodFinish = current_timestamp.saturating_add(conf.rewardsDuration);
+
+		IncentiveConfigs::<T>::set(conf);
 		Ok(())
 	}
 }
