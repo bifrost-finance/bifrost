@@ -42,16 +42,20 @@ impl<
 	}
 	/// Check if the round should be updated
 	pub fn should_update(&self, now: B) -> bool {
+		//Current blockNumber -  BlockNumber of Round Start >= Length of Round ==> should update
 		now - self.first >= self.length.into()
 	}
-	/// New round
+	/// Update round
 	pub fn update(&mut self, now: B) {
+		//Set current round index -= 1
 		self.current = self.current.saturating_add(1u32);
+		//Set blockNumber of Round Start = Current blockNumber
 		self.first = now;
 	}
 
 	/// Check exec_delay match
 	pub fn check_delay(&self, now: B, delay: u32) -> bool {
+		//Current blockNumber -  BlockNumber of Round Start == delay blockNumber ===> true
 		now - self.first == delay.into() && delay != 0
 	}
 }
@@ -66,12 +70,18 @@ impl<
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct TokenInfo<Balance: Copy> {
+	/// The number of token staking in Farming
 	pub farming_staking_amount: Balance,
+	/// token_config.system_stakable_farming_rate(100%) * farming_staking_amount(0) +/-
+	/// token_config.system_stakable_base
 	pub system_stakable_amount: Balance,
+	/// Number of additional token already mint
 	pub system_shadow_amount: Balance,
+	/// Number of pending redemptions
 	pub pending_redeem_amount: Balance,
-	// config params
+	/// Current TokenConfig
 	pub current_config: TokenConfig<Balance>,
+	/// New TokenConfig
 	pub new_config: TokenConfig<Balance>,
 }
 
@@ -100,11 +110,17 @@ impl<Balance: Copy + PartialEq> TokenInfo<Balance> {
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct TokenConfig<Balance> {
+	/// Number of blocks with delayed execution
 	pub exec_delay: u32,
+	/// 100 %
 	pub system_stakable_farming_rate: Permill,
+	///
 	pub lptoken_rates: Vec<Perbill>,
-	pub add_or_sub: bool, // true: add, false: sub
+	/// true: add, false: sub , +/- token_config.system_stakable_base
+	pub add_or_sub: bool,
+	///
 	pub system_stakable_base: Balance,
+	/// Farming pool ids
 	pub farming_poolids: Vec<PoolId>,
 }
 
