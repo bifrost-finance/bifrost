@@ -1122,13 +1122,6 @@ parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second::<Runtime>());
 	pub VksmPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
-			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::VToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
-		).into(),
-		ksm_per_second::<Runtime>()
-	);
-	pub VksmNewPerSecond: (AssetId, u128) = (
-		MultiLocation::new(
 			0,
 			X1(GeneralKey((CurrencyId::VToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
 		).into(),
@@ -1249,7 +1242,6 @@ impl TakeRevenue for ToTreasury {
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VksmPerSecond, ToTreasury>,
-	FixedRateOfFungible<VksmNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
