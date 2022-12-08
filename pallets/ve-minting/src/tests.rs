@@ -73,7 +73,7 @@ fn update_reward() {
 
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
 		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
-		assert_ok!(VeMinting::updateReward(Some(BOB)));
+		assert_ok!(VeMinting::updateReward(Some(&BOB)));
 
 		// 	assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), Ok(0));
 		// 	assert_eq!(VeMinting::balanceOfAt(&BOB, 0), Ok(0));

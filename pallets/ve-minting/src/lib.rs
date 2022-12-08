@@ -41,7 +41,9 @@ use frame_support::{
 		},
 		ArithmeticError, DispatchError, Perbill, SaturatedConversion,
 	},
-	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
+	traits::{
+		tokens::WithdrawReasons, Currency, ExistenceRequirement, LockIdentifier, LockableCurrency,
+	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -407,6 +409,7 @@ pub mod pallet {
 			log::debug!("_checkpoint:{:?}", u_new);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
+			Self::updateReward(Some(addr))?;
 
 			Ok(())
 		}

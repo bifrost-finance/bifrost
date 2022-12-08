@@ -71,22 +71,41 @@ impl<T: Config> Pallet<T> {
 			.saturating_add(Self::rewards(addr)))
 	}
 
-	pub fn updateReward(addr: Option<AccountIdOf<T>>) -> DispatchResult {
+	pub fn updateReward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let rewardPerTokenStored = Self::rewardPerToken();
 		IncentiveConfigs::<T>::mutate(|item| {
 			item.rewardPerTokenStored = rewardPerTokenStored;
 			item.lastUpdateTime = Self::lastTimeRewardApplicable();
 		});
 		if let Some(address) = addr {
-			Rewards::<T>::insert(&address, Self::earned(&address)?);
-			UserRewardPerTokenPaid::<T>::insert(&address, rewardPerTokenStored);
+			Rewards::<T>::insert(address, Self::earned(&address)?);
+			UserRewardPerTokenPaid::<T>::insert(address, rewardPerTokenStored);
+		}
+		Ok(())
+	}
+
+	// pub fn staking(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
+	// 	Self::updateReward(Some(addr))
+	// }
+
+	pub fn getReward(addr: &AccountIdOf<T>) -> DispatchResult {
+		Self::updateReward(Some(addr))?;
+		let reward = Self::rewards(addr);
+		if reward > BalanceOf::<T>::zero() {
+			T::Currency::transfer(
+				&T::VeMintingPalletId::get().into_account_truncating(),
+				addr,
+				reward,
+				ExistenceRequirement::KeepAlive,
+			)?;
+			Rewards::<T>::remove(addr);
 		}
 		Ok(())
 	}
 
 	// Motion
 	pub fn notifyRewardAmount(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
-		Self::updateReward(None);
+		Self::updateReward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
