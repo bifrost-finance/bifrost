@@ -209,7 +209,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
+							Native(ASG) | Native(BNC) | VToken(KSM) | VSToken(KSM) | Token(ZLK) =>
 								Some(currency_id),
 							_ => None,
 						}
