@@ -102,14 +102,14 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-stable-amm = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-stable-amm-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-stable-amm-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-zenlink-swap-router = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "69ce6f5284c1483e999335aa48fc962c90290362" }
-merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "f6c32339bdfc960fdc2827528c5a9e8fc0491628" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-stable-amm = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-stable-amm-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+zenlink-swap-router = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "d030097e17c1005366b0b66d3a4130c4ba13bc77" }
+merkle-distributor = { git = "https://github.com/bifrost-finance/merkle-distributor", rev = "dbe7b91b353f1a72faa8d56f0af06969736b237a" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f336875e48599b5e9500b301385259354821f01f" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f336875e48599b5e9500b301385259354821f01f" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f336875e48599b5e9500b301385259354821f01f" }
