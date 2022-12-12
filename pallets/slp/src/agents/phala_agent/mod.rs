@@ -16,17 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod common;
-mod filecoin_agent;
-mod moonbeam_agent;
-mod parachain_staking_agent;
-mod polkadot_agent;
-mod utils;
-mod phala_agent;
+mod agent;
+mod types;
 
-pub use common::*;
-pub use filecoin_agent::*;
-pub use moonbeam_agent::*;
-pub use parachain_staking_agent::*;
-pub use polkadot_agent::*;
-pub use utils::*;
+pub use agent::*;
+pub use types::*;

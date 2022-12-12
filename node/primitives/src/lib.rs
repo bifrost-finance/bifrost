@@ -155,6 +155,8 @@ pub enum TimeUnit {
 	// 1000 blocks. Can be used by Filecoin.
 	// 30 seconds per block. Kblock means 8.33 hours.
 	Kblock(#[codec(compact)] u32),
+	// 1 hour. Should be Unix Timstamp in seconds / 3600
+	Hour(#[codec(compact)] u32)
 }
 
 impl Default for TimeUnit {
