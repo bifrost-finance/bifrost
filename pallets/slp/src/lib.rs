@@ -19,13 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent, PhalaAgent},
+	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent, PolkadotAgent},
 	primitives::BASE_WEIGHT,
 };
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,PHA
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR, PHA,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -214,6 +214,9 @@ pub mod pallet {
 		NotEnoughBalance,
 		VectorTooLong,
 		MultiCurrencyError,
+		NotDelegateValidator,
+		DividedByZero,
+		SharePriceNotValid,
 	}
 
 	#[pallet::event]

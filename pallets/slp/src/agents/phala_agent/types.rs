@@ -32,7 +32,7 @@ pub enum PhalaCall<T: Config> {
 	#[codec(index = 0)]
 	System(SystemCall),
 	#[codec(index = 3)]
-	Utility(Box<UtilityCall<Self>>),
+	Utility(Box<PhalaUtilityCall<Self>>),
 	#[codec(index = 33)]
 	Xcm(Box<XcmCall>),
 	#[codec(index = 40)]
@@ -61,4 +61,12 @@ pub enum WrappedBalancesCall<T: Config> {
 	UnwrapAll,
 	#[codec(index = 2)]
 	Unwrap(BalanceOf<T>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum PhalaUtilityCall<PhalaCall> {
+	#[codec(index = 1)]
+	AsDerivative(u16, Box<PhalaCall>),
+	#[codec(index = 2)]
+	BatchAll(Box<Vec<Box<PhalaCall>>>),
 }
