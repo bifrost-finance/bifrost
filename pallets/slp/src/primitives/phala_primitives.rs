@@ -23,6 +23,7 @@ use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
+pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct PhalaLedger<Balance> {

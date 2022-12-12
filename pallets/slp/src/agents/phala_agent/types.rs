@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::agents::{BalancesCall, SystemCall, XcmCall};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
 use sp_runtime::traits::StaticLookup;
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{VersionedMultiAssets, VersionedMultiLocation};
+use xcm_interface::UtilityCall;
 
 use crate::{BalanceOf, Config};
 
@@ -42,43 +44,21 @@ pub enum PhalaCall<T: Config> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum SystemCall {
-	#[codec(index = 8)]
-	RemarkWithEvent(Box<Vec<u8>>),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum BalancesCall<T: Config> {
-	#[codec(index = 3)]
-	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum UtilityCall<PhalaCall> {
-	#[codec(index = 1)]
-	AsDerivative(u16, Box<PhalaCall>),
-	#[codec(index = 2)]
-	BatchAll(Box<Vec<Box<PhalaCall>>>),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum VaultCall<T: Config> {
 	#[codec(index = 4)]
 	CheckAndMaybeForceWithdraw(u64),
 	#[codec(index = 5)]
-	Contribute(u64,BalanceOf<T>),
+	Contribute(u64, BalanceOf<T>),
 	#[codec(index = 6)]
-	Withdraw(u64,BalanceOf<T>),
-
+	Withdraw(u64, BalanceOf<T>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum XcmCall {
+pub enum WrappedBalancesCall<T: Config> {
+	#[codec(index = 0)]
+	Wrap(BalanceOf<T>),
+	#[codec(index = 1)]
+	UnwrapAll,
 	#[codec(index = 2)]
-	ReserveTransferAssets(
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiAssets>,
-		u32,
-	),
+	Unwrap(BalanceOf<T>),
 }

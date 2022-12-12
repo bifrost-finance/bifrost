@@ -30,3 +30,4 @@ pub use moonbeam_agent::*;
 pub use parachain_staking_agent::*;
 pub use polkadot_agent::*;
 pub use utils::*;
+pub use phala_agent::*;

@@ -19,13 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent},
+	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent, PhalaAgent},
 	primitives::BASE_WEIGHT,
 };
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,PHA
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -1868,6 +1868,7 @@ pub mod pallet {
 				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
+				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
