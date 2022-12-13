@@ -73,21 +73,58 @@ impl<T: Config> Pallet<T> {
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
+		let reward_per_token = Self::rewardPerToken();
+		// let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
 		let vetoken_balance = Self::balanceOf(addr, current_timestamp)?;
-		rewards.iter_mut().for_each(|(currency, reward)| {
-			*reward = reward.saturating_add(
-				vetoken_balance.saturating_mul(
-					Self::rewardPerToken()
-						.get(currency)
-						.unwrap_or(&BalanceOf::<T>::zero())
-						.saturating_sub(
-							*Self::user_reward_per_token_paid(addr)
+		// rewards.iter_mut().for_each(|(currency, reward)| {
+		// 	*reward = reward.saturating_add(
+		// 		vetoken_balance.saturating_mul(
+		// 			Self::rewardPerToken()
+		// 				.get(currency)
+		// 				.unwrap_or(&BalanceOf::<T>::zero())
+		// 				.saturating_sub(
+		// 					*Self::user_reward_per_token_paid(addr)
+		// 						.get(currency)
+		// 						.unwrap_or(&BalanceOf::<T>::zero()),
+		// 				),
+		// 		),
+		// 	);
+		// });
+		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
+			rewards
+		} else {
+			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
+		};
+
+		reward_per_token.iter().for_each(|(currency, reward)| {
+			rewards
+				.entry(*currency)
+				.and_modify(|total_reward| {
+					*total_reward = total_reward.saturating_add(
+						vetoken_balance.saturating_mul(
+							Self::rewardPerToken()
 								.get(currency)
-								.unwrap_or(&BalanceOf::<T>::zero()),
+								.unwrap_or(&BalanceOf::<T>::zero())
+								.saturating_sub(
+									*Self::user_reward_per_token_paid(addr)
+										.get(currency)
+										.unwrap_or(&BalanceOf::<T>::zero()),
+								),
 						),
-				),
-			);
+					);
+				})
+				.or_insert(
+					vetoken_balance.saturating_mul(
+						Self::rewardPerToken()
+							.get(currency)
+							.unwrap_or(&BalanceOf::<T>::zero())
+							.saturating_sub(
+								*Self::user_reward_per_token_paid(addr)
+									.get(currency)
+									.unwrap_or(&BalanceOf::<T>::zero()),
+							),
+					),
+				);
 		});
 		Ok(rewards)
 		// Ok(Self::balanceOf(addr, current_timestamp)?
@@ -115,30 +152,21 @@ impl<T: Config> Pallet<T> {
 	// 	Self::updateReward(Some(addr))
 	// }
 
+	#[transactional]
 	pub fn getReward(addr: &AccountIdOf<T>) -> DispatchResult {
 		Self::updateReward(Some(addr))?;
-		// let rewards = Self::rewards(addr);
+
 		if let Some(rewards) = Self::rewards(addr) {
-			rewards.iter().for_each(|(currency, reward)| {
+			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
-					currency,
+					*currency,
 					&T::VeMintingPalletId::get().into_account_truncating(),
 					addr,
 					reward,
-				)?;
-			});
+				)
+			})?;
 			Rewards::<T>::remove(addr);
 		}
-
-		// if reward > BalanceOf::<T>::zero() {
-		// 	T::Currency::transfer(
-		// 		&T::VeMintingPalletId::get().into_account_truncating(),
-		// 		addr,
-		// 		reward,
-		// 		ExistenceRequirement::KeepAlive,
-		// 	)?;
-		// 	Rewards::<T>::remove(addr);
-		// }
 		Ok(())
 	}
 

@@ -21,6 +21,8 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use crate as ve_minting;
+use crate::BNC;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -51,14 +53,12 @@ use xcm::{
 	},
 };
 
-use crate as ve_minting;
-
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+// pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);

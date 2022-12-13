@@ -44,23 +44,22 @@ use frame_support::{
 	traits::{
 		tokens::WithdrawReasons, Currency, ExistenceRequirement, LockIdentifier, LockableCurrency,
 	},
-	PalletId,
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::{AccountId, CurrencyId, Timestamp}; // BlockNumber, Balance
-use orml_traits::MultiCurrency;
+use node_primitives::{AccountId, CurrencyId, Timestamp, TokenSymbol}; // BlockNumber, Balance
+use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::collections::btree_map::BTreeMap;
 pub use weights::WeightInfo;
 
 pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 
 #[allow(type_alias_bounds)]
-type BalanceOf<T: Config> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
-// type BalanceOf<T> =
-// 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -107,7 +106,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+
 		type Currency: Currency<Self::AccountId>
 			// + ReservableCurrency<Self::AccountId>
 			+ LockableCurrency<Self::AccountId>;
@@ -210,7 +211,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		AccountIdOf<T>,
 		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-		ValueQuery,
+		// ValueQuery,
 	>;
 
 	#[pallet::hooks]
@@ -449,7 +450,7 @@ pub mod pallet {
 			Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 			if value != BalanceOf::<T>::zero() {
-				T::Currency::extend_lock(COLLATOR_LOCK_ID, addr, value, WithdrawReasons::all());
+				T::MultiCurrency::extend_lock(COLLATOR_LOCK_ID, BNC, addr, value);
 			}
 
 			Self::deposit_event(Event::Minted {
