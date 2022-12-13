@@ -52,6 +52,7 @@ use node_primitives::{AccountId, CurrencyId, Timestamp}; // BlockNumber, Balance
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
+use sp_std::collections::btree_map::BTreeMap;
 pub use weights::WeightInfo;
 
 pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
@@ -190,17 +191,27 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn incentive_configs)]
 	pub type IncentiveConfigs<T: Config> =
-		StorageValue<_, IncentiveConfig<BalanceOf<T>>, ValueQuery>;
+		StorageValue<_, IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_reward_per_token_paid)]
-	pub type UserRewardPerTokenPaid<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
+	pub type UserRewardPerTokenPaid<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn rewards)]
-	pub type Rewards<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
+	pub type Rewards<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		ValueQuery,
+	>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {

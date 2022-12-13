@@ -68,7 +68,7 @@ fn update_reward() {
 		log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		log::debug!("{:?}", System::block_number());
-		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1670752990696));
+		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1671752990696));
 		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
 
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
