@@ -117,9 +117,6 @@ impl<T: Config>
 			Error::<T>::ExceedActiveMaximum
 		);
 
-		// Get the delegator account id in Kusama/Polkadot network
-		let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
-
 		// Construct xcm message.
 		let wrapCall = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Wrap(amount));
 		let contributeCall = PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
@@ -344,6 +341,15 @@ impl<T: Config>
 			Err(Error::<T>::ValidatorError)?;
 		}
 
+		// Emit event
+		Pallet::<T>::deposit_event(Event::Delegated {
+			currency_id,
+			delegator_id: who.clone(),
+			targets: Some(targets.clone()),
+			query_id: Zero::zero(),
+			query_id_hash: Hash::<T>::default(),
+		});
+
 		Ok(Zero::zero())
 	}
 
@@ -403,7 +409,7 @@ impl<T: Config>
 		Self::delegate(self, who, &targets, currency_id)
 	}
 
-	/// Initiate payout for a certain delegator.
+	/// It's automatically calculated, So we don't need to do anything here.
 	fn payout(
 		&self,
 		who: &MultiLocation,
@@ -411,25 +417,51 @@ impl<T: Config>
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Ok(())
+		Err(Error::<T>::Unsupported)
 	}
 
-	/// Withdraw the due payout into free balance.
+	/// Corresponds to the `check_and_maybe_force_withdraw` funtion of PhalaVault pallet.
+	/// Usually we don't need to call it, someone else will pay the rewards. But in case,
+	/// we can call it to force withdraw the rewards.
 	fn liquidize(
 		&self,
 		who: &MultiLocation,
-		when: &Option<TimeUnit>,
+		_when: &Option<TimeUnit>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		// Check if it has already delegated a validator.
+		let pool_id = if let Some(Ledger::Phala(ledger)) =
+			DelegatorLedgers::<T>::get(currency_id, who.clone())
+		{
+			ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
+		} else {
+			Err(Error::<T>::DelegatorNotExist)
+		}?;
+
+		// Construct xcm message.
+		let checkAndMaybeForceWithdrawCall =
+			PhalaCall::PhalaVault(VaultCall::<T>::CheckAndMaybeForceWithdraw(pool_id));
+		let calls = vec![Box::new(checkAndMaybeForceWithdrawCall)];
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			XcmOperation::Bond,
+			calls,
+			who,
+			currency_id,
+		)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
-	/// Chill self. Cancel the identity of delegator in the Relay chain side.
-	/// Unbonding all the active amount should be done before or after chill,
-	/// so that we can collect back all the bonded amount.
+	/// Not supported in Phala.
 	fn chill(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Make token transferred back to Bifrost chain account.
