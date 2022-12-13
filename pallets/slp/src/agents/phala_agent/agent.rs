@@ -90,7 +90,7 @@ impl<T: Config>
 		Ok(delegator_multilocation)
 	}
 
-	/// The same as function bond and rebond.
+	/// In Phala context, it corresponds to `contribute` function.
 	fn bond(
 		&self,
 		who: &MultiLocation,
@@ -162,26 +162,89 @@ impl<T: Config>
 		Ok(query_id)
 	}
 
-	/// Bond extra amount to a delegator.
+	/// Bond extra amount to a delegator. In Phala context, it is the same as bond.
 	fn bond_extra(
 		&self,
 		who: &MultiLocation,
 		amount: BalanceOf<T>,
-		_validator: &Option<MultiLocation>,
+		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		Self::bond(self, who, amount, share_price, currency_id)
 	}
 
-	/// Decrease bonding amount to a delegator.
+	/// Decrease bonding amount to a delegator. In Phala context, it corresponds to `withdraw`
+	/// function. Noted that the param for `withdraw` is `shares` instead of `amount`. So we need
+	/// to calculate the shares by the input `share_price` and `amount`.
 	fn unbond(
 		&self,
 		who: &MultiLocation,
 		amount: BalanceOf<T>,
-		_validator: &Option<MultiLocation>,
+		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		// Check if it has already delegated a validator.
+		let (pool_id, active_shares) = if let Some(Ledger::Phala(ledger)) =
+			DelegatorLedgers::<T>::get(currency_id, who.clone())
+		{
+			let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
+			let active_shares = ledger.active_shares;
+			Ok((pool_id, active_shares))
+		} else {
+			Err(Error::<T>::DelegatorNotExist)
+		}?;
+
+		// Ensure the amount is not zero
+		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+		// Calculate how many shares we can get by the amount at current price
+		let shares = if let Some(MultiLocation {
+			parents: _,
+			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
+		}) = share_price
+		{
+			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
+			let shares = total_value.checked_div(*total_shares).ok_or(Error::<T>::OverFlow)?;
+			BalanceOf::<T>::unique_saturated_from(shares)
+		} else {
+			Err(Error::<T>::SharePriceNotValid)?
+		};
+
+		// Check if shares exceeds the minimum requirement > 1000.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		ensure!(shares > mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+
+		// Check if the remaining active shares is enough for withdrawing.
+		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
+
+		// Construct xcm message.
+		let unwrapCall = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Unwrap(amount));
+		let withdrawCall = PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
+		let calls = vec![Box::new(unwrapCall), Box::new(withdrawCall)];
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			XcmOperation::Unbond,
+			calls,
+			who,
+			currency_id,
+		)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(
+			who,
+			SubstrateLedgerUpdateOperation::Unlock,
+			shares,
+			query_id,
+			timeout,
+			currency_id,
+		)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
@@ -193,15 +256,18 @@ impl<T: Config>
 		Ok(Zero::zero())
 	}
 
-	/// Cancel some unbonding amount.
+	/// In Phala context, it is the same as bond.
 	fn rebond(
 		&self,
 		who: &MultiLocation,
 		amount: Option<BalanceOf<T>>,
-		_validator: &Option<MultiLocation>,
+		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		let amount = amount.ok_or(Error::<T>::InvalidAmount)?;
+		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+		Self::bond(self, who, amount, share_price, currency_id)
 	}
 
 	/// Delegate to some validators. In Phala context, the passed in Multilocation
