@@ -253,7 +253,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// In Phala context, it is the same as bond.
@@ -347,24 +347,60 @@ impl<T: Config>
 		Ok(Zero::zero())
 	}
 
-	/// Remove delegation relationship with some validators.
+	/// Remove delegation relationship with some validators. Just change the storage, no need to
+	/// call Phala runtime.
 	fn undelegate(
 		&self,
 		who: &MultiLocation,
-		targets: &Vec<MultiLocation>,
+		_targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
+		// Check if it has already delegated a validator.
+		DelegatorLedgers::<T>::mutate(
+			currency_id,
+			who.clone(),
+			|old_ledger_opt| -> Result<(), Error<T>> {
+				if let Some(Ledger::Phala(ref mut ledger)) = old_ledger_opt {
+					// Ensure both active_shares and unlocking_shares are zero.
+					ensure!(ledger.active_shares == Zero::zero(), Error::<T>::ValidatorStillInUse);
+					ensure!(
+						ledger.unlocking_shares == Zero::zero(),
+						Error::<T>::ValidatorStillInUse
+					);
+
+					// undelegate the validator
+					ledger.bonded_pool_id = None;
+					ledger.bonded_pool_collection_id = None;
+
+					// Emit event
+					Pallet::<T>::deposit_event(Event::Undelegated {
+						currency_id,
+						delegator_id: who.clone(),
+						targets: vec![],
+						query_id: Zero::zero(),
+						query_id_hash: Hash::<T>::default(),
+					});
+
+					Ok(())
+				} else {
+					Err(Error::<T>::DelegatorNotExist)
+				}
+			},
+		)?;
+
 		Ok(Zero::zero())
 	}
 
-	/// Re-delegate existing delegation to a new validator set.
+	/// Re-delegate existing delegation to a new validator set. In Phala context, it's the same as
+	/// delegate.
 	fn redelegate(
 		&self,
 		who: &MultiLocation,
 		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		Ok(Zero::zero())
+		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorNotProvided)?;
+		Self::delegate(self, who, &targets, currency_id)
 	}
 
 	/// Initiate payout for a certain delegator.
