@@ -636,6 +636,10 @@ pub mod pallet {
 			// Calculate weight
 			BASE_WEIGHT.saturating_mul(counter.into())
 		}
+
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_vksm_xcm_fee::<T>()
+		}
 	}
 
 	#[pallet::call]
