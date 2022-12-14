@@ -169,21 +169,13 @@ fn register_linked_account_should_work() {
 }
 
 #[test]
-fn register_currency_for_cross_in_out_should_work() {
+fn register_and_deregister_currency_for_cross_in_out_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
-			Origin::signed(ALICE),
-			KSM,
-			Some(())
-		));
+		assert_ok!(CrossInOut::register_currency_for_cross_in_out(Origin::signed(ALICE), KSM,));
 
 		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), Some(()));
 
-		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
-			Origin::signed(ALICE),
-			KSM,
-			None
-		));
+		assert_ok!(CrossInOut::deregister_currency_for_cross_in_out(Origin::signed(ALICE), KSM,));
 
 		assert_eq!(CrossCurrencyRegistry::<Runtime>::get(KSM), None);
 	});
