@@ -101,7 +101,8 @@ fn bifrost_treasury_operations() {
 			let lp_asset_id = bifrost_kusama_runtime::ZenlinkProtocol::lp_asset_id(
 				&zenlink_protocol::AssetId::try_convert_from(KSM, para_id).unwrap(),
 				&zenlink_protocol::AssetId::try_convert_from(VKSM, para_id).unwrap(),
-			);
+			)
+			.unwrap();
 
 			let lp = bifrost_kusama_runtime::ZenlinkProtocol::foreign_balance_of(
 				lp_asset_id,
