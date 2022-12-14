@@ -25,6 +25,8 @@ use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 
 use crate::{BalanceOf, Config};
 
+type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum SubstrateCall<T: Config> {
 	Kusama(KusamaCall<T>),
@@ -91,11 +93,7 @@ pub enum PolkadotUtilityCall<PolkadotCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama/Polkadot has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(
-		<T::Lookup as StaticLookup>::Source,
-		#[codec(compact)] BalanceOf<T>,
-		RewardDestination<T::AccountId>,
-	),
+	Bond(AccountIdLookupOf<T>, #[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]
@@ -103,7 +101,7 @@ pub enum StakingCall<T: Config> {
 	#[codec(index = 3)]
 	WithdrawUnbonded(u32),
 	#[codec(index = 5)]
-	Nominate(Vec<<T::Lookup as StaticLookup>::Source>),
+	Nominate(Vec<AccountIdLookupOf<T>>),
 	#[codec(index = 6)]
 	Chill,
 	#[codec(index = 18)]
