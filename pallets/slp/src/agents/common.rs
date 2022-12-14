@@ -16,19 +16,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	pallet::Error, vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, MinimumsAndMaximums,
-	MultiLocation, Pallet, Validators, Zero,
+	pallet::Error,
+	vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, Encode,
+	Junction::{AccountId32, Parachain},
+	Junctions::X1,
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Zero,
 };
 use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-use sp_core::U256;
+use sp_core::{Get, U256};
 use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
+use xcm::{opaque::latest::NetworkId::Any, VersionedMultiLocation};
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -182,5 +186,30 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::deposit(depoist_currency, &beneficiary, charge_amount)?;
 
 		Ok(())
+	}
+
+	pub(crate) fn get_transfer_back_dest_and_beneficiary(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		currency_id: CurrencyId,
+	) -> Result<(Box<VersionedMultiLocation>, Box<VersionedMultiLocation>), Error<T>> {
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+
+		// Prepare parameter dest and beneficiary.
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
+
+		let dest =
+			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+		let beneficiary =
+			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
+
+		Ok((dest, beneficiary))
 	}
 }

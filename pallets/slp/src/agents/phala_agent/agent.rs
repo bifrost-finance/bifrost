@@ -215,9 +215,8 @@ impl<T: Config>
 		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
 
 		// Construct xcm message.
-		let unwrapCall = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Unwrap(amount));
 		let withdrawCall = PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
-		let calls = vec![Box::new(unwrapCall), Box::new(withdrawCall)];
+		let calls = vec![Box::new(withdrawCall)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -472,6 +471,40 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		let (dest, beneficiary) =
+			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+
+		// Prepare parameter assets.
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(Self::get_pha_multilocation()),
+		};
+		let assets: Box<VersionedMultiAssets> =
+			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+
+		// Prepare parameter fee_asset_item.
+		let fee_asset_item: u32 = 0;
+
+		// Construct xcm message.
+		let call = PhalaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
+			dest,
+			beneficiary,
+			assets,
+			fee_asset_item,
+		)));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperation::TransferBack,
+			call,
+			from,
+			currency_id,
+		)?;
+
 		Ok(())
 	}
 
@@ -625,8 +658,7 @@ impl<T: Config> PhalaAgent<T> {
 		currency_id: CurrencyId,
 	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
-		let responder =
-			MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::phala::ID)) };
+		let responder = Self::get_pha_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
@@ -681,6 +713,49 @@ impl<T: Config> PhalaAgent<T> {
 		Ok((call_as_subaccount, fee, weight))
 	}
 
+	fn construct_xcm_and_send_as_subaccount_without_query_id(
+		operation: XcmOperation,
+		call: PhalaCall<T>,
+		who: &MultiLocation,
+		currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params_without_query_id(
+				operation,
+				call,
+				who,
+				currency_id,
+			)?;
+
+		let xcm_message =
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(())
+	}
+
+	fn prepare_send_as_subaccount_call_params_without_query_id(
+		operation: XcmOperation,
+		call: PhalaCall<T>,
+		who: &MultiLocation,
+		currency_id: CurrencyId,
+	) -> Result<(PhalaCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		let call_as_subaccount = PhalaCall::Utility(Box::new(PhalaUtilityCall::AsDerivative(
+			sub_account_index,
+			Box::new(call),
+		)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		Ok((call_as_subaccount, fee, weight))
+	}
+
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		update_operation: SubstrateLedgerUpdateOperation,
@@ -728,5 +803,9 @@ impl<T: Config> PhalaAgent<T> {
 
 		let unlock_time_unit = TimeUnit::Hour(unlock_hour);
 		Ok(Some(unlock_time_unit))
+	}
+
+	fn get_pha_multilocation() -> MultiLocation {
+		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::phala::ID)) }
 	}
 }

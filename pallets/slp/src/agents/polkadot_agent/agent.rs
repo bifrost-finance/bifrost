@@ -29,6 +29,7 @@ use crate::{
 	traits::{InstructionBuilder, QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
+	Junction::AccountId32,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorsByDelegator,
 	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmWeight,
 };
@@ -48,12 +49,7 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
-	opaque::latest::{
-		Instruction,
-		Junction::{AccountId32, Parachain},
-		Junctions::X1,
-		MultiLocation,
-	},
+	opaque::latest::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
 	VersionedMultiAssets, VersionedMultiLocation,
 };
 
@@ -726,22 +722,8 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		// Check if from is one of our delegators. If not, return error.
-		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
-
-		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-
-		let dest =
-			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
-		let beneficiary =
-			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
+		let (dest, beneficiary) =
+			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
