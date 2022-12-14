@@ -1558,9 +1558,9 @@ pub mod pallet {
 						lg.active >= mins_maxs.delegator_bonded_minimum,
 						Error::<T>::LowerThanMinimum
 					);
-				} else {
-					Err(Error::<T>::Unexpected)?;
 				}
+			} else {
+				Err(Error::<T>::Unexpected)?;
 			}
 
 			// Update the ledger.
