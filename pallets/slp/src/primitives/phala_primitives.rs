@@ -19,9 +19,8 @@
 use crate::MultiLocation;
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
+use node_primitives::{CurrencyId, TokenSymbol};
 use scale_info::TypeInfo;
-use sp_std::vec::Vec;
 
 pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 
@@ -40,5 +39,5 @@ pub struct PhalaLedger<Balance> {
 	/// If the delegator is bonded, it should record the bonded pool id.
 	pub bonded_pool_id: Option<u64>,
 	/// If the delegator is bonded, it should record the bonded pool NFT collection id.
-	pub bonded_pool_collection_id: Option<u32>
+	pub bonded_pool_collection_id: Option<u32>,
 }

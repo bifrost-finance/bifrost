@@ -16,16 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::agents::{BalancesCall, SystemCall, XcmCall};
+use crate::{
+	agents::{BalancesCall, SystemCall, XcmCall},
+	BalanceOf, Config,
+};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use scale_info::TypeInfo;
-use sp_runtime::traits::StaticLookup;
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{VersionedMultiAssets, VersionedMultiLocation};
-use xcm_interface::UtilityCall;
-
-use crate::{BalanceOf, Config};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum PhalaCall<T: Config> {

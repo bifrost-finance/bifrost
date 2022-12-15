@@ -29,7 +29,6 @@ use crate::{
 	traits::{InstructionBuilder, QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
-	Junction::AccountId32,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorsByDelegator,
 	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmWeight,
 };
@@ -50,7 +49,7 @@ use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
 	opaque::latest::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
-	VersionedMultiAssets, VersionedMultiLocation,
+	VersionedMultiAssets,
 };
 
 /// StakingAgent implementation for Kusama/Polkadot
@@ -1448,47 +1447,18 @@ impl<T: Config> PolkadotAgent<T> {
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		// Ensure amount is greater than zero.
-		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-
-		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
-		// not succeed.
-		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
-
-		let (weight, fee_amount) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		// Prepare parameter dest and beneficiary.
 		let dest = MultiLocation::parent();
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
 
 		// Prepare parameter assets.
-		let asset = MultiAsset {
-			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(MultiLocation::parent()),
-		};
-		let assets = MultiAssets::from(asset);
-
-		// Prepare fee asset.
-		let fee_asset = MultiAsset {
-			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(MultiLocation { parents: 0, interior: Here }),
+		let assets = {
+			let asset = MultiAsset {
+				fun: Fungible(amount.unique_saturated_into()),
+				id: Concrete(MultiLocation::parent()),
+			};
+			MultiAssets::from(asset)
 		};
 
-		// prepare for xcm message
-		let msg = Xcm(vec![
-			WithdrawAsset(assets),
-			InitiateReserveWithdraw {
-				assets: All.into(),
-				reserve: dest,
-				xcm: Xcm(vec![
-					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
-				]),
-			},
-		]);
+		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
 
 		//【For xcm v3】
 		// let now = frame_system::Pallet::<T>::block_number();
@@ -1504,13 +1474,6 @@ impl<T: Config> PolkadotAgent<T> {
 		// let response_info = QueryResponseInfo { destination, query_id, max_weight: 0 };
 		// let report_error = Xcm(vec![ReportError(response_info)]);
 		// msg.0.insert(0, SetAppendix(report_error));
-
-		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
-			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmFailure)?;
-
-		Ok(())
 	}
 
 	fn inner_construct_xcm_message(

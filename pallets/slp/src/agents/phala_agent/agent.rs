@@ -22,11 +22,10 @@ use crate::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
 		XcmOperation, TIMEOUT_BLOCKS,
 	},
-	traits::{InstructionBuilder, QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLatestTuneRecord,
-	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee, XcmWeight,
+	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
+	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -36,22 +35,18 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::VtokenMintingOperator;
 use sp_runtime::{
-	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedFrom,
-		UniqueSaturatedInto, Zero,
-	},
+	traits::{CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
 	opaque::latest::{
-		Instruction,
-		Junction::{AccountId32, GeneralIndex, Parachain},
+		Junction::{GeneralIndex, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
-	VersionedMultiAssets, VersionedMultiLocation,
+	VersionedMultiAssets,
 };
 use xcm_interface::traits::parachains;
 
@@ -118,9 +113,9 @@ impl<T: Config>
 		);
 
 		// Construct xcm message.
-		let wrapCall = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Wrap(amount));
-		let contributeCall = PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
-		let calls = vec![Box::new(wrapCall), Box::new(contributeCall)];
+		let wrap_call = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Wrap(amount));
+		let contribute_call = PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
+		let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -215,8 +210,8 @@ impl<T: Config>
 		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
 
 		// Construct xcm message.
-		let withdrawCall = PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
-		let calls = vec![Box::new(withdrawCall)];
+		let withdraw_call = PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
+		let calls = vec![Box::new(withdraw_call)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -246,8 +241,8 @@ impl<T: Config>
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
 	fn unbond_all(
 		&self,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -411,10 +406,10 @@ impl<T: Config>
 	/// It's automatically calculated, So we don't need to do anything here.
 	fn payout(
 		&self,
-		who: &MultiLocation,
-		validator: &MultiLocation,
-		when: &Option<TimeUnit>,
-		currency_id: CurrencyId,
+		_who: &MultiLocation,
+		_validator: &MultiLocation,
+		_when: &Option<TimeUnit>,
+		_currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -439,13 +434,13 @@ impl<T: Config>
 		}?;
 
 		// Construct xcm message.
-		let checkAndMaybeForceWithdrawCall =
+		let check_and_maybe_force_withdraw_call =
 			PhalaCall::PhalaVault(VaultCall::<T>::CheckAndMaybeForceWithdraw(pool_id));
-		let calls = vec![Box::new(checkAndMaybeForceWithdrawCall)];
+		let calls = vec![Box::new(check_and_maybe_force_withdraw_call)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Bond,
 			calls,
 			who,
@@ -459,7 +454,7 @@ impl<T: Config>
 	}
 
 	/// Not supported in Phala.
-	fn chill(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -517,6 +512,19 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
+		// Make sure receiving account is one of the currency_id delegators.
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Make sure from account is the entrance account of vtoken-minting module.
+		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+
+		Self::do_transfer_to(from, to, amount, currency_id)?;
+
 		Ok(())
 	}
 
@@ -621,7 +629,7 @@ impl<T: Config>
 		call: PhalaCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
-		currency_id: CurrencyId,
+		_currency_id: CurrencyId,
 	) -> Result<Xcm<()>, Error<T>> {
 		let asset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
@@ -807,5 +815,25 @@ impl<T: Config> PhalaAgent<T> {
 
 	fn get_pha_multilocation() -> MultiLocation {
 		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::phala::ID)) }
+	}
+
+	fn do_transfer_to(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		let dest = Self::get_pha_multilocation();
+
+		// Prepare parameter assets.
+		let assets = {
+			let asset = MultiAsset {
+				fun: Fungible(amount.unique_saturated_into()),
+				id: Concrete(Self::get_pha_multilocation()),
+			};
+			MultiAssets::from(asset)
+		};
+
+		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
 	}
 }

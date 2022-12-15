@@ -20,8 +20,9 @@ use crate::{
 	vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Encode,
 	Junction::{AccountId32, Parachain},
-	Junctions::X1,
-	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Zero,
+	Junctions::{Here, X1},
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
+	Zero,
 };
 use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
@@ -32,7 +33,7 @@ use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
-use xcm::{opaque::latest::NetworkId::Any, VersionedMultiLocation};
+use xcm::prelude::*;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -211,5 +212,55 @@ impl<T: Config> Pallet<T> {
 			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
 
 		Ok((dest, beneficiary))
+	}
+
+	pub(crate) fn inner_do_transfer_to(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+		assets: MultiAssets,
+		dest: &MultiLocation,
+	) -> Result<(), Error<T>> {
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
+		// not succeed.
+		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
+
+		let (weight, fee_amount) =
+			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// Prepare parameter beneficiary.
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
+		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
+
+		// Prepare fee asset.
+		let fee_asset = MultiAsset {
+			fun: Fungible(fee_amount.unique_saturated_into()),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
+		};
+
+		// prepare for xcm message
+		let msg = Xcm(vec![
+			WithdrawAsset(assets),
+			InitiateReserveWithdraw {
+				assets: All.into(),
+				reserve: dest.clone(),
+				xcm: Xcm(vec![
+					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+				]),
+			},
+		]);
+
+		// Execute the xcm message.
+		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+			.ensure_complete()
+			.map_err(|_| Error::<T>::XcmFailure)?;
+
+		Ok(())
 	}
 }
