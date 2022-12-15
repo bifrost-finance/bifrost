@@ -623,7 +623,19 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Ok(())
+		// Get the delegator ledger
+		let ledger =
+			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		if let Ledger::Phala(phala_ledger) = ledger {
+			// Check if ledger bonding and unlocking amount is zero. If not, return error.
+			ensure!(phala_ledger.active_shares.is_zero(), Error::<T>::AmountNotZero);
+			ensure!(phala_ledger.unlocking_shares.is_zero(), Error::<T>::AmountNotZero);
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
+
+		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
 	/// Add a new serving delegator for a particular currency.
