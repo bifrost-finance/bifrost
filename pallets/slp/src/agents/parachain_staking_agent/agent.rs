@@ -963,7 +963,8 @@ impl<T: Config>
 		_who: &MultiLocation,
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+		_if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 

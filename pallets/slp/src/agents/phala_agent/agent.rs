@@ -529,13 +529,45 @@ impl<T: Config>
 	}
 
 	// Convert token to another token.
+	// if we convert from currency_id to some other currency, then if_from_currency should be true.
+	// if we convert from some other currency to currency_id, then if_from_currency should be false.
 	fn convert_asset(
 		&self,
-		_who: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+		if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
+		// Check if delegator exists.
+		ensure!(
+			DelegatorLedgers::<T>::contains_key(currency_id, who.clone()),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Construct xcm message.
+		let call = if if_from_currency {
+			PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Wrap(amount))
+		} else {
+			PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Unwrap(amount))
+		};
+		let calls = vec![Box::new(call)];
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			XcmOperation::ConvertAsset,
+			calls,
+			who,
+			currency_id,
+		)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(query_id)
 	}
 
 	fn tune_vtoken_exchange_rate(

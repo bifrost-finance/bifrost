@@ -145,7 +145,8 @@ pub trait StakingAgent<
 		who: &MultiLocation,
 		amount: Balance,
 		currency_id: CurrencyId,
-	) -> Result<(), Error>;
+		if_from_currency: bool,
+	) -> Result<QueryId, Error>;
 
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(

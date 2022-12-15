@@ -18,13 +18,13 @@
 
 mod filecoin_primitives;
 mod moonbeam_primitives;
-mod polkadot_primitives;
 mod phala_primitives;
+mod polkadot_primitives;
 
 pub use filecoin_primitives::*;
 pub use moonbeam_primitives::*;
-pub use polkadot_primitives::*;
 pub use phala_primitives::*;
+pub use polkadot_primitives::*;
 
 use crate::XcmWeight;
 use codec::{Decode, Encode};
@@ -129,4 +129,5 @@ pub enum XcmOperation {
 	CancelLeave,
 	XtokensTransferBack,
 	ExecuteLeave,
+	ConvertAsset,
 }

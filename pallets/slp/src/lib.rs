@@ -1015,18 +1015,23 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// Convert token to another token.
+		// if we convert from currency_id to some other currency, then if_from_currency should be
+		// true. if we convert from some other currency to currency_id, then if_from_currency should
+		// be false.
 		#[pallet::weight(T::WeightInfo::convert_asset())]
 		pub fn convert_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
+			if_from_currency: bool,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.convert_asset(&who, amount, currency_id)?;
+			staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
