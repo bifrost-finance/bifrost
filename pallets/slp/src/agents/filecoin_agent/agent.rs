@@ -383,6 +383,16 @@ impl<T: Config>
 		Ok(())
 	}
 
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		Err(Error::<T>::Unsupported)
+	}
+
 	/// For filecoin, instead of delegator(miner) account, "who" should be a
 	/// validator(worker) account, since we tune extrange rate once per worker by
 	/// aggregating all its miner accounts' interests.

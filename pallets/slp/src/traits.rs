@@ -139,6 +139,14 @@ pub trait StakingAgent<
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		who: &MultiLocation,
+		amount: Balance,
+		currency_id: CurrencyId,
+	) -> Result<(), Error>;
+
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
 		&self,

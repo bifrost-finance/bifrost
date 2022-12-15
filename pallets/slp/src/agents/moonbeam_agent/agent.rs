@@ -863,6 +863,16 @@ impl<T: Config>
 		Ok(())
 	}
 
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		Err(Error::<T>::Unsupported)
+	}
+
 	fn tune_vtoken_exchange_rate(
 		&self,
 		_who: &Option<MultiLocation>,

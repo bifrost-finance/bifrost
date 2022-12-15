@@ -323,6 +323,12 @@ pub mod pallet {
 			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
+		ConvertAsset {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			#[codec(compact)]
+			amount: BalanceOf<T>,
+		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
 			#[codec(compact)]
@@ -1005,6 +1011,25 @@ pub mod pallet {
 				to: *to,
 				amount,
 			});
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::convert_asset())]
+		pub fn convert_asset(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+			#[pallet::compact] amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.convert_asset(&who, amount, currency_id)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
 
 			Ok(())
 		}

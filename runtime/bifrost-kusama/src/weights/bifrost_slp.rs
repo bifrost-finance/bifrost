@@ -90,6 +90,7 @@ pub trait WeightInfo {
 	fn unbond() -> Weight;
 	fn unbond_all() -> Weight;
 	fn undelegate() -> Weight;
+	fn convert_asset() -> Weight;
 }
 
 /// Weights for bifrost_slp using the Bifrost node and recommended hardware.
@@ -247,6 +248,13 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(9 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
+
+	fn convert_asset() -> Weight {
+		(225_916_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(9 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
 		(77_203_000 as Weight)
@@ -625,6 +633,13 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
 	}
+
+	fn convert_asset() -> Weight {
+		(225_916_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
+	}
+
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
 		(77_203_000 as Weight)
