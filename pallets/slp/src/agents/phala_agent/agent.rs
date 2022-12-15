@@ -35,7 +35,9 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::VtokenMintingOperator;
 use sp_runtime::{
-	traits::{CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	traits::{
+		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+	},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -574,9 +576,38 @@ impl<T: Config>
 		&self,
 		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
-		_vtoken_amount: BalanceOf<T>,
+		shares_amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
+		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Ensure delegator has bonded to a validator.
+		if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, who.clone()) {
+			ensure!(ledger.bonded_pool_id.is_some(), Error::<T>::DelegatorNotBonded);
+		} else {
+			Err(Error::<T>::DelegatorNotExist)?;
+		}
+
+		Pallet::<T>::tune_vtoken_exchange_rate_without_update_ledger(
+			who,
+			token_amount,
+			currency_id,
+		)?;
+
+		// update delegator ledger
+		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
+			if let Some(Ledger::Phala(ref mut old_phala_ledger)) = old_ledger {
+				// Increase both the active and total amount.
+				old_phala_ledger.active_shares = old_phala_ledger
+					.active_shares
+					.checked_add(&shares_amount)
+					.ok_or(Error::<T>::OverFlow)?;
+				Ok(())
+			} else {
+				Err(Error::<T>::Unexpected)?
+			}
+		})?;
+
 		Ok(())
 	}
 

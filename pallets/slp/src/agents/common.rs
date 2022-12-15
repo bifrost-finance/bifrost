@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Encode,
+	vec, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
@@ -260,6 +260,46 @@ impl<T: Config> Pallet<T> {
 		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
+
+		Ok(())
+	}
+
+	pub(crate) fn tune_vtoken_exchange_rate_without_update_ledger(
+		who: &MultiLocation,
+		token_amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		// ensure who is a valid delegator
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Get current TimeUnit.
+		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+			.ok_or(Error::<T>::TimeUnitNotExist)?;
+		// Get DelegatorLatestTuneRecord for the currencyId.
+		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(currency_id, &who);
+		// ensure each delegator can only tune once per TimeUnit.
+		ensure!(
+			latest_time_unit_op != Some(current_time_unit.clone()),
+			Error::<T>::DelegatorAlreadyTuned
+		);
+
+		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
+
+		// Check whether "who" is an existing delegator.
+		ensure!(
+			DelegatorLedgers::<T>::contains_key(currency_id, who),
+			Error::<T>::DelegatorNotBonded
+		);
+
+		// Tune the vtoken exchange rate.
+		T::VtokenMinting::increase_token_pool(currency_id, token_amount)
+			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+
+		// Update the DelegatorLatestTuneRecord<T> storage.
+		DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);
 
 		Ok(())
 	}

@@ -27,10 +27,10 @@ use crate::{
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
 	},
 	traits::{InstructionBuilder, QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
-	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorsByDelegator,
-	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmWeight,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
+	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
+	XcmDestWeightAndFee, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -803,34 +803,11 @@ impl<T: Config>
 	) -> Result<(), Error<T>> {
 		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// ensure who is a valid delegator
-		ensure!(
-			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
-			Error::<T>::DelegatorNotExist
-		);
-
-		// Get current TimeUnit.
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		// Get DelegatorLatestTuneRecord for the currencyId.
-		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(currency_id, &who);
-		// ensure each delegator can only tune once per TimeUnit.
-		ensure!(
-			latest_time_unit_op != Some(current_time_unit.clone()),
-			Error::<T>::DelegatorAlreadyTuned
-		);
-
-		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
-
-		// Check whether "who" is an existing delegator.
-		ensure!(
-			DelegatorLedgers::<T>::contains_key(currency_id, who),
-			Error::<T>::DelegatorNotBonded
-		);
-
-		// Tune the vtoken exchange rate.
-		T::VtokenMinting::increase_token_pool(currency_id, token_amount)
-			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+		Pallet::<T>::tune_vtoken_exchange_rate_without_update_ledger(
+			who,
+			token_amount,
+			currency_id,
+		)?;
 
 		// update delegator ledger
 		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
@@ -846,9 +823,6 @@ impl<T: Config>
 				Err(Error::<T>::Unexpected)?
 			}
 		})?;
-
-		// Update the DelegatorLatestTuneRecord<T> storage.
-		DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);
 
 		Ok(())
 	}
