@@ -1239,6 +1239,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-indices",
  "pallet-utility",
  "pallet-xcm",
  "parachain-staking",

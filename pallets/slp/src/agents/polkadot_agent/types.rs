@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
@@ -23,42 +24,62 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 
-use crate::{BalanceOf, Config};
-
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum SubstrateCall<T: Config> {
-	Kusama(KusamaCall<T>),
-	Polkadot(PolkadotCall<T>),
+pub mod kusama {
+	use crate::{
+		agents::{BalancesCall, StakingCall, SystemCall, XcmCall},
+		*,
+	};
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelaychainCall<T: Config> {
+		#[codec(index = 0)]
+		System(SystemCall),
+		#[codec(index = 4)]
+		Balances(BalancesCall<T>),
+		#[codec(index = 6)]
+		Staking(StakingCall<T>),
+		#[codec(index = 24)]
+		Utility(Box<UtilityCall<Self>>),
+		#[codec(index = 99)]
+		Xcm(Box<XcmCall>),
+	}
+
+	#[derive(Encode, Decode, RuntimeDebug, Clone)]
+	pub enum UtilityCall<RelaychainCall> {
+		#[codec(index = 1)]
+		AsDerivative(u16, Box<RelaychainCall>),
+		#[codec(index = 2)]
+		BatchAll(Box<Vec<Box<RelaychainCall>>>),
+	}
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum KusamaCall<T: Config> {
-	#[codec(index = 0)]
-	System(SystemCall),
-	#[codec(index = 4)]
-	Balances(BalancesCall<T>),
-	#[codec(index = 6)]
-	Staking(StakingCall<T>),
-	#[codec(index = 24)]
-	Utility(Box<KusamaUtilityCall<Self>>),
-	#[codec(index = 99)]
-	Xcm(Box<XcmCall>),
-}
+pub mod polkadot {
+	use crate::{
+		agents::{BalancesCall, StakingCall, SystemCall, XcmCall},
+		*,
+	};
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelaychainCall<T: Config> {
+		#[codec(index = 0)]
+		System(SystemCall),
+		#[codec(index = 5)]
+		Balances(BalancesCall<T>),
+		#[codec(index = 7)]
+		Staking(StakingCall<T>),
+		#[codec(index = 26)]
+		Utility(Box<UtilityCall<Self>>),
+		#[codec(index = 99)]
+		Xcm(Box<XcmCall>),
+	}
 
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum PolkadotCall<T: Config> {
-	#[codec(index = 0)]
-	System(SystemCall),
-	#[codec(index = 5)]
-	Balances(BalancesCall<T>),
-	#[codec(index = 7)]
-	Staking(StakingCall<T>),
-	#[codec(index = 26)]
-	Utility(Box<PolkadotUtilityCall<Self>>),
-	#[codec(index = 99)]
-	Xcm(Box<XcmCall>),
+	#[derive(Encode, Decode, RuntimeDebug, Clone)]
+	pub enum UtilityCall<RelaychainCall> {
+		#[codec(index = 1)]
+		AsDerivative(u16, Box<RelaychainCall>),
+		#[codec(index = 2)]
+		BatchAll(Box<Vec<Box<RelaychainCall>>>),
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
@@ -71,22 +92,6 @@ pub enum SystemCall {
 pub enum BalancesCall<T: Config> {
 	#[codec(index = 3)]
 	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum KusamaUtilityCall<KusamaCall> {
-	#[codec(index = 1)]
-	AsDerivative(u16, Box<KusamaCall>),
-	#[codec(index = 2)]
-	BatchAll(Box<Vec<Box<KusamaCall>>>),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum PolkadotUtilityCall<PolkadotCall> {
-	#[codec(index = 1)]
-	AsDerivative(u16, Box<PolkadotCall>),
-	#[codec(index = 2)]
-	BatchAll(Box<Vec<Box<PolkadotCall>>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
