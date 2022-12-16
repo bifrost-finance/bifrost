@@ -26,7 +26,7 @@ use sp_std::collections::btree_map::BTreeMap; //{borrow::ToOwned, collections::b
 pub struct IncentiveConfig<CurrencyId, Balance> {
 	rewardRate: BTreeMap<CurrencyId, Balance>, // Balance,
 	rewardPerTokenStored: BTreeMap<CurrencyId, Balance>,
-	rewardsDuration: Timestamp,
+	pub rewardsDuration: Timestamp,
 	periodFinish: Timestamp,
 	lastUpdateTime: Timestamp,
 }
@@ -171,38 +171,72 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Motion
-	pub fn notifyRewardAmount(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
+	#[transactional]
+	pub fn notifyRewardAmount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
 		Self::updateReward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		// let mut rewardRate;
-		// if current_timestamp >= conf.periodFinish {
-		// 	conf.rewardRate = reward
-		// 		.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
-		// 		.ok_or(Error::<T>::CalculationOverflow)?;
-		// } else {
-		// 	let remaining = conf
-		// 		.periodFinish
-		// 		.saturating_sub(current_timestamp)
-		// 		.saturated_into::<BalanceOf<T>>();
-		// 	let leftover: BalanceOf<T> = remaining.saturating_mul(conf.rewardRate);
-		// 	conf.rewardRate = reward
-		// 		.saturating_add(leftover)
-		// 		.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
-		// 		.ok_or(Error::<T>::CalculationOverflow)?;
-		// }
+		let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+			rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
+
+		if current_timestamp >= conf.periodFinish {
+			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+				let currency_amount = T::MultiCurrency::free_balance(
+					*currency,
+					&T::VeMintingPalletId::get().into_account_truncating(),
+				);
+				// ensure!(*reward <= currency_amount, Error::<T>::Expired);
+				let new_reward = reward
+					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+					.unwrap_or_else(Zero::zero);
+				conf.rewardRate
+					.entry(*currency)
+					.and_modify(|total_reward| {
+						*total_reward = new_reward;
+					})
+					.or_insert(new_reward);
+				Ok(())
+			})?;
+
+		// conf.rewardRate = reward
+		// 	.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+		// 	.ok_or(Error::<T>::CalculationOverflow)?;
+		} else {
+			let remaining = conf
+				.periodFinish
+				.saturating_sub(current_timestamp)
+				.saturated_into::<BalanceOf<T>>();
+			// let leftover: BalanceOf<T> = remaining.saturating_mul(conf.rewardRate);
+			// conf.rewardRate = reward
+			// 	.saturating_add(leftover)
+			// 	.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+			// 	.ok_or(Error::<T>::CalculationOverflow)?;
+			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+				let leftover: BalanceOf<T> = reward.saturating_mul(remaining);
+				let total_reward: BalanceOf<T> = reward.saturating_add(leftover);
+				let currency_amount = T::MultiCurrency::free_balance(
+					*currency,
+					&T::VeMintingPalletId::get().into_account_truncating(),
+				);
+				ensure!(total_reward <= currency_amount, Error::<T>::Expired);
+				let new_reward = total_reward
+					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+					.unwrap_or_else(|| BalanceOf::<T>::zero());
+				conf.rewardRate
+					.entry(*currency)
+					.and_modify(|total_reward| {
+						*total_reward = new_reward;
+					})
+					.or_insert(new_reward);
+				Ok(())
+			})?;
+		};
 		let balance = Self::balanceOf(
 			&T::VeMintingPalletId::get().into_account_truncating(),
 			current_timestamp,
 		)?;
-		// ensure!(
-		// 	conf.rewardRate <=
-		// 		balance
-		// 			.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
-		// 			.ok_or(Error::<T>::CalculationOverflow)?,
-		// 	Error::<T>::NotExpire
-		// );
+
 		conf.lastUpdateTime = current_timestamp;
 		conf.periodFinish = current_timestamp.saturating_add(conf.rewardsDuration);
 

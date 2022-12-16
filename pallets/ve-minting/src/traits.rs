@@ -28,11 +28,10 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn totalSupply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
-	fn create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult;
+	fn create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
+	fn increase_amount(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	fn increase_unlock_time(addr: &AccountId, _unlock_time: Timestamp) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
-
-// impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T>
-// {}
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
 	for Pallet<T>
@@ -44,19 +43,42 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
+		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
 
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		ensure!(_unlock_time > current_timestamp, Error::<T>::NotExpire);
+		ensure!(unlock_time > current_timestamp, Error::<T>::Expired);
 		ensure!(
-			_unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
-			Error::<T>::NotExpire
+			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
+			Error::<T>::Expired
 		);
-		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::NotExpire); // Withdraw old tokens first
-		ensure!(_value > BalanceOf::<T>::zero(), Error::<T>::NotExpire); // need non-zero value
+		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
+		ensure!(_value > BalanceOf::<T>::zero(), Error::<T>::Expired); // need non-zero value
 
-		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
 		Self::_deposit_for(addr, _value, unlock_time, _locked)
+	}
+
+	fn increase_unlock_time(addr: &AccountIdOf<T>, _unlock_time: Timestamp) -> DispatchResult {
+		let ve_config = Self::ve_configs();
+		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
+		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
+
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		ensure!(_locked.end > current_timestamp, Error::<T>::Expired);
+		ensure!(unlock_time > _locked.end, Error::<T>::Expired);
+		ensure!(
+			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
+			Error::<T>::Expired
+		);
+		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
+
+		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)
+	}
+
+	fn increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
+		Self::_deposit_for(addr, value, 0, _locked)
 	}
 
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
@@ -68,7 +90,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let mut _locked = Self::locked(addr);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		ensure!(current_timestamp > _locked.end, Error::<T>::NotExpire);
+		ensure!(current_timestamp > _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
 		let old_locked: LockedBalance<BalanceOf<T>> = _locked.clone();
 		_locked.end = Zero::zero();
@@ -113,7 +135,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let current_block_number: BlockNumberFor<T> =
 			frame_system::Pallet::<T>::block_number().into();
-		ensure!(_block <= current_block_number, Error::<T>::NotExpire);
+		ensure!(_block <= current_block_number, Error::<T>::Expired);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 

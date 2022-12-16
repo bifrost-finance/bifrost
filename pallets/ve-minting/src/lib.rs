@@ -142,7 +142,7 @@ pub mod pallet {
 		CalculationOverflow,
 		ExistentialDeposit,
 		DistributionNotExist,
-		NotExpire,
+		Expired,
 	}
 
 	#[pallet::storage]
@@ -229,8 +229,8 @@ pub mod pallet {
 			// min_mint: BalanceOf<T>,             // 最小铸造值
 			// min_lock_period: BlockNumberFor<T>, // 最小锁仓期
 			max_time: Option<Timestamp>, // 最大锁仓期
-			MULTIPLIER: Option<u128>,
-			WEEK: Option<Timestamp>,
+			multiplier: Option<u128>,
+			week: Option<Timestamp>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -238,13 +238,12 @@ pub mod pallet {
 			if let Some(max_time) = max_time {
 				ve_config.max_time = max_time;
 			};
-			if let Some(MULTIPLIER) = MULTIPLIER {
+			if let Some(MULTIPLIER) = multiplier {
 				ve_config.MULTIPLIER = MULTIPLIER;
 			};
-			if let Some(WEEK) = WEEK {
+			if let Some(WEEK) = week {
 				ve_config.WEEK = WEEK;
 			};
-
 			VeConfigs::<T>::set(ve_config);
 
 			Self::deposit_event(Event::Created {});
@@ -252,9 +251,20 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
-		pub fn create_distribution(origin: OriginFor<T>) -> DispatchResult {
+		pub fn notify_rewards(
+			origin: OriginFor<T>,
+			rewards_duration: Option<Timestamp>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			if let Some(rewardsDuration) = rewards_duration {
+				let mut incentive_config = Self::incentive_configs();
+				incentive_config.rewardsDuration = rewardsDuration;
+				IncentiveConfigs::<T>::set(incentive_config);
+			};
+
+			Self::notifyRewardAmount(rewards)?;
 			Self::deposit_event(Event::Created {});
 			Ok(())
 		}
