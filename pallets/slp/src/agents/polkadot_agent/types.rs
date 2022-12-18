@@ -84,7 +84,7 @@ pub mod polkadot {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum SystemCall {
-	#[codec(index = 8)]
+	#[codec(index = 7)]
 	RemarkWithEvent(Box<Vec<u8>>),
 }
 
