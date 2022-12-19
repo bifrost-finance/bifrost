@@ -52,7 +52,7 @@ use xcm::{
 	opaque::latest::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
-		MultiLocation,
+		MultiLocation, WeightLimit,
 	},
 	VersionedMultiLocation,
 };
@@ -810,16 +810,12 @@ impl<T: Config>
 			),
 		}));
 
-		let (weight, _) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::XtokensTransferBack)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
 		// Construct xcm message.
 		let call = MoonbeamCall::Xtokens(MoonbeamXtokensCall::Transfer(
 			MoonbeamCurrencyId::SelfReserve,
 			amount.unique_saturated_into(),
 			dest,
-			weight,
+			WeightLimit::Unlimited,
 		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
