@@ -73,10 +73,7 @@ where
 }
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	MultiLocation::new(
-		1,
-		X2(Parachain(para_id.into()), GeneralKey(id.encode().try_into().unwrap())),
-	)
+	MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap())))
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
@@ -137,17 +134,6 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 
 		match location {
 			MultiLocation { parents, interior } if parents == 1 => match interior {
-				X2(Parachain(id), GeneralKey(key)) if ParaId::from(id) == T::get() => {
-					// decode the general key
-					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
-						match currency_id {
-							Native(BNC) => Some(currency_id),
-							_ => None,
-						}
-					} else {
-						None
-					}
-				},
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonbeam::ID) &&
 						(index == parachains::moonbeam::PALLET_ID)) =>
