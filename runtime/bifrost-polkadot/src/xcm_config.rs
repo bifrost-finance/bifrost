@@ -72,7 +72,7 @@ where
 	}
 }
 
-fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
+fn native_currency_location(id: CurrencyId) -> MultiLocation {
 	MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap())))
 }
 
@@ -105,7 +105,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 
 		match id {
 			Token2(DOT_TOKEN_ID) => Some(MultiLocation::parent()),
-			Native(BNC) => Some(native_currency_location(id, T::get())),
+			Native(BNC) => Some(native_currency_location(id)),
 			// Moonbeam Native token
 			Token2(GLMR_TOKEN_ID) => Some(MultiLocation::new(
 				1,
