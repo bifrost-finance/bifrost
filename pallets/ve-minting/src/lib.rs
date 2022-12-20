@@ -333,7 +333,7 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.fxs_amt = Self::balanceOf(addr)?;
+				last_point.fxs_amt = Self::balanceOf(addr, None)?;
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point.clone();
@@ -389,7 +389,7 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_timestamp {
 					last_point.blk = current_block_number;
-					last_point.fxs_amt = Self::balanceOf(addr)?;
+					last_point.fxs_amt = Self::balanceOf(addr, None)?;
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);

@@ -23,7 +23,7 @@ use crate::*;
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
 	fn withdraw(addr: &AccountId) -> DispatchResult;
-	fn balanceOf(addr: &AccountId) -> Result<Balance, DispatchError>;
+	fn balanceOf(addr: &AccountId, time: Option<Timestamp>) -> Result<Balance, DispatchError>;
 	fn balanceOfAt(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
 	fn totalSupply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
@@ -109,9 +109,21 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn balanceOf(addr: &AccountIdOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-		let _t: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+	fn balanceOf(
+		addr: &AccountIdOf<T>,
+		time: Option<Timestamp>,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		// if let Some(_t) = time {
+		// 	_t
+		// } else {
+		// 	sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis()
+		// };
+		let _t = match time {
+			Some(_t) => _t,
+			None => sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis(),
+		};
+		// let _t: Timestamp =
+		// 	sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());

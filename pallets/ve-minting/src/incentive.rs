@@ -73,7 +73,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::rewardPerToken();
 		// let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
-		let vetoken_balance = Self::balanceOf(addr)?;
+		let vetoken_balance = Self::balanceOf(addr, None)?;
 		// rewards.iter_mut().for_each(|(currency, reward)| {
 		// 	*reward = reward.saturating_add(
 		// 		vetoken_balance.saturating_mul(
@@ -230,7 +230,8 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 		};
-		let balance = Self::balanceOf(&T::VeMintingPalletId::get().into_account_truncating())?;
+		let balance =
+			Self::balanceOf(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
 
 		conf.lastUpdateTime = current_timestamp;
 		conf.periodFinish = current_timestamp.saturating_add(conf.rewardsDuration);
