@@ -30,14 +30,18 @@ use node_primitives::TokenInfo;
 fn _checkpoint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
+		let current_timestamp: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		let old_locked = LockedBalance { amount: 0, end: 0 };
-		let new_locked = LockedBalance { amount: 10000000000000, end: 1668752990696 };
+		let new_locked =
+			LockedBalance { amount: 10000000000000, end: current_timestamp + 365 * 86400 * 1000 };
 
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
 			Some(4 * 365 * 86400),
 			Some(10_u128.pow(18)),
-			Some(7 * 86400)
+			Some(7 * 86400),
+			Some(0)
 		));
 		// assert_eq!(VeMinting::ve_configs(), VeConfig::default());
 		// VeMinting::_checkpoint(&BOB, old_locked, new_locked);
@@ -45,9 +49,7 @@ fn _checkpoint() {
 		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
 		// let mut u_point = Point::<BalanceOf<Runtime>, BlockNumberFor<Runtime>>::default();
 		// assert_eq!(VeMinting::user_point_history(&BOB, U256::from(1)), u_point);
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), Ok(0));
+		assert_eq!(VeMinting::balanceOf(&BOB), Ok(0));
 	});
 }
 
@@ -59,7 +61,8 @@ fn update_reward() {
 			Origin::signed(ALICE),
 			Some(4 * 365 * 86400 * 1000),
 			Some(10_u128.pow(12)),
-			Some(7 * 86400)
+			Some(7 * 86400),
+			Some(0)
 		));
 
 		System::set_block_number(System::block_number() + 20);
@@ -68,16 +71,20 @@ fn update_reward() {
 		log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		log::debug!("{:?}", System::block_number());
-		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1671752990696));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+		assert_ok!(VeMinting::create_lock(
+			&BOB,
+			10000000000000,
+			current_timestamp + 365 * 86400 * 1000,
+		));
+		log::debug!("{:?}", VeMinting::balanceOf(&BOB));
 
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+		log::debug!("{:?}", VeMinting::balanceOf(&BOB));
 		assert_ok!(VeMinting::updateReward(Some(&BOB)));
 
-		// 	assert_eq!(VeMinting::balanceOf(&BOB, current_timestamp), Ok(0));
-		// 	assert_eq!(VeMinting::balanceOfAt(&BOB, 0), Ok(0));
-		// 	assert_eq!(VeMinting::balanceOfAt(&BOB, System::block_number()), Ok(0));
+		assert_eq!(VeMinting::balanceOf(&BOB), Ok(20000000000000));
+		// assert_eq!(VeMinting::balanceOfAt(&BOB, 0), Ok(0));
+		// assert_eq!(VeMinting::balanceOfAt(&BOB, System::block_number()), Ok(0));
 	});
 }
 
@@ -97,3 +104,34 @@ fn asset_registry() {
 		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
 	}
 }
+
+// #[test]
+// fn notifyRewardAmount() {
+// 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+// 		asset_registry();
+// 		assert_ok!(VeMinting::set_config(
+// 			Origin::signed(ALICE),
+// 			Some(4 * 365 * 86400 * 1000),
+// 			Some(10_u128.pow(12)),
+// 			Some(7 * 86400)
+// 		));
+
+// 		System::set_block_number(System::block_number() + 20);
+// 		let current_timestamp: Timestamp =
+// 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+// 		log::debug!("{:?}", System::block_number());
+// 		System::set_block_number(System::block_number() + 20);
+// 		log::debug!("{:?}", System::block_number());
+// 		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1671752990696));
+// 		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+
+// 		let rewards = vec![(KSM, 1000)];
+// 		assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
+// 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
+// 		log::debug!("{:?}", VeMinting::balanceOf(&BOB, current_timestamp));
+// 		assert_ok!(VeMinting::updateReward(Some(&BOB)));
+// 		// let rewards = vec![(KSM, 1000)];
+// 		// assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
+// 		// assert_eq!(Tokens::free_balance(KSM, &TREASURY_ACCOUNT), ed);
+// 	});
+// }

@@ -71,11 +71,9 @@ impl<T: Config> Pallet<T> {
 	pub fn earned(
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		let reward_per_token = Self::rewardPerToken();
 		// let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
-		let vetoken_balance = Self::balanceOf(addr, current_timestamp)?;
+		let vetoken_balance = Self::balanceOf(addr)?;
 		// rewards.iter_mut().for_each(|(currency, reward)| {
 		// 	*reward = reward.saturating_add(
 		// 		vetoken_balance.saturating_mul(
@@ -232,10 +230,7 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 		};
-		let balance = Self::balanceOf(
-			&T::VeMintingPalletId::get().into_account_truncating(),
-			current_timestamp,
-		)?;
+		let balance = Self::balanceOf(&T::VeMintingPalletId::get().into_account_truncating())?;
 
 		conf.lastUpdateTime = current_timestamp;
 		conf.periodFinish = current_timestamp.saturating_add(conf.rewardsDuration);

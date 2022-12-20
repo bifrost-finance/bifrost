@@ -53,6 +53,7 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::collections::btree_map::BTreeMap;
+use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
 pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
@@ -75,6 +76,7 @@ pub struct VeConfig<Balance> {
 	max_time: Timestamp,
 	MULTIPLIER: u128,
 	WEEK: Timestamp,
+	VOTE_WEIGHT_MULTIPLIER: Balance,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -231,6 +233,7 @@ pub mod pallet {
 			max_time: Option<Timestamp>, // 最大锁仓期
 			multiplier: Option<u128>,
 			week: Option<Timestamp>,
+			vote_weight_multiplier: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -243,6 +246,9 @@ pub mod pallet {
 			};
 			if let Some(WEEK) = week {
 				ve_config.WEEK = WEEK;
+			};
+			if let Some(VOTE_WEIGHT_MULTIPLIER) = vote_weight_multiplier {
+				ve_config.VOTE_WEIGHT_MULTIPLIER = VOTE_WEIGHT_MULTIPLIER;
 			};
 			VeConfigs::<T>::set(ve_config);
 
@@ -326,8 +332,8 @@ pub mod pallet {
 			};
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
-				// } else {
-				// 	last_point.fxs_amt = Self::balanceOf(addr)
+			} else {
+				last_point.fxs_amt = Self::balanceOf(addr)?;
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point.clone();
@@ -383,7 +389,7 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_timestamp {
 					last_point.blk = current_block_number;
-					// last_point.fxs_amt = ERC20(self.token).balanceOf(self);
+					last_point.fxs_amt = Self::balanceOf(addr)?;
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);

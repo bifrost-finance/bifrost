@@ -23,7 +23,7 @@ use crate::*;
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
 	fn withdraw(addr: &AccountId) -> DispatchResult;
-	fn balanceOf(addr: &AccountId, _t: Timestamp) -> Result<Balance, DispatchError>;
+	fn balanceOf(addr: &AccountId) -> Result<Balance, DispatchError>;
 	fn balanceOfAt(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
 	fn totalSupply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
@@ -109,7 +109,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn balanceOf(addr: &AccountIdOf<T>, _t: Timestamp) -> Result<BalanceOf<T>, DispatchError> {
+	fn balanceOf(addr: &AccountIdOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+		let _t: Timestamp =
+			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());
@@ -125,7 +127,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			if last_point.bias < Zero::zero() {
 				last_point.bias = Zero::zero();
 			}
-			Ok(last_point.bias)
+			let ve_config = Self::ve_configs();
+			Ok(last_point.fxs_amt + (Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * last_point.bias))
 		}
 	}
 
@@ -182,7 +185,12 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			// (_block - point_0.blk) / d_block
 		}
 		upoint.bias -= upoint.slope.saturating_mul((block_time - upoint.ts).saturated_into()); //  * (block_time - upoint.ts);
-		Ok(upoint.bias)
+
+		if (upoint.bias >= Zero::zero()) || (upoint.fxs_amt >= Zero::zero()) {
+			Ok(upoint.fxs_amt + (Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * upoint.bias))
+		} else {
+			Ok(Zero::zero())
+		}
 	}
 
 	fn find_block_epoch(_block: BlockNumberFor<T>, max_epoch: U256) -> U256 {
@@ -242,6 +250,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		if last_point.bias < Zero::zero() {
 			last_point.bias = Zero::zero()
 		}
-		last_point.bias
+		last_point.fxs_amt + Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * last_point.bias
+		// last_point.bias
 	}
 }
