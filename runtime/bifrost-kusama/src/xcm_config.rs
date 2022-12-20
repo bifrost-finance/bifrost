@@ -70,7 +70,7 @@ where
 	}
 }
 
-fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
+fn native_currency_location(id: CurrencyId) -> MultiLocation {
 	MultiLocation::new(0, X1(GeneralKey((id.encode()).try_into().unwrap())))
 }
 
@@ -104,7 +104,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		match id {
 			Token(KSM) => Some(MultiLocation::parent()),
 			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
-				Some(native_currency_location(id, T::get())),
+				Some(native_currency_location(id)),
 			// Karura currencyId types
 			Token(KAR) => Some(MultiLocation::new(
 				1,
