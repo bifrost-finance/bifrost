@@ -23,9 +23,9 @@ use crate::*;
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
 	fn _withdraw(addr: &AccountId) -> DispatchResult;
-	fn balanceOf(addr: &AccountId, time: Option<Timestamp>) -> Result<Balance, DispatchError>;
-	fn balanceOfAt(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
-	fn totalSupply(t: Timestamp) -> Balance;
+	fn balance_of(addr: &AccountId, time: Option<Timestamp>) -> Result<Balance, DispatchError>;
+	fn balance_of_at(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
+	fn total_supply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
 	fn _create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
@@ -43,7 +43,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
+		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
 
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
@@ -64,7 +64,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn _increase_unlock_time(addr: &AccountIdOf<T>, _unlock_time: Timestamp) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
+		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
 
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
@@ -112,7 +112,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn balanceOf(
+	fn balance_of(
 		addr: &AccountIdOf<T>,
 		time: Option<Timestamp>,
 	) -> Result<BalanceOf<T>, DispatchError> {
@@ -133,7 +133,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		} else {
 			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
 				Self::user_point_history(addr, u_epoch);
-			log::debug!("{:?}::{:?}::{:?}", _t, last_point.ts, last_point.bias);
+			// log::debug!("{:?}::{:?}::{:?}", _t, last_point.ts, last_point.bias);
 
 			last_point.bias -= last_point
 				.slope
@@ -143,11 +143,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				last_point.bias = Zero::zero();
 			}
 			let ve_config = Self::ve_configs();
-			Ok(last_point.fxs_amt + (Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * last_point.bias))
+			Ok(last_point.fxs_amt + (Self::ve_configs().vote_weight_multiplier * last_point.bias))
 		}
 	}
 
-	fn balanceOfAt(
+	fn balance_of_at(
 		addr: &AccountIdOf<T>,
 		_block: BlockNumberFor<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
@@ -202,7 +202,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		upoint.bias -= upoint.slope.saturating_mul((block_time - upoint.ts).saturated_into()); //  * (block_time - upoint.ts);
 
 		if (upoint.bias >= Zero::zero()) || (upoint.fxs_amt >= Zero::zero()) {
-			Ok(upoint.fxs_amt + (Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * upoint.bias))
+			Ok(upoint.fxs_amt + (Self::ve_configs().vote_weight_multiplier * upoint.bias))
 		} else {
 			Ok(Zero::zero())
 		}
@@ -226,19 +226,19 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		_min
 	}
 
-	fn totalSupply(t: Timestamp) -> BalanceOf<T> {
+	fn total_supply(t: Timestamp) -> BalanceOf<T> {
 		let g_epoch: U256 = Self::epoch();
 		let last_point = Self::point_history(g_epoch);
 		Self::supply_at(last_point, t)
 	}
 
 	fn supply_at(point: Point<BalanceOf<T>, BlockNumberFor<T>>, t: Timestamp) -> BalanceOf<T> {
-		let mut ve_config = Self::ve_configs();
+		let ve_config = Self::ve_configs();
 
 		let mut last_point = point;
-		let mut t_i: Timestamp = (last_point.ts / ve_config.WEEK) * ve_config.WEEK;
+		let mut t_i: Timestamp = (last_point.ts / ve_config.week) * ve_config.week;
 		for i in 0..255 {
-			t_i += ve_config.WEEK;
+			t_i += ve_config.week;
 			let mut d_slope = Zero::zero();
 			if t_i > t {
 				t_i = t
@@ -265,7 +265,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		if last_point.bias < Zero::zero() {
 			last_point.bias = Zero::zero()
 		}
-		last_point.fxs_amt + Self::ve_configs().VOTE_WEIGHT_MULTIPLIER * last_point.bias
+		last_point.fxs_amt + Self::ve_configs().vote_weight_multiplier * last_point.bias
 		// last_point.bias
 	}
 }

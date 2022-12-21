@@ -21,7 +21,7 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use crate as ve_minting;
+use crate as bifrost_ve_minting;
 use crate::BNC;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
@@ -59,11 +59,11 @@ pub type Balance = u128;
 
 pub type AccountId = AccountId32;
 // pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+// pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+// pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -81,7 +81,7 @@ frame_support::construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
-		VeMinting: ve_minting::{Pallet, Call, Storage, Event<T>},
+		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -159,9 +159,9 @@ orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		env_logger::try_init().unwrap_or(());
 
-		log::debug!(
-			"{:?}",currency_id
-		);
+		// log::debug!(
+		// 	"{:?}",currency_id
+		// );
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
@@ -234,7 +234,7 @@ parameter_types! {
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
 }
 
-impl ve_minting::Config for Runtime {
+impl bifrost_ve_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type Currency = Balances;

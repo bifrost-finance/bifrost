@@ -17,67 +17,67 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::VeMintingInterface, *};
-use frame_system::pallet_prelude::*;
-use node_primitives::currency;
+// use frame_system::pallet_prelude::*;
+// use node_primitives::currency;
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap; //{borrow::ToOwned, collections::btree_map::BTreeMap, prelude::*};
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct IncentiveConfig<CurrencyId, Balance> {
-	rewardRate: BTreeMap<CurrencyId, Balance>, // Balance,
-	rewardPerTokenStored: BTreeMap<CurrencyId, Balance>,
-	pub rewardsDuration: Timestamp,
-	periodFinish: Timestamp,
-	lastUpdateTime: Timestamp,
+	reward_rate: BTreeMap<CurrencyId, Balance>, // Balance,
+	reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	pub rewards_duration: Timestamp,
+	period_finish: Timestamp,
+	last_update_time: Timestamp,
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn lastTimeRewardApplicable() -> Timestamp {
+	pub fn last_time_reward_applicable() -> Timestamp {
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		if current_timestamp < Self::incentive_configs().periodFinish {
+		if current_timestamp < Self::incentive_configs().period_finish {
 			current_timestamp
 		} else {
-			Self::incentive_configs().periodFinish
+			Self::incentive_configs().period_finish
 		}
 	}
 
-	pub fn rewardPerToken() -> BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> {
+	pub fn reward_per_token() -> BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> {
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		let _totalSupply = Self::totalSupply(current_timestamp);
-		if _totalSupply == BalanceOf::<T>::zero() {
-			return conf.rewardPerTokenStored;
+		let _total_supply = Self::total_supply(current_timestamp);
+		if _total_supply == BalanceOf::<T>::zero() {
+			return conf.reward_per_token_stored;
 		}
-		conf.rewardPerTokenStored.iter_mut().for_each(|(currency, reward)| {
+		conf.reward_per_token_stored.iter_mut().for_each(|(currency, reward)| {
 			*reward = reward.saturating_add(
-				Self::lastTimeRewardApplicable()
+				Self::last_time_reward_applicable()
 					.saturated_into::<BalanceOf<T>>()
-					.saturating_sub(conf.lastUpdateTime.saturated_into::<BalanceOf<T>>())
+					.saturating_sub(conf.last_update_time.saturated_into::<BalanceOf<T>>())
 					.saturating_mul(
-						*conf.rewardRate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
+						*conf.reward_rate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
 					)
 					// .mul(1e18)
-					.checked_div(&_totalSupply)
+					.checked_div(&_total_supply)
 					.unwrap_or_default(), // .ok_or(Error::<T>::CalculationOverflow)?,
 			);
 		});
 
 		IncentiveConfigs::<T>::set(conf.clone());
-		conf.rewardPerTokenStored
+		conf.reward_per_token_stored
 	}
 
 	pub fn earned(
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let reward_per_token = Self::rewardPerToken();
+		let reward_per_token = Self::reward_per_token();
 		// let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
-		let vetoken_balance = Self::balanceOf(addr, None)?;
+		let vetoken_balance = Self::balance_of(addr, None)?;
 		// rewards.iter_mut().for_each(|(currency, reward)| {
 		// 	*reward = reward.saturating_add(
 		// 		vetoken_balance.saturating_mul(
-		// 			Self::rewardPerToken()
+		// 			Self::reward_per_token()
 		// 				.get(currency)
 		// 				.unwrap_or(&BalanceOf::<T>::zero())
 		// 				.saturating_sub(
@@ -100,7 +100,7 @@ impl<T: Config> Pallet<T> {
 				.and_modify(|total_reward| {
 					*total_reward = total_reward.saturating_add(
 						vetoken_balance.saturating_mul(
-							Self::rewardPerToken()
+							Self::reward_per_token()
 								.get(currency)
 								.unwrap_or(&BalanceOf::<T>::zero())
 								.saturating_sub(
@@ -113,7 +113,7 @@ impl<T: Config> Pallet<T> {
 				})
 				.or_insert(
 					vetoken_balance.saturating_mul(
-						Self::rewardPerToken()
+						Self::reward_per_token()
 							.get(currency)
 							.unwrap_or(&BalanceOf::<T>::zero())
 							.saturating_sub(
@@ -125,34 +125,34 @@ impl<T: Config> Pallet<T> {
 				);
 		});
 		Ok(rewards)
-		// Ok(Self::balanceOf(addr, current_timestamp)?
+		// Ok(Self::balance_of(addr, current_timestamp)?
 		// 	.saturating_mul(
-		// 		Self::rewardPerToken().saturating_sub(Self::user_reward_per_token_paid(addr)),
+		// 		Self::reward_per_token().saturating_sub(Self::user_reward_per_token_paid(addr)),
 		// 	)
 		// 	// .div(1e18)
 		// 	.saturating_add(Self::rewards(addr)))
 	}
 
-	pub fn updateReward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
-		let rewardPerTokenStored = Self::rewardPerToken();
+	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
+		let reward_per_token_stored = Self::reward_per_token();
 		IncentiveConfigs::<T>::mutate(|item| {
-			item.rewardPerTokenStored = rewardPerTokenStored.clone();
-			item.lastUpdateTime = Self::lastTimeRewardApplicable();
+			item.reward_per_token_stored = reward_per_token_stored.clone();
+			item.last_update_time = Self::last_time_reward_applicable();
 		});
 		if let Some(address) = addr {
 			Rewards::<T>::insert(address, Self::earned(&address)?);
-			UserRewardPerTokenPaid::<T>::insert(address, rewardPerTokenStored);
+			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored);
 		}
 		Ok(())
 	}
 
 	// pub fn staking(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
-	// 	Self::updateReward(Some(addr))
+	// 	Self::update_reward(Some(addr))
 	// }
 
 	#[transactional]
-	pub fn getReward(addr: &AccountIdOf<T>) -> DispatchResult {
-		Self::updateReward(Some(addr))?;
+	pub fn get_reward(addr: &AccountIdOf<T>) -> DispatchResult {
+		Self::update_reward(Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
@@ -170,15 +170,15 @@ impl<T: Config> Pallet<T> {
 
 	// Motion
 	#[transactional]
-	pub fn notifyRewardAmount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
-		Self::updateReward(None)?;
+	pub fn notify_reward_amount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
+		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 			rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
 
-		if current_timestamp >= conf.periodFinish {
+		if current_timestamp >= conf.period_finish {
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 				let currency_amount = T::MultiCurrency::free_balance(
 					*currency,
@@ -186,9 +186,9 @@ impl<T: Config> Pallet<T> {
 				);
 				ensure!(*reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = reward
-					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+					.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
 					.unwrap_or_else(Zero::zero);
-				conf.rewardRate
+				conf.reward_rate
 					.entry(*currency)
 					.and_modify(|total_reward| {
 						*total_reward = new_reward;
@@ -197,18 +197,18 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
-		// conf.rewardRate = reward
-		// 	.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+		// conf.reward_rate = reward
+		// 	.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
 		// 	.ok_or(Error::<T>::CalculationOverflow)?;
 		} else {
 			let remaining = conf
-				.periodFinish
+				.period_finish
 				.saturating_sub(current_timestamp)
 				.saturated_into::<BalanceOf<T>>();
-			// let leftover: BalanceOf<T> = remaining.saturating_mul(conf.rewardRate);
-			// conf.rewardRate = reward
+			// let leftover: BalanceOf<T> = remaining.saturating_mul(conf.reward_rate);
+			// conf.reward_rate = reward
 			// 	.saturating_add(leftover)
-			// 	.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+			// 	.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
 			// 	.ok_or(Error::<T>::CalculationOverflow)?;
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 				let leftover: BalanceOf<T> = reward.saturating_mul(remaining);
@@ -219,9 +219,9 @@ impl<T: Config> Pallet<T> {
 				);
 				ensure!(total_reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = total_reward
-					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
+					.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
 					.unwrap_or_else(|| BalanceOf::<T>::zero());
-				conf.rewardRate
+				conf.reward_rate
 					.entry(*currency)
 					.and_modify(|total_reward| {
 						*total_reward = new_reward;
@@ -231,10 +231,10 @@ impl<T: Config> Pallet<T> {
 			})?;
 		};
 		let balance =
-			Self::balanceOf(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
+			Self::balance_of(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
 
-		conf.lastUpdateTime = current_timestamp;
-		conf.periodFinish = current_timestamp.saturating_add(conf.rewardsDuration);
+		conf.last_update_time = current_timestamp;
+		conf.period_finish = current_timestamp.saturating_add(conf.rewards_duration);
 
 		IncentiveConfigs::<T>::set(conf);
 		Ok(())

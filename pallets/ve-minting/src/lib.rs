@@ -39,11 +39,9 @@ use frame_support::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Saturating,
 			UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, DispatchError, Perbill, SaturatedConversion,
+		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{
-		tokens::WithdrawReasons, Currency, ExistenceRequirement, LockIdentifier, LockableCurrency,
-	},
+	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -52,7 +50,7 @@ use node_primitives::{AccountId, CurrencyId, Timestamp, TokenSymbol}; // BlockNu
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
 use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
@@ -76,9 +74,9 @@ pub struct VeConfig<Balance> {
 	min_mint: Balance,
 	min_time: Timestamp,
 	max_time: Timestamp,
-	MULTIPLIER: u128,
-	WEEK: Timestamp,
-	VOTE_WEIGHT_MULTIPLIER: Balance,
+	multiplier: u128,
+	week: Timestamp,
+	vote_weight_multiplier: Balance,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -125,10 +123,10 @@ pub mod pallet {
 		type VeMintingPalletId: Get<PalletId>;
 
 		// #[pallet::constant]
-		// type MULTIPLIER: u128;
+		// type multiplier: u128;
 
 		// #[pallet::constant]
-		// type WEEK: Timestamp;
+		// type week: Timestamp;
 	}
 
 	#[pallet::event]
@@ -249,14 +247,14 @@ pub mod pallet {
 			if let Some(max_time) = max_time {
 				ve_config.max_time = max_time;
 			};
-			if let Some(MULTIPLIER) = multiplier {
-				ve_config.MULTIPLIER = MULTIPLIER;
+			if let Some(multiplier) = multiplier {
+				ve_config.multiplier = multiplier;
 			};
-			if let Some(WEEK) = week {
-				ve_config.WEEK = WEEK;
+			if let Some(week) = week {
+				ve_config.week = week;
 			};
-			if let Some(VOTE_WEIGHT_MULTIPLIER) = vote_weight_multiplier {
-				ve_config.VOTE_WEIGHT_MULTIPLIER = VOTE_WEIGHT_MULTIPLIER;
+			if let Some(vote_weight_multiplier) = vote_weight_multiplier {
+				ve_config.vote_weight_multiplier = vote_weight_multiplier;
 			};
 			VeConfigs::<T>::set(ve_config);
 
@@ -308,13 +306,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			if let Some(rewardsDuration) = rewards_duration {
+			if let Some(rewards_duration) = rewards_duration {
 				let mut incentive_config = Self::incentive_configs();
-				incentive_config.rewardsDuration = rewardsDuration;
+				incentive_config.rewards_duration = rewards_duration;
 				IncentiveConfigs::<T>::set(incentive_config);
 			};
 
-			Self::notifyRewardAmount(rewards)?;
+			Self::notify_reward_amount(rewards)?;
 			Self::deposit_event(Event::Created {});
 			Ok(())
 		}
@@ -377,19 +375,19 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.fxs_amt = Self::balanceOf(addr, None)?;
+				last_point.fxs_amt = Self::balance_of(addr, None)?;
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point.clone();
 			let mut block_slope: u128 = Zero::zero();
 			if current_timestamp > last_point.ts {
-				block_slope = ve_config.MULTIPLIER *
+				block_slope = ve_config.multiplier *
 					(current_block_number - last_point.blk).saturated_into::<u128>() /
 					(current_timestamp - last_point.ts).saturated_into::<u128>()
 			}
-			let mut t_i: Timestamp = (last_checkpoint / ve_config.WEEK) * ve_config.WEEK;
+			let mut t_i: Timestamp = (last_checkpoint / ve_config.week) * ve_config.week;
 			for i in 0..255 {
-				t_i += ve_config.WEEK;
+				t_i += ve_config.week;
 				let mut d_slope = Zero::zero();
 				if t_i > current_timestamp {
 					t_i = current_timestamp
@@ -425,7 +423,7 @@ pub mod pallet {
 						(t_i - initial_last_point.ts)
 							.try_into()
 							.map_err(|_| ArithmeticError::Overflow)?,
-					) / ve_config.MULTIPLIER)
+					) / ve_config.multiplier)
 						.try_into()
 						.map_err(|_| ArithmeticError::Overflow)?;
 				g_epoch += U256::one();
@@ -433,7 +431,7 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_timestamp {
 					last_point.blk = current_block_number;
-					last_point.fxs_amt = Self::balanceOf(addr, None)?;
+					last_point.fxs_amt = Self::balance_of(addr, None)?;
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);
@@ -478,10 +476,10 @@ pub mod pallet {
 			u_new.ts = current_timestamp;
 			u_new.blk = current_block_number;
 			u_new.fxs_amt = Self::locked(addr).amount;
-			log::debug!("_checkpoint:{:?}", u_new);
+			// log::debug!("_checkpoint:{:?}", u_new);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
-			Self::updateReward(Some(addr))?;
+			Self::update_reward(Some(addr))?;
 
 			Ok(())
 		}
@@ -508,12 +506,12 @@ pub mod pallet {
 				_locked.end = unlock_time
 			}
 			Locked::<T>::insert(addr, _locked.clone());
-			log::debug!("_deposit_for:{:?}", _locked);
+			// log::debug!("_deposit_for:{:?}", _locked);
 
 			Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 			if value != BalanceOf::<T>::zero() {
-				T::MultiCurrency::extend_lock(COLLATOR_LOCK_ID, BNC, addr, value);
+				T::MultiCurrency::extend_lock(COLLATOR_LOCK_ID, BNC, addr, value)?;
 			}
 
 			Self::deposit_event(Event::Minted {

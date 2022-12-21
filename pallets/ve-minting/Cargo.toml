@@ -27,7 +27,6 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.2
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-env_logger = "0.9.3"
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -38,6 +37,7 @@ bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
+env_logger = "0.9.3"
 
 [features]
 default = ["std"]
@@ -54,5 +54,5 @@ std = [
 	"bifrost-runtime-common/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
-try-runtime = ["frame-support/try-runtime"]
+# runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+# try-runtime = ["frame-support/try-runtime"]

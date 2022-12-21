@@ -23,7 +23,7 @@
 use crate::{mock::*, traits::VeMintingInterface, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
-use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
+use frame_support::{assert_noop, assert_ok};
 use node_primitives::TokenInfo;
 
 #[test]
@@ -51,7 +51,7 @@ fn _checkpoint() {
 		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
 		// let mut u_point = Point::<BalanceOf<Runtime>, BlockNumberFor<Runtime>>::default();
 		// assert_eq!(VeMinting::user_point_history(&BOB, U256::from(1)), u_point);
-		assert_eq!(VeMinting::balanceOf(&BOB, Some(current_timestamp)), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(current_timestamp)), Ok(0));
 	});
 }
 
@@ -72,21 +72,21 @@ fn update_reward() {
 		System::set_block_number(System::block_number() + 20);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		log::debug!("{:?}", System::block_number());
+		// log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
-		log::debug!("{:?}", System::block_number());
+		// log::debug!("{:?}", System::block_number());
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			10000000000000,
 			current_timestamp + 365 * 86400 * 1000,
 		));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
-		assert_ok!(VeMinting::updateReward(Some(&BOB)));
+		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 
-		assert_eq!(VeMinting::balanceOf(&BOB, None), Ok(20000000000000));
-		assert_eq!(VeMinting::balanceOf(&BOB, Some(current_timestamp)), Ok(20000000000000));
-		// assert_eq!(VeMinting::balanceOfAt(&BOB, 0), Ok(0));
-		// assert_eq!(VeMinting::balanceOfAt(&BOB, System::block_number()), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(20000000000000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(current_timestamp)), Ok(20000000000000));
+		// assert_eq!(VeMinting::balance_of_at(&BOB, 0), Ok(0));
+		// assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number()), Ok(0));
 	});
 }
 
@@ -108,7 +108,7 @@ fn asset_registry() {
 }
 
 #[test]
-fn notifyRewardAmount() {
+fn notify_reward_amount() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
 		assert_ok!(VeMinting::set_config(
@@ -124,21 +124,24 @@ fn notifyRewardAmount() {
 		System::set_block_number(System::block_number() + 20);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		log::debug!("{:?}", System::block_number());
+		// log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
-		log::debug!("{:?}", System::block_number());
+		// log::debug!("{:?}", System::block_number());
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			10000000000000,
 			current_timestamp + 365 * 86400 * 1000
 		));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
+		// log::debug!("{:?}", VeMinting::balance_of(&BOB, Some(current_timestamp)));
 
 		let rewards = vec![(KSM, 1000)];
 		assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
-		log::debug!("notifyRewardAmount: {:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
-		assert_ok!(VeMinting::updateReward(Some(&BOB)));
+		// log::debug!(
+		// 	"notify_reward_amount: {:?}",
+		// 	VeMinting::balance_of(&BOB, Some(current_timestamp))
+		// );
+		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 		// let rewards = vec![(KSM, 1000)];
 		// assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
 		// assert_eq!(Tokens::free_balance(KSM, &TREASURY_ACCOUNT), ed);

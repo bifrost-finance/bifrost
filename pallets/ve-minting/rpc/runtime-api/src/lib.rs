@@ -16,4 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Ensure we're `no_std` when compiling for Wasm.
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use codec::Codec;
+use node_primitives::{Balance, BlockNumber, CurrencyId, Timestamp};
+use sp_api::decl_runtime_apis;
+use sp_core::U256;
+use sp_std::vec::Vec;
+
+decl_runtime_apis! {
+	pub trait VeMintingRuntimeApi<AccountId> where
+		AccountId: Codec,
+	{
+		fn balance_of(
+			who: AccountId,
+			t: Option<Timestamp>,
+		) -> Balance;
+
+		fn total_supply(
+			t: Timestamp,
+		) -> Balance;
+
+		fn find_block_epoch(
+			block: BlockNumber,
+			max_epoch: U256,
+		) -> U256;
+	}
+}
