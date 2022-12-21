@@ -353,6 +353,7 @@ impl ExtBuilder {
 			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
+			(VeMintingPalletId::get().into_account_truncating(), KSM, 10000),
 		])
 	}
 

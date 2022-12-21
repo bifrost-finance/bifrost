@@ -22,21 +22,21 @@ use crate::*;
 
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
-	fn withdraw(addr: &AccountId) -> DispatchResult;
+	fn _withdraw(addr: &AccountId) -> DispatchResult;
 	fn balanceOf(addr: &AccountId, time: Option<Timestamp>) -> Result<Balance, DispatchError>;
 	fn balanceOfAt(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
 	fn totalSupply(t: Timestamp) -> Balance;
 	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
-	fn create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
-	fn increase_amount(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
-	fn increase_unlock_time(addr: &AccountId, _unlock_time: Timestamp) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
+	fn _create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
+	fn _increase_amount(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	fn _increase_unlock_time(addr: &AccountId, _unlock_time: Timestamp) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
 	for Pallet<T>
 {
-	fn create_lock(
+	fn _create_lock(
 		addr: &AccountIdOf<T>,
 		_value: BalanceOf<T>,
 		_unlock_time: Timestamp,
@@ -47,18 +47,21 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
-		ensure!(unlock_time > current_timestamp, Error::<T>::Expired);
+		ensure!(
+			unlock_time > ve_config.min_time.saturating_add(current_timestamp),
+			Error::<T>::Expired
+		);
 		ensure!(
 			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
 			Error::<T>::Expired
 		);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
-		ensure!(_value > BalanceOf::<T>::zero(), Error::<T>::Expired); // need non-zero value
+		ensure!(_value >= ve_config.min_mint, Error::<T>::Expired); // need non-zero value
 
 		Self::_deposit_for(addr, _value, unlock_time, _locked)
 	}
 
-	fn increase_unlock_time(addr: &AccountIdOf<T>, _unlock_time: Timestamp) -> DispatchResult {
+	fn _increase_unlock_time(addr: &AccountIdOf<T>, _unlock_time: Timestamp) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
 		let unlock_time: Timestamp = (_unlock_time / ve_config.WEEK) * ve_config.WEEK;
@@ -66,7 +69,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 		ensure!(_locked.end > current_timestamp, Error::<T>::Expired);
-		ensure!(unlock_time > _locked.end, Error::<T>::Expired);
+		ensure!(unlock_time >= ve_config.min_time.saturating_add(_locked.end), Error::<T>::Expired);
 		ensure!(
 			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
 			Error::<T>::Expired
@@ -76,7 +79,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)
 	}
 
-	fn increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
 		Self::_deposit_for(addr, value, 0, _locked)
 	}
@@ -86,7 +89,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::_deposit_for(addr, value, 0, _locked)
 	}
 
-	fn withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
+	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
 		let current_timestamp: Timestamp =
 			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();

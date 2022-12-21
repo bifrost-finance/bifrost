@@ -73,6 +73,8 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance> {
 	amount: Balance,
+	min_mint: Balance,
+	min_time: Timestamp,
 	max_time: Timestamp,
 	MULTIPLIER: u128,
 	WEEK: Timestamp,
@@ -228,9 +230,9 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			// min_mint: BalanceOf<T>,             // 最小铸造值
-			// min_lock_period: BlockNumberFor<T>, // 最小锁仓期
-			max_time: Option<Timestamp>, // 最大锁仓期
+			min_mint: Option<BalanceOf<T>>, // 最小铸造值
+			min_time: Option<Timestamp>,    // 最小锁仓期
+			max_time: Option<Timestamp>,    // 最大锁仓期
 			multiplier: Option<u128>,
 			week: Option<Timestamp>,
 			vote_weight_multiplier: Option<BalanceOf<T>>,
@@ -238,6 +240,12 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut ve_config = Self::ve_configs();
+			if let Some(min_mint) = min_mint {
+				ve_config.min_mint = min_mint;
+			};
+			if let Some(min_time) = min_time {
+				ve_config.min_time = min_time;
+			};
 			if let Some(max_time) = max_time {
 				ve_config.max_time = max_time;
 			};
@@ -252,6 +260,42 @@ pub mod pallet {
 			};
 			VeConfigs::<T>::set(ve_config);
 
+			Self::deposit_event(Event::Created {});
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn create_lock(
+			origin: OriginFor<T>,
+			value: BalanceOf<T>,
+			unlock_time: Timestamp,
+		) -> DispatchResult {
+			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
+			Self::_create_lock(&exchanger, value, unlock_time)?;
+			Self::deposit_event(Event::Created {});
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
+			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
+			Self::_increase_amount(&exchanger, value)?;
+			Self::deposit_event(Event::Created {});
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn increase_unlock_time(origin: OriginFor<T>, time: Timestamp) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::_increase_unlock_time(&exchanger, time)?;
+			Self::deposit_event(Event::Created {});
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::_withdraw(&exchanger)?;
 			Self::deposit_event(Event::Created {});
 			Ok(())
 		}
@@ -448,6 +492,9 @@ pub mod pallet {
 			unlock_time: Timestamp,
 			locked_balance: LockedBalance<BalanceOf<T>>,
 		) -> DispatchResult {
+			let ve_config = Self::ve_configs();
+			ensure!(value >= ve_config.min_mint, Error::<T>::Expired);
+
 			let current_timestamp: Timestamp =
 				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
 

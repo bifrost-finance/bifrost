@@ -184,7 +184,7 @@ impl<T: Config> Pallet<T> {
 					*currency,
 					&T::VeMintingPalletId::get().into_account_truncating(),
 				);
-				// ensure!(*reward <= currency_amount, Error::<T>::Expired);
+				ensure!(*reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = reward
 					.checked_div(&conf.rewardsDuration.saturated_into::<BalanceOf<T>>())
 					.unwrap_or_else(Zero::zero);

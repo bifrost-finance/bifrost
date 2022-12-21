@@ -38,6 +38,8 @@ fn _checkpoint() {
 
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
+			Some(0),
+			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400),
 			Some(10_u128.pow(18)),
 			Some(7 * 86400),
@@ -59,6 +61,8 @@ fn update_reward() {
 		asset_registry();
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
+			Some(0),
+			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400 * 1000),
 			Some(10_u128.pow(12)),
 			Some(7 * 86400),
@@ -71,15 +75,12 @@ fn update_reward() {
 		log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		log::debug!("{:?}", System::block_number());
-		assert_ok!(VeMinting::create_lock(
+		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			10000000000000,
 			current_timestamp + 365 * 86400 * 1000,
 		));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
-
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
 		assert_ok!(VeMinting::updateReward(Some(&BOB)));
 
 		assert_eq!(VeMinting::balanceOf(&BOB, None), Ok(20000000000000));
@@ -112,6 +113,8 @@ fn notifyRewardAmount() {
 		asset_registry();
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
+			Some(0),
+			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400 * 1000),
 			Some(10_u128.pow(12)),
 			Some(7 * 86400),
@@ -124,13 +127,17 @@ fn notifyRewardAmount() {
 		log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		log::debug!("{:?}", System::block_number());
-		assert_ok!(VeMinting::create_lock(&BOB, 10000000000000, 1671752990696));
+		assert_ok!(VeMinting::_create_lock(
+			&BOB,
+			10000000000000,
+			current_timestamp + 365 * 86400 * 1000
+		));
 		log::debug!("{:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
 
 		let rewards = vec![(KSM, 1000)];
 		assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
-		log::debug!("{:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
+		log::debug!("notifyRewardAmount: {:?}", VeMinting::balanceOf(&BOB, Some(current_timestamp)));
 		assert_ok!(VeMinting::updateReward(Some(&BOB)));
 		// let rewards = vec![(KSM, 1000)];
 		// assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
