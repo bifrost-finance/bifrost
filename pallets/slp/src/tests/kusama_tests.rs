@@ -247,7 +247,13 @@ fn refund_currency_due_unbond_works() {
 		// get entrance and exit accounts
 		let (entrance_acc, exit_acc) = VtokenMinting::get_entrance_and_exit_accounts();
 		// Set exit account balance to be 50.
-		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), exit_acc.clone(), KSM, 50, 0));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			MultiAddress::Id(exit_acc.clone()),
+			KSM,
+			50,
+			0
+		));
 
 		// set current era to be 100.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
@@ -399,7 +405,13 @@ fn refund_currency_due_unbond_works() {
 		);
 
 		// Set some more balance to exit account.
-		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), exit_acc.clone(), KSM, 30, 0));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			MultiAddress::Id(exit_acc.clone()),
+			KSM,
+			30,
+			0
+		));
 
 		// set era to 110
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(110));
