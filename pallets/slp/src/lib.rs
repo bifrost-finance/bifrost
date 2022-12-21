@@ -55,7 +55,6 @@ use xcm::latest::{
 };
 
 mod agents;
-pub mod migration;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -637,10 +636,6 @@ pub mod pallet {
 
 			// Calculate weight
 			Weight::from_ref_time(BASE_WEIGHT.saturating_mul(counter.into()))
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			migration::update_vksm_xcm_fee::<T>()
 		}
 	}
 
