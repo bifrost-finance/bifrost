@@ -16,29 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// #![cfg_attr(not(feature = "std"), no_std)]
-
-use super::{Config, Weight};
-use crate::{BalanceOf, XcmDestWeightAndFee, KSM};
-use frame_support::traits::Get;
-use sp_runtime::traits::UniqueSaturatedFrom;
-
-pub fn update_vksm_xcm_fee<T: Config>() -> Weight {
-	let mut write_count = 0;
-
-	XcmDestWeightAndFee::<T>::translate::<(u64, BalanceOf<T>), _>(
-		|currency_id, _xcm_peration, (weight, fee)| {
-			let mut new_fee = fee;
-			if currency_id == KSM {
-				new_fee = fee * BalanceOf::<T>::unique_saturated_from(10u128);
-				write_count = write_count + 1;
-			}
-
-			Some((weight, new_fee))
-		},
-	);
-
-	let entry_count = XcmDestWeightAndFee::<T>::iter().count() as u64;
-
-	T::DbWeight::get().reads(entry_count) + T::DbWeight::get().writes(write_count)
-}
+#[cfg(test)]
+pub mod mock;
+#[cfg(test)]
+pub mod mock_kusama;

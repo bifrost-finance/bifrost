@@ -18,10 +18,10 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, BNC, KSM, *};
+use crate::{mocks::mock_kusama::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::opaque::latest::NetworkId::Any;
 
 #[test]
