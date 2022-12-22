@@ -45,8 +45,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
 		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
 
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		ensure!(
 			unlock_time > ve_config.min_time.saturating_add(current_timestamp),
 			Error::<T>::Expired
@@ -66,8 +65,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
 		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
 
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		ensure!(_locked.end > current_timestamp, Error::<T>::Expired);
 		ensure!(unlock_time >= ve_config.min_time.saturating_add(_locked.end), Error::<T>::Expired);
 		ensure!(
@@ -91,8 +89,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		ensure!(current_timestamp > _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
 		let old_locked: LockedBalance<BalanceOf<T>> = _locked.clone();
@@ -119,14 +116,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		// if let Some(_t) = time {
 		// 	_t
 		// } else {
-		// 	sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis()
+		// 	T::UnixTime::now().as_millis().saturated_into()
 		// };
 		let _t = match time {
 			Some(_t) => _t,
-			None => sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis(),
+			None => T::UnixTime::now().as_millis().saturated_into(),
 		};
 		// let _t: Timestamp =
-		// 	sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		// 	T::UnixTime::now().as_millis().saturated_into();
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());
@@ -154,8 +151,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let current_block_number: BlockNumberFor<T> =
 			frame_system::Pallet::<T>::block_number().into();
 		ensure!(_block <= current_block_number, Error::<T>::Expired);
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 
 		// Binary search
 		let mut _min = U256::zero();

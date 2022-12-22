@@ -41,7 +41,7 @@ use frame_support::{
 		},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
+	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency, Time, UnixTime},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -121,6 +121,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
+
+		type UnixTime: UnixTime;
 
 		// #[pallet::constant]
 		// type multiplier: u128;
@@ -332,8 +334,7 @@ pub mod pallet {
 			let ve_config = Self::ve_configs();
 			let current_block_number: BlockNumberFor<T> =
 				frame_system::Pallet::<T>::block_number().into(); // BlockNumberFor<T>
-			let current_timestamp: Timestamp =
-				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+			let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 
 			if old_locked.end > current_timestamp && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = old_locked
@@ -493,8 +494,7 @@ pub mod pallet {
 			let ve_config = Self::ve_configs();
 			ensure!(value >= ve_config.min_mint, Error::<T>::Expired);
 
-			let current_timestamp: Timestamp =
-				sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+			let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();

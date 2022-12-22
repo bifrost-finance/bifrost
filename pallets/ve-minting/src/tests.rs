@@ -30,8 +30,7 @@ use node_primitives::TokenInfo;
 fn _checkpoint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		let old_locked = LockedBalance { amount: 0, end: 0 };
 		let new_locked =
 			LockedBalance { amount: 10000000000000, end: current_timestamp + 365 * 86400 * 1000 };
@@ -70,8 +69,7 @@ fn update_reward() {
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		// log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		// log::debug!("{:?}", System::block_number());
@@ -122,8 +120,7 @@ fn notify_reward_amount() {
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		// log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		// log::debug!("{:?}", System::block_number());

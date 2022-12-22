@@ -33,8 +33,7 @@ pub struct IncentiveConfig<CurrencyId, Balance> {
 
 impl<T: Config> Pallet<T> {
 	pub fn last_time_reward_applicable() -> Timestamp {
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		if current_timestamp < Self::incentive_configs().period_finish {
 			current_timestamp
 		} else {
@@ -44,8 +43,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn reward_per_token() -> BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> {
 		let mut conf = Self::incentive_configs();
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		let _total_supply = Self::total_supply(current_timestamp);
 		if _total_supply == BalanceOf::<T>::zero() {
 			return conf.reward_per_token_stored;
@@ -173,8 +171,7 @@ impl<T: Config> Pallet<T> {
 	pub fn notify_reward_amount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
-		let current_timestamp: Timestamp =
-			sp_timestamp::InherentDataProvider::from_system_time().timestamp().as_millis();
+		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 		let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 			rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
 

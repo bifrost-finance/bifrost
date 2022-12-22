@@ -79,6 +79,7 @@ use bifrost_runtime_common::{
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
+use bifrost_ve_minting::traits::VeMintingInterface;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -107,6 +108,7 @@ use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
+use sp_core::U256;
 use sp_runtime::traits::ConvertInto;
 use xcm::latest::{prelude::*, Weight as XcmWeight};
 use xcm_builder::{
@@ -329,6 +331,7 @@ parameter_types! {
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
+	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
 }
 
 impl frame_system::Config for Runtime {
@@ -1450,7 +1453,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&VeMintingPalletId::get())
+				.eq(a)
 	}
 }
 
@@ -2110,6 +2115,16 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
+impl bifrost_ve_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type Currency = Balances;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type VeMintingPalletId = VeMintingPalletId;
+	type WeightInfo = ();
+	type UnixTime = Timestamp;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -2289,6 +2304,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
+		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 	}
 }
 
@@ -2637,6 +2653,28 @@ impl_runtime_apis! {
 
 		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+	}
+
+	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
+		fn balance_of(
+			who: AccountId,
+			t: Option<node_primitives::Timestamp>,
+		) -> Balance{
+			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
+		}
+
+		fn total_supply(
+			t: node_primitives::Timestamp,
+		) -> Balance{
+			VeMinting::total_supply(t)
+		}
+
+		fn find_block_epoch(
+			block: node_primitives::BlockNumber,
+			max_epoch: U256,
+		) -> U256{
+			VeMinting::find_block_epoch(block, max_epoch)
 		}
 	}
 

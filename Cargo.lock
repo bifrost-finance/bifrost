@@ -795,6 +795,8 @@ dependencies = [
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
+ "bifrost-ve-minting",
+ "bifrost-ve-minting-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
@@ -1381,6 +1383,17 @@ dependencies = [
  "sp-std",
  "sp-timestamp",
  "xcm",
+]
+
+[[package]]
+name = "bifrost-ve-minting-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]
