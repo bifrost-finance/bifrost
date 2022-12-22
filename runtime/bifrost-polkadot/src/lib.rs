@@ -70,7 +70,7 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, micro, milli, millicent, AuraId, CouncilCollective,
+	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
