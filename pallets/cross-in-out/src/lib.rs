@@ -94,7 +94,9 @@ pub mod pallet {
 		},
 		CurrencyRegistered {
 			currency_id: CurrencyId,
-			operation: Option<()>,
+		},
+		CurrencyDeregistered {
+			currency_id: CurrencyId,
 		},
 		AddedToIssueList {
 			account: AccountIdOf<T>,
@@ -336,15 +338,30 @@ pub mod pallet {
 		pub fn register_currency_for_cross_in_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			operation: Option<()>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			CrossCurrencyRegistry::<T>::mutate_exists(currency_id, |registration| {
-				*registration = operation;
+				if registration.is_none() {
+					*registration = Some(());
+
+					Self::deposit_event(Event::CurrencyRegistered { currency_id });
+				}
 			});
 
-			Self::deposit_event(Event::CurrencyRegistered { currency_id, operation });
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::deregister_currency_for_cross_in_out())]
+		pub fn deregister_currency_for_cross_in_out(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			if CrossCurrencyRegistry::<T>::take(currency_id).is_some() {
+				Self::deposit_event(Event::CurrencyDeregistered { currency_id });
+			};
 
 			Ok(())
 		}

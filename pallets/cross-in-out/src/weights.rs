@@ -31,6 +31,7 @@ use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
 	fn register_currency_for_cross_in_out() -> Weight;
+	fn deregister_currency_for_cross_in_out() -> Weight;
 	fn cross_in() -> Weight;
     fn cross_out() -> Weight;
     fn register_linked_account() -> Weight;
@@ -45,6 +46,12 @@ pub trait WeightInfo {
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	fn register_currency_for_cross_in_out() -> Weight {
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	}
+
+	fn deregister_currency_for_cross_in_out() -> Weight {
 		Weight::from_ref_time(15_000_000 as u64)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
@@ -108,6 +115,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn register_currency_for_cross_in_out() -> Weight {
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+	}
+
+	fn deregister_currency_for_cross_in_out() -> Weight {
 		Weight::from_ref_time(15_000_000 as u64)
 			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))

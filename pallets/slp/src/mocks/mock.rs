@@ -54,11 +54,9 @@ pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
-pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
 
@@ -357,15 +355,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
-		self
-	}
-
-	pub fn one_hundred_for_alice(self) -> Self {
-		self.balances(vec![(ALICE, BNC, 100), (ALICE, KSM, 100), (ALICE, VKSM, 100)])
-	}
-
 	#[cfg(feature = "runtime-benchmarks")]
 	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
 		use frame_benchmarking::whitelisted_caller;

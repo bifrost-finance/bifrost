@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use crate::{
-	mock::*,
+	mocks::mock::*,
 	primitives::{MoonbeamLedgerUpdateEntry, OneToManyDelegationAction, OneToManyScheduledRequest},
 	Junction::Parachain,
 	Junctions::X2,
