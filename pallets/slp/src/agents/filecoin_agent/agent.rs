@@ -327,7 +327,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -337,6 +337,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}

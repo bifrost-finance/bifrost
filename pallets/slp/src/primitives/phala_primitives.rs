@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::MultiLocation;
+use crate::{MultiLocation, TimeUnit};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TokenSymbol};
@@ -36,6 +36,8 @@ pub struct PhalaLedger<Balance> {
 	/// of the delegator (assuming it doesn't get slashed first).
 	#[codec(compact)]
 	pub unlocking_shares: Balance,
+	// The unlocking time unit
+	pub unlocking_time_unit: Option<TimeUnit>,
 	/// If the delegator is bonded, it should record the bonded pool id.
 	pub bonded_pool_id: Option<u64>,
 	/// If the delegator is bonded, it should record the bonded pool NFT collection id.

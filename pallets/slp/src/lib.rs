@@ -218,6 +218,7 @@ pub mod pallet {
 		SharePriceNotValid,
 		InvalidAmount,
 		ValidatorMultilocationNotvalid,
+		AmountNotProvided,
 	}
 
 	#[pallet::event]
@@ -301,6 +302,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			amount: Option<BalanceOf<T>>,
 		},
 		Chill {
 			currency_id: CurrencyId,
@@ -922,12 +924,13 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			when: Option<TimeUnit>,
 			validator: Option<MultiLocation>,
+			amount: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(&who, &when, &validator, currency_id)?;
+			let query_id = staking_agent.liquidize(&who, &when, &validator, currency_id, amount)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -937,6 +940,7 @@ pub mod pallet {
 				time_unit: when,
 				query_id,
 				query_id_hash,
+				amount,
 			});
 			Ok(())
 		}

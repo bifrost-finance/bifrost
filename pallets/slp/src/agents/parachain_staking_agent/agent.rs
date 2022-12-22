@@ -699,7 +699,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -710,6 +710,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;

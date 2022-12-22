@@ -20,7 +20,7 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		XcmOperation, PHA, TIMEOUT_BLOCKS,
+		XcmOperation, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
@@ -33,7 +33,7 @@ use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::VtokenMintingOperator;
+use node_primitives::{TokenSymbol, VtokenMintingOperator};
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
@@ -178,15 +178,19 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let (pool_id, active_shares) = if let Some(Ledger::Phala(ledger)) =
+		let (pool_id, active_shares, unlocking_shares) = if let Some(Ledger::Phala(ledger)) =
 			DelegatorLedgers::<T>::get(currency_id, who.clone())
 		{
 			let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
 			let active_shares = ledger.active_shares;
-			Ok((pool_id, active_shares))
+			let unlocking_shares = ledger.unlocking_shares;
+			Ok((pool_id, active_shares, unlocking_shares))
 		} else {
 			Err(Error::<T>::DelegatorNotExist)
 		}?;
+
+		// Ensure this delegator is not in the process of unbonding.
+		ensure!(unlocking_shares.is_zero(), Error::<T>::AlreadyRequested);
 
 		// Ensure the amount is not zero
 		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
@@ -307,6 +311,7 @@ impl<T: Config>
 					account: who.clone(),
 					active_shares: Zero::zero(),
 					unlocking_shares: Zero::zero(),
+					unlocking_time_unit: None,
 					bonded_pool_id: None,
 					bonded_pool_collection_id: None,
 				};
@@ -405,25 +410,14 @@ impl<T: Config>
 		Self::delegate(self, who, &targets, currency_id)
 	}
 
-	/// It's automatically calculated, So we don't need to do anything here.
-	fn payout(
-		&self,
-		_who: &MultiLocation,
-		_validator: &MultiLocation,
-		_when: &Option<TimeUnit>,
-		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
-	}
-
 	/// Corresponds to the `check_and_maybe_force_withdraw` funtion of PhalaVault pallet.
 	/// Usually we don't need to call it, someone else will pay the rewards. But in case,
 	/// we can call it to force withdraw the rewards.
-	fn liquidize(
+	fn payout(
 		&self,
 		who: &MultiLocation,
+		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
-		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
@@ -443,7 +437,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Bond,
+			XcmOperation::Payout,
 			calls,
 			who,
 			currency_id,
@@ -453,6 +447,51 @@ impl<T: Config>
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
+	}
+
+	/// This is for revising ledger unlocking shares. Since Phala might return the withdrawal amount
+	/// by several times, we need to update the ledger to reflect the changes.
+	fn liquidize(
+		&self,
+		who: &MultiLocation,
+		_when: &Option<TimeUnit>,
+		_validator: &Option<MultiLocation>,
+		currency_id: CurrencyId,
+		amount: Option<BalanceOf<T>>,
+	) -> Result<QueryId, Error<T>> {
+		// Check if amount is provided. This amount will replace the unlocking_shares in ledger.
+		let updated_amount = amount.ok_or(Error::<T>::AmountNotProvided)?;
+
+		// update delegator ledger
+		DelegatorLedgers::<T>::mutate_exists(
+			currency_id,
+			who,
+			|old_ledger| -> Result<(), Error<T>> {
+				if let Some(Ledger::Phala(ref mut old_phala_ledger)) = old_ledger {
+					ensure!(
+						old_phala_ledger.bonded_pool_id.is_some(),
+						Error::<T>::DelegatorNotBonded
+					);
+					ensure!(
+						old_phala_ledger.unlocking_shares > updated_amount,
+						Error::<T>::InvalidAmount
+					);
+
+					// Update unlocking_shares to amount.
+					old_phala_ledger.unlocking_shares = updated_amount;
+
+					if updated_amount.is_zero() {
+						old_phala_ledger.unlocking_time_unit = None;
+					}
+
+					Ok(())
+				} else {
+					Err(Error::<T>::Unexpected)?
+				}
+			},
+		)?;
+
+		Ok(Zero::zero())
 	}
 
 	/// Not supported in Phala.
@@ -642,7 +681,7 @@ impl<T: Config>
 	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		if let &MultiLocation {
 			parents: 1,
-			interior: X2(GeneralIndex(pool_id), GeneralIndex(collection_id)),
+			interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
 		} = who
 		{
 			Pallet::<T>::inner_add_validator(who, currency_id)
@@ -706,27 +745,56 @@ impl<T: Config>
 		manual_mode: bool,
 		currency_id: CurrencyId,
 	) -> Result<bool, Error<T>> {
-		Ok(true)
+		// If this is manual mode, it is always updatable.
+		let should_update = if manual_mode {
+			true
+		} else {
+			T::SubstrateResponseManager::get_query_response_record(query_id)
+		};
+
+		// Update corresponding storages.
+		if should_update {
+			Self::update_ledger_query_response_storage(query_id, entry.clone(), currency_id)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
+				query_id,
+				entry,
+			});
+		}
+
+		Ok(should_update)
 	}
 
 	fn check_validators_by_delegator_query_response(
 		&self,
-		query_id: QueryId,
-		entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
-		manual_mode: bool,
+		_query_id: QueryId,
+		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
-		Ok(true)
+		Err(Error::<T>::Unsupported)
 	}
 
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
+		// delete pallet_xcm query
+		T::SubstrateResponseManager::remove_query_record(query_id);
+
+		// delete update entry
+		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id,
+		});
+
 		Ok(())
 	}
 
 	fn fail_validators_by_delegator_query_response(
 		&self,
-		query_id: QueryId,
+		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
-		Ok(())
+		Err(Error::<T>::Unsupported)
 	}
 }
 
@@ -886,11 +954,10 @@ impl<T: Config> PhalaAgent<T> {
 		timeout: BlockNumberFor<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		use crate::primitives::SubstrateLedgerUpdateOperation::{Liquidize, Unlock};
+		use crate::primitives::SubstrateLedgerUpdateOperation::Unlock;
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = match &update_operation {
 			Unlock => Self::get_unlocking_era_from_current(currency_id)?,
-			Liquidize => T::VtokenMinting::get_ongoing_time_unit(currency_id),
 			_ => None,
 		};
 
@@ -949,5 +1016,72 @@ impl<T: Config> PhalaAgent<T> {
 		};
 
 		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
+	}
+
+	fn update_ledger_query_response_storage(
+		query_id: QueryId,
+		query_entry: LedgerUpdateEntry<BalanceOf<T>>,
+		currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		use crate::primitives::SubstrateLedgerUpdateOperation::{Bond, Unlock};
+		// update DelegatorLedgers<T> storage
+		if let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+			currency_id: _,
+			delegator_id,
+			update_operation,
+			amount,
+			unlock_time,
+		}) = query_entry
+		{
+			DelegatorLedgers::<T>::mutate(
+				currency_id,
+				delegator_id,
+				|old_ledger| -> Result<(), Error<T>> {
+					if let Some(Ledger::Phala(ref mut old_pha_ledger)) = old_ledger {
+						match update_operation {
+							Bond => {
+								// If this is a bonding operation, increase active_shares.
+								old_pha_ledger.active_shares = old_pha_ledger
+									.active_shares
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+							},
+							// If this is a bonding operation, increase unlocking_shares.
+							Unlock => {
+								// we only allow one unlocking operation at a time.
+								ensure!(
+									old_pha_ledger.unlocking_shares.is_zero(),
+									Error::<T>::AlreadyRequested
+								);
+
+								old_pha_ledger.unlocking_shares = amount;
+
+								let unlock_time_unit =
+									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+								old_pha_ledger.unlocking_time_unit = Some(unlock_time_unit);
+							},
+							_ => return Err(Error::<T>::Unexpected),
+						}
+						Ok(())
+					} else {
+						Err(Error::<T>::Unexpected)
+					}
+				},
+			)?;
+		} else {
+			Err(Error::<T>::Unexpected)?;
+		}
+
+		// Delete the DelegatorLedgerXcmUpdateQueue<T> query
+		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
+
+		// Delete the query in pallet_xcm.
+		ensure!(
+			T::SubstrateResponseManager::remove_query_record(query_id),
+			Error::<T>::QueryResponseRemoveError
+		);
+
+		Ok(())
 	}
 }

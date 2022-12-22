@@ -25,10 +25,10 @@ use crate::{
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
-	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorsByDelegator,
-	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmWeight,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
+	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
+	XcmDestWeightAndFee, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -46,12 +46,8 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
-	opaque::latest::{
-		Junction::{AccountId32, Parachain},
-		Junctions::X1,
-		MultiLocation,
-	},
-	VersionedMultiAssets, VersionedMultiLocation,
+	opaque::latest::{Junction::Parachain, Junctions::X1, MultiLocation},
+	VersionedMultiAssets,
 };
 
 #[cfg(not(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime")))]
@@ -535,7 +531,7 @@ impl<T: Config>
 		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		// Get the validator account
 		let validator_account = Pallet::<T>::multilocation_to_account(validator)?;
 
@@ -561,7 +557,7 @@ impl<T: Config>
 		// Both tokenpool increment and delegator ledger update need to be conducted by backend
 		// services.
 
-		Ok(())
+		Ok(Zero::zero())
 	}
 
 	/// Withdraw the due payout into free balance.
@@ -571,6 +567,7 @@ impl<T: Config>
 		when: &Option<TimeUnit>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
