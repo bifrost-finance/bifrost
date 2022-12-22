@@ -1257,6 +1257,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-indices",
  "pallet-utility",
  "pallet-xcm",
  "parachain-staking",
@@ -5300,7 +5301,7 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=f6c32339bdfc960fdc2827528c5a9e8fc0491628#f6c32339bdfc960fdc2827528c5a9e8fc0491628"
+source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=b3f7f1293e62d1063adc7a597df82fe0cb186894#b3f7f1293e62d1063adc7a597df82fe0cb186894"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5596,7 +5597,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.66"
+version = "0.9.67"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -10712,18 +10713,18 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.149"
+version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "256b9932320c590e707b94576e3cc1f7c9024d0ee6612dfbcf1cb106cbe8e055"
+checksum = "97fed41fc1a24994d044e6db6935e69511a1153b52c15eb42493b26fa87feba0"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.149"
+version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4eae9b04cbffdfd550eb462ed33bc6a1b68c935127d008b27444d08380f94e4"
+checksum = "255abe9a125a985c05190d687b320c12f9b1f0b99445e608c21ba0782c719ad8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -10732,9 +10733,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.89"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "020ff22c755c2ed3f8cf162dbb41a7268d934702f3ed3631656ea597e08fc3db"
+checksum = "877c235533714907a8c2464236f5c4b2a17262ef1bd71f38f35ea592c8da6883"
 dependencies = [
  "itoa",
  "ryu",
@@ -13559,7 +13560,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -13582,7 +13583,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -13597,7 +13598,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -13608,7 +13609,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -13625,7 +13626,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-rpc"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -13639,7 +13640,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -13650,7 +13651,7 @@ dependencies = [
 [[package]]
 name = "zenlink-swap-router"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=69ce6f5284c1483e999335aa48fc962c90290362#69ce6f5284c1483e999335aa48fc962c90290362"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2a40100309e74ddf425961b1ba1851c5b6f5cac3#2a40100309e74ddf425961b1ba1851c5b6f5cac3"
 dependencies = [
  "frame-support",
  "frame-system",
