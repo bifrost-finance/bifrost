@@ -640,12 +640,34 @@ impl<T: Config>
 
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Ok(())
+		if let &MultiLocation {
+			parents: 1,
+			interior: X2(GeneralIndex(pool_id), GeneralIndex(collection_id)),
+		} = who
+		{
+			Pallet::<T>::inner_add_validator(who, currency_id)
+		} else {
+			Err(Error::<T>::ValidatorMultilocationNotvalid)?
+		}
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Ok(())
+		// Get the delegator ledger
+		let ledger =
+			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		let (active_shares, unlocking_shares) = if let Ledger::Phala(phala_ledger) = ledger {
+			(phala_ledger.active_shares, phala_ledger.unlocking_shares)
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
+
+		// Check if ledger active_shares and unlocking_shares amount are zero. If not, return error.
+		ensure!(active_shares.is_zero(), Error::<T>::AmountNotZero);
+		ensure!(unlocking_shares.is_zero(), Error::<T>::AmountNotZero);
+
+		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
 	/// Charge hosting fee.

@@ -217,6 +217,7 @@ pub mod pallet {
 		DividedByZero,
 		SharePriceNotValid,
 		InvalidAmount,
+		ValidatorMultilocationNotvalid,
 	}
 
 	#[pallet::event]
