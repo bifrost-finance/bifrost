@@ -72,45 +72,45 @@ pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: VtokenMinting MinimumMint (r:1 w:1)
 	fn set_minimum_mint() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting MinimumRedeem (r:1 w:1)
 	fn set_minimum_redeem() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting UnlockDuration (r:1 w:1)
 	fn set_unlock_duration() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	fn add_support_rebond_token() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	fn remove_support_rebond_token() -> Weight {
-		(17_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(17_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting Fees (r:1 w:1)
 	fn set_fees() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting HookIterationLimit (r:1 w:1)
 	fn set_hook_iteration_limit() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting MinimumMint (r:1 w:0)
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
@@ -119,9 +119,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: Tokens Accounts (r:3 w:3)
 	// Storage: System Account (r:1 w:1)
 	fn mint() -> Weight {
-		(71_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(71_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(6 as u64))
 	}
 	// Storage: VtokenMinting MinimumRedeem (r:1 w:0)
 	// Storage: VtokenMinting Fees (r:1 w:0)
@@ -137,9 +137,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: VtokenMinting TimeUnitUnlockLedger (r:1 w:1)
 	// Storage: VtokenMinting TokenUnlockLedger (r:0 w:1)
 	fn redeem() -> Weight {
-		(88_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(88_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	// Storage: VtokenMinting UserUnlockLedger (r:1 w:1)
@@ -151,9 +151,9 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: VtokenMinting Fees (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
 	fn rebond() -> Weight {
-		(81_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(11 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(81_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(11 as u64))
+			.saturating_add(T::DbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	// Storage: VtokenMinting TokenUnlockLedger (r:1 w:1)
@@ -165,14 +165,14 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: VtokenMinting Fees (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
 	fn rebond_by_unlock_id() -> Weight {
-		(78_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(11 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(78_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(11 as u64))
+			.saturating_add(T::DbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting OngoingTimeUnit (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
 	}
 }
 
@@ -180,45 +180,45 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 impl WeightInfo for () {
 	// Storage: VtokenMinting MinimumMint (r:1 w:1)
 	fn set_minimum_mint() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting MinimumRedeem (r:1 w:1)
 	fn set_minimum_redeem() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting UnlockDuration (r:1 w:1)
 	fn set_unlock_duration() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	fn add_support_rebond_token() -> Weight {
-		(16_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(16_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	fn remove_support_rebond_token() -> Weight {
-		(17_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(17_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting Fees (r:1 w:1)
 	fn set_fees() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting HookIterationLimit (r:1 w:1)
 	fn set_hook_iteration_limit() -> Weight {
-		(15_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(15_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: VtokenMinting MinimumMint (r:1 w:0)
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
@@ -227,9 +227,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:3 w:3)
 	// Storage: System Account (r:1 w:1)
 	fn mint() -> Weight {
-		(71_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+		Weight::from_ref_time(71_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(6 as u64))
 	}
 	// Storage: VtokenMinting MinimumRedeem (r:1 w:0)
 	// Storage: VtokenMinting Fees (r:1 w:0)
@@ -245,9 +245,9 @@ impl WeightInfo for () {
 	// Storage: VtokenMinting TimeUnitUnlockLedger (r:1 w:1)
 	// Storage: VtokenMinting TokenUnlockLedger (r:0 w:1)
 	fn redeem() -> Weight {
-		(88_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(88_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	// Storage: VtokenMinting UserUnlockLedger (r:1 w:1)
@@ -259,9 +259,9 @@ impl WeightInfo for () {
 	// Storage: VtokenMinting Fees (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
 	fn rebond() -> Weight {
-		(81_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(11 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(81_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(11 as u64))
+			.saturating_add(RocksDbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	// Storage: VtokenMinting TokenUnlockLedger (r:1 w:1)
@@ -273,13 +273,13 @@ impl WeightInfo for () {
 	// Storage: VtokenMinting Fees (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
 	fn rebond_by_unlock_id() -> Weight {
-		(78_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(11 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(78_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(11 as u64))
+			.saturating_add(RocksDbWeight::get().writes(10 as u64))
 	}
 	// Storage: VtokenMinting OngoingTimeUnit (r:1 w:0)
 	fn on_initialize() -> Weight {
-		(6_000_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 	}
 }

@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, traits::VeMintingInterface, *};
+use crate::{mock::*, traits::VeMintingInterface, UnixTime, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok};
@@ -30,7 +30,8 @@ use node_primitives::TokenInfo;
 fn _checkpoint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
+		System::set_block_number(System::block_number() + 20);
+		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now(); // .as_millis().saturated_into();
 		let old_locked = LockedBalance { amount: 0, end: 0 };
 		let new_locked =
 			LockedBalance { amount: 10000000000000, end: current_timestamp + 365 * 86400 * 1000 };
@@ -58,6 +59,7 @@ fn _checkpoint() {
 fn update_reward() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
+		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
 			Some(0),
@@ -69,8 +71,7 @@ fn update_reward() {
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-		// log::debug!("{:?}", System::block_number());
+		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now(); //.as_millis().saturated_into();
 		System::set_block_number(System::block_number() + 20);
 		// log::debug!("{:?}", System::block_number());
 		assert_ok!(VeMinting::_create_lock(
@@ -109,6 +110,7 @@ fn asset_registry() {
 fn notify_reward_amount() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
+		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(
 			Origin::signed(ALICE),
 			Some(0),
@@ -120,7 +122,7 @@ fn notify_reward_amount() {
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
+		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now();
 		// log::debug!("{:?}", System::block_number());
 		System::set_block_number(System::block_number() + 20);
 		// log::debug!("{:?}", System::block_number());

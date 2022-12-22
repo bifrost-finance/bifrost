@@ -2116,7 +2116,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 }
 
 impl bifrost_ve_minting::Config for Runtime {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type Currency = Balances;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;

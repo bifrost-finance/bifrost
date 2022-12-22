@@ -22,7 +22,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate as bifrost_ve_minting;
-use crate::BNC;
+use crate::{UnixTime, BNC};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -37,7 +37,7 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyIdMapping, TokenSymbol};
+use node_primitives::{CurrencyId, CurrencyIdMapping, Moment, TokenSymbol};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
@@ -78,6 +78,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
@@ -190,6 +191,19 @@ impl orml_tokens::Config for Runtime {
 	type OnKilledTokenAccount = ();
 }
 
+use bifrost_runtime_common::constants::time::SLOT_DURATION;
+parameter_types! {
+	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
+}
+
+impl pallet_timestamp::Config for Runtime {
+	type MinimumPeriod = MinimumPeriod;
+	/// A timestamp: milliseconds since the unix epoch.
+	type Moment = Moment;
+	type OnTimestampSet = ();
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
@@ -243,6 +257,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
+	type UnixTime = Timestamp;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;

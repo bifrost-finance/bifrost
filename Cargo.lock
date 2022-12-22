@@ -1364,7 +1364,7 @@ dependencies = [
  "bifrost-slp",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
- "env_logger",
+ "env_logger 0.9.3",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1375,13 +1375,13 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-timestamp",
  "xcm",
 ]
 
