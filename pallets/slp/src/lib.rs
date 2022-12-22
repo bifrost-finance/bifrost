@@ -55,7 +55,6 @@ use xcm::latest::{
 };
 
 mod agents;
-pub mod migration;
 mod mocks;
 pub mod primitives;
 mod tests;
