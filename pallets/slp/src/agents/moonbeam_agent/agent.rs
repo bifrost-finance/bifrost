@@ -835,7 +835,7 @@ impl<T: Config>
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	/// Receiving account must be one of the KSM delegators.
+	/// Receiving account must be one of the MOVR/GLMR delegators.
 	fn transfer_to(
 		&self,
 		from: &MultiLocation,
@@ -843,7 +843,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		// Make sure receiving account is one of the KSM delegators.
+		// Make sure receiving account is one of the MOVR/GLMR delegators.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
 			Error::<T>::DelegatorNotExist
@@ -945,7 +945,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		// Get current VKSM/KSM exchange rate.
+		// Get current VMOVR/MOVR、VGLMR/GLMR exchange rate.
 		let vtoken = match currency_id {
 			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
 			GLMR => Ok(CurrencyId::VToken2(GLMR_TOKEN_ID)),

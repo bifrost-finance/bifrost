@@ -20,7 +20,7 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		XcmOperation, TIMEOUT_BLOCKS,
+		XcmOperation, PHA, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
@@ -678,7 +678,12 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		Ok(())
+		let vtoken = CurrencyId::VToken(TokenSymbol::PHA);
+
+		let charge_amount =
+			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
+
+		Pallet::<T>::inner_charge_hosting_fee(charge_amount, to, vtoken)
 	}
 
 	/// Deposit some amount as fee to nominator accounts.
@@ -689,6 +694,8 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
+		Self::do_transfer_to(from, to, amount, currency_id)?;
+
 		Ok(())
 	}
 
