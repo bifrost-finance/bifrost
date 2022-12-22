@@ -129,7 +129,6 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Weights used in the runtime.
 // mod weights;
 
-// mod migrations;
 mod xcm_config;
 
 use xcm_config::{
@@ -149,7 +148,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 966,
+	spec_version: 967,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1120,6 +1119,13 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 
 parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second::<Runtime>());
+	pub VksmPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey((CurrencyId::VToken(TokenSymbol::KSM).encode()).try_into().unwrap()))
+		).into(),
+		ksm_per_second::<Runtime>()
+	);
 	pub VsksmPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
@@ -1234,6 +1240,7 @@ impl TakeRevenue for ToTreasury {
 
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfFungible<VksmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,

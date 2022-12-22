@@ -1257,6 +1257,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-indices",
  "pallet-utility",
  "pallet-xcm",
  "parachain-staking",
@@ -5596,7 +5597,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.66"
+version = "0.9.67"
 dependencies = [
  "clap",
  "cumulus-client-cli",

@@ -15,18 +15,16 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{
-	agents::{
-		KusamaCall, KusamaUtilityCall, PolkadotCall, PolkadotUtilityCall, RewardDestination,
-		StakingCall, SubstrateCall, SystemCall, XcmCall,
-	},
+	agents::{RewardDestination, StakingCall, SystemCall, XcmCall},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
 	},
-	traits::{InstructionBuilder, QueryResponseManager, StakingAgent, XcmBuilder},
+	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLatestTuneRecord,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, Hash,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorsByDelegator,
@@ -49,13 +47,18 @@ use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
 	opaque::latest::{
-		Instruction,
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
 	VersionedMultiAssets, VersionedMultiLocation,
 };
+
+#[cfg(not(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime")))]
+use super::types::kusama::{RelaychainCall, UtilityCall};
+
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+use super::types::polkadot::{RelaychainCall, UtilityCall};
 
 /// StakingAgent implementation for Kusama/Polkadot
 pub struct PolkadotAgent<T>(PhantomData<T>);
@@ -117,19 +120,11 @@ impl<T: Config>
 		let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Bond(
-				T::Lookup::unlookup(delegator_account),
-				amount,
-				RewardDestination::<AccountIdOf<T>>::Staked,
-			)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Bond(
-				T::Lookup::unlookup(delegator_account),
-				amount,
-				RewardDestination::<AccountIdOf<T>>::Staked,
-			)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Bond(
+			T::Lookup::unlookup(delegator_account),
+			amount,
+			RewardDestination::<AccountIdOf<T>>::Staked,
+		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -198,12 +193,7 @@ impl<T: Config>
 			Err(Error::<T>::Unexpected)?;
 		}
 		// Construct xcm message..
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::BondExtra(amount)))),
-			DOT =>
-				Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::BondExtra(amount)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::BondExtra(amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -268,11 +258,7 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Unbond(amount)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Unbond(amount)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Unbond(amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -313,12 +299,7 @@ impl<T: Config>
 			let amount = substrate_ledger.active;
 
 			// Construct xcm message.
-			let call = match currency_id {
-				KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Unbond(amount)))),
-				DOT =>
-					Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Unbond(amount)))),
-				_ => Err(Error::NotSupportedCurrencyId),
-			}?;
+			let call = RelaychainCall::Staking(StakingCall::Unbond(amount));
 
 			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 			// send it out.
@@ -381,11 +362,7 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Rebond(amount)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Rebond(amount)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Rebond(amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -446,12 +423,7 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Nominate(accounts)))),
-			DOT =>
-				Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Nominate(accounts)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Nominate(accounts));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -518,12 +490,7 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Nominate(accounts)))),
-			DOT =>
-				Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Nominate(accounts)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Nominate(accounts));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -579,17 +546,8 @@ impl<T: Config>
 			Err(Error::<T>::InvalidTimeUnit)?
 		};
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::PayoutStakers(
-				validator_account,
-				payout_era,
-			)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::PayoutStakers(
-				validator_account,
-				payout_era,
-			)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call =
+			RelaychainCall::Staking(StakingCall::PayoutStakers(validator_account, payout_era));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -628,15 +586,7 @@ impl<T: Config>
 		};
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::WithdrawUnbonded(
-				num_slashing_spans,
-			)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(
-				StakingCall::WithdrawUnbonded(num_slashing_spans),
-			))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::WithdrawUnbonded(num_slashing_spans));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -674,11 +624,7 @@ impl<T: Config>
 		);
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Chill))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Chill))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Staking(StakingCall::Chill);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -755,15 +701,12 @@ impl<T: Config>
 		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Xcm(Box::new(
-				XcmCall::ReserveTransferAssets(dest, beneficiary, assets, fee_asset_item),
-			)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Xcm(Box::new(
-				XcmCall::ReserveTransferAssets(dest, beneficiary, assets, fee_asset_item),
-			)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = RelaychainCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
+			dest,
+			beneficiary,
+			assets,
+			fee_asset_item,
+		)));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -1034,47 +977,42 @@ impl<T: Config>
 impl<T: Config>
 	XcmBuilder<
 		BalanceOf<T>,
-		SubstrateCall<T>,
+		RelaychainCall<T>,
 		Error<T>, // , MultiLocation,
 	> for PolkadotAgent<T>
 {
 	fn construct_xcm_message(
-		call: SubstrateCall<T>,
+		call: RelaychainCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		_currency_id: CurrencyId,
 		// response_back_location: MultiLocation
 	) -> Result<Xcm<()>, Error<T>> {
-		let mut xcm_message = Self::inner_construct_xcm_message(extra_fee);
-		let transact_instruct = match call {
-			SubstrateCall::Kusama(ksm_call) => Self::construct_instruction(ksm_call, weight),
-			SubstrateCall::Polkadot(dot_call) => Self::construct_instruction(dot_call, weight),
+		let asset = MultiAsset {
+			id: Concrete(MultiLocation::here()),
+			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
-		xcm_message.insert(2, transact_instruct);
+		let xcm_message = vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: call.encode().into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(Parachain(T::ParachainId::get().into())),
+				},
+			},
+		];
+
 		Ok(Xcm(xcm_message))
-	}
-}
-
-// for kusama call
-impl<T: Config> InstructionBuilder<KusamaCall<T>> for PolkadotAgent<T> {
-	fn construct_instruction(call: KusamaCall<T>, weight: XcmWeight) -> Instruction {
-		Transact {
-			origin_type: OriginKind::SovereignAccount,
-			require_weight_at_most: weight,
-			call: call.encode().into(),
-		}
-	}
-}
-
-// for polkadot call
-impl<T: Config> InstructionBuilder<PolkadotCall<T>> for PolkadotAgent<T> {
-	fn construct_instruction(call: PolkadotCall<T>, weight: XcmWeight) -> Instruction {
-		Transact {
-			origin_type: OriginKind::SovereignAccount,
-			require_weight_at_most: weight,
-			call: call.encode().into(),
-		}
 	}
 }
 
@@ -1082,52 +1020,31 @@ impl<T: Config> InstructionBuilder<PolkadotCall<T>> for PolkadotAgent<T> {
 impl<T: Config> PolkadotAgent<T> {
 	fn prepare_send_as_subaccount_call_params_with_query_id(
 		operation: XcmOperation,
-		call: SubstrateCall<T>,
+		call: RelaychainCall<T>,
 		who: &MultiLocation,
 		query_id: QueryId,
 		currency_id: CurrencyId,
-	) -> Result<(SubstrateCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
+	) -> Result<(RelaychainCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let call_as_subaccount = match call {
-			SubstrateCall::Kusama(ksm_call) => {
-				// Temporary wrapping remark event in Kusama for ease use of backend service.
-				let remark_call =
-					KusamaCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+		let call_as_subaccount = {
+			// Temporary wrapping remark event in Kusama for ease use of backend service.
+			let remark_call =
+				RelaychainCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
-				let call_batched_with_remark =
-					KusamaCall::Utility(Box::new(KusamaUtilityCall::BatchAll(Box::new(vec![
-						Box::new(ksm_call),
-						Box::new(remark_call),
-					]))));
+			let call_batched_with_remark =
+				RelaychainCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![
+					Box::new(call),
+					Box::new(remark_call),
+				]))));
 
-				Ok(SubstrateCall::Kusama(KusamaCall::Utility(Box::new(
-					KusamaUtilityCall::AsDerivative(
-						sub_account_index,
-						Box::new(call_batched_with_remark),
-					),
-				))))
-			},
-			SubstrateCall::Polkadot(dot_call) => {
-				let remark_call =
-					PolkadotCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
-
-				let call_batched_with_remark =
-					PolkadotCall::Utility(Box::new(PolkadotUtilityCall::BatchAll(Box::new(vec![
-						Box::new(dot_call),
-						Box::new(remark_call),
-					]))));
-
-				Ok(SubstrateCall::Polkadot(PolkadotCall::Utility(Box::new(
-					PolkadotUtilityCall::AsDerivative(
-						sub_account_index,
-						Box::new(call_batched_with_remark),
-					),
-				))))
-			},
-		}?;
+			RelaychainCall::Utility(Box::new(UtilityCall::AsDerivative(
+				sub_account_index,
+				Box::new(call_batched_with_remark),
+			)))
+		};
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
@@ -1137,23 +1054,18 @@ impl<T: Config> PolkadotAgent<T> {
 
 	fn prepare_send_as_subaccount_call_params_without_query_id(
 		operation: XcmOperation,
-		call: SubstrateCall<T>,
+		call: RelaychainCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(SubstrateCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
+	) -> Result<(RelaychainCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let call_as_subaccount = match call {
-			SubstrateCall::Kusama(ksm_call) => Ok(SubstrateCall::Kusama(KusamaCall::Utility(
-				Box::new(KusamaUtilityCall::AsDerivative(sub_account_index, Box::new(ksm_call))),
-			))),
-			SubstrateCall::Polkadot(dot_call) =>
-				Ok(SubstrateCall::Polkadot(PolkadotCall::Utility(Box::new(
-					PolkadotUtilityCall::AsDerivative(sub_account_index, Box::new(dot_call)),
-				)))),
-		}?;
+		let call_as_subaccount = RelaychainCall::Utility(Box::new(UtilityCall::AsDerivative(
+			sub_account_index,
+			Box::new(call),
+		)));
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
@@ -1163,7 +1075,7 @@ impl<T: Config> PolkadotAgent<T> {
 
 	fn construct_xcm_as_subaccount_with_query_id(
 		operation: XcmOperation,
-		call: SubstrateCall<T>,
+		call: RelaychainCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
@@ -1204,7 +1116,7 @@ impl<T: Config> PolkadotAgent<T> {
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
 		operation: XcmOperation,
-		call: SubstrateCall<T>,
+		call: RelaychainCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
@@ -1529,29 +1441,5 @@ impl<T: Config> PolkadotAgent<T> {
 			.map_err(|_| Error::<T>::XcmFailure)?;
 
 		Ok(())
-	}
-
-	fn inner_construct_xcm_message(
-		extra_fee: BalanceOf<T>,
-		// response_back_location: MultiLocation
-	) -> Vec<Instruction> {
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
-		};
-
-		vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			RefundSurplus,
-			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::max_value(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(Parachain(T::ParachainId::get().into())),
-				},
-			},
-		]
 	}
 }

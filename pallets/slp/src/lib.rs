@@ -55,8 +55,7 @@ use xcm::latest::{
 };
 
 mod agents;
-pub mod migration;
-mod mock;
+mod mocks;
 pub mod primitives;
 mod tests;
 pub mod traits;
@@ -1550,20 +1549,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;
-
-			let mins_maxs =
-				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-			// Check the new ledger must has at lease minimum active amount.
-			if let Some(ref ldgr) = *ledger {
-				if let Ledger::Substrate(lg) = ldgr {
-					ensure!(
-						lg.active >= mins_maxs.delegator_bonded_minimum,
-						Error::<T>::LowerThanMinimum
-					);
-				} else {
-					Err(Error::<T>::Unexpected)?;
-				}
-			}
 
 			// Update the ledger.
 			DelegatorLedgers::<T>::mutate_exists(currency_id, &*who, |old_ledger| {
