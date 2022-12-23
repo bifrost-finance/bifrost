@@ -139,7 +139,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			if last_point.bias < Zero::zero() {
 				last_point.bias = Zero::zero();
 			}
-			let ve_config = Self::ve_configs();
 			Ok(last_point.fxs_amt + (Self::ve_configs().vote_weight_multiplier * last_point.bias))
 		}
 	}
@@ -156,7 +155,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		// Binary search
 		let mut _min = U256::zero();
 		let mut _max = Self::user_point_epoch(addr);
-		for i in 0..128 {
+		for _i in 0..128 {
 			if _min >= _max {
 				break;
 			}
@@ -177,8 +176,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let max_epoch: U256 = Self::epoch();
 		let _epoch: U256 = Self::find_block_epoch(_block, max_epoch);
 		let point_0: Point<BalanceOf<T>, BlockNumberFor<T>> = Self::point_history(_epoch);
-		let mut d_block = Zero::zero();
-		let mut d_t = Zero::zero();
+		let d_block; // = Zero::zero();
+		let d_t; // = Zero::zero();
 		if _epoch < max_epoch {
 			let point_1 = Self::point_history(_epoch + 1);
 			d_block = point_1.blk - point_0.blk;
@@ -207,7 +206,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn find_block_epoch(_block: BlockNumberFor<T>, max_epoch: U256) -> U256 {
 		let mut _min = U256::zero();
 		let mut _max = max_epoch;
-		for i in 0..128 {
+		for _i in 0..128 {
 			if _min >= _max {
 				break;
 			}
@@ -233,7 +232,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let mut last_point = point;
 		let mut t_i: Timestamp = (last_point.ts / ve_config.week) * ve_config.week;
-		for i in 0..255 {
+		for _i in 0..255 {
 			t_i += ve_config.week;
 			let mut d_slope = Zero::zero();
 			if t_i > t {

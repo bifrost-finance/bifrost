@@ -20,10 +20,10 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, traits::VeMintingInterface, UnixTime, *};
+use crate::{mock::*, traits::VeMintingInterface, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::assert_ok;
 use node_primitives::TokenInfo;
 
 #[test]
@@ -37,7 +37,7 @@ fn _checkpoint() {
 			LockedBalance { amount: 10000000000000, end: current_timestamp + 365 * 86400 * 1000 };
 
 		assert_ok!(VeMinting::set_config(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			Some(0),
 			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400),
@@ -61,7 +61,7 @@ fn update_reward() {
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			Some(0),
 			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400 * 1000),
@@ -112,7 +112,7 @@ fn notify_reward_amount() {
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(
-			Origin::signed(ALICE),
+			RuntimeOrigin::signed(ALICE),
 			Some(0),
 			Some(7 * 86400 * 1000),
 			Some(4 * 365 * 86400 * 1000),
@@ -134,7 +134,11 @@ fn notify_reward_amount() {
 		// log::debug!("{:?}", VeMinting::balance_of(&BOB, Some(current_timestamp)));
 
 		let rewards = vec![(KSM, 1000)];
-		assert_ok!(VeMinting::notify_rewards(Origin::signed(ALICE), Some(7 * 86400), rewards));
+		assert_ok!(VeMinting::notify_rewards(
+			RuntimeOrigin::signed(ALICE),
+			Some(7 * 86400),
+			rewards
+		));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
 		// log::debug!(
 		// 	"notify_reward_amount: {:?}",

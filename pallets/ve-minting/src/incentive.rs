@@ -98,14 +98,11 @@ impl<T: Config> Pallet<T> {
 				.and_modify(|total_reward| {
 					*total_reward = total_reward.saturating_add(
 						vetoken_balance.saturating_mul(
-							Self::reward_per_token()
-								.get(currency)
-								.unwrap_or(&BalanceOf::<T>::zero())
-								.saturating_sub(
-									*Self::user_reward_per_token_paid(addr)
-										.get(currency)
-										.unwrap_or(&BalanceOf::<T>::zero()),
-								),
+							reward.saturating_sub(
+								*Self::user_reward_per_token_paid(addr)
+									.get(currency)
+									.unwrap_or(&BalanceOf::<T>::zero()),
+							),
 						),
 					);
 				})
@@ -172,8 +169,8 @@ impl<T: Config> Pallet<T> {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-		let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-			rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
+		// let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
+		// 	rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
 
 		if current_timestamp >= conf.period_finish {
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
@@ -227,8 +224,8 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 		};
-		let balance =
-			Self::balance_of(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
+		// let balance =
+		// 	Self::balance_of(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
 
 		conf.last_update_time = current_timestamp;
 		conf.period_finish = current_timestamp.saturating_add(conf.rewards_duration);

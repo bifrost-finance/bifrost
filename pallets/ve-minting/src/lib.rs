@@ -35,18 +35,15 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{
-			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Saturating,
-			UniqueSaturatedInto, Zero,
-		},
+		traits::{AccountIdConversion, CheckedDiv, Saturating, UniqueSaturatedInto, Zero},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency, Time, UnixTime},
+	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency, UnixTime},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::{AccountId, CurrencyId, Timestamp, TokenSymbol}; // BlockNumber, Balance
+use node_primitives::{CurrencyId, Timestamp, TokenSymbol}; // BlockNumber, Balance
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
@@ -328,7 +325,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
-			let mut old_dslope = 0_i128;
+			let mut old_dslope: i128; //  0_i128;
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
@@ -387,7 +384,7 @@ pub mod pallet {
 					(current_timestamp - last_point.ts).saturated_into::<u128>()
 			}
 			let mut t_i: Timestamp = (last_checkpoint / ve_config.week) * ve_config.week;
-			for i in 0..255 {
+			for _i in 0..255 {
 				t_i += ve_config.week;
 				let mut d_slope = Zero::zero();
 				if t_i > current_timestamp {
@@ -398,7 +395,7 @@ pub mod pallet {
 				last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
 					.checked_sub(
 						U256::from(last_point.slope.saturated_into::<u128>()).saturating_mul(
-							U256::from((t_i - last_point.ts).saturated_into::<u128>()),
+							U256::from((t_i - last_checkpoint).saturated_into::<u128>()),
 						),
 					)
 					// .checked_div(total_shares)

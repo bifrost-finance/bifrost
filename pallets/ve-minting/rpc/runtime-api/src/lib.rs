@@ -19,10 +19,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
-use node_primitives::{Balance, BlockNumber, CurrencyId, Timestamp};
+use node_primitives::{Balance, BlockNumber, Timestamp};
 use sp_api::decl_runtime_apis;
 use sp_core::U256;
-use sp_std::vec::Vec;
 
 decl_runtime_apis! {
 	pub trait VeMintingRuntimeApi<AccountId> where
