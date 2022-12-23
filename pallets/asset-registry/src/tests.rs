@@ -388,3 +388,60 @@ fn register_multilocation_should_work() {
 		assert_eq!(CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)), Some(2000_000_000));
 	})
 }
+
+#[test]
+fn force_set_multilocation_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let metadata = AssetMetadata {
+			name: b"Bifrost Native Coin".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: 0,
+		};
+		// v1
+		let location = VersionedMultiLocation::V1(MultiLocation {
+			parents: 1,
+			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+		});
+		let multi_location: MultiLocation = location.clone().try_into().unwrap();
+
+		assert_noop!(
+			AssetRegistry::force_set_multilocation(
+				RuntimeOrigin::signed(CouncilAccount::get()),
+				CurrencyId::Token2(0),
+				Box::new(location.clone()),
+				2000_000_000
+			),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+
+		assert_ok!(AssetRegistry::register_token_metadata(
+			RuntimeOrigin::signed(CouncilAccount::get()),
+			Box::new(metadata.clone())
+		));
+
+		assert_ok!(AssetRegistry::force_set_multilocation(
+			RuntimeOrigin::signed(CouncilAccount::get()),
+			CurrencyId::Token2(0),
+			Box::new(location.clone()),
+			2000_000_000
+		));
+
+		assert_ok!(AssetRegistry::force_set_multilocation(
+			RuntimeOrigin::signed(CouncilAccount::get()),
+			CurrencyId::Token2(0),
+			Box::new(location.clone()),
+			3000_000_000
+		));
+
+		assert_eq!(
+			LocationToCurrencyIds::<Runtime>::get(multi_location.clone()),
+			Some(CurrencyId::Token2(0))
+		);
+		assert_eq!(
+			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
+			Some(multi_location.clone())
+		);
+		assert_eq!(CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)), Some(3000_000_000));
+	})
+}

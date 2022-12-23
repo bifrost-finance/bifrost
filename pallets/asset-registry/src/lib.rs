@@ -51,6 +51,7 @@ use xcm::{
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
 
+mod migration;
 mod mock;
 mod tests;
 pub mod weights;
@@ -118,6 +119,8 @@ pub mod pallet {
 		AssetUpdated { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The CurrencyId registered.
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
+		/// MultiLocation Force set.
+		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: u128 },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -278,6 +281,13 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_currency_multilocations::<T>()
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::register_native_asset())]
@@ -409,6 +419,36 @@ pub mod pallet {
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			Self::do_register_multilocation(currency_id, &location)?;
 			Self::do_register_weight(currency_id, weight)?;
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::force_set_multilocation())]
+		pub fn force_set_multilocation(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			location: Box<VersionedMultiLocation>,
+			weight: u128,
+		) -> DispatchResult {
+			T::RegisterOrigin::ensure_origin(origin)?;
+
+			let location: MultiLocation =
+				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+
+			ensure!(
+				CurrencyMetadatas::<T>::get(currency_id).is_some(),
+				Error::<T>::CurrencyIdNotExists
+			);
+
+			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
+			CurrencyIdToLocations::<T>::insert(currency_id, location.clone());
+			CurrencyIdToWeights::<T>::insert(currency_id, weight);
+
+			Pallet::<T>::deposit_event(Event::<T>::MultiLocationSet {
+				currency_id,
+				location,
+				weight,
+			});
 
 			Ok(())
 		}

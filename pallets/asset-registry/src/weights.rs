@@ -62,6 +62,7 @@ pub trait WeightInfo {
 	fn register_vstoken_metadata() -> Weight;
 	fn register_vsbond_metadata() -> Weight;
 	fn register_multilocation() -> Weight;
+	fn force_set_multilocation() -> Weight;
 }
 
 /// Weights for bifrost_asset_registry using the Bifrost node and recommended hardware.
@@ -117,6 +118,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(3 as u64))
 			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
+
+	fn force_set_multilocation() -> Weight {
+		Weight::from_ref_time(61_509_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(3 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -167,6 +174,12 @@ impl WeightInfo for () {
 	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
 	// Storage: AssetRegistry CurrencyIdToWeights (r:0 w:1)
 	fn register_multilocation() -> Weight {
+		Weight::from_ref_time(61_509_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(3 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+	}
+
+	fn force_set_multilocation() -> Weight {
 		Weight::from_ref_time(61_509_000 as u64)
 			.saturating_add(RocksDbWeight::get().reads(3 as u64))
 			.saturating_add(RocksDbWeight::get().writes(3 as u64))
