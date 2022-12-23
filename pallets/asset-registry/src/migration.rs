@@ -32,8 +32,12 @@ pub fn update_currency_multilocations<T: Config>() -> Weight {
 			CurrencyId::VToken2(_) |
 			CurrencyId::Native(_) => {
 				let lct = non_chain_part(location.clone());
+				log::info!("******dealing with {:?}....", currency_id);
+				log::info!("Old location: {:?}....", location.clone());
 				LocationToCurrencyIds::<T>::remove(location.clone());
 				LocationToCurrencyIds::<T>::insert(lct.clone(), currency_id);
+				log::info!("New location: {:?}....", lct.clone());
+				assert!(Some(currency_id) == LocationToCurrencyIds::<T>::get(lct.clone()));
 				lct
 			},
 			_ => location,
