@@ -70,7 +70,7 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, milli, millicent, AuraId, CouncilCollective,
+	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -94,7 +94,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{
-	currency::MutationHooks, location::AbsoluteReserveProvider, parameter_type_with_key,
+	currency::MutationHooks, location::RelativeReserveProvider, parameter_type_with_key,
 	MultiCurrency,
 };
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 966,
+	spec_version: 968,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1024,7 +1024,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
@@ -1173,7 +1173,7 @@ parameter_type_with_key! {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
-			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 1 * micro::<Runtime>(NativeCurrencyId::get()),
 			CurrencyId::ForeignAsset(foreign_asset_id) => {
 				AssetIdMaps::<Runtime>::get_asset_metadata(AssetIds::ForeignAssetId(*foreign_asset_id)).
 					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -1238,6 +1238,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
+	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
 	pub RelayXcmBaseWeight: u64 = (100 * milli::<Runtime>(RelayCurrencyId::get())) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -1255,14 +1256,14 @@ impl orml_xtokens::Config for Runtime {
 	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type LocationInverter = LocationInverter<Ancestry>;
-	type SelfLocation = SelfLocation;
+	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = RelayXcmBaseWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
 	type MultiLocationsFilter = Everything;
-	type ReserveProvider = AbsoluteReserveProvider;
+	type ReserveProvider = RelativeReserveProvider;
 }
 
 impl orml_unknown_tokens::Config for Runtime {

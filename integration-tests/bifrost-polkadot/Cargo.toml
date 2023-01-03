@@ -8,7 +8,7 @@ edition = "2021"
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = { version = "0.4.17" }
-serde = { version = "1.0.151", optional = true }
+serde = { version = "1.0.152", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", optional = true }
 hex-literal = { version = "0.3.4" }
@@ -74,7 +74,7 @@ zenlink-protocol = { version = "*" }
 zenlink-protocol-runtime-api = { version = "*" }
 
 [dev-dependencies]
-env_logger = "0.9.3"
+env_logger = "0.10.0"
 hex = "0.4.0"
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }

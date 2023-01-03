@@ -99,7 +99,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{
-	currency::MutationHooks, location::AbsoluteReserveProvider, parameter_type_with_key,
+	currency::MutationHooks, location::RelativeReserveProvider, parameter_type_with_key,
 	MultiCurrency,
 };
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
@@ -124,7 +124,6 @@ use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler,
 	MultiAssetsHandler, PairInfo, PairLpGenerate, ZenlinkMultiAssets,
 };
-
 use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 // Weights used in the runtime.
 // mod weights;
@@ -148,7 +147,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 967,
+	spec_version: 968,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1263,7 +1262,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
@@ -1399,7 +1398,7 @@ parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent::<Runtime>(PolkadotCurrencyId::get()),
-			&CurrencyId::LPToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 1 * micro::<Runtime>(NativeCurrencyId::get()),
 			&CurrencyId::StableLpToken(..) => 10 * millicent::<Runtime>(NativeCurrencyId::get()),
 			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent::<Runtime>(RelayCurrencyId::get()),  // 0.0001 vKSM
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::RMRK)),
@@ -1486,6 +1485,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
+	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
 	pub RelayXcmBaseWeight: u64 = milli::<Runtime>(RelayCurrencyId::get()) as u64;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -1503,14 +1503,14 @@ impl orml_xtokens::Config for Runtime {
 	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type LocationInverter = LocationInverter<Ancestry>;
-	type SelfLocation = SelfLocation;
+	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = RelayXcmBaseWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
 	type MultiLocationsFilter = Everything;
-	type ReserveProvider = AbsoluteReserveProvider;
+	type ReserveProvider = RelativeReserveProvider;
 }
 
 impl orml_unknown_tokens::Config for Runtime {

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
+	vec, BalanceOf, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
