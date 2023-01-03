@@ -219,6 +219,7 @@ pub mod pallet {
 		InvalidAmount,
 		ValidatorMultilocationNotvalid,
 		AmountNotProvided,
+		FailToConvert,
 	}
 
 	#[pallet::event]

@@ -79,6 +79,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
+		ensure!(
+			delegator_multilocation.clone() != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
