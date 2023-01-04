@@ -251,6 +251,7 @@ fn reset() {
 		let pool_infos = PoolInfo {
 			tokens_proportion: tokens_proportion_map,
 			total_shares: Default::default(),
+			basic_token: (KSM, Perbill::from_percent(100)),
 			basic_rewards: basic_rewards_map.clone(),
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,

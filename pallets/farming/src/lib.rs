@@ -30,6 +30,7 @@ mod tests;
 mod benchmarking;
 
 pub mod gauge;
+mod migration;
 pub mod rewards;
 pub mod weights;
 pub use weights::WeightInfo;
@@ -289,6 +290,11 @@ pub mod pallet {
 
 			T::WeightInfo::on_initialize()
 		}
+
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_pool_info::<T>();
+			T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
+		}
 	}
 
 	#[pallet::call]
@@ -318,6 +324,7 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let keeper = T::Keeper::get().into_sub_account_truncating(pid);
 			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
+			let basic_token = tokens_proportion[0].clone();
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -327,6 +334,7 @@ pub mod pallet {
 				keeper,
 				reward_issuer,
 				tokens_proportion_map,
+				basic_token,
 				basic_rewards_map,
 				None,
 				min_deposit_to_start,
@@ -409,9 +417,7 @@ pub mod pallet {
 				);
 			}
 
-			let tokens_proportion_values: Vec<Perbill> =
-				pool_info.tokens_proportion.values().cloned().collect();
-			let native_amount = tokens_proportion_values[0].saturating_reciprocal_mul(add_value);
+			let native_amount = pool_info.basic_token.1.saturating_reciprocal_mul(add_value);
 			pool_info.tokens_proportion.iter().try_for_each(
 				|(token, proportion)| -> DispatchResult {
 					T::MultiCurrency::transfer(
@@ -778,10 +784,8 @@ impl<T: Config> FarmingInfo<BalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
 	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		if let Some(pool_info) = Self::pool_infos(&pool_id) {
 			if let Some(token_proportion_value) = pool_info.tokens_proportion.get(&currency_id) {
-				let tokens_proportion_values: Vec<Perbill> =
-					pool_info.tokens_proportion.values().cloned().collect();
 				let native_amount =
-					tokens_proportion_values[0].saturating_reciprocal_mul(pool_info.total_shares);
+					pool_info.basic_token.1.saturating_reciprocal_mul(pool_info.total_shares);
 				return *token_proportion_value * native_amount;
 			}
 		}
