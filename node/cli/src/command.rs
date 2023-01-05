@@ -326,7 +326,7 @@ pub fn run() -> Result<()> {
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
 				let id = ParaId::from(para_id);
@@ -353,16 +353,18 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				if collator_options.relay_chain_rpc_url.is_some() && cli.relay_chain_args.len() > 0 {
-					log::warn!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
-				}
-
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node(config, polkadot_config, collator_options, id, hwbench)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
+						start_node::<RuntimeApi>(
+							config,
+							polkadot_config,
+							collator_options,
+							id,
+							hwbench,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
 					}
 				})
 			})
@@ -396,24 +398,20 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, false)?;
+							let partials = new_partial::<RuntimeApi>(&config, false)?;
 							cmd.run(partials.client)
 						}
 					})
 				}),
 				#[cfg(not(feature = "runtime-benchmarks"))]
 				BenchmarkCmd::Storage(_) =>
-					return Err(sc_cli::Error::Input(
-						"Compile with --features=runtime-benchmarks \
-						to enable storage benchmarks."
-							.into(),
-					)
-					.into()),
+					Err("Storage benchmarking can be enabled with `--features runtime-benchmarks`."
+						.into()),
 				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, false)?;
+							let partials = new_partial::<RuntimeApi>(&config, false)?;
 							let db = partials.backend.expose_db();
 							let storage = partials.backend.expose_storage();
 							cmd.run(config, partials.client.clone(), db, storage)
@@ -495,7 +493,7 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(

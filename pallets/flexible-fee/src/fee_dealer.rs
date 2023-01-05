@@ -58,11 +58,11 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
 		.checked_sub(&(fee + native_existential_deposit))
 		.map_or(false, |new_free_balance| {
 			<<T as Config>::Currency as Currency<
-										<T as frame_system::Config>::AccountId,
-									>>::ensure_can_withdraw(
-										who, fee, reason, new_free_balance
-									)
-									.is_ok()
+					<T as frame_system::Config>::AccountId,
+				>>::ensure_can_withdraw(
+					who, fee, reason, new_free_balance
+				)
+					.is_ok()
 		});
 
 		if !native_is_enough {

@@ -29,7 +29,7 @@ pub enum Subcommand {
 	Key(KeySubcommand),
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
-	#[command(
+	#[clap(
 		name = "inspect",
 		about = "Decode given block or extrinsic using current native runtime."
 	)]
@@ -83,7 +83,7 @@ pub enum Subcommand {
 }
 
 #[derive(Debug, Parser)]
-#[command(
+#[clap(
 	propagate_version = true,
 	args_conflicts_with_subcommands = true,
 	subcommand_negates_reqs = true
@@ -94,6 +94,9 @@ pub struct Cli {
 
 	#[command(flatten)]
 	pub run: cumulus_client_cli::RunCmd,
+
+	#[arg(long)]
+	pub sealing: Option<String>,
 
 	/// Disable automatic hardware benchmarks.
 	///
@@ -106,8 +109,8 @@ pub struct Cli {
 	pub no_hardware_benchmarks: bool,
 
 	/// Relay chain arguments
-	#[arg(raw = true)]
-	pub relay_chain_args: Vec<String>,
+	#[arg(raw = true, conflicts_with = "relay-chain-rpc-url")]
+	pub relaychain_args: Vec<String>,
 }
 
 #[derive(Debug)]

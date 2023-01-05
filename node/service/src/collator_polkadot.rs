@@ -16,12 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#![warn(unused_extern_crates)]
+
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{sync::Arc, time::Duration};
 
+// rpc
+use jsonrpsee::RpcModule;
+
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_polkadot_runtime;
-use bifrost_polkadot_runtime::RuntimeApi;
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -47,10 +51,10 @@ use sc_service::{
 	TaskManager,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
+use sp_api::{CallApiAt, ConstructRuntimeApi, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_consensus::BlockStatus;
-use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
+use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
@@ -87,23 +91,31 @@ impl sc_executor::NativeExecutionDispatch for BifrostPolkadotExecutor {
 }
 
 pub type FullBackend = TFullBackend<Block>;
-pub type FullClient = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
+
+type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
+
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 
-pub fn new_partial(
+pub fn new_partial<RuntimeApi>(
 	config: &Configuration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
-		FullClient,
+		FullClient<RuntimeApi>,
 		FullBackend,
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		sc_transaction_pool::FullPool<Block, FullClient>,
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
 	sc_service::Error,
-> {
+>
+where
+	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+{
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -213,87 +225,41 @@ async fn build_relay_chain_interface(
 	}
 }
 
-fn build_consensus(
-	client: Arc<FullClient>,
-	prometheus_registry: Option<&Registry>,
-	telemetry: Option<TelemetryHandle>,
-	task_manager: &TaskManager,
-	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
-	sync_oracle: Arc<NetworkService<Block, Hash>>,
-	keystore: SyncCryptoStorePtr,
-	force_authoring: bool,
-	id: ParaId,
-) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error> {
-	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
-	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
-		task_manager.spawn_handle(),
-		client.clone(),
-		transaction_pool,
-		prometheus_registry,
-		telemetry.clone(),
-	);
-
-	let params = BuildAuraConsensusParams {
-		proposer_factory,
-		create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
-			let relay_chain_interface = relay_chain_interface.clone();
-			async move {
-				let parachain_inherent =
-					cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
-						relay_parent,
-						&relay_chain_interface,
-						&validation_data,
-						id,
-					)
-					.await;
-				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-
-				let slot =
-					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-						*timestamp,
-						slot_duration,
-					);
-
-				let parachain_inherent = parachain_inherent.ok_or_else(|| {
-					Box::<dyn std::error::Error + Send + Sync>::from(
-						"Failed to create parachain inherent",
-					)
-				})?;
-				Ok((slot, timestamp, parachain_inherent))
-			}
-		},
-		block_import: client.clone(),
-		para_client: client,
-		backoff_authoring_blocks: Option::<()>::None,
-		sync_oracle,
-		keystore,
-		force_authoring,
-		slot_duration,
-		// We got around 500ms for proposing
-		block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
-		// And a maximum of 750ms if slots are skipped
-		max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
-		telemetry,
-	};
-
-	Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(params))
-}
-
 /// Start a node with the given parachain `Configuration` and relay chain
 /// `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the
 /// runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
-async fn start_node_impl(
+async fn start_node_impl<RB, RuntimeApi, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
 	id: ParaId,
+	_rpc_ext_builder: RB,
+	build_consensus: BIC,
 	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
+where
+	RB: Fn(Arc<FullClient<RuntimeApi>>) -> Result<RpcModule<()>, sc_service::Error>
+		+ Send
+		+ 'static,
+	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+	BIC: FnOnce(
+		Arc<FullClient<RuntimeApi>>,
+		Option<&Registry>,
+		Option<TelemetryHandle>,
+		&TaskManager,
+		Arc<dyn RelayChainInterface>,
+		Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>>,
+		Arc<NetworkService<Block, Hash>>,
+		SyncCryptoStorePtr,
+		bool,
+	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+{
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, false)?;
@@ -394,7 +360,6 @@ async fn start_node_impl(
 			network,
 			params.keystore_container.sync_keystore(),
 			force_authoring,
-			id,
 		)?;
 
 		let spawner = task_manager.spawn_handle();
@@ -434,14 +399,93 @@ async fn start_node_impl(
 }
 
 /// Start a normal parachain node.
-pub async fn start_node(
+pub async fn start_node<RuntimeApi>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
 	id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl(parachain_config, polkadot_config, collator_options, id, hwbench).await
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi>>)>
+where
+	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+{
+	start_node_impl(
+		parachain_config,
+		polkadot_config,
+		collator_options,
+		id,
+		|_| Ok(RpcModule::new(())),
+		|client,
+		 prometheus_registry,
+		 telemetry,
+		 task_manager,
+		 relay_chain_interface,
+		 transaction_pool,
+		 sync_oracle,
+		 keystore,
+		 force_authoring| {
+			let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+
+			let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+				task_manager.spawn_handle(),
+				client.clone(),
+				transaction_pool,
+				prometheus_registry,
+				telemetry.clone(),
+			);
+
+			Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
+				BuildAuraConsensusParams {
+					proposer_factory,
+					create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
+						let relay_chain_interface = relay_chain_interface.clone();
+						async move {
+							let parachain_inherent =
+								cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+									relay_parent,
+									&relay_chain_interface,
+									&validation_data,
+									id,
+								).await;
+
+							let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+							let slot =
+								sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+									*timestamp,
+									slot_duration,
+								);
+
+							let parachain_inherent = parachain_inherent.ok_or_else(|| {
+								Box::<dyn std::error::Error + Send + Sync>::from(
+									"Failed to create parachain inherent",
+								)
+							})?;
+
+							Ok((slot, timestamp, parachain_inherent))
+						}
+					},
+					block_import: client.clone(),
+					para_client: client,
+					backoff_authoring_blocks: Option::<()>::None,
+					sync_oracle,
+					keystore,
+					force_authoring,
+					slot_duration,
+					// We got around 500ms for proposing
+					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+					// And a maximum of 750ms if slots are skipped
+					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+					telemetry,
+				},
+			))
+		},
+		hwbench,
+	)
+	.await
 }
 
 /// Builds a new object suitable for chain operations.
@@ -461,7 +505,7 @@ pub fn new_chain_ops(
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial(config, false)?;
+				new_partial::<bifrost_polkadot_runtime::RuntimeApi>(config, false)?;
 			Ok((Arc::new(Client::BifrostPolkadot(client)), backend, import_queue, task_manager))
 		}
 		#[cfg(not(any(
@@ -613,7 +657,7 @@ macro_rules! with_client {
 pub enum Client {
 	#[cfg(feature = "with-bifrost-polkadot-runtime")]
 	#[allow(dead_code)]
-	BifrostPolkadot(Arc<FullClient>),
+	BifrostPolkadot(Arc<FullClient<bifrost_polkadot_runtime::RuntimeApi>>),
 }
 
 impl ClientHandle for Client {
