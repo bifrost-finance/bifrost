@@ -1410,12 +1410,14 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		// Other sibling chains use the Bifrost para account with "sibl"
 		_ => {
 			// get parachain id
-			if let Some(location) = BifrostCurrencyIdConvert::convert(currency_id) {
+			if let Some(location) =
+				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
+			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
 					MultiLocation::new(
 						1,
 						X2(
-							Parachain(para_id),
+							Parachain(para_id.clone()),
 							AccountId32 {
 								network: NetworkId::Any,
 								id: Utility::derivative_account_id(

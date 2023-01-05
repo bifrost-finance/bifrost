@@ -58,6 +58,7 @@ pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
+pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
 
 construct_runtime!(
 	pub enum Runtime where

@@ -25,7 +25,8 @@ use crate::{
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee, XcmWeight,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	XcmDestWeightAndFee, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -34,11 +35,12 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{TokenSymbol, VtokenMintingOperator};
+use sp_core::U256;
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 	},
-	DispatchResult,
+	DispatchResult, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use xcm::{
@@ -206,15 +208,26 @@ impl<T: Config>
 		}) = share_price
 		{
 			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			let shares = total_value.checked_div(*total_shares).ok_or(Error::<T>::OverFlow)?;
+			let shares: u128 = U256::from(total_shares.clone().saturated_into::<u128>())
+				.saturating_mul(amount.saturated_into::<u128>().into())
+				.checked_div(total_value.clone().saturated_into::<u128>().into())
+				.ok_or(Error::<T>::OverFlow)?
+				.as_u128()
+				.saturated_into();
+
 			BalanceOf::<T>::unique_saturated_from(shares)
 		} else {
 			Err(Error::<T>::SharePriceNotValid)?
 		};
 
-		// Check if shares exceeds the minimum requirement > 1000.
+		// Check if shares exceeds the minimum requirement > 1000(existential value for shares).
+		ensure!(
+			shares > BalanceOf::<T>::unique_saturated_from(1000u32),
+			Error::<T>::LowerThanMinimum
+		);
+
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(shares > mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
 		// Check if the remaining active shares is enough for withdrawing.
 		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
@@ -696,21 +709,16 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Get the delegator ledger
-		let ledger =
-			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let multi_hash = T::Hashing::hash(&who.encode());
 
-		let (active_shares, unlocking_shares) = if let Ledger::Phala(phala_ledger) = ledger {
-			(phala_ledger.active_shares, phala_ledger.unlocking_shares)
-		} else {
-			Err(Error::<T>::Unexpected)?
-		};
-
-		// Check if ledger active_shares and unlocking_shares amount are zero. If not, return error.
-		ensure!(active_shares.is_zero(), Error::<T>::AmountNotZero);
-		ensure!(unlocking_shares.is_zero(), Error::<T>::AmountNotZero);
-
-		Pallet::<T>::inner_remove_delegator(who, currency_id)
+		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
+		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
+			if validator_list.contains(&(who.clone(), multi_hash)) {
+				Err(Error::<T>::ValidatorStillInUse)?;
+			}
+		}
+		// Update corresponding storage.
+		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -1057,6 +1065,11 @@ impl<T: Config> PhalaAgent<T> {
 									old_pha_ledger.unlocking_shares.is_zero(),
 									Error::<T>::AlreadyRequested
 								);
+
+								old_pha_ledger.active_shares = old_pha_ledger
+									.active_shares
+									.checked_sub(&amount)
+									.ok_or(Error::<T>::UnderFlow)?;
 
 								old_pha_ledger.unlocking_shares = amount;
 

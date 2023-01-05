@@ -156,7 +156,7 @@ pub enum TimeUnit {
 	// 30 seconds per block. Kblock means 8.33 hours.
 	Kblock(#[codec(compact)] u32),
 	// 1 hour. Should be Unix Timstamp in seconds / 3600
-	Hour(#[codec(compact)] u32)
+	Hour(#[codec(compact)] u32),
 }
 
 impl Default for TimeUnit {
@@ -172,6 +172,7 @@ impl PartialEq for TimeUnit {
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.eq(b),
 			(Self::Round(a), Self::Round(b)) => a.eq(b),
 			(Self::Kblock(a), Self::Kblock(b)) => a.eq(b),
+			(Self::Hour(a), Self::Hour(b)) => a.eq(b),
 			_ => false,
 		}
 	}
@@ -184,6 +185,7 @@ impl Ord for TimeUnit {
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.cmp(b),
 			(Self::Round(a), Self::Round(b)) => a.cmp(b),
 			(Self::Kblock(a), Self::Kblock(b)) => a.cmp(b),
+			(Self::Hour(a), Self::Hour(b)) => a.cmp(b),
 			_ => sp_std::cmp::Ordering::Less,
 		}
 	}
@@ -196,6 +198,7 @@ impl PartialOrd for TimeUnit {
 			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),
 			(Self::Round(a), Self::Round(b)) => Some(a.cmp(b)),
 			(Self::Kblock(a), Self::Kblock(b)) => Some(a.cmp(b)),
+			(Self::Hour(a), Self::Hour(b)) => Some(a.cmp(b)),
 			_ => None,
 		}
 	}
