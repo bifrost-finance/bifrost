@@ -57,6 +57,7 @@ where
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	pub tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
+	pub basic_token: (CurrencyIdOf, Perbill),
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -85,6 +86,7 @@ where
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
 		tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
+		basic_token: (CurrencyIdOf, Perbill),
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BalanceOf,
@@ -95,6 +97,7 @@ where
 	) -> Self {
 		Self {
 			tokens_proportion,
+			basic_token,
 			total_shares: Default::default(),
 			basic_rewards,
 			rewards: BTreeMap::new(),
@@ -378,12 +381,12 @@ impl<T: Config> Pallet<T> {
 					let current_block_number: BlockNumberFor<T> =
 						frame_system::Pallet::<T>::block_number();
 					let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
-					let tokens_proportion_values: Vec<Perbill> =
-						pool_info.tokens_proportion.values().cloned().collect();
 					share_info.withdraw_list.iter().try_for_each(
 						|(dest_block, remove_value)| -> DispatchResult {
 							if *dest_block <= current_block_number {
-								let native_amount = tokens_proportion_values[0]
+								let native_amount = pool_info
+									.basic_token
+									.1
 									.saturating_reciprocal_mul(*remove_value);
 								pool_info.tokens_proportion.iter().try_for_each(
 									|(token, &proportion)| -> DispatchResult {

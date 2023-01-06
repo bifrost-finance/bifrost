@@ -846,7 +846,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 }
 
 // culumus runtime start

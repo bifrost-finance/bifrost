@@ -1,12 +1,13 @@
 name: Release
 
 env:
-  SUBWASM_VERSION: 0.17.0
+  SUBWASM_VERSION: 0.18.0
 
 on:
   push:
     tags:
       - 'bifrost-*'
+  workflow_dispatch:
 
 jobs:
   srtool:
@@ -43,6 +44,7 @@ jobs:
       - name: Build bifrost
         working-directory: ${{ github.workspace }}
         run: |
+          apt-get install -y protobuf-compiler
           make production-release
           mkdir -p ${{ github.workspace }}/artifacts
           mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/

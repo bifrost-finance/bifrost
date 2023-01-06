@@ -20,7 +20,8 @@
 
 /// Money matters.
 pub mod currency {
-	use bifrost_runtime_common::cent;
+	use crate::Runtime;
+	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -46,8 +47,9 @@ pub mod currency {
 	impl WeightToFeePolynomial for WeightToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			let p = super::currency::RELAY_CENTS;
-			let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			let p = base_tx_fee::<Runtime>() * 10;
+			let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
 				negative: false,
@@ -55,6 +57,10 @@ pub mod currency {
 				coeff_integer: p / q,
 			}]
 		}
+	}
+
+	fn base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
+		milli::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) / 3
 	}
 
 	fn xcm_base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
