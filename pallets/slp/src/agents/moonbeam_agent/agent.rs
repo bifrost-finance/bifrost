@@ -1337,11 +1337,8 @@ impl<T: Config> MoonbeamAgent<T> {
 									.ok_or(Error::<T>::OverFlow)?;
 
 								let amount_rs = old_ledger.delegations.get(&validator_id);
-								let original_amount = if let Some(amt) = amount_rs {
-									amt.clone()
-								} else {
-									Zero::zero()
-								};
+								let original_amount =
+									if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 								let new_amount = original_amount
 									.checked_add(&amount)
@@ -1407,14 +1404,13 @@ impl<T: Config> MoonbeamAgent<T> {
 									validator: validator_id.clone(),
 									when_executable: unlock_time_unit.clone(),
 									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-										revoke_amount.clone(),
+										*revoke_amount,
 									),
 								};
 								old_ledger.requests.push(new_request);
-								old_ledger.request_briefs.insert(
-									validator_id,
-									(unlock_time_unit, revoke_amount.clone()),
-								);
+								old_ledger
+									.request_briefs
+									.insert(validator_id, (unlock_time_unit, *revoke_amount));
 							},
 							// cancel bond less or revoke request
 							CancelRequest => {
@@ -1469,14 +1465,14 @@ impl<T: Config> MoonbeamAgent<T> {
 										validator: vali.clone(),
 										when_executable: unlock_time.clone(),
 										action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-											amt.clone(),
+											*amt,
 										),
 									};
 									new_requests.push(request_entry);
 
 									old_ledger
 										.request_briefs
-										.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
+										.insert(vali.clone(), (unlock_time.clone(), *amt));
 								}
 
 								old_ledger.requests = new_requests;

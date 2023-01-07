@@ -628,7 +628,7 @@ pub mod pallet {
 
 			let message_id = T::XcmInterface::contribute(index, value)?;
 
-			Self::deposit_event(Event::Contributing(who.clone(), index, value.clone(), message_id));
+			Self::deposit_event(Event::Contributing(who.clone(), index, value, message_id));
 			Ok(())
 		}
 
