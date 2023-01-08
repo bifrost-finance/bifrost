@@ -45,6 +45,7 @@ pub struct DeprecatedPoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountI
 	pub withdraw_limit_count: u8,
 }
 
+#[allow(dead_code)]
 pub fn update_pool_info<T: Config>() -> Weight {
 	let _ = PoolInfos::<T>::translate::<
 		DeprecatedPoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
