@@ -290,11 +290,6 @@ pub mod pallet {
 
 			T::WeightInfo::on_initialize()
 		}
-
-		fn on_runtime_upgrade() -> Weight {
-			migration::update_pool_info::<T>();
-			T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
-		}
 	}
 
 	#[pallet::call]
