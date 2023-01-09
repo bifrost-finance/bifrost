@@ -2335,13 +2335,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		// "Bound uses of call" <https://github.com/paritytech/polkadot/pull/5729>
-		pallet_preimage::migration::v1::Migration<Runtime>,
-		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
-		pallet_democracy::migrations::v1::Migration<Runtime>,
-		pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
-	),
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

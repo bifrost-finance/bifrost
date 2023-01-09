@@ -24,6 +24,7 @@ use frame_support::traits::Get;
 use primitives::CurrencyId;
 use xcm::opaque::latest::{Junction, Junction::Parachain, Junctions::Here};
 
+#[allow(dead_code)]
 pub fn update_currency_multilocations<T: Config>() -> Weight {
 	CurrencyIdToLocations::<T>::translate::<MultiLocation, _>(|currency_id, location| {
 		let new_location = match currency_id {
