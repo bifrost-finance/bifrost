@@ -115,14 +115,14 @@ $ ./start-relay.sh
 ```
 
 **Tips**: 
-> If you get a error like dirty database,
+> If you get an error like dirty database,
 ```
 rethrow "state" database dirty flag set: 
     {"what":"\"state\" database dirty flag set"}
     thread-0  chain_plugin.cpp:958 plugin_initialize
 ```
 
-> or want to delete all histoty blocks, run the following command.
+> or want to delete all history blocks, run the following command.
 ```shell
 $ ./build/bin/nodeos --delete-all-blocks --delete-state-history --delete-relay-history --plugin eosio::bridge_plugin
 ```
@@ -175,7 +175,7 @@ Go back to section **Create a dev wallet**'s tips to unlock the wallet.
 
 ### Configure Browser
 
-Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy content data from the file ```developer_setting.json``` to **Deveoper** tab like this, and save it.
+Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy content data from the file ```developer_setting.json``` to **Developer** tab like this, and save it.
 ![developer_setting](developer_setting.png)
 
 ### EOS to Bifrost
@@ -197,7 +197,7 @@ $ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS"
 
 Go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), to check whether transaction is sent successfully to Bifrost or not.
 
-Wait about 90 seconds for the transaction is verified. If all go well, you can see a event like the following screencapture.
+Wait about 90 seconds for the transaction is verified. If all go well, you can see an event like the following screencapture.
 
 ![prove_action_event](prove_action_event.png)
 
@@ -222,7 +222,7 @@ Before testing, you have to setup some necessary steps.
 
 Bifrost side:
 
-There're two Bifrost nodes that you start in previous steps, here you need add EOS node address info and EOS secret key
+There're two Bifrost nodes that you start in previous steps, here you need to add EOS node address info and EOS secret key
 to both running Bifrost nodes by tool **subkey**.
 
 Execute the script. This script will add necessary data to alice node and bob node.
