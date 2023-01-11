@@ -42,8 +42,11 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
 use orml_traits::MultiCurrency;
+use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero},
+	traits::{
+		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero,
+	},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -1704,6 +1707,9 @@ impl<T: Config>
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
+		let self_sibling_parachain_account: [u8; 20] =
+			Sibling::from(T::ParachainId::get()).into_account_truncating();
+
 		Ok(Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
@@ -1718,7 +1724,10 @@ impl<T: Config>
 				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(Parachain(T::ParachainId::get().into())),
+					interior: X1(AccountKey20 {
+						network: Any,
+						key: self_sibling_parachain_account,
+					}),
 				},
 			},
 		]))
