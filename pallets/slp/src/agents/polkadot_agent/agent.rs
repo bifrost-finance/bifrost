@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	agents::{RewardDestination, StakingCall, SystemCall, XcmCall},
+	agents::{RewardDestination, StakingCall, XcmCall},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
@@ -55,10 +55,10 @@ use xcm::{
 };
 
 #[cfg(not(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime")))]
-use super::types::kusama::{RelaychainCall, UtilityCall};
+use super::types::kusama::{RelaychainCall, SystemCall, UtilityCall};
 
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-use super::types::polkadot::{RelaychainCall, UtilityCall};
+use super::types::polkadot::{RelaychainCall, SystemCall, UtilityCall};
 
 /// StakingAgent implementation for Kusama/Polkadot
 pub struct PolkadotAgent<T>(PhantomData<T>);

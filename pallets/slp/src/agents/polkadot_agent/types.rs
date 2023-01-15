@@ -28,7 +28,7 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 
 pub mod kusama {
 	use crate::{
-		agents::{BalancesCall, StakingCall, SystemCall, XcmCall},
+		agents::{BalancesCall, StakingCall, XcmCall},
 		*,
 	};
 	#[derive(Encode, Decode, RuntimeDebug)]
@@ -52,11 +52,17 @@ pub mod kusama {
 		#[codec(index = 2)]
 		BatchAll(Box<Vec<Box<RelaychainCall>>>),
 	}
+
+	#[derive(Encode, Decode, RuntimeDebug, Clone)]
+	pub enum SystemCall {
+		#[codec(index = 7)]
+		RemarkWithEvent(Box<Vec<u8>>),
+	}
 }
 
 pub mod polkadot {
 	use crate::{
-		agents::{BalancesCall, StakingCall, SystemCall, XcmCall},
+		agents::{BalancesCall, StakingCall, XcmCall},
 		*,
 	};
 	#[derive(Encode, Decode, RuntimeDebug)]
@@ -80,12 +86,12 @@ pub mod polkadot {
 		#[codec(index = 2)]
 		BatchAll(Box<Vec<Box<RelaychainCall>>>),
 	}
-}
 
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum SystemCall {
-	#[codec(index = 7)]
-	RemarkWithEvent(Box<Vec<u8>>),
+	#[derive(Encode, Decode, RuntimeDebug, Clone)]
+	pub enum SystemCall {
+		#[codec(index = 8)]
+		RemarkWithEvent(Box<Vec<u8>>),
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
