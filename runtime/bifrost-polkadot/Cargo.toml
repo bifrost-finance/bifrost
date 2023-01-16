@@ -91,7 +91,7 @@ bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", de
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
-bifrost-slp = { path = "../../pallets/slp", default-features = false }
+bifrost-slp = { path = "../../pallets/slp", default-features = false, features = ["with-bifrost-polkadot-runtime"] }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-system-maker = { path = "../../pallets/system-maker", default-features = false }
 

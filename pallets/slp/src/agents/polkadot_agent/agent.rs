@@ -54,10 +54,10 @@ use xcm::{
 	VersionedMultiAssets, VersionedMultiLocation,
 };
 
-#[cfg(not(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime")))]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 use super::types::kusama::{RelaychainCall, SystemCall, UtilityCall};
 
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
 use super::types::polkadot::{RelaychainCall, SystemCall, UtilityCall};
 
 /// StakingAgent implementation for Kusama/Polkadot
