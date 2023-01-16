@@ -124,8 +124,10 @@ with-bifrost-polkadot-runtime = [
 with-all-runtime = [
 	"with-bifrost-runtime",
 ]
-try-runtime = [
+try-bifrost-kusama-runtime = [
 	"bifrost-kusama-runtime/try-runtime",
+]
+try-bifrost-polkadot-runtime = [
 	"bifrost-polkadot-runtime/try-runtime",
 ]
 fast-runtime = [

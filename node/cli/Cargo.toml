@@ -74,5 +74,6 @@ with-bifrost-runtime = [
 with-bifrost-kusama-runtime = ["node-service/with-bifrost-kusama-runtime"]
 with-bifrost-polkadot-runtime = ["node-service/with-bifrost-polkadot-runtime"]
 with-all-runtime = ["with-bifrost-runtime"]
-try-runtime = ["node-service/try-runtime", "try-runtime-cli"]
+try-bifrost-kusama-runtime = ["node-service/try-bifrost-kusama-runtime", "try-runtime-cli"]
+try-bifrost-polkadot-runtime = ["node-service/try-bifrost-polkadot-runtime", "try-runtime-cli"]
 fast-runtime = ["node-service/fast-runtime"]

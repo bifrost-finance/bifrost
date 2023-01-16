@@ -535,7 +535,10 @@ pub fn run() -> Result<()> {
 				cmd.run(&*spec)
 			})
 		},
-		#[cfg(feature = "try-runtime")]
+		#[cfg(any(
+			feature = "try-bifrost-kusama-runtime",
+			feature = "try-bifrost-polkadot-runtime"
+		))]
 		Some(Subcommand::TryRuntime(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
