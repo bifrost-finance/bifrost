@@ -97,7 +97,7 @@ bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-featur
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
 bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
-bifrost-slp = { path = "../../pallets/slp", default-features = false, features = ["with-bifrost-polkadot-runtime"] }
+bifrost-slp = { path = "../../pallets/slp", default-features = false, features = ["with-bifrost-kusama-runtime"] }
 # xcm-support = { path = "../../xcm-support", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
