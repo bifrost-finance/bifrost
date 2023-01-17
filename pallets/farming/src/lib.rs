@@ -30,7 +30,6 @@ mod tests;
 mod benchmarking;
 
 pub mod gauge;
-mod migration;
 pub mod rewards;
 pub mod weights;
 pub use weights::WeightInfo;
