@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 968,
+	spec_version: 969,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -846,7 +846,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type OnChargeTransaction = FlexibleFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 }
 
 // culumus runtime start
@@ -1919,13 +1919,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		// "Bound uses of call" <https://github.com/paritytech/polkadot/pull/5729>
-		pallet_preimage::migration::v1::Migration<Runtime>,
-		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
-		pallet_democracy::migrations::v1::Migration<Runtime>,
-		pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
-	),
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

@@ -202,7 +202,7 @@ impl<T: Config>
 
 					let amount_rs = old_ledger.delegations.get(validator_multilocation);
 					let original_amount =
-						if let Some(amt) = amount_rs { amt.clone() } else { Zero::zero() };
+						if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -282,7 +282,7 @@ impl<T: Config>
 
 					let amount_rs = old_ledger.delegations.get(validator_multilocation);
 					let original_amount =
-						if let Some(amt) = amount_rs { amt.clone() } else { Zero::zero() };
+						if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -441,13 +441,11 @@ impl<T: Config>
 						let request_entry = OneToManyScheduledRequest {
 							validator: vali.clone(),
 							when_executable: unlock_time.clone(),
-							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(amt.clone()),
+							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*amt),
 						};
 						new_requests.push(request_entry);
 
-						old_ledger
-							.request_briefs
-							.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
+						old_ledger.request_briefs.insert(vali.clone(), (unlock_time.clone(), *amt));
 					}
 
 					old_ledger.requests = new_requests;
@@ -627,14 +625,12 @@ impl<T: Config>
 					let new_request = OneToManyScheduledRequest {
 						validator: (*validator).clone(),
 						when_executable: unlock_time_unit.clone(),
-						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-							revoke_amount.clone(),
-						),
+						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*revoke_amount),
 					};
 					old_ledger.requests.push(new_request);
 					old_ledger
 						.request_briefs
-						.insert((*validator).clone(), (unlock_time_unit, revoke_amount.clone()));
+						.insert((*validator).clone(), (unlock_time_unit, *revoke_amount));
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
