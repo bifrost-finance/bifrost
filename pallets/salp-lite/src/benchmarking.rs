@@ -27,9 +27,9 @@ use sp_std::prelude::*;
 
 pub use crate::{Pallet as Salp, *};
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	let events = frame_system::Pallet::<T>::events();
-	let system_event: <T as frame_system::Config>::Event = generic_event.into();
+	let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
 	// compare to the last event record
 	let frame_system::EventRecord { event, .. } = &events[events.len() - 1];
 	assert_eq!(event, &system_event);
@@ -49,7 +49,7 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 #[allow(dead_code)]
 fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
 	let value = T::MinContribution::get();
-	let confirmer: T::Origin =
+	let confirmer: T::RuntimeOrigin =
 		RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 	assert_ok!(Salp::<T>::issue(confirmer, who.clone(), index, value, [0; 32]));
 }
@@ -58,7 +58,7 @@ benchmarks! {
 	redeem {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
+		let caller_origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
@@ -74,7 +74,7 @@ benchmarks! {
 	refund {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
+		let caller_origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));

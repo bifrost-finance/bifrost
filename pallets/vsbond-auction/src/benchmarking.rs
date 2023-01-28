@@ -47,7 +47,7 @@ benchmarks! {
 		let total_price = BalanceOf::<T>::unique_saturated_from(30u128);
 		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(caller.clone())), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone())), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64)
 
 	clinch_order {
@@ -60,7 +60,7 @@ benchmarks! {
 		let order_owner = account("bechmarking_account_1", 0, 0);
 		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(order_owner)), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64)
 
 	partial_clinch_order {
@@ -73,7 +73,7 @@ benchmarks! {
 		let order_owner = account("bechmarking_account_1", 0, 0);
 		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(order_owner)), index, TokenSymbol::KSM, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64, BalanceOf::<T>::unique_saturated_from(5u128))
 
 	set_buy_and_sell_transaction_fee_rate {

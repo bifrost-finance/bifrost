@@ -73,6 +73,7 @@ cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/cumulu
 
 # Polkadot dependencies
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.32" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.32" }
 
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
@@ -110,6 +111,7 @@ runtime-benchmarks = [
 	"bifrost-kusama-runtime/runtime-benchmarks",
 	"bifrost-polkadot-runtime/runtime-benchmarks",
 	"polkadot-service/runtime-benchmarks",
+	"polkadot-cli/runtime-benchmarks",
 ]
 with-bifrost-runtime = [
 	"with-bifrost-kusama-runtime",
