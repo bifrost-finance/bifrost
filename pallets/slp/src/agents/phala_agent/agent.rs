@@ -208,9 +208,9 @@ impl<T: Config>
 		}) = share_price
 		{
 			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			let shares: u128 = U256::from(total_shares.clone().saturated_into::<u128>())
+			let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
 				.saturating_mul(amount.saturated_into::<u128>().into())
-				.checked_div(total_value.clone().saturated_into::<u128>().into())
+				.checked_div((*total_value).saturated_into::<u128>().into())
 				.ok_or(Error::<T>::OverFlow)?
 				.as_u128()
 				.saturated_into();

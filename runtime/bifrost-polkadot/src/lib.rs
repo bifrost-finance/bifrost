@@ -1417,7 +1417,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 					MultiLocation::new(
 						1,
 						X2(
-							Parachain(para_id.clone()),
+							Parachain(*para_id),
 							AccountId32 {
 								network: NetworkId::Any,
 								id: Utility::derivative_account_id(
