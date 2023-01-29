@@ -22,6 +22,8 @@
 
 use bifrost_asset_registry::AssetIdMaps;
 // use parachain_staking::ParachainStakingInterface;
+use crate as bifrost_slp;
+use crate::{Config, QueryResponseManager};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -43,9 +45,6 @@ use sp_runtime::{
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::latest::prelude::*;
 
-use crate as bifrost_slp;
-use crate::{Config, QueryResponseManager};
-
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
 pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -59,6 +58,7 @@ pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
+pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -265,6 +265,7 @@ pub struct SubAccountIndexMultiLocationConvertor;
 impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
 	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
 		match currency_id {
+			// AccountKey20 format of Bifrost sibling para account
 			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
 				1,
 				X2(
@@ -279,7 +280,8 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 					},
 				),
 			),
-			_ => MultiLocation::new(
+			// Only relay chain use the Bifrost para account with "para"
+			CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
 					network: NetworkId::Any,
@@ -290,6 +292,46 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 					.into(),
 				}),
 			),
+			// Bifrost Kusama Native token
+			CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
+				0,
+				X1(Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: Self::derivative_account_id(
+						polkadot_parachain::primitives::Sibling::from(2001u32)
+							.into_account_truncating(),
+						sub_account_index,
+					)
+					.into(),
+				}),
+			),
+			// Other sibling chains use the Bifrost para account with "sibl"
+			_ => {
+				// get parachain id
+				if let Some(location) = BifrostCurrencyIdConvert::convert(currency_id) {
+					if let Some(Parachain(para_id)) = location.interior().first() {
+						MultiLocation::new(
+							1,
+							X2(
+								Parachain(*para_id),
+								Junction::AccountId32 {
+									network: NetworkId::Any,
+									id: Self::derivative_account_id(
+										polkadot_parachain::primitives::Sibling::from(2001u32)
+											.into_account_truncating(),
+										sub_account_index,
+									)
+									.into(),
+								},
+							),
+						)
+					} else {
+						MultiLocation::default()
+					}
+				} else {
+					MultiLocation::default()
+				}
+			},
 		}
 	}
 }
@@ -324,6 +366,23 @@ impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
 		true
+	}
+}
+
+pub struct BifrostCurrencyIdConvert;
+impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		use CurrencyId::*;
+		use TokenSymbol::*;
+
+		match id {
+			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
+			Token(KSM) => Some(MultiLocation::parent()),
+			Native(BNC) =>
+				Some(MultiLocation::new(0, X1(GeneralKey("0x0001".encode().try_into().unwrap())))),
+			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
+			_ => None,
+		}
 	}
 }
 

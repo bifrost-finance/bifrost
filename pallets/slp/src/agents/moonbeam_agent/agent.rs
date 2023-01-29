@@ -88,6 +88,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
+		ensure!(
+			delegator_multilocation.clone() != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -673,7 +677,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -684,6 +688,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -838,7 +843,7 @@ impl<T: Config>
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	/// Receiving account must be one of the KSM delegators.
+	/// Receiving account must be one of the MOVR/GLMR delegators.
 	fn transfer_to(
 		&self,
 		from: &MultiLocation,
@@ -846,7 +851,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		// Make sure receiving account is one of the KSM delegators.
+		// Make sure receiving account is one of the MOVR/GLMR delegators.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
 			Error::<T>::DelegatorNotExist
@@ -860,6 +865,17 @@ impl<T: Config>
 		Self::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
+	}
+
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+		_if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
+		Err(Error::<T>::Unsupported)
 	}
 
 	fn tune_vtoken_exchange_rate(
@@ -937,7 +953,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		// Get current VKSM/KSM exchange rate.
+		// Get current VMOVR/MOVR、VGLMR/GLMR exchange rate.
 		let vtoken = match currency_id {
 			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
 			GLMR => Ok(CurrencyId::VToken2(GLMR_TOKEN_ID)),

@@ -780,7 +780,8 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::RequestNotDue
 		);
@@ -799,7 +800,8 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -845,7 +847,8 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::LeavingNotDue
 		);
@@ -864,7 +867,8 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 				None,
-				Some(validator_0_location)
+				Some(validator_0_location),
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);

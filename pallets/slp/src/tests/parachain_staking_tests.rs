@@ -611,7 +611,8 @@ fn parachain_staking_liquidize_works() {
 				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -630,7 +631,8 @@ fn parachain_staking_liquidize_works() {
 				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -674,7 +676,8 @@ fn parachain_staking_liquidize_works() {
 				BNC,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone())
+				Some(validator_0_location.clone()),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -693,7 +696,8 @@ fn parachain_staking_liquidize_works() {
 				BNC,
 				Box::new(subaccount_0_location),
 				None,
-				Some(validator_0_location)
+				Some(validator_0_location),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);

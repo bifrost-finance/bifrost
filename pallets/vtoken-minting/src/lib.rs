@@ -774,6 +774,10 @@ pub mod pallet {
 					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
+				TimeUnit::Hour(hour_a) => match b {
+					TimeUnit::Hour(hour_b) => TimeUnit::Hour(hour_a + hour_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
 			};
 

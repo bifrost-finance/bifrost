@@ -1641,9 +1641,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				.into(),
 			}),
 		),
-		// Other sibling chains use the Bifrost para account with "sibl"
-		_ => MultiLocation::new(
-			1,
+		// Bifrost Kusama Native token
+		CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
+			0,
 			X1(AccountId32 {
 				network: NetworkId::Any,
 				id: Utility::derivative_account_id(
@@ -1654,6 +1654,37 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				.into(),
 			}),
 		),
+		// Other sibling chains use the Bifrost para account with "sibl"
+		_ => {
+			// get parachain id
+			if let Some(location) =
+				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
+			{
+				if let Some(Parachain(para_id)) = location.interior().first() {
+					MultiLocation::new(
+						1,
+						X2(
+							Parachain(*para_id),
+							AccountId32 {
+								network: NetworkId::Any,
+								id: Utility::derivative_account_id(
+									polkadot_parachain::primitives::Sibling::from(
+										ParachainInfo::get(),
+									)
+									.into_account_truncating(),
+									index,
+								)
+								.into(),
+							},
+						),
+					)
+				} else {
+					MultiLocation::default()
+				}
+			} else {
+				MultiLocation::default()
+			}
+		},
 	}
 }
 

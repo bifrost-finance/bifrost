@@ -24,6 +24,8 @@ mod kusama_tests;
 mod moonriver_tests;
 #[cfg(test)]
 mod parachain_staking_tests;
+#[cfg(test)]
+mod phala_tests;
 
 #[cfg(test)]
 pub use kusama_tests::*;
@@ -33,3 +35,5 @@ pub use moonriver_tests::*;
 // pub use parachain_staking_tests::*;
 #[cfg(test)]
 pub use filecoin_tests::*;
+#[cfg(test)]
+pub use phala_tests::*;

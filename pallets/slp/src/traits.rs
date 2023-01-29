@@ -107,7 +107,7 @@ pub trait StakingAgent<
 		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
-	) -> Result<(), Error>;
+	) -> Result<QueryId, Error>;
 
 	/// Withdraw the due payout into free balance.
 	fn liquidize(
@@ -116,6 +116,7 @@ pub trait StakingAgent<
 		when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		amount: Option<Balance>,
 	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
@@ -138,6 +139,15 @@ pub trait StakingAgent<
 		amount: Balance,
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
+
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		who: &MultiLocation,
+		amount: Balance,
+		currency_id: CurrencyId,
+		if_from_currency: bool,
+	) -> Result<QueryId, Error>;
 
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(

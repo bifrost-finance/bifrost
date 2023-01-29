@@ -16,19 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	pallet::Error, vec, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, MinimumsAndMaximums,
-	MultiLocation, Pallet, Validators, Zero,
+	pallet::Error,
+	vec, BalanceOf, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
+	Junction::{AccountId32, Parachain},
+	Junctions::{Here, X1},
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
+	Zero,
 };
 use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-use sp_core::U256;
+use sp_core::{Get, U256};
 use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
+use xcm::prelude::*;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -180,6 +185,121 @@ impl<T: Config> Pallet<T> {
 		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
 		// Issue corresponding vksm to beneficiary account.
 		T::MultiCurrency::deposit(depoist_currency, &beneficiary, charge_amount)?;
+
+		Ok(())
+	}
+
+	pub(crate) fn get_transfer_back_dest_and_beneficiary(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		currency_id: CurrencyId,
+	) -> Result<(Box<VersionedMultiLocation>, Box<VersionedMultiLocation>), Error<T>> {
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+
+		// Prepare parameter dest and beneficiary.
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
+
+		let dest =
+			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+		let beneficiary =
+			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
+
+		Ok((dest, beneficiary))
+	}
+
+	pub(crate) fn inner_do_transfer_to(
+		from: &MultiLocation,
+		to: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+		assets: MultiAssets,
+		dest: &MultiLocation,
+	) -> Result<(), Error<T>> {
+		// Ensure amount is greater than zero.
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
+		// not succeed.
+		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
+
+		let (weight, fee_amount) =
+			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// Prepare parameter beneficiary.
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
+		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
+
+		// Prepare fee asset.
+		let fee_asset = MultiAsset {
+			fun: Fungible(fee_amount.unique_saturated_into()),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
+		};
+
+		// prepare for xcm message
+		let msg = Xcm(vec![
+			WithdrawAsset(assets),
+			InitiateReserveWithdraw {
+				assets: All.into(),
+				reserve: dest.clone(),
+				xcm: Xcm(vec![
+					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+				]),
+			},
+		]);
+
+		// Execute the xcm message.
+		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+			.ensure_complete()
+			.map_err(|_| Error::<T>::XcmFailure)?;
+
+		Ok(())
+	}
+
+	pub(crate) fn tune_vtoken_exchange_rate_without_update_ledger(
+		who: &MultiLocation,
+		token_amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		// ensure who is a valid delegator
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
+			Error::<T>::DelegatorNotExist
+		);
+
+		// Get current TimeUnit.
+		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+			.ok_or(Error::<T>::TimeUnitNotExist)?;
+		// Get DelegatorLatestTuneRecord for the currencyId.
+		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(currency_id, &who);
+		// ensure each delegator can only tune once per TimeUnit.
+		ensure!(
+			latest_time_unit_op != Some(current_time_unit.clone()),
+			Error::<T>::DelegatorAlreadyTuned
+		);
+
+		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
+
+		// Check whether "who" is an existing delegator.
+		ensure!(
+			DelegatorLedgers::<T>::contains_key(currency_id, who),
+			Error::<T>::DelegatorNotBonded
+		);
+
+		// Tune the vtoken exchange rate.
+		T::VtokenMinting::increase_token_pool(currency_id, token_amount)
+			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+
+		// Update the DelegatorLatestTuneRecord<T> storage.
+		DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);
 
 		Ok(())
 	}
