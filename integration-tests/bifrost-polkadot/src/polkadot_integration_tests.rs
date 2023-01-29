@@ -37,10 +37,10 @@ use bifrost_polkadot_runtime::{ExistentialDeposit, NativeCurrencyId};
 mod bifrost_imports {
 	pub use bifrost_polkadot_runtime::{
 		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
-		BlockNumber, Currencies, CurrencyId, ExistentialDeposit, ExistentialDeposits,
-		NativeCurrencyId, OriginCaller, ParachainInfo, ParachainSystem, Proxy, RelayCurrencyId,
-		Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Salp, Scheduler, Session, SlotLength,
-		Slp, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
+		BlockNumber, Currencies, CurrencyId, ExistentialDeposit, NativeCurrencyId, OriginCaller,
+		ParachainInfo, ParachainSystem, Proxy, RelayCurrencyId, Runtime, RuntimeCall, RuntimeEvent,
+		RuntimeOrigin, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens, TreasuryPalletId,
+		Utility, Vesting, XTokens,
 	};
 	pub use frame_support::parameter_types;
 	pub use sp_runtime::traits::AccountIdConversion;
