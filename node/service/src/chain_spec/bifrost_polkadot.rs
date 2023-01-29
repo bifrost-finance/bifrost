@@ -151,7 +151,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT())])
+		.flat_map(|x| vec![(x.clone(), Token(TokenSymbol::DOT), ENDOWMENT())])
 		.collect();
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -216,7 +216,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), CurrencyId::Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
+		.flat_map(|x| vec![(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
 		.collect();
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
