@@ -104,9 +104,9 @@ use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
 use xcm::latest::{prelude::*, Weight as XcmWeight};
 use xcm_config::{
-	parachains, AccountId32Aliases, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-	Sibling, SiblingParachainConvertsVia, StatemineTransferFee, UmpTransactFee, XcmConfig,
-	XcmRouter,
+	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
+	MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia, StatemineTransferFee,
+	UmpTransactFee, XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 

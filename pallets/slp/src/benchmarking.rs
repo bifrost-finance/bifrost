@@ -447,6 +447,7 @@ benchmarks! {
 			who:Box::new(subaccount_0_location.clone()),
 			when:Some(TimeUnit::SlashingSpan(5)),
 			validator:None,
+			amount:None
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 

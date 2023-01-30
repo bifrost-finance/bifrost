@@ -108,9 +108,9 @@ mod xcm_config;
 use pallet_xcm::QueryStatus;
 use xcm::latest::prelude::*;
 pub use xcm_config::{
-	parachains, AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency,
-	SelfParaChainId, Sibling, SiblingParachainConvertsVia, StatemineTransferFee, UmpTransactFee,
-	XcmConfig, XcmRouter,
+	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
+	ExistentialDeposits, MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia,
+	StatemineTransferFee, UmpTransactFee, XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
