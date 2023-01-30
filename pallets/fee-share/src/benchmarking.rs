@@ -20,14 +20,14 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
-use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
-use frame_system::{Pallet as System, RawOrigin};
+use frame_support::{assert_ok, dispatch::Weight};
+use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
 
 use crate::{Pallet as FeeShare, *};
 
 benchmarks! {
-	on_initialize {}:{FeeShare::<T>::on_idle(T::BlockNumber::from(10u32),0);}
+	on_initialize {}:{FeeShare::<T>::on_idle(T::BlockNumber::from(10u32),Weight::from_ref_time(0));}
 
 	create_distribution {
 		let caller: T::AccountId = whitelisted_caller();

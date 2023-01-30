@@ -5761,6 +5761,7 @@ dependencies = [
  "pallet-transaction-payment-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
  "parachain-staking",
+ "polkadot-cli",
  "polkadot-service",
  "sc-basic-authorship",
  "sc-chain-spec",
