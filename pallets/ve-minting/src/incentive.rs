@@ -17,14 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::VeMintingInterface, *};
-// use frame_system::pallet_prelude::*;
-// use node_primitives::currency;
 pub use pallet::*;
-use sp_std::collections::btree_map::BTreeMap; //{borrow::ToOwned, collections::btree_map::BTreeMap, prelude::*};
+use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct IncentiveConfig<CurrencyId, Balance> {
-	reward_rate: BTreeMap<CurrencyId, Balance>, // Balance,
+	reward_rate: BTreeMap<CurrencyId, Balance>,
 	reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
 	pub rewards_duration: Timestamp,
 	period_finish: Timestamp,
@@ -56,9 +54,8 @@ impl<T: Config> Pallet<T> {
 					.saturating_mul(
 						*conf.reward_rate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
 					)
-					// .mul(1e18)
 					.checked_div(&_total_supply)
-					.unwrap_or_default(), // .ok_or(Error::<T>::CalculationOverflow)?,
+					.unwrap_or_default(),
 			);
 		});
 
@@ -70,22 +67,7 @@ impl<T: Config> Pallet<T> {
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token();
-		// let mut rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> = Self::rewards(addr);
 		let vetoken_balance = Self::balance_of(addr, None)?;
-		// rewards.iter_mut().for_each(|(currency, reward)| {
-		// 	*reward = reward.saturating_add(
-		// 		vetoken_balance.saturating_mul(
-		// 			Self::reward_per_token()
-		// 				.get(currency)
-		// 				.unwrap_or(&BalanceOf::<T>::zero())
-		// 				.saturating_sub(
-		// 					*Self::user_reward_per_token_paid(addr)
-		// 						.get(currency)
-		// 						.unwrap_or(&BalanceOf::<T>::zero()),
-		// 				),
-		// 		),
-		// 	);
-		// });
 		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
 			rewards
 		} else {
@@ -120,12 +102,6 @@ impl<T: Config> Pallet<T> {
 				);
 		});
 		Ok(rewards)
-		// Ok(Self::balance_of(addr, current_timestamp)?
-		// 	.saturating_mul(
-		// 		Self::reward_per_token().saturating_sub(Self::user_reward_per_token_paid(addr)),
-		// 	)
-		// 	// .div(1e18)
-		// 	.saturating_add(Self::rewards(addr)))
 	}
 
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
@@ -140,10 +116,6 @@ impl<T: Config> Pallet<T> {
 		}
 		Ok(())
 	}
-
-	// pub fn staking(addr: &AccountIdOf<T>, reward: BalanceOf<T>) -> DispatchResult {
-	// 	Self::update_reward(Some(addr))
-	// }
 
 	#[transactional]
 	pub fn get_reward(addr: &AccountIdOf<T>) -> DispatchResult {
@@ -169,8 +141,6 @@ impl<T: Config> Pallet<T> {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-		// let rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-		// 	rewards.iter().clone().map(|(k, v)| (*k, *v)).collect();
 
 		if current_timestamp >= conf.period_finish {
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
@@ -191,19 +161,11 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 
-		// conf.reward_rate = reward
-		// 	.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
-		// 	.ok_or(Error::<T>::CalculationOverflow)?;
 		} else {
 			let remaining = conf
 				.period_finish
 				.saturating_sub(current_timestamp)
 				.saturated_into::<BalanceOf<T>>();
-			// let leftover: BalanceOf<T> = remaining.saturating_mul(conf.reward_rate);
-			// conf.reward_rate = reward
-			// 	.saturating_add(leftover)
-			// 	.checked_div(&conf.rewards_duration.saturated_into::<BalanceOf<T>>())
-			// 	.ok_or(Error::<T>::CalculationOverflow)?;
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 				let leftover: BalanceOf<T> = reward.saturating_mul(remaining);
 				let total_reward: BalanceOf<T> = reward.saturating_add(leftover);
@@ -224,8 +186,6 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			})?;
 		};
-		// let balance =
-		// 	Self::balance_of(&T::VeMintingPalletId::get().into_account_truncating(), None)?;
 
 		conf.last_update_time = current_timestamp;
 		conf.period_finish = current_timestamp.saturating_add(conf.rewards_duration);

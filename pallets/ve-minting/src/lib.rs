@@ -43,7 +43,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::{CurrencyId, Timestamp, TokenSymbol}; // BlockNumber, Balance
+use node_primitives::{CurrencyId, Timestamp, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
@@ -108,9 +108,7 @@ pub mod pallet {
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type Currency: Currency<Self::AccountId>
-			// + ReservableCurrency<Self::AccountId>
-			+ LockableCurrency<Self::AccountId>;
+		type Currency: Currency<Self::AccountId> + LockableCurrency<Self::AccountId>;
 
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
@@ -120,12 +118,6 @@ pub mod pallet {
 		type VeMintingPalletId: Get<PalletId>;
 
 		type UnixTime: UnixTime;
-
-		// #[pallet::constant]
-		// type multiplier: u128;
-
-		// #[pallet::constant]
-		// type week: Timestamp;
 	}
 
 	#[pallet::event]
@@ -212,24 +204,16 @@ pub mod pallet {
 		Blake2_128Concat,
 		AccountIdOf<T>,
 		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-		// ValueQuery,
 	>;
-
-	// #[pallet::hooks]
-	// impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-	// 	fn on_idle(_bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-	// 		0
-	// 	}
-	// }
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			min_mint: Option<BalanceOf<T>>, // 最小铸造值
-			min_time: Option<Timestamp>,    // 最小锁仓期
-			max_time: Option<Timestamp>,    // 最大锁仓期
+			min_mint: Option<BalanceOf<T>>, // Minimum mint balance
+			min_time: Option<Timestamp>,    // Minimum lockup time
+			max_time: Option<Timestamp>,    // Maximum lockup time
 			multiplier: Option<u128>,
 			week: Option<Timestamp>,
 			vote_weight_multiplier: Option<BalanceOf<T>>,
@@ -348,7 +332,6 @@ pub mod pallet {
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
-				// u_new.slope = new_locked.amount / Self::ve_configs().max_time;
 				u_new.bias = u_new
 					.slope
 					.saturating_mul((new_locked.end - current_timestamp).saturated_into());
@@ -398,13 +381,10 @@ pub mod pallet {
 							U256::from((t_i - last_checkpoint).saturated_into::<u128>()),
 						),
 					)
-					// .checked_div(total_shares)
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
 
-				// last_point.bias -=
-				// 	last_point.slope.saturating_mul((t_i - last_point.ts).saturated_into());
 				last_point.slope += (d_slope as u128).saturated_into();
 				if last_point.bias < Zero::zero() {
 					// This can happen
@@ -433,7 +413,6 @@ pub mod pallet {
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);
-					// Self::point_history(g_epoch) = last_point
 				}
 			}
 			Epoch::<T>::set(g_epoch);
@@ -462,7 +441,6 @@ pub mod pallet {
 					new_dslope = new_dslope
 						.checked_sub(u_new.slope.saturated_into::<u128>() as i128)
 						.ok_or(ArithmeticError::Overflow)?;
-					// new_dslope -= u_new.slope; old slope disappeared at this point
 					SlopeChanges::<T>::insert(new_locked.end, new_dslope);
 				}
 				// else: we recorded it already in old_dslope
@@ -474,7 +452,6 @@ pub mod pallet {
 			u_new.ts = current_timestamp;
 			u_new.blk = current_block_number;
 			u_new.fxs_amt = Self::locked(addr).amount;
-			// log::debug!("_checkpoint:{:?}", u_new);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 			Self::update_reward(Some(addr))?;
@@ -503,7 +480,6 @@ pub mod pallet {
 				_locked.end = unlock_time
 			}
 			Locked::<T>::insert(addr, _locked.clone());
-			// log::debug!("_deposit_for:{:?}", _locked);
 
 			Self::_checkpoint(addr, old_locked, _locked.clone())?;
 

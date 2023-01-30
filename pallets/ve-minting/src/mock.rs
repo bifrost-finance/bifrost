@@ -160,9 +160,6 @@ orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		env_logger::try_init().unwrap_or(());
 
-		// log::debug!(
-		// 	"{:?}",currency_id
-		// );
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,

@@ -113,29 +113,20 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		addr: &AccountIdOf<T>,
 		time: Option<Timestamp>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		// if let Some(_t) = time {
-		// 	_t
-		// } else {
-		// 	T::UnixTime::now().as_millis().saturated_into()
-		// };
 		let _t = match time {
 			Some(_t) => _t,
 			None => T::UnixTime::now().as_millis().saturated_into(),
 		};
-		// let _t: Timestamp =
-		// 	T::UnixTime::now().as_millis().saturated_into();
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());
 		} else {
 			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
 				Self::user_point_history(addr, u_epoch);
-			// log::debug!("{:?}::{:?}::{:?}", _t, last_point.ts, last_point.bias);
 
 			last_point.bias -= last_point
 				.slope
 				.saturating_mul((_t.saturating_sub(last_point.ts)).saturated_into());
-			// .ok_or(ArithmeticError::Overflow)?;
 			if last_point.bias < Zero::zero() {
 				last_point.bias = Zero::zero();
 			}
@@ -160,8 +151,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				break;
 			}
 			let _mid = (_min + _max + 1) / 2;
-			// let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
-			// 	Self::user_point_history(addr, _mid);
 
 			if Self::user_point_history(addr, _mid).blk <= _block {
 				_min = _mid
@@ -176,8 +165,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let max_epoch: U256 = Self::epoch();
 		let _epoch: U256 = Self::find_block_epoch(_block, max_epoch);
 		let point_0: Point<BalanceOf<T>, BlockNumberFor<T>> = Self::point_history(_epoch);
-		let d_block; // = Zero::zero();
-		let d_t; // = Zero::zero();
+		let d_block;
+		let d_t;
 		if _epoch < max_epoch {
 			let point_1 = Self::point_history(_epoch + 1);
 			d_block = point_1.blk - point_0.blk;
@@ -192,9 +181,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			block_time += d_t
 				.saturating_mul((_block - point_0.blk).saturated_into())
 				.saturating_div(d_block.saturated_into());
-			// (_block - point_0.blk) / d_block
 		}
-		upoint.bias -= upoint.slope.saturating_mul((block_time - upoint.ts).saturated_into()); //  * (block_time - upoint.ts);
+		upoint.bias -= upoint.slope.saturating_mul((block_time - upoint.ts).saturated_into());
 
 		if (upoint.bias >= Zero::zero()) || (upoint.fxs_amt >= Zero::zero()) {
 			Ok(upoint.fxs_amt + (Self::ve_configs().vote_weight_multiplier * upoint.bias))
@@ -261,6 +249,5 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			last_point.bias = Zero::zero()
 		}
 		last_point.fxs_amt + Self::ve_configs().vote_weight_multiplier * last_point.bias
-		// last_point.bias
 	}
 }
