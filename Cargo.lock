@@ -810,6 +810,8 @@ dependencies = [
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
+ "bifrost-ve-minting",
+ "bifrost-ve-minting-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
@@ -1365,6 +1367,47 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-ve-minting"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "env_logger 0.9.3",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "bifrost-ve-minting-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-core",
  "sp-std",
 ]
 
