@@ -414,17 +414,45 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn init_for_alice_n_bob(self) -> Self {
+		use sp_runtime::traits::AccountIdConversion;
+		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+		let entrance_account = AccountId::new(entrance_account_id_32);
+		self.balances(vec![
+			(pool_account.clone(), KSM, 100_000_000_000_000),
+			(ALICE, BNC, 100_000_000_000_000),
+			(BOB, BNC, 100_000_000_000_000),
+			(CHARLIE, BNC, 100_000_000_000_000),
+			(entrance_account, BNC, 100_000_000_000_000),
+		])
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
 		use frame_benchmarking::whitelisted_caller;
 		use sp_runtime::traits::AccountIdConversion;
 		let whitelist_caller: AccountId = whitelisted_caller();
 		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
-
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+		let entrance_account = AccountId::new(entrance_account_id_32);
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
 			(whitelist_caller.clone(), VKSM, 100_000_000_000_000),
 			(pool_account.clone(), KSM, 100_000_000_000_000),
+			(ALICE, BNC, 100_000_000_000_000),
+			(BOB, BNC, 100_000_000_000_000),
+			(CHARLIE, BNC, 100_000_000_000_000),
+			(entrance_account, BNC, 100_000_000_000_000),
 		])
 	}
 
