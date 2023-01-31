@@ -355,7 +355,7 @@ pub mod pallet {
 				last_point.fxs_amt = Self::balance_of(addr, None)?;
 			}
 			let mut last_checkpoint = last_point.ts;
-			let initial_last_point = last_point.clone();
+			let initial_last_point = last_point;
 			let mut block_slope: u128 = Zero::zero();
 			if current_timestamp > last_point.ts {
 				block_slope = ve_config.multiplier *
@@ -427,7 +427,7 @@ pub mod pallet {
 				// old_dslope was <something> - u_old.slope, so we cancel that
 				old_dslope += u_old.slope.saturated_into::<u128>() as i128;
 				if new_locked.end == old_locked.end {
-					old_dslope -= u_new.slope.clone().saturated_into::<u128>() as i128;
+					old_dslope -= u_new.slope.saturated_into::<u128>() as i128;
 				} // It was a new deposit, not extension
 				SlopeChanges::<T>::insert(old_locked.end, old_dslope);
 			}

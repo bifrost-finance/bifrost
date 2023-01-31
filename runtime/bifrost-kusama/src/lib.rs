@@ -48,7 +48,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::{ConstU32, OpaqueMetadata};
+use sp_core::{ConstU32, OpaqueMetadata, U256};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
