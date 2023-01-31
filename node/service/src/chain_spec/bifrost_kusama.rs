@@ -88,17 +88,17 @@ fn bifrost_kusama_properties() -> Properties {
 	let mut token_decimals: Vec<u32> = vec![];
 	[
 		// native token
-		CurrencyId::Native(TokenSymbol::BNC),
+		Native(BNC),
 		// stable token
-		CurrencyId::Stable(TokenSymbol::KUSD),
+		Stable(KUSD),
 		// token
-		CurrencyId::Token(TokenSymbol::DOT),
-		CurrencyId::Token(TokenSymbol::KSM),
-		CurrencyId::Token(TokenSymbol::KAR),
-		CurrencyId::Token(TokenSymbol::ZLK),
-		CurrencyId::Token(TokenSymbol::PHA),
-		CurrencyId::Token(TokenSymbol::RMRK),
-		CurrencyId::Token(TokenSymbol::MOVR),
+		Token(DOT),
+		Token(KSM),
+		Token(KAR),
+		Token(ZLK),
+		Token(PHA),
+		Token(RMRK),
+		Token(MOVR),
 	]
 	.iter()
 	.for_each(|token| {
@@ -207,11 +207,11 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT() * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT()),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), Stable(KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), Token(KAR), ENDOWMENT() * 10_000),
+				(x.clone(), Token(KSM), ENDOWMENT()),
+				(x.clone(), Token(DOT), ENDOWMENT()),
+				(x.clone(), VSToken(DOT), ENDOWMENT()),
 			]
 		})
 		.collect();
@@ -291,10 +291,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT() * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 4_000_000),
+				(x.clone(), Stable(KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), Token(KAR), ENDOWMENT() * 10_000),
+				(x.clone(), Token(KSM), ENDOWMENT() * 4_000_000),
+				(x.clone(), VSToken(KSM), ENDOWMENT() * 4_000_000),
 				(
 					x.clone(),
 					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
@@ -540,14 +540,7 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		salp_lite_multisig,
-		(
-			vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
-				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
-			],
-			vec![],
-			vec![],
-		),
+		(vec![(Token(DOT), 100_000_000, None), (Token(KSM), 10_000_000, None)], vec![], vec![]),
 	)
 }
 

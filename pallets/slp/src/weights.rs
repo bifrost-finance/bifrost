@@ -95,6 +95,7 @@ pub trait WeightInfo {
 	fn supplement_fee_reserve() -> Weight;
 	fn confirm_validators_by_delegator_query_response() -> Weight;
 	fn fail_validators_by_delegator_query_response() -> Weight;
+	fn convert_asset() -> Weight;
 }
 
 /// Weights for bifrost_slp using the Bifrost node and recommended hardware.
@@ -252,6 +253,13 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(9 as u64))
 			.saturating_add(T::DbWeight::get().writes(2 as u64))
 	}
+
+	fn convert_asset() -> Weight {
+		Weight::from_ref_time(216_032_000 as u64)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(2 as u64))
+	}
+
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
 		Weight::from_ref_time(80_744_000 as u64)
@@ -702,6 +710,13 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(9 as u64))
 			.saturating_add(RocksDbWeight::get().writes(2 as u64))
 	}
+
+	fn convert_asset() -> Weight {
+		Weight::from_ref_time(216_032_000 as u64)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(2 as u64))
+	}
+
 	// Storage: VtokenMinting TokenPool (r:1 w:1)
 	fn increase_token_pool() -> Weight {
 		Weight::from_ref_time(80_744_000 as u64)

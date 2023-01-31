@@ -18,10 +18,12 @@
 
 mod filecoin_primitives;
 mod moonbeam_primitives;
+mod phala_primitives;
 mod polkadot_primitives;
 
 pub use filecoin_primitives::*;
 pub use moonbeam_primitives::*;
+pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
 use crate::XcmWeight;
@@ -40,6 +42,7 @@ pub enum Ledger<Balance> {
 	Moonbeam(OneToManyLedger<Balance>),
 	ParachainStaking(OneToManyLedger<Balance>),
 	Filecoin(FilecoinLedger<Balance>),
+	Phala(PhalaLedger<Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
@@ -126,4 +129,5 @@ pub enum XcmOperation {
 	CancelLeave,
 	XtokensTransferBack,
 	ExecuteLeave,
+	ConvertAsset,
 }

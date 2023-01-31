@@ -826,6 +826,7 @@ fn liquidize_works() {
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
+				None,
 				None
 			));
 		});
@@ -1552,6 +1553,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 				RelayCurrencyId::get(),
 				Box::new(SUBACCOUNT_0_LOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
+				None,
 				None
 			));
 

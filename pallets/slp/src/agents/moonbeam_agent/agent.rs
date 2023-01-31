@@ -21,7 +21,7 @@ use super::types::{
 	MoonbeamXtokensCall,
 };
 use crate::{
-	agents::SystemCall,
+	agents::MoonbeamSystemCall,
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
@@ -42,8 +42,11 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
 use orml_traits::MultiCurrency;
+use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero},
+	traits::{
+		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero,
+	},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -85,6 +88,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
+		ensure!(
+			delegator_multilocation.clone() != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -670,7 +677,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -681,6 +688,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -835,7 +843,7 @@ impl<T: Config>
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	/// Receiving account must be one of the KSM delegators.
+	/// Receiving account must be one of the MOVR/GLMR delegators.
 	fn transfer_to(
 		&self,
 		from: &MultiLocation,
@@ -843,7 +851,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		// Make sure receiving account is one of the KSM delegators.
+		// Make sure receiving account is one of the MOVR/GLMR delegators.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
 			Error::<T>::DelegatorNotExist
@@ -857,6 +865,17 @@ impl<T: Config>
 		Self::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
+	}
+
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+		_if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
+		Err(Error::<T>::Unsupported)
 	}
 
 	fn tune_vtoken_exchange_rate(
@@ -934,7 +953,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		// Get current VKSM/KSM exchange rate.
+		// Get current VMOVR/MOVR、VGLMR/GLMR exchange rate.
 		let vtoken = match currency_id {
 			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
 			GLMR => Ok(CurrencyId::VToken2(GLMR_TOKEN_ID)),
@@ -1135,7 +1154,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
 		let remark_call =
-			MoonbeamCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+			MoonbeamCall::System(MoonbeamSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 		let call_batched_with_remark =
 			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
@@ -1337,11 +1356,8 @@ impl<T: Config> MoonbeamAgent<T> {
 									.ok_or(Error::<T>::OverFlow)?;
 
 								let amount_rs = old_ledger.delegations.get(&validator_id);
-								let original_amount = if let Some(amt) = amount_rs {
-									amt.clone()
-								} else {
-									Zero::zero()
-								};
+								let original_amount =
+									if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 								let new_amount = original_amount
 									.checked_add(&amount)
@@ -1407,14 +1423,13 @@ impl<T: Config> MoonbeamAgent<T> {
 									validator: validator_id.clone(),
 									when_executable: unlock_time_unit.clone(),
 									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-										revoke_amount.clone(),
+										*revoke_amount,
 									),
 								};
 								old_ledger.requests.push(new_request);
-								old_ledger.request_briefs.insert(
-									validator_id,
-									(unlock_time_unit, revoke_amount.clone()),
-								);
+								old_ledger
+									.request_briefs
+									.insert(validator_id, (unlock_time_unit, *revoke_amount));
 							},
 							// cancel bond less or revoke request
 							CancelRequest => {
@@ -1469,14 +1484,14 @@ impl<T: Config> MoonbeamAgent<T> {
 										validator: vali.clone(),
 										when_executable: unlock_time.clone(),
 										action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-											amt.clone(),
+											*amt,
 										),
 									};
 									new_requests.push(request_entry);
 
 									old_ledger
 										.request_briefs
-										.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
+										.insert(vali.clone(), (unlock_time.clone(), *amt));
 								}
 
 								old_ledger.requests = new_requests;
@@ -1708,6 +1723,9 @@ impl<T: Config>
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
+		let self_sibling_parachain_account: [u8; 20] =
+			Sibling::from(T::ParachainId::get()).into_account_truncating();
+
 		Ok(Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
@@ -1722,7 +1740,10 @@ impl<T: Config>
 				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(Parachain(T::ParachainId::get().into())),
+					interior: X1(AccountKey20 {
+						network: Any,
+						key: self_sibling_parachain_account,
+					}),
 				},
 			},
 		]))

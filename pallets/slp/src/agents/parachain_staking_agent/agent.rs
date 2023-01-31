@@ -70,6 +70,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
+		ensure!(
+			delegator_multilocation.clone() != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -198,7 +202,7 @@ impl<T: Config>
 
 					let amount_rs = old_ledger.delegations.get(validator_multilocation);
 					let original_amount =
-						if let Some(amt) = amount_rs { amt.clone() } else { Zero::zero() };
+						if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -278,7 +282,7 @@ impl<T: Config>
 
 					let amount_rs = old_ledger.delegations.get(validator_multilocation);
 					let original_amount =
-						if let Some(amt) = amount_rs { amt.clone() } else { Zero::zero() };
+						if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
@@ -437,13 +441,11 @@ impl<T: Config>
 						let request_entry = OneToManyScheduledRequest {
 							validator: vali.clone(),
 							when_executable: unlock_time.clone(),
-							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(amt.clone()),
+							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*amt),
 						};
 						new_requests.push(request_entry);
 
-						old_ledger
-							.request_briefs
-							.insert(vali.clone(), (unlock_time.clone(), amt.clone()));
+						old_ledger.request_briefs.insert(vali.clone(), (unlock_time.clone(), *amt));
 					}
 
 					old_ledger.requests = new_requests;
@@ -623,14 +625,12 @@ impl<T: Config>
 					let new_request = OneToManyScheduledRequest {
 						validator: (*validator).clone(),
 						when_executable: unlock_time_unit.clone(),
-						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-							revoke_amount.clone(),
-						),
+						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*revoke_amount),
 					};
 					old_ledger.requests.push(new_request);
 					old_ledger
 						.request_briefs
-						.insert((*validator).clone(), (unlock_time_unit, revoke_amount.clone()));
+						.insert((*validator).clone(), (unlock_time_unit, *revoke_amount));
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
@@ -699,7 +699,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -710,6 +710,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -955,6 +956,17 @@ impl<T: Config>
 			.map_err(|_| Error::<T>::Unexpected)?;
 
 		Ok(())
+	}
+
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+		_if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
+		Err(Error::<T>::Unsupported)
 	}
 
 	fn tune_vtoken_exchange_rate(

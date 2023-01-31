@@ -60,12 +60,7 @@ fn deposit() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, tokens) = init_no_gauge();
 		System::set_block_number(System::block_number() + 1);
-		assert_ok!(Farming::deposit(
-			RuntimeOrigin::signed(ALICE),
-			pid,
-			tokens.clone(),
-			Some((100, 100))
-		));
+		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 		System::set_block_number(System::block_number() + 1);
 		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, 0, Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
@@ -198,12 +193,7 @@ fn retire() {
 		let (pid, tokens) = init_no_gauge();
 		Farming::on_initialize(0);
 		System::set_block_number(System::block_number() + 1);
-		assert_ok!(Farming::deposit(
-			RuntimeOrigin::signed(ALICE),
-			pid,
-			tokens.clone(),
-			Some((100, 100))
-		));
+		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 		System::set_block_number(System::block_number() + 1);
 		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, 0, Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 800);
@@ -251,6 +241,7 @@ fn reset() {
 		let pool_infos = PoolInfo {
 			tokens_proportion: tokens_proportion_map,
 			total_shares: Default::default(),
+			basic_token: (KSM, Perbill::from_percent(100)),
 			basic_rewards: basic_rewards_map.clone(),
 			rewards: BTreeMap::new(),
 			state: PoolState::UnCharged,
@@ -317,12 +308,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 300000)];
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
-	assert_ok!(Farming::deposit(
-		RuntimeOrigin::signed(ALICE),
-		pid,
-		tokens.clone(),
-		Some((100, 100))
-	));
+	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 	(pid, tokens)
 }
 
@@ -349,7 +335,7 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 100000)];
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
-	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens.clone(), None));
+	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, None));
 	(pid, tokens)
 }
 
@@ -399,16 +385,11 @@ fn create_farming_pool() {
 			assert_eq!(pool_infos.state, PoolState::Charged)
 		};
 		assert_err!(
-			Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens.clone(), Some((100, 100))),
+			Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))),
 			Error::<Runtime>::CanNotDeposit
 		);
 		System::set_block_number(System::block_number() + 3);
-		assert_ok!(Farming::deposit(
-			RuntimeOrigin::signed(ALICE),
-			pid,
-			tokens.clone(),
-			Some((100, 100))
-		));
+		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 		Farming::on_initialize(System::block_number() + 3);
 		Farming::on_initialize(0);
 		if let Some(pool_infos) = Farming::pool_infos(0) {

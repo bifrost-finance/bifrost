@@ -28,6 +28,32 @@ pub enum Subcommand {
 	#[command(subcommand)]
 	Key(KeySubcommand),
 
+	/// Build a chain specification.
+	BuildSpec(sc_cli::BuildSpecCmd),
+
+	/// Sub-commands concerned with benchmarking.
+	/// The pallet benchmarking moved to the `pallet` sub-command.
+	#[command(subcommand)]
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+	/// Validate blocks.
+	CheckBlock(sc_cli::CheckBlockCmd),
+
+	/// Export blocks.
+	ExportBlocks(sc_cli::ExportBlocksCmd),
+
+	/// Export the state of a given block into a chain spec.
+	ExportState(sc_cli::ExportStateCmd),
+
+	/// Export the genesis state of the parachain.
+	ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
+
+	/// Export the genesis wasm of the parachain.
+	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
+
+	/// Import blocks.
+	ImportBlocks(sc_cli::ImportBlocksCmd),
+
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
 	#[command(
 		name = "inspect",
@@ -35,10 +61,14 @@ pub enum Subcommand {
 	)]
 	Inspect(node_inspect::cli::InspectCmd),
 
-	/// Sub-commands concerned with benchmarking.
-	/// The pallet benchmarking moved to the `pallet` sub-command.
-	#[command(subcommand)]
-	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+	/// Remove the whole chain.
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
+
+	/// Revert the chain to a previous state.
+	Revert(sc_cli::RevertCmd),
+
+	/// Sign a message, with a given (secret) key.
+	Sign(SignCmd),
 
 	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
 	/// testing.
@@ -50,36 +80,6 @@ pub enum Subcommand {
 
 	/// Generate a seed that provides a vanity address.
 	Vanity(VanityCmd),
-
-	/// Sign a message, with a given (secret) key.
-	Sign(SignCmd),
-
-	/// Build a chain specification.
-	BuildSpec(sc_cli::BuildSpecCmd),
-
-	/// Validate blocks.
-	CheckBlock(sc_cli::CheckBlockCmd),
-
-	/// Export blocks.
-	ExportBlocks(sc_cli::ExportBlocksCmd),
-
-	/// Export the state of a given block into a chain spec.
-	ExportState(sc_cli::ExportStateCmd),
-
-	/// Import blocks.
-	ImportBlocks(sc_cli::ImportBlocksCmd),
-
-	/// Remove the whole chain.
-	PurgeChain(cumulus_client_cli::PurgeChainCmd),
-
-	/// Revert the chain to a previous state.
-	Revert(sc_cli::RevertCmd),
-
-	/// Export the genesis state of the parachain.
-	ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
-
-	/// Export the genesis wasm of the parachain.
-	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
 }
 
 #[derive(Debug, Parser)]

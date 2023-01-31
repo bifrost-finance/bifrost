@@ -19,13 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PolkadotAgent},
+	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent, PolkadotAgent},
 	primitives::BASE_WEIGHT,
 };
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR, PHA,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -213,6 +213,13 @@ pub mod pallet {
 		NotEnoughBalance,
 		VectorTooLong,
 		MultiCurrencyError,
+		NotDelegateValidator,
+		DividedByZero,
+		SharePriceNotValid,
+		InvalidAmount,
+		ValidatorMultilocationNotvalid,
+		AmountNotProvided,
+		FailToConvert,
 	}
 
 	#[pallet::event]
@@ -296,6 +303,7 @@ pub mod pallet {
 			#[codec(compact)]
 			query_id: QueryId,
 			query_id_hash: Hash<T>,
+			amount: Option<BalanceOf<T>>,
 		},
 		Chill {
 			currency_id: CurrencyId,
@@ -315,6 +323,12 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
+			#[codec(compact)]
+			amount: BalanceOf<T>,
+		},
+		ConvertAsset {
+			currency_id: CurrencyId,
+			who: MultiLocation,
 			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
@@ -911,12 +925,13 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			when: Option<TimeUnit>,
 			validator: Option<MultiLocation>,
+			amount: Option<BalanceOf<T>>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(&who, &when, &validator, currency_id)?;
+			let query_id = staking_agent.liquidize(&who, &when, &validator, currency_id, amount)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -926,6 +941,7 @@ pub mod pallet {
 				time_unit: when,
 				query_id,
 				query_id_hash,
+				amount,
 			});
 			Ok(())
 		}
@@ -1000,6 +1016,30 @@ pub mod pallet {
 				to: *to,
 				amount,
 			});
+
+			Ok(())
+		}
+
+		// Convert token to another token.
+		// if we convert from currency_id to some other currency, then if_from_currency should be
+		// true. if we convert from some other currency to currency_id, then if_from_currency should
+		// be false.
+		#[pallet::weight(T::WeightInfo::convert_asset())]
+		pub fn convert_asset(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+			#[pallet::compact] amount: BalanceOf<T>,
+			if_from_currency: bool,
+		) -> DispatchResult {
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
 
 			Ok(())
 		}
@@ -1853,6 +1893,7 @@ pub mod pallet {
 				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
+				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

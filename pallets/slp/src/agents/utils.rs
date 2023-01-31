@@ -97,6 +97,10 @@ impl<T: Config> Pallet<T> {
 				parents: _,
 				interior: X1(AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
+			MultiLocation {
+				parents: _,
+				interior: X2(_, AccountId32 { network: _network_id, id: account_id }),
+			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
 		Ok(*account_32)

@@ -8,7 +8,7 @@ edition = "2021"
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = { version = "0.4.17" }
-serde = { version = "1.0.151", optional = true }
+serde = { version = "1.0.152", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", optional = true }
 hex-literal = { version = "0.3.4" }
@@ -87,4 +87,4 @@ polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch =
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.32" }
 polkadot-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.32" }
 #statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.32" }
-xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", branch = "polkadot-v0.9.32" }
+xcm-emulator = { version = "*" }

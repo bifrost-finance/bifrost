@@ -7,7 +7,7 @@ version = "3.0.1"
 
 [dependencies]
 log = "0.4.17"
-serde = { version = "1.0.151", optional = true }
+serde = { version = "1.0.152", optional = true }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", optional = true, default-features = false }
@@ -17,7 +17,7 @@ parity-scale-codec = { version = "3.1.5", default-features = false, features = [
 	"derive",
 	"max-encoded-len",
 ] }
-scale-info = { version = "2.1.2", default-features = false, features = [
+scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 	"decode",
 ] }

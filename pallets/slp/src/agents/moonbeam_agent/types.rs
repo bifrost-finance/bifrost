@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{agents::SystemCall, BalanceOf, Config};
+use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
@@ -28,7 +28,7 @@ use xcm::{opaque::latest::WeightLimit, VersionedMultiLocation};
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {
 	#[codec(index = 0)]
-	System(SystemCall),
+	System(MoonbeamSystemCall),
 	#[codec(index = 10)]
 	Balances(MoonbeamBalancesCall<T>),
 	#[codec(index = 20)]
@@ -82,6 +82,12 @@ pub enum MoonbeamParachainStakingCall<T: Config> {
 pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
 	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum MoonbeamSystemCall {
+	#[codec(index = 8)]
+	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
