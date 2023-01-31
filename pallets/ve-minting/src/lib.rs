@@ -199,12 +199,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn rewards)]
-	pub type Rewards<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		AccountIdOf<T>,
-		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
-	>;
+	pub type Rewards<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

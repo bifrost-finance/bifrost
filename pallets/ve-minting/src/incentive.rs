@@ -160,7 +160,6 @@ impl<T: Config> Pallet<T> {
 					.or_insert(new_reward);
 				Ok(())
 			})?;
-
 		} else {
 			let remaining = conf
 				.period_finish
