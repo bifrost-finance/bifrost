@@ -121,9 +121,21 @@ build-bifrost-rococo-fast-wasm:
 check-try-runtime:
 	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
 
-.PHONY: try-bifrost-runtime-upgrade # try bifrost runtime upgrade
-try-bifrost-runtime-upgrade:
-	./scripts/try-runtime.sh bifrost-kusama
+.PHONY: try-kusama-runtime-upgrade # try kusama runtime upgrade
+try-kusama-runtime-upgrade:
+	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
+ 			  -- try-runtime \
+ 			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
+ 			  --chain=bifrost-kusama-local on-runtime-upgrade live \
+ 			  --uri=wss://bifrost-rpc.dwellir.com:443
+
+.PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
+try-polkadot-runtime-upgrade:
+	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
+ 			  -- try-runtime \
+ 			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
+ 			  --chain=bifrost-polkadot-local on-runtime-upgrade live \
+ 			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: resources # export genesis resources
 resources:

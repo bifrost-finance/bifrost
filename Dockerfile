@@ -18,8 +18,8 @@
 FROM rust:buster as builder
 
 RUN apt-get update && apt-get install time cmake clang libclang-dev llvm protobuf-compiler -y
-RUN rustup toolchain install nightly-2022-10-09
-RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2022-10-09
+RUN rustup toolchain install nightly-2022-10-30
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2022-10-30
 
 WORKDIR /app
 COPY . /app

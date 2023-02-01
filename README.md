@@ -8,8 +8,8 @@ Welcome,
 
 Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message (XCM) it can provide cross-chain liquid staking services for polkadot relay chains, parachains, and heterogeneous chains bridged with polkadot.
 
-👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*  
-👉 *Learn to use the Bifrost network with our [wiki](https://wiki.bifrost.finance/network).*  
+👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*
+👉 *Learn to use the Bifrost network with our [wiki](https://wiki.bifrost.finance/network).*
 
 <h4>🐣 Supported by</h4>
 
@@ -78,7 +78,11 @@ make generate-all-weights
 If modify the storage, should test the data migration before production upgrade.
 
 ```bash
-make try-bifrost-runtime-upgrade
+# bifrost kusama
+make try-kusama-runtime-upgrade
+
+# bifrost polkadot
+make try-polkadot-runtime-upgrade
 ```
 
 ## Run development chain

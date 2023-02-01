@@ -128,7 +128,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 969,
+	spec_version: 970,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -311,7 +311,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub CheckingAccount: AccountId = PalletId(*b"py/xcmch").into_account_truncating();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 impl frame_system::Config for Runtime {
@@ -1876,7 +1876,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,),
+	pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
