@@ -420,7 +420,6 @@ impl ExtBuilder {
 	}
 
 	pub fn init_for_alice_n_bob(self) -> Self {
-		use sp_runtime::traits::AccountIdConversion;
 		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
 		let entrance_account_id_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]

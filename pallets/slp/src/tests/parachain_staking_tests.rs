@@ -29,7 +29,7 @@ use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
 	primitives::{OneToManyDelegatorStatus, OneToManyLedger},
-	BNC, *,
+	BNC,
 };
 use codec::alloc::collections::BTreeMap;
 
@@ -253,11 +253,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 	let validator_0_location =
 		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
 
-	let validator_1_location = MultiLocation {
-		parents: 0,
-		interior: X1(AccountId32 { network: Any, id: CHARLIE.into() }),
-	};
-
 	ExtBuilder::default().init_for_alice_n_bob().build().execute_with(|| {
 		// environment setup
 		parachain_staking_setup();
@@ -267,7 +262,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
 		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location.clone(), 0);
 
-		use parachain_staking::{CandidateMetadata, CapacityStatus, CollatorStatus};
 		assert_ok!(ParachainStaking::join_candidates(
 			RuntimeOrigin::signed(BOB),
 			10_000_000_000_000u128,
@@ -385,7 +379,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 
-		let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
+		// let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
 		// log::debug!("test5{:?}", delegation_scheduled_requests);
 
 		assert_ok!(Slp::liquidize(
@@ -811,21 +805,9 @@ fn parachain_staking_liquidize_works() {
 			),
 			Error::<Runtime>::Unexpected
 		);
+
 		// set delegator_0 ledger
 		let parachain_staking_ledger = OneToManyLedger {
-			account: subaccount_0_location.clone(),
-			total: 10_000_000_000_000,
-			less_total: 10_000_000_000_000,
-			delegations: delegation_set.clone(),
-			requests: request_list.clone(),
-			request_briefs: request_briefs_set.clone(),
-			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(48)),
-		};
-
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger.clone());
-
-		// set delegator_0 ledger
-		let parachain_staking_ledger2 = OneToManyLedger {
 			account: subaccount_0_location.clone(),
 			total: 10_000_000_000_000,
 			less_total: 10_000_000_000_000,
@@ -834,9 +816,9 @@ fn parachain_staking_liquidize_works() {
 			request_briefs: request_briefs_set,
 			status: OneToManyDelegatorStatus::Active,
 		};
-		let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger2);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 
 		assert_noop!(
 			Slp::liquidize(

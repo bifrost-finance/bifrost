@@ -528,10 +528,9 @@ impl<T: Config>
 
 					let request_index = old_ledger
 						.requests
-						.binary_search_by_key(validator_multilocation, |request| {
-							request.validator.clone()
-						})
-						.map_err(|_| Error::<T>::Unexpected)?;
+						.iter()
+						.position(|rqst| rqst.validator == *validator_multilocation)
+						.ok_or(Error::<T>::Unexpected)?;
 					old_ledger.requests.remove(request_index);
 
 					old_ledger.request_briefs.remove(validator_multilocation);
