@@ -60,7 +60,7 @@ pub mod weights;
 mod benchmarks;
 #[cfg(test)]
 mod mock;
-pub mod set;
+mod set;
 #[cfg(test)]
 mod tests;
 

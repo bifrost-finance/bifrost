@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-// use crate::{mock::*, *};
 use crate::{
 	mocks::mock::*,
 	primitives::{OneToManyDelegationAction, OneToManyScheduledRequest},
@@ -65,9 +64,6 @@ fn initialize_parachain_staking_delegator() {
 fn parachain_staking_setup() {
 	let validator_0_location =
 		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
-
-	let validator_1_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: ALICE.into() }) };
 
 	let treasury_account_id_32: [u8; 32] =
 		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
@@ -230,13 +226,6 @@ fn parachain_staking_setup() {
 		BNC,
 		Box::new(validator_0_location.clone()),
 	));
-
-	assert_ok!(Slp::add_validator(
-		RuntimeOrigin::signed(ALICE),
-		BNC,
-		Box::new(validator_1_location.clone()),
-	));
-	assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), BNC, None,));
 
 	// initialize delegator
 }
