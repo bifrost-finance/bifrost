@@ -14408,7 +14408,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -14431,7 +14431,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14446,7 +14446,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14457,7 +14457,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -14474,7 +14474,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-rpc"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14488,7 +14488,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14499,7 +14499,7 @@ dependencies = [
 [[package]]
 name = "zenlink-swap-router"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=f07284082cad6ec956fa604a03624454987e884f#f07284082cad6ec956fa604a03624454987e884f"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=c7513f6653c5e686574b421e32fca74763377a63#c7513f6653c5e686574b421e32fca74763377a63"
 dependencies = [
  "frame-support",
  "frame-system",

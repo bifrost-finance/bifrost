@@ -102,13 +102,13 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-stable-amm = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-stable-amm-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
-zenlink-swap-router = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "f07284082cad6ec956fa604a03624454987e884f" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-stable-amm = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-stable-amm-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-stable-amm-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
+zenlink-swap-router = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "c7513f6653c5e686574b421e32fca74763377a63" }
 merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "41cdaa648ad67b69ec61b1958206c960e78aa075" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "05f0007b30c98303078ee64d34390233d6ffb30e" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "05f0007b30c98303078ee64d34390233d6ffb30e" }
