@@ -165,6 +165,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(10000)]
 		pub fn vsbond_convert_to_vstoken(
 			origin: OriginFor<T>,
@@ -239,6 +240,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(10000)]
 		pub fn vstoken_convert_to_vsbond(
 			origin: OriginFor<T>,
@@ -318,6 +320,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
@@ -333,6 +336,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn set_exchange_rate(
 			origin: OriginFor<T>,
@@ -349,6 +353,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn set_relaychain_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;

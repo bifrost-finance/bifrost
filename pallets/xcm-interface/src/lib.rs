@@ -166,6 +166,7 @@ pub mod pallet {
 		///
 		/// Parameters:
 		/// - `updates`: vec of tuple: (XcmInterfaceOperation, WeightChange, FeeChange).
+		#[pallet::call_index(0)]
 		#[pallet::weight((
 			0,
 			DispatchClass::Normal,
@@ -200,6 +201,7 @@ pub mod pallet {
 
 			Ok(())
 		}
+		#[pallet::call_index(1)]
 		#[pallet::weight(2_000_000_000)]
 		pub fn transfer_statemine_assets(
 			origin: OriginFor<T>,

@@ -339,6 +339,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -355,6 +356,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -376,6 +378,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -395,6 +398,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight((
 			0,
 			DispatchClass::Normal,
@@ -433,6 +437,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -454,6 +459,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -477,6 +483,7 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
+		#[pallet::call_index(6)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -547,6 +554,7 @@ pub mod pallet {
 		/// Edit the configuration for an in-progress crowdloan.
 		///
 		/// Can only be called by Root origin.
+		#[pallet::call_index(7)]
 		#[pallet::weight((
 			0,
 			DispatchClass::Normal,
@@ -587,6 +595,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::contribute())]
 		pub fn contribute(
 			origin: OriginFor<T>,
@@ -633,6 +642,7 @@ pub mod pallet {
 		}
 
 		/// Confirm contribute
+		#[pallet::call_index(9)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -712,6 +722,7 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(
 			origin: OriginFor<T>,
@@ -741,6 +752,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock_by_vsbond(
 			origin: OriginFor<T>,
@@ -793,6 +805,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(12)]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock_vstoken(origin: OriginFor<T>, who: AccountIdOf<T>) -> DispatchResult {
 			ensure_signed(origin)?;
@@ -834,6 +847,7 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::batch_unlock(T::RemoveKeysLimit::get()))]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
@@ -881,6 +895,7 @@ pub mod pallet {
 
 		/// Withdraw full balance of the parachain.
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
+		#[pallet::call_index(14)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -911,6 +926,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(15)]
 		#[pallet::weight(T::WeightInfo::refund())]
 		pub fn refund(
 			origin: OriginFor<T>,
@@ -982,6 +998,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(16)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -1038,6 +1055,7 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
+		#[pallet::call_index(17)]
 		#[pallet::weight((
 			0,
 			DispatchClass::Normal,
@@ -1064,6 +1082,7 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
+		#[pallet::call_index(18)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -1114,6 +1133,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(19)]
 		#[pallet::weight((
 			0,
 			DispatchClass::Normal,

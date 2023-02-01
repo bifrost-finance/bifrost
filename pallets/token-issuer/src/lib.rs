@@ -108,6 +108,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
@@ -135,6 +136,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
@@ -157,6 +159,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::add_to_transfer_whitelist())]
 		pub fn add_to_transfer_whitelist(
 			origin: OriginFor<T>,
@@ -187,6 +190,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::remove_from_transfer_whitelist())]
 		pub fn remove_from_transfer_whitelist(
 			origin: OriginFor<T>,
@@ -215,6 +219,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::issue())]
 		pub fn issue(
 			origin: OriginFor<T>,
@@ -238,6 +243,7 @@ pub mod pallet {
 		///
 		/// The dispatch origin for this call must be `Root` by the
 		/// transactor.
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer())]
 		pub fn transfer(
 			origin: OriginFor<T>,
