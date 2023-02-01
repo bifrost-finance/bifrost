@@ -242,7 +242,9 @@ fn parachain_staking_setup() {
 }
 
 #[test]
-fn parachain_staking_bond_works() {
+fn parachain_staking_bond_to_liquidize_works() {
+	env_logger::try_init().unwrap_or(());
+
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
 		interior: X1(Junction::AccountId32 { network: Any, id: ALICE.into() }),
@@ -251,20 +253,28 @@ fn parachain_staking_bond_works() {
 	let validator_0_location =
 		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
 
+	let validator_1_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 { network: Any, id: CHARLIE.into() }),
+	};
+
 	ExtBuilder::default().init_for_alice_n_bob().build().execute_with(|| {
 		// environment setup
 		parachain_staking_setup();
 		initialize_parachain_staking_delegator();
 		env_logger::try_init().unwrap_or(());
-		// assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), BNC, None,));
 
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
 		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location.clone(), 0);
 
-		// ParachainStaking::CandidateInfo::<Runtime>::insert()
 		use parachain_staking::{CandidateMetadata, CapacityStatus, CollatorStatus};
 		assert_ok!(ParachainStaking::join_candidates(
 			RuntimeOrigin::signed(BOB),
+			10_000_000_000_000u128,
+			10_000_000u32
+		));
+		assert_ok!(ParachainStaking::join_candidates(
+			RuntimeOrigin::signed(CHARLIE),
 			10_000_000_000_000u128,
 			10_000_000u32
 		));
@@ -277,7 +287,6 @@ fn parachain_staking_bond_works() {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
 		};
-		// use sp_runtime::AccountId32;
 		let entrance_account = AccountId::new(entrance_account_id_32);
 		assert_eq!(Balances::free_balance(&entrance_account), 100000000000000);
 
@@ -309,6 +318,7 @@ fn parachain_staking_bond_works() {
 			Some(validator_0_location.clone()),
 			2_000_000_000_000,
 		));
+
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
 		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000);
 
@@ -319,6 +329,33 @@ fn parachain_staking_bond_works() {
 		};
 
 		let mut request_list = Vec::new();
+
+		let validator_10: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+		let validator_10_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: validator_10 }),
+		};
+		let request10 = OneToManyScheduledRequest {
+			validator: validator_10_location.clone(),
+			when_executable: TimeUnit::Round(50),
+			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
+		};
+		let validator_11: [u8; 32] =
+			hex_literal::hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
+				.into();
+		let validator_11_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: validator_11 }),
+		};
+		let request11 = OneToManyScheduledRequest {
+			validator: validator_11_location.clone(),
+			when_executable: TimeUnit::Round(50),
+			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
+		};
+		request_list.push(request11);
+		request_list.push(request10);
 		request_list.push(request);
 
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
@@ -336,26 +373,29 @@ fn parachain_staking_bond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 		let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
-		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger2);
+		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger2.clone());
 
 		System::set_block_number(700_000);
+		assert_ok!(Slp::update_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			TimeUnit::Round(48)
+		));
 		parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
 		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
-		// assert_eq!(ParachainStaking::DelegationScheduledRequests(ALICE), RoundInfo::new(10000000, 0, 1));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 
 		let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
-		log::debug!("test5{:?}", delegation_scheduled_requests);
+		// log::debug!("test5{:?}", delegation_scheduled_requests);
 
-		assert_ok!(
-			Slp::liquidize(
-				RuntimeOrigin::signed(ALICE),
-				BNC,
-				Box::new(subaccount_0_location.clone()),
-				None,
-				Some(validator_0_location.clone()),
-				None
-			)
-		);
+		assert_ok!(Slp::liquidize(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Box::new(subaccount_0_location.clone()),
+			None,
+			Some(validator_0_location.clone()),
+			None
+		));
 	});
 }
 
@@ -795,10 +835,7 @@ fn parachain_staking_liquidize_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 		let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
-		env_logger::try_init().unwrap_or(());
-		log::debug!("fdsf{:?}", BNC);
 		// Set delegator ledger
-		// DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger);
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location.clone(), ledger2);
 
 		assert_noop!(
@@ -810,7 +847,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location.clone()),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::RequestNotDue
 		);
 
 		System::set_block_number(700);
@@ -818,7 +855,7 @@ fn parachain_staking_liquidize_works() {
 		assert_ok!(Slp::update_ongoing_time_unit(
 			RuntimeOrigin::signed(ALICE),
 			BNC,
-			TimeUnit::Round(48)
+			TimeUnit::Round(1000)
 		));
 
 		assert_noop!(
@@ -830,7 +867,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }

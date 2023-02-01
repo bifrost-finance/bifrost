@@ -183,12 +183,7 @@ impl<T: Config>
 			candidate_delegation_count,
 			delegation_count,
 		)
-		.map_err(|e| {
-			log::debug!("test3{:?}", e);
-
-			Error::<T>::Unexpected
-		})?;
-		// .map_err(|_| Error::<T>::Unexpected)?;
+		.map_err(|_| Error::<T>::Unexpected)?;
 
 		DelegatorLedgers::<T>::mutate_exists(
 			currency_id,
@@ -737,10 +732,9 @@ impl<T: Config>
 				// check whether the request is already due.
 				let request_info =
 					ledger.request_briefs.get(&collator).ok_or(Error::<T>::RequestNotExist)?;
-				log::debug!("test11{:?}", request_info.clone());
 				let due_time = &request_info.0;
 				// due_amount = request_info.1;
-				// ensure!(now >= due_time.clone(), Error::<T>::RequestNotDue);
+				ensure!(now >= due_time.clone(), Error::<T>::RequestNotDue);
 			}
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
@@ -815,11 +809,7 @@ impl<T: Config>
 				delegator_account_id,
 				validator_account_id,
 			)
-			.map_err(|e| {
-				log::debug!("test2{:?}", e);
-
-				Error::<T>::RequestNotExist
-			})?;
+			.map_err(|_| Error::<T>::Unexpected)?;
 			DelegatorLedgers::<T>::mutate_exists(
 				currency_id,
 				who,
@@ -854,7 +844,7 @@ impl<T: Config>
 							Err(Error::<T>::InvalidTimeUnit)?
 						};
 
-						// ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
+						ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
 
 						let (_, execute_amount) = old_ledger
 							.request_briefs
@@ -872,10 +862,10 @@ impl<T: Config>
 
 						let request_index = old_ledger
 							.requests
-							.binary_search_by_key(validator_multilocation, |rqst| {
-								rqst.validator.clone()
-							})
-							.map_err(|_| Error::<T>::RequestNotExist)?;
+							.iter()
+							.position(|rqst| rqst.validator == *validator_multilocation)
+							.ok_or(Error::<T>::RequestNotExist)?;
+
 						old_ledger.requests.remove(request_index);
 
 						let old_delegate_amount = old_ledger
@@ -963,11 +953,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
 		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
-		.map_err(|e| {
-			log::debug!("test4{:?}", e);
-
-			Error::<T>::RequestNotExist
-		})?;
+			.map_err(|_| Error::<T>::Unexpected)?;
 
 		Ok(())
 	}
