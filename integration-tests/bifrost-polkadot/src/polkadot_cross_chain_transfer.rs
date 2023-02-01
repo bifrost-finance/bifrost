@@ -57,7 +57,7 @@ fn transfer_from_relay_chain() {
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				9999990730400
+				9999991917600
 			);
 		});
 	})
@@ -88,7 +88,7 @@ fn transfer_to_relay_chain() {
 		PolkadotNet::execute_with(|| {
 			assert_eq!(
 				polkadot_runtime::Balances::free_balance(&AccountId::from(BOB)),
-				19573469824
+				19578565860
 			);
 		});
 	})

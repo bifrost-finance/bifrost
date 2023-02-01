@@ -21,7 +21,7 @@ use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use frame_support::{
 	assert_ok,
 	traits::{GenesisBuild, OnFinalize, OnInitialize},
-	weights::{constants::*, Weight},
+	weights::constants::*,
 };
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
@@ -191,10 +191,10 @@ impl ExtBuilder {
 
 #[test]
 fn sanity_check_weight_per_time_constants_are_as_expected() {
-	assert_eq!(WEIGHT_PER_SECOND, Weight::from_ref_time(1_000_000_000_000));
-	assert_eq!(WEIGHT_PER_MILLIS, WEIGHT_PER_SECOND / 1000);
-	assert_eq!(WEIGHT_PER_MICROS, WEIGHT_PER_MILLIS / 1000);
-	assert_eq!(WEIGHT_PER_NANOS, WEIGHT_PER_MICROS / 1000);
+	assert_eq!(WEIGHT_REF_TIME_PER_SECOND, 1_000_000_000_000);
+	assert_eq!(WEIGHT_REF_TIME_PER_MILLIS, WEIGHT_REF_TIME_PER_SECOND / 1000);
+	assert_eq!(WEIGHT_REF_TIME_PER_MICROS, WEIGHT_REF_TIME_PER_MILLIS / 1000);
+	assert_eq!(WEIGHT_REF_TIME_PER_NANOS, WEIGHT_REF_TIME_PER_MICROS / 1000);
 }
 
 #[test]

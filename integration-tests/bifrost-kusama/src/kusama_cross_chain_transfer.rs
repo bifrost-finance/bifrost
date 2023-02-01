@@ -48,7 +48,7 @@ fn transfer_from_relay_chain() {
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				999907304000
+				999919176000
 			);
 		});
 	})
@@ -71,7 +71,7 @@ fn transfer_to_relay_chain() {
 		});
 
 		KusamaNet::execute_with(|| {
-			assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999989594258);
+			assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999895428355);
 		});
 	})
 }
