@@ -1536,7 +1536,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>
+	pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
