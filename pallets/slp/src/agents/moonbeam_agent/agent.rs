@@ -1453,10 +1453,9 @@ impl<T: Config> MoonbeamAgent<T> {
 
 								let request_index = old_ledger
 									.requests
-									.binary_search_by_key(&validator_id, |request| {
-										request.validator.clone()
-									})
-									.map_err(|_| Error::<T>::Unexpected)?;
+									.iter()
+									.position(|request| request.validator == validator_id)
+									.ok_or(Error::<T>::Unexpected)?;
 								old_ledger.requests.remove(request_index);
 
 								old_ledger.request_briefs.remove(&validator_id);
@@ -1609,10 +1608,9 @@ impl<T: Config> MoonbeamAgent<T> {
 
 								let request_index = old_ledger
 									.requests
-									.binary_search_by_key(&validator_id, |rqst| {
-										rqst.validator.clone()
-									})
-									.map_err(|_| Error::<T>::RequestNotExist)?;
+									.iter()
+									.position(|rqst| rqst.validator == validator_id)
+									.ok_or(Error::<T>::RequestNotExist)?;
 								old_ledger.requests.remove(request_index);
 
 								let old_delegate_amount = old_ledger
