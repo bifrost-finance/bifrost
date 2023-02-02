@@ -125,16 +125,18 @@ check-try-runtime:
 try-kusama-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
  			  -- try-runtime \
- 			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
- 			  --chain=bifrost-kusama-local on-runtime-upgrade live \
+ 			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
+ 			  --chain=bifrost-kusama-local on-runtime-upgrade \
+ 			  --checks=all live \
  			  --uri=wss://bifrost-rpc.dwellir.com:443
 
 .PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
 try-polkadot-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
  			  -- try-runtime \
- 			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
- 			  --chain=bifrost-polkadot-local on-runtime-upgrade live \
+ 			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm -lruntime=debug \
+ 			  --chain=bifrost-polkadot-local on-runtime-upgrade \
+ 			  --checks=all live \
  			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: resources # export genesis resources
