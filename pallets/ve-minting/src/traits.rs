@@ -18,7 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 use crate::*;
-// use node_primitives::BlockNumber;
 
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
@@ -33,7 +32,7 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn _increase_unlock_time(addr: &AccountId, _unlock_time: Timestamp) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
 
-impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
+impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
 	for Pallet<T>
 {
 	fn _create_lock(
@@ -121,7 +120,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());
 		} else {
-			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
+			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, u_epoch);
 
 			last_point.bias -= last_point
@@ -136,10 +135,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn balance_of_at(
 		addr: &AccountIdOf<T>,
-		_block: BlockNumberFor<T>,
+		_block: T::BlockNumber,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let current_block_number: BlockNumberFor<T> =
-			frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(_block <= current_block_number, Error::<T>::Expired);
 		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 
@@ -159,12 +157,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			}
 		}
 
-		let mut upoint: Point<BalanceOf<T>, BlockNumberFor<T>> =
-			Self::user_point_history(addr, _min);
+		let mut upoint: Point<BalanceOf<T>, T::BlockNumber> = Self::user_point_history(addr, _min);
 
 		let max_epoch: U256 = Self::epoch();
 		let _epoch: U256 = Self::find_block_epoch(_block, max_epoch);
-		let point_0: Point<BalanceOf<T>, BlockNumberFor<T>> = Self::point_history(_epoch);
+		let point_0: Point<BalanceOf<T>, T::BlockNumber> = Self::point_history(_epoch);
 		let d_block;
 		let d_t;
 		if _epoch < max_epoch {
@@ -191,7 +188,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		}
 	}
 
-	fn find_block_epoch(_block: BlockNumberFor<T>, max_epoch: U256) -> U256 {
+	fn find_block_epoch(_block: T::BlockNumber, max_epoch: U256) -> U256 {
 		let mut _min = U256::zero();
 		let mut _max = max_epoch;
 		for _i in 0..128 {
@@ -215,7 +212,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::supply_at(last_point, t)
 	}
 
-	fn supply_at(point: Point<BalanceOf<T>, BlockNumberFor<T>>, t: Timestamp) -> BalanceOf<T> {
+	fn supply_at(point: Point<BalanceOf<T>, T::BlockNumber>, t: Timestamp) -> BalanceOf<T> {
 		let ve_config = Self::ve_configs();
 
 		let mut last_point = point;

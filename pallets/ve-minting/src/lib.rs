@@ -158,7 +158,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn point_history)]
 	pub type PointHistory<T: Config> =
-		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
+		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, T::BlockNumber>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_point_history)]
@@ -168,7 +168,7 @@ pub mod pallet {
 		AccountIdOf<T>,
 		Blake2_128Concat,
 		U256,
-		Point<BalanceOf<T>, BlockNumberFor<T>>,
+		Point<BalanceOf<T>, T::BlockNumber>,
 		ValueQuery,
 	>;
 
@@ -303,14 +303,14 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>>,
 			new_locked: LockedBalance<BalanceOf<T>>,
 		) -> DispatchResult {
-			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
-			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
+			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
+			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut old_dslope: i128; //  0_i128;
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
-			let current_block_number: BlockNumberFor<T> =
-				frame_system::Pallet::<T>::block_number().into(); // BlockNumberFor<T>
+			let current_block_number: T::BlockNumber =
+				frame_system::Pallet::<T>::block_number().into(); // T::BlockNumber
 			let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
 
 			if old_locked.end > current_timestamp && old_locked.amount > BalanceOf::<T>::zero() {
@@ -342,7 +342,7 @@ pub mod pallet {
 				}
 			}
 
-			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> = Point {
+			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> = Point {
 				bias: Zero::zero(),
 				slope: Zero::zero(),
 				ts: current_timestamp,
