@@ -149,6 +149,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set user fee charge assets order.
+		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_user_fee_charge_order())]
 		pub fn set_user_fee_charge_order(
 			origin: OriginFor<T>,

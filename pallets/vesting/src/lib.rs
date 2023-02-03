@@ -243,6 +243,7 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, [Sender Account]
 		///     - Writes: Vesting Storage, Balances Locks, [Sender Account]
 		/// # </weight>
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get())
 		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get()))
 		)]
@@ -267,6 +268,7 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account
 		///     - Writes: Vesting Storage, Balances Locks, Target Account
 		/// # </weight>
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get())
 		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get()))
 		)]
@@ -296,6 +298,7 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account, [Sender Account]
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, [Sender Account]
 		/// # </weight>
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get()))]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
@@ -343,6 +346,7 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account, Source Account
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, Source Account
 		/// # </weight>
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get()))]
 		pub fn force_vested_transfer(
 			origin: OriginFor<T>,
@@ -375,6 +379,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn force_set_vested(
 			origin: OriginFor<T>,
@@ -405,6 +410,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(0)]
 		pub fn init_vesting_start_at(
 			origin: OriginFor<T>,
@@ -417,6 +423,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(0)]
 		pub fn set_vesting_per_block(
 			origin: OriginFor<T>,
@@ -459,6 +466,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(0)]
 		pub fn force_set_cliff(
 			origin: OriginFor<T>,

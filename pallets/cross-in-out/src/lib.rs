@@ -183,6 +183,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::cross_in())]
 		pub fn cross_in(
 			origin: OriginFor<T>,
@@ -222,6 +223,7 @@ pub mod pallet {
 		}
 
 		/// Destroy some balance from an account and issue cross-out event.
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::cross_out())]
 		pub fn cross_out(
 			origin: OriginFor<T>,
@@ -252,6 +254,7 @@ pub mod pallet {
 		}
 
 		// Register the mapping relationship of Bifrost account and account from other chains
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::register_linked_account())]
 		pub fn register_linked_account(
 			origin: OriginFor<T>,
@@ -296,6 +299,7 @@ pub mod pallet {
 		}
 
 		// Change originally registered linked outer chain multilocation
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::change_outer_linked_account())]
 		pub fn change_outer_linked_account(
 			origin: OriginFor<T>,
@@ -334,6 +338,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::register_currency_for_cross_in_out())]
 		pub fn register_currency_for_cross_in_out(
 			origin: OriginFor<T>,
@@ -352,6 +357,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::deregister_currency_for_cross_in_out())]
 		pub fn deregister_currency_for_cross_in_out(
 			origin: OriginFor<T>,
@@ -366,6 +372,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
@@ -393,6 +400,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
@@ -415,6 +423,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::add_to_register_whitelist())]
 		pub fn add_to_register_whitelist(
 			origin: OriginFor<T>,
@@ -448,6 +457,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::remove_from_register_whitelist())]
 		pub fn remove_from_register_whitelist(
 			origin: OriginFor<T>,
@@ -476,6 +486,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::set_crossing_minimum_amount())]
 		pub fn set_crossing_minimum_amount(
 			origin: OriginFor<T>,

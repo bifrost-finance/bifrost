@@ -204,6 +204,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_config(
 			origin: OriginFor<T>,
@@ -241,6 +242,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn create_lock(
 			origin: OriginFor<T>,
@@ -253,6 +255,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
@@ -261,6 +264,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_unlock_time(origin: OriginFor<T>, time: Timestamp) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
@@ -269,6 +273,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
@@ -277,6 +282,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn notify_rewards(
 			origin: OriginFor<T>,

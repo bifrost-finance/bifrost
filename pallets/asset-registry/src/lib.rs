@@ -27,7 +27,7 @@ use frame_support::{
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
-	weights::constants::WEIGHT_PER_SECOND,
+	weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
@@ -283,6 +283,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::register_native_asset())]
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
@@ -303,6 +304,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::update_native_asset())]
 		pub fn update_native_asset(
 			origin: OriginFor<T>,
@@ -323,6 +325,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::register_token_metadata())]
 		pub fn register_token_metadata(
 			origin: OriginFor<T>,
@@ -337,6 +340,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::register_vtoken_metadata())]
 		pub fn register_vtoken_metadata(origin: OriginFor<T>, token_id: TokenId) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
@@ -352,6 +356,7 @@ pub mod pallet {
 			}
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::register_vstoken_metadata())]
 		pub fn register_vstoken_metadata(
 			origin: OriginFor<T>,
@@ -370,6 +375,7 @@ pub mod pallet {
 			}
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::register_vsbond_metadata())]
 		pub fn register_vsbond_metadata(
 			origin: OriginFor<T>,
@@ -399,6 +405,7 @@ pub mod pallet {
 			}
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::register_multilocation())]
 		pub fn register_multilocation(
 			origin: OriginFor<T>,
@@ -416,6 +423,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::force_set_multilocation())]
 		pub fn force_set_multilocation(
 			origin: OriginFor<T>,
@@ -878,10 +886,10 @@ where
 						currency_metadatas.minimal_balance.into(),
 						T::Currency::minimum_balance().into(),
 					);
-					// The WEIGHT_PER_SECOND is non-zero.
+					// The WEIGHT_REF_TIME_PER_SECOND is non-zero.
 					let weight_ratio = FixedU128::saturating_from_rational(
 						weight as u128,
-						WEIGHT_PER_SECOND.ref_time(),
+						WEIGHT_REF_TIME_PER_SECOND,
 					);
 					let amount = ed_ratio
 						.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
@@ -916,7 +924,7 @@ where
 		);
 		let weight = weight.min(self.weight);
 		let weight_ratio =
-			FixedU128::saturating_from_rational(weight as u128, WEIGHT_PER_SECOND.ref_time());
+			FixedU128::saturating_from_rational(weight as u128, WEIGHT_REF_TIME_PER_SECOND);
 		let amount = self
 			.ed_ratio
 			.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
