@@ -6,11 +6,12 @@
 
 Welcome,
 
-Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message (XCM) it can provide cross-chain liquid staking services for polkadot relay chains, parachains, and heterogeneous chains bridged with polkadot.
+Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message ([XCM](https://wiki.polkadot.network/docs/learn-xcm)) it can provide cross-chain liquid staking services for multiple chains.
 
-👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*
-👉 *Learn to use the Bifrost network with our [wiki](https://wiki.bifrost.finance/network).*
+[Our mission](https://bifrost-finance.notion.site/7df6abf2acb54b398df75230e157c7da?v=02ecfe941c5242c3b5f8c77654512b80) is to provide standardized cross-chain interest-bearing derivatives for [Polkadot](https://polkadot.network) relay chains, parachains, and heterogeneous chains bridged with Polkadot. 
 
+👉 *Discover the Bifrost at [bifrost.finance](https://bifrost.finance/).*  
+👉 *Learn to use the Bifrost with our [wiki](https://wiki.bifrost.finance/).*  
 <h4>🐣 Supported by</h4>
 
 <p align="left">
@@ -19,14 +20,14 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
   <a href="https://bootcamp.web3.foundation/"><img src="docs/res/readme/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
-[![master-build](https://img.shields.io/github/workflow/status/bifrost-finance/bifrost/master-build/master)](https://github.com/bifrost-finance/bifrost/actions)
+[![master-build](https://img.shields.io/github/actions/workflow/status/bifrost-finance/bifrost/ci-build.yml?logo=Buddy)](https://github.com/bifrost-finance/bifrost/actions/workflows/ci-build.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bifrost-finance/bifrost&amp;utm_campaign=Badge_Grade)
-[![Substrate Version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
-[![Docker](https://img.shields.io/badge/Docker-v0.4.0-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
+[![Substrate Version](https://img.shields.io/badge/Substrate-latest-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
+[![Dapp](https://img.shields.io/badge/Dapp-5c5c5c?logo=Icinga)](https://bifrost.app)
+[![Analytics](https://img.shields.io/badge/-Analytics-5c5c5c?logo=Google%20Analytics)](https://stats.bifrost.app)
 [![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
-[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
-[![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
+[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/BifrostFinance)
 
 ## Get Build Help
 
@@ -78,11 +79,7 @@ make generate-all-weights
 If modify the storage, should test the data migration before production upgrade.
 
 ```bash
-# bifrost kusama
-make try-kusama-runtime-upgrade
-
-# bifrost polkadot
-make try-polkadot-runtime-upgrade
+make try-bifrost-runtime-upgrade
 ```
 
 ## Run development chain
