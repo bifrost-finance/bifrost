@@ -1659,6 +1659,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type VeMintingPalletId = VeMintingPalletId;
 	type WeightInfo = ();
 	type UnixTime = Timestamp;
+	type BlockNumberToBalance = ConvertInto;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -2189,13 +2190,13 @@ impl_runtime_apis! {
 	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
 		fn balance_of(
 			who: AccountId,
-			t: Option<node_primitives::Timestamp>,
+			t: Option<node_primitives::BlockNumber>,
 		) -> Balance{
 			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
 		}
 
 		fn total_supply(
-			t: node_primitives::Timestamp,
+			t: node_primitives::BlockNumber,
 		) -> Balance{
 			VeMinting::total_supply(t)
 		}

@@ -38,12 +38,12 @@ pub trait VeMintingRpcApi<BlockHash, AccountId> {
 	fn balance_of(
 		&self,
 		who: AccountId,
-		t: Option<Timestamp>,
+		t: Option<BlockNumber>,
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
 
 	#[method(name = "ve_minting_total_supply")]
-	fn total_supply(&self, t: Timestamp, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
+	fn total_supply(&self, t: BlockNumber, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
 	#[method(name = "ve_minting_findBlockEpoch")]
 	fn find_block_epoch(
@@ -78,7 +78,7 @@ where
 	fn balance_of(
 		&self,
 		who: AccountId,
-		t: Option<Timestamp>,
+		t: Option<BlockNumber>,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
@@ -100,7 +100,7 @@ where
 
 	fn total_supply(
 		&self,
-		t: Timestamp,
+		t: BlockNumber,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
