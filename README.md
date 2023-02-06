@@ -79,7 +79,11 @@ make generate-all-weights
 If modify the storage, should test the data migration before production upgrade.
 
 ```bash
-make try-bifrost-runtime-upgrade
+# bifrost kusama
+make try-kusama-runtime-upgrade
+
+# bifrost polkadot
+make try-polkadot-runtime-upgrade
 ```
 
 ## Run development chain
