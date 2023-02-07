@@ -31,23 +31,24 @@ fn _checkpoint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now();
 		let old_locked = LockedBalance { amount: 0, end: 0 };
-		let new_locked =
-			LockedBalance { amount: 10000000000000, end: current_timestamp + 365 * 86400 * 1000 };
+		let new_locked = LockedBalance {
+			amount: 10000000000000,
+			end: System::block_number() + 365 * 86400 * 1000 / 12,
+		};
 
 		assert_ok!(VeMinting::set_config(
 			RuntimeOrigin::signed(ALICE),
 			Some(0),
-			Some(7 * 86400 * 1000),
-			Some(4 * 365 * 86400),
+			Some(7 * 86400 * 1000 / 12),
+			Some(4 * 365 * 86400 / 12),
 			Some(10_u128.pow(18)),
-			Some(7 * 86400),
+			Some(7 * 86400 / 12),
 			Some(0)
 		));
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(current_timestamp)), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
 	});
 }
 
@@ -59,26 +60,25 @@ fn update_reward() {
 		assert_ok!(VeMinting::set_config(
 			RuntimeOrigin::signed(ALICE),
 			Some(0),
-			Some(7 * 86400 * 1000),
-			Some(4 * 365 * 86400 * 1000),
+			Some(7 * 86400 * 1000 / 12),
+			Some(4 * 365 * 86400 * 1000 / 12),
 			Some(10_u128.pow(12)),
-			Some(7 * 86400),
+			Some(7 * 86400 / 12),
 			Some(0)
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			10000000000000,
-			current_timestamp + 365 * 86400 * 1000,
+			System::block_number() + 365 * 86400 * 1000 / 12,
 		));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
 		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(20000000000000));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(current_timestamp)), Ok(20000000000000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(20000000000000));
 	});
 }
 
@@ -107,20 +107,19 @@ fn notify_reward_amount() {
 		assert_ok!(VeMinting::set_config(
 			RuntimeOrigin::signed(ALICE),
 			Some(0),
-			Some(7 * 86400 * 1000),
-			Some(4 * 365 * 86400 * 1000),
+			Some(7 * 86400 * 1000 / 12),
+			Some(4 * 365 * 86400 * 1000 / 12),
 			Some(10_u128.pow(12)),
-			Some(7 * 86400),
+			Some(7 * 86400 / 12),
 			Some(3)
 		));
 
 		System::set_block_number(System::block_number() + 20);
-		let current_timestamp: node_primitives::Timestamp = <Runtime as Config>::UnixTime::now();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			10000000000000,
-			current_timestamp + 365 * 86400 * 1000
+			System::block_number() + 365 * 86400 * 1000 / 12
 		));
 
 		let rewards = vec![(KSM, 1000)];

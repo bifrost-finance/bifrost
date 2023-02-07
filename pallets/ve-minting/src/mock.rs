@@ -41,7 +41,9 @@ use node_primitives::{CurrencyId, CurrencyIdMapping, Moment, TokenSymbol};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
+	traits::{
+		AccountIdConversion, BlakeTwo256, Convert, ConvertInto, IdentityLookup, TrailingZeroInput,
+	},
 	AccountId32,
 };
 use xcm::{
@@ -252,7 +254,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
-	type UnixTime = Timestamp;
+	type BlockNumberToBalance = ConvertInto;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;

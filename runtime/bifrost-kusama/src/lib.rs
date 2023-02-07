@@ -1658,7 +1658,6 @@ impl bifrost_ve_minting::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VeMintingPalletId = VeMintingPalletId;
 	type WeightInfo = ();
-	type UnixTime = Timestamp;
 	type BlockNumberToBalance = ConvertInto;
 }
 

@@ -118,7 +118,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let _t = match time {
 			Some(_t) => _t,
-			None => T::UnixTime::now().as_millis().saturated_into(),
+			None => frame_system::Pallet::<T>::block_number(),
 		};
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {

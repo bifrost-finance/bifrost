@@ -38,7 +38,7 @@ use frame_support::{
 		traits::{AccountIdConversion, CheckedDiv, Convert, Saturating, UniqueSaturatedInto, Zero},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency, UnixTime},
+	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -116,8 +116,6 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
-
-		type UnixTime: UnixTime;
 
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
