@@ -44,6 +44,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		let unlock_time: T::BlockNumber = (_unlock_time / ve_config.week) * ve_config.week;
+		log::debug!("unlock_time:{:?}", unlock_time);
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(
@@ -54,8 +55,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= ve_config.max_time.saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
-		ensure!(_value >= ve_config.min_mint, Error::<T>::Expired); // need non-zero value
+		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
+		ensure!(_value >= ve_config.min_mint, Error::<T>::NotEnoughBalance); // need non-zero value
 
 		Self::_deposit_for(addr, _value, unlock_time, _locked)
 	}
@@ -75,13 +76,18 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= ve_config.max_time.saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
+		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 
 		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)
 	}
 
 	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+		ensure!(value > Zero::zero(), Error::<T>::NotEnoughBalance);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
+		// log::debug!("_increase_amount:{:?}", _locked);
+		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired lock
 		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)
 	}
 
@@ -92,8 +98,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
-		ensure!(current_block_number > _locked.end, Error::<T>::Expired);
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		log::debug!("{:?}", current_block_number);
+		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
 		let old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = _locked.clone();
 		_locked.end = Zero::zero();
@@ -101,14 +108,17 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Locked::<T>::insert(addr, _locked.clone());
 
 		let supply_before = Self::supply();
-		Supply::<T>::set(supply_before - value);
+		Supply::<T>::set(supply_before.saturating_sub(value));
 
 		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 		// TODO: set_lock
 		T::Currency::set_lock(COLLATOR_LOCK_ID, addr, Zero::zero(), WithdrawReasons::all());
 
-		Self::deposit_event(Event::Supply { supply_before, supply: supply_before - value });
+		Self::deposit_event(Event::Supply {
+			supply_before,
+			supply: supply_before.saturating_sub(value),
+		});
 		Ok(())
 	}
 
@@ -127,13 +137,21 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, u_epoch);
 
-			last_point.bias -= last_point
-				.slope
-				.saturating_mul(T::BlockNumberToBalance::convert(_t.saturating_sub(last_point.ts)));
-			if last_point.bias < Zero::zero() {
-				last_point.bias = Zero::zero();
+			last_point.bias = last_point.bias.saturating_sub(
+				last_point
+					.slope
+					.checked_mul(
+						(_t.saturated_into::<u128>() as i128) -
+							(last_point.ts.saturated_into::<u128>() as i128),
+					)
+					.ok_or(ArithmeticError::Overflow)?,
+			);
+			if last_point.bias < 0_i128 {
+				last_point.bias = 0_i128
 			}
-			Ok(last_point.fxs_amt + (Self::ve_configs().vote_weight_multiplier * last_point.bias))
+			Ok(last_point.fxs_amt +
+				(Self::ve_configs().vote_weight_multiplier *
+					(last_point.bias as u128).unique_saturated_into()))
 		}
 	}
 
@@ -185,11 +203,22 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				.unique_saturated_into();
 		}
 		upoint.bias -= upoint
-			.slope
-			.saturating_mul(T::BlockNumberToBalance::convert(block_time - upoint.ts));
+			.bias
+			.checked_sub(
+				upoint
+					.slope
+					.checked_mul(
+						(block_time.saturated_into::<u128>() as i128) -
+							(upoint.ts.saturated_into::<u128>() as i128),
+					)
+					.ok_or(ArithmeticError::Overflow)?,
+			)
+			.ok_or(ArithmeticError::Overflow)?;
 
-		if (upoint.bias >= Zero::zero()) || (upoint.fxs_amt >= Zero::zero()) {
-			Ok(upoint.fxs_amt + (Self::ve_configs().vote_weight_multiplier * upoint.bias))
+		if (upoint.bias >= 0_i128) || (upoint.fxs_amt >= Zero::zero()) {
+			Ok(upoint.fxs_amt +
+				(Self::ve_configs().vote_weight_multiplier *
+					(upoint.bias as u128).unique_saturated_into()))
 		} else {
 			Ok(Zero::zero())
 		}
@@ -216,6 +245,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn total_supply(t: T::BlockNumber) -> BalanceOf<T> {
 		let g_epoch: U256 = Self::epoch();
 		let last_point = Self::point_history(g_epoch);
+		// log::debug!("g_epoch:{:?} last_point:{:?}", g_epoch, last_point.clone());
 		Self::supply_at(last_point, t)
 	}
 
@@ -245,13 +275,15 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			if t_i == t {
 				break;
 			}
-			last_point.slope += (d_slope as u128).saturated_into();
+			last_point.slope += d_slope;
 			last_point.ts = t_i
 		}
 
-		if last_point.bias < Zero::zero() {
-			last_point.bias = Zero::zero()
+		if last_point.bias < 0_i128 {
+			last_point.bias = 0_i128
 		}
-		last_point.fxs_amt + Self::ve_configs().vote_weight_multiplier * last_point.bias
+		last_point.fxs_amt +
+			Self::ve_configs().vote_weight_multiplier *
+				(last_point.bias as u128).unique_saturated_into()
 	}
 }

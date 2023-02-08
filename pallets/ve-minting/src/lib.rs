@@ -35,7 +35,10 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv, Convert, Saturating, UniqueSaturatedInto, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedDiv, Convert, Saturating, UniqueSaturatedInto,
+			Zero,
+		},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
 	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
@@ -86,8 +89,8 @@ pub struct LockedBalance<Balance, BlockNumber> {
 
 #[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct Point<Balance, BlockNumber> {
-	bias: Balance,  // i128
-	slope: Balance, // dweight / dt
+	bias: i128,  // i128
+	slope: i128, // dweight / dt
 	ts: BlockNumber,
 	blk: BlockNumber, // block
 	fxs_amt: Balance,
@@ -145,6 +148,8 @@ pub mod pallet {
 		ExistentialDeposit,
 		DistributionNotExist,
 		Expired,
+		LockNotExist,
+		LockExist,
 	}
 
 	#[pallet::storage]
@@ -329,13 +334,22 @@ pub mod pallet {
 				frame_system::Pallet::<T>::block_number().into(); // T::BlockNumber
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
-				u_old.slope = old_locked
-					.amount
-					.checked_div(&T::BlockNumberToBalance::convert(Self::ve_configs().max_time))
-					.ok_or(Error::<T>::CalculationOverflow)?;
-				u_old.bias = u_old.slope.saturating_mul(T::BlockNumberToBalance::convert(
-					old_locked.end - current_block_number,
-				));
+				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
+					.checked_div(U256::from(Self::ve_configs().max_time.saturated_into::<u128>()))
+					.unwrap_or_default()
+					.as_u128()
+					.unique_saturated_into();
+				// .ok_or(Error::<T>::CalculationOverflow)?;
+				u_old.bias = u_old
+					.slope
+					.checked_mul(
+						(old_locked.end.saturated_into::<u128>() as i128) -
+							(current_block_number.saturated_into::<u128>() as i128),
+					)
+					.ok_or(ArithmeticError::Overflow)?;
+				// u_old.bias = u_old.slope.saturating_mul(T::BlockNumberToBalance::convert(
+				// 	old_locked.end - current_block_number,
+				// ));
 			}
 			if new_locked.end > current_block_number && new_locked.amount > BalanceOf::<T>::zero() {
 				u_new.slope = U256::from(new_locked.amount.saturated_into::<u128>())
@@ -343,10 +357,19 @@ pub mod pallet {
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
-				u_new.bias = u_new.slope.saturating_mul(T::BlockNumberToBalance::convert(
-					new_locked.end - current_block_number,
-				));
+				u_new.bias = u_new
+					.slope
+					.checked_mul(
+						(new_locked.end.saturated_into::<u128>() as i128) -
+							(current_block_number.saturated_into::<u128>() as i128),
+					)
+					.ok_or(ArithmeticError::Overflow)?;
+				// u_new.bias = u_new.slope.saturating_mul(T::BlockNumberToBalance::convert(
+				// 	new_locked.end - current_block_number,
+				// ));
+				log::debug!("u_new{:?}", u_new);
 			}
+			log::debug!("new_locked{:?}", new_locked);
 
 			old_dslope = Self::slope_changes(old_locked.end);
 			if new_locked.end != 0u32.unique_saturated_into() {
@@ -395,16 +418,17 @@ pub mod pallet {
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
-
-				last_point.slope += (d_slope as u128).saturated_into();
-				if last_point.bias < Zero::zero() {
-					// This can happen
-					last_point.bias = Zero::zero()
-				}
-				if last_point.slope < Zero::zero() {
+				log::debug!("d_slope{:?}last_point.slope:{:?}", d_slope, last_point.slope);
+				last_point.slope += d_slope;
+				if last_point.slope < 0_i128 {
 					//This cannot happen - just in case
-					last_point.slope = Zero::zero()
+					last_point.slope = 0_i128
 				}
+				if last_point.bias < 0_i128 {
+					// This can happen
+					last_point.bias = 0_i128
+				}
+
 				last_checkpoint = t_i;
 				last_point.ts = t_i;
 				last_point.blk = initial_last_point.blk +
@@ -428,13 +452,22 @@ pub mod pallet {
 			}
 			Epoch::<T>::set(g_epoch);
 
-			last_point.slope += u_new.slope - u_old.slope;
-			last_point.bias += u_new.bias - u_old.bias;
-			if last_point.slope < Zero::zero() {
-				last_point.slope = Zero::zero()
+			log::debug!("last_point:{:?}u_new:{:?}u_old:{:?}", last_point, u_new, u_old);
+			last_point.slope = u_new
+				.slope
+				.checked_add(last_point.slope)
+				.ok_or(ArithmeticError::Overflow)?
+				.saturating_sub(u_old.slope);
+			last_point.bias = last_point
+				.bias
+				.checked_add(u_new.bias)
+				.ok_or(ArithmeticError::Overflow)?
+				.saturating_sub(u_old.bias);
+			if last_point.slope < 0_i128 {
+				last_point.slope = 0_i128
 			}
-			if last_point.bias < Zero::zero() {
-				last_point.bias = Zero::zero()
+			if last_point.bias < 0_i128 {
+				last_point.bias = 0_i128
 			}
 			PointHistory::<T>::insert(g_epoch, last_point);
 
