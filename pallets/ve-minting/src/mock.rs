@@ -243,6 +243,7 @@ impl bifrost_asset_registry::Config for Runtime {
 
 parameter_types! {
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 }
 
 impl bifrost_ve_minting::Config for Runtime {
@@ -251,6 +252,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type Currency = Balances;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
 	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
@@ -365,7 +367,7 @@ impl ExtBuilder {
 			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
-			(VeMintingPalletId::get().into_account_truncating(), KSM, 10000),
+			(IncentivePalletId::get().into_account_truncating(), KSM, 10000),
 		])
 	}
 

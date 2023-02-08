@@ -127,7 +127,7 @@ impl<T: Config> Pallet<T> {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*currency,
-					&T::VeMintingPalletId::get().into_account_truncating(),
+					&T::IncentivePalletId::get().into_account_truncating(),
 					addr,
 					reward,
 				)
@@ -148,7 +148,7 @@ impl<T: Config> Pallet<T> {
 			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 				let currency_amount = T::MultiCurrency::free_balance(
 					*currency,
-					&T::VeMintingPalletId::get().into_account_truncating(),
+					&T::IncentivePalletId::get().into_account_truncating(),
 				);
 				ensure!(*reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = reward
@@ -171,7 +171,7 @@ impl<T: Config> Pallet<T> {
 				let total_reward: BalanceOf<T> = reward.saturating_add(leftover);
 				let currency_amount = T::MultiCurrency::free_balance(
 					*currency,
-					&T::VeMintingPalletId::get().into_account_truncating(),
+					&T::IncentivePalletId::get().into_account_truncating(),
 				);
 				ensure!(total_reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = total_reward

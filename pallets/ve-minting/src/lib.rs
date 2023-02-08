@@ -36,12 +36,12 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, CheckedAdd, CheckedDiv, Convert, Saturating, UniqueSaturatedInto,
-			Zero,
+			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, Convert, Saturating,
+			UniqueSaturatedInto, Zero,
 		},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{tokens::WithdrawReasons, Currency, LockIdentifier, LockableCurrency},
+	traits::{Currency, LockIdentifier, LockableCurrency},
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -119,6 +119,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type IncentivePalletId: Get<PalletId>;
 
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
@@ -326,7 +329,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
-			let mut old_dslope: i128; //  0_i128;
+			// let mut old_dslope = 0_i128;
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
@@ -339,7 +342,6 @@ pub mod pallet {
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
-				// .ok_or(Error::<T>::CalculationOverflow)?;
 				u_old.bias = u_old
 					.slope
 					.checked_mul(
@@ -347,9 +349,6 @@ pub mod pallet {
 							(current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
-				// u_old.bias = u_old.slope.saturating_mul(T::BlockNumberToBalance::convert(
-				// 	old_locked.end - current_block_number,
-				// ));
 			}
 			if new_locked.end > current_block_number && new_locked.amount > BalanceOf::<T>::zero() {
 				u_new.slope = U256::from(new_locked.amount.saturated_into::<u128>())
@@ -364,14 +363,8 @@ pub mod pallet {
 							(current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
-				// u_new.bias = u_new.slope.saturating_mul(T::BlockNumberToBalance::convert(
-				// 	new_locked.end - current_block_number,
-				// ));
-				log::debug!("u_new{:?}", u_new);
 			}
-			log::debug!("new_locked{:?}", new_locked);
-
-			old_dslope = Self::slope_changes(old_locked.end);
+			let mut old_dslope = Self::slope_changes(old_locked.end);
 			if new_locked.end != 0u32.unique_saturated_into() {
 				if new_locked.end == old_locked.end {
 					new_dslope = old_dslope
@@ -381,8 +374,8 @@ pub mod pallet {
 			}
 
 			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> = Point {
-				bias: Zero::zero(),
-				slope: Zero::zero(),
+				bias: 0_i128,
+				slope: 0_i128,
 				ts: current_block_number,
 				blk: current_block_number,
 				fxs_amt: Zero::zero(),
@@ -390,7 +383,10 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.fxs_amt = Self::balance_of(addr, None)?;
+				last_point.fxs_amt = T::MultiCurrency::free_balance(
+					BNC,
+					&T::VeMintingPalletId::get().into_account_truncating(),
+				);
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point;
@@ -444,7 +440,10 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
 					last_point.blk = current_block_number;
-					last_point.fxs_amt = Self::balance_of(addr, None)?;
+					last_point.fxs_amt = T::MultiCurrency::free_balance(
+						BNC,
+						&T::VeMintingPalletId::get().into_account_truncating(),
+					);
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);
@@ -525,11 +524,15 @@ pub mod pallet {
 			}
 			Locked::<T>::insert(addr, _locked.clone());
 
-			Self::_checkpoint(addr, old_locked, _locked.clone())?;
-
 			if value != BalanceOf::<T>::zero() {
-				T::MultiCurrency::extend_lock(COLLATOR_LOCK_ID, BNC, addr, value)?;
+				T::MultiCurrency::transfer(
+					BNC,
+					addr,
+					&T::VeMintingPalletId::get().into_account_truncating(),
+					value,
+				)?;
 			}
+			Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 			Self::deposit_event(Event::Minted {
 				addr: addr.clone(),

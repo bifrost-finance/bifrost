@@ -308,6 +308,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 }
 
 impl frame_system::Config for Runtime {
@@ -1657,6 +1658,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type Currency = Balances;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
 }

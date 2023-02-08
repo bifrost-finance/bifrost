@@ -23,7 +23,7 @@
 use crate::{mock::*, traits::VeMintingInterface, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use node_primitives::TokenInfo;
 
 #[test]
@@ -130,5 +130,73 @@ fn notify_reward_amount() {
 		));
 		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
 		assert_ok!(VeMinting::update_reward(Some(&BOB)));
+	});
+}
+
+#[test]
+fn create_lock_to_withdraw() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		System::set_block_number(System::block_number() + 7 * 86400 / 12); // a week
+		assert_ok!(VeMinting::set_config(
+			RuntimeOrigin::signed(ALICE),
+			Some(4 * 365 * 86400 / 12),
+			Some(7 * 86400 / 12),
+			Some(4 * 365 * 86400 / 12),
+			Some(10_u128.pow(12)),
+			Some(7 * 86400 / 12),
+			Some(3)
+		));
+
+		log::debug!(
+			"1System::block_number():{:?} total_supply:{:?}",
+			System::block_number(),
+			VeMinting::total_supply(System::block_number())
+		);
+
+		let rewards = vec![(KSM, 1000)];
+		assert_ok!(VeMinting::notify_rewards(
+			RuntimeOrigin::signed(ALICE),
+			Some(7 * 86400 / 12),
+			rewards
+		));
+		log::debug!(
+			"2System::block_number():{:?} total_supply:{:?}",
+			System::block_number(),
+			VeMinting::total_supply(System::block_number())
+		);
+		assert_ok!(VeMinting::_create_lock(
+			&BOB,
+			50_000_000,
+			System::block_number() + 365 * 86400 / 12
+		));
+		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000_000));
+		log::debug!(
+			"3System::block_number():{:?} total_supply:{:?}",
+			System::block_number(),
+			VeMinting::total_supply(System::block_number())
+		);
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(170761600));
+		assert_eq!(VeMinting::total_supply(System::block_number()), 170761600);
+
+		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE)));
+		assert_noop!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)), Error::<Runtime>::Expired);
+		assert_eq!(VeMinting::total_supply(System::block_number()), 170761600);
+		System::set_block_number(System::block_number() + 365 * 86400 / 12); // a year
+
+		log::debug!(
+			"4System::block_number():{:?} total_supply:{:?}",
+			System::block_number(),
+			VeMinting::total_supply(System::block_number())
+		);
+		assert_eq!(VeMinting::total_supply(System::block_number()), 100_000_000);
+		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)));
+		assert_ok!(VeMinting::_withdraw(&BOB));
+		log::debug!(
+			"5System::block_number():{:?} total_supply:{:?}",
+			System::block_number(),
+			VeMinting::total_supply(System::block_number())
+		);
+		assert_eq!(VeMinting::total_supply(System::block_number()), 0);
 	});
 }

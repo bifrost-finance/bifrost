@@ -44,7 +44,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		let unlock_time: T::BlockNumber = (_unlock_time / ve_config.week) * ve_config.week;
-		log::debug!("unlock_time:{:?}", unlock_time);
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(
@@ -84,7 +83,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		ensure!(value > Zero::zero(), Error::<T>::NotEnoughBalance);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
-		// log::debug!("_increase_amount:{:?}", _locked);
 		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired lock
@@ -99,7 +97,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
-		log::debug!("{:?}", current_block_number);
 		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
 		let old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = _locked.clone();
@@ -110,10 +107,15 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let supply_before = Self::supply();
 		Supply::<T>::set(supply_before.saturating_sub(value));
 
-		Self::_checkpoint(addr, old_locked, _locked.clone())?;
+		// BNC should be transferred before checkpoint
+		T::MultiCurrency::transfer(
+			BNC,
+			&T::VeMintingPalletId::get().into_account_truncating(),
+			addr,
+			value,
+		)?;
 
-		// TODO: set_lock
-		T::Currency::set_lock(COLLATOR_LOCK_ID, addr, Zero::zero(), WithdrawReasons::all());
+		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 		Self::deposit_event(Event::Supply {
 			supply_before,
@@ -149,9 +151,16 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			if last_point.bias < 0_i128 {
 				last_point.bias = 0_i128
 			}
-			Ok(last_point.fxs_amt +
-				(Self::ve_configs().vote_weight_multiplier *
-					(last_point.bias as u128).unique_saturated_into()))
+
+			Ok(last_point
+				.fxs_amt
+				.checked_add(
+					&Self::ve_configs()
+						.vote_weight_multiplier
+						.checked_mul(&last_point.bias.unsigned_abs().unique_saturated_into())
+						.ok_or(ArithmeticError::Overflow)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?)
 		}
 	}
 
@@ -245,7 +254,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	fn total_supply(t: T::BlockNumber) -> BalanceOf<T> {
 		let g_epoch: U256 = Self::epoch();
 		let last_point = Self::point_history(g_epoch);
-		// log::debug!("g_epoch:{:?} last_point:{:?}", g_epoch, last_point.clone());
 		Self::supply_at(last_point, t)
 	}
 
