@@ -24,8 +24,11 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn _withdraw(addr: &AccountId) -> DispatchResult;
 	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
 	fn balance_of_at(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
-	fn total_supply(t: BlockNumber) -> Balance;
-	fn supply_at(point: Point<Balance, BlockNumber>, t: BlockNumber) -> Balance;
+	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
+	fn supply_at(
+		point: Point<Balance, BlockNumber>,
+		t: BlockNumber,
+	) -> Result<Balance, DispatchError>;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
 	fn _create_lock(addr: &AccountId, _value: Balance, _unlock_time: BlockNumber)
 		-> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
@@ -139,21 +142,27 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, u_epoch);
 
-			last_point.bias = last_point.bias.saturating_sub(
-				last_point
-					.slope
-					.checked_mul(
-						(_t.saturated_into::<u128>() as i128) -
-							(last_point.ts.saturated_into::<u128>() as i128),
-					)
-					.ok_or(ArithmeticError::Overflow)?,
-			);
+			last_point.bias = last_point
+				.bias
+				.checked_sub(
+					last_point
+						.slope
+						.checked_mul(
+							_t.checked_sub(&last_point.ts)
+								.ok_or(ArithmeticError::Overflow)?
+								.saturated_into::<u128>()
+								.unique_saturated_into(),
+						)
+						.ok_or(ArithmeticError::Overflow)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?;
+
 			if last_point.bias < 0_i128 {
 				last_point.bias = 0_i128
 			}
 
 			Ok(last_point
-				.fxs_amt
+				.amt
 				.checked_add(
 					&Self::ve_configs()
 						.vote_weight_multiplier
@@ -224,8 +233,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			)
 			.ok_or(ArithmeticError::Overflow)?;
 
-		if (upoint.bias >= 0_i128) || (upoint.fxs_amt >= Zero::zero()) {
-			Ok(upoint.fxs_amt +
+		if (upoint.bias >= 0_i128) || (upoint.amt >= Zero::zero()) {
+			Ok(upoint.amt +
 				(Self::ve_configs().vote_weight_multiplier *
 					(upoint.bias as u128).unique_saturated_into()))
 		} else {
@@ -251,13 +260,16 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		_min
 	}
 
-	fn total_supply(t: T::BlockNumber) -> BalanceOf<T> {
+	fn total_supply(t: T::BlockNumber) -> Result<BalanceOf<T>, DispatchError> {
 		let g_epoch: U256 = Self::epoch();
 		let last_point = Self::point_history(g_epoch);
 		Self::supply_at(last_point, t)
 	}
 
-	fn supply_at(point: Point<BalanceOf<T>, T::BlockNumber>, t: T::BlockNumber) -> BalanceOf<T> {
+	fn supply_at(
+		point: Point<BalanceOf<T>, T::BlockNumber>,
+		t: T::BlockNumber,
+	) -> Result<BalanceOf<T>, DispatchError> {
 		let ve_config = Self::ve_configs();
 
 		let mut last_point = point;
@@ -271,14 +283,20 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				d_slope = Self::slope_changes(t_i)
 			}
 
-			last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
+			last_point.bias = last_point
+				.bias
 				.checked_sub(
-					U256::from(last_point.slope.saturated_into::<u128>())
-						.saturating_mul(U256::from((t_i - last_point.ts).saturated_into::<u128>())),
+					last_point
+						.slope
+						.checked_mul(
+							t_i.checked_sub(&last_point.ts)
+								.ok_or(ArithmeticError::Overflow)?
+								.saturated_into::<u128>()
+								.unique_saturated_into(),
+						)
+						.ok_or(ArithmeticError::Overflow)?,
 				)
-				.unwrap_or_default()
-				.as_u128()
-				.unique_saturated_into();
+				.ok_or(ArithmeticError::Overflow)?;
 
 			if t_i == t {
 				break;
@@ -290,8 +308,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		if last_point.bias < 0_i128 {
 			last_point.bias = 0_i128
 		}
-		last_point.fxs_amt +
-			Self::ve_configs().vote_weight_multiplier *
-				(last_point.bias as u128).unique_saturated_into()
+		Ok(last_point
+			.amt
+			.checked_add(
+				&Self::ve_configs()
+					.vote_weight_multiplier
+					.checked_mul(&(last_point.bias as u128).unique_saturated_into())
+					.ok_or(ArithmeticError::Overflow)?,
+			)
+			.ok_or(ArithmeticError::Overflow)?)
 	}
 }

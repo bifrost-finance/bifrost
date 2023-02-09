@@ -40,12 +40,12 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn reward_per_token() -> BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> {
+	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
-		let _total_supply = Self::total_supply(current_block_number);
+		let _total_supply = Self::total_supply(current_block_number)?;
 		if _total_supply == BalanceOf::<T>::zero() {
-			return conf.reward_per_token_stored;
+			return Ok(conf.reward_per_token_stored);
 		}
 		conf.reward_per_token_stored.iter_mut().for_each(|(currency, reward)| {
 			*reward = reward.saturating_add(
@@ -62,13 +62,13 @@ impl<T: Config> Pallet<T> {
 		});
 
 		IncentiveConfigs::<T>::set(conf.clone());
-		conf.reward_per_token_stored
+		Ok(conf.reward_per_token_stored)
 	}
 
 	pub fn earned(
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let reward_per_token = Self::reward_per_token();
+		let reward_per_token = Self::reward_per_token()?;
 		let vetoken_balance = Self::balance_of(addr, None)?;
 		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
 			rewards
@@ -76,7 +76,7 @@ impl<T: Config> Pallet<T> {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
 
-		reward_per_token.iter().for_each(|(currency, reward)| {
+		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 			rewards
 				.entry(*currency)
 				.and_modify(|total_reward| {
@@ -92,7 +92,7 @@ impl<T: Config> Pallet<T> {
 				})
 				.or_insert(
 					vetoken_balance.saturating_mul(
-						Self::reward_per_token()
+						Self::reward_per_token()?
 							.get(currency)
 							.unwrap_or(&BalanceOf::<T>::zero())
 							.saturating_sub(
@@ -102,12 +102,13 @@ impl<T: Config> Pallet<T> {
 							),
 					),
 				);
-		});
+			Ok(())
+		})?;
 		Ok(rewards)
 	}
 
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
-		let reward_per_token_stored = Self::reward_per_token();
+		let reward_per_token_stored = Self::reward_per_token()?;
 		IncentiveConfigs::<T>::mutate(|item| {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable();

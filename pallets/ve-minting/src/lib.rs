@@ -36,8 +36,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, Convert, Saturating,
-			UniqueSaturatedInto, Zero,
+			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Convert,
+			Saturating, UniqueSaturatedInto, Zero,
 		},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
@@ -93,7 +93,7 @@ pub struct Point<Balance, BlockNumber> {
 	slope: i128, // dweight / dt
 	ts: BlockNumber,
 	blk: BlockNumber, // block
-	fxs_amt: Balance,
+	amt: Balance,
 }
 
 #[frame_support::pallet]
@@ -329,12 +329,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
-			// let mut old_dslope = 0_i128;
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
 			let ve_config = Self::ve_configs();
 			let current_block_number: T::BlockNumber =
-				frame_system::Pallet::<T>::block_number().into(); // T::BlockNumber
+				frame_system::Pallet::<T>::block_number().into();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
@@ -378,12 +377,12 @@ pub mod pallet {
 				slope: 0_i128,
 				ts: current_block_number,
 				blk: current_block_number,
-				fxs_amt: Zero::zero(),
+				amt: Zero::zero(),
 			};
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.fxs_amt = T::MultiCurrency::free_balance(
+				last_point.amt = T::MultiCurrency::free_balance(
 					BNC,
 					&T::VeMintingPalletId::get().into_account_truncating(),
 				);
@@ -405,15 +404,21 @@ pub mod pallet {
 				} else {
 					d_slope = Self::slope_changes(t_i)
 				}
-				last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
+				last_point.bias = last_point
+					.bias
 					.checked_sub(
-						U256::from(last_point.slope.saturated_into::<u128>()).saturating_mul(
-							U256::from((t_i - last_checkpoint).saturated_into::<u128>()),
-						),
+						last_point
+							.slope
+							.checked_mul(
+								t_i.checked_sub(&last_checkpoint)
+									.ok_or(ArithmeticError::Overflow)?
+									.saturated_into::<u128>()
+									.unique_saturated_into(),
+							)
+							.ok_or(ArithmeticError::Overflow)?,
 					)
-					.unwrap_or_default()
-					.as_u128()
-					.unique_saturated_into();
+					.ok_or(ArithmeticError::Overflow)?;
+
 				log::debug!("d_slope{:?}last_point.slope:{:?}", d_slope, last_point.slope);
 				last_point.slope += d_slope;
 				if last_point.slope < 0_i128 {
@@ -440,7 +445,7 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
 					last_point.blk = current_block_number;
-					last_point.fxs_amt = T::MultiCurrency::free_balance(
+					last_point.amt = T::MultiCurrency::free_balance(
 						BNC,
 						&T::VeMintingPalletId::get().into_account_truncating(),
 					);
@@ -451,7 +456,6 @@ pub mod pallet {
 			}
 			Epoch::<T>::set(g_epoch);
 
-			log::debug!("last_point:{:?}u_new:{:?}u_old:{:?}", last_point, u_new, u_old);
 			last_point.slope = u_new
 				.slope
 				.checked_add(last_point.slope)
@@ -494,7 +498,14 @@ pub mod pallet {
 			UserPointEpoch::<T>::insert(addr, user_epoch);
 			u_new.ts = current_block_number;
 			u_new.blk = current_block_number;
-			u_new.fxs_amt = Self::locked(addr).amount;
+			u_new.amt = Self::locked(addr).amount;
+			log::debug!(
+				"last_point:{:?}u_new:{:?}u_old:{:?}new_locked:{:?}",
+				last_point,
+				u_new,
+				u_old,
+				new_locked
+			);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 			Self::update_reward(Some(addr))?;

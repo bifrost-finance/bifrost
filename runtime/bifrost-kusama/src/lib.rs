@@ -2199,7 +2199,7 @@ impl_runtime_apis! {
 		fn total_supply(
 			t: node_primitives::BlockNumber,
 		) -> Balance{
-			VeMinting::total_supply(t)
+			VeMinting::total_supply(t).unwrap_or(Zero::zero())
 		}
 
 		fn find_block_epoch(
