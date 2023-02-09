@@ -375,7 +375,7 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 			// fee.
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &entrance_account_32.into()),
-				1999907304000
+				1999919176000
 			);
 		});
 	})
@@ -464,7 +464,7 @@ fn transfer_to_works() {
 			// Why not the transferred amount reach the sub-account?
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999989594258
+				2999895428355
 			);
 		});
 	})
@@ -558,7 +558,7 @@ fn unbond_works() {
 		register_delegator_ledger();
 
 		KusamaNet::execute_with(|| {
-			kusama_runtime::Staking::trigger_new_era(0, vec![]);
+			kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
 		});
 
 		Bifrost::execute_with(|| {
@@ -805,7 +805,7 @@ fn liquidize_works() {
 			// Kusama's unbonding period is 27 days = 100_800 blocks
 			kusama_runtime::System::set_block_number(101_000);
 			for _i in 0..29 {
-				kusama_runtime::Staking::trigger_new_era(0, vec![]);
+				kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
 			}
 
 			assert_eq!(
@@ -1523,7 +1523,7 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			// Kusama's unbonding period is 27 days = 100_800 blocks
 			kusama_runtime::System::set_block_number(101_000);
 			for _i in 0..29 {
-				kusama_runtime::Staking::trigger_new_era(0, vec![]);
+				kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
 			}
 
 			assert_eq!(

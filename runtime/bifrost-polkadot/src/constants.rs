@@ -23,7 +23,7 @@ pub mod currency {
 	use crate::Runtime;
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
-		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
 	use node_primitives::{Balance, CurrencyId, TokenSymbol};
@@ -71,7 +71,7 @@ pub mod currency {
 	// DOT precision is 1/100 of KSM and BNC
 	pub fn dot_per_second<Runtime: bifrost_asset_registry::Config>() -> u128 {
 		let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
-		let base_tx_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
+		let base_tx_per_second = (WEIGHT_REF_TIME_PER_SECOND as u128) / base_weight;
 		let fee_per_second = base_tx_per_second * xcm_base_tx_fee::<Runtime>();
 		fee_per_second / 100 * 10 / 100
 	}

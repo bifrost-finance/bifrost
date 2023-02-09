@@ -296,6 +296,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Update token config，take effect when next round begins
+		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::token_config())]
 		pub fn token_config(
 			origin: OriginFor<T>,
@@ -390,6 +391,7 @@ pub mod pallet {
 		}
 
 		/// Update token config，take effect when next round begins
+		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::delete_token())]
 		pub fn delete_token(
 			origin: OriginFor<T>,
@@ -410,6 +412,7 @@ pub mod pallet {
 
 		/// refresh token info，query farming pallet, and update TokenInfo, change to new
 		/// config，ignore exec_delay, execute immediately
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::refresh_token_info())]
 		pub fn refresh_token_info(
 			origin: OriginFor<T>,
@@ -438,6 +441,7 @@ pub mod pallet {
 		}
 
 		/// payout to treasury
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::payout())]
 		pub fn payout(origin: OriginFor<T>, token: CurrencyIdOf<T>) -> DispatchResultWithPostInfo {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;

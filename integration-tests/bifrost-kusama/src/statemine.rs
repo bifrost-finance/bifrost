@@ -72,10 +72,15 @@ fn cross_usdt() {
 				10 * 10_000_000_000,
 			);
 
-			assert_ok!(Assets::create(origin.clone(), 1984, MultiAddress::Id(ALICE.into()), 10));
+			assert_ok!(Assets::create(
+				origin.clone(),
+				codec::Compact(1984),
+				MultiAddress::Id(ALICE.into()),
+				10
+			));
 			assert_ok!(Assets::mint(
 				origin.clone(),
-				1984,
+				codec::Compact(1984),
 				MultiAddress::Id(ALICE.into()),
 				100 * USDT
 			));

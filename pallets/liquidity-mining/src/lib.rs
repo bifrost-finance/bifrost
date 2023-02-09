@@ -682,6 +682,7 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a liquidity-pool which type is `PoolType::SingleToken`, accepts any token as
 		/// deposit.
+		#[pallet::call_index(0)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -717,6 +718,7 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Mining`, Only accepts `lpToken` as
 		/// deposit.
+		#[pallet::call_index(1)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -759,6 +761,7 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts free `vsToken`
 		/// and free `vsBond` as deposit.
+		#[pallet::call_index(2)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -798,6 +801,7 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts reserved
 		/// `vsToken` and reserved `vsBond` as deposit.
+		#[pallet::call_index(3)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -838,6 +842,7 @@ pub mod pallet {
 		/// _NOTE_: The extrinsic is only applied to the liquidity-pool at `PoolState::UnCharged`;
 		/// 	When the extrinsic was executed successfully, the liquidity-pool would be at
 		/// 	`PoolState::Charged`.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -875,6 +880,7 @@ pub mod pallet {
 		}
 
 		/// Kill a liquidity-pool at `PoolState::Uncharged`.
+		#[pallet::call_index(5)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -907,6 +913,7 @@ pub mod pallet {
 		///
 		/// 2. If the pool is at `PoolState::Charged` and has some deposit, or `PoolState::Ongoing`,
 		/// 	the field `block_retired` of the pool would be set to the current block height.
+		#[pallet::call_index(6)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -953,6 +960,7 @@ pub mod pallet {
 		/// Edit the parameters of a liquidity-pool.
 		///
 		/// __NOTE__: Forbid editing the liquidity-pool which type is `PoolType::EBFarming`;
+		#[pallet::call_index(7)]
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -992,6 +1000,7 @@ pub mod pallet {
 		/// - The deposit caller was contributed to the pool should be bigger than
 		///   `T::MinimumDeposit`;
 		/// - The pool is at `PoolState::Charged` or `PoolState::Ongoing`;
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -1095,6 +1104,7 @@ pub mod pallet {
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -1128,6 +1138,7 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::redeem_all())]
 		pub fn redeem_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1148,6 +1159,7 @@ pub mod pallet {
 		///
 		/// The condition to redeem:
 		/// - The pool is at `PoolState::Retired`.
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::volunteer_to_redeem())]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
@@ -1181,6 +1193,7 @@ pub mod pallet {
 		/// The conditions to claim:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing`.
+		#[pallet::call_index(12)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1214,6 +1227,7 @@ pub mod pallet {
 		/// - The pool type is not `PoolType::EBFarming`.
 		/// - There are pending-unlocks in the deposit_data.
 		/// - The current block-height exceeded the unlock-height;
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1319,6 +1333,7 @@ pub mod pallet {
 		/// The conditions to cancel:
 		/// - The pool state is `PoolState::Ongoing`.
 		/// - There is a `pending-unlock` that is specific by the parameter `index`;
+		#[pallet::call_index(14)]
 		#[pallet::weight(T::WeightInfo::cancel_unlock())]
 		pub fn cancel_unlock(
 			origin: OriginFor<T>,
@@ -1377,6 +1392,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::call_index(15)]
 		#[pallet::weight(1_000_000)]
 		pub fn lazy_migration_v2_0_0(
 			_origin: OriginFor<T>,

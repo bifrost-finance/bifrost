@@ -297,6 +297,7 @@ pub mod pallet {
 		BlockNumberFor<T>: AtLeast32BitUnsigned + Copy,
 		BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 	{
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
@@ -361,6 +362,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(0)]
 		pub fn charge(
 			origin: OriginFor<T>,
@@ -386,6 +388,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -440,6 +443,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(
 			origin: OriginFor<T>,
@@ -469,6 +473,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
@@ -498,6 +503,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn withdraw_claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
@@ -510,6 +516,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(0)]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -551,6 +558,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(0)]
 		pub fn set_retire_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -563,6 +571,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(8)]
 		#[pallet::weight(0)]
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -576,6 +585,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(0)]
 		pub fn reset_pool(
 			origin: OriginFor<T>,
@@ -638,6 +648,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(0)]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -654,6 +665,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(11)]
 		#[pallet::weight(0)]
 		pub fn edit_pool(
 			origin: OriginFor<T>,
@@ -707,6 +719,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(12)]
 		#[pallet::weight(T::WeightInfo::gauge_withdraw())]
 		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
@@ -748,6 +761,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(13)]
 		#[pallet::weight(0)]
 		pub fn force_gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin

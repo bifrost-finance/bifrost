@@ -324,6 +324,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
@@ -335,6 +336,7 @@ pub mod pallet {
 			Self::mint_inner(exchanger, token_id, token_amount)
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -345,6 +347,7 @@ pub mod pallet {
 			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -503,6 +506,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::rebond_by_unlock_id())]
 		pub fn rebond_by_unlock_id(
 			origin: OriginFor<T>,
@@ -595,6 +599,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::set_unlock_duration())]
 		pub fn set_unlock_duration(
 			origin: OriginFor<T>,
@@ -612,6 +617,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_minimum_mint(
 			origin: OriginFor<T>,
@@ -646,6 +652,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::set_minimum_redeem())]
 		pub fn set_minimum_redeem(
 			origin: OriginFor<T>,
@@ -662,6 +669,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::add_support_rebond_token())]
 		pub fn add_support_rebond_token(
 			origin: OriginFor<T>,
@@ -677,6 +685,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::remove_support_rebond_token())]
 		pub fn remove_support_rebond_token(
 			origin: OriginFor<T>,
@@ -698,6 +707,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::set_fees())]
 		pub fn set_fees(
 			origin: OriginFor<T>,
@@ -712,6 +722,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::set_hook_iteration_limit())]
 		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -724,6 +735,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(11)]
 		#[pallet::weight(0)]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
@@ -738,6 +750,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(12)]
 		#[pallet::weight(0)]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,

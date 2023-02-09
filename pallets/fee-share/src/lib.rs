@@ -163,6 +163,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_distribution())]
 		pub fn create_distribution(
 			origin: OriginFor<T>,
@@ -201,6 +202,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::edit_distribution())]
 		pub fn edit_distribution(
 			origin: OriginFor<T>,
@@ -239,6 +241,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::set_era_length())]
 		pub fn set_era_length(
 			origin: OriginFor<T>,
@@ -255,6 +258,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::execute_distribute())]
 		pub fn execute_distribute(
 			origin: OriginFor<T>,
@@ -270,6 +274,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::delete_distribution())]
 		pub fn delete_distribution(
 			origin: OriginFor<T>,

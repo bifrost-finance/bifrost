@@ -149,6 +149,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Anyone can add KSM to the pool.
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::add_ksm_to_pool())]
 		pub fn add_ksm_to_pool(origin: OriginFor<T>, token_amount: BalanceOf<T>) -> DispatchResult {
 			let adder = ensure_signed(origin)?;
@@ -166,6 +167,7 @@ pub mod pallet {
 		}
 
 		// exchange vsksm and vsbond for ksm
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::exchange_for_ksm())]
 		pub fn exchange_for_ksm(
 			origin: OriginFor<T>,
@@ -207,6 +209,7 @@ pub mod pallet {
 		}
 
 		// edit exchange discount price
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::edit_exchange_price())]
 		pub fn edit_exchange_price(
 			origin: OriginFor<T>,
@@ -230,6 +233,7 @@ pub mod pallet {
 		}
 
 		// edit token release amount per day
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::edit_release_per_day())]
 		pub fn edit_release_per_day(
 			origin: OriginFor<T>,
@@ -251,6 +255,7 @@ pub mod pallet {
 		}
 
 		// edit token release start and end block
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::edit_release_start_and_end_block())]
 		pub fn edit_release_start_and_end_block(
 			origin: OriginFor<T>,
