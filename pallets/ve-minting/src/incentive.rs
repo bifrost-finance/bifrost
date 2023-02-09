@@ -32,7 +32,7 @@ pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber> {
 
 impl<T: Config> Pallet<T> {
 	pub fn last_time_reward_applicable() -> T::BlockNumber {
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		if current_block_number < Self::incentive_configs().period_finish {
 			current_block_number
 		} else {
@@ -109,6 +109,10 @@ impl<T: Config> Pallet<T> {
 
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
+		log::debug!(
+			"update_reward---reward_per_token_stored:{:?}",
+			reward_per_token_stored.clone()
+		);
 		IncentiveConfigs::<T>::mutate(|item| {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable();

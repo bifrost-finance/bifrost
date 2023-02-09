@@ -395,12 +395,13 @@ pub mod pallet {
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point;
-			let mut block_slope: u128 = Zero::zero();
-			if current_block_number > last_point.ts {
-				block_slope = ve_config.multiplier *
-					(current_block_number - last_point.blk).saturated_into::<u128>() /
-					(current_block_number - last_point.ts).saturated_into::<u128>()
-			}
+			// let mut block_slope: u128 = Zero::zero();
+			// if current_block_number > last_point.ts {
+			// 	block_slope = ve_config.multiplier
+			// 	// *
+			// 	// 	(current_block_number - last_point.blk).saturated_into::<u128>() /
+			// 	// 	(current_block_number - last_point.ts).saturated_into::<u128>()
+			// }
 			let mut t_i: T::BlockNumber = (last_checkpoint / ve_config.week) * ve_config.week;
 			for _i in 0..255 {
 				t_i += ve_config.week;
@@ -438,14 +439,7 @@ pub mod pallet {
 
 				last_checkpoint = t_i;
 				last_point.ts = t_i;
-				last_point.blk = initial_last_point.blk +
-					(block_slope.saturating_mul(
-						(t_i - initial_last_point.ts)
-							.try_into()
-							.map_err(|_| ArithmeticError::Overflow)?,
-					) / ve_config.multiplier)
-						.try_into()
-						.map_err(|_| ArithmeticError::Overflow)?;
+				last_point.blk = initial_last_point.blk + (t_i - initial_last_point.ts);
 				g_epoch += U256::one();
 
 				// Fill for the current block, if applicable
@@ -506,7 +500,8 @@ pub mod pallet {
 			u_new.blk = current_block_number;
 			u_new.amt = Self::locked(addr).amount;
 			log::debug!(
-				"last_point:{:?}u_new:{:?}u_old:{:?}new_locked:{:?}",
+				"g_epoch:{:?}last_point:{:?}u_new:{:?}u_old:{:?}new_locked:{:?}",
+				g_epoch,
 				last_point,
 				u_new,
 				u_old,

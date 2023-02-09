@@ -60,8 +60,8 @@ fn update_reward() {
 		assert_ok!(VeMinting::set_config(
 			RuntimeOrigin::signed(ALICE),
 			Some(0),
-			Some(7 * 86400 * 1000 / 12),
-			Some(4 * 365 * 86400 * 1000 / 12),
+			Some(7 * 86400 / 12),
+			Some(4 * 365 * 86400 / 12),
 			Some(10_u128.pow(12)),
 			Some(7 * 86400 / 12),
 			Some(0)
@@ -71,14 +71,14 @@ fn update_reward() {
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
-			10000000000000,
-			System::block_number() + 365 * 86400 * 1000 / 12,
+			100_000_000_000,
+			System::block_number() + 365 * 86400 / 12,
 		));
-		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
+		assert_ok!(VeMinting::deposit_for(&BOB, 100_000_000_000));
 		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(20000000000000));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(20000000000000));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(200_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(200_000_000_000));
 	});
 }
 
@@ -107,8 +107,8 @@ fn notify_reward_amount() {
 		assert_ok!(VeMinting::set_config(
 			RuntimeOrigin::signed(ALICE),
 			Some(0),
-			Some(7 * 86400 * 1000 / 12),
-			Some(4 * 365 * 86400 * 1000 / 12),
+			Some(7 * 86400 / 12),
+			Some(4 * 365 * 86400 / 12),
 			Some(10_u128.pow(12)),
 			Some(7 * 86400 / 12),
 			Some(3)
@@ -118,9 +118,10 @@ fn notify_reward_amount() {
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
-			10000000000000,
-			System::block_number() + 365 * 86400 * 1000 / 12
+			100_000_000_000,
+			System::block_number() + 4 * 365 * 86400 / 12
 		));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(399146883040));
 
 		let rewards = vec![(KSM, 1000)];
 		assert_ok!(VeMinting::notify_rewards(
@@ -128,8 +129,15 @@ fn notify_reward_amount() {
 			Some(7 * 86400),
 			rewards
 		));
-		assert_ok!(VeMinting::deposit_for(&BOB, 10000000000000));
+		assert_ok!(VeMinting::deposit_for(&BOB, 100_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798325215500));
 		assert_ok!(VeMinting::update_reward(Some(&BOB)));
+		System::set_block_number(System::block_number() + 20);
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798324074000));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_ok!(VeMinting::get_reward(&BOB));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798324074000));
 	});
 }
 
@@ -178,7 +186,7 @@ fn create_lock_to_withdraw() {
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(170761600));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(170761600));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(170761600));
 
 		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE)));
