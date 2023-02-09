@@ -157,7 +157,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -256,7 +257,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -461,7 +463,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -623,7 +626,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -932,7 +936,8 @@ impl<T: Config> PhalaAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}

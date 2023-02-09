@@ -386,6 +386,13 @@ fn phala_xcm_setup() {
 		XcmOperation::TransferTo,
 		Some((20_000_000_000, 10_000_000_000)),
 	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		PHA,
+		XcmOperation::ConvertAsset,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
 }
 
 fn phala_setup() {
@@ -1541,5 +1548,35 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		assert_eq!(Slp::get_validators(PHA), Some(vec![]));
+	});
+}
+
+#[test]
+fn phala_convert_asset_works() {
+	let subaccount_0_account_id_32: AccountId =
+		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
+			.into();
+
+	let subaccount_0_location = MultiLocation {
+		parents: 1,
+		interior: X2(
+			Parachain(2004),
+			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+		),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		phala_setup();
+
+		assert_noop!(
+			Slp::convert_asset(
+				RuntimeOrigin::signed(ALICE),
+				PHA,
+				Box::new(subaccount_0_location.clone()),
+				1_000_000_000_000,
+				true
+			),
+			Error::<Runtime>::XcmFailure
+		);
 	});
 }
