@@ -18,7 +18,6 @@
 
 use crate::{traits::VeMintingInterface, *};
 pub use pallet::*;
-// use sp_runtime::traits::SaturatedConversion;
 use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -47,19 +46,41 @@ impl<T: Config> Pallet<T> {
 		if _total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
-		conf.reward_per_token_stored.iter_mut().for_each(|(currency, reward)| {
-			*reward = reward.saturating_add(
-				T::BlockNumberToBalance::convert(Self::last_time_reward_applicable())
-					// Self::last_time_reward_applicable()
-					// 	.saturated_into::<BalanceOf<T>>()
-					.saturating_sub(T::BlockNumberToBalance::convert(conf.last_update_time))
-					.saturating_mul(
-						*conf.reward_rate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
-					)
-					.checked_div(&_total_supply)
-					.unwrap_or_default(),
-			);
+		conf.reward_rate.iter().for_each(|(currency, reward)| {
+			conf.reward_per_token_stored
+				.entry(*currency)
+				.and_modify(|total_reward| {
+					log::debug!(
+						"reward_per_token:{:?}Self::last_time_reward_applicable():{:?}conf.last_update_time:{:?}total_reward:{:?}",
+						reward,
+						Self::last_time_reward_applicable(),
+						conf.last_update_time,
+						total_reward
+					);
+					*total_reward = total_reward
+						.saturating_add(T::BlockNumberToBalance::convert(
+							Self::last_time_reward_applicable().saturating_sub(conf.last_update_time)
+						)
+						.saturating_mul(*reward)
+						.saturating_mul(Self::ve_configs().multiplier.unique_saturated_into())
+						.checked_div(&_total_supply)
+						.unwrap_or_default())
+				})
+				.or_insert(*reward);
 		});
+		// conf.reward_per_token_stored.iter_mut().for_each(|(currency, reward)| {
+		// 	*reward = reward.saturating_add(
+		// 		T::BlockNumberToBalance::convert(Self::last_time_reward_applicable())
+		// 			// Self::last_time_reward_applicable()
+		// 			// 	.saturated_into::<BalanceOf<T>>()
+		// 			.saturating_sub(T::BlockNumberToBalance::convert(conf.last_update_time))
+		// 			.saturating_mul(
+		// 				*conf.reward_rate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
+		// 			)
+		// 			.checked_div(&_total_supply)
+		// 			.unwrap_or_default(),
+		// 	);
+		// });
 
 		IncentiveConfigs::<T>::set(conf.clone());
 		Ok(conf.reward_per_token_stored)
@@ -75,32 +96,38 @@ impl<T: Config> Pallet<T> {
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
-
+		log::debug!("earned---reward_per_token:{:?}", reward_per_token.clone(),);
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 			rewards
 				.entry(*currency)
 				.and_modify(|total_reward| {
 					*total_reward = total_reward.saturating_add(
-						vetoken_balance.saturating_mul(
-							reward.saturating_sub(
-								*Self::user_reward_per_token_paid(addr)
-									.get(currency)
-									.unwrap_or(&BalanceOf::<T>::zero()),
-							),
-						),
+						vetoken_balance
+							.saturating_mul(
+								reward.saturating_sub(
+									*Self::user_reward_per_token_paid(addr)
+										.get(currency)
+										.unwrap_or(&BalanceOf::<T>::zero()),
+								),
+							)
+							.checked_div(&Self::ve_configs().multiplier.unique_saturated_into())
+							.unwrap_or_default(),
 					);
 				})
 				.or_insert(
-					vetoken_balance.saturating_mul(
-						Self::reward_per_token()?
-							.get(currency)
-							.unwrap_or(&BalanceOf::<T>::zero())
-							.saturating_sub(
-								*Self::user_reward_per_token_paid(addr)
-									.get(currency)
-									.unwrap_or(&BalanceOf::<T>::zero()),
-							),
-					),
+					vetoken_balance
+						.saturating_mul(
+							Self::reward_per_token()?
+								.get(currency)
+								.unwrap_or(&BalanceOf::<T>::zero())
+								.saturating_sub(
+									*Self::user_reward_per_token_paid(addr)
+										.get(currency)
+										.unwrap_or(&BalanceOf::<T>::zero()),
+								),
+						)
+						.checked_div(&Self::ve_configs().multiplier.unique_saturated_into())
+						.unwrap_or_default(),
 				);
 			Ok(())
 		})?;
@@ -109,17 +136,19 @@ impl<T: Config> Pallet<T> {
 
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
-		log::debug!(
-			"update_reward---reward_per_token_stored:{:?}",
-			reward_per_token_stored.clone()
-		);
+
 		IncentiveConfigs::<T>::mutate(|item| {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable();
 		});
 		if let Some(address) = addr {
+			log::debug!(
+				"update_reward---reward_per_token_stored:{:?}Self::earned(&address)?:{:?}",
+				reward_per_token_stored.clone(),
+				Self::earned(&address)?
+			);
 			Rewards::<T>::insert(address, Self::earned(&address)?);
-			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored);
+			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored.clone());
 		}
 		Ok(())
 	}
@@ -130,6 +159,7 @@ impl<T: Config> Pallet<T> {
 
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
+				log::debug!("get_reward---currency:{:?}reward:{:?}", currency, reward);
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
@@ -155,7 +185,7 @@ impl<T: Config> Pallet<T> {
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
 				);
-				ensure!(*reward <= currency_amount, Error::<T>::Expired);
+				ensure!(*reward <= currency_amount, Error::<T>::NotEnoughBalance);
 				let new_reward = reward
 					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
 					.unwrap_or_else(Zero::zero);

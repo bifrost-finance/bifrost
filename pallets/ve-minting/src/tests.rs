@@ -118,26 +118,24 @@ fn notify_reward_amount() {
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
-			100_000_000_000,
+			20_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
 		));
+		assert_ok!(VeMinting::deposit_for(&BOB, 80_000_000_000));
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(399146883040));
 
-		let rewards = vec![(KSM, 1000)];
+		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::signed(ALICE),
 			Some(7 * 86400),
 			rewards
 		));
-		assert_ok!(VeMinting::deposit_for(&BOB, 100_000_000_000));
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798325215500));
-		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 		System::set_block_number(System::block_number() + 20);
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798324074000));
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
 		assert_ok!(VeMinting::get_reward(&BOB));
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(798324074000));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 659);
+		System::set_block_number(System::block_number() + 20000000000);
+		assert_ok!(VeMinting::get_reward(&BOB));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 999701999);
 	});
 }
 
