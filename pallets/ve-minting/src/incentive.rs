@@ -68,19 +68,6 @@ impl<T: Config> Pallet<T> {
 				})
 				.or_insert(*reward);
 		});
-		// conf.reward_per_token_stored.iter_mut().for_each(|(currency, reward)| {
-		// 	*reward = reward.saturating_add(
-		// 		T::BlockNumberToBalance::convert(Self::last_time_reward_applicable())
-		// 			// Self::last_time_reward_applicable()
-		// 			// 	.saturated_into::<BalanceOf<T>>()
-		// 			.saturating_sub(T::BlockNumberToBalance::convert(conf.last_update_time))
-		// 			.saturating_mul(
-		// 				*conf.reward_rate.get(currency).unwrap_or(&BalanceOf::<T>::zero()),
-		// 			)
-		// 			.checked_div(&_total_supply)
-		// 			.unwrap_or_default(),
-		// 	);
-		// });
 
 		IncentiveConfigs::<T>::set(conf.clone());
 		Ok(conf.reward_per_token_stored)
@@ -188,7 +175,7 @@ impl<T: Config> Pallet<T> {
 				ensure!(*reward <= currency_amount, Error::<T>::NotEnoughBalance);
 				let new_reward = reward
 					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
-					.unwrap_or_else(Zero::zero);
+					.ok_or(ArithmeticError::Overflow)?;
 				conf.reward_rate
 					.entry(*currency)
 					.and_modify(|total_reward| {
@@ -211,7 +198,7 @@ impl<T: Config> Pallet<T> {
 				ensure!(total_reward <= currency_amount, Error::<T>::Expired);
 				let new_reward = total_reward
 					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
-					.unwrap_or_else(|| BalanceOf::<T>::zero());
+					.ok_or(ArithmeticError::Overflow)?;
 				conf.reward_rate
 					.entry(*currency)
 					.and_modify(|total_reward| {

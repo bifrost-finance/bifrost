@@ -176,7 +176,7 @@ fn create_lock_to_withdraw() {
 			50_000_000,
 			System::block_number() + 365 * 86400 / 12
 		));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(81449600));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number() - 10)), Ok(81449720));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(81449600));
 		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000_000));
 		log::debug!(

@@ -142,16 +142,22 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, u_epoch);
 
+			log::debug!(
+				"balance_of---:{:?}_t:{:?}last_point.ts:{:?}",
+				(_t.saturated_into::<u128>() as i128)
+					.saturating_sub(last_point.ts.saturated_into::<u128>() as i128),
+				_t,
+				last_point.ts
+			);
 			last_point.bias = last_point
 				.bias
 				.checked_sub(
 					last_point
 						.slope
 						.checked_mul(
-							_t.checked_sub(&last_point.ts)
-								.ok_or(ArithmeticError::Overflow)?
-								.saturated_into::<u128>()
-								.unique_saturated_into(),
+							(_t.saturated_into::<u128>() as i128)
+								.checked_sub(last_point.ts.saturated_into::<u128>() as i128)
+								.ok_or(ArithmeticError::Overflow)?,
 						)
 						.ok_or(ArithmeticError::Overflow)?,
 				)
@@ -166,7 +172,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				.checked_add(
 					&Self::ve_configs()
 						.vote_weight_multiplier
-						.checked_mul(&last_point.bias.unsigned_abs().unique_saturated_into())
+						.checked_mul(&(last_point.bias as u128).unique_saturated_into())
 						.ok_or(ArithmeticError::Overflow)?,
 				)
 				.ok_or(ArithmeticError::Overflow)?)

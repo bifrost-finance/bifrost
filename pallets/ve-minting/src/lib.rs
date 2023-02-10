@@ -395,13 +395,6 @@ pub mod pallet {
 			}
 			let mut last_checkpoint = last_point.ts;
 			let initial_last_point = last_point;
-			// let mut block_slope: u128 = Zero::zero();
-			// if current_block_number > last_point.ts {
-			// 	block_slope = ve_config.multiplier
-			// 	// *
-			// 	// 	(current_block_number - last_point.blk).saturated_into::<u128>() /
-			// 	// 	(current_block_number - last_point.ts).saturated_into::<u128>()
-			// }
 			let mut t_i: T::BlockNumber = (last_checkpoint / ve_config.week) * ve_config.week;
 			for _i in 0..255 {
 				t_i += ve_config.week;
@@ -427,7 +420,8 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 
 				log::debug!("d_slope{:?}last_point.slope:{:?}", d_slope, last_point.slope);
-				last_point.slope += d_slope;
+				last_point.slope =
+					last_point.slope.checked_add(d_slope).ok_or(ArithmeticError::Overflow)?;
 				if last_point.slope < 0_i128 {
 					//This cannot happen - just in case
 					last_point.slope = 0_i128
@@ -460,12 +454,14 @@ pub mod pallet {
 				.slope
 				.checked_add(last_point.slope)
 				.ok_or(ArithmeticError::Overflow)?
-				.saturating_sub(u_old.slope);
+				.checked_sub(u_old.slope)
+				.ok_or(ArithmeticError::Overflow)?;
 			last_point.bias = last_point
 				.bias
 				.checked_add(u_new.bias)
 				.ok_or(ArithmeticError::Overflow)?
-				.saturating_sub(u_old.bias);
+				.checked_sub(u_old.bias)
+				.ok_or(ArithmeticError::Overflow)?;
 			if last_point.slope < 0_i128 {
 				last_point.slope = 0_i128
 			}
@@ -476,18 +472,19 @@ pub mod pallet {
 
 			if old_locked.end > current_block_number {
 				// old_dslope was <something> - u_old.slope, so we cancel that
-				old_dslope += u_old.slope.saturated_into::<u128>() as i128;
+				old_dslope =
+					old_dslope.checked_add(u_old.slope).ok_or(ArithmeticError::Overflow)?;
 				if new_locked.end == old_locked.end {
-					old_dslope -= u_new.slope.saturated_into::<u128>() as i128;
+					old_dslope =
+						old_dslope.checked_sub(u_new.slope).ok_or(ArithmeticError::Overflow)?;
 				} // It was a new deposit, not extension
 				SlopeChanges::<T>::insert(old_locked.end, old_dslope);
 			}
 
 			if new_locked.end > current_block_number {
 				if new_locked.end > old_locked.end {
-					new_dslope = new_dslope
-						.checked_sub(u_new.slope.saturated_into::<u128>() as i128)
-						.ok_or(ArithmeticError::Overflow)?;
+					new_dslope =
+						new_dslope.checked_sub(u_new.slope).ok_or(ArithmeticError::Overflow)?;
 					SlopeChanges::<T>::insert(new_locked.end, new_dslope);
 				}
 				// else: we recorded it already in old_dslope
