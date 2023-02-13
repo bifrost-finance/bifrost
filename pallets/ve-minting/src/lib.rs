@@ -141,6 +141,26 @@ pub mod pallet {
 			supply_before: BalanceOf<T>,
 			supply: BalanceOf<T>,
 		},
+		LockCreated {
+			addr: AccountIdOf<T>,
+			value: BalanceOf<T>,
+			unlock_time: T::BlockNumber,
+		},
+		UnlockTimeIncreased {
+			addr: AccountIdOf<T>,
+			unlock_time: T::BlockNumber,
+		},
+		AmountIncreased {
+			addr: AccountIdOf<T>,
+			value: BalanceOf<T>,
+		},
+		Withdrawn {
+			addr: AccountIdOf<T>,
+			value: BalanceOf<T>,
+		},
+		RewardAdded {
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -151,6 +171,7 @@ pub mod pallet {
 		ExistentialDeposit,
 		DistributionNotExist,
 		Expired,
+		BelowMinimumMint,
 		LockNotExist,
 		LockExist,
 	}
@@ -274,36 +295,28 @@ pub mod pallet {
 			unlock_time: T::BlockNumber,
 		) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
-			Self::_create_lock(&exchanger, value, unlock_time)?;
-			Self::deposit_event(Event::Created {});
-			Ok(())
+			Self::_create_lock(&exchanger, value, unlock_time)
 		}
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
-			Self::_increase_amount(&exchanger, value)?;
-			Self::deposit_event(Event::Created {});
-			Ok(())
+			Self::_increase_amount(&exchanger, value)
 		}
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_unlock_time(origin: OriginFor<T>, time: T::BlockNumber) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::_increase_unlock_time(&exchanger, time)?;
-			Self::deposit_event(Event::Created {});
-			Ok(())
+			Self::_increase_unlock_time(&exchanger, time)
 		}
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::_withdraw(&exchanger)?;
-			Self::deposit_event(Event::Created {});
-			Ok(())
+			Self::_withdraw(&exchanger)
 		}
 
 		#[pallet::call_index(5)]
@@ -321,9 +334,7 @@ pub mod pallet {
 				IncentiveConfigs::<T>::set(incentive_config);
 			};
 
-			Self::notify_reward_amount(rewards)?;
-			Self::deposit_event(Event::Created {});
-			Ok(())
+			Self::notify_reward_amount(rewards)
 		}
 	}
 
@@ -518,7 +529,7 @@ pub mod pallet {
 			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
 			let ve_config = Self::ve_configs();
-			ensure!(value >= ve_config.min_mint, Error::<T>::Expired);
+			ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
 			let current_block_number: T::BlockNumber =
 				frame_system::Pallet::<T>::block_number().into();

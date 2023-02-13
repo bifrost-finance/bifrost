@@ -39,6 +39,7 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
 	for Pallet<T>
 {
+	#[transactional]
 	fn _create_lock(
 		addr: &AccountIdOf<T>,
 		_value: BalanceOf<T>,
@@ -60,9 +61,16 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 		ensure!(_value >= ve_config.min_mint, Error::<T>::NotEnoughBalance); // need non-zero value
 
-		Self::_deposit_for(addr, _value, unlock_time, _locked)
+		Self::_deposit_for(addr, _value, unlock_time, _locked)?;
+		Self::deposit_event(Event::LockCreated {
+			addr: addr.to_owned(),
+			value: _value,
+			unlock_time: _unlock_time,
+		});
+		Ok(())
 	}
 
+	#[transactional]
 	fn _increase_unlock_time(
 		addr: &AccountIdOf<T>,
 		_unlock_time: T::BlockNumber,
@@ -80,16 +88,24 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 
-		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)
+		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)?;
+		Self::deposit_event(Event::UnlockTimeIncreased {
+			addr: addr.to_owned(),
+			unlock_time: _unlock_time,
+		});
+		Ok(())
 	}
 
+	#[transactional]
 	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		ensure!(value > Zero::zero(), Error::<T>::NotEnoughBalance);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired lock
-		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)
+		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)?;
+		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
+		Ok(())
 	}
 
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
@@ -97,6 +113,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)
 	}
 
+	#[transactional]
 	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
@@ -120,6 +137,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
+		Self::deposit_event(Event::Withdrawn { addr: addr.to_owned(), value });
 		Self::deposit_event(Event::Supply {
 			supply_before,
 			supply: supply_before.saturating_sub(value),

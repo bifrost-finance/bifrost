@@ -39,6 +39,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	#[transactional]
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
@@ -73,6 +74,7 @@ impl<T: Config> Pallet<T> {
 		Ok(conf.reward_per_token_stored)
 	}
 
+	#[transactional]
 	pub fn earned(
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
@@ -121,6 +123,7 @@ impl<T: Config> Pallet<T> {
 		Ok(rewards)
 	}
 
+	#[transactional]
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
 
@@ -195,7 +198,7 @@ impl<T: Config> Pallet<T> {
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
 				);
-				ensure!(total_reward <= currency_amount, Error::<T>::Expired);
+				ensure!(total_reward <= currency_amount, Error::<T>::NotEnoughBalance);
 				let new_reward = total_reward
 					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
 					.ok_or(ArithmeticError::Overflow)?;
@@ -213,6 +216,7 @@ impl<T: Config> Pallet<T> {
 		conf.period_finish = current_block_number.saturating_add(conf.rewards_duration);
 
 		IncentiveConfigs::<T>::set(conf);
+		Self::deposit_event(Event::RewardAdded { rewards });
 		Ok(())
 	}
 }
