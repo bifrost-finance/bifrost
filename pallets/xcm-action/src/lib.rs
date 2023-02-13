@@ -1,0 +1,399 @@
+// This file is part of Bifrost.
+
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![cfg_attr(not(feature = "std"), no_std)]
+use bifrost_asset_registry::AssetMetadata;
+use codec::{Decode, Encode, MaxEncodedLen};
+use cumulus_pallet_xcm::Origin as CumulusOrigin;
+use cumulus_primitives_core::ParaId;
+use frame_support::{
+	dispatch::{DispatchResult, DispatchResultWithPostInfo},
+	sp_runtime::SaturatedConversion,
+	traits::Get,
+	PalletId, RuntimeDebug,
+};
+use frame_system::Config as SystemConfig;
+use node_primitives::{CurrencyId, CurrencyIdMapping, TryConvertFrom, VtokenMintingInterface};
+use orml_traits::{MultiCurrency, XcmTransfer};
+pub use pallet::*;
+use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
+use sp_core::{Hasher, H160};
+use sp_runtime::traits::BlakeTwo256;
+use sp_std::vec;
+use xcm::{latest::prelude::*, v1::MultiLocation};
+
+pub mod weights;
+pub use weights::WeightInfo;
+
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+pub const ASTA_PARA_ID: u32 = 2006;
+
+#[derive(
+	Encode,
+	Decode,
+	MaxEncodedLen,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	Ord,
+	TypeInfo,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[non_exhaustive]
+pub enum TargetChain {
+	Astar,
+	Shiden,
+	Moonbeam,
+	Moonriver,
+}
+
+#[frame_support::pallet]
+pub mod pallet {
+	use super::*;
+	use frame_support::pallet_prelude::{ValueQuery, *};
+	use frame_system::pallet_prelude::*;
+	use zenlink_protocol::{AssetId, ExportZenlink};
+
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type RuntimeOrigin: From<<Self as SystemConfig>::RuntimeOrigin>
+			+ Into<Result<CumulusOrigin, <Self as Config>::RuntimeOrigin>>;
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+
+		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
+
+		/// The interface to call VtokenMinting module functions.
+		type VtokenMintingInterface: VtokenMintingInterface<
+			AccountIdOf<Self>,
+			CurrencyIdOf<Self>,
+			BalanceOf<Self>,
+		>;
+
+		/// xtokens xcm transfer interface
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
+
+		/// Convert MultiLocation to `T::CurrencyId`.
+		type CurrencyIdConvert: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
+
+		/// ModuleID for creating sub account
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type ParachainId: Get<ParaId>;
+
+		#[pallet::constant]
+		type NativeCurrencyId: Get<CurrencyIdOf<Self>>;
+
+		type WeightInfo: WeightInfo;
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		AddWhitelistAccountId {
+			target_chain: TargetChain,
+			account_id: AccountIdOf<T>,
+		},
+		RemoveWhitelistAccountId {
+			target_chain: TargetChain,
+			account_id: AccountIdOf<T>,
+		},
+		XcmMint {
+			caller: AccountIdOf<T>,
+			currency_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+			target_chain: TargetChain,
+			receiver: H160,
+		},
+		XcmSwap {
+			caller: AccountIdOf<T>,
+			currency_id_in: CurrencyIdOf<T>,
+			currency_id_out: CurrencyIdOf<T>,
+			target_chain: TargetChain,
+			receiver: H160,
+		},
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Token not found in vtoken minting
+		TokenNotFoundInVtokenMinting,
+		/// Token not found in zenlink
+		TokenNotFoundInZenlink,
+		/// Accountid decode error
+		DecodingError,
+		/// Multilocation to Curency id convert error
+		CurrencyIdConvert,
+		BalanceBeforeAndAfterMintIsEqual,
+		NotSetActionInfo,
+		ChainNotSupported,
+		VTokenMintError,
+		AccountIdAlreadyInWhitelist,
+		AccountIdNotInWhitelist,
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn whitelist_account_ids)]
+	pub type WhitelistAccountId<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		TargetChain,
+		BoundedVec<AccountIdOf<T>, ConstU32<10>>,
+		ValueQuery,
+	>;
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// vtoken mint and transfer to target chain
+		#[pallet::call_index(0)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
+		pub fn mint(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			target_chain: TargetChain,
+			receiver: H160,
+		) -> DispatchResultWithPostInfo {
+			let caller = ensure_signed(origin)?;
+			let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
+			ensure!(whitelist_account_ids.contains(&caller), Error::<T>::AccountIdNotInWhitelist);
+
+			let mut result = true;
+			let receiver_account_id = Self::h160_to_account_id(receiver);
+			let token_amount = T::MultiCurrency::free_balance(currency_id, &caller);
+			match T::VtokenMintingInterface::mint(caller.clone(), currency_id, token_amount) {
+				Ok(_) => {},
+				Err(_) => {
+					Self::transfer_assets_to_astr(
+						caller.clone(),
+						currency_id,
+						token_amount,
+						receiver_account_id.clone(),
+					)?;
+					result = false;
+				},
+			};
+
+			if result {
+				// success
+				let vtoken_id = T::VtokenMintingInterface::vtoken_id(currency_id)
+					.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
+				let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &caller);
+
+				Self::match_target_chain(
+					caller.clone(),
+					vtoken_id,
+					vtoken_amount,
+					target_chain,
+					receiver_account_id,
+				)?;
+
+				Self::deposit_event(Event::XcmMint {
+					caller,
+					currency_id,
+					token_amount,
+					target_chain,
+					receiver,
+				});
+			}
+
+			Ok(().into())
+		}
+
+		/// zenlink inner_swap_assets_for_exact_assets
+		#[pallet::call_index(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::swap())]
+		pub fn swap(
+			origin: OriginFor<T>,
+			currency_id_in: CurrencyIdOf<T>,
+			currency_id_out: CurrencyIdOf<T>,
+			target_chain: TargetChain,
+			receiver: H160,
+		) -> DispatchResultWithPostInfo {
+			let caller = ensure_signed(origin)?;
+			let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
+			ensure!(whitelist_account_ids.contains(&caller), Error::<T>::AccountIdNotInWhitelist);
+
+			let in_asset_id: AssetId =
+				AssetId::try_convert_from(currency_id_in, T::ParachainId::get().into())
+					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
+			let out_asset_id: AssetId =
+				AssetId::try_convert_from(currency_id_out, T::ParachainId::get().into())
+					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
+
+			let mut result = true;
+			let receiver_account_id = Self::h160_to_account_id(receiver);
+			let currency_id_in_amount = T::MultiCurrency::free_balance(currency_id_in, &caller);
+			let path = vec![in_asset_id, out_asset_id];
+			match T::DexOperator::inner_swap_exact_assets_for_assets(
+				&caller,
+				currency_id_in_amount.saturated_into(),
+				0,
+				&path,
+				&caller,
+			) {
+				Ok(_) => {},
+				Err(_) => {
+					Self::transfer_assets_to_astr(
+						caller.clone(),
+						currency_id_in,
+						currency_id_in_amount,
+						receiver_account_id.clone(),
+					)?;
+					result = false;
+				},
+			}
+
+			if result {
+				let currency_id_out_amount =
+					T::MultiCurrency::free_balance(currency_id_out, &caller);
+				Self::match_target_chain(
+					caller.clone(),
+					currency_id_out,
+					currency_id_out_amount,
+					target_chain,
+					receiver_account_id,
+				)?;
+
+				Self::deposit_event(Event::XcmSwap {
+					caller,
+					currency_id_in,
+					currency_id_out,
+					target_chain,
+					receiver,
+				});
+			}
+			Ok(().into())
+		}
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
+		pub fn add_whitelist(
+			origin: OriginFor<T>,
+			target_chain: TargetChain,
+			account_id: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_signed(origin)?;
+
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain).to_vec();
+
+			ensure!(
+				!whitelist_account_ids.contains(&account_id),
+				Error::<T>::AccountIdAlreadyInWhitelist
+			);
+			whitelist_account_ids.push(account_id.clone());
+			WhitelistAccountId::<T>::insert(
+				target_chain,
+				BoundedVec::try_from(whitelist_account_ids).unwrap(),
+			);
+			Self::deposit_event(Event::AddWhitelistAccountId { target_chain, account_id });
+			Ok(().into())
+		}
+		#[pallet::call_index(3)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
+		pub fn remove_whitelist(
+			origin: OriginFor<T>,
+			target_chain: TargetChain,
+			account_id: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_signed(origin)?;
+
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain).to_vec();
+
+			ensure!(
+				whitelist_account_ids.contains(&account_id),
+				Error::<T>::AccountIdNotInWhitelist
+			);
+			whitelist_account_ids.retain(|x| *x != account_id);
+			WhitelistAccountId::<T>::insert(
+				target_chain,
+				BoundedVec::try_from(whitelist_account_ids).unwrap(),
+			);
+			Self::deposit_event(Event::RemoveWhitelistAccountId { target_chain, account_id });
+			Ok(().into())
+		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	fn transfer_assets_to_astr(
+		caller: T::AccountId,
+		currency_id: CurrencyIdOf<T>,
+		amount: BalanceOf<T>,
+		receiver: T::AccountId,
+	) -> DispatchResult {
+		let dest = MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(ASTA_PARA_ID),
+				AccountId32 { network: Any, id: receiver.encode().try_into().unwrap() },
+			),
+		};
+
+		T::XcmTransfer::transfer(caller, currency_id, amount, dest, Limited(5_000_000_000))
+	}
+
+	fn match_target_chain(
+		caller: T::AccountId,
+		currency_id: CurrencyIdOf<T>,
+		token_amount: BalanceOf<T>,
+		target_chain: TargetChain,
+		receiver: T::AccountId,
+	) -> DispatchResult {
+		match target_chain {
+			TargetChain::Astar =>
+				Self::transfer_assets_to_astr(caller, currency_id, token_amount, receiver),
+			_ => Err(Error::<T>::ChainNotSupported.into()),
+		}
+	}
+
+	fn h160_to_account_id(address: H160) -> T::AccountId {
+		let mut data = [0u8; 24];
+		data[0..4].copy_from_slice(b"evm:");
+		data[4..24].copy_from_slice(&address[..]);
+		let hash = BlakeTwo256::hash(&data);
+
+		let account_id_32 = sp_runtime::AccountId32::from(Into::<[u8; 32]>::into(hash));
+		T::AccountId::decode(&mut account_id_32.as_ref()).expect("Fail to decode address")
+	}
+}

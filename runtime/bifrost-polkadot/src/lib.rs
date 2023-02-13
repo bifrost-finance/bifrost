@@ -1233,6 +1233,24 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+parameter_types! {
+	pub const XcmActionPalletId: PalletId = PalletId(*b"/xcmactn");
+}
+
+impl bifrost_xcm_action::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type MultiCurrency = Currencies;
+	type DexOperator = ZenlinkProtocol;
+	type VtokenMintingInterface = VtokenMinting;
+	type XcmTransfer = XTokens;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type PalletId = XcmActionPalletId;
+	type ParachainId = SelfParaChainId;
+	type NativeCurrencyId = NativeCurrencyId;
+	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1490,6 +1508,7 @@ construct_runtime! {
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 123,
 	}
 }
 
