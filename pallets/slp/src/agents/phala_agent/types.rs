@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	agents::{BalancesCall, SystemCall, XcmCall},
+	agents::{BalancesCall, XcmCall},
 	BalanceOf, Config,
 };
 use codec::{Decode, Encode};
@@ -27,7 +27,7 @@ use sp_std::{boxed::Box, vec::Vec};
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum PhalaCall<T: Config> {
 	#[codec(index = 0)]
-	System(SystemCall),
+	System(PhalaSystemCall),
 	#[codec(index = 3)]
 	Utility(Box<PhalaUtilityCall<Self>>),
 	#[codec(index = 33)]
@@ -66,4 +66,10 @@ pub enum PhalaUtilityCall<PhalaCall> {
 	AsDerivative(u16, Box<PhalaCall>),
 	#[codec(index = 2)]
 	BatchAll(Box<Vec<Box<PhalaCall>>>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum PhalaSystemCall {
+	#[codec(index = 8)]
+	RemarkWithEvent(Box<Vec<u8>>),
 }
