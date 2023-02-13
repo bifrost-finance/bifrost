@@ -48,7 +48,7 @@ fn _checkpoint() {
 		));
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(0));
 	});
 }
 
@@ -77,8 +77,8 @@ fn update_reward() {
 		assert_ok!(VeMinting::deposit_for(&BOB, 100_000_000_000));
 		assert_ok!(VeMinting::update_reward(Some(&BOB)));
 
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(200_000_000_000));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(200_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(200_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(200_000_000_000));
 	});
 }
 
@@ -122,7 +122,7 @@ fn notify_reward_amount() {
 			System::block_number() + 4 * 365 * 86400 / 12
 		));
 		assert_ok!(VeMinting::deposit_for(&BOB, 80_000_000_000));
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(399146883040));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(399146883040));
 
 		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
@@ -176,7 +176,10 @@ fn create_lock_to_withdraw() {
 			50_000_000,
 			System::block_number() + 365 * 86400 / 12
 		));
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number() - 10)), Ok(81449720));
+		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number()), Ok(81449600));
+		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number() - 10), Ok(0));
+		assert_eq!(VeMinting::balance_of_at(&BOB, 0), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(81449600));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(81449600));
 		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000_000));
 		log::debug!(
@@ -184,7 +187,7 @@ fn create_lock_to_withdraw() {
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
-		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(170761600));
+		assert_eq!(VeMinting::balance_of(&BOB), Ok(170761600));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(170761600));
 
 		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE)));

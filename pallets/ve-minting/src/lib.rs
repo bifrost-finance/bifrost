@@ -339,6 +339,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		pub fn _checkpoint(
 			addr: &AccountIdOf<T>,
 			old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
@@ -522,6 +523,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		pub fn _deposit_for(
 			addr: &AccountIdOf<T>,
 			value: BalanceOf<T>,

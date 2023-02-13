@@ -22,8 +22,8 @@ use crate::*;
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
 	fn _withdraw(addr: &AccountId) -> DispatchResult;
-	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
-	fn balance_of_at(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
+	fn balance_of(addr: &AccountId) -> Result<Balance, DispatchError>; // Get the current voting power for `addr`
+	fn balance_of_at(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>; // Measure voting power of `addr` at block height `block`
 	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
 	fn supply_at(
 		point: Point<Balance, BlockNumber>,
@@ -108,6 +108,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
+	#[transactional]
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)
@@ -145,14 +146,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn balance_of(
-		addr: &AccountIdOf<T>,
-		time: Option<T::BlockNumber>,
-	) -> Result<BalanceOf<T>, DispatchError> {
-		let _t = match time {
-			Some(_t) => _t,
-			None => frame_system::Pallet::<T>::block_number(),
-		};
+	#[transactional]
+	fn balance_of(addr: &AccountIdOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		let u_epoch = Self::user_point_epoch(addr);
 		if u_epoch == U256::zero() {
 			return Ok(Zero::zero());
@@ -162,9 +158,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 			log::debug!(
 				"balance_of---:{:?}_t:{:?}last_point.ts:{:?}",
-				(_t.saturated_into::<u128>() as i128)
+				(current_block_number.saturated_into::<u128>() as i128)
 					.saturating_sub(last_point.ts.saturated_into::<u128>() as i128),
-				_t,
+				current_block_number,
 				last_point.ts
 			);
 			last_point.bias = last_point
@@ -173,7 +169,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 					last_point
 						.slope
 						.checked_mul(
-							(_t.saturated_into::<u128>() as i128)
+							(current_block_number.saturated_into::<u128>() as i128)
 								.checked_sub(last_point.ts.saturated_into::<u128>() as i128)
 								.ok_or(ArithmeticError::Overflow)?,
 						)
@@ -199,11 +195,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn balance_of_at(
 		addr: &AccountIdOf<T>,
-		_block: T::BlockNumber,
+		block: T::BlockNumber,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
-		ensure!(_block <= current_block_number, Error::<T>::Expired);
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		ensure!(block <= current_block_number, Error::<T>::Expired);
 
 		// Binary search
 		let mut _min = U256::zero();
@@ -214,7 +209,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			}
 			let _mid = (_min + _max + 1) / 2;
 
-			if Self::user_point_history(addr, _mid).blk <= _block {
+			if Self::user_point_history(addr, _mid).blk <= block {
 				_min = _mid
 			} else {
 				_max = _mid - 1
@@ -222,9 +217,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		}
 
 		let mut upoint: Point<BalanceOf<T>, T::BlockNumber> = Self::user_point_history(addr, _min);
+		log::debug!("balance_of_at---_min:{:?}_max:{:?}upoint:{:?}", _min, _max, upoint);
 
 		let max_epoch: U256 = Self::epoch();
-		let _epoch: U256 = Self::find_block_epoch(_block, max_epoch);
+		let _epoch: U256 = Self::find_block_epoch(block, max_epoch);
 		let point_0: Point<BalanceOf<T>, T::BlockNumber> = Self::point_history(_epoch);
 		let d_block;
 		let d_t;
@@ -239,28 +235,35 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let mut block_time = point_0.ts;
 		if d_block != Zero::zero() {
-			block_time += (d_t.saturating_mul(_block - point_0.blk))
+			block_time += (d_t.saturating_mul(block - point_0.blk))
 				.saturated_into::<u128>()
 				.saturating_div(d_block.saturated_into::<u128>())
 				.unique_saturated_into();
 		}
-		upoint.bias -= upoint
+		upoint.bias = upoint
 			.bias
 			.checked_sub(
 				upoint
 					.slope
 					.checked_mul(
-						(block_time.saturated_into::<u128>() as i128) -
-							(upoint.ts.saturated_into::<u128>() as i128),
+						(block_time.saturated_into::<u128>() as i128)
+							.checked_sub(upoint.ts.saturated_into::<u128>() as i128)
+							.ok_or(ArithmeticError::Overflow)?,
 					)
 					.ok_or(ArithmeticError::Overflow)?,
 			)
 			.ok_or(ArithmeticError::Overflow)?;
 
 		if (upoint.bias >= 0_i128) || (upoint.amt >= Zero::zero()) {
-			Ok(upoint.amt +
-				(Self::ve_configs().vote_weight_multiplier *
-					(upoint.bias as u128).unique_saturated_into()))
+			Ok(upoint
+				.amt
+				.checked_add(
+					&Self::ve_configs()
+						.vote_weight_multiplier
+						.checked_mul(&(upoint.bias as u128).unique_saturated_into())
+						.ok_or(ArithmeticError::Overflow)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?)
 		} else {
 			Ok(Zero::zero())
 		}
