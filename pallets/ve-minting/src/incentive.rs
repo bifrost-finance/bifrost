@@ -79,7 +79,7 @@ impl<T: Config> Pallet<T> {
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token()?;
-		let vetoken_balance = Self::balance_of(addr)?;
+		let vetoken_balance = Self::balance_of_current_block(addr)?;
 		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
 			rewards
 		} else {

@@ -50,7 +50,7 @@ use node_primitives::{CurrencyId, TokenSymbol}; // BlockNumber
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
-use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
+use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
@@ -130,7 +130,9 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Created {},
+		ConfigSet {
+			config: VeConfig<BalanceOf<T>, T::BlockNumber>,
+		},
 		Minted {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
@@ -166,10 +168,6 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		NotEnoughBalance,
-		NotSupportProportion,
-		CalculationOverflow,
-		ExistentialDeposit,
-		DistributionNotExist,
 		Expired,
 		BelowMinimumMint,
 		LockNotExist,
@@ -281,9 +279,9 @@ pub mod pallet {
 			if let Some(vote_weight_multiplier) = vote_weight_multiplier {
 				ve_config.vote_weight_multiplier = vote_weight_multiplier;
 			};
-			VeConfigs::<T>::set(ve_config);
+			VeConfigs::<T>::set(ve_config.clone());
 
-			Self::deposit_event(Event::Created {});
+			Self::deposit_event(Event::ConfigSet { config: ve_config });
 			Ok(())
 		}
 
@@ -564,6 +562,135 @@ pub mod pallet {
 			});
 			Self::deposit_event(Event::Supply { supply_before, supply: supply_before + value });
 			Ok(())
+		}
+
+		// Get the current voting power for `addr`
+		#[transactional]
+		pub(crate) fn balance_of_current_block(
+			addr: &AccountIdOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			let u_epoch = Self::user_point_epoch(addr);
+			if u_epoch == U256::zero() {
+				return Ok(Zero::zero());
+			} else {
+				let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
+					Self::user_point_history(addr, u_epoch);
+
+				log::debug!(
+					"balance_of---:{:?}_t:{:?}last_point.ts:{:?}",
+					(current_block_number.saturated_into::<u128>() as i128)
+						.saturating_sub(last_point.ts.saturated_into::<u128>() as i128),
+					current_block_number,
+					last_point.ts
+				);
+				last_point.bias = last_point
+					.bias
+					.checked_sub(
+						last_point
+							.slope
+							.checked_mul(
+								(current_block_number.saturated_into::<u128>() as i128)
+									.checked_sub(last_point.ts.saturated_into::<u128>() as i128)
+									.ok_or(ArithmeticError::Overflow)?,
+							)
+							.ok_or(ArithmeticError::Overflow)?,
+					)
+					.ok_or(ArithmeticError::Overflow)?;
+
+				if last_point.bias < 0_i128 {
+					last_point.bias = 0_i128
+				}
+
+				Ok(last_point
+					.amt
+					.checked_add(
+						&Self::ve_configs()
+							.vote_weight_multiplier
+							.checked_mul(&(last_point.bias as u128).unique_saturated_into())
+							.ok_or(ArithmeticError::Overflow)?,
+					)
+					.ok_or(ArithmeticError::Overflow)?)
+			}
+		}
+
+		// Measure voting power of `addr` at block height `block`
+		#[transactional]
+		pub(crate) fn balance_of_at(
+			addr: &AccountIdOf<T>,
+			block: T::BlockNumber,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			ensure!(block <= current_block_number, Error::<T>::Expired);
+
+			// Binary search
+			let mut _min = U256::zero();
+			let mut _max = Self::user_point_epoch(addr);
+			for _i in 0..128 {
+				if _min >= _max {
+					break;
+				}
+				let _mid = (_min + _max + 1) / 2;
+
+				if Self::user_point_history(addr, _mid).blk <= block {
+					_min = _mid
+				} else {
+					_max = _mid - 1
+				}
+			}
+
+			let mut upoint: Point<BalanceOf<T>, T::BlockNumber> =
+				Self::user_point_history(addr, _min);
+			log::debug!("balance_of_at---_min:{:?}_max:{:?}upoint:{:?}", _min, _max, upoint);
+
+			let max_epoch: U256 = Self::epoch();
+			let _epoch: U256 = Self::find_block_epoch(block, max_epoch);
+			let point_0: Point<BalanceOf<T>, T::BlockNumber> = Self::point_history(_epoch);
+			let d_block;
+			let d_t;
+			if _epoch < max_epoch {
+				let point_1 = Self::point_history(_epoch + 1);
+				d_block = point_1.blk - point_0.blk;
+				d_t = point_1.ts - point_0.ts;
+			} else {
+				d_block = current_block_number - point_0.blk;
+				d_t = current_block_number - point_0.ts;
+			}
+
+			let mut block_time = point_0.ts;
+			if d_block != Zero::zero() {
+				block_time += (d_t.saturating_mul(block - point_0.blk))
+					.saturated_into::<u128>()
+					.saturating_div(d_block.saturated_into::<u128>())
+					.unique_saturated_into();
+			}
+			upoint.bias = upoint
+				.bias
+				.checked_sub(
+					upoint
+						.slope
+						.checked_mul(
+							(block_time.saturated_into::<u128>() as i128)
+								.checked_sub(upoint.ts.saturated_into::<u128>() as i128)
+								.ok_or(ArithmeticError::Overflow)?,
+						)
+						.ok_or(ArithmeticError::Overflow)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?;
+
+			if (upoint.bias >= 0_i128) || (upoint.amt >= Zero::zero()) {
+				Ok(upoint
+					.amt
+					.checked_add(
+						&Self::ve_configs()
+							.vote_weight_multiplier
+							.checked_mul(&(upoint.bias as u128).unique_saturated_into())
+							.ok_or(ArithmeticError::Overflow)?,
+					)
+					.ok_or(ArithmeticError::Overflow)?)
+			} else {
+				Ok(Zero::zero())
+			}
 		}
 	}
 }
