@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	agents::{PhalaCall, PhalaUtilityCall, SystemCall, VaultCall, WrappedBalancesCall, XcmCall},
+	agents::{
+		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XcmCall,
+	},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
@@ -35,10 +37,12 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{TokenSymbol, VtokenMintingOperator};
+use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
 	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom,
+		UniqueSaturatedInto, Zero,
 	},
 	DispatchResult, SaturatedConversion,
 };
@@ -834,6 +838,9 @@ impl<T: Config>
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
+		let self_sibling_parachain_account: [u8; 32] =
+			Sibling::from(T::ParachainId::get()).into_account_truncating();
+
 		Ok(Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
@@ -848,7 +855,7 @@ impl<T: Config>
 				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(Parachain(T::ParachainId::get().into())),
+					interior: X1(AccountId32 { network: Any, id: self_sibling_parachain_account }),
 				},
 			},
 		]))
@@ -898,7 +905,7 @@ impl<T: Config> PhalaAgent<T> {
 		let call_as_subaccount = {
 			// Temporary wrapping remark event in Kusama for ease use of backend service.
 			let remark_call =
-				PhalaCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+				PhalaCall::System(PhalaSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 			let mut all_calls = Vec::new();
 			all_calls.extend(calls.into_iter());
