@@ -1020,6 +1020,7 @@ dependencies = [
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
  "bifrost-system-maker",
+ "bifrost-system-staking",
  "bifrost-vesting",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
