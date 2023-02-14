@@ -73,7 +73,7 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
+	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -294,6 +294,7 @@ parameter_types! {
 	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
@@ -1169,6 +1170,13 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 	}
 }
 
+pub struct OnRefund;
+impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64 {
+		SystemStaking::on_refund(token_id, to, token_amount).ref_time()
+	}
+}
+
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1182,7 +1190,7 @@ impl bifrost_slp::Config for Runtime {
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = ();
+	type OnRefund = OnRefund;
 	type ParachainStaking = ();
 }
 
@@ -1209,6 +1217,27 @@ impl bifrost_farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const MaxTokenLen: u32 = 500;
+	pub const MaxFarmingPoolIdLen: u32 = 100;
+}
+
+impl bifrost_system_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type EnsureConfirmAsGovernance =
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
+	type FarmingInfo = Farming;
+	type VtokenMintingInterface = VtokenMinting;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type PalletId = SystemStakingPalletId;
+	type BlocksPerRound = BlocksPerRound;
+	type MaxTokenLen = MaxTokenLen;
+	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
 impl bifrost_system_maker::Config for Runtime {
@@ -1297,6 +1326,22 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
+pub struct OnRedeemSuccess;
+impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for OnRedeemSuccess {
+	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
+		SystemStaking::on_redeem_success(token_id, to, token_amount)
+	}
+
+	fn on_redeemed(
+		address: AccountId,
+		token_id: CurrencyId,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+		fee: Balance,
+	) -> Weight {
+		SystemStaking::on_redeemed(address, token_id, token_amount, vtoken_amount, fee)
+	}
+}
 
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
@@ -1315,7 +1360,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
-	type OnRedeemSuccess = ();
+	type OnRedeemSuccess = OnRedeemSuccess;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
@@ -1488,6 +1533,7 @@ construct_runtime! {
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 		TokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
+		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 	}
