@@ -659,8 +659,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 13;
 	pub const DesiredRunnersUp: u32 = 20;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
-	pub const MaxVoters: u32 = 10 * 1000;
-	pub const MaxCandidates: u32 = 1000;
+	pub const MaxVoters: u32 = 512;
+	pub const MaxCandidates: u32 = 64;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
