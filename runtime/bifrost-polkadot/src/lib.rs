@@ -649,7 +649,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * DOLLARS;
+	pub const CandidacyBond: Balance = 10_000 * DOLLARS;
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
 	pub const VotingBondBase: Balance = deposit(1, 64);
 	// additional data per vote is 32 bytes (account id).

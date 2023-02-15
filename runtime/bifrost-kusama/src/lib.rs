@@ -663,7 +663,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub CandidacyBond: Balance = 100 * dollar::<Runtime>(NativeCurrencyId::get());
+	pub CandidacyBond: Balance = 10_000 * dollar::<Runtime>(NativeCurrencyId::get());
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
 	pub VotingBondBase: Balance = deposit::<Runtime>(1, 64);
 	// additional data per vote is 32 bytes (account id).
