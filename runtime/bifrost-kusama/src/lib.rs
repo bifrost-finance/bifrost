@@ -662,7 +662,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub CandidacyBond: Balance = 100 * cent::<Runtime>(NativeCurrencyId::get());
+	pub CandidacyBond: Balance = 100 * dollar::<Runtime>(NativeCurrencyId::get());
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
 	pub VotingBondBase: Balance = deposit::<Runtime>(1, 64);
 	// additional data per vote is 32 bytes (account id).
@@ -672,8 +672,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 7;
 	pub const DesiredRunnersUp: u32 = 7;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
-	pub const MaxVoters: u32 = 10 * 1000;
-	pub const MaxCandidates: u32 = 1000;
+	pub const MaxVoters: u32 = 512;
+	pub const MaxCandidates: u32 = 64;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
