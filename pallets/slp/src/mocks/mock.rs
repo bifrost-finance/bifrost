@@ -75,12 +75,20 @@ construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Pallet, Call, Event}
 	}
 );
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
 	pub const RelayCurrencyId: CurrencyId = KSM;
+}
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = ();
 }
 
 parameter_types! {

@@ -25,10 +25,25 @@ use crate::{
 	Junctions::X2,
 	*,
 };
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, PalletId};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
+
+const validator_0_location: MultiLocation =
+	MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
+const validator_0_account_id_32: [u8; 32] =
+	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
+const validator_0_location_wrong: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X2(
+		Parachain(2004),
+		Junction::AccountId32 { network: Any, id: validator_0_account_id_32 },
+	),
+};
+
+const validator_1_location: MultiLocation =
+	MultiLocation { parents: 1, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
 
 #[test]
 fn initialize_phala_delegator_works() {
@@ -105,21 +120,6 @@ fn initialize_phala_delegator_works() {
 
 #[test]
 fn add_validator_works() {
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
-
-	let validator_0_account_id_32 =
-		hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
-			.into();
-
-	let validator_0_location_wrong = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: validator_0_account_id_32 },
-		),
-	};
-
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			Slp::add_validator(
@@ -170,34 +170,16 @@ fn add_validator_works() {
 
 #[test]
 fn phala_delegate_works() {
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
 	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
 	let subaccount_id_0: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0);
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
 			Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
-		),
-	};
-
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
-
-	let validator_1_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
-
-	let validator_0_account_id_32 =
-		hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
-			.into();
-
-	let validator_0_location_wrong = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: validator_0_account_id_32 },
 		),
 	};
 
@@ -335,9 +317,7 @@ fn initialize_preparation_setup() {
 }
 
 fn phala_xcm_setup() {
-	let treasury_account_id_32: [u8; 32] =
-		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-			.into();
+	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
 		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
@@ -396,13 +376,10 @@ fn phala_xcm_setup() {
 }
 
 fn phala_setup() {
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
-
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
 	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
 	let subaccount_id_0: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0);
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -437,20 +414,18 @@ fn phala_setup() {
 
 #[test]
 fn phala_bond_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32 },
 		),
 	};
-
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		let share_price_multilocation =
@@ -558,10 +533,10 @@ fn phala_bond_works() {
 
 #[test]
 fn phala_unbond_works() {
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
 	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
 	let subaccount_id_0: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0);
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -570,9 +545,6 @@ fn phala_unbond_works() {
 			Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
 		),
 	};
-
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		let share_price_multilocation =
@@ -709,9 +681,10 @@ fn phala_unbond_works() {
 
 #[test]
 fn phala_rebond_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -765,9 +738,10 @@ fn phala_rebond_works() {
 
 #[test]
 fn phala_undelegate_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -776,9 +750,6 @@ fn phala_undelegate_works() {
 			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
 		),
 	};
-
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -864,9 +835,10 @@ fn phala_undelegate_works() {
 
 #[test]
 fn phala_redelegate_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -875,9 +847,6 @@ fn phala_redelegate_works() {
 			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
 		),
 	};
-
-	let validator_1_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -936,9 +905,10 @@ fn phala_redelegate_works() {
 
 #[test]
 fn phala_liquidize_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1024,9 +994,10 @@ fn phala_liquidize_works() {
 
 #[test]
 fn phala_bond_confirm_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1100,9 +1071,10 @@ fn phala_bond_confirm_works() {
 
 #[test]
 fn phala_unbond_confirm_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1175,9 +1147,10 @@ fn phala_unbond_confirm_works() {
 
 #[test]
 fn phala_transfer_back_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1225,9 +1198,10 @@ fn phala_transfer_back_works() {
 
 #[test]
 fn phala_transfer_to_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1284,9 +1258,10 @@ fn phala_transfer_to_works() {
 
 #[test]
 fn supplement_fee_account_whitelist_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1299,31 +1274,20 @@ fn supplement_fee_account_whitelist_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		phala_setup();
-		let entrance_account_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
+		let entrance_account_id: AccountId = PalletId(*b"bf/vtkin").into_account_truncating();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 		let entrance_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
 		};
 
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
-
+		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
 
-		let source_account_id_32: [u8; 32] =
-			hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
-				.into();
+		let source_account_id_32: [u8; 32] = ALICE.into();
 		let source_location = Slp::account_32_to_local_location(source_account_id_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
@@ -1411,9 +1375,10 @@ fn supplement_fee_account_whitelist_works() {
 
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1424,11 +1389,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
-		let treasury_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+		let treasury_id: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
+		let treasury_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 
 		phala_setup();
 
@@ -1498,9 +1460,10 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 #[test]
 fn add_validator_and_remove_validator_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1509,9 +1472,6 @@ fn add_validator_and_remove_validator_works() {
 			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
 		),
 	};
-
-	let validator_0_location =
-		MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
@@ -1553,9 +1513,10 @@ fn add_validator_and_remove_validator_works() {
 
 #[test]
 fn phala_convert_asset_works() {
-	let subaccount_0_account_id_32: AccountId =
-		hex_literal::hex!["290bf94235666a351d9c8082c77e689813a905d0bbffdbd8b4a619ec5303ba27"]
-			.into();
+	let bifrost_parachain_account_id: AccountId = Sibling::from(2001).into_account_truncating();
+	// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
+	let subaccount_0_account_id_32: [u8; 32] =
+		Utility::derivative_account_id(bifrost_parachain_account_id, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
