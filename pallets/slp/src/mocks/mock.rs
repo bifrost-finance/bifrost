@@ -20,10 +20,9 @@
 
 #![cfg(test)]
 
-use bifrost_asset_registry::AssetIdMaps;
-// use parachain_staking::ParachainStakingInterface;
 use crate as bifrost_slp;
 use crate::{Config, QueryResponseManager};
+use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -59,6 +58,8 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
 pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
+#[cfg(feature = "runtime-benchmarks")]
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 
 construct_runtime!(
 	pub enum Runtime where
