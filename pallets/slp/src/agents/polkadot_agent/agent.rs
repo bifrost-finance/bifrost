@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	agents::{
-		KusamaCall, KusamaUtilityCall, PolkadotCall, PolkadotUtilityCall, RewardDestination,
-		StakingCall, SubstrateCall, SystemCall, XcmCall,
+		KusamaCall, KusamaUtilityCall, PolkadotCall, PolkadotUtilityCall, StakingCall,
+		SubstrateCall, SystemCall, XcmCall,
 	},
 	pallet::{Error, Event},
 	primitives::{
@@ -116,19 +116,7 @@ impl<T: Config>
 		let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
 
 		// Construct xcm message.
-		let call = match currency_id {
-			KSM => Ok(SubstrateCall::Kusama(KusamaCall::Staking(StakingCall::Bond(
-				T::Lookup::unlookup(delegator_account),
-				amount,
-				RewardDestination::<AccountIdOf<T>>::Staked,
-			)))),
-			DOT => Ok(SubstrateCall::Polkadot(PolkadotCall::Staking(StakingCall::Bond(
-				T::Lookup::unlookup(delegator_account),
-				amount,
-				RewardDestination::<AccountIdOf<T>>::Staked,
-			)))),
-			_ => Err(Error::NotSupportedCurrencyId),
-		}?;
+		let call = SubstrateCall::getBondCall(currency_id, amount)?;
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.

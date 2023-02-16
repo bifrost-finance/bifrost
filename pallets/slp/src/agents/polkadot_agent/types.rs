@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{AccountIdOf, CurrencyId};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
@@ -29,6 +30,30 @@ use crate::{BalanceOf, Config};
 pub enum SubstrateCall<T: Config> {
 	Kusama(KusamaCall<T>),
 	Polkadot(PolkadotCall<T>),
+}
+
+impl<T: Config> SubstrateCall<T> {
+	pub fn getBondCall(
+		currency_id: CurrencyId,
+		amount: AccountIdOf<T>,
+		delegator_account: T::AccountId,
+	) -> Result<Self, Error<T>> {
+		let call = match currency_id {
+			KSM => Ok(Self::Kusama(KusamaCall::Staking(StakingCall::Bond(
+				T::Lookup::unlookup(delegator_account),
+				amount,
+				RewardDestination::<AccountIdOf<T>>::Staked,
+			)))),
+			DOT => Ok(Self::Polkadot(PolkadotCall::Staking(StakingCall::Bond(
+				T::Lookup::unlookup(delegator_account),
+				amount,
+				RewardDestination::<AccountIdOf<T>>::Staked,
+			)))),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}?;
+
+		Ok(call)
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
