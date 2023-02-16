@@ -386,7 +386,11 @@ pub mod pallet {
 				);
 			}
 			let mut last_checkpoint = last_point.block;
-			let mut t_i: T::BlockNumber = (last_checkpoint / T::Week::get()) * T::Week::get();
+			let mut t_i: T::BlockNumber = last_checkpoint
+				.checked_div(&T::Week::get())
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_mul(&T::Week::get())
+				.ok_or(ArithmeticError::Overflow)?;
 			for _i in 0..255 {
 				t_i += T::Week::get();
 				let mut d_slope = Zero::zero();

@@ -45,7 +45,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
-		let unlock_time: T::BlockNumber = (_unlock_time / T::Week::get()) * T::Week::get();
+		let unlock_time: T::BlockNumber = _unlock_time
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(
@@ -74,7 +78,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
-		let unlock_time: T::BlockNumber = (_unlock_time / T::Week::get()) * T::Week::get();
+		let unlock_time: T::BlockNumber = _unlock_time
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired);
@@ -179,7 +187,12 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		t: T::BlockNumber,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let mut last_point = point;
-		let mut t_i: T::BlockNumber = (last_point.block / T::Week::get()) * T::Week::get();
+		let mut t_i: T::BlockNumber = last_point
+			.block
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
 		for _i in 0..255 {
 			t_i += T::Week::get();
 			let mut d_slope = Zero::zero();

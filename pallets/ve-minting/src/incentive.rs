@@ -46,7 +46,15 @@ impl<T: Config> Pallet<T> {
 		if _total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
-		conf.reward_rate.iter().for_each(|(currency, reward)| {
+		conf.reward_rate.iter().for_each(|(currency, &reward)| {
+			let increment:BalanceOf<T> = U256::from(
+				Self::last_time_reward_applicable().saturating_sub(conf.last_update_time).saturated_into::<u128>())
+			.saturating_mul(U256::from(reward.saturated_into::<u128>()))
+			.saturating_mul(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+			.checked_div(U256::from(_total_supply.saturated_into::<u128>()))
+			.unwrap_or_default()
+			.as_u128()
+			.unique_saturated_into();
 			conf.reward_per_token_stored
 				.entry(*currency)
 				.and_modify(|total_reward| {
@@ -58,15 +66,9 @@ impl<T: Config> Pallet<T> {
 						total_reward
 					);
 					*total_reward = total_reward
-						.saturating_add(T::BlockNumberToBalance::convert(
-							Self::last_time_reward_applicable().saturating_sub(conf.last_update_time)
-						)
-						.saturating_mul(*reward)
-						.saturating_mul(T::Multiplier::get())
-						.checked_div(&_total_supply)
-						.unwrap_or_default())
+						.saturating_add(increment)
 				})
-				.or_insert(*reward);
+				.or_insert(increment);
 		});
 
 		IncentiveConfigs::<T>::set(conf.clone());
@@ -89,21 +91,25 @@ impl<T: Config> Pallet<T> {
 				.entry(*currency)
 				.and_modify(|total_reward| {
 					*total_reward = total_reward.saturating_add(
-						vetoken_balance
-							.saturating_mul(
-								reward.saturating_sub(
-									*Self::user_reward_per_token_paid(addr)
-										.get(currency)
-										.unwrap_or(&BalanceOf::<T>::zero()),
-								),
-							)
-							.checked_div(&T::Multiplier::get())
-							.unwrap_or_default(),
+						U256::from(vetoken_balance.saturated_into::<u128>())
+							.saturating_mul(U256::from(
+								reward
+									.saturating_sub(
+										*Self::user_reward_per_token_paid(addr)
+											.get(currency)
+											.unwrap_or(&BalanceOf::<T>::zero()),
+									)
+									.saturated_into::<u128>(),
+							))
+							.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+							.unwrap_or_default()
+							.as_u128()
+							.unique_saturated_into(),
 					);
 				})
 				.or_insert(
-					vetoken_balance
-						.saturating_mul(
+					U256::from(vetoken_balance.saturated_into::<u128>())
+						.saturating_mul(U256::from(
 							Self::reward_per_token()?
 								.get(currency)
 								.unwrap_or(&BalanceOf::<T>::zero())
@@ -111,10 +117,13 @@ impl<T: Config> Pallet<T> {
 									*Self::user_reward_per_token_paid(addr)
 										.get(currency)
 										.unwrap_or(&BalanceOf::<T>::zero()),
-								),
-						)
-						.checked_div(&T::Multiplier::get())
-						.unwrap_or_default(),
+								)
+								.saturated_into::<u128>(),
+						))
+						.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+						.unwrap_or_default()
+						.as_u128()
+						.unique_saturated_into(),
 				);
 			Ok(())
 		})?;

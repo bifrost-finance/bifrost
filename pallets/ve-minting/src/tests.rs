@@ -116,15 +116,16 @@ fn notify_reward_amount() {
 		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::signed(ALICE),
-			Some(7 * 86400),
+			Some(7 * 86400 / 12),
 			rewards
 		));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::get_reward(&BOB));
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 659);
-		System::set_block_number(System::block_number() + 20000000000);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 396819);
+		System::set_block_number(System::block_number() + 7 * 86400 / 12);
 		assert_ok!(VeMinting::get_reward(&BOB));
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 999701999);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
 	});
 }
 
