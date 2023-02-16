@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet::Error, primitives::KSM, AccountIdOf, BalanceOf, Config, CurrencyId};
+use crate::{pallet::Error, primitives::KSM, vec, AccountIdOf, BalanceOf, Config, CurrencyId};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::DOT;
