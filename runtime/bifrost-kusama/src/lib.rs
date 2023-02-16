@@ -1641,15 +1641,25 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
+parameter_types! {
+	pub const Week: BlockNumber = WEEKS;
+	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
+}
+
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type Currency = Balances;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.

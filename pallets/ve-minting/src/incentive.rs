@@ -39,7 +39,6 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	#[transactional]
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
@@ -63,7 +62,7 @@ impl<T: Config> Pallet<T> {
 							Self::last_time_reward_applicable().saturating_sub(conf.last_update_time)
 						)
 						.saturating_mul(*reward)
-						.saturating_mul(Self::ve_configs().multiplier.unique_saturated_into())
+						.saturating_mul(T::Multiplier::get())
 						.checked_div(&_total_supply)
 						.unwrap_or_default())
 				})
@@ -74,7 +73,6 @@ impl<T: Config> Pallet<T> {
 		Ok(conf.reward_per_token_stored)
 	}
 
-	#[transactional]
 	pub fn earned(
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
@@ -99,7 +97,7 @@ impl<T: Config> Pallet<T> {
 										.unwrap_or(&BalanceOf::<T>::zero()),
 								),
 							)
-							.checked_div(&Self::ve_configs().multiplier.unique_saturated_into())
+							.checked_div(&T::Multiplier::get())
 							.unwrap_or_default(),
 					);
 				})
@@ -115,7 +113,7 @@ impl<T: Config> Pallet<T> {
 										.unwrap_or(&BalanceOf::<T>::zero()),
 								),
 						)
-						.checked_div(&Self::ve_configs().multiplier.unique_saturated_into())
+						.checked_div(&T::Multiplier::get())
 						.unwrap_or_default(),
 				);
 			Ok(())
@@ -123,7 +121,6 @@ impl<T: Config> Pallet<T> {
 		Ok(rewards)
 	}
 
-	#[transactional]
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
 
@@ -143,7 +140,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	#[transactional]
 	pub fn get_reward(addr: &AccountIdOf<T>) -> DispatchResult {
 		Self::update_reward(Some(addr))?;
 
@@ -163,7 +159,6 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Motion
-	#[transactional]
 	pub fn notify_reward_amount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();

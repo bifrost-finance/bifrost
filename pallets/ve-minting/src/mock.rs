@@ -244,19 +244,24 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
 	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type Currency = Balances;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
-	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
