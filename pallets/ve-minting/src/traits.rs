@@ -44,6 +44,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		_unlock_time: T::BlockNumber,
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
+		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
+
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		let unlock_time: T::BlockNumber = _unlock_time
 			.checked_div(&T::Week::get())
@@ -105,7 +107,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	}
 
 	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
-		ensure!(value > Zero::zero(), Error::<T>::NotEnoughBalance);
+		let ve_config = Self::ve_configs();
+		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();

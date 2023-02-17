@@ -509,9 +509,6 @@ pub mod pallet {
 			unlock_time: T::BlockNumber,
 			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
-			let ve_config = Self::ve_configs();
-			ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
-
 			let current_block_number: T::BlockNumber =
 				frame_system::Pallet::<T>::block_number().into();
 			let mut _locked = locked_balance;
