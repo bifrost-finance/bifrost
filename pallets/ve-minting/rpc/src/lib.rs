@@ -25,7 +25,7 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
+use node_primitives::Balance;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::U256;
@@ -55,7 +55,11 @@ pub struct VeMintingRpc<C, Block> {
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> VeMintingRpc<C, Block> {
+impl<C, Block> VeMintingRpc<C, Block>
+where
+	Block: BlockT,
+	C: BlockIdTo<Block>,
+{
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
@@ -69,7 +73,7 @@ where
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockIdTo<Block>,
 	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
-	CallError: From<<C as BlockIdTo<Block>>::Error>,
+	// CallError: From<<C as BlockIdTo<Block>>::Error>,
 {
 	fn balance_of(
 		&self,
@@ -85,7 +89,13 @@ where
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
 			})
-			.map_err(|e| jsonrpsee::core::Error::Call(e.into()))?;
+			.map_err(|e| {
+				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InternalError.code(),
+					"Failed to get balance_of.",
+					Some(format!("{:?}", e)),
+				)))
+			})?;
 
 		let rs: Result<Balance, _> = lm_rpc_api.balance_of(&at, who, block_number);
 
@@ -110,15 +120,15 @@ where
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
 			})
-			.map_err(|e| jsonrpsee::core::Error::Call(e.into()))?
-			.ok_or_else(|| {
+			.map_err(|e| {
 				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
 					ErrorCode::InternalError.code(),
-					"Cannot get block_number",
-					Some(format!("Cannot get block_number")),
+					"Failed to get total_supply.",
+					Some(format!("{:?}", e)),
 				)))
 			})?;
-		let rs: Result<Balance, _> = lm_rpc_api.total_supply(&at, block_number);
+		let rs: Result<Balance, _> =
+			lm_rpc_api.total_supply(&at, block_number.expect("no block found"));
 
 		match rs {
 			Ok(supply) => Ok(NumberOrHex::Hex(supply.into())),
@@ -145,15 +155,15 @@ where
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
 			})
-			.map_err(|e| jsonrpsee::core::Error::Call(e.into()))?
-			.ok_or_else(|| {
+			.map_err(|e| {
 				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
 					ErrorCode::InternalError.code(),
-					"Cannot get block_number",
-					Some(format!("Cannot get block_number")),
+					"Failed to get find_block_epoch.",
+					Some(format!("{:?}", e)),
 				)))
 			})?;
-		let rs: Result<U256, _> = lm_rpc_api.find_block_epoch(&at, block_number, max_epoch);
+		let rs: Result<U256, _> =
+			lm_rpc_api.find_block_epoch(&at, block_number.expect("no block found"), max_epoch);
 
 		match rs {
 			Ok(epoch) => Ok(NumberOrHex::Hex(epoch.into())),

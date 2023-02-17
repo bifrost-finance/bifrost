@@ -51,7 +51,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::OpaqueMetadata;
+use sp_core::{OpaqueMetadata, U256};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
@@ -78,6 +78,7 @@ use bifrost_runtime_common::{
 	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
+use bifrost_ve_minting::traits::VeMintingInterface;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -299,6 +300,8 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 }
 
 impl frame_system::Config for Runtime {
@@ -1366,6 +1369,27 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
+parameter_types! {
+	pub const Week: BlockNumber = WEEKS;
+	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1536,6 +1560,7 @@ construct_runtime! {
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 	}
 }
 
@@ -1799,6 +1824,28 @@ impl_runtime_apis! {
 
 		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+	}
+
+	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
+		fn balance_of(
+			who: AccountId,
+			t: Option<node_primitives::BlockNumber>,
+		) -> Balance{
+			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
+		}
+
+		fn total_supply(
+			t: node_primitives::BlockNumber,
+		) -> Balance{
+			VeMinting::total_supply(t).unwrap_or(Zero::zero())
+		}
+
+		fn find_block_epoch(
+			block: node_primitives::BlockNumber,
+			max_epoch: U256,
+		) -> U256{
+			VeMinting::find_block_epoch(block, max_epoch)
 		}
 	}
 
