@@ -1377,6 +1377,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-ve-minting-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-ve-minting-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
 name = "bifrost-ve-minting-rpc-runtime-api"
 version = "0.8.0"
 dependencies = [
@@ -6017,6 +6033,8 @@ dependencies = [
  "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-ve-minting-rpc-api",
+ "bifrost-ve-minting-rpc-runtime-api",
  "jsonrpsee",
  "node-primitives",
  "pallet-transaction-payment-rpc",

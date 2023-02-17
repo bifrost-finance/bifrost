@@ -70,7 +70,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,
 	min_mint: Balance,
-	min_time: BlockNumber,
+	min_block: BlockNumber,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -252,8 +252,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			min_mint: Option<BalanceOf<T>>,   // Minimum mint balance
-			min_time: Option<T::BlockNumber>, // Minimum lockup time
+			min_mint: Option<BalanceOf<T>>,    // Minimum mint balance
+			min_block: Option<T::BlockNumber>, // Minimum lockup time
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -261,8 +261,8 @@ pub mod pallet {
 			if let Some(min_mint) = min_mint {
 				ve_config.min_mint = min_mint;
 			};
-			if let Some(min_time) = min_time {
-				ve_config.min_time = min_time;
+			if let Some(min_block) = min_block {
+				ve_config.min_block = min_block;
 			};
 			VeConfigs::<T>::set(ve_config.clone());
 

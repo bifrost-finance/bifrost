@@ -53,7 +53,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(
-			unlock_time > ve_config.min_time.saturating_add(current_block_number),
+			unlock_time > ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
 		ensure!(
@@ -86,7 +86,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired);
-		ensure!(unlock_time >= ve_config.min_time.saturating_add(_locked.end), Error::<T>::Expired);
+		ensure!(
+			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
+			Error::<T>::Expired
+		);
 		ensure!(
 			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
