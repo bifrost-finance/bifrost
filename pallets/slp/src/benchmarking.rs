@@ -555,7 +555,7 @@ benchmarks! {
 		let call = Call::<T>::charge_host_fee_and_tune_vtoken_exchange_rate {
 			currency_id:KSM,
 			value:BalanceOf::<T>::unique_saturated_from(100u128),
-			who:Some(subaccount_0_location.clone())
+			who:Some(subaccount_0_location.clone()),
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
