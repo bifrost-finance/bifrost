@@ -16,17 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{traits::VeMintingInterface, *};
+use crate::{
+	traits::{Incentive, VeMintingInterface},
+	*,
+};
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber> {
-	reward_rate: BTreeMap<CurrencyId, Balance>,
-	reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
 	pub rewards_duration: BlockNumber,
-	period_finish: BlockNumber,
-	last_update_time: BlockNumber,
+	pub period_finish: BlockNumber,
+	pub last_update_time: BlockNumber,
 }
 
 impl<T: Config> Pallet<T> {
@@ -174,52 +177,18 @@ impl<T: Config> Pallet<T> {
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 
 		if current_block_number >= conf.period_finish {
-			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-				let currency_amount = T::MultiCurrency::free_balance(
-					*currency,
-					&T::IncentivePalletId::get().into_account_truncating(),
-				);
-				ensure!(*reward <= currency_amount, Error::<T>::NotEnoughBalance);
-				let new_reward = reward
-					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
-					.ok_or(ArithmeticError::Overflow)?;
-				conf.reward_rate
-					.entry(*currency)
-					.and_modify(|total_reward| {
-						*total_reward = new_reward;
-					})
-					.or_insert(new_reward);
-				Ok(())
-			})?;
+			Self::add_reward(&mut conf, &rewards, Zero::zero())?;
 		} else {
 			let remaining = T::BlockNumberToBalance::convert(
 				conf.period_finish.saturating_sub(current_block_number),
 			);
-			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-				let leftover: BalanceOf<T> = reward.saturating_mul(remaining);
-				let total_reward: BalanceOf<T> = reward.saturating_add(leftover);
-				let currency_amount = T::MultiCurrency::free_balance(
-					*currency,
-					&T::IncentivePalletId::get().into_account_truncating(),
-				);
-				ensure!(total_reward <= currency_amount, Error::<T>::NotEnoughBalance);
-				let new_reward = total_reward
-					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
-					.ok_or(ArithmeticError::Overflow)?;
-				conf.reward_rate
-					.entry(*currency)
-					.and_modify(|total_reward| {
-						*total_reward = new_reward;
-					})
-					.or_insert(new_reward);
-				Ok(())
-			})?;
+			Self::add_reward(&mut conf, &rewards, remaining)?;
 		};
 
 		conf.last_update_time = current_block_number;
 		conf.period_finish = current_block_number.saturating_add(conf.rewards_duration);
-
 		IncentiveConfigs::<T>::set(conf);
+
 		Self::deposit_event(Event::RewardAdded { rewards });
 		Ok(())
 	}

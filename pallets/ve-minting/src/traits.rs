@@ -44,7 +44,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		_unlock_time: T::BlockNumber,
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
-		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
+		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		let unlock_time: T::BlockNumber = _unlock_time
@@ -241,5 +241,48 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 					.ok_or(ArithmeticError::Overflow)?,
 			)
 			.ok_or(ArithmeticError::Overflow)?)
+	}
+}
+
+pub trait Incentive<CurrencyId, Balance, BlockNumber> {
+	fn add_reward(
+		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber>,
+		rewards: &Vec<(CurrencyId, Balance)>,
+		remaining: Balance,
+	) -> DispatchResult;
+}
+
+impl<T: Config> Incentive<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> for Pallet<T> {
+	fn add_reward(
+		conf: &mut IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,
+		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		remaining: BalanceOf<T>,
+	) -> DispatchResult {
+		rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+			let mut total_reward: BalanceOf<T> = *reward;
+			if remaining != Zero::zero() {
+				let leftover: BalanceOf<T> = conf
+					.reward_rate
+					.get(currency)
+					.unwrap_or(&Zero::zero())
+					.saturating_mul(remaining);
+				total_reward = total_reward.saturating_add(leftover);
+			}
+			let currency_amount = T::MultiCurrency::free_balance(
+				*currency,
+				&T::IncentivePalletId::get().into_account_truncating(),
+			);
+			ensure!(total_reward <= currency_amount, Error::<T>::NotEnoughBalance);
+			let new_reward = total_reward
+				.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
+				.ok_or(ArithmeticError::Overflow)?;
+			conf.reward_rate
+				.entry(*currency)
+				.and_modify(|total_reward| {
+					*total_reward = new_reward;
+				})
+				.or_insert(new_reward);
+			Ok(())
+		})
 	}
 }
