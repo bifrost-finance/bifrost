@@ -55,7 +55,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 		ensure!(
-			unlock_time > ve_config.min_block.saturating_add(current_block_number),
+			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
 		ensure!(
@@ -63,7 +63,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			Error::<T>::Expired
 		);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
-		ensure!(_value >= ve_config.min_mint, Error::<T>::NotEnoughBalance); // need non-zero value
 
 		Self::_deposit_for(addr, _value, unlock_time, _locked)?;
 		Self::deposit_event(Event::LockCreated {
@@ -87,7 +86,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			.ok_or(ArithmeticError::Overflow)?;
 
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
-		ensure!(_locked.end > current_block_number, Error::<T>::Expired);
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
 			Error::<T>::Expired
@@ -97,6 +95,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			Error::<T>::Expired
 		);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
+		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
 		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)?;
 		Self::deposit_event(Event::UnlockTimeIncreased {
@@ -112,7 +111,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
-		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired lock
+		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)?;
 		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
 		Ok(())

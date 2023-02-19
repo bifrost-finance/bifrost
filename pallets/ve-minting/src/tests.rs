@@ -162,16 +162,70 @@ fn create_lock_to_withdraw() {
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
+		assert_noop!(
+			VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000_000_000_000),
+			Error::<Runtime>::LockNotExist
+		);
+		assert_noop!(
+			VeMinting::increase_unlock_time(
+				RuntimeOrigin::signed(BOB),
+				System::block_number() + 365 * 86400 / 12
+			),
+			Error::<Runtime>::LockNotExist
+		);
+		assert_noop!(
+			VeMinting::create_lock(
+				RuntimeOrigin::signed(BOB),
+				50_000_000_000_000,
+				System::block_number() + 5 * 365 * 86400 / 12
+			),
+			Error::<Runtime>::Expired
+		);
+		assert_noop!(
+			VeMinting::create_lock(
+				RuntimeOrigin::signed(BOB),
+				50_000_000_000_000,
+				System::block_number() + 7 * 86400 / 12 - 1
+			),
+			Error::<Runtime>::Expired
+		);
+		assert_noop!(
+			VeMinting::create_lock(
+				RuntimeOrigin::signed(BOB),
+				50_000,
+				System::block_number() + 7 * 86400 / 12
+			),
+			Error::<Runtime>::BelowMinimumMint
+		);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			50_000_000_000_000,
 			System::block_number() + 365 * 86400 / 12
 		));
+		assert_noop!(
+			VeMinting::_create_lock(
+				&BOB,
+				50_000_000_000_000,
+				System::block_number() + 365 * 86400 / 12
+			),
+			Error::<Runtime>::LockExist
+		);
+		assert_noop!(
+			VeMinting::increase_unlock_time(
+				RuntimeOrigin::signed(BOB),
+				System::block_number() + 5 * 365 * 86400 / 12
+			),
+			Error::<Runtime>::Expired
+		);
 		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number()), Ok(87397254003200));
 		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number() - 10), Ok(0));
 		assert_eq!(VeMinting::balance_of_at(&BOB, 0), Ok(0));
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number() - 10)), Ok(0));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(87397254003200));
+		assert_noop!(
+			VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000),
+			Error::<Runtime>::BelowMinimumMint
+		);
 		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 50_000_000_000_000));
 		log::debug!(
 			"3System::block_number():{:?} total_supply:{:?}",
