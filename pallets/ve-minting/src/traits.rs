@@ -138,7 +138,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		// BNC should be transferred before checkpoint
 		T::MultiCurrency::transfer(
-			BNC,
+			T::TokenType::get(),
 			&T::VeMintingPalletId::get().into_account_truncating(),
 			addr,
 			value,
@@ -276,7 +276,8 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::Bloc
 				*currency,
 				&T::IncentivePalletId::get().into_account_truncating(),
 			);
-			// Make sure the new reward is less than or equal to the reward owned by the IncentivePalletId
+			// Make sure the new reward is less than or equal to the reward owned by the
+			// IncentivePalletId
 			ensure!(
 				total_reward <= currency_amount.saturating_add(*reward),
 				Error::<T>::NotEnoughBalance

@@ -45,15 +45,13 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::CurrencyId;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 use traits::VeMintingInterface;
 pub use weights::WeightInfo;
-
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 
 #[allow(type_alias_bounds)]
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -105,6 +103,9 @@ pub mod pallet {
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		type TokenType: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
@@ -382,7 +383,7 @@ pub mod pallet {
 				last_point = Self::point_history(g_epoch);
 			} else {
 				last_point.amount = T::MultiCurrency::free_balance(
-					BNC,
+					T::TokenType::get(),
 					&T::VeMintingPalletId::get().into_account_truncating(),
 				);
 			}
@@ -434,7 +435,7 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
 					last_point.amount = T::MultiCurrency::free_balance(
-						BNC,
+						T::TokenType::get(),
 						&T::VeMintingPalletId::get().into_account_truncating(),
 					);
 					break;
@@ -525,7 +526,7 @@ pub mod pallet {
 
 			if value != BalanceOf::<T>::zero() {
 				T::MultiCurrency::transfer(
-					BNC,
+					T::TokenType::get(),
 					addr,
 					&T::VeMintingPalletId::get().into_account_truncating(),
 					value,
