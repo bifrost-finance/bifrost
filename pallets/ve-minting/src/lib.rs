@@ -306,6 +306,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn notify_rewards(
 			origin: OriginFor<T>,
+			incentive_from: AccountIdOf<T>,
 			rewards_duration: Option<T::BlockNumber>,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
@@ -317,7 +318,7 @@ pub mod pallet {
 				IncentiveConfigs::<T>::set(incentive_config);
 			};
 
-			Self::notify_reward_amount(rewards)
+			Self::notify_reward_amount(&incentive_from, rewards)
 		}
 	}
 

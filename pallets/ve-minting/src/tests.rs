@@ -116,6 +116,7 @@ fn notify_reward_amount() {
 		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::signed(ALICE),
+			ALICE,
 			Some(7 * 86400 / 12),
 			rewards
 		));
@@ -149,6 +150,7 @@ fn create_lock_to_withdraw() {
 		let rewards = vec![(KSM, 1000)];
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::signed(ALICE),
+			ALICE,
 			Some(7 * 86400 / 12),
 			rewards
 		));

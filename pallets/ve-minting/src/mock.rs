@@ -367,12 +367,11 @@ impl ExtBuilder {
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
 			(ALICE, BNC, 1_000_000_000_000),
+			(ALICE, KSM, 1_000_000_000_000),
 			(BOB, BNC, 1_000_000_000_000),
 			(BOB, vKSM, 1_000_000_000_000),
 			(BOB, MOVR, 1_000_000_000_000),
 			(CHARLIE, MOVR, 1_000_000_000_000),
-			(IncentivePalletId::get().into_account_truncating(), BNC, 1_000_000_000_000),
-			(IncentivePalletId::get().into_account_truncating(), KSM, 1_000_000_000_000_000),
 		])
 	}
 

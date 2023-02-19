@@ -171,18 +171,21 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Motion
-	pub fn notify_reward_amount(rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>) -> DispatchResult {
+	pub fn notify_reward_amount(
+		addr: &AccountIdOf<T>,
+		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
 
 		if current_block_number >= conf.period_finish {
-			Self::add_reward(&mut conf, &rewards, Zero::zero())?;
+			Self::add_reward(addr, &mut conf, &rewards, Zero::zero())?;
 		} else {
 			let remaining = T::BlockNumberToBalance::convert(
 				conf.period_finish.saturating_sub(current_block_number),
 			);
-			Self::add_reward(&mut conf, &rewards, remaining)?;
+			Self::add_reward(addr, &mut conf, &rewards, remaining)?;
 		};
 
 		conf.last_update_time = current_block_number;

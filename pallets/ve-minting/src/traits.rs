@@ -244,16 +244,20 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	}
 }
 
-pub trait Incentive<CurrencyId, Balance, BlockNumber> {
+pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn add_reward(
+		addr: &AccountId,
 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber>,
 		rewards: &Vec<(CurrencyId, Balance)>,
 		remaining: Balance,
 	) -> DispatchResult;
 }
 
-impl<T: Config> Incentive<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> for Pallet<T> {
+impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
+	for Pallet<T>
+{
 	fn add_reward(
+		addr: &AccountIdOf<T>,
 		conf: &mut IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,
 		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		remaining: BalanceOf<T>,
@@ -272,7 +276,11 @@ impl<T: Config> Incentive<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> for Pal
 				*currency,
 				&T::IncentivePalletId::get().into_account_truncating(),
 			);
-			ensure!(total_reward <= currency_amount, Error::<T>::NotEnoughBalance);
+			// Make sure the new reward is less than or equal to the reward owned by the IncentivePalletId
+			ensure!(
+				total_reward <= currency_amount.saturating_add(*reward),
+				Error::<T>::NotEnoughBalance
+			);
 			let new_reward = total_reward
 				.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
 				.ok_or(ArithmeticError::Overflow)?;
@@ -282,7 +290,12 @@ impl<T: Config> Incentive<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> for Pal
 					*total_reward = new_reward;
 				})
 				.or_insert(new_reward);
-			Ok(())
+			T::MultiCurrency::transfer(
+				*currency,
+				addr,
+				&T::IncentivePalletId::get().into_account_truncating(),
+				*reward,
+			)
 		})
 	}
 }
