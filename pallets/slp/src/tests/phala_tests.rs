@@ -30,19 +30,19 @@ use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
-const validator_0_location: MultiLocation =
+const VALIDATOR_0_LOCATION: MultiLocation =
 	MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
-const validator_0_account_id_32: [u8; 32] =
+const VALIDATOR_0_ACCOUNT_ID_32: [u8; 32] =
 	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
-const validator_0_location_wrong: MultiLocation = MultiLocation {
+const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2004),
-		Junction::AccountId32 { network: Any, id: validator_0_account_id_32 },
+		Junction::AccountId32 { network: Any, id: VALIDATOR_0_ACCOUNT_ID_32 },
 	),
 };
 
-const validator_1_location: MultiLocation =
+const VALIDATOR_1_LOCATION: MultiLocation =
 	MultiLocation { parents: 1, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
 
 #[test]
@@ -125,7 +125,7 @@ fn add_validator_works() {
 			Slp::add_validator(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(validator_0_location_wrong)
+				Box::new(VALIDATOR_0_LOCATION_WRONG)
 			),
 			Error::<Runtime>::ValidatorMultilocationNotvalid
 		);
@@ -134,7 +134,7 @@ fn add_validator_works() {
 			Slp::add_validator(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(validator_0_location.clone())
+				Box::new(VALIDATOR_0_LOCATION.clone())
 			),
 			Error::<Runtime>::NotExist
 		);
@@ -163,7 +163,7 @@ fn add_validator_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_0_location)
+			Box::new(VALIDATOR_0_LOCATION)
 		));
 	});
 }
@@ -192,7 +192,7 @@ fn phala_delegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location.clone()],
+				vec![VALIDATOR_0_LOCATION.clone()],
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -214,7 +214,7 @@ fn phala_delegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location_wrong],
+				vec![VALIDATOR_0_LOCATION_WRONG],
 			),
 			Error::<Runtime>::ValidatorError
 		);
@@ -224,7 +224,7 @@ fn phala_delegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location.clone()],
+				vec![VALIDATOR_0_LOCATION.clone()],
 			),
 			Error::<Runtime>::ValidatorSetNotExist
 		);
@@ -232,7 +232,7 @@ fn phala_delegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_1_location.clone())
+			Box::new(VALIDATOR_1_LOCATION.clone())
 		));
 
 		assert_noop!(
@@ -240,7 +240,7 @@ fn phala_delegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location.clone()],
+				vec![VALIDATOR_0_LOCATION.clone()],
 			),
 			Error::<Runtime>::ValidatorNotExist
 		);
@@ -248,14 +248,14 @@ fn phala_delegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_0_location.clone())
+			Box::new(VALIDATOR_0_LOCATION.clone())
 		));
 
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
+			vec![VALIDATOR_0_LOCATION.clone()],
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -400,7 +400,7 @@ fn phala_setup() {
 	assert_ok!(Slp::add_validator(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
-		Box::new(validator_0_location.clone()),
+		Box::new(VALIDATOR_0_LOCATION.clone()),
 	));
 
 	// delegate a validator for the delegator
@@ -408,7 +408,7 @@ fn phala_setup() {
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		Box::new(subaccount_0_location.clone()),
-		vec![validator_0_location.clone()],
+		vec![VALIDATOR_0_LOCATION.clone()],
 	));
 }
 
@@ -461,13 +461,13 @@ fn phala_bond_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_0_location.clone()),
+			Box::new(VALIDATOR_0_LOCATION.clone()),
 		));
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
+			vec![VALIDATOR_0_LOCATION.clone()],
 		));
 
 		phala_xcm_setup();
@@ -513,7 +513,7 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location.clone()),
 				1_000_000_000_000,
-				Some(validator_0_location.clone())
+				Some(VALIDATOR_0_LOCATION.clone())
 			),
 			Error::<Runtime>::DividedByZero
 		);
@@ -626,7 +626,7 @@ fn phala_unbond_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				Some(validator_0_location.clone()),
+				Some(VALIDATOR_0_LOCATION.clone()),
 				1_000_000,
 			),
 			Error::<Runtime>::DividedByZero
@@ -772,7 +772,7 @@ fn phala_undelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location.clone()],
+				vec![VALIDATOR_0_LOCATION.clone()],
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
@@ -794,7 +794,7 @@ fn phala_undelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location.clone()),
-				vec![validator_0_location.clone()],
+				vec![VALIDATOR_0_LOCATION.clone()],
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
@@ -815,7 +815,7 @@ fn phala_undelegate_works() {
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
+			vec![VALIDATOR_0_LOCATION.clone()],
 		));
 
 		let undelegated_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -878,14 +878,14 @@ fn phala_redelegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_1_location.clone())
+			Box::new(VALIDATOR_1_LOCATION.clone())
 		));
 
 		assert_ok!(Slp::redelegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location.clone()),
-			Some(vec![validator_1_location.clone()])
+			Some(vec![VALIDATOR_1_LOCATION.clone()])
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -1476,7 +1476,7 @@ fn add_validator_and_remove_validator_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
 		let multi_hash_0 =
-			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+			<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode());
 
 		initialize_preparation_setup();
 
@@ -1486,11 +1486,11 @@ fn add_validator_and_remove_validator_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_0_location.clone()),
+			Box::new(VALIDATOR_0_LOCATION.clone()),
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0));
 
 		assert_eq!(Slp::get_validators(PHA), Some(valis));
 
@@ -1498,13 +1498,13 @@ fn add_validator_and_remove_validator_works() {
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
+			vec![VALIDATOR_0_LOCATION.clone()],
 		));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(validator_0_location.clone()),
+			Box::new(VALIDATOR_0_LOCATION.clone()),
 		));
 
 		assert_eq!(Slp::get_validators(PHA), Some(vec![]));

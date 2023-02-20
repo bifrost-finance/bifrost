@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	agents::{
-		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XcmCall,
+		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XtransferCall,
 	},
 	pallet::{Error, Event},
 	primitives::{
@@ -54,7 +54,6 @@ use xcm::{
 		Junctions::X1,
 		MultiLocation,
 	},
-	VersionedMultiAssets,
 };
 use xcm_interface::traits::parachains;
 
@@ -525,27 +524,21 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		let (dest, beneficiary) =
-			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+		let dest_account_32 = Pallet::<T>::multilocation_to_account_32(to)?;
+		let dest = Pallet::<T>::account_32_to_parachain_location(
+			dest_account_32,
+			T::ParachainId::get().into(),
+		)?;
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(Self::get_pha_multilocation()),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
-
-		// Prepare parameter fee_asset_item.
-		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = PhalaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
-			dest,
-			beneficiary,
-			assets,
-			fee_asset_item,
-		)));
+		let call =
+			PhalaCall::Xtransfer(XtransferCall::Transfer(Box::new(asset), Box::new(dest), None));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.

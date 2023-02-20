@@ -16,13 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-	agents::{BalancesCall, XcmCall},
-	BalanceOf, Config,
-};
+use crate::{agents::BalancesCall, BalanceOf, Config, MultiLocation};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
+use xcm::{latest::Weight as XCMWeight, opaque::latest::MultiAsset};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum PhalaCall<T: Config> {
@@ -30,14 +28,20 @@ pub enum PhalaCall<T: Config> {
 	System(PhalaSystemCall),
 	#[codec(index = 3)]
 	Utility(Box<PhalaUtilityCall<Self>>),
-	#[codec(index = 33)]
-	Xcm(Box<XcmCall>),
 	#[codec(index = 40)]
 	Balances(BalancesCall<T>),
+	#[codec(index = 82)]
+	Xtransfer(XtransferCall),
 	#[codec(index = 94)]
 	PhalaVault(VaultCall<T>),
 	#[codec(index = 95)]
 	PhalaWrappedBalances(WrappedBalancesCall<T>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum XtransferCall {
+	#[codec(index = 0)]
+	Transfer(Box<MultiAsset>, Box<MultiLocation>, Option<XCMWeight>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]

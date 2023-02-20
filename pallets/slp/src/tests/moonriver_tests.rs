@@ -35,23 +35,23 @@ use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::opaque::latest::NetworkId::Any;
 
-const validator_0_account_id_20: [u8; 20] =
+const VALIDATOR_0_ACCOUNT_ID_20: [u8; 20] =
 	hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"];
-const validator_0_location: MultiLocation = MultiLocation {
+const VALIDATOR_0_LOCATION: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2023),
-		Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+		Junction::AccountKey20 { network: Any, key: VALIDATOR_0_ACCOUNT_ID_20 },
 	),
 };
 
-const validator_1_account_id_20: [u8; 20] =
+const VALIDATOR_1_ACCOUNT_ID_20: [u8; 20] =
 	hex_literal::hex!["f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac"];
-const validator_1_location: MultiLocation = MultiLocation {
+const VALIDATOR_1_LOCATION: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2023),
-		Junction::AccountKey20 { network: Any, key: validator_1_account_id_20 },
+		Junction::AccountKey20 { network: Any, key: VALIDATOR_1_ACCOUNT_ID_20 },
 	),
 };
 
@@ -277,7 +277,7 @@ fn moonriver_setup() {
 	assert_ok!(Slp::add_validator(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
-		Box::new(validator_0_location.clone()),
+		Box::new(VALIDATOR_0_LOCATION.clone()),
 	));
 
 	// initialize delegator
@@ -307,7 +307,7 @@ fn moonriver_bond_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				5_000_000_000_000_000_000,
-				Some(validator_0_location.clone())
+				Some(VALIDATOR_0_LOCATION.clone())
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -334,7 +334,7 @@ fn moonriver_bond_extra_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -359,7 +359,7 @@ fn moonriver_bond_extra_works() {
 				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
-				Some(validator_0_location),
+				Some(VALIDATOR_0_LOCATION),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure
@@ -387,7 +387,7 @@ fn moonriver_unbond_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -412,7 +412,7 @@ fn moonriver_unbond_works() {
 				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
-				Some(validator_0_location),
+				Some(VALIDATOR_0_LOCATION),
 				2_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure
@@ -440,7 +440,7 @@ fn moonriver_unbond_all_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -487,10 +487,10 @@ fn moonriver_rebond_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Decrease(2_000_000_000_000_000_000),
 		};
@@ -499,7 +499,7 @@ fn moonriver_rebond_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -522,7 +522,7 @@ fn moonriver_rebond_works() {
 				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
-				Some(validator_0_location.clone()),
+				Some(VALIDATOR_0_LOCATION.clone()),
 				None
 			),
 			Error::<Runtime>::XcmFailure
@@ -550,8 +550,8 @@ fn moonriver_undelegate_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
-		delegation_set.insert(validator_1_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_1_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -576,7 +576,7 @@ fn moonriver_undelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				MOVR,
 				Box::new(subaccount_0_location),
-				vec![validator_0_location],
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -603,10 +603,10 @@ fn moonriver_redelegate_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Revoke(8_000_000_000_000_000_000),
 		};
@@ -615,7 +615,7 @@ fn moonriver_redelegate_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 8_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 8_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -665,10 +665,10 @@ fn moonriver_liquidize_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Decrease(2_000_000_000_000_000_000),
 		};
@@ -679,7 +679,7 @@ fn moonriver_liquidize_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -703,7 +703,7 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone()),
+				Some(VALIDATOR_0_LOCATION.clone()),
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -723,17 +723,17 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone()),
+				Some(VALIDATOR_0_LOCATION.clone()),
 				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(50),
 			action: OneToManyDelegationAction::Revoke(10_000_000_000_000_000_000),
 		};
@@ -744,7 +744,7 @@ fn moonriver_liquidize_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set.insert(
-			validator_0_location.clone(),
+			VALIDATOR_0_LOCATION.clone(),
 			(TimeUnit::Round(50), 10_000_000_000_000_000_000),
 		);
 
@@ -770,7 +770,7 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location.clone()),
 				None,
-				Some(validator_0_location.clone()),
+				Some(VALIDATOR_0_LOCATION.clone()),
 				None
 			),
 			Error::<Runtime>::LeavingNotDue
@@ -790,7 +790,7 @@ fn moonriver_liquidize_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 				None,
-				Some(validator_0_location),
+				Some(VALIDATOR_0_LOCATION),
 				None
 			),
 			Error::<Runtime>::XcmFailure
@@ -840,7 +840,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		let update_entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Bond,
 			amount: 5_000_000_000_000_000_000,
 			unlock_time: None,
@@ -862,7 +862,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -889,7 +889,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		let update_entry_1 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Bond,
 			amount: 5_000_000_000_000_000_000,
 			unlock_time: None,
@@ -911,7 +911,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -955,7 +955,7 @@ fn moonriver_unbond_confirm_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -985,7 +985,7 @@ fn moonriver_unbond_confirm_works() {
 		let update_entry_2 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::BondLess,
 			amount: 2_000_000_000_000_000_000,
 			unlock_time: Some(TimeUnit::Round(24)),
@@ -1007,9 +1007,9 @@ fn moonriver_unbond_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Decrease(2_000_000_000_000_000_000),
 		};
@@ -1018,7 +1018,7 @@ fn moonriver_unbond_confirm_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -1043,7 +1043,7 @@ fn moonriver_unbond_confirm_works() {
 		let update_entry_3 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(0)),
@@ -1086,7 +1086,7 @@ fn moonriver_unbond_confirm_works() {
 		let update_entry_4 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(24)),
@@ -1108,7 +1108,7 @@ fn moonriver_unbond_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1153,7 +1153,7 @@ fn moonriver_unbond_all_confirm_works() {
 		// unbond_all confirm
 		// schedule leave
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1224,7 +1224,7 @@ fn moonriver_unbond_all_confirm_works() {
 		let update_entry_6 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteLeave,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(48)),
@@ -1287,9 +1287,9 @@ fn moonriver_rebond_confirm_works() {
 
 		// confirm rebond
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Decrease(2_000_000_000_000_000_000),
 		};
@@ -1298,7 +1298,7 @@ fn moonriver_rebond_confirm_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 2_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -1323,7 +1323,7 @@ fn moonriver_rebond_confirm_works() {
 		let update_entry_7 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::CancelRequest,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(48)),
@@ -1345,7 +1345,7 @@ fn moonriver_rebond_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 10_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 10_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1389,8 +1389,8 @@ fn moonriver_undelegate_confirm_works() {
 		moonriver_setup();
 		// undelegate confirm
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
-		delegation_set.insert(validator_1_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_1_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1414,7 +1414,7 @@ fn moonriver_undelegate_confirm_works() {
 		let update_entry_8 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::Revoke,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(24)),
@@ -1436,11 +1436,11 @@ fn moonriver_undelegate_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
-		delegation_set.insert(validator_1_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_1_LOCATION.clone(), 5_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::<Balance>::Revoke(5_000_000_000_000_000_000),
 		};
@@ -1450,7 +1450,7 @@ fn moonriver_undelegate_confirm_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 5_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 5_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -1475,7 +1475,7 @@ fn moonriver_undelegate_confirm_works() {
 		let update_entry_9 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(21)),
@@ -1501,7 +1501,7 @@ fn moonriver_undelegate_confirm_works() {
 		let update_entry_10 = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id: MOVR,
 			delegator_id: subaccount_0_location.clone(),
-			validator_id: Some(validator_0_location.clone()),
+			validator_id: Some(VALIDATOR_0_LOCATION.clone()),
 			update_operation: MoonbeamLedgerUpdateOperation::ExecuteRequest,
 			amount: 0,
 			unlock_time: Some(TimeUnit::Round(24)),
@@ -1523,7 +1523,7 @@ fn moonriver_undelegate_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_1_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_1_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1567,10 +1567,10 @@ fn moonriver_redelegate_confirm_works() {
 		moonriver_setup();
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 
 		let request = OneToManyScheduledRequest {
-			validator: validator_0_location.clone(),
+			validator: VALIDATOR_0_LOCATION.clone(),
 			when_executable: TimeUnit::Round(24),
 			action: OneToManyDelegationAction::Revoke(8_000_000_000_000_000_000),
 		};
@@ -1579,7 +1579,7 @@ fn moonriver_redelegate_confirm_works() {
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 		request_briefs_set
-			.insert(validator_0_location.clone(), (TimeUnit::Round(24), 8_000_000_000_000_000_000));
+			.insert(VALIDATOR_0_LOCATION.clone(), (TimeUnit::Round(24), 8_000_000_000_000_000_000));
 
 		// set delegator_0 ledger
 		let moonriver_ledger = OneToManyLedger {
@@ -1633,7 +1633,7 @@ fn moonriver_redelegate_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 8_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 8_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1895,7 +1895,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		MinimumsAndMaximums::<Runtime>::insert(MOVR, mins_and_maxs);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location.clone(), 5_000_000_000_000_000_000);
+		delegation_set.insert(VALIDATOR_0_LOCATION.clone(), 5_000_000_000_000_000_000);
 		let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
 
@@ -1969,7 +1969,7 @@ fn add_validator_and_remove_validator_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
 		let multi_hash_0 =
-			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
+			<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode());
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -1996,18 +1996,18 @@ fn add_validator_and_remove_validator_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			MOVR,
-			Box::new(validator_0_location.clone()),
+			Box::new(VALIDATOR_0_LOCATION.clone()),
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0));
 
 		assert_eq!(Slp::get_validators(MOVR), Some(valis));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
 			MOVR,
-			Box::new(validator_0_location.clone()),
+			Box::new(VALIDATOR_0_LOCATION.clone()),
 		));
 
 		assert_eq!(Slp::get_validators(MOVR), Some(vec![]));
