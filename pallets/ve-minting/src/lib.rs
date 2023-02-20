@@ -32,6 +32,7 @@ pub mod incentive;
 pub mod traits;
 pub mod weights;
 
+use crate::traits::Incentive;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -41,21 +42,17 @@ use frame_support::{
 		},
 		ArithmeticError, DispatchError, SaturatedConversion,
 	},
-	traits::{Currency, LockIdentifier, LockableCurrency},
-	transactional, PalletId,
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::{CurrencyId, TokenSymbol}; // BlockNumber
+use node_primitives::CurrencyId;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 use traits::VeMintingInterface;
 pub use weights::WeightInfo;
-
-pub const COLLATOR_LOCK_ID: LockIdentifier = *b"vemintin";
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 
 #[allow(type_alias_bounds)]
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -72,11 +69,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,
 	min_mint: Balance,
-	min_time: BlockNumber,
-	max_time: BlockNumber,
-	multiplier: u128,
-	week: BlockNumber,
-	vote_weight_multiplier: Balance,
+	min_block: BlockNumber,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -85,15 +78,12 @@ pub struct LockedBalance<Balance, BlockNumber> {
 	end: BlockNumber,
 }
 
-// pub type Epoch = U256;
-
 #[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct Point<Balance, BlockNumber> {
 	bias: i128,  // i128
 	slope: i128, // dweight / dt
-	ts: BlockNumber,
-	blk: BlockNumber, // block
-	amt: Balance,
+	block: BlockNumber,
+	amount: Balance,
 }
 
 #[frame_support::pallet]
@@ -111,11 +101,12 @@ pub mod pallet {
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type Currency: Currency<Self::AccountId> + LockableCurrency<Self::AccountId>;
-
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		type TokenType: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type VeMintingPalletId: Get<PalletId>;
@@ -125,6 +116,18 @@ pub mod pallet {
 
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type Week: Get<Self::BlockNumber>;
+
+		#[pallet::constant]
+		type MaxBlock: Get<Self::BlockNumber>;
+
+		#[pallet::constant]
+		type Multiplier: Get<BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type VoteWeightMultiplier: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::event]
@@ -159,6 +162,9 @@ pub mod pallet {
 		Withdrawn {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
+		},
+		IncentiveSet {
+			rewards_duration: T::BlockNumber,
 		},
 		RewardAdded {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
@@ -251,12 +257,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			min_mint: Option<BalanceOf<T>>,   // Minimum mint balance
-			min_time: Option<T::BlockNumber>, // Minimum lockup time
-			max_time: Option<T::BlockNumber>, // Maximum lockup time
-			multiplier: Option<u128>,
-			week: Option<T::BlockNumber>,
-			vote_weight_multiplier: Option<BalanceOf<T>>,
+			min_mint: Option<BalanceOf<T>>,    // Minimum mint balance
+			min_block: Option<T::BlockNumber>, // Minimum lockup time
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -264,20 +266,8 @@ pub mod pallet {
 			if let Some(min_mint) = min_mint {
 				ve_config.min_mint = min_mint;
 			};
-			if let Some(min_time) = min_time {
-				ve_config.min_time = min_time;
-			};
-			if let Some(max_time) = max_time {
-				ve_config.max_time = max_time;
-			};
-			if let Some(multiplier) = multiplier {
-				ve_config.multiplier = multiplier;
-			};
-			if let Some(week) = week {
-				ve_config.week = week;
-			};
-			if let Some(vote_weight_multiplier) = vote_weight_multiplier {
-				ve_config.vote_weight_multiplier = vote_weight_multiplier;
+			if let Some(min_block) = min_block {
+				ve_config.min_block = min_block;
 			};
 			VeConfigs::<T>::set(ve_config.clone());
 
@@ -321,23 +311,17 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn notify_rewards(
 			origin: OriginFor<T>,
+			incentive_from: AccountIdOf<T>,
 			rewards_duration: Option<T::BlockNumber>,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-
-			if let Some(rewards_duration) = rewards_duration {
-				let mut incentive_config = Self::incentive_configs();
-				incentive_config.rewards_duration = rewards_duration;
-				IncentiveConfigs::<T>::set(incentive_config);
-			};
-
-			Self::notify_reward_amount(rewards)
+			Self::set_incentive(rewards_duration);
+			Self::notify_reward_amount(&incentive_from, rewards)
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		#[transactional]
 		pub fn _checkpoint(
 			addr: &AccountIdOf<T>,
 			old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
@@ -347,13 +331,12 @@ pub mod pallet {
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
-			let ve_config = Self::ve_configs();
 			let current_block_number: T::BlockNumber =
 				frame_system::Pallet::<T>::block_number().into();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
-					.checked_div(U256::from(Self::ve_configs().max_time.saturated_into::<u128>()))
+					.checked_div(U256::from(T::MaxBlock::get().saturated_into::<u128>()))
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
@@ -367,7 +350,7 @@ pub mod pallet {
 			}
 			if new_locked.end > current_block_number && new_locked.amount > BalanceOf::<T>::zero() {
 				u_new.slope = U256::from(new_locked.amount.saturated_into::<u128>())
-					.checked_div(U256::from(Self::ve_configs().max_time.saturated_into::<u128>()))
+					.checked_div(U256::from(T::MaxBlock::get().saturated_into::<u128>()))
 					.unwrap_or_default()
 					.as_u128()
 					.unique_saturated_into();
@@ -380,7 +363,7 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 			}
 			let mut old_dslope = Self::slope_changes(old_locked.end);
-			if new_locked.end != 0u32.unique_saturated_into() {
+			if new_locked.end != Zero::zero() {
 				if new_locked.end == old_locked.end {
 					new_dslope = old_dslope
 				} else {
@@ -391,23 +374,25 @@ pub mod pallet {
 			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> = Point {
 				bias: 0_i128,
 				slope: 0_i128,
-				ts: current_block_number,
-				blk: current_block_number,
-				amt: Zero::zero(),
+				block: current_block_number,
+				amount: Zero::zero(),
 			};
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.amt = T::MultiCurrency::free_balance(
-					BNC,
+				last_point.amount = T::MultiCurrency::free_balance(
+					T::TokenType::get(),
 					&T::VeMintingPalletId::get().into_account_truncating(),
 				);
 			}
-			let mut last_checkpoint = last_point.ts;
-			let initial_last_point = last_point;
-			let mut t_i: T::BlockNumber = (last_checkpoint / ve_config.week) * ve_config.week;
+			let mut last_checkpoint = last_point.block;
+			let mut t_i: T::BlockNumber = last_checkpoint
+				.checked_div(&T::Week::get())
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_mul(&T::Week::get())
+				.ok_or(ArithmeticError::Overflow)?;
 			for _i in 0..255 {
-				t_i += ve_config.week;
+				t_i += T::Week::get();
 				let mut d_slope = Zero::zero();
 				if t_i > current_block_number {
 					t_i = current_block_number
@@ -442,15 +427,13 @@ pub mod pallet {
 				}
 
 				last_checkpoint = t_i;
-				last_point.ts = t_i;
-				last_point.blk = initial_last_point.blk + (t_i - initial_last_point.ts);
+				last_point.block = t_i;
 				g_epoch += U256::one();
 
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
-					last_point.blk = current_block_number;
-					last_point.amt = T::MultiCurrency::free_balance(
-						BNC,
+					last_point.amount = T::MultiCurrency::free_balance(
+						T::TokenType::get(),
 						&T::VeMintingPalletId::get().into_account_truncating(),
 					);
 					break;
@@ -503,9 +486,8 @@ pub mod pallet {
 			// Now handle user history
 			let user_epoch = Self::user_point_epoch(addr) + U256::one();
 			UserPointEpoch::<T>::insert(addr, user_epoch);
-			u_new.ts = current_block_number;
-			u_new.blk = current_block_number;
-			u_new.amt = Self::locked(addr).amount;
+			u_new.block = current_block_number;
+			u_new.amount = Self::locked(addr).amount;
 			log::debug!(
 				"g_epoch:{:?}last_point:{:?}u_new:{:?}u_old:{:?}new_locked:{:?}",
 				g_epoch,
@@ -521,16 +503,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[transactional]
 		pub fn _deposit_for(
 			addr: &AccountIdOf<T>,
 			value: BalanceOf<T>,
 			unlock_time: T::BlockNumber,
 			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
-			let ve_config = Self::ve_configs();
-			ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
-
 			let current_block_number: T::BlockNumber =
 				frame_system::Pallet::<T>::block_number().into();
 			let mut _locked = locked_balance;
@@ -546,7 +524,7 @@ pub mod pallet {
 
 			if value != BalanceOf::<T>::zero() {
 				T::MultiCurrency::transfer(
-					BNC,
+					T::TokenType::get(),
 					addr,
 					&T::VeMintingPalletId::get().into_account_truncating(),
 					value,
@@ -565,7 +543,6 @@ pub mod pallet {
 		}
 
 		// Get the current voting power for `addr`
-		#[transactional]
 		pub(crate) fn balance_of_current_block(
 			addr: &AccountIdOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
@@ -578,11 +555,11 @@ pub mod pallet {
 					Self::user_point_history(addr, u_epoch);
 
 				log::debug!(
-					"balance_of---:{:?}_t:{:?}last_point.ts:{:?}",
+					"balance_of---:{:?}_t:{:?}last_point.block:{:?}",
 					(current_block_number.saturated_into::<u128>() as i128)
-						.saturating_sub(last_point.ts.saturated_into::<u128>() as i128),
+						.saturating_sub(last_point.block.saturated_into::<u128>() as i128),
 					current_block_number,
-					last_point.ts
+					last_point.block
 				);
 				last_point.bias = last_point
 					.bias
@@ -591,7 +568,7 @@ pub mod pallet {
 							.slope
 							.checked_mul(
 								(current_block_number.saturated_into::<u128>() as i128)
-									.checked_sub(last_point.ts.saturated_into::<u128>() as i128)
+									.checked_sub(last_point.block.saturated_into::<u128>() as i128)
 									.ok_or(ArithmeticError::Overflow)?,
 							)
 							.ok_or(ArithmeticError::Overflow)?,
@@ -603,10 +580,9 @@ pub mod pallet {
 				}
 
 				Ok(last_point
-					.amt
+					.amount
 					.checked_add(
-						&Self::ve_configs()
-							.vote_weight_multiplier
+						&T::VoteWeightMultiplier::get()
 							.checked_mul(&(last_point.bias as u128).unique_saturated_into())
 							.ok_or(ArithmeticError::Overflow)?,
 					)
@@ -615,7 +591,6 @@ pub mod pallet {
 		}
 
 		// Measure voting power of `addr` at block height `block`
-		#[transactional]
 		pub(crate) fn balance_of_at(
 			addr: &AccountIdOf<T>,
 			block: T::BlockNumber,
@@ -632,7 +607,7 @@ pub mod pallet {
 				}
 				let _mid = (_min + _max + 1) / 2;
 
-				if Self::user_point_history(addr, _mid).blk <= block {
+				if Self::user_point_history(addr, _mid).block <= block {
 					_min = _mid
 				} else {
 					_max = _mid - 1
@@ -643,47 +618,25 @@ pub mod pallet {
 				Self::user_point_history(addr, _min);
 			log::debug!("balance_of_at---_min:{:?}_max:{:?}upoint:{:?}", _min, _max, upoint);
 
-			let max_epoch: U256 = Self::epoch();
-			let _epoch: U256 = Self::find_block_epoch(block, max_epoch);
-			let point_0: Point<BalanceOf<T>, T::BlockNumber> = Self::point_history(_epoch);
-			let d_block;
-			let d_t;
-			if _epoch < max_epoch {
-				let point_1 = Self::point_history(_epoch + 1);
-				d_block = point_1.blk - point_0.blk;
-				d_t = point_1.ts - point_0.ts;
-			} else {
-				d_block = current_block_number - point_0.blk;
-				d_t = current_block_number - point_0.ts;
-			}
-
-			let mut block_time = point_0.ts;
-			if d_block != Zero::zero() {
-				block_time += (d_t.saturating_mul(block - point_0.blk))
-					.saturated_into::<u128>()
-					.saturating_div(d_block.saturated_into::<u128>())
-					.unique_saturated_into();
-			}
 			upoint.bias = upoint
 				.bias
 				.checked_sub(
 					upoint
 						.slope
 						.checked_mul(
-							(block_time.saturated_into::<u128>() as i128)
-								.checked_sub(upoint.ts.saturated_into::<u128>() as i128)
+							(block.saturated_into::<u128>() as i128)
+								.checked_sub(upoint.block.saturated_into::<u128>() as i128)
 								.ok_or(ArithmeticError::Overflow)?,
 						)
 						.ok_or(ArithmeticError::Overflow)?,
 				)
 				.ok_or(ArithmeticError::Overflow)?;
 
-			if (upoint.bias >= 0_i128) || (upoint.amt >= Zero::zero()) {
+			if (upoint.bias >= 0_i128) || (upoint.amount >= Zero::zero()) {
 				Ok(upoint
-					.amt
+					.amount
 					.checked_add(
-						&Self::ve_configs()
-							.vote_weight_multiplier
+						&T::VoteWeightMultiplier::get()
 							.checked_mul(&(upoint.bias as u128).unique_saturated_into())
 							.ok_or(ArithmeticError::Overflow)?,
 					)

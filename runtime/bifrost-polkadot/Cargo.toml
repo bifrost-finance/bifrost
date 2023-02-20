@@ -101,6 +101,8 @@ bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", defaul
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
+bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
+bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -196,6 +198,8 @@ std = [
 	"bifrost-system-staking/std",
 	"bifrost-system-maker/std",
 	"bifrost-fee-share/std",
+	"bifrost-ve-minting/std",
+	"bifrost-ve-minting-rpc-runtime-api/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
@@ -279,6 +283,7 @@ try-runtime = [
 	"bifrost-system-staking/try-runtime",
 	"bifrost-system-maker/try-runtime",
 	"bifrost-fee-share/try-runtime",
+	"bifrost-ve-minting/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

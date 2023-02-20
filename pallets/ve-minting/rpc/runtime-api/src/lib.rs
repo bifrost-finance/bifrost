@@ -26,6 +26,7 @@ use sp_core::U256;
 decl_runtime_apis! {
 	pub trait VeMintingRuntimeApi<AccountId> where
 		AccountId: Codec,
+		BlockNumber: Codec,
 	{
 		fn balance_of(
 			who: AccountId,

@@ -22,7 +22,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate as bifrost_ve_minting;
-use crate::BNC;
+// use crate::BNC;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -60,8 +60,8 @@ pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-// pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-// pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
@@ -242,21 +242,28 @@ impl bifrost_asset_registry::Config for Runtime {
 }
 
 parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
 	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type Currency = Balances;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
-	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
@@ -362,12 +369,13 @@ impl ExtBuilder {
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
 			(ALICE, BNC, 1_000_000_000_000),
+			(ALICE, vBNC, 1_000_000_000_000_000),
+			(ALICE, KSM, 1_000_000_000_000),
 			(BOB, BNC, 1_000_000_000_000),
+			(BOB, vBNC, 1_000_000_000_000_000),
 			(BOB, vKSM, 1_000_000_000_000),
 			(BOB, MOVR, 1_000_000_000_000),
 			(CHARLIE, MOVR, 1_000_000_000_000),
-			(IncentivePalletId::get().into_account_truncating(), BNC, 1_000_000_000_000),
-			(IncentivePalletId::get().into_account_truncating(), KSM, 1_000_000_000_000_000),
 		])
 	}
 
