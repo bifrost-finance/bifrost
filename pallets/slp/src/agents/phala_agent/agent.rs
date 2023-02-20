@@ -144,8 +144,7 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			total_value.checked_div(*total_shares).ok_or(Error::<T>::OverFlow)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
 			Err(Error::<T>::SharePriceNotValid)
 		}?;
@@ -212,18 +211,10 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
-				.saturating_mul(amount.saturated_into::<u128>().into())
-				.checked_div((*total_value).saturated_into::<u128>().into())
-				.ok_or(Error::<T>::OverFlow)?
-				.as_u128()
-				.saturated_into();
-
-			BalanceOf::<T>::unique_saturated_from(shares)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
-			Err(Error::<T>::SharePriceNotValid)?
-		};
+			Err(Error::<T>::SharePriceNotValid)
+		}?;
 
 		// Check if shares exceeds the minimum requirement > 1000(existential value for shares).
 		ensure!(
@@ -1098,5 +1089,21 @@ impl<T: Config> PhalaAgent<T> {
 		);
 
 		Ok(())
+	}
+
+	fn calculate_shares(
+		total_value: &u128,
+		total_shares: &u128,
+		amount: BalanceOf<T>,
+	) -> Result<BalanceOf<T>, Error<T>> {
+		ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
+		let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
+			.saturating_mul(amount.saturated_into::<u128>().into())
+			.checked_div((*total_value).saturated_into::<u128>().into())
+			.ok_or(Error::<T>::OverFlow)?
+			.as_u128()
+			.saturated_into();
+
+		Ok(BalanceOf::<T>::unique_saturated_from(shares))
 	}
 }
