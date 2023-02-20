@@ -20,21 +20,40 @@
 
 use crate::{
 	mocks::mock::*,
-	primitives::{MoonbeamLedgerUpdateEntry, OneToManyDelegationAction, OneToManyScheduledRequest},
+	primitives::{
+		MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation, OneToManyDelegationAction,
+		OneToManyDelegatorStatus, OneToManyLedger, OneToManyScheduledRequest,
+	},
 	Junction::Parachain,
 	Junctions::X2,
-};
-use frame_support::{assert_noop, assert_ok};
-use xcm::opaque::latest::NetworkId::Any;
-
-use crate::{
-	primitives::{MoonbeamLedgerUpdateOperation, OneToManyDelegatorStatus, OneToManyLedger},
 	MOVR, *,
 };
 use codec::alloc::collections::BTreeMap;
+use frame_support::{assert_noop, assert_ok, PalletId};
 use node_primitives::Balance;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
+use xcm::opaque::latest::NetworkId::Any;
+
+const validator_0_account_id_20: [u8; 20] =
+	hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"];
+const validator_0_location: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X2(
+		Parachain(2023),
+		Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+	),
+};
+
+const validator_1_account_id_20: [u8; 20] =
+	hex_literal::hex!["f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac"];
+const validator_1_location: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X2(
+		Parachain(2023),
+		Junction::AccountKey20 { network: Any, key: validator_1_account_id_20 },
+	),
+};
 
 #[test]
 fn initialize_moonriver_delegator() {
@@ -100,20 +119,7 @@ fn initialize_moonriver_delegator() {
 }
 
 fn moonriver_setup() {
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
-		),
-	};
-
-	let treasury_account_id_32: [u8; 32] =
-		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-			.into();
+	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
 		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
@@ -279,25 +285,16 @@ fn moonriver_setup() {
 
 #[test]
 fn moonriver_bond_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -319,25 +316,16 @@ fn moonriver_bond_works() {
 
 #[test]
 fn moonriver_bond_extra_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -381,25 +369,16 @@ fn moonriver_bond_extra_works() {
 
 #[test]
 fn moonriver_unbond_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -443,25 +422,16 @@ fn moonriver_unbond_works() {
 
 #[test]
 fn moonriver_unbond_all_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -499,25 +469,16 @@ fn moonriver_unbond_all_works() {
 
 #[test]
 fn moonriver_rebond_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -571,36 +532,16 @@ fn moonriver_rebond_works() {
 
 #[test]
 fn moonriver_undelegate_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
-		),
-	};
-
-	let validator_1_account_id_20: [u8; 20] =
-		hex_literal::hex!["f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac"].into();
-
-	let validator_1_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_1_account_id_20 },
 		),
 	};
 
@@ -644,25 +585,16 @@ fn moonriver_undelegate_works() {
 
 #[test]
 fn moonriver_redelegate_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -715,25 +647,16 @@ fn moonriver_redelegate_works() {
 
 #[test]
 fn moonriver_liquidize_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -877,25 +800,15 @@ fn moonriver_liquidize_works() {
 
 #[test]
 fn moonriver_bond_and_bond_extra_confirm_works() {
-	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
 
+	let subaccount_0_account_id_20: [u8; 20] =
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -1024,25 +937,16 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 
 #[test]
 fn moonriver_unbond_confirm_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -1230,25 +1134,16 @@ fn moonriver_unbond_confirm_works() {
 
 #[test]
 fn moonriver_unbond_all_confirm_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -1373,25 +1268,16 @@ fn moonriver_unbond_all_confirm_works() {
 
 #[test]
 fn moonriver_rebond_confirm_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -1485,36 +1371,16 @@ fn moonriver_rebond_confirm_works() {
 
 #[test]
 fn moonriver_undelegate_confirm_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
-		),
-	};
-
-	let validator_1_account_id_20: [u8; 20] =
-		hex_literal::hex!["f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac"].into();
-
-	let validator_1_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_1_account_id_20 },
 		),
 	};
 
@@ -1683,25 +1549,16 @@ fn moonriver_undelegate_confirm_works() {
 
 #[test]
 fn moonriver_redelegate_confirm_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
 			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
-		),
-	};
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -1802,8 +1659,10 @@ fn moonriver_redelegate_confirm_works() {
 
 #[test]
 fn moonriver_transfer_back_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1816,9 +1675,7 @@ fn moonriver_transfer_back_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		moonriver_setup();
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
+		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
@@ -1840,8 +1697,10 @@ fn moonriver_transfer_back_works() {
 
 #[test]
 fn moonriver_transfer_to_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1854,9 +1713,7 @@ fn moonriver_transfer_to_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		moonriver_setup();
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
@@ -1878,8 +1735,10 @@ fn moonriver_transfer_to_works() {
 
 #[test]
 fn supplement_fee_account_whitelist_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -1892,31 +1751,21 @@ fn supplement_fee_account_whitelist_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		moonriver_setup();
-		let entrance_account_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
+		let entrance_account_id: AccountId = entrance_account_id_32.into();
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
 		};
 
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
-
+		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
 
-		let source_account_id_32: [u8; 32] =
-			hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
-				.into();
+		let source_account_id_32: [u8; 32] = ALICE.into();
 		let source_location = Slp::account_32_to_local_location(source_account_id_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
@@ -2004,8 +1853,10 @@ fn supplement_fee_account_whitelist_works() {
 
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
+	let bifrost_parachain_account_id_20: [u8; 20] = Sibling::from(2001).into_account_truncating();
+
 	let subaccount_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["863c1faef3c3b8f8735ecb7f8ed18996356dd3de"].into();
+		Slp::derivative_account_id_20(bifrost_parachain_account_id_20, 0).into();
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
@@ -2015,23 +1866,9 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		),
 	};
 
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
-		),
-	};
-
 	ExtBuilder::default().build().execute_with(|| {
-		let treasury_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+		let treasury_id: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
+		let treasury_32: [u8; 32] = treasury_id.clone().into();
 
 		// moonriver_setup();
 
@@ -2129,17 +1966,6 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 #[test]
 fn add_validator_and_remove_validator_works() {
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
-		),
-	};
-
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
 		let multi_hash_0 =

@@ -23,8 +23,8 @@ use crate::{
 	primitives::FilecoinLedger,
 	FIL, *,
 };
-use frame_support::{assert_noop, assert_ok};
-use sp_runtime::WeakBoundedVec;
+use frame_support::{assert_noop, assert_ok, PalletId};
+use sp_runtime::{traits::AccountIdConversion, WeakBoundedVec};
 use xcm::opaque::latest::NetworkId::Any;
 
 fn mins_maxs_setup() {
@@ -385,11 +385,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
 		};
 
-		let treasury_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+		let treasury_id: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
+		let treasury_32: [u8; 32] = treasury_id.clone().into();
 
 		assert_noop!(
 			Slp::charge_host_fee_and_tune_vtoken_exchange_rate(

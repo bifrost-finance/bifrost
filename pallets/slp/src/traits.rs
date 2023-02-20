@@ -19,7 +19,7 @@ use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
 use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
-use xcm::{latest::Weight as XcmWeight, opaque::latest::Instruction};
+use xcm::latest::Weight as XcmWeight;
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -238,10 +238,6 @@ pub trait XcmBuilder<Balance, ChainCallType, Error> {
 		currency_id: CurrencyId,
 		// response_back_location: AccountId
 	) -> Result<Xcm<()>, Error>;
-}
-
-pub trait InstructionBuilder<ChainCallType> {
-	fn construct_instruction(call: ChainCallType, weight: XcmWeight) -> Instruction;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
