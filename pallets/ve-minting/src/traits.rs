@@ -244,6 +244,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 }
 
 pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
+	fn set_incentive(rewards_duration: Option<BlockNumber>);
 	fn add_reward(
 		addr: &AccountId,
 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber>,
@@ -255,6 +256,14 @@ pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
 impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
 	for Pallet<T>
 {
+	fn set_incentive(rewards_duration: Option<T::BlockNumber>) {
+		if let Some(rewards_duration) = rewards_duration {
+			let mut incentive_config = Self::incentive_configs();
+			incentive_config.rewards_duration = rewards_duration;
+			IncentiveConfigs::<T>::set(incentive_config);
+			Self::deposit_event(Event::IncentiveSet { rewards_duration });
+		};
+	}
 	fn add_reward(
 		addr: &AccountIdOf<T>,
 		conf: &mut IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,

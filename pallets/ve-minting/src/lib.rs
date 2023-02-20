@@ -32,6 +32,7 @@ pub mod incentive;
 pub mod traits;
 pub mod weights;
 
+use crate::traits::Incentive;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -161,6 +162,9 @@ pub mod pallet {
 		Withdrawn {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
+		},
+		IncentiveSet {
+			rewards_duration: T::BlockNumber,
 		},
 		RewardAdded {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
@@ -312,13 +316,7 @@ pub mod pallet {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-
-			if let Some(rewards_duration) = rewards_duration {
-				let mut incentive_config = Self::incentive_configs();
-				incentive_config.rewards_duration = rewards_duration;
-				IncentiveConfigs::<T>::set(incentive_config);
-			};
-
+			Self::set_incentive(rewards_duration);
 			Self::notify_reward_amount(&incentive_from, rewards)
 		}
 	}
