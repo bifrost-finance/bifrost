@@ -22,7 +22,7 @@ use crate::{
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
-	Zero,
+	Zero, DOT, KSM,
 };
 use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
@@ -206,8 +206,15 @@ impl<T: Config> Pallet<T> {
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 
-		let dest =
-			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+		let dest = match currency_id {
+			KSM | DOT =>
+				Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into())))),
+			_ => Box::new(VersionedMultiLocation::from(MultiLocation {
+				parents: 1,
+				interior: X1(Parachain(T::ParachainId::get().into())),
+			})),
+		};
+
 		let beneficiary =
 			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
 
