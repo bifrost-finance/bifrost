@@ -1265,6 +1265,13 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+impl bifrost_cross_in_out::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1562,6 +1569,7 @@ construct_runtime! {
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 	}
 }
