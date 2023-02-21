@@ -208,6 +208,7 @@ impl<T: Config> Pallet<T> {
 
 		let dest =
 			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+
 		let beneficiary =
 			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
 
