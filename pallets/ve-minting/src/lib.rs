@@ -319,6 +319,13 @@ pub mod pallet {
 			Self::set_incentive(rewards_duration);
 			Self::notify_reward_amount(&incentive_from, rewards)
 		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::_get_rewards(&exchanger)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -327,6 +334,8 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 			new_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
+			Self::update_reward(Some(addr))?;
+
 			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut new_dslope = 0_i128;
@@ -497,7 +506,6 @@ pub mod pallet {
 			);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
-			Self::update_reward(Some(addr))?;
 
 			Ok(())
 		}
