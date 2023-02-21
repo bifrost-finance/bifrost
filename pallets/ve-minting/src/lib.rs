@@ -331,8 +331,7 @@ pub mod pallet {
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
-			let current_block_number: T::BlockNumber =
-				frame_system::Pallet::<T>::block_number().into();
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
@@ -509,15 +508,14 @@ pub mod pallet {
 			unlock_time: T::BlockNumber,
 			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
-			let current_block_number: T::BlockNumber =
-				frame_system::Pallet::<T>::block_number().into();
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();
 			Supply::<T>::set(supply_before + value);
 
 			let old_locked = _locked.clone();
 			_locked.amount += value;
-			if unlock_time != 0u32.unique_saturated_into() {
+			if unlock_time != Zero::zero() {
 				_locked.end = unlock_time
 			}
 			Locked::<T>::insert(addr, _locked.clone());
