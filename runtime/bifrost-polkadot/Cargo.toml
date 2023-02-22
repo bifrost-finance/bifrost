@@ -228,6 +228,7 @@ runtime-benchmarks = [
 	"bifrost-slp/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
+	"bifrost-cross-in-out/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 
@@ -285,6 +286,7 @@ try-runtime = [
 	"bifrost-system-maker/try-runtime",
 	"bifrost-fee-share/try-runtime",
 	"bifrost-ve-minting/try-runtime",
+	"bifrost-cross-in-out/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
