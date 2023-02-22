@@ -21,7 +21,7 @@ use crate::*;
 
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
-	fn _withdraw(addr: &AccountId) -> DispatchResult;
+	fn withdraw_inner(addr: &AccountId) -> DispatchResult;
 	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
 	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
 	fn supply_at(
@@ -29,16 +29,19 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		t: BlockNumber,
 	) -> Result<Balance, DispatchError>;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
-	fn _create_lock(addr: &AccountId, _value: Balance, _unlock_time: BlockNumber)
-		-> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
-	fn _increase_amount(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
-	fn _increase_unlock_time(addr: &AccountId, _unlock_time: BlockNumber) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
+	fn create_lock_inner(
+		addr: &AccountId,
+		_value: Balance,
+		_unlock_time: BlockNumber,
+	) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
+	fn increase_amount_inner(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	fn increase_unlock_time_inner(addr: &AccountId, _unlock_time: BlockNumber) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
 	for Pallet<T>
 {
-	fn _create_lock(
+	fn create_lock_inner(
 		addr: &AccountIdOf<T>,
 		_value: BalanceOf<T>,
 		_unlock_time: T::BlockNumber,
@@ -73,7 +76,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn _increase_unlock_time(
+	fn increase_unlock_time_inner(
 		addr: &AccountIdOf<T>,
 		_unlock_time: T::BlockNumber,
 	) -> DispatchResult {
@@ -105,7 +108,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(())
 	}
 
-	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+	fn increase_amount_inner(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
@@ -122,7 +125,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::_deposit_for(addr, value, Zero::zero(), _locked)
 	}
 
-	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
+	fn withdraw_inner(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);

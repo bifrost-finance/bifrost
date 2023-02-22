@@ -50,8 +50,11 @@ impl<T: Config> Pallet<T> {
 			return Ok(conf.reward_per_token_stored);
 		}
 		conf.reward_rate.iter().for_each(|(currency, &reward)| {
-			let increment:BalanceOf<T> = U256::from(
-				Self::last_time_reward_applicable().saturating_sub(conf.last_update_time).saturated_into::<u128>())
+			let increment: BalanceOf<T> = U256::from(
+				Self::last_time_reward_applicable()
+					.saturating_sub(conf.last_update_time)
+					.saturated_into::<u128>(),
+			)
 			.saturating_mul(U256::from(reward.saturated_into::<u128>()))
 			.saturating_mul(U256::from(T::Multiplier::get().saturated_into::<u128>()))
 			.checked_div(U256::from(_total_supply.saturated_into::<u128>()))
@@ -60,17 +63,7 @@ impl<T: Config> Pallet<T> {
 			.unique_saturated_into();
 			conf.reward_per_token_stored
 				.entry(*currency)
-				.and_modify(|total_reward| {
-					log::debug!(
-						"reward_per_token:{:?}Self::last_time_reward_applicable():{:?}conf.last_update_time:{:?}total_reward:{:?}",
-						reward,
-						Self::last_time_reward_applicable(),
-						conf.last_update_time,
-						total_reward
-					);
-					*total_reward = total_reward
-						.saturating_add(increment)
-				})
+				.and_modify(|total_reward| *total_reward = total_reward.saturating_add(increment))
 				.or_insert(increment);
 		});
 
@@ -88,13 +81,6 @@ impl<T: Config> Pallet<T> {
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
-		log::debug!(
-			"earned---who:{:?}reward_per_token:{:?}vetoken_balance:{:?}Self::user_reward_per_token_paid(addr):{:?}",
-			addr,
-			reward_per_token.clone(),
-			vetoken_balance,
-			Self::user_reward_per_token_paid(addr),
-		);
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 			let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
 				.saturating_mul(U256::from(
@@ -129,12 +115,6 @@ impl<T: Config> Pallet<T> {
 			item.last_update_time = Self::last_time_reward_applicable();
 		});
 		if let Some(address) = addr {
-			log::debug!(
-				"update_reward---who:{:?}reward_per_token_stored:{:?}Self::earned(&address)?:{:?}",
-				addr,
-				reward_per_token_stored.clone(),
-				Self::earned(&address)?
-			);
 			let earned = Self::earned(&address)?;
 			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
 				Rewards::<T>::insert(address, earned);
@@ -149,7 +129,6 @@ impl<T: Config> Pallet<T> {
 
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
-				log::debug!("get_rewards---currency:{:?}reward:{:?}", currency, reward);
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
