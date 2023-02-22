@@ -105,12 +105,21 @@ fn notify_reward_amount() {
 
 		System::set_block_number(System::block_number() + 20);
 		System::set_block_number(System::block_number() + 20);
+		assert_noop!(
+			VeMinting::get_rewards(RuntimeOrigin::signed(BOB)),
+			Error::<Runtime>::NoRewards
+		);
 		assert_ok!(VeMinting::_create_lock(
 			&BOB,
 			20_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
 		));
-		assert_ok!(VeMinting::deposit_for(&BOB, 80_000_000_000));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_noop!(
+			VeMinting::get_rewards(RuntimeOrigin::signed(BOB)),
+			Error::<Runtime>::NoRewards
+		);
+		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 80_000_000_000));
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(399146883040));
 
 		let rewards = vec![(KSM, 1_000_000_000)];
@@ -118,18 +127,37 @@ fn notify_reward_amount() {
 			RuntimeOrigin::signed(ALICE),
 			ALICE,
 			Some(7 * 86400 / 12),
-			rewards
+			rewards.clone()
 		));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
 		System::set_block_number(System::block_number() + 20);
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
-		assert_ok!(VeMinting::get_reward(&BOB));
+		assert_ok!(VeMinting::get_rewards(RuntimeOrigin::signed(BOB)));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 396819);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		let a = VeMinting::rewards(BOB);
-		log::debug!("notify_reward_amount:{:?} total_supply:{:?}", System::block_number(), a);
-		assert_ok!(VeMinting::get_reward(&BOB));
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
+		assert_ok!(VeMinting::notify_rewards(
+			RuntimeOrigin::signed(ALICE),
+			ALICE,
+			Some(7 * 86400 / 12),
+			rewards
+		));
+		assert_ok!(VeMinting::_create_lock(
+			&CHARLIE,
+			100_000_000_000,
+			System::block_number() + 4 * 365 * 86400 / 12
+		));
+		System::set_block_number(System::block_number() + 1 * 86400 / 12);
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 1071285014);
+		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE));
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 71556583);
+		System::set_block_number(System::block_number() + 7 * 86400 / 12);
+		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE));
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 500898890);
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 1499073906);
 	});
 }
 

@@ -53,7 +53,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::Expired
@@ -85,7 +85,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
 			Error::<T>::Expired
@@ -110,16 +110,16 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
 		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
-		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)?;
+		Self::_deposit_for(addr, value, Zero::zero(), _locked)?;
 		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
 		Ok(())
 	}
 
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
-		Self::_deposit_for(addr, value, 0u32.unique_saturated_into(), _locked)
+		Self::_deposit_for(addr, value, Zero::zero(), _locked)
 	}
 
 	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {

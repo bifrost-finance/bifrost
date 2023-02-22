@@ -44,7 +44,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		let _total_supply = Self::total_supply(current_block_number)?;
 		if _total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
@@ -88,46 +88,34 @@ impl<T: Config> Pallet<T> {
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
-		log::debug!("earned---reward_per_token:{:?}", reward_per_token.clone(),);
+		log::debug!(
+			"earned---who:{:?}reward_per_token:{:?}vetoken_balance:{:?}Self::user_reward_per_token_paid(addr):{:?}",
+			addr,
+			reward_per_token.clone(),
+			vetoken_balance,
+			Self::user_reward_per_token_paid(addr),
+		);
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+			let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
+				.saturating_mul(U256::from(
+					reward
+						.saturating_sub(
+							*Self::user_reward_per_token_paid(addr)
+								.get(currency)
+								.unwrap_or(&BalanceOf::<T>::zero()),
+						)
+						.saturated_into::<u128>(),
+				))
+				.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+				.unwrap_or_default()
+				.as_u128()
+				.unique_saturated_into();
 			rewards
 				.entry(*currency)
 				.and_modify(|total_reward| {
-					*total_reward = total_reward.saturating_add(
-						U256::from(vetoken_balance.saturated_into::<u128>())
-							.saturating_mul(U256::from(
-								reward
-									.saturating_sub(
-										*Self::user_reward_per_token_paid(addr)
-											.get(currency)
-											.unwrap_or(&BalanceOf::<T>::zero()),
-									)
-									.saturated_into::<u128>(),
-							))
-							.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
-							.unwrap_or_default()
-							.as_u128()
-							.unique_saturated_into(),
-					);
+					*total_reward = total_reward.saturating_add(increment);
 				})
-				.or_insert(
-					U256::from(vetoken_balance.saturated_into::<u128>())
-						.saturating_mul(U256::from(
-							Self::reward_per_token()?
-								.get(currency)
-								.unwrap_or(&BalanceOf::<T>::zero())
-								.saturating_sub(
-									*Self::user_reward_per_token_paid(addr)
-										.get(currency)
-										.unwrap_or(&BalanceOf::<T>::zero()),
-								)
-								.saturated_into::<u128>(),
-						))
-						.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
-						.unwrap_or_default()
-						.as_u128()
-						.unique_saturated_into(),
-				);
+				.or_insert(increment);
 			Ok(())
 		})?;
 		Ok(rewards)
@@ -142,22 +130,26 @@ impl<T: Config> Pallet<T> {
 		});
 		if let Some(address) = addr {
 			log::debug!(
-				"update_reward---reward_per_token_stored:{:?}Self::earned(&address)?:{:?}",
+				"update_reward---who:{:?}reward_per_token_stored:{:?}Self::earned(&address)?:{:?}",
+				addr,
 				reward_per_token_stored.clone(),
 				Self::earned(&address)?
 			);
-			Rewards::<T>::insert(address, Self::earned(&address)?);
+			let earned = Self::earned(&address)?;
+			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
+				Rewards::<T>::insert(address, earned);
+			}
 			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored.clone());
 		}
 		Ok(())
 	}
 
-	pub fn get_reward(addr: &AccountIdOf<T>) -> DispatchResult {
+	pub fn get_rewards_inner(addr: &AccountIdOf<T>) -> DispatchResult {
 		Self::update_reward(Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
-				log::debug!("get_reward---currency:{:?}reward:{:?}", currency, reward);
+				log::debug!("get_rewards---currency:{:?}reward:{:?}", currency, reward);
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
@@ -166,6 +158,12 @@ impl<T: Config> Pallet<T> {
 				)
 			})?;
 			Rewards::<T>::remove(addr);
+			Self::deposit_event(Event::Rewarded {
+				addr: addr.to_owned(),
+				rewards: rewards.into_iter().collect(),
+			});
+		} else {
+			return Err(Error::<T>::NoRewards.into());
 		}
 		Ok(())
 	}
@@ -177,7 +175,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number().into();
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 
 		if current_block_number >= conf.period_finish {
 			Self::add_reward(addr, &mut conf, &rewards, Zero::zero())?;

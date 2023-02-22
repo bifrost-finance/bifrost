@@ -169,6 +169,10 @@ pub mod pallet {
 		RewardAdded {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
+		Rewarded {
+			addr: AccountIdOf<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -178,6 +182,7 @@ pub mod pallet {
 		BelowMinimumMint,
 		LockNotExist,
 		LockExist,
+		NoRewards,
 	}
 
 	#[pallet::storage]
@@ -319,6 +324,13 @@ pub mod pallet {
 			Self::set_incentive(rewards_duration);
 			Self::notify_reward_amount(&incentive_from, rewards)
 		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::mint())]
+		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::get_rewards_inner(&exchanger)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -327,12 +339,13 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 			new_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
+			Self::update_reward(Some(addr))?;
+
 			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
-			let current_block_number: T::BlockNumber =
-				frame_system::Pallet::<T>::block_number().into();
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
@@ -498,7 +511,6 @@ pub mod pallet {
 			);
 
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
-			Self::update_reward(Some(addr))?;
 
 			Ok(())
 		}
@@ -509,15 +521,14 @@ pub mod pallet {
 			unlock_time: T::BlockNumber,
 			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
 		) -> DispatchResult {
-			let current_block_number: T::BlockNumber =
-				frame_system::Pallet::<T>::block_number().into();
+			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();
 			Supply::<T>::set(supply_before + value);
 
 			let old_locked = _locked.clone();
 			_locked.amount += value;
-			if unlock_time != 0u32.unique_saturated_into() {
+			if unlock_time != Zero::zero() {
 				_locked.end = unlock_time
 			}
 			Locked::<T>::insert(addr, _locked.clone());
