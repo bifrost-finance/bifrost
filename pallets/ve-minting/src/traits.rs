@@ -280,7 +280,8 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::Bloc
 					.reward_rate
 					.get(currency)
 					.unwrap_or(&Zero::zero())
-					.saturating_mul(remaining);
+					.checked_mul(&remaining)
+					.ok_or(ArithmeticError::Overflow)?;
 				total_reward = total_reward.saturating_add(leftover);
 			}
 			let currency_amount = T::MultiCurrency::free_balance(

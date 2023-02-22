@@ -49,14 +49,16 @@ impl<T: Config> Pallet<T> {
 		if _total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
-		conf.reward_rate.iter().for_each(|(currency, &reward)| {
+		conf.reward_rate.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 			let increment: BalanceOf<T> = U256::from(
 				Self::last_time_reward_applicable()
 					.saturating_sub(conf.last_update_time)
 					.saturated_into::<u128>(),
 			)
-			.saturating_mul(U256::from(reward.saturated_into::<u128>()))
-			.saturating_mul(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+			.checked_mul(U256::from(reward.saturated_into::<u128>()))
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+			.ok_or(ArithmeticError::Overflow)?
 			.checked_div(U256::from(_total_supply.saturated_into::<u128>()))
 			.unwrap_or_default()
 			.as_u128()
@@ -65,7 +67,8 @@ impl<T: Config> Pallet<T> {
 				.entry(*currency)
 				.and_modify(|total_reward| *total_reward = total_reward.saturating_add(increment))
 				.or_insert(increment);
-		});
+			Ok(())
+		})?;
 
 		IncentiveConfigs::<T>::set(conf.clone());
 		Ok(conf.reward_per_token_stored)
@@ -83,7 +86,7 @@ impl<T: Config> Pallet<T> {
 		};
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 			let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
-				.saturating_mul(U256::from(
+				.checked_mul(U256::from(
 					reward
 						.saturating_sub(
 							*Self::user_reward_per_token_paid(addr)
@@ -92,6 +95,7 @@ impl<T: Config> Pallet<T> {
 						)
 						.saturated_into::<u128>(),
 				))
+				.ok_or(ArithmeticError::Overflow)?
 				.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
 				.unwrap_or_default()
 				.as_u128()
