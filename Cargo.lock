@@ -1008,6 +1008,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-cross-in-out",
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
  "bifrost-fee-share",
