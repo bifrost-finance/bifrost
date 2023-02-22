@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use crate::{mocks::mock_kusama::*, BNC, KSM, *};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::opaque::latest::NetworkId::Any;
@@ -142,10 +142,8 @@ fn supplement_fee_reserve_works() {
 #[test]
 fn remove_delegator_works() {
 	ExtBuilder::default().build().execute_with(|| {
-		// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
-		let subaccount_0: AccountId =
-			hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
-				.into();
+		let para_chain_account: AccountId = ParaId::from(2001).into_account_truncating();
+		let subaccount_0: AccountId = Utility::derivative_account_id(para_chain_account, 0);
 		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
@@ -447,20 +445,15 @@ fn refund_currency_due_unbond_works() {
 
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
-	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
-	let subaccount_0: AccountId =
-		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
-			.into();
+	let para_chain_account: AccountId = ParaId::from(2001).into_account_truncating();
+	let subaccount_0: AccountId = Utility::derivative_account_id(para_chain_account, 0);
 	let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
 	let subaccount_0_location: MultiLocation =
 		Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
 	ExtBuilder::default().build().execute_with(|| {
-		let treasury_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-				.into();
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+		let treasury_id: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
+		let treasury_32: [u8; 32] = treasury_id.clone().into();
 
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(1));
 
@@ -544,8 +537,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 #[test]
 fn set_hosting_fees_works() {
 	ExtBuilder::default().build().execute_with(|| {
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+		let treasury_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);

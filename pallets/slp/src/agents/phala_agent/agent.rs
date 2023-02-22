@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	agents::{
-		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XcmCall,
+		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XtransferCall,
 	},
 	pallet::{Error, Event},
 	primitives::{
@@ -54,7 +54,6 @@ use xcm::{
 		Junctions::X1,
 		MultiLocation,
 	},
-	VersionedMultiAssets,
 };
 use xcm_interface::traits::parachains;
 
@@ -144,8 +143,7 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			total_value.checked_div(*total_shares).ok_or(Error::<T>::OverFlow)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
 			Err(Error::<T>::SharePriceNotValid)
 		}?;
@@ -212,18 +210,10 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
-				.saturating_mul(amount.saturated_into::<u128>().into())
-				.checked_div((*total_value).saturated_into::<u128>().into())
-				.ok_or(Error::<T>::OverFlow)?
-				.as_u128()
-				.saturated_into();
-
-			BalanceOf::<T>::unique_saturated_from(shares)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
-			Err(Error::<T>::SharePriceNotValid)?
-		};
+			Err(Error::<T>::SharePriceNotValid)
+		}?;
 
 		// Check if shares exceeds the minimum requirement > 1000(existential value for shares).
 		ensure!(
@@ -534,27 +524,21 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		let (dest, beneficiary) =
-			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+		let dest_account_32 = Pallet::<T>::multilocation_to_account_32(to)?;
+		let dest = Pallet::<T>::account_32_to_parachain_location(
+			dest_account_32,
+			T::ParachainId::get().into(),
+		)?;
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(Self::get_pha_multilocation()),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
-
-		// Prepare parameter fee_asset_item.
-		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = PhalaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
-			dest,
-			beneficiary,
-			assets,
-			fee_asset_item,
-		)));
+		let call =
+			PhalaCall::Xtransfer(XtransferCall::Transfer(Box::new(asset), Box::new(dest), None));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -640,7 +624,7 @@ impl<T: Config>
 		&self,
 		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
-		shares_amount: BalanceOf<T>,
+		_vtoken_amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
@@ -657,20 +641,6 @@ impl<T: Config>
 			token_amount,
 			currency_id,
 		)?;
-
-		// update delegator ledger
-		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
-			if let Some(Ledger::Phala(ref mut old_phala_ledger)) = old_ledger {
-				// Increase both the active and total amount.
-				old_phala_ledger.active_shares = old_phala_ledger
-					.active_shares
-					.checked_add(&shares_amount)
-					.ok_or(Error::<T>::OverFlow)?;
-				Ok(())
-			} else {
-				Err(Error::<T>::Unexpected)?
-			}
-		})?;
 
 		Ok(())
 	}
@@ -1112,5 +1082,21 @@ impl<T: Config> PhalaAgent<T> {
 		);
 
 		Ok(())
+	}
+
+	fn calculate_shares(
+		total_value: &u128,
+		total_shares: &u128,
+		amount: BalanceOf<T>,
+	) -> Result<BalanceOf<T>, Error<T>> {
+		ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
+		let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
+			.saturating_mul(amount.saturated_into::<u128>().into())
+			.checked_div((*total_value).saturated_into::<u128>().into())
+			.ok_or(Error::<T>::OverFlow)?
+			.as_u128()
+			.saturated_into();
+
+		Ok(BalanceOf::<T>::unique_saturated_from(shares))
 	}
 }
