@@ -22,7 +22,6 @@
 #![allow(non_upper_case_globals)]
 
 use crate as bifrost_ve_minting;
-// use crate::BNC;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};

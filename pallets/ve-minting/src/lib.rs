@@ -169,6 +169,10 @@ pub mod pallet {
 		RewardAdded {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
+		Rewarded {
+			addr: AccountIdOf<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -178,6 +182,7 @@ pub mod pallet {
 		BelowMinimumMint,
 		LockNotExist,
 		LockExist,
+		NoRewards,
 	}
 
 	#[pallet::storage]
@@ -324,7 +329,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::_get_rewards(&exchanger)
+			Self::get_rewards_inner(&exchanger)
 		}
 	}
 

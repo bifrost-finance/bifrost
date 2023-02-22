@@ -135,13 +135,16 @@ impl<T: Config> Pallet<T> {
 				reward_per_token_stored.clone(),
 				Self::earned(&address)?
 			);
-			Rewards::<T>::insert(address, Self::earned(&address)?);
+			let earned = Self::earned(&address)?;
+			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
+				Rewards::<T>::insert(address, earned);
+			}
 			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored.clone());
 		}
 		Ok(())
 	}
 
-	pub fn _get_rewards(addr: &AccountIdOf<T>) -> DispatchResult {
+	pub fn get_rewards_inner(addr: &AccountIdOf<T>) -> DispatchResult {
 		Self::update_reward(Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
@@ -155,6 +158,12 @@ impl<T: Config> Pallet<T> {
 				)
 			})?;
 			Rewards::<T>::remove(addr);
+			Self::deposit_event(Event::Rewarded {
+				addr: addr.to_owned(),
+				rewards: rewards.into_iter().collect(),
+			});
+		} else {
+			return Err(Error::<T>::NoRewards.into());
 		}
 		Ok(())
 	}
