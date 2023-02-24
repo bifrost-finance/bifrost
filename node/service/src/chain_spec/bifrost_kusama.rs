@@ -25,8 +25,9 @@ use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
 	GenesisConfig, IndicesConfig, InflationInfo, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig,
-	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SudoConfig,
+	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -189,6 +190,7 @@ pub fn bifrost_genesis(
 			delegations,
 			inflation_config: inflation_config(),
 		},
+		sudo: SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
 	}
 }
 
@@ -395,6 +397,21 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+	))
+}
+
+pub fn local_2262_config() -> Result<ChainSpec, String> {
+	Ok(ChainSpec::from_genesis(
+		"Bifrost 2262",
+		"bifrost_2262",
+		ChainType::Local,
+		move || local_config_genesis(2262.into()),
+		vec![],
+		None,
+		Some(DEFAULT_PROTOCOL_ID),
+		None,
+		Some(bifrost_kusama_properties()),
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: 2262 },
 	))
 }
 
