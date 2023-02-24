@@ -611,7 +611,6 @@ pub mod pallet {
 
 			let mut upoint: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, _min);
-
 			upoint.bias = upoint
 				.bias
 				.checked_sub(
@@ -626,18 +625,17 @@ pub mod pallet {
 				)
 				.ok_or(ArithmeticError::Overflow)?;
 
-			if (upoint.bias >= 0_i128) || (upoint.amount >= Zero::zero()) {
-				Ok(upoint
-					.amount
-					.checked_add(
-						&T::VoteWeightMultiplier::get()
-							.checked_mul(&(upoint.bias as u128).unique_saturated_into())
-							.ok_or(ArithmeticError::Overflow)?,
-					)
-					.ok_or(ArithmeticError::Overflow)?)
-			} else {
-				Ok(Zero::zero())
+			if upoint.bias < 0_i128 {
+				upoint.bias = 0_i128
 			}
+			Ok(upoint
+				.amount
+				.checked_add(
+					&T::VoteWeightMultiplier::get()
+						.checked_mul(&(upoint.bias as u128).unique_saturated_into())
+						.ok_or(ArithmeticError::Overflow)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?)
 		}
 	}
 }
