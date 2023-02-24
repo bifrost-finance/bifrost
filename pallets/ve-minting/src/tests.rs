@@ -61,7 +61,7 @@ fn update_reward() {
 
 		System::set_block_number(System::block_number() + 20);
 		System::set_block_number(System::block_number() + 20);
-		assert_ok!(VeMinting::_create_lock(
+		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
 			100_000_000_000,
 			System::block_number() + 365 * 86400 / 12,
@@ -109,7 +109,7 @@ fn notify_reward_amount() {
 			VeMinting::get_rewards(RuntimeOrigin::signed(BOB)),
 			Error::<Runtime>::NoRewards
 		);
-		assert_ok!(VeMinting::_create_lock(
+		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
 			20_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
@@ -143,7 +143,7 @@ fn notify_reward_amount() {
 			Some(7 * 86400 / 12),
 			rewards
 		));
-		assert_ok!(VeMinting::_create_lock(
+		assert_ok!(VeMinting::create_lock_inner(
 			&CHARLIE,
 			100_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
@@ -225,13 +225,13 @@ fn create_lock_to_withdraw() {
 			),
 			Error::<Runtime>::BelowMinimumMint
 		);
-		assert_ok!(VeMinting::_create_lock(
+		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
 			50_000_000_000_000,
 			System::block_number() + 365 * 86400 / 12
 		));
 		assert_noop!(
-			VeMinting::_create_lock(
+			VeMinting::create_lock_inner(
 				&BOB,
 				50_000_000_000_000,
 				System::block_number() + 365 * 86400 / 12
@@ -269,7 +269,7 @@ fn create_lock_to_withdraw() {
 		System::set_block_number(System::block_number() + 365 * 86400 / 12); // a year
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(100_000_000_000_000));
 		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)));
-		assert_ok!(VeMinting::_withdraw(&BOB));
+		assert_ok!(VeMinting::withdraw_inner(&BOB));
 		log::debug!(
 			"5System::block_number():{:?} total_supply:{:?}",
 			System::block_number(),

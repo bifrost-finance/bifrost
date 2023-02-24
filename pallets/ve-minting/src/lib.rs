@@ -208,6 +208,7 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	// Each week has a Point struct stored in PointHistory.
 	#[pallet::storage]
 	#[pallet::getter(fn point_history)]
 	pub type PointHistory<T: Config> =
@@ -288,28 +289,28 @@ pub mod pallet {
 			unlock_time: T::BlockNumber,
 		) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
-			Self::_create_lock(&exchanger, value, unlock_time)
+			Self::create_lock_inner(&exchanger, value, unlock_time)
 		}
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
-			Self::_increase_amount(&exchanger, value)
+			Self::increase_amount_inner(&exchanger, value)
 		}
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn increase_unlock_time(origin: OriginFor<T>, time: T::BlockNumber) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::_increase_unlock_time(&exchanger, time)
+			Self::increase_unlock_time_inner(&exchanger, time)
 		}
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::_withdraw(&exchanger)
+			Self::withdraw_inner(&exchanger)
 		}
 
 		#[pallet::call_index(5)]
@@ -427,7 +428,6 @@ pub mod pallet {
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 
-				log::debug!("d_slope{:?}last_point.slope:{:?}", d_slope, last_point.slope);
 				last_point.slope =
 					last_point.slope.checked_add(d_slope).ok_or(ArithmeticError::Overflow)?;
 				if last_point.slope < 0_i128 {
@@ -501,15 +501,6 @@ pub mod pallet {
 			UserPointEpoch::<T>::insert(addr, user_epoch);
 			u_new.block = current_block_number;
 			u_new.amount = Self::locked(addr).amount;
-			log::debug!(
-				"g_epoch:{:?}last_point:{:?}u_new:{:?}u_old:{:?}new_locked:{:?}",
-				g_epoch,
-				last_point,
-				u_new,
-				u_old,
-				new_locked
-			);
-
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 
 			Ok(())
@@ -565,13 +556,6 @@ pub mod pallet {
 				let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
 					Self::user_point_history(addr, u_epoch);
 
-				log::debug!(
-					"balance_of---:{:?}_t:{:?}last_point.block:{:?}",
-					(current_block_number.saturated_into::<u128>() as i128)
-						.saturating_sub(last_point.block.saturated_into::<u128>() as i128),
-					current_block_number,
-					last_point.block
-				);
 				last_point.bias = last_point
 					.bias
 					.checked_sub(
@@ -627,7 +611,6 @@ pub mod pallet {
 
 			let mut upoint: Point<BalanceOf<T>, T::BlockNumber> =
 				Self::user_point_history(addr, _min);
-			log::debug!("balance_of_at---_min:{:?}_max:{:?}upoint:{:?}", _min, _max, upoint);
 
 			upoint.bias = upoint
 				.bias
