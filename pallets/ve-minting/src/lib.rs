@@ -140,7 +140,7 @@ pub mod pallet {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
 			end: T::BlockNumber,
-			timestamp: T::BlockNumber,
+			now: T::BlockNumber,
 		},
 		Supply {
 			supply_before: BalanceOf<T>,
@@ -538,7 +538,7 @@ pub mod pallet {
 				addr: addr.clone(),
 				value,
 				end: _locked.end,
-				timestamp: current_block_number,
+				now: current_block_number,
 			});
 			Self::deposit_event(Event::Supply { supply_before, supply: supply_before + value });
 			Ok(())
