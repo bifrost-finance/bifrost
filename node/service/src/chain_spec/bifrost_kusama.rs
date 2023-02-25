@@ -190,7 +190,12 @@ pub fn bifrost_genesis(
 			delegations,
 			inflation_config: inflation_config(),
 		},
-		sudo: SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
+		//0x5a5f7eb7050fb96d8d7895d9afce428a064ce66e3b094805bcad9a8e68cb9934
+		sudo: SudoConfig {
+			key: Some(
+				hex!["5a5f7eb7050fb96d8d7895d9afce428a064ce66e3b094805bcad9a8e68cb9934"].into(),
+			),
+		},
 	}
 }
 
