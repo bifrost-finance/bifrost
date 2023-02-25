@@ -316,8 +316,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
-	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let council_membership = vec![];
+	let technical_committee_membership = vec![];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 	let salp_lite_multisig: AccountId =
