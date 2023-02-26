@@ -192,7 +192,7 @@ impl<T: Config> SubstrateCall<T> {
 	pub fn get_transact_instruct(self, weight: XcmWeight) -> Instruction {
 		let encoded_call = match &self {
 			SubstrateCall::Kusama(call) => call.encode(),
-			SubstrateCall::Polkadot(call) => call.encode()
+			SubstrateCall::Polkadot(call) => call.encode(),
 		};
 
 		Transact {

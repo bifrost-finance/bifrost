@@ -66,16 +66,16 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
-		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
-		Utility: pallet_utility::{Pallet, Call, Event}
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 2,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		Currencies: orml_currencies::{Pallet, Call} = 72,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage} = 114,
+		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>} = 25,
+		Utility: pallet_utility::{Pallet, Call, Event} = 50
 	}
 );
 

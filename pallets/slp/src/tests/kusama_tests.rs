@@ -24,6 +24,11 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::opaque::latest::NetworkId::Any;
 
+const SUBACCOUNT_0_32: [u8; 32] =
+	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
+const SUBACCOUNT_0_LOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: SUBACCOUNT_0_32 }) };
+
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
@@ -556,4 +561,145 @@ fn set_hosting_fees_works() {
 		assert_eq!(fee, pct);
 		assert_eq!(location, treasury_location);
 	});
+}
+
+// test for DOT
+#[test]
+fn bond_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		register_subaccount_index_0();
+
+		// Bond 1 ksm for sub-account index 0
+		assert_noop!(
+			Slp::bond(
+				RuntimeOrigin::signed(ALICE),
+				DOT,
+				Box::new(SUBACCOUNT_0_LOCATION),
+				1_000_000_000_000,
+				None
+			),
+			Error::<Runtime>::XcmFailure
+		);
+	});
+}
+
+// Preparation: register sub-account index 0.
+fn register_subaccount_index_0() {
+	// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
+	// block)
+	assert_ok!(Slp::set_ongoing_time_unit_update_interval(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		Some(600)
+	));
+
+	System::set_block_number(600);
+
+	// Initialize ongoing timeunit as 0.
+	assert_ok!(Slp::update_ongoing_time_unit(RuntimeOrigin::signed(ALICE), DOT, TimeUnit::Era(0)));
+
+	// Initialize currency delays.
+	let delay =
+		Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
+	assert_ok!(Slp::set_currency_delays(RuntimeOrigin::signed(ALICE), DOT, Some(delay)));
+
+	let mins_and_maxs = MinimumsMaximums {
+		delegator_bonded_minimum: 100_000_000_000,
+		bond_extra_minimum: 0,
+		unbond_minimum: 0,
+		rebond_minimum: 0,
+		unbond_record_maximum: 32,
+		validators_back_maximum: 36,
+		delegator_active_staking_maximum: 200_000_000_000_000,
+		validators_reward_maximum: 0,
+		delegation_amount_minimum: 0,
+		delegators_maximum: 100,
+		validators_maximum: 300,
+	};
+
+	// Set minimums and maximums
+	assert_ok!(Slp::set_minimums_and_maximums(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		Some(mins_and_maxs)
+	));
+
+	// First to setup index-multilocation relationship of subaccount_0
+	assert_ok!(Slp::add_delegator(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		0u16,
+		Box::new(SUBACCOUNT_0_LOCATION),
+	));
+
+	// Register Operation weight and fee
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::TransferTo,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Bond,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::BondExtra,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Unbond,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Rebond,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Delegate,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Payout,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Liquidize,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::Chill,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
+
+	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+		RuntimeOrigin::signed(ALICE),
+		DOT,
+		XcmOperation::TransferBack,
+		Some((20_000_000_000, 10_000_000_000)),
+	));
 }
