@@ -111,6 +111,8 @@ impl<T: Config> Pallet<T> {
 		Ok(rewards)
 	}
 
+	// Used to update reward when notify_reward or user call
+	// create_lock/increase_amount/increase_unlock_time/withdraw/get_rewards
 	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
 

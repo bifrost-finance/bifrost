@@ -59,8 +59,7 @@ fn update_reward() {
 			Some(7 * 86400 / 12)
 		));
 
-		System::set_block_number(System::block_number() + 20);
-		System::set_block_number(System::block_number() + 20);
+		System::set_block_number(System::block_number() + 40);
 		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
 			100_000_000_000,
@@ -103,8 +102,7 @@ fn notify_reward_amount() {
 			Some(7 * 86400 / 12)
 		));
 
-		System::set_block_number(System::block_number() + 20);
-		System::set_block_number(System::block_number() + 20);
+		System::set_block_number(System::block_number() + 40);
 		assert_noop!(
 			VeMinting::get_rewards(RuntimeOrigin::signed(BOB)),
 			Error::<Runtime>::NoRewards
@@ -266,7 +264,8 @@ fn create_lock_to_withdraw() {
 		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE)));
 		assert_noop!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)), Error::<Runtime>::Expired);
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(174794515868800));
-		System::set_block_number(System::block_number() + 365 * 86400 / 12); // a year
+		System::set_block_number(System::block_number() + 2 * 365 * 86400 / 12);
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(100_000_000_000_000));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(100_000_000_000_000));
 		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)));
 		assert_ok!(VeMinting::withdraw_inner(&BOB));
@@ -275,6 +274,18 @@ fn create_lock_to_withdraw() {
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(0));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(0));
+	});
+}
+
+#[test]
+fn overflow() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		assert_ok!(VeMinting::create_lock_inner(&BOB, 100_000_000_000_000, 77000));
+		System::set_block_number(77001);
+		assert_eq!(VeMinting::balance_of(&BOB, Some(77001)), Ok(100_000_000_000_000));
+		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(100_000_000_000_000));
 	});
 }
