@@ -324,8 +324,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			foreign_location: Box<MultiLocation>,
+			account: AccountIdOf<T>,
 		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
