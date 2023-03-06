@@ -20,10 +20,9 @@
 
 #![cfg(test)]
 
-use bifrost_asset_registry::AssetIdMaps;
-// use parachain_staking::ParachainStakingInterface;
 use crate as bifrost_slp;
 use crate::{Config, QueryResponseManager};
+use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -59,6 +58,8 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
 pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
+#[cfg(feature = "runtime-benchmarks")]
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -74,12 +75,20 @@ construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Pallet, Call, Event}
 	}
 );
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
 	pub const RelayCurrencyId: CurrencyId = KSM;
+}
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = ();
 }
 
 parameter_types! {

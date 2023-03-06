@@ -31,6 +31,8 @@ use crate::{
 	BNC,
 };
 use codec::alloc::collections::BTreeMap;
+use frame_support::PalletId;
+use sp_runtime::traits::AccountIdConversion;
 
 #[test]
 fn initialize_parachain_staking_delegator() {
@@ -65,9 +67,7 @@ fn parachain_staking_setup() {
 	let validator_0_location =
 		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
 
-	let treasury_account_id_32: [u8; 32] =
-		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-			.into();
+	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
 		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
@@ -262,9 +262,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			10_000_000u32
 		));
 
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
@@ -313,6 +311,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 
 		let mut request_list = Vec::new();
 
+		// random account to test ordering
 		let validator_10: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
 				.into();
@@ -325,6 +324,8 @@ fn parachain_staking_bond_to_liquidize_works() {
 			when_executable: TimeUnit::Round(50),
 			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
 		};
+
+		// random account to test ordering
 		let validator_11: [u8; 32] =
 			hex_literal::hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
 				.into();
@@ -853,9 +854,7 @@ fn parachain_staking_transfer_back_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		parachain_staking_setup();
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
+		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
@@ -893,9 +892,7 @@ fn parachain_staking_transfer_to_works() {
 		// environment setup
 		parachain_staking_setup();
 
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
@@ -932,31 +929,20 @@ fn supplement_fee_account_whitelist_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
 		parachain_staking_setup();
-		let entrance_account_id: AccountId =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
-		let entrance_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
+		let entrance_account_id: AccountId = PalletId(*b"bf/vtkin").into_account_truncating();
+		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
 		};
-
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
-
+		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
 			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
 		};
 
-		let source_account_id_32: [u8; 32] =
-			hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"]
-				.into();
+		let source_account_id_32: [u8; 32] = ALICE.into();
 		let source_location = Slp::account_32_to_local_location(source_account_id_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
@@ -990,15 +976,6 @@ fn supplement_fee_account_whitelist_works() {
 			Some(entrance_account_id)
 		));
 
-		// assert_noop!(
-		// 	Slp::supplement_fee_reserve(
-		// 		RuntimeOrigin::signed(ALICE),
-		// 		BNC,
-		// 		Box::new(entrance_account_location.clone()),
-		// 	),
-		// 	Error::<Runtime>::XcmFailure
-		// );
-
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
@@ -1014,15 +991,6 @@ fn supplement_fee_account_whitelist_works() {
 			BNC,
 			Box::new(exit_account_location.clone()),
 		));
-
-		// assert_noop!(
-		// 	Slp::supplement_fee_reserve(
-		// 		RuntimeOrigin::signed(ALICE),
-		// 		BNC,
-		// 		Box::new(exit_account_location.clone()),
-		// 	),
-		// 	Error::<Runtime>::XcmFailure
-		// );
 
 		// remove exit_account_location from whitelist
 		assert_ok!(Slp::remove_supplement_fee_account_from_whitelist(

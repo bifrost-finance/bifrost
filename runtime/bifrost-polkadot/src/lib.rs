@@ -35,8 +35,8 @@ pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything, Imbalance,
-		InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing, OnUnbalanced,
-		Randomness,
+		InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing, OnRuntimeUpgrade,
+		OnUnbalanced, Randomness,
 	},
 	weights::{
 		constants::{
@@ -51,7 +51,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::OpaqueMetadata;
+use sp_core::{OpaqueMetadata, U256};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
@@ -78,6 +78,7 @@ use bifrost_runtime_common::{
 	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
+use bifrost_ve_minting::traits::VeMintingInterface;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -299,6 +300,8 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 }
 
 impl frame_system::Config for Runtime {
@@ -649,7 +652,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * DOLLARS;
+	pub const CandidacyBond: Balance = 10_000 * DOLLARS;
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
 	pub const VotingBondBase: Balance = deposit(1, 64);
 	// additional data per vote is 32 bytes (account id).
@@ -1262,6 +1265,14 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+impl bifrost_cross_in_out::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type EntrancePalletId = SlpEntrancePalletId;
+	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1364,6 +1375,29 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+}
+
+parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub const Week: BlockNumber = WEEKS;
+	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type TokenType = VeMintingTokenType;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1536,6 +1570,8 @@ construct_runtime! {
 		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
+		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 	}
 }
 
@@ -1582,7 +1618,10 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,
+	(
+		pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,
+		SalpOnRuntimeUpgrade<Runtime>,
+	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1799,6 +1838,28 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
+		fn balance_of(
+			who: AccountId,
+			t: Option<node_primitives::BlockNumber>,
+		) -> Balance{
+			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
+		}
+
+		fn total_supply(
+			t: node_primitives::BlockNumber,
+		) -> Balance{
+			VeMinting::total_supply(t).unwrap_or(Zero::zero())
+		}
+
+		fn find_block_epoch(
+			block: node_primitives::BlockNumber,
+			max_epoch: U256,
+		) -> U256{
+			VeMinting::find_block_epoch(block, max_epoch)
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (
@@ -1852,6 +1913,43 @@ impl_runtime_apis! {
 			// have a backtrace here.
 			Executive::try_execute_block(block, state_root_check,signature_check, select).unwrap()
 		}
+	}
+}
+
+pub struct SalpOnRuntimeUpgrade<T>(PhantomData<T>);
+impl<T: bifrost_salp::Config> OnRuntimeUpgrade for SalpOnRuntimeUpgrade<T> {
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `pre_upgrade`...");
+
+		let redeem_pool: _ = bifrost_salp::RedeemPool::<T>::get();
+		log::info!("Old redeem_pool is {:?}", redeem_pool);
+
+		Ok(vec![])
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Bifrost `on_runtime_upgrade`...");
+
+		let weight = bifrost_salp::migration::update_redeem_pool::<Runtime>();
+
+		log::info!("Bifrost `on_runtime_upgrade finished`");
+
+		weight
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `post_upgrade`...");
+
+		let redeem_pool: _ = bifrost_salp::RedeemPool::<T>::get();
+		log::info!("New redeem_pool is {:?}", redeem_pool);
+
+		Ok(())
 	}
 }
 

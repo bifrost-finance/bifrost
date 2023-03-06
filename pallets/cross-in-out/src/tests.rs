@@ -251,7 +251,18 @@ fn change_outer_linked_account_should_work() {
 			CrossInOut::change_outer_linked_account(
 				RuntimeOrigin::signed(BOB),
 				KSM,
-				Box::new(location.clone())
+				Box::new(location2.clone()),
+				BOB
+			),
+			BadOrigin
+		);
+
+		assert_noop!(
+			CrossInOut::change_outer_linked_account(
+				RuntimeOrigin::signed(ALICE),
+				KSM,
+				Box::new(location.clone()),
+				BOB
 			),
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
@@ -260,17 +271,19 @@ fn change_outer_linked_account_should_work() {
 
 		assert_noop!(
 			CrossInOut::change_outer_linked_account(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(ALICE),
 				KSM,
-				Box::new(location.clone())
+				Box::new(location.clone()),
+				BOB
 			),
 			Error::<Runtime>::AlreadyExist
 		);
 
 		assert_ok!(CrossInOut::change_outer_linked_account(
-			RuntimeOrigin::signed(BOB),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
-			Box::new(location2.clone())
+			Box::new(location2.clone()),
+			BOB
 		));
 	});
 }

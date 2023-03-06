@@ -18,28 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Codec;
-use node_primitives::{Balance, BlockNumber};
-use sp_api::decl_runtime_apis;
-use sp_core::U256;
+use super::{Config, RedeemPool, Weight};
+use frame_support::traits::Get;
+use sp_runtime::traits::UniqueSaturatedInto;
 
-decl_runtime_apis! {
-	pub trait VeMintingRuntimeApi<AccountId> where
-		AccountId: Codec,
-		BlockNumber: Codec,
-	{
-		fn balance_of(
-			who: AccountId,
-			t: Option<BlockNumber>,
-		) -> Balance;
+pub fn update_redeem_pool<T: Config>() -> Weight {
+	RedeemPool::<T>::set(147_780_374_204_392u128.unique_saturated_into());
 
-		fn total_supply(
-			t: BlockNumber,
-		) -> Balance;
-
-		fn find_block_epoch(
-			block: BlockNumber,
-			max_epoch: U256,
-		) -> U256;
-	}
+	T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1)
 }

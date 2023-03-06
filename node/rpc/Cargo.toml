@@ -17,6 +17,7 @@ sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", bra
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
@@ -27,6 +28,8 @@ bifrost-liquidity-mining-rpc-api = { path = "../../pallets/liquidity-mining/rpc"
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
 bifrost-farming-rpc-api = { path = "../../pallets/farming/rpc" }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api" }
+bifrost-ve-minting-rpc-api = { path = "../../pallets/ve-minting/rpc" }
+bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api" }
 zenlink-protocol = "*"
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"
