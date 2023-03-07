@@ -25,6 +25,36 @@ use frame_support::{assert_err, assert_ok};
 use crate::{mock::*, *};
 
 #[test]
+fn boost() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, _tokens) = init_no_gauge();
+		assert_ok!(Farming::set_retire_limit(RuntimeOrigin::signed(ALICE), 10));
+		assert_err!(
+			Farming::claim(RuntimeOrigin::signed(ALICE), pid),
+			Error::<Runtime>::InvalidPoolState
+		);
+		System::set_block_number(System::block_number() + 100);
+		Farming::on_initialize(0);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		Farming::on_initialize(0);
+		assert_ok!(Farming::withdraw_claim(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
+		Farming::on_initialize(0);
+		assert_ok!(Farming::close_pool(RuntimeOrigin::signed(ALICE), pid));
+		assert_ok!(Farming::force_retire_pool(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5000); // 3000 + 1000 + 1000
+		Farming::on_initialize(0);
+		assert_err!(
+			Farming::force_retire_pool(RuntimeOrigin::signed(ALICE), pid),
+			Error::<Runtime>::InvalidPoolState
+		);
+	});
+}
+
+#[test]
 fn claim() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_no_gauge();
@@ -254,6 +284,7 @@ fn reset() {
 			withdraw_limit_time: Default::default(),
 			claim_limit_time: Default::default(),
 			withdraw_limit_count: 5,
+			if_ve: false,
 		};
 		assert_eq!(Farming::pool_infos(0), Some(pool_infos));
 		let gauge_pool_info = GaugePoolInfo {

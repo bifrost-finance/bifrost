@@ -27,6 +27,7 @@ use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 pub struct DeprecatedPoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor>
 {
 	pub tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
+	pub basic_token: (CurrencyIdOf, Perbill),
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -54,13 +55,10 @@ pub fn update_pool_info<T: Config>() -> Weight {
 		|_key,
 		 pool|
 		 -> Option<PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>> {
-			// if let Some(pool) = pool_info {
-			let a = pool.tokens_proportion.keys().cloned().collect::<Vec<CurrencyIdOf<T>>>()[0];
-			let b = pool.tokens_proportion.values().cloned().collect::<Vec<Perbill>>()[0];
 			let new_entry =
 				PoolInfo::<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>> {
 					tokens_proportion: pool.tokens_proportion,
-					basic_token: (a, b),
+					basic_token: pool.basic_token,
 					total_shares: pool.total_shares,
 					basic_rewards: pool.basic_rewards,
 					rewards: pool.rewards,
@@ -74,11 +72,9 @@ pub fn update_pool_info<T: Config>() -> Weight {
 					withdraw_limit_time: pool.withdraw_limit_time,
 					claim_limit_time: pool.claim_limit_time,
 					withdraw_limit_count: pool.withdraw_limit_count,
+					if_ve: false,
 				};
 			Some(new_entry)
-			// } else {
-			// 	None
-			// }
 		},
 	);
 

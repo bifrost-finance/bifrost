@@ -565,6 +565,7 @@ dependencies = [
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
+ "bifrost-ve-minting",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

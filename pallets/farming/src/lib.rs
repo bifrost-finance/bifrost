@@ -29,16 +29,20 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod boost;
 pub mod gauge;
 pub mod rewards;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use crate::boost::*;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
-		ArithmeticError, Perbill,
+		traits::{
+			AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv, Convert, Saturating, Zero,
+		},
+		ArithmeticError, Perbill, Percent,
 	},
 	PalletId,
 };
@@ -92,6 +96,18 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RewardIssuer: Get<PalletId>;
+
+		#[pallet::constant]
+		type FarmingBoost: Get<PalletId>;
+
+		type VeMinting: bifrost_ve_minting::VeMintingInterface<
+			AccountIdOf<Self>,
+			CurrencyIdOf<Self>,
+			BalanceOf<Self>,
+			Self::BlockNumber,
+		>;
+
+		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
 	}
 
 	#[pallet::event]
@@ -155,6 +171,15 @@ pub mod pallet {
 		RetireLimitSet {
 			limit: u32,
 		},
+		RoundEnd {
+			voting_pools: BTreeMap<PoolId, BalanceOf<T>>,
+			total_votes: BalanceOf<T>,
+			start_round: BlockNumberFor<T>,
+			end_round: BlockNumberFor<T>,
+		},
+		RoundStartError {
+			info: DispatchError,
+		},
 	}
 
 	#[pallet::error]
@@ -173,6 +198,9 @@ pub mod pallet {
 		WithdrawLimitCountExceeded,
 		ShareInfoNotExists,
 		CanNotDeposit,
+		WhitelistEmpty,
+		RoundNotOver,
+		RoundLengthNotSet,
 	}
 
 	#[pallet::storage]
@@ -237,13 +265,40 @@ pub mod pallet {
 		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn boost_pool_infos)]
+	pub type BoostPoolInfos<T: Config> = StorageValue<
+		_,
+		BoostPoolInfo<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn user_boost_infos)]
+	pub type UserBoostInfos<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		UserBoostInfo<BalanceOf<T>, BlockNumberFor<T>>,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_basic_rewards)]
+	pub type BoostBasicRewards<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			PoolInfos::<T>::iter().for_each(|(pid, mut pool_info)| match pool_info.state {
 				PoolState::Ongoing => {
-					pool_info.basic_rewards.clone().iter().for_each(
+					pool_info.basic_rewards.clone().iter_mut().for_each(
 						|(reward_currency_id, reward_amount)| {
+							if let Some(boost_basic_reward) =
+								Self::boost_basic_rewards(pid, reward_currency_id)
+							{
+								*reward_amount = reward_amount.saturating_add(boost_basic_reward);
+							}
 							pool_info
 								.rewards
 								.entry(*reward_currency_id)
@@ -286,6 +341,10 @@ pub mod pallet {
 					_ => (),
 				},
 			);
+			if n == Self::boost_pool_infos().end_round {
+				Self::end_boost_round();
+				// Self::auto_start_boost_round();
+			}
 
 			T::WeightInfo::on_initialize()
 		}
@@ -783,6 +842,38 @@ pub mod pallet {
 			} else {
 				Self::deposit_event(Event::PartiallyForceGaugeClaimed { gid });
 			}
+			Ok(())
+		}
+
+		// Add whitelist and take effect immediately
+		#[pallet::call_index(14)]
+		#[pallet::weight(0)]
+		pub fn add_boost_pool_whitelist(
+			origin: OriginFor<T>,
+			whitelist: Vec<PoolId>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			let mut boost_pool_info = Self::boost_pool_infos();
+			boost_pool_info.whitelist.extend(whitelist);
+			boost_pool_info.whitelist.sort();
+			boost_pool_info.whitelist.dedup();
+			BoostPoolInfos::<T>::set(boost_pool_info);
+			Ok(())
+		}
+
+		// Whitelist for next round in effect
+		#[pallet::call_index(15)]
+		#[pallet::weight(0)]
+		pub fn set_next_round_whitelist(
+			origin: OriginFor<T>,
+			mut whitelist: Vec<PoolId>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			BoostPoolInfos::<T>::mutate(|boost_pool_info| {
+				whitelist.sort();
+				whitelist.dedup();
+				boost_pool_info.next_round_whitelist = whitelist;
+			});
 			Ok(())
 		}
 	}

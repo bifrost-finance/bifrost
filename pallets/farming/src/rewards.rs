@@ -74,6 +74,7 @@ pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, Block
 	pub withdraw_limit_time: BlockNumberFor,
 	pub claim_limit_time: BlockNumberFor,
 	pub withdraw_limit_count: u8,
+	pub if_ve: bool, // Used to determine whether it is a VeBNC farming pool, the default is false
 }
 
 impl<BalanceOf, CurrencyIdOf, AccountIdOf, BlockNumberFor>
@@ -111,6 +112,7 @@ where
 			withdraw_limit_time,
 			claim_limit_time,
 			withdraw_limit_count,
+			if_ve: false,
 		}
 	}
 }
