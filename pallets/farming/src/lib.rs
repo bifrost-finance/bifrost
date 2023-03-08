@@ -180,6 +180,17 @@ pub mod pallet {
 		RoundStartError {
 			info: DispatchError,
 		},
+		RoundStart {
+			round_length: BlockNumberFor<T>,
+		},
+		Voted {
+			who: AccountIdOf<T>,
+			vote_list: Vec<(PoolId, Percent)>,
+		},
+		BoostCharged {
+			who: AccountIdOf<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -342,8 +353,8 @@ pub mod pallet {
 				},
 			);
 			if n == Self::boost_pool_infos().end_round {
-				Self::end_boost_round();
-				// Self::auto_start_boost_round();
+				Self::end_boost_round_inner();
+				Self::auto_start_boost_round();
 			}
 
 			T::WeightInfo::on_initialize()
@@ -874,6 +885,53 @@ pub mod pallet {
 				whitelist.dedup();
 				boost_pool_info.next_round_whitelist = whitelist;
 			});
+			Ok(())
+		}
+
+		#[pallet::call_index(16)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn vote(origin: OriginFor<T>, vote_list: Vec<(PoolId, Percent)>) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::vote_inner(&exchanger, vote_list.clone())?;
+			Self::deposit_event(Event::Voted { who: exchanger, vote_list });
+			Ok(())
+		}
+
+		#[pallet::call_index(17)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn start_boost_round(
+			origin: OriginFor<T>,
+			round_length: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::start_boost_round_inner(round_length)?;
+			Ok(())
+		}
+
+		#[pallet::call_index(18)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn end_boost_round(origin: OriginFor<T>) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::end_boost_round_inner();
+			Ok(())
+		}
+
+		#[pallet::call_index(19)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn charge_boost(
+			origin: OriginFor<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+				T::MultiCurrency::transfer(
+					*currency,
+					&exchanger,
+					&T::FarmingBoost::get().into_account_truncating(),
+					*reward,
+				)
+			})?;
+			Self::deposit_event(Event::BoostCharged { who: exchanger, rewards });
 			Ok(())
 		}
 	}
