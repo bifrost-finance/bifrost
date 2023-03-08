@@ -310,6 +310,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 }
 
 impl frame_system::Config for Runtime {
@@ -1435,6 +1436,9 @@ impl bifrost_farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
+	type FarmingBoost = FarmingBoostPalletId;
+	type VeMinting = ();
+	type BlockNumberToBalance = ConvertInto;
 }
 
 parameter_types! {
