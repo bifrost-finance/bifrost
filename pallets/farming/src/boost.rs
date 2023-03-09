@@ -35,8 +35,8 @@ pub struct BoostPoolInfo<CurrencyId, Balance, BlockNumber> {
 #[derive(Clone, Encode, Decode, TypeInfo)]
 pub struct UserBoostInfo<Balance, BlockNumber> {
 	pub vote_amount: Balance,
-	pub vote_list: Vec<(PoolId, Percent)>,
-	pub last_block: BlockNumber,
+	pub vote_list: Vec<(PoolId, Percent)>, // Change only when voting
+	pub last_vote: BlockNumber,            // Change only when voting
 }
 
 pub trait BoostInterface<AccountId, CurrencyId, Balance, BlockNumber> {
@@ -50,11 +50,10 @@ impl<T: Config> BoostInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 		let mut boost_pool_info = Self::boost_pool_infos();
 		let new_vote_amount = T::VeMinting::balance_of(who, None)?;
 
-		// TODO: if boost_pool_info is default, return
 		if let Some(mut user_boost_info) = Self::user_boost_infos(who) {
 			// If the user's last voting block height is greater than or equal to the block height
-			// at the beginning of this round, subtract.
-			if user_boost_info.last_block >= boost_pool_info.start_round {
+			// at the beginning of this round, refresh.
+			if user_boost_info.last_vote >= boost_pool_info.start_round {
 				user_boost_info.vote_list.iter().for_each(|(pid, proportion)| {
 					boost_pool_info
 						.voting_pools
@@ -206,7 +205,7 @@ impl<T: Config> Pallet<T> {
 		if let Some(user_boost_info) = Self::user_boost_infos(who) {
 			// If the user's last voting block height is greater than or equal to the block height
 			// at the beginning of this round, subtract.
-			if user_boost_info.last_block >= boost_pool_info.start_round {
+			if user_boost_info.last_vote >= boost_pool_info.start_round {
 				user_boost_info.vote_list.iter().for_each(|(pid, proportion)| {
 					boost_pool_info
 						.voting_pools
@@ -241,7 +240,7 @@ impl<T: Config> Pallet<T> {
 		let new_user_boost_info = UserBoostInfo {
 			vote_amount: new_vote_amount,
 			vote_list,
-			last_block: current_block_number,
+			last_vote: current_block_number,
 		};
 		UserBoostInfos::<T>::insert(who, new_user_boost_info);
 		Ok(())
