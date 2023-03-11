@@ -558,3 +558,70 @@ fn remove_validator_should_work() {
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(empty_vec));
 	});
 }
+
+#[test]
+fn filecoin_transfer_to_works() {
+	// miner
+	let location = MultiLocation {
+		parents: 100,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
+
+	// worker
+	let owner_location = MultiLocation {
+		parents: 111,
+		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		bond_setup();
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+
+		let entrance_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+		};
+
+		let exit_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
+				.into();
+
+		let exit_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+		};
+
+		assert_noop!(
+			Slp::transfer_to(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(exit_account_location.clone()),
+				Box::new(owner_location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::InvalidAccount
+		);
+
+		assert_noop!(
+			Slp::transfer_to(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(entrance_account_location.clone()),
+				Box::new(location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::ValidatorNotExist
+		);
+
+		assert_ok!(Slp::transfer_to(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			Box::new(entrance_account_location.clone()),
+			Box::new(owner_location.clone()),
+			0,
+		));
+	});
+}
