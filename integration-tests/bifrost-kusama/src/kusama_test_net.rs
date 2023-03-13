@@ -20,10 +20,9 @@
 
 use bifrost_runtime_common::dollar;
 use frame_support::{traits::GenesisBuild, weights::Weight};
-use node_primitives::TokenSymbol::KSM;
 use polkadot_primitives::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, ParaId};
 
 use crate::kusama_integration_tests::*;
 
@@ -46,26 +45,6 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
-	pub struct SalpTest {
-		Runtime = Runtime,
-		RuntimeOrigin = RuntimeOrigin,
-		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
-		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext_salp(2001),
-	}
-}
-
-decl_test_parachain! {
-	pub struct Sibling {
-		Runtime = Runtime,
-		RuntimeOrigin = RuntimeOrigin,
-		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
-		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext(2000),
-	}
-}
-
-decl_test_parachain! {
 	pub struct Statemine {
 		Runtime = statemine_runtime::Runtime,
 		RuntimeOrigin = statemine_runtime::RuntimeOrigin,
@@ -81,7 +60,6 @@ decl_test_network! {
 		parachains = vec![
 			(1000, Statemine),
 			(2001, Bifrost),
-			(2000, Sibling),
 		],
 	}
 }
@@ -130,10 +108,10 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![(
-			AccountId::from(ALICE),
-			100 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM)),
-		)],
+		balances: vec![
+			(AccountId::from(ALICE), 100 * KSM_DECIMALS),
+			(ParaId::from(2001u32).into_account_truncating(), 2 * KSM_DECIMALS),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -157,26 +135,16 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilder::default()
-		.balances(vec![(
-			AccountId::from(ALICE),
-			RelayCurrencyId::get(),
-			10 * dollar::<Runtime>(RelayCurrencyId::get()),
-		)])
-		.parachain_id(parachain_id)
-		.build()
-}
-pub fn para_ext_salp(parachain_id: u32) -> sp_io::TestExternalities {
-	ExtBuilder::default()
 		.balances(vec![
 			(
 				AccountId::from(ALICE),
 				RelayCurrencyId::get(),
-				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+				10 * dollar::<Runtime>(RelayCurrencyId::get()),
 			),
 			(
 				AccountId::from(BOB),
 				RelayCurrencyId::get(),
-				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+				10 * dollar::<Runtime>(RelayCurrencyId::get()),
 			),
 		])
 		.parachain_id(parachain_id)

@@ -34,7 +34,7 @@ fn transfer_ksm_between_bifrost_and_relay_chain() {
 				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new(VersionedMultiLocation::V3(X1(Parachain(2001)).into())),
 				Box::new(VersionedMultiLocation::V3(
-					X1(Junction::AccountId32 { id: BOB, network: None }).into()
+					X1(Junction::AccountId32 { id: CATHI, network: None }).into()
 				)),
 				Box::new(VersionedMultiAssets::V3(
 					(Here, 10 * dollar::<Runtime>(RelayCurrencyId::get())).into()
@@ -51,31 +51,31 @@ fn transfer_ksm_between_bifrost_and_relay_chain() {
 			let parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
 			assert_eq!(
 				Balances::free_balance(parachain_account),
-				10 * dollar::<Runtime>(RelayCurrencyId::get())
+				12 * dollar::<Runtime>(RelayCurrencyId::get())
 			);
 		});
 
 		Bifrost::execute_with(|| {
 			// Bifrost bob 9.9 KSM
 			assert_eq!(
-				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
+				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(CATHI)),
 				9999919872000
 			);
 
 			// Bifrost bob 9.9 KSM -> Kusama bob 2 KSM
 			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(BOB.into()),
+				RuntimeOrigin::signed(CATHI.into()),
 				RelayCurrencyId::get(),
 				2 * dollar::<Runtime>(RelayCurrencyId::get()),
 				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::new(
 					1,
-					X1(Junction::AccountId32 { id: BOB, network: None })
+					X1(Junction::AccountId32 { id: CATHI, network: None })
 				))),
 				xcm_emulator::Unlimited
 			));
 			// Bifrost bob 7.9 KSM
 			assert_eq!(
-				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
+				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(CATHI)),
 				7999919872000
 			);
 		});
@@ -85,11 +85,11 @@ fn transfer_ksm_between_bifrost_and_relay_chain() {
 			let parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
 			assert_eq!(
 				Balances::free_balance(parachain_account),
-				8 * dollar::<Runtime>(RelayCurrencyId::get())
+				10 * dollar::<Runtime>(RelayCurrencyId::get())
 			);
 
 			//  Bifrost bob 1.9 KSM
-			assert_eq!(Balances::free_balance(&AccountId::from(BOB)), 1999909712564);
+			assert_eq!(Balances::free_balance(&AccountId::from(CATHI)), 1999909712564);
 		});
 	})
 }

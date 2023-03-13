@@ -1297,11 +1297,11 @@ impl<T: Config> MoonbeamAgent<T> {
 		let msg = Xcm(vec![
 			WithdrawAsset(assets.clone()),
 			InitiateReserveWithdraw {
-				assets: All.into(),
+				assets: AllCounted(1).into(),
 				reserve: dest.clone(),
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), beneficiary },
+					DepositAsset { assets: AllCounted(1).into(), beneficiary },
 				]),
 			},
 		]);
@@ -1734,7 +1734,7 @@ impl<T: Config>
 			},
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
+				assets: AllCounted(1).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(AccountKey20 {

@@ -253,11 +253,11 @@ impl<T: Config> Pallet<T> {
 		let msg = Xcm(vec![
 			WithdrawAsset(assets),
 			InitiateReserveWithdraw {
-				assets: All.into(),
+				assets: AllCounted(1).into(),
 				reserve: dest.clone(),
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), beneficiary },
+					DepositAsset { assets: AllCounted(1).into(), beneficiary },
 				]),
 			},
 		]);

@@ -350,18 +350,20 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 
 		// Cross-chain transfer some KSM to Bob account in Bifrost
 		KusamaNet::execute_with(|| {
+			println!("{:?}", kusama_runtime::Balances::free_balance(&para_account_2001.clone()));
 			assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new(VersionedMultiLocation::V3(X1(Parachain(2001)).into())),
 				Box::new(VersionedMultiLocation::V3(
-					X1(Junction::AccountId32 { id: entrance_account_32, network: None })
-						.into()
+					X1(Junction::AccountId32 { id: entrance_account_32, network: None }).into()
 				)),
 				Box::new(VersionedMultiAssets::V3(
 					(Here, 2 * dollar::<Runtime>(RelayCurrencyId::get())).into()
 				)),
 				0,
 			));
+
+			println!("{:?}", kusama_runtime::Balances::free_balance(&para_account_2001.clone()));
 
 			// predefined 2 dollars + 2 dollar::<Runtime> from cross-chain transfer = 3 dollars
 			assert_eq!(
@@ -375,7 +377,7 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 			// fee.
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &entrance_account_32.into()),
-				1999919176000
+				1999919872000
 			);
 		});
 	})
@@ -464,7 +466,7 @@ fn transfer_to_works() {
 			// Why not the transferred amount reach the sub-account?
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999895428355
+				2999909712564
 			);
 		});
 	})
@@ -1225,7 +1227,10 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1280,7 +1285,10 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1326,7 +1334,10 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1381,7 +1392,10 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1458,7 +1472,10 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1510,7 +1527,10 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1690,7 +1710,10 @@ fn fail_delegator_ledger_query_response_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1742,7 +1765,10 @@ fn fail_delegator_ledger_query_response_works() {
 						parents: 1,
 						interior: Here
 					}),
-					maybe_match_querier: None,
+					maybe_match_querier: Some(VersionedMultiLocation::V3(MultiLocation {
+						parents: 0,
+						interior: Here
+					})),
 					maybe_notify: None,
 					timeout: 1600
 				})

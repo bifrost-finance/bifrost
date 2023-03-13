@@ -247,14 +247,17 @@ pub mod pallet {
 			let msg = Xcm(vec![
 				WithdrawAsset(assets),
 				InitiateReserveWithdraw {
-					assets: All.into(),
+					assets: AllCounted(1).into(),
 					reserve: MultiLocation::new(
 						1,
 						Junctions::X1(Junction::Parachain(parachains::Statemine::ID)),
 					),
 					xcm: Xcm(vec![
 						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-						DepositAsset { assets: All.into(), beneficiary: dst_location.clone() },
+						DepositAsset {
+							assets: AllCounted(1).into(),
+							beneficiary: dst_location.clone(),
+						},
 					]),
 				},
 			]);
@@ -329,7 +332,7 @@ pub mod pallet {
 					call,
 				},
 				RefundSurplus,
-				DepositAsset { assets: All.into(), beneficiary: sovereign_location },
+				DepositAsset { assets: AllCounted(1).into(), beneficiary: sovereign_location },
 			]);
 			let data = VersionedXcm::<()>::from(message.clone()).encode();
 			let id = Self::transact_id(&data[..]);
