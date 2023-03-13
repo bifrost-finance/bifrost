@@ -1470,7 +1470,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			FeeSources::<T>::mutate_exists(currency_id, |w_n_f| {
-				*w_n_f = who_and_fee.clone();
+				*w_n_f = who_and_fee;
 			});
 
 			// Deposit event.
@@ -1693,7 +1693,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			HostingFees::<T>::mutate_exists(currency_id, |fee_set| {
-				*fee_set = maybe_fee_set.clone();
+				*fee_set = maybe_fee_set;
 			});
 
 			Pallet::<T>::deposit_event(Event::HostingFeesSet { currency_id, fees: maybe_fee_set });

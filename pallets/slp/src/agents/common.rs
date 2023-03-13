@@ -97,7 +97,7 @@ impl<T: Config> Pallet<T> {
 						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 					if let Err(index) = rs {
-						validator_list.insert(index, (who.clone(), multi_hash));
+						validator_list.insert(index, (*who, multi_hash));
 					} else {
 						Err(Error::<T>::AlreadyExist)?
 					}
@@ -134,7 +134,7 @@ impl<T: Config> Pallet<T> {
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		let multi_hash = T::Hashing::hash(&who.encode());
-		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
+		ensure!(validators_set.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
 
 		// Update corresponding storage.
 		Validators::<T>::mutate(currency_id, |validator_vec| {
@@ -253,7 +253,7 @@ impl<T: Config> Pallet<T> {
 			WithdrawAsset(assets),
 			InitiateReserveWithdraw {
 				assets: AllCounted(1).into(),
-				reserve: dest.clone(),
+				reserve: *dest,
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
 					DepositAsset { assets: AllCounted(1).into(), beneficiary },
@@ -262,7 +262,7 @@ impl<T: Config> Pallet<T> {
 		]);
 		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, hash, weight, weight)
+		T::XcmExecutor::execute_xcm_in_credit(*from, msg, hash, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
 

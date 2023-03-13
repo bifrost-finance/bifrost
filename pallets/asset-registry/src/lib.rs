@@ -440,8 +440,8 @@ pub mod pallet {
 				Error::<T>::CurrencyIdNotExists
 			);
 
-			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
-			CurrencyIdToLocations::<T>::insert(currency_id, location.clone());
+			LocationToCurrencyIds::<T>::insert(location, currency_id);
+			CurrencyIdToLocations::<T>::insert(currency_id, location);
 			CurrencyIdToWeights::<T>::insert(currency_id, weight);
 
 			Pallet::<T>::deposit_event(Event::<T>::MultiLocationSet {
@@ -877,8 +877,7 @@ where
 		if let AssetId::Concrete(ref multi_location) = asset_id {
 			log::debug!(target: "asset-registry::weight", "buy_weight multi_location: {:?}", multi_location);
 
-			if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(multi_location.clone())
-			{
+			if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(multi_location) {
 				if let Some(currency_metadatas) = Pallet::<T>::currency_metadatas(currency_id) {
 					// The integration tests can ensure the ed is non-zero.
 					let ed_ratio = FixedU128::saturating_from_rational(
@@ -893,7 +892,7 @@ where
 					let amount = ed_ratio
 						.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
 
-					let required = MultiAsset { id: asset_id.clone(), fun: Fungible(amount) };
+					let required = MultiAsset { id: *asset_id, fun: Fungible(amount) };
 
 					log::trace!(
 						target: "asset-registry::weight", "buy_weight payment: {:?}, required: {:?}, fixed_rate: {:?}, ed_ratio: {:?}, weight_ratio: {:?}",
@@ -906,7 +905,7 @@ where
 					self.weight = self.weight.saturating_add(weight.ref_time());
 					self.amount = self.amount.saturating_add(amount);
 					self.ed_ratio = ed_ratio;
-					self.multi_location = Some(multi_location.clone());
+					self.multi_location = Some(*multi_location);
 					return Ok(unused);
 				}
 			}
@@ -933,10 +932,7 @@ where
 
 		log::trace!(target: "asset-registry::weight", "refund_weight amount: {:?}", amount);
 		if amount > 0 && self.multi_location.is_some() {
-			Some(
-				(self.multi_location.as_ref().expect("checked is non-empty; qed").clone(), amount)
-					.into(),
-			)
+			Some((*self.multi_location.as_ref().expect("checked is non-empty; qed"), amount).into())
 		} else {
 			None
 		}
@@ -948,10 +944,7 @@ impl<T, FixedRate: Get<u128>, R: TakeRevenue> Drop for FixedRateOfAsset<T, Fixed
 		log::trace!(target: "asset-registry::weight", "take revenue, weight: {:?}, amount: {:?}, multi_location: {:?}", self.weight, self.amount, self.multi_location);
 		if self.amount > 0 && self.multi_location.is_some() {
 			R::take_revenue(
-				(
-					self.multi_location.as_ref().expect("checked is non-empty; qed").clone(),
-					self.amount,
-				)
+				(*self.multi_location.as_ref().expect("checked is non-empty; qed"), self.amount)
 					.into(),
 			);
 		}

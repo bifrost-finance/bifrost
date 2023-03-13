@@ -254,10 +254,7 @@ pub mod pallet {
 					),
 					xcm: Xcm(vec![
 						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-						DepositAsset {
-							assets: AllCounted(1).into(),
-							beneficiary: dst_location.clone(),
-						},
+						DepositAsset { assets: AllCounted(1).into(), beneficiary: dst_location },
 					]),
 				},
 			]);

@@ -67,7 +67,7 @@ impl<T: Config> Pallet<T> {
 			// Check if the validator is in the validator whitelist
 			let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
 			ensure!(
-				validators_set.contains(&(validator.clone(), multi_hash)),
+				validators_set.contains(&(*validator, multi_hash)),
 				Error::<T>::ValidatorNotExist
 			);
 
@@ -75,7 +75,7 @@ impl<T: Config> Pallet<T> {
 			let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 			if let Err(index) = rs {
-				validators_list.insert(index, (validator.clone(), multi_hash));
+				validators_list.insert(index, (*validator, multi_hash));
 			}
 		}
 
