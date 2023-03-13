@@ -48,12 +48,12 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{GeneralIndex, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
+	v3::prelude::*,
 };
 use xcm_interface::traits::parachains;
 
@@ -160,7 +160,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_pha_multilocation();
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -252,7 +252,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_pha_multilocation();
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -458,7 +458,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_pha_multilocation();
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -615,7 +615,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_pha_multilocation();
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -815,17 +815,16 @@ impl<T: Config>
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
-				origin_type: OriginKind::SovereignAccount,
+				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: call.encode().into(),
 			},
 			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
-				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(AccountId32 { network: Any, id: self_sibling_parachain_account }),
+					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
 				},
 			},
 		]))
@@ -914,7 +913,7 @@ impl<T: Config> PhalaAgent<T> {
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		let dest = Self::get_pha_multilocation();
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}

@@ -23,7 +23,7 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 #[allow(unused_imports)]
 pub use crate::{Pallet as Slp, *};
@@ -49,7 +49,7 @@ fn kusama_setup<
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -60,7 +60,7 @@ fn kusama_setup<
 	// sp_core::crypto::AccountId32::new(treasury_account_id_32);
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
 	};
 
 	// set operate_origins
@@ -269,7 +269,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -294,7 +294,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -326,7 +326,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -464,7 +464,7 @@ benchmarks! {
 				.into();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
@@ -539,7 +539,7 @@ benchmarks! {
 				let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 		assert_ok!(Slp::<T>::set_hosting_fees(origin.clone(), KSM, Some((pct, treasury_location))));
 		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
@@ -817,7 +817,7 @@ benchmarks! {
 				let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 		let call = Call::<T>::set_hosting_fees {
 			currency_id:KSM,
@@ -853,7 +853,7 @@ benchmarks! {
 				.into();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		let call = Call::<T>::add_supplement_fee_account_to_whitelist {
@@ -869,7 +869,7 @@ benchmarks! {
 				.into();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 		assert_ok!(Slp::<T>::add_supplement_fee_account_to_whitelist(origin.clone(), KSM, Box::new(exit_account_location.clone())));
 		let call = Call::<T>::remove_supplement_fee_account_from_whitelist {
@@ -890,7 +890,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -923,7 +923,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: validator_0_account_id_20 },
+				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;

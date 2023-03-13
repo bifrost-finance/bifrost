@@ -44,8 +44,8 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	opaque::v3::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	v3::prelude::*,
 	VersionedMultiAssets,
 };
 
@@ -147,7 +147,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -204,7 +205,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -269,7 +271,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -310,7 +313,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
 		} else {
@@ -373,7 +377,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -433,7 +438,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -500,7 +506,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -601,7 +608,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -649,7 +657,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -1059,7 +1068,8 @@ impl<T: Config> PolkadotAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
@@ -1350,7 +1360,6 @@ impl<T: Config> PolkadotAgent<T> {
 			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
-				max_assets: u32::max_value(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(Parachain(T::ParachainId::get().into())),

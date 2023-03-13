@@ -16,51 +16,61 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// #![cfg_attr(not(feature = "std"), no_std)]
+use crate::{Config, CurrencyId, CurrencyIdToLocations, LocationToCurrencyIds, Weight};
+use frame_support::{
+	log, migration::storage_key_iter, pallet_prelude::*, traits::OnRuntimeUpgrade,
+	StoragePrefixedMap,
+};
+use sp_std::marker::PhantomData;
+use xcm::v3::prelude::*;
 
-use super::{Config, Weight};
-use crate::{CurrencyIdToLocations, LocationToCurrencyIds, MultiLocation};
-use frame_support::traits::Get;
-use primitives::CurrencyId;
-use xcm::opaque::latest::{Junction, Junction::Parachain, Junctions::Here};
+/// Migrate MultiLocation v1 to v3
+pub struct MigrateV1MultiLocationToV3<T>(PhantomData<T>);
+impl<T: Config> OnRuntimeUpgrade for MigrateV1MultiLocationToV3<T> {
+	fn on_runtime_upgrade() -> Weight {
+		log::info!(
+			target: "asset-registry",
+			"MigrateV1MultiLocationToV3::on_runtime_upgrade execute, will migrate the key type of LocationToCurrencyIds from old MultiLocation(v1/v2) to v3",
+		);
 
-#[allow(dead_code)]
-pub fn update_currency_multilocations<T: Config>() -> Weight {
-	CurrencyIdToLocations::<T>::translate::<MultiLocation, _>(|currency_id, location| {
-		let new_location = match currency_id {
-			CurrencyId::VToken(_) |
-			CurrencyId::VSToken(_) |
-			CurrencyId::VToken2(_) |
-			CurrencyId::Native(_) => {
-				let lct = non_chain_part(location.clone());
-				LocationToCurrencyIds::<T>::remove(location.clone());
-				LocationToCurrencyIds::<T>::insert(lct.clone(), currency_id);
-				lct
-			},
-			_ => location,
-		};
+		let mut weight: Weight = Weight::zero();
 
-		Some(new_location)
-	});
+		// migrate the key type of LocationToCurrencyIds
+		let module_prefix = LocationToCurrencyIds::<T>::module_prefix();
+		let storage_prefix = LocationToCurrencyIds::<T>::storage_prefix();
+		let old_data = storage_key_iter::<xcm::v2::MultiLocation, CurrencyId, Twox64Concat>(
+			module_prefix,
+			storage_prefix,
+		)
+		.drain();
+		for (old_key, value) in old_data {
+			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			log::info!("old_key=========================={:?}", old_key);
+			log::info!("value=========================={:?}", value);
+			let new_key: MultiLocation =
+				old_key.clone().try_into().expect("Stored xcm::v2::MultiLocation");
+			log::info!("new_key=========================={:?}", new_key);
+			LocationToCurrencyIds::<T>::insert(new_key, value);
+		}
 
-	let entry_count = CurrencyIdToLocations::<T>::iter().count() as u64;
+		//migrate the value type of CurrencyIdToLocations
+		let module_prefix = CurrencyIdToLocations::<T>::module_prefix();
+		let storage_prefix = CurrencyIdToLocations::<T>::storage_prefix();
+		let old_data = storage_key_iter::<CurrencyId, xcm::v2::MultiLocation, Twox64Concat>(
+			module_prefix,
+			storage_prefix,
+		)
+		.drain();
+		for (key, old_value) in old_data {
+			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			log::info!("key=========================={:?}", key);
+			log::info!("old_value=========================={:?}", old_value);
+			let new_value: MultiLocation =
+				old_value.clone().try_into().expect("Stored xcm::v2::MultiLocation");
+			log::info!("new_value=========================={:?}", new_value);
+			CurrencyIdToLocations::<T>::insert(key, new_value);
+		}
 
-	T::DbWeight::get().reads(entry_count * 2) + T::DbWeight::get().writes(entry_count * 3)
-}
-
-fn non_chain_part(location: MultiLocation) -> MultiLocation {
-	let mut junctions = location.interior().clone();
-	while is_chain_junction(junctions.first()) {
-		let _ = junctions.take_first();
+		weight
 	}
-
-	if junctions != Here {
-		MultiLocation::new(0, junctions)
-	} else {
-		location
-	}
-}
-
-fn is_chain_junction(junction: Option<&Junction>) -> bool {
-	matches!(junction, Some(Parachain(_)))
 }

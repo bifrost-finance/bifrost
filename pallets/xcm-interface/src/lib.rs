@@ -36,7 +36,7 @@ macro_rules! use_relay {
             use kusama::RelaychainCall;
 
 			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Any {
+        } else if T::RelayNetwork::get() == NetworkId::Rococo {
             use rococo::RelaychainCall;
 
 			$( $code )*
@@ -67,7 +67,8 @@ pub mod pallet {
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{
-		latest::{prelude::*, Weight as XcmWeight},
+		v2::Weight as XcmWeight,
+		v3::{prelude::*, ExecuteXcm, Parent},
 		DoubleEncoded, VersionedXcm,
 	};
 
@@ -253,20 +254,17 @@ pub mod pallet {
 					),
 					xcm: Xcm(vec![
 						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-						DepositAsset {
-							assets: All.into(),
-							max_assets: 2,
-							beneficiary: dst_location.clone(),
-						},
+						DepositAsset { assets: All.into(), beneficiary: dst_location.clone() },
 					]),
 				},
 			]);
-
+			let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 			<T as pallet_xcm::Config>::XcmExecutor::execute_xcm_in_credit(
 				origin_location,
 				msg,
-				dest_weight,
-				dest_weight,
+				hash,
+				Weight::from_ref_time(dest_weight),
+				Weight::from_ref_time(dest_weight),
 			)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
@@ -326,12 +324,12 @@ pub mod pallet {
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
-					origin_type: OriginKind::SovereignAccount,
-					require_weight_at_most: weight + nonce as u64,
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most: Weight::from_ref_time(weight + nonce as u64),
 					call,
 				},
 				RefundSurplus,
-				DepositAsset { assets: All.into(), max_assets: 1, beneficiary: sovereign_location },
+				DepositAsset { assets: All.into(), beneficiary: sovereign_location },
 			]);
 			let data = VersionedXcm::<()>::from(message.clone()).encode();
 			let id = Self::transact_id(&data[..]);

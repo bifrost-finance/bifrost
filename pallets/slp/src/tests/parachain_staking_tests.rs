@@ -24,7 +24,6 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok};
 use parachain_staking::RoundInfo;
-use xcm::opaque::latest::NetworkId::Any;
 
 use crate::{
 	primitives::{OneToManyDelegatorStatus, OneToManyLedger},
@@ -65,12 +64,12 @@ fn initialize_parachain_staking_delegator() {
 
 fn parachain_staking_setup() {
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
 	};
 
 	// set operate_origins
@@ -236,11 +235,11 @@ fn parachain_staking_bond_to_liquidize_works() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: ALICE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: ALICE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().init_for_alice_n_bob().build().execute_with(|| {
 		// environment setup
@@ -266,7 +265,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 		let entrance_account = AccountId::new(entrance_account_id_32);
 		assert_eq!(Balances::free_balance(&entrance_account), 100000000000000);
@@ -317,7 +316,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 				.into();
 		let validator_10_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: validator_10 }),
+			interior: X1(AccountId32 { network: None, id: validator_10 }),
 		};
 		let request10 = OneToManyScheduledRequest {
 			validator: validator_10_location.clone(),
@@ -331,7 +330,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 				.into();
 		let validator_11_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: validator_11 }),
+			interior: X1(AccountId32 { network: None, id: validator_11 }),
 		};
 		let request11 = OneToManyScheduledRequest {
 			validator: validator_11_location.clone(),
@@ -387,11 +386,11 @@ fn parachain_staking_bond_to_liquidize_works() {
 fn parachain_staking_bond_extra_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -435,11 +434,11 @@ fn parachain_staking_bond_extra_works() {
 fn parachain_staking_unbond_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -483,11 +482,11 @@ fn parachain_staking_unbond_works() {
 fn parachain_staking_unbond_all_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -525,11 +524,11 @@ fn parachain_staking_unbond_all_works() {
 fn parachain_staking_rebond_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -583,14 +582,14 @@ fn parachain_staking_rebond_works() {
 fn parachain_staking_undelegate_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	let validator_1_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: DAVE.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: DAVE.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -634,11 +633,11 @@ fn parachain_staking_undelegate_works() {
 fn parachain_staking_redelegate_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -691,11 +690,11 @@ fn parachain_staking_redelegate_works() {
 fn parachain_staking_liquidize_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -848,7 +847,7 @@ fn parachain_staking_liquidize_works() {
 fn parachain_staking_transfer_back_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -858,7 +857,7 @@ fn parachain_staking_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
@@ -885,7 +884,7 @@ fn parachain_staking_transfer_back_works() {
 fn parachain_staking_transfer_to_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -896,7 +895,7 @@ fn parachain_staking_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location.clone());
@@ -923,7 +922,7 @@ fn parachain_staking_transfer_to_works() {
 fn supplement_fee_account_whitelist_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(Junction::AccountId32 { network: Any, id: CHARLIE.into() }),
+		interior: X1(Junction::AccountId32 { network: None, id: CHARLIE.into() }),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -934,12 +933,12 @@ fn supplement_fee_account_whitelist_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -1013,7 +1012,7 @@ fn supplement_fee_account_whitelist_works() {
 #[test]
 fn add_validator_and_remove_validator_works() {
 	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: BOB.into() }) };
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];

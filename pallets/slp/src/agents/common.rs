@@ -33,7 +33,8 @@ use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
-use xcm::prelude::*;
+use xcm::{v3::prelude::*, VersionedMultiLocation};
+// use xcm::opaque::v3::NetworkId::Any;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -206,11 +207,15 @@ impl<T: Config> Pallet<T> {
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 
-		let dest =
-			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(Parachain(
+			T::ParachainId::get().into(),
+		)))));
 
 		let beneficiary =
-			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
+			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
+				network: None,
+				id: to_32,
+			}))));
 
 		Ok((dest, beneficiary))
 	}
@@ -252,13 +257,13 @@ impl<T: Config> Pallet<T> {
 				reserve: dest.clone(),
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+					DepositAsset { assets: All.into(), beneficiary },
 				]),
 			},
 		]);
-
+		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, hash, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
 

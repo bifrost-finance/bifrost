@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::assert_ok;
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
+use xcm::v3::Weight;
 use xcm_emulator::TestExt;
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
@@ -36,10 +37,10 @@ fn relaychain_transact_works() {
 
 		let msg = Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: WeightLimit::Limited(6000000000) },
+			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: 2000000000 as u64,
+				origin_kind: OriginKind::SovereignAccount,
+				require_weight_at_most: Weight::from_ref_time(2000000000),
 				call: remark.encode().into(),
 			},
 		]);
@@ -50,6 +51,7 @@ fn relaychain_transact_works() {
 
 		KusamaNet::execute_with(|| {
 			use kusama_runtime::{RuntimeEvent, System};
+			println!("{:?}",System::events());
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::System(frame_system::Event::Remarked { sender: _, hash: _ })

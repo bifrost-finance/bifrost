@@ -80,7 +80,7 @@ use pallet_staking::{Nominations, StakingLedger};
 use pallet_xcm::QueryStatus;
 use polkadot_parachain::primitives::Id as ParaId;
 use sp_runtime::testing::H256;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use xcm::{prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
@@ -88,21 +88,21 @@ use crate::{kusama_integration_tests::*, kusama_test_net::*};
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
 const SUBACCOUNT_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: SUBACCOUNT_0_32 }) };
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: SUBACCOUNT_0_32 }) };
 const ENTRANCE_ACCOUNT_32: [u8; 32] =
 	hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"];
 const ENTRANCE_ACCOUNT_LOCATION: MultiLocation = MultiLocation {
 	parents: 0,
-	interior: X1(AccountId32 { network: Any, id: ENTRANCE_ACCOUNT_32 }),
+	interior: X1(AccountId32 { network: None, id: ENTRANCE_ACCOUNT_32 }),
 };
 const VALIDATOR_0_32: [u8; 32] =
 	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
 const VALIDATOR_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_0_32 }) };
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: VALIDATOR_0_32 }) };
 const VALIDATOR_1_32: [u8; 32] =
 	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
 const VALIDATOR_1_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_1_32 }) };
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: VALIDATOR_1_32 }) };
 
 /// ****************************************************
 /// *********  Preparation section  ********************
@@ -199,70 +199,70 @@ fn register_subaccount_index_0() {
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferTo,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Bond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::BondExtra,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Unbond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Rebond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Delegate,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Payout,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Liquidize,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Chill,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferBack,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((20_000_000_000.into(), 10_000_000_000)),
 		));
 	});
 }
@@ -352,12 +352,12 @@ fn transfer_2_ksm_to_entrance_account_in_bifrost() {
 		KusamaNet::execute_with(|| {
 			assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new(VersionedMultiLocation::V1(X1(Parachain(2001)).into())),
-				Box::new(VersionedMultiLocation::V1(
-					X1(Junction::AccountId32 { id: entrance_account_32, network: NetworkId::Any })
+				Box::new(VersionedMultiLocation::V3(X1(Parachain(2001)).into())),
+				Box::new(VersionedMultiLocation::V3(
+					X1(Junction::AccountId32 { id: entrance_account_32, network: None })
 						.into()
 				)),
-				Box::new(VersionedMultiAssets::V1(
+				Box::new(VersionedMultiAssets::V3(
 					(Here, 2 * dollar::<Runtime>(RelayCurrencyId::get())).into()
 				)),
 				0,
@@ -993,10 +993,11 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1057,10 +1058,11 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1106,10 +1108,11 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1170,10 +1173,11 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1217,10 +1221,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1271,10 +1276,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1316,10 +1322,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1370,10 +1377,11 @@ fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1446,10 +1454,11 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			assert_eq!(
 				PolkadotXcm::query(1),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1497,10 +1506,11 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 			assert_eq!(
 				PolkadotXcm::query(1),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1574,10 +1584,11 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			assert_eq!(
 				PolkadotXcm::query(1),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 2200
 				})
@@ -1625,10 +1636,11 @@ fn confirm_delegator_ledger_query_response_with_liquidize_works() {
 			assert_eq!(
 				PolkadotXcm::query(1),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 2200
 				})
@@ -1674,10 +1686,11 @@ fn fail_delegator_ledger_query_response_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})
@@ -1725,10 +1738,11 @@ fn fail_delegator_ledger_query_response_works() {
 			assert_eq!(
 				PolkadotXcm::query(0),
 				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
+					responder: VersionedMultiLocation::V3(MultiLocation {
 						parents: 1,
 						interior: Here
 					}),
+					maybe_match_querier: None,
 					maybe_notify: None,
 					timeout: 1600
 				})

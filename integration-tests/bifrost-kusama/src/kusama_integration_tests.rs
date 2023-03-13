@@ -32,8 +32,6 @@ pub use sp_runtime::{
 
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
-pub const CATHI: [u8; 32] = [2u8; 32];
-pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
 
 const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;

@@ -46,8 +46,7 @@ use sp_runtime::{
 };
 use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
-	AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate,
-	ZenlinkMultiAssets,
+	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
 
 use super::*;
@@ -280,12 +279,9 @@ impl zenlink_protocol::Config for Test {
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
 	type TargetChains = ();
-	type XcmExecutor = ();
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;

@@ -21,7 +21,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
 use sp_runtime::DispatchError::BadOrigin;
-use xcm::opaque::latest::{Junction, Junctions::X1};
+use xcm::opaque::v2::{Junction, Junctions::X1};
 
 #[test]
 fn cross_in_and_cross_out_should_work() {

@@ -26,40 +26,35 @@ use mock::{
 	AssetRegistry, CouncilAccount, ExtBuilder, Runtime, RuntimeEvent, RuntimeOrigin, System,
 };
 use primitives::TokenSymbol;
+use xcm::prelude::*;
 
 #[test]
 fn versioned_multi_location_convert_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		// v0
-		let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-			xcm::v0::Junction::Parachain(1000),
-		));
-		let location: MultiLocation = v0_location.try_into().unwrap();
+		// V3
+		let v3_location =
+			VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
+		let location: MultiLocation = v3_location.try_into().unwrap();
 		assert_eq!(
 			location,
-			MultiLocation {
-				parents: 0,
-				interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(1000))
-			}
+			MultiLocation { parents: 0, interior: Junctions::X1(Junction::Parachain(1000)) }
 		);
 
-		// v1
-		let v1_location = VersionedMultiLocation::V1(MultiLocation {
+		// V3
+		let v3_location = VersionedMultiLocation::V3(MultiLocation {
 			parents: 0,
-			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(1000)),
+			interior: Junctions::X1(Junction::Parachain(1000)),
 		});
-		let location: MultiLocation = v1_location.try_into().unwrap();
+		let location: MultiLocation = v3_location.clone().try_into().unwrap();
 		assert_eq!(
 			location,
-			MultiLocation {
-				parents: 0,
-				interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(1000))
-			}
+			MultiLocation { parents: 0, interior: Junctions::X1(Junction::Parachain(1000)) }
 		);
 
 		// handle all of VersionedMultiLocation
-		assert!(match location.into() {
-			VersionedMultiLocation::V0 { .. } | VersionedMultiLocation::V1 { .. } => true,
+		assert!(match v3_location {
+			VersionedMultiLocation::V3 { .. } => true,
+			_ => false,
 		});
 	});
 }
@@ -67,14 +62,13 @@ fn versioned_multi_location_convert_work() {
 #[test]
 fn register_native_asset_works() {
 	ExtBuilder::default().build().execute_with(|| {
-		let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-			xcm::v0::Junction::Parachain(1000),
-		));
+		let v3_location =
+			VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
 
 		assert_ok!(AssetRegistry::register_native_asset(
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
-			Box::new(v0_location.clone()),
+			Box::new(v3_location.clone()),
 			Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -108,7 +102,7 @@ fn register_native_asset_works() {
 			AssetRegistry::register_native_asset(
 				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token(TokenSymbol::DOT),
-				Box::new(v0_location),
+				Box::new(v3_location),
 				Box::new(AssetMetadata {
 					name: b"Token Name".to_vec(),
 					symbol: b"TN".to_vec(),
@@ -123,15 +117,15 @@ fn register_native_asset_works() {
 
 #[test]
 fn update_native_asset_works() {
-	let v0_location =
-		VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(xcm::v0::Junction::Parachain(1000)));
+	let v3_location =
+		VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
 
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			AssetRegistry::update_native_asset(
 				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token(TokenSymbol::DOT),
-				Box::new(v0_location.clone()),
+				Box::new(v3_location.clone()),
 				Box::new(AssetMetadata {
 					name: b"New Token Name".to_vec(),
 					symbol: b"NTN".to_vec(),
@@ -145,7 +139,7 @@ fn update_native_asset_works() {
 		assert_ok!(AssetRegistry::register_native_asset(
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
-			Box::new(v0_location.clone()),
+			Box::new(v3_location.clone()),
 			Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -157,7 +151,7 @@ fn update_native_asset_works() {
 		assert_ok!(AssetRegistry::update_native_asset(
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token(TokenSymbol::DOT),
-			Box::new(v0_location.clone()),
+			Box::new(v3_location.clone()),
 			Box::new(AssetMetadata {
 				name: b"New Token Name".to_vec(),
 				symbol: b"NTN".to_vec(),
@@ -338,10 +332,10 @@ fn register_multilocation_should_work() {
 			decimals: 12,
 			minimal_balance: 0,
 		};
-		// v1
-		let location = VersionedMultiLocation::V1(MultiLocation {
+		// V3
+		let location = VersionedMultiLocation::V3(MultiLocation {
 			parents: 1,
-			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+			interior: Junctions::X1(Junction::Parachain(2001)),
 		});
 		let multi_location: MultiLocation = location.clone().try_into().unwrap();
 
@@ -398,10 +392,10 @@ fn force_set_multilocation_should_work() {
 			decimals: 12,
 			minimal_balance: 0,
 		};
-		// v1
-		let location = VersionedMultiLocation::V1(MultiLocation {
+		// V3
+		let location = VersionedMultiLocation::V3(MultiLocation {
 			parents: 1,
-			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+			interior: Junctions::X1(Junction::Parachain(2001)),
 		});
 		let multi_location: MultiLocation = location.clone().try_into().unwrap();
 

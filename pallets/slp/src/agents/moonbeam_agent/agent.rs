@@ -51,12 +51,12 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::{prelude::*, Weight as XcmWeight},
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation, WeightLimit,
 	},
+	v3::{prelude::*, Weight as XcmWeight},
 	VersionedMultiLocation,
 };
 use xcm_interface::traits::parachains;
@@ -238,7 +238,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -312,7 +312,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -399,7 +399,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -451,7 +451,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -526,7 +526,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -611,7 +611,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -665,7 +665,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -777,7 +777,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -814,7 +814,7 @@ impl<T: Config>
 			parents: 1,
 			interior: X2(
 				Parachain(T::ParachainId::get().into()),
-				AccountId32 { network: Any, id: to_32 },
+				AccountId32 { network: None, id: to_32 },
 			),
 		}));
 
@@ -1136,7 +1136,7 @@ impl<T: Config> MoonbeamAgent<T> {
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(fee)
 	}
@@ -1301,13 +1301,13 @@ impl<T: Config> MoonbeamAgent<T> {
 				reserve: dest.clone(),
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+					DepositAsset { assets: All.into(), beneficiary },
 				]),
 			},
 		]);
-
+		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, hash, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
 
@@ -1728,18 +1728,17 @@ impl<T: Config>
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
-				origin_type: OriginKind::SovereignAccount,
+				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: call.encode().into(),
 			},
 			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
-				max_assets: u32::MAX,
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(AccountKey20 {
-						network: Any,
+						network: None,
 						key: self_sibling_parachain_account,
 					}),
 				},

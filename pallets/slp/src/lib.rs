@@ -50,9 +50,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::latest::{
-	ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm,
-};
+use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
 
 mod agents;
 mod mocks;
@@ -1167,7 +1165,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
 			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
 
-			let mut extra_weight = 0 as XcmWeight;
+			let mut extra_weight = 0 as u64;
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {

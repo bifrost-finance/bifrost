@@ -6,10 +6,10 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// (at your option) None later version.
 
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// but WITHOUT None WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
@@ -28,7 +28,6 @@ use crate::{
 use frame_support::{assert_noop, assert_ok, PalletId};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::opaque::latest::NetworkId::Any;
 
 const VALIDATOR_0_LOCATION: MultiLocation =
 	MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
@@ -38,7 +37,7 @@ const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2004),
-		Junction::AccountId32 { network: Any, id: VALIDATOR_0_ACCOUNT_ID_32 },
+		Junction::AccountId32 { network: None, id: VALIDATOR_0_ACCOUNT_ID_32 },
 	),
 };
 
@@ -80,7 +79,7 @@ fn initialize_phala_delegator_works() {
 			parents: 1,
 			interior: X2(
 				Parachain(2004),
-				Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
+				Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
 			),
 		};
 
@@ -179,7 +178,7 @@ fn phala_delegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
+			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
 		),
 	};
 
@@ -320,7 +319,7 @@ fn phala_xcm_setup() {
 	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
 	};
 
 	// update some PHA balance to treasury account
@@ -343,35 +342,35 @@ fn phala_xcm_setup() {
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		XcmOperation::Bond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		XcmOperation::Unbond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		XcmOperation::TransferBack,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		XcmOperation::TransferTo,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
 		XcmOperation::ConvertAsset,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }
 
@@ -385,7 +384,7 @@ fn phala_setup() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
+			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
 		),
 	};
 
@@ -423,7 +422,7 @@ fn phala_bond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32 },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32 },
 		),
 	};
 
@@ -542,7 +541,7 @@ fn phala_unbond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_id_0.into() },
+			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
 		),
 	};
 
@@ -690,7 +689,7 @@ fn phala_rebond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -747,7 +746,7 @@ fn phala_undelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -844,7 +843,7 @@ fn phala_redelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -914,7 +913,7 @@ fn phala_liquidize_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1003,7 +1002,7 @@ fn phala_bond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1080,7 +1079,7 @@ fn phala_unbond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1156,7 +1155,7 @@ fn phala_transfer_back_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1169,7 +1168,7 @@ fn phala_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1207,7 +1206,7 @@ fn phala_transfer_to_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1220,7 +1219,7 @@ fn phala_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] =
@@ -1229,7 +1228,7 @@ fn phala_transfer_to_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1267,7 +1266,7 @@ fn supplement_fee_account_whitelist_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1278,13 +1277,13 @@ fn supplement_fee_account_whitelist_works() {
 		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -1384,7 +1383,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1413,7 +1412,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -1469,7 +1468,7 @@ fn add_validator_and_remove_validator_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1522,7 +1521,7 @@ fn phala_convert_asset_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: Any, id: subaccount_0_account_id_32.into() },
+			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 

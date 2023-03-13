@@ -35,7 +35,7 @@ use sp_runtime::{
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 /// StakingAgent implementation for Filecoin
 pub struct FilecoinAgent<T>(PhantomData<T>);

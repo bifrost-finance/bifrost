@@ -17,131 +17,79 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Cross-chain transfer tests within Kusama network.
-use bifrost_asset_registry::AssetMetadata;
-use bifrost_kusama_runtime::{AssetRegistry, Runtime};
-use bifrost_runtime_common::millicent;
+use bifrost_kusama_runtime::Runtime;
 use frame_support::assert_ok;
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
-use xcm_emulator::TestExt;
+use xcm::{v3::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use xcm_emulator::{ParaId, TestExt};
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
 #[test]
-fn transfer_from_relay_chain() {
+fn transfer_ksm_between_bifrost_and_relay_chain() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_asset();
 		KusamaNet::execute_with(|| {
+			// Kusama alice(100 KSM) -> Bifrost bob 10 KSM
 			assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new(VersionedMultiLocation::V1(X1(Parachain(2001)).into())),
-				Box::new(VersionedMultiLocation::V1(
-					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any }).into()
+				Box::new(VersionedMultiLocation::V3(X1(Parachain(2001)).into())),
+				Box::new(VersionedMultiLocation::V3(
+					X1(Junction::AccountId32 { id: BOB, network: None }).into()
 				)),
-				Box::new(VersionedMultiAssets::V1(
-					(Here, dollar::<Runtime>(RelayCurrencyId::get())).into()
+				Box::new(VersionedMultiAssets::V3(
+					(Here, 10 * dollar::<Runtime>(RelayCurrencyId::get())).into()
 				)),
 				0,
 			));
-		});
-		Bifrost::execute_with(|| {
+
+			//  Bifrost alice 90 KSM
 			assert_eq!(
-				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				999919176000
+				Balances::free_balance(&AccountId::from(ALICE)),
+				90 * dollar::<Runtime>(RelayCurrencyId::get())
+			);
+			// Parachain account 10 KSM
+			let parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
+			assert_eq!(
+				Balances::free_balance(parachain_account),
+				10 * dollar::<Runtime>(RelayCurrencyId::get())
 			);
 		});
-	})
-}
 
-#[test]
-fn transfer_to_relay_chain() {
-	sp_io::TestExternalities::default().execute_with(|| {
 		Bifrost::execute_with(|| {
+			// Bifrost bob 9.9 KSM
+			assert_eq!(
+				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
+				9999919872000
+			);
+
+			// Bifrost bob 9.9 KSM -> Kusama bob 2 KSM
 			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(ALICE.into()),
+				RuntimeOrigin::signed(BOB.into()),
 				RelayCurrencyId::get(),
-				dollar::<Runtime>(RelayCurrencyId::get()),
-				Box::new(xcm::VersionedMultiLocation::V1(MultiLocation::new(
+				2 * dollar::<Runtime>(RelayCurrencyId::get()),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::new(
 					1,
-					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
+					X1(Junction::AccountId32 { id: BOB, network: None })
 				))),
-				xcm_emulator::Limited(4_000_000_000)
+				xcm_emulator::Unlimited
 			));
+			// Bifrost bob 7.9 KSM
+			assert_eq!(
+				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
+				7999919872000
+			);
 		});
 
 		KusamaNet::execute_with(|| {
-			assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999895428355);
-		});
-	})
-}
-
-#[test]
-fn transfer_to_sibling() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		env_logger::init();
-
-		TestNet::reset();
-
-		fn bifrost_reserve_account() -> AccountId {
-			use sp_runtime::traits::AccountIdConversion;
-			polkadot_parachain::primitives::Sibling::from(2001).into_account_truncating()
-		}
-
-		Bifrost::execute_with(|| {
-			assert_ok!(Tokens::deposit(
-				CurrencyId::Token(TokenSymbol::KAR),
-				&AccountId::from(ALICE),
-				100_000_000_000_000
-			));
-		});
-
-		Sibling::execute_with(|| {
-			assert_ok!(Tokens::deposit(
-				CurrencyId::Token(TokenSymbol::KAR),
-				&bifrost_reserve_account(),
-				100_000_000_000_000
-			));
-		});
-
-		Bifrost::execute_with(|| {
-			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(ALICE.into()),
-				CurrencyId::Token(TokenSymbol::KAR),
-				10_000_000_000_000,
-				Box::new(
-					MultiLocation::new(
-						1,
-						X2(
-							Parachain(2000),
-							Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
-						)
-					)
-					.into()
-				),
-				xcm_emulator::Limited(1_000_000_000),
-			));
-
+			// Parachain account 8 KSM
+			let parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
 			assert_eq!(
-				Tokens::free_balance(CurrencyId::Token(TokenSymbol::KAR), &AccountId::from(ALICE)),
-				90_000_000_000_000
+				Balances::free_balance(parachain_account),
+				8 * dollar::<Runtime>(RelayCurrencyId::get())
 			);
+
+			//  Bifrost bob 1.9 KSM
+			assert_eq!(Balances::free_balance(&AccountId::from(BOB)), 1999909712564);
 		});
 	})
-}
-
-fn register_asset() {
-	Bifrost::execute_with(|| {
-		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		assert_ok!(AssetRegistry::do_register_native_asset(
-			currency_id,
-			&MultiLocation::parent(),
-			&AssetMetadata {
-				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				decimals: currency_id.decimals().unwrap_or_default(),
-				minimal_balance: 10 * millicent::<Runtime>(currency_id),
-			}
-		));
-	});
 }

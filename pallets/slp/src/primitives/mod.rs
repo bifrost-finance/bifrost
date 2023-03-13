@@ -26,7 +26,6 @@ pub use moonbeam_primitives::*;
 pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
-use crate::XcmWeight;
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::TimeUnit;
@@ -34,7 +33,7 @@ use scale_info::TypeInfo;
 
 pub type QueryId = u64;
 pub const TIMEOUT_BLOCKS: u32 = 1000;
-pub const BASE_WEIGHT: XcmWeight = 1000;
+pub const BASE_WEIGHT: u64 = 1000;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum Ledger<Balance> {

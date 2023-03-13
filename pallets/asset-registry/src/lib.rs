@@ -27,7 +27,7 @@ use frame_support::{
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
-	weights::constants::WEIGHT_REF_TIME_PER_SECOND,
+	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
@@ -43,15 +43,15 @@ use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
 // MultiLocation in the future.
 use xcm::{
-	latest::Weight as XcmWeight,
-	opaque::latest::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
-	v1::MultiLocation,
+	opaque::v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
+	v2::Weight as XcmWeight,
+	v3::MultiLocation,
 	VersionedMultiLocation,
 };
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
 
-mod migration;
+pub mod migration;
 mod mock;
 mod tests;
 pub mod weights;
@@ -865,7 +865,7 @@ where
 		}
 	}
 
-	fn buy_weight(&mut self, weight: XcmWeight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -888,7 +888,7 @@ where
 					);
 					// The WEIGHT_REF_TIME_PER_SECOND is non-zero.
 					let weight_ratio = FixedU128::saturating_from_rational(
-						weight as u128,
+						weight.ref_time(),
 						WEIGHT_REF_TIME_PER_SECOND,
 					);
 					let amount = ed_ratio
@@ -904,7 +904,7 @@ where
 						.clone()
 						.checked_sub(required)
 						.map_err(|_| XcmError::TooExpensive)?;
-					self.weight = self.weight.saturating_add(weight);
+					self.weight = self.weight.saturating_add(weight.ref_time());
 					self.amount = self.amount.saturating_add(amount);
 					self.ed_ratio = ed_ratio;
 					self.multi_location = Some(multi_location.clone());
@@ -917,19 +917,19 @@ where
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: XcmWeight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
 		log::trace!(
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
 		);
-		let weight = weight.min(self.weight);
+		let weight = weight.min(Weight::from_ref_time(self.weight));
 		let weight_ratio =
-			FixedU128::saturating_from_rational(weight as u128, WEIGHT_REF_TIME_PER_SECOND);
+			FixedU128::saturating_from_rational(weight.ref_time(), WEIGHT_REF_TIME_PER_SECOND);
 		let amount = self
 			.ed_ratio
 			.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
 
-		self.weight = self.weight.saturating_sub(weight);
+		self.weight = self.weight.saturating_sub(weight.ref_time());
 		self.amount = self.amount.saturating_sub(amount);
 
 		log::trace!(target: "asset-registry::weight", "refund_weight amount: {:?}", amount);
