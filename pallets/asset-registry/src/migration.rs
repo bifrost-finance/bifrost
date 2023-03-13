@@ -42,34 +42,21 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV1MultiLocationToV3<T> {
 			module_prefix,
 			storage_prefix,
 		)
-		.drain();
+		.drain()
+		.collect::<sp_std::vec::Vec<_>>();
 		for (old_key, value) in old_data {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 			log::info!("old_key=========================={:?}", old_key);
-			log::info!("value=========================={:?}", value);
-			let new_key: MultiLocation =
-				old_key.clone().try_into().expect("Stored xcm::v2::MultiLocation");
+			let new_key: MultiLocation = old_key.try_into().expect("Stored xcm::v2::MultiLocation");
 			log::info!("new_key=========================={:?}", new_key);
 			LocationToCurrencyIds::<T>::insert(new_key, value);
 		}
 
 		//migrate the value type of CurrencyIdToLocations
-		let module_prefix = CurrencyIdToLocations::<T>::module_prefix();
-		let storage_prefix = CurrencyIdToLocations::<T>::storage_prefix();
-		let old_data = storage_key_iter::<CurrencyId, xcm::v2::MultiLocation, Twox64Concat>(
-			module_prefix,
-			storage_prefix,
-		)
-		.drain();
-		for (key, old_value) in old_data {
+		CurrencyIdToLocations::<T>::translate(|_key, old_value: xcm::v2::MultiLocation| {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-			log::info!("key=========================={:?}", key);
-			log::info!("old_value=========================={:?}", old_value);
-			let new_value: MultiLocation =
-				old_value.clone().try_into().expect("Stored xcm::v2::MultiLocation");
-			log::info!("new_value=========================={:?}", new_value);
-			CurrencyIdToLocations::<T>::insert(key, new_value);
-		}
+			MultiLocation::try_from(old_value).ok()
+		});
 
 		weight
 	}

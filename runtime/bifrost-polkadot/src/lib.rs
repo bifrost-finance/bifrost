@@ -1605,8 +1605,12 @@ pub type Executive = frame_executive::Executive<
 	Runtime,
 	AllPalletsWithSystem,
 	(
-		pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,
-		SalpOnRuntimeUpgrade<Runtime>,
+		// "Use 2D weights in XCM v3" <https://github.com/paritytech/polkadot/pull/6134>
+		pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		orml_unknown_tokens::Migration<Runtime>,
+		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
+		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
+		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
 	),
 >;
 

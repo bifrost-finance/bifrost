@@ -34,7 +34,6 @@ use sp_runtime::{
 	DispatchResult,
 };
 use xcm::{v3::prelude::*, VersionedMultiLocation};
-// use xcm::opaque::v3::NetworkId::Any;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {

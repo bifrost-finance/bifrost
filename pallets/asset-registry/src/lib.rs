@@ -44,7 +44,6 @@ use sp_std::{boxed::Box, vec::Vec};
 // MultiLocation in the future.
 use xcm::{
 	opaque::v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
-	v2::Weight as XcmWeight,
 	v3::MultiLocation,
 	VersionedMultiLocation,
 };
@@ -843,7 +842,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 /// The constant `FixedRate` type parameter should be the concrete fungible ID and the amount of it
 /// required for one second of weight.
 pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
-	weight: XcmWeight,
+	weight: u64,
 	amount: u128,
 	ed_ratio: FixedU128,
 	multi_location: Option<MultiLocation>,

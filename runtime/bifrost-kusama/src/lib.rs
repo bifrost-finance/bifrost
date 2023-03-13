@@ -1857,8 +1857,6 @@ pub type Executive = frame_executive::Executive<
 		orml_unknown_tokens::Migration<Runtime>,
 		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
 		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
-		// Note: The following Migrations do not use the StorageVersion feature, must to be removed
-		// after the upgrade
 		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
 	),
 >;

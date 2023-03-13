@@ -379,7 +379,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 150 * 1_000_000,
 		0
 	);
-	pub KarPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub KarPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(parachains::karura::ID), Junction::from(BoundedVec::try_from(parachains::karura::KAR_KEY.to_vec()).unwrap()))
@@ -388,7 +388,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 100,
 		0
 	);
-	pub KusdPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub KusdPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(parachains::karura::ID), Junction::from(BoundedVec::try_from(parachains::karura::KUSD_KEY.to_vec()).unwrap()))
@@ -397,7 +397,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 400,
 		0
 	);
-	pub PhaPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub PhaPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X1(Parachain(parachains::phala::ID)),
@@ -406,7 +406,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 400,
 		0
 	);
-	pub RmrkPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub RmrkPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
@@ -415,7 +415,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 10 / 100, //rmrk currency decimal as 10
 		0
 	);
-	pub RmrkNewPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub RmrkNewPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X3(Parachain(parachains::Statemine::ID), PalletInstance(parachains::Statemine::PALLET_ID),GeneralIndex(parachains::Statemine::RMRK_ID.into()))
@@ -424,7 +424,7 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 10 / 100, //rmrk currency decimal as 10
 		0
 	);
-	pub MovrPerSecond: (xcm::v3::AssetId, u128,u128) = (
+	pub MovrPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(parachains::moonriver::ID), PalletInstance(parachains::moonriver::PALLET_ID.into()))
