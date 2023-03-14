@@ -284,7 +284,6 @@ fn reset() {
 			withdraw_limit_time: Default::default(),
 			claim_limit_time: Default::default(),
 			withdraw_limit_count: 5,
-			if_ve: false,
 		};
 		assert_eq!(Farming::pool_infos(0), Some(pool_infos));
 		let gauge_pool_info = GaugePoolInfo {
