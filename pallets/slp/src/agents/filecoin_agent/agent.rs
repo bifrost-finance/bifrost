@@ -19,9 +19,9 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, Hash,
+	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
+	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -353,7 +353,7 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// For filecoin, transfer_to means transfering newly minted amount to miner
+	/// For filecoin, transfer_to means transfering newly minted amount to worker
 	/// accounts. It actually burn/withdraw the corresponding amount from entrance_account.
 	fn transfer_to(
 		&self,
@@ -367,11 +367,16 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
 
-		// "to" account must be one of the delegators(miners) accounts
-		ensure!(
-			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
-			Error::<T>::DelegatorNotExist
-		);
+		// "to" account must be one of the validator(worker) accounts
+		let multi_hash = T::Hashing::hash(&to.encode());
+		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
+			ensure!(
+				validator_vec.contains(&(to.clone(), multi_hash)),
+				Error::<T>::ValidatorNotExist
+			);
+		} else {
+			Err(Error::<T>::ValidatorNotExist)?;
+		}
 
 		// burn the amount
 		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
@@ -403,7 +408,7 @@ impl<T: Config>
 		_vtoken_amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
+		let who = who.as_ref().ok_or(Error::<T>::ValidatorNotExist)?;
 		let multi_hash = T::Hashing::hash(&who.encode());
 
 		// ensure "who" is a valid validator
