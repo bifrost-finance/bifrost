@@ -20,6 +20,7 @@
 #![allow(clippy::unused_unit)]
 
 pub mod calls;
+pub mod migration;
 pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;
@@ -68,7 +69,6 @@ pub mod pallet {
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{
-		v2::Weight as XcmWeight,
 		v3::{prelude::*, ExecuteXcm, Parent},
 		DoubleEncoded, VersionedXcm,
 	};
@@ -117,13 +117,13 @@ pub mod pallet {
 		type StatemineTransferFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type StatemineTransferWeight: Get<XcmWeight>;
+		type StatemineTransferWeight: Get<Weight>;
 
 		#[pallet::constant]
 		type ContributionFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type ContributionWeight: Get<XcmWeight>;
+		type ContributionWeight: Get<Weight>;
 
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
@@ -143,7 +143,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmDestWeightUpdated(XcmInterfaceOperation, XcmWeight),
+		XcmDestWeightUpdated(XcmInterfaceOperation, Weight),
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
 		XcmFeeUpdated(XcmInterfaceOperation, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
@@ -156,7 +156,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (XcmWeight, BalanceOf<T>), OptionQuery>;
+		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
 
 	/// Tracker for the next nonce index
 	#[pallet::storage]
@@ -185,7 +185,7 @@ pub mod pallet {
 			))]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(XcmInterfaceOperation, Option<XcmWeight>, Option<BalanceOf<T>>)>,
+			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -238,19 +238,19 @@ pub mod pallet {
 
 			let mut assets = MultiAssets::new();
 			let statemine_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(
+				id: Concrete(MultiLocation::new(
 					1,
-					Junctions::X3(
-						Junction::Parachain(parachains::Statemine::ID),
-						Junction::PalletInstance(parachains::Statemine::PALLET_ID),
-						Junction::GeneralIndex(asset_id.into()),
+					X3(
+						Parachain(parachains::Statemine::ID),
+						PalletInstance(parachains::Statemine::PALLET_ID),
+						GeneralIndex(asset_id.into()),
 					),
 				)),
-				fun: Fungibility::Fungible(amount_u128),
+				fun: Fungible(amount_u128),
 			};
 			let fee_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(1, Junctions::Here)),
-				fun: Fungibility::Fungible(xcm_fee_u128),
+				id: Concrete(MultiLocation::new(1, Junctions::Here)),
+				fun: Fungible(xcm_fee_u128),
 			};
 			assets.push(statemine_asset);
 			assets.push(fee_asset.clone());
@@ -258,10 +258,7 @@ pub mod pallet {
 				WithdrawAsset(assets),
 				InitiateReserveWithdraw {
 					assets: AllCounted(1).into(),
-					reserve: MultiLocation::new(
-						1,
-						Junctions::X1(Junction::Parachain(parachains::Statemine::ID)),
-					),
+					reserve: MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
 					xcm: Xcm(vec![
 						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 						DepositAsset { assets: AllCounted(1).into(), beneficiary: dst_location },
@@ -273,8 +270,8 @@ pub mod pallet {
 				origin_location,
 				msg,
 				hash,
-				Weight::from_ref_time(dest_weight),
-				Weight::from_ref_time(dest_weight),
+				dest_weight,
+				dest_weight,
 			)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
@@ -297,8 +294,6 @@ pub mod pallet {
 				Self::xcm_dest_weight_and_fee(XcmInterfaceOperation::UmpContributeTransact)
 					.unwrap_or((T::ContributionWeight::get(), T::ContributionFee::get()));
 
-			let nonce = Self::next_nonce_index(index)?;
-
 			// Construct confirm_contribute_call
 			let confirm_contribute_call = T::SalpHelper::confirm_contribute_call();
 			// Generate query_id
@@ -313,7 +308,7 @@ pub mod pallet {
 			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer);
 
 			let (msg_id, msg) =
-				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee, nonce)?;
+				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;
 
 			let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
 			ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
@@ -322,13 +317,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn next_nonce_index(index: ChainId) -> Result<Nonce, Error<T>> {
-			CurrentNonce::<T>::try_mutate(index, |ni| {
-				*ni = ni.overflowing_add(1).0;
-				Ok(*ni)
-			})
-		}
-
 		pub(crate) fn transact_id(data: &[u8]) -> MessageId {
 			return sp_io::hashing::blake2_256(data);
 		}
@@ -336,9 +324,8 @@ pub mod pallet {
 		pub(crate) fn build_ump_transact(
 			query_id: QueryId,
 			call: DoubleEncoded<()>,
-			weight: XcmWeight,
+			weight: Weight,
 			fee: BalanceOf<T>,
-			nonce: Nonce,
 		) -> Result<(MessageId, Xcm<()>), Error<T>> {
 			let sovereign_account: AccountIdOf<T> = T::ParachainSovereignAccount::get();
 			let sovereign_location: MultiLocation =
@@ -354,7 +341,7 @@ pub mod pallet {
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: Weight::from_ref_time(weight + nonce as u64),
+					require_weight_at_most: weight,
 					call,
 				},
 				ReportTransactStatus(QueryResponseInfo {
@@ -362,7 +349,7 @@ pub mod pallet {
 						T::ParachainId::get(),
 					)))),
 					query_id,
-					max_weight: Weight::from_parts(weight + nonce as u64, 0),
+					max_weight: weight,
 				}),
 				RefundSurplus,
 				DepositAsset { assets: AllCounted(1).into(), beneficiary: sovereign_location },
