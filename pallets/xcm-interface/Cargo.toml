@@ -16,13 +16,13 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false  }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38" }
 
 [features]
 default = ["std"]
@@ -39,6 +39,7 @@ std = [
 	"pallet-xcm/std",
 	"xcm/std",
 	"orml-traits/std",
+	"cumulus-primitives-core/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

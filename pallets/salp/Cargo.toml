@@ -24,6 +24,8 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38", default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.38" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.38" }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
@@ -53,6 +55,8 @@ std = [
 	"zenlink-protocol/std",
 	"bifrost-asset-registry/std",
 	"cumulus-primitives-core/std",
+	"pallet-xcm/std",
+	"xcm/std",
 ]
 
 runtime-benchmarks = [

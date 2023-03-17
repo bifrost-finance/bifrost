@@ -23,10 +23,12 @@
 use bifrost_asset_registry::AssetIdMaps;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
-	construct_runtime, ord_parameter_types, parameter_types,
+	construct_runtime, ord_parameter_types,
+	pallet_prelude::IsType,
+	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
 	sp_std::marker::PhantomData,
-	traits::{EnsureOrigin, GenesisBuild, Get, Nothing},
+	traits::{EnsureOrigin, Everything, GenesisBuild, Get, Nothing},
 	weights::Weight,
 	PalletId,
 };
@@ -306,7 +308,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> RuntimeOrigin {
+	fn try_successful_origin() -> RuntimeOrigin {
 		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
 	}
 }
@@ -318,7 +320,11 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExecutor {
-	fn contribute(_index: ParaId, _value: Balance) -> Result<MessageId, DispatchError> {
+	fn contribute(
+		contributer: AccountId,
+		_index: ParaId,
+		_value: Balance,
+	) -> Result<MessageId, DispatchError> {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {
@@ -331,6 +337,8 @@ impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExec
 impl salp::Config for Test {
 	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeOrigin = RuntimeOrigin;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;

@@ -24,7 +24,7 @@ pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-pub use traits::{ChainId, MessageId, Nonce};
+pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
 
 macro_rules! use_relay {
     ({ $( $code:tt )* }) => {
@@ -57,6 +57,7 @@ pub(crate) type BalanceOf<T: Config> =
 
 #[frame_support::pallet]
 pub mod pallet {
+	use cumulus_primitives_core::ParaId;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
@@ -106,6 +107,9 @@ pub mod pallet {
 		/// Convert `T::AccountId` to `MultiLocation`.
 		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
 
+		/// Salp call encode
+		type SalpHelper: SalpHelper<AccountIdOf<Self>, <Self as pallet_xcm::Config>::RuntimeCall>;
+
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
 
@@ -120,6 +124,12 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type ContributionWeight: Get<XcmWeight>;
+
+		#[pallet::constant]
+		type ParachainId: Get<ParaId>;
+
+		#[pallet::constant]
+		type CallBackTimeOut: Get<Self::BlockNumber>;
 	}
 
 	#[pallet::error]
@@ -276,16 +286,34 @@ pub mod pallet {
 	}
 
 	impl<T: Config> XcmHelper<AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
-		fn contribute(index: ChainId, value: BalanceOf<T>) -> Result<MessageId, DispatchError> {
-			let contribute_call = Self::build_ump_crowdloan_contribute(index, value);
+		fn contribute(
+			contributer: AccountIdOf<T>,
+			index: ChainId,
+			amount: BalanceOf<T>,
+		) -> Result<MessageId, DispatchError> {
+			// Construct contribute call data
+			let contribute_call = Self::build_ump_crowdloan_contribute(index, amount);
 			let (dest_weight, xcm_fee) =
 				Self::xcm_dest_weight_and_fee(XcmInterfaceOperation::UmpContributeTransact)
 					.unwrap_or((T::ContributionWeight::get(), T::ContributionFee::get()));
 
 			let nonce = Self::next_nonce_index(index)?;
 
+			// Construct confirm_contribute_call
+			let confirm_contribute_call = T::SalpHelper::confirm_contribute_call();
+			// Generate query_id
+			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
+				MultiLocation::parent(),
+				confirm_contribute_call,
+				T::CallBackTimeOut::get(),
+				Here,
+			);
+
+			// Bind query_id and contribution
+			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer);
+
 			let (msg_id, msg) =
-				Self::build_ump_transact(contribute_call, dest_weight, xcm_fee, nonce)?;
+				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee, nonce)?;
 
 			let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
 			ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
@@ -306,6 +334,7 @@ pub mod pallet {
 		}
 
 		pub(crate) fn build_ump_transact(
+			query_id: QueryId,
 			call: DoubleEncoded<()>,
 			weight: XcmWeight,
 			fee: BalanceOf<T>,
@@ -328,6 +357,13 @@ pub mod pallet {
 					require_weight_at_most: Weight::from_ref_time(weight + nonce as u64),
 					call,
 				},
+				ReportTransactStatus(QueryResponseInfo {
+					destination: MultiLocation::from(X1(Parachain(u32::from(
+						T::ParachainId::get(),
+					)))),
+					query_id,
+					max_weight: Weight::from_parts(weight + nonce as u64, 0),
+				}),
 				RefundSurplus,
 				DepositAsset { assets: AllCounted(1).into(), beneficiary: sovereign_location },
 			]);

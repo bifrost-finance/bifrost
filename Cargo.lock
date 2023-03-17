@@ -1206,6 +1206,7 @@ dependencies = [
  "pallet-collective",
  "pallet-multisig",
  "pallet-sudo",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
@@ -1213,6 +1214,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
  "xcm-interface",
  "zenlink-protocol",
 ]

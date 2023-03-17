@@ -1226,6 +1226,8 @@ parameter_types! {
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Currencies;

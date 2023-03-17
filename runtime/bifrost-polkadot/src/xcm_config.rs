@@ -536,4 +536,7 @@ impl xcm_interface::Config for Runtime {
 	type StatemineTransferFee = StatemineTransferFee;
 	type ContributionWeight = ContributionWeight;
 	type ContributionFee = UmpTransactFee;
+	type SalpHelper = Salp;
+	type ParachainId = SelfParaChainId;
+	type CallBackTimeOut = ConstU32<10>;
 }
