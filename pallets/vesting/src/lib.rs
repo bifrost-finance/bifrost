@@ -244,8 +244,8 @@ pub mod pallet {
 		///     - Writes: Vesting Storage, Balances Locks, [Sender Account]
 		/// # </weight>
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get())
-		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get()))
+		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get(),10u32)
+		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get(),10u32))
 		)]
 		pub fn vest(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -269,8 +269,8 @@ pub mod pallet {
 		///     - Writes: Vesting Storage, Balances Locks, Target Account
 		/// # </weight>
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get())
-		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get()))
+		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get(),10u32)
+		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get(),10u32))
 		)]
 		pub fn vest_other(
 			origin: OriginFor<T>,
@@ -299,7 +299,7 @@ pub mod pallet {
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, [Sender Account]
 		/// # </weight>
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get()))]
+		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get(),10u32))]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
@@ -347,7 +347,7 @@ pub mod pallet {
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, Source Account
 		/// # </weight>
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get()))]
+		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get(),10u32))]
 		pub fn force_vested_transfer(
 			origin: OriginFor<T>,
 			source: <T::Lookup as StaticLookup>::Source,

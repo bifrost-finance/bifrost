@@ -30,7 +30,7 @@ pub const BOB: [u8; 32] = [1u8; 32];
 pub const CATHI: [u8; 32] = [2u8; 32];
 
 pub const KSM_DECIMALS: u128 = 1000_000_000_000;
-pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
+// pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
 const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;
 pub const BLOCKS_PER_YEAR: u32 = SECONDS_PER_YEAR / SECONDS_PER_BLOCK;

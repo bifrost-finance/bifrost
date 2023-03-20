@@ -370,10 +370,7 @@ impl<T: Config>
 		// "to" account must be one of the validator(worker) accounts
 		let multi_hash = T::Hashing::hash(&to.encode());
 		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(
-				validator_vec.contains(&(to.clone(), multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validator_vec.contains(&(*to, multi_hash)), Error::<T>::ValidatorNotExist);
 		} else {
 			Err(Error::<T>::ValidatorNotExist)?;
 		}

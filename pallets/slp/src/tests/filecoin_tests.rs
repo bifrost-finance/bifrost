@@ -527,16 +527,12 @@ fn remove_validator_should_work() {
 #[test]
 fn filecoin_transfer_to_works() {
 	// miner
-	let location = MultiLocation {
-		parents: 100,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let location =
+		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 	// worker
-	let owner_location = MultiLocation {
-		parents: 111,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let owner_location =
+		MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -547,7 +543,7 @@ fn filecoin_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] =
@@ -556,7 +552,7 @@ fn filecoin_transfer_to_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
