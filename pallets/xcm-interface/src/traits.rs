@@ -138,7 +138,12 @@ pub trait XcmHelper<AccountId, Balance> {
 	) -> Result<MessageId, DispatchError>;
 }
 
-pub trait SalpHelper<AccountId, RuntimeCall> {
+pub trait SalpHelper<AccountId, RuntimeCall, Balance> {
 	fn confirm_contribute_call() -> RuntimeCall;
-	fn bind_query_id_and_contribution(query_id: QueryId, index: ChainId, contributer: AccountId);
+	fn bind_query_id_and_contribution(
+		query_id: QueryId,
+		index: ChainId,
+		contributer: AccountId,
+		amount: Balance,
+	);
 }

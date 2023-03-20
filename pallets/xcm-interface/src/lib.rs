@@ -108,7 +108,11 @@ pub mod pallet {
 		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
 
 		/// Salp call encode
-		type SalpHelper: SalpHelper<AccountIdOf<Self>, <Self as pallet_xcm::Config>::RuntimeCall>;
+		type SalpHelper: SalpHelper<
+			AccountIdOf<Self>,
+			<Self as pallet_xcm::Config>::RuntimeCall,
+			BalanceOf<Self>,
+		>;
 
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
@@ -305,7 +309,7 @@ pub mod pallet {
 			);
 
 			// Bind query_id and contribution
-			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer);
+			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer, amount);
 
 			let (msg_id, msg) =
 				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;

@@ -689,6 +689,7 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "pallet-transaction-payment",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
@@ -696,6 +697,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "xcm-interface",
  "zenlink-protocol",
 ]
@@ -1215,6 +1219,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "xcm-interface",
  "zenlink-protocol",
 ]

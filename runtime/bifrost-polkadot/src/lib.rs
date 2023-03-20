@@ -1613,6 +1613,7 @@ pub type Executive = frame_executive::Executive<
 		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
 		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
 		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
+		xcm_interface::migration::RemoveNonce<Runtime>,
 	),
 >;
 

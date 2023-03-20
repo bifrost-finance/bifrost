@@ -36,6 +36,8 @@ orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 
 [features]
 default = ["std"]

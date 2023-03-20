@@ -297,8 +297,8 @@ pub mod pallet {
 	/// Record contribution
 	#[pallet::storage]
 	#[pallet::getter(fn contributing_value)]
-	pub type ContributingValue<T: Config> =
-		StorageMap<_, Blake2_128Concat, QueryId, (ParaId, AccountIdOf<T>)>;
+	pub type QueryIdContributionInfo<T: Config> =
+		StorageMap<_, Blake2_128Concat, QueryId, (ParaId, AccountIdOf<T>, BalanceOf<T>)>;
 
 	/// Info on all of the funds.
 	#[pallet::storage]
@@ -1196,18 +1196,7 @@ pub mod pallet {
 			let responder = ensure_response(<T as Config>::RuntimeOrigin::from(origin))?;
 			ensure!(responder == MultiLocation::parent(), Error::<T>::ResponderNotRelayChain);
 
-			let is_success = match response {
-				Response::Null |
-				Response::Assets(_) |
-				Response::ExecutionResult(_) |
-				Response::Version(_) |
-				Response::PalletsInfo(_) |
-				Response::DispatchResult(MaybeErrorCode::Error(_)) |
-				Response::DispatchResult(MaybeErrorCode::TruncatedError(_)) => false,
-				Response::DispatchResult(MaybeErrorCode::Success) => true,
-			};
-
-			let (index, contributer) = ContributingValue::<T>::get(query_id)
+			let (index, contributer, _amount) = QueryIdContributionInfo::<T>::get(query_id)
 				.ok_or(Error::<T>::NotFindContributionValue)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -1230,7 +1219,7 @@ pub mod pallet {
 			)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-			if is_success {
+			if let Response::DispatchResult(MaybeErrorCode::Success) = response {
 				// Issue reserved vsToken/vsBond to contributor
 				T::MultiCurrency::deposit(vs_token, &contributer, contributing)?;
 				T::MultiCurrency::deposit(vs_bond, &contributer, contributing)?;
@@ -1268,7 +1257,7 @@ pub mod pallet {
 				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &contributer, contributing);
 				Self::deposit_event(Event::ContributeFailed(contributer, index, contributing));
 			}
-			ContributingValue::<T>::remove(query_id);
+			QueryIdContributionInfo::<T>::remove(query_id);
 			Ok(())
 		}
 	}
@@ -1425,7 +1414,7 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall>
+impl<T: Config> xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
 	for Pallet<T>
 {
 	fn confirm_contribute_call() -> <T as Config>::RuntimeCall {
@@ -1437,7 +1426,8 @@ impl<T: Config> xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::Runtime
 		query_id: QueryId,
 		index: ChainId,
 		contributer: AccountIdOf<T>,
+		amount: BalanceOf<T>,
 	) {
-		ContributingValue::<T>::insert(query_id, (index, contributer));
+		QueryIdContributionInfo::<T>::insert(query_id, (index, contributer, amount));
 	}
 }
