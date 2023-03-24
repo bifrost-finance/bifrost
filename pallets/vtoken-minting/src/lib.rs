@@ -1058,6 +1058,20 @@ pub mod pallet {
 							}
 							Ok(())
 						},
+						TimeUnit::Kblock(kblock) => {
+							if ongoing_elem + unlock_duration_elem > *kblock {
+								*kblock =
+									kblock.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
+						TimeUnit::Hour(hour) => {
+							if ongoing_elem + unlock_duration_elem > *hour {
+								*hour =
+									hour.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
 						_ => Ok(()),
 					}
 				})?;
