@@ -67,6 +67,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::FeeDealer,
@@ -337,14 +338,10 @@ impl frame_system::Config for Runtime {
 	/// Converts a module to an index of this module in the runtime.
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = SS58Prefix;
-	type SystemWeightInfo = ();
+	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 	/// Runtime version.
 	type Version = Version;
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-parameter_types! {
-	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
+	type MaxConsumers = ConstU32<16>;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -352,7 +349,7 @@ impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	type OnTimestampSet = Aura;
-	type WeightInfo = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -366,7 +363,7 @@ impl pallet_utility::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type PalletsOrigin = OriginCaller;
-	type WeightInfo = ();
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -482,7 +479,7 @@ impl pallet_proxy::Config for Runtime {
 	type ProxyDepositBase = ProxyDepositBase;
 	type ProxyDepositFactor = ProxyDepositFactor;
 	type ProxyType = ProxyType;
-	type WeightInfo = ();
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -516,7 +513,7 @@ impl pallet_scheduler::Config for Runtime {
 	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 	type PalletsOrigin = OriginCaller;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = ();
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
 	type Preimages = Preimage;
 }
 
@@ -535,7 +532,7 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxSignatories = MaxSignatories;
-	type WeightInfo = ();
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -560,7 +557,7 @@ impl pallet_identity::Config for Runtime {
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
 	type RegistrarOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -572,7 +569,7 @@ impl pallet_indices::Config for Runtime {
 	type Currency = Balances;
 	type Deposit = IndexDeposit;
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -586,7 +583,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = ();
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -603,7 +600,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type MotionDuration = CouncilMotionDuration;
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
-	type WeightInfo = ();
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -620,7 +617,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type MotionDuration = TechnicalMotionDuration;
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
-	type WeightInfo = ();
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -633,7 +630,7 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type RemoveOrigin = MoreThanHalfCouncil;
 	type ResetOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
@@ -646,7 +643,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 	type RemoveOrigin = MoreThanHalfCouncil;
 	type ResetOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -684,7 +681,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type VotingBondFactor = VotingBondFactor;
 	type MaxCandidates = MaxCandidates;
 	type MaxVoters = MaxVoters;
-	type WeightInfo = ();
+	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -744,7 +741,7 @@ impl pallet_democracy::Config for Runtime {
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
 	type VotingPeriod = VotingPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
@@ -784,7 +781,7 @@ impl pallet_treasury::Config for Runtime {
 	type RejectOrigin = MoreThanHalfCouncil;
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -809,7 +806,7 @@ impl pallet_bounties::Config for Runtime {
 	type DataDepositPerByte = DataDepositPerByte;
 	type RuntimeEvent = RuntimeEvent;
 	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = ();
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
 	type ChildBountyManager = ();
 }
 
@@ -821,7 +818,7 @@ impl pallet_tips::Config for Runtime {
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
 	type Tippers = PhragmenElection;
-	type WeightInfo = ();
+	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -871,7 +868,7 @@ impl pallet_session::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	// we don't have stash and controller, thus we don't need the convert as well.
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type WeightInfo = ();
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_authorship::Config for Runtime {
@@ -915,7 +912,7 @@ impl pallet_vesting::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = ();
+	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
 // Bifrost modules start
