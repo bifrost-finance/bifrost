@@ -1618,10 +1618,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		pallet_balances::migration::MigrateToTrackInactive<Runtime, CheckingAccount>,
-		SalpOnRuntimeUpgrade<Runtime>,
-	),
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1913,43 +1910,6 @@ impl_runtime_apis! {
 			// have a backtrace here.
 			Executive::try_execute_block(block, state_root_check,signature_check, select).unwrap()
 		}
-	}
-}
-
-pub struct SalpOnRuntimeUpgrade<T>(PhantomData<T>);
-impl<T: bifrost_salp::Config> OnRuntimeUpgrade for SalpOnRuntimeUpgrade<T> {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-
-		let redeem_pool: _ = bifrost_salp::RedeemPool::<T>::get();
-		log::info!("Old redeem_pool is {:?}", redeem_pool);
-
-		Ok(vec![])
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-
-		let weight = bifrost_salp::migration::update_redeem_pool::<Runtime>();
-
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-
-		weight
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `post_upgrade`...");
-
-		let redeem_pool: _ = bifrost_salp::RedeemPool::<T>::get();
-		log::info!("New redeem_pool is {:?}", redeem_pool);
-
-		Ok(())
 	}
 }
 
