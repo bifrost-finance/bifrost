@@ -25,11 +25,18 @@ pub use sp_runtime::{
 	BuildStorage, DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
 };
 
-pub const ALICE: [u8; 32] = [0u8; 32];
-pub const BOB: [u8; 32] = [1u8; 32];
+pub const ALICE: [u8; 32] =
+	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
+pub const BOB: [u8; 32] =
+	hex_literal::hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"];
+pub const KUSAMA_ALICE_STASH_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
+pub const KUSAMA_BOB_STASH_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
 pub const CATHI: [u8; 32] = [2u8; 32];
 
 pub const KSM_DECIMALS: u128 = 1000_000_000_000;
+pub const BNC_DECIMALS: u128 = 1000_000_000_000;
 pub const CONTRIBUTON_INDEX: MessageId = [0; 32];
 const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;

@@ -767,9 +767,7 @@ impl<T: Config>
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
-			query_id,
-		});
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailed { query_id });
 
 		Ok(())
 	}
@@ -796,6 +794,7 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		_currency_id: CurrencyId,
+		_query_id: Option<QueryId>,
 	) -> Result<Xcm<()>, Error<T>> {
 		let asset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
@@ -837,7 +836,7 @@ impl<T: Config> PhalaAgent<T> {
 		let responder = Self::get_pha_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
+		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
 
 		let (call_as_subaccount, fee, weight) =
 			Self::prepare_send_as_subaccount_call_params_with_query_id(
@@ -849,7 +848,7 @@ impl<T: Config> PhalaAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
 		Ok((query_id, timeout, xcm_message))
 	}
@@ -904,7 +903,7 @@ impl<T: Config> PhalaAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
 		let dest = Self::get_pha_multilocation();
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;

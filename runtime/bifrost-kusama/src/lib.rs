@@ -1365,7 +1365,9 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
+	for SubstrateResponseManager
+{
 	fn get_query_response_record(query_id: QueryId) -> bool {
 		if let Some(QueryStatus::Ready { .. }) = PolkadotXcm::query(query_id) {
 			true
@@ -1374,10 +1376,18 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 		}
 	}
 
-	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
-		PolkadotXcm::new_query(*responder, timeout, Here)
+	fn create_query_record(
+		responder: &MultiLocation,
+		call_back: Option<RuntimeCall>,
+		timeout: BlockNumber,
+	) -> u64 {
 		// for xcm v3 version see the following
 		// PolkadotXcm::new_query(responder, timeout, Here)
+		if let Some(call_back) = call_back {
+			PolkadotXcm::new_notify_query(*responder, call_back, timeout, Here)
+		} else {
+			PolkadotXcm::new_query(*responder, timeout, Here)
+		}
 	}
 
 	fn remove_query_record(query_id: QueryId) -> bool {
@@ -1400,6 +1410,8 @@ impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
 
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;

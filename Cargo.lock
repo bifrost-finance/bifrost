@@ -773,6 +773,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-membership",
+ "pallet-session",
  "pallet-staking",
  "pallet-transaction-payment",
  "pallet-xcm",

@@ -21,6 +21,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
