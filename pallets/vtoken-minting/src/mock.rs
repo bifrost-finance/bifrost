@@ -64,6 +64,10 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
 pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const FIL_TOKEN_ID: u8 = 4u8;
+pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
+pub const vFIL_TOKEN_ID: u8 = 4u8;
+pub const vFIL: CurrencyId = CurrencyId::VToken2(vFIL_TOKEN_ID);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -163,6 +167,8 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
+			&FIL => 0,
+			&vFIL => 0,
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
@@ -332,6 +338,8 @@ impl ExtBuilder {
 			(BOB, vKSM, 1000),
 			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
+			(BOB, vFIL, 1000),
+			(BOB, FIL, 100000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
 		])
 	}
