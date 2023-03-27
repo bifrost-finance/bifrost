@@ -38,9 +38,12 @@ bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-featur
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-asset-registry = { path = "../../pallets/asset-registry" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common" }
 
 [features]
 default = ["std"]
@@ -58,9 +61,7 @@ std = [
 	"bifrost-slp/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-farming/std",
-	"xcm/std",
 	"bifrost-asset-registry/std",
-	"bifrost-runtime-common/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

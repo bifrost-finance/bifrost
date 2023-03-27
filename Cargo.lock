@@ -659,6 +659,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
@@ -667,6 +668,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "zenlink-protocol",
 ]
 
@@ -1305,6 +1308,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "xcm-interface",
 ]
 
@@ -1326,6 +1331,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
@@ -1334,6 +1340,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
  "zenlink-protocol",
 ]
 
@@ -1357,6 +1365,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
@@ -1365,6 +1374,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -1408,6 +1419,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -1415,6 +1427,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -1522,6 +1536,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -1529,6 +1544,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
