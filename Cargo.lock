@@ -5729,7 +5729,7 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=84be95becc503d2bfa64db5d26991022deafe960#84be95becc503d2bfa64db5d26991022deafe960"
+source = "git+https://github.com/bifrost-finance/merkle-distributor?rev=bb14f660911f63a07bef673cbeb0e9dff38a3f77#bb14f660911f63a07bef673cbeb0e9dff38a3f77"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6483,7 +6483,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6500,7 +6500,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6515,7 +6515,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -6534,7 +6534,7 @@ dependencies = [
 [[package]]
 name = "orml-unknown-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6549,7 +6549,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -6563,7 +6563,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6577,7 +6577,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -6591,7 +6591,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8301b6c2871ce4e0279c78b3714e8e3a40a749ea#8301b6c2871ce4e0279c78b3714e8e3a40a749ea"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=f60655f922204a803ee945ffddba6ca530caffe0#f60655f922204a803ee945ffddba6ca530caffe0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -14649,7 +14649,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -14672,7 +14672,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14687,7 +14687,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14698,7 +14698,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -14715,7 +14715,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-rpc"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14729,7 +14729,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14740,7 +14740,7 @@ dependencies = [
 [[package]]
 name = "zenlink-swap-router"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=d23e6f93d479f86e980a20344157a8c726ff646b#d23e6f93d479f86e980a20344157a8c726ff646b"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module-1?rev=b737d84b44ee55965532c137bb8a51e2016e2593#b737d84b44ee55965532c137bb8a51e2016e2593"
 dependencies = [
  "frame-support",
  "frame-system",

@@ -69,7 +69,7 @@ fn relaychain_transact_works() {
 				// }),
 				RefundSurplus,
 				DepositAsset {
-					assets: AllCounted(1).into(),
+					assets: All.into(),
 					beneficiary: MultiLocation::from(AccountId32 { network: None, id: ALICE }),
 				},
 			]);

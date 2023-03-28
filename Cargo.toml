@@ -102,19 +102,19 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-stable-amm = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-stable-amm-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-stable-amm-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-zenlink-swap-router = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "d23e6f93d479f86e980a20344157a8c726ff646b" }
-merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "84be95becc503d2bfa64db5d26991022deafe960" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8301b6c2871ce4e0279c78b3714e8e3a40a749ea" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-stable-amm = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-stable-amm-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+zenlink-swap-router = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module-1", rev = "b737d84b44ee55965532c137bb8a51e2016e2593" }
+merkle-distributor = { git = "https://github.com/bifrost-finance/merkle-distributor", rev = "bb14f660911f63a07bef673cbeb0e9dff38a3f77" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f60655f922204a803ee945ffddba6ca530caffe0" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "92d371839f6d5c52dd35b7e3d61cbdefc792cc42" }
