@@ -1154,7 +1154,12 @@ impl<T: Config> MoonbeamAgent<T> {
 
 		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
 		let remark_call =
-			MoonbeamCall::System(MoonbeamSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+			if(currency_id == MOVR) {
+				MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(query_id.encode())));
+			} else {
+				MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(query_id.encode())));
+			};
+			
 
 		let call_batched_with_remark =
 			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
