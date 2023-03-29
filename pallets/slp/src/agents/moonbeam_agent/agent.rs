@@ -1156,11 +1156,11 @@ impl<T: Config> MoonbeamAgent<T> {
 		let remark_call = if (currency_id == MOVR) {
 			MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(
 				query_id.encode(),
-			)));
+			)))
 		} else {
 			MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(
 				query_id.encode(),
-			)));
+			)))
 		};
 
 		let call_batched_with_remark =
