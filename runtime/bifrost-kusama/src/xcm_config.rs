@@ -183,13 +183,9 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		match location {
 			MultiLocation { parents, interior } if parents == 1 => match interior {
 				X2(Parachain(id), GeneralKey { data, length }) if id == parachains::karura::ID =>
-					if data[..data.len().min(length as usize)] ==
-						parachains::karura::KAR_KEY.to_vec()
-					{
+					if data[..length as usize] == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(KAR))
-					} else if data[..data.len().min(length as usize)] ==
-						parachains::karura::KUSD_KEY.to_vec()
-					{
+					} else if data[..length as usize] == parachains::karura::KUSD_KEY.to_vec() {
 						Some(Stable(KUSD))
 					} else {
 						None
@@ -368,7 +364,6 @@ parameter_types! {
 		ksm_per_second::<Runtime>() * 150 * 1_000_000,
 		0
 	);
-	//Junction::from(BoundedVec::try_from(parachains::karura::KUSD_KEY.to_vec()).unwrap())
 	pub ZlkNewPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			0,
@@ -484,7 +479,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmSender = XcmRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ConstU32<10>;
+	type MaxAssetsIntoHolding = ConstU32<8>;
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
