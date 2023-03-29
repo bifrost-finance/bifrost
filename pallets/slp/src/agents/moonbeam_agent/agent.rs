@@ -1153,13 +1153,15 @@ impl<T: Config> MoonbeamAgent<T> {
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
-		let remark_call =
-			if(currency_id == MOVR) {
-				MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(query_id.encode())));
-			} else {
-				MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(query_id.encode())));
-			};
-			
+		let remark_call = if (currency_id == MOVR) {
+			MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(
+				query_id.encode(),
+			)));
+		} else {
+			MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(
+				query_id.encode(),
+			)));
+		};
 
 		let call_batched_with_remark =
 			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
