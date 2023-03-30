@@ -1295,7 +1295,7 @@ impl<T: Config> MoonbeamAgent<T> {
 				assets: All.into(),
 				reserve: dest,
 				xcm: Xcm(vec![
-					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					BuyExecution { fees: fee_asset, weight_limit: Limited(weight) },
 					DepositAsset { assets: All.into(), beneficiary },
 				]),
 			},
