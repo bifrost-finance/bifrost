@@ -16,14 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, DelegatorLedgerXcmUpdateQueue, Hash,
-	LedgerUpdateEntry, Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry,
-	ValidatorsByDelegatorXcmUpdateQueue, H160,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, Hash, LedgerUpdateEntry, Pallet,
+	TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
 };
 use codec::Encode;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get};
+use frame_support::ensure;
 use node_primitives::CurrencyId;
 use sp_std::prelude::*;
 use xcm::{
@@ -191,37 +190,6 @@ impl<T: Config> Pallet<T> {
 	/// **************************************/
 	/// ****** XCM confirming Functions ******/
 	/// **************************************/
-	pub fn process_query_entry_records() -> Result<u32, Error<T>> {
-		let mut counter = 0u32;
-
-		// Deal with DelegatorLedgerXcmUpdateQueue storage
-		for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
-			if counter >= T::MaxTypeEntryPerBlock::get() {
-				break;
-			}
-
-			let updated = Self::get_ledger_update_agent_then_process(query_id, false)?;
-			if updated {
-				counter = counter.saturating_add(1);
-			}
-		}
-
-		// Deal with ValidatorsByDelegator storage
-		for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
-			if counter >= T::MaxTypeEntryPerBlock::get() {
-				break;
-			}
-			let updated =
-				Self::get_validators_by_delegator_update_agent_then_process(query_id, false)?;
-
-			if updated {
-				counter = counter.saturating_add(1);
-			}
-		}
-
-		Ok(counter)
-	}
-
 	pub fn get_ledger_update_agent_then_process(
 		query_id: QueryId,
 		manual_mode: bool,

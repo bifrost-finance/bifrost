@@ -16,12 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{ChainId, Config, CurrentNonce, Nonce};
+use crate::{BalanceOf, ChainId, Config, CurrentNonce, Nonce, XcmDestWeightAndFee};
 use frame_support::{
 	log, migration::storage_key_iter, pallet_prelude::*, traits::OnRuntimeUpgrade,
 	StoragePrefixedMap,
 };
 use sp_std::marker::PhantomData;
+use xcm::v2;
 
 pub struct RemoveNonce<T>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for RemoveNonce<T> {
@@ -43,6 +44,20 @@ impl<T: Config> OnRuntimeUpgrade for RemoveNonce<T> {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 			CurrentNonce::<T>::remove(key);
 		}
+
+		//kusama example
+		assert!(CurrentNonce::<T>::get(2241) == 0);
+		assert!(CurrentNonce::<T>::get(2102) == 0);
+
+		//polkadot example
+		assert!(CurrentNonce::<T>::get(2090) == 0);
+		assert!(CurrentNonce::<T>::get(2051) == 0);
+
+		XcmDestWeightAndFee::<T>::translate(|_key, old_value: (v2::Weight, BalanceOf<T>)| {
+			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			Some((Weight::from_ref_time(old_value.0), old_value.1))
+		});
+
 		weight
 	}
 }

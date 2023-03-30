@@ -20,7 +20,7 @@
 
 extern crate core;
 
-use crate::{agents::PolkadotAgent, primitives::BASE_WEIGHT};
+use crate::agents::PolkadotAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
@@ -52,6 +52,7 @@ pub use weights::WeightInfo;
 use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
 
 mod agents;
+pub mod migration;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -648,15 +649,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-			// For queries in update entry queues, search responses in pallet_xcm Queries storage.
-			let counter = Self::process_query_entry_records().unwrap_or(0);
-
-			// Calculate weight
-			Weight::from_ref_time(BASE_WEIGHT.saturating_mul(counter.into()))
-		}
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

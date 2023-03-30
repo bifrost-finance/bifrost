@@ -814,7 +814,7 @@ impl<T: Config>
 			},
 			RefundSurplus,
 			DepositAsset {
-				assets: AllCounted(1).into(),
+				assets: All.into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
