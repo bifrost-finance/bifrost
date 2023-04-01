@@ -71,9 +71,7 @@ use static_assertions::const_assert;
 pub mod constants;
 use bifrost_asset_registry::AssetIdMaps;
 #[allow(unused_imports)]
-use bifrost_flexible_fee::{
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 pub use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,

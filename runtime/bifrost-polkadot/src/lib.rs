@@ -68,9 +68,7 @@ use sp_version::RuntimeVersion;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::{
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,

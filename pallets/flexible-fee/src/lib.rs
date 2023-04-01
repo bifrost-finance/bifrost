@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::{convert::Into};
+use core::convert::Into;
 
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -42,10 +42,7 @@ use sp_std::{vec, vec::Vec};
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
-
-use crate::{
-	misc_fees::{FeeDeductor, FeeGetter},
-};
+use crate::misc_fees::{FeeDeductor, FeeGetter};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -193,24 +190,22 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// Get user fee charge assets order
 	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyIdOf<T>> {
-
-		let mut order_list: Vec<CurrencyIdOf<T>>= Vec::new();
+		let mut order_list: Vec<CurrencyIdOf<T>> = Vec::new();
 		// Get user default fee currency
 		if let Some(user_default_fee_currency) = UserDefaultFeeCurrency::<T>::get(&account_id) {
 			order_list.push(user_default_fee_currency);
 		};
-			
+
 		// Get universal fee currency order list
 		let mut universal_fee_currency_order_list = UniversalFeeCurrencyOrderList::<T>::get();
 
 		// Concat user default fee currency and universal fee currency order list
 		order_list.append(&mut universal_fee_currency_order_list);
 
-
 		order_list
 	}
 
-		/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
+	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
 	/// rather than BNC.
 	fn ensure_can_charge_fee(
 		who: &T::AccountId,
@@ -263,7 +258,6 @@ impl<T: Config> Pallet<T> {
 
 		Ok((currency_id, amount_in))
 	}
-
 }
 
 /// Default implementation for a Currency and an OnUnbalanced handler.
@@ -303,14 +297,14 @@ where
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
 		let rs = match T::Currency::withdraw(
-				who,
-				fee,
-				withdraw_reason,
-				ExistenceRequirement::AllowDeath,
-			) {
-				Ok(imbalance) => Ok(Some(imbalance)),
-				Err(_msg) => Err(InvalidTransaction::Payment.into()),
-			};
+			who,
+			fee,
+			withdraw_reason,
+			ExistenceRequirement::AllowDeath,
+		) {
+			Ok(imbalance) => Ok(Some(imbalance)),
+			Err(_msg) => Err(InvalidTransaction::Payment.into()),
+		};
 
 		// See if the this RuntimeCall needs to pay extra fee
 		let (fee_name, if_extra_fee) = T::ExtraFeeMatcher::get_fee_info(&call);
@@ -367,9 +361,6 @@ where
 	}
 }
 
-
-
-
 impl<T: Config> Pallet<T> {
 	fn find_out_fee_currency_and_amount(
 		who: &T::AccountId,
@@ -388,7 +379,6 @@ impl<T: Config> Pallet<T> {
 				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee).is_ok() {
 					// currency, amount_in, amount_out
 					return Ok(Some((currency_id, fee, fee)));
-					
 				}
 			} else {
 				// If it is other assets, go to exchange fee amount.
