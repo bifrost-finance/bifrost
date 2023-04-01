@@ -51,12 +51,9 @@ use zenlink_protocol::{
 };
 
 use super::*;
-use crate as flexible_fee;
 #[allow(unused_imports)]
-use crate::{
-	fee_dealer::FixedCurrencyFeeRate,
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+use crate::{self as flexible_fee, tests::CHARLIE};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -86,10 +83,6 @@ frame_support::construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
 	}
 );
-
-ord_parameter_types! {
-	pub const One: AccountId = ALICE;
-}
 
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -229,10 +222,13 @@ parameter_types! {
 	pub const SalpContributeFee: Balance = 100_000_000;
 }
 
+ord_parameter_types! {
+	pub const One: AccountId = CHARLIE;
+}
+
 impl crate::Config for Test {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FlexibleFee;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
@@ -245,6 +241,7 @@ impl crate::Config for Test {
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
 	type ParachainId = ParaInfo;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 }
 
 pub struct ParaInfo;

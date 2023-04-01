@@ -20,7 +20,6 @@
 mod account_id;
 mod asset_registry;
 mod dollor_tests;
-mod flexible_fee;
 mod kusama_cross_chain_transact;
 mod kusama_cross_chain_transfer;
 mod kusama_integration_tests;
