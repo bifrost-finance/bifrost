@@ -1322,7 +1322,7 @@ impl<T: Config> PolkadotAgent<T> {
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(Parachain(T::ParachainId::get().into())),

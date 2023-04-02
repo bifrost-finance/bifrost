@@ -141,8 +141,8 @@ fn cross_usdt() {
 		});
 		Statemine::execute_with(|| {
 			use statemine_runtime::*;
-			// println!("{:?}", System::events());
-			// assert_eq!(Assets::balance(1984, AccountId::from(BOB)), 5 * USDT);
+			println!("{:?}", System::events());
+			assert_eq!(Assets::balance(1984, AccountId::from(BOB)), 5 * USDT);
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success {
@@ -150,6 +150,6 @@ fn cross_usdt() {
 					weight: _
 				})
 			)));
-		})
+		});
 	})
 }
