@@ -21,7 +21,10 @@ use bifrost_asset_registry::AssetMetadata;
 use frame_support::assert_ok;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::{v3::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use xcm::{
+	v3::{prelude::*, Weight},
+	VersionedMultiAssets, VersionedMultiLocation,
+};
 use xcm_emulator::TestExt;
 
 const USDT: u128 = 1_000_000;
@@ -51,7 +54,7 @@ fn cross_usdt() {
 				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				0
+				Weight::zero()
 			));
 		});
 

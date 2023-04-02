@@ -119,7 +119,7 @@ pub mod pallet {
 		/// The CurrencyId registered.
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 		/// MultiLocation Force set.
-		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: u128 },
+		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: Weight },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -155,7 +155,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn currency_id_to_weight)]
 	pub type CurrencyIdToWeights<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, u128, OptionQuery>;
+		StorageMap<_, Twox64Concat, CurrencyId, Weight, OptionQuery>;
 
 	/// The storages for AssetMetadatas.
 	///
@@ -410,7 +410,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			location: Box<VersionedMultiLocation>,
-			weight: u128,
+			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -428,7 +428,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			location: Box<VersionedMultiLocation>,
-			weight: u128,
+			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -564,7 +564,7 @@ impl<T: Config> Pallet<T> {
 		LocationToCurrencyIds::<T>::remove(location);
 	}
 
-	pub fn do_register_weight(currency_id: CurrencyId, weight: u128) -> DispatchResult {
+	pub fn do_register_weight(currency_id: CurrencyId, weight: Weight) -> DispatchResult {
 		ensure!(
 			CurrencyMetadatas::<T>::get(currency_id).is_some(),
 			Error::<T>::CurrencyIdNotExists

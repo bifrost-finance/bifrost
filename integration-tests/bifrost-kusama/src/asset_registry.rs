@@ -22,7 +22,10 @@ use bifrost_asset_registry::{
 	Error, Event, LocationToCurrencyIds,
 };
 use frame_support::{assert_noop, assert_ok};
-use xcm::{v3::prelude::*, VersionedMultiLocation};
+use xcm::{
+	v3::{prelude::*, Weight},
+	VersionedMultiLocation,
+};
 
 #[test]
 fn register_native_asset_works() {
@@ -278,7 +281,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					2000_000_000
+					Weight::from_ref_time(2000_000_000)
 				),
 				Error::<Runtime>::CurrencyIdNotExists
 			);
@@ -292,7 +295,7 @@ fn register_multilocation() {
 				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				2000_000_000
+				Weight::from_ref_time(2000_000_000)
 			));
 
 			assert_noop!(
@@ -300,7 +303,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					2000_000_000
+					Weight::from_ref_time(2000_000_000)
 				),
 				Error::<Runtime>::CurrencyIdExisted
 			);
@@ -315,7 +318,7 @@ fn register_multilocation() {
 			);
 			assert_eq!(
 				CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
-				Some(2000_000_000)
+				Some(Weight::from_ref_time(2000_000_000))
 			);
 		})
 	})
