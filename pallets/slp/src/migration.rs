@@ -24,7 +24,7 @@ use crate::{
 	BalanceOf, Config, CurrencyId, DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, FeeSources,
 	Hash, HostingFees, SupplementFeeAccountWhitelist, Validators, ValidatorsByDelegator,
-	ValidatorsByDelegatorXcmUpdateQueue, Weight,
+	ValidatorsByDelegatorXcmUpdateQueue, Weight, XcmDestWeightAndFee,
 };
 use codec::alloc::collections::BTreeMap;
 use frame_support::{
@@ -208,6 +208,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 			|_key1, _key2, old_value: xcm::v2::MultiLocation| {
 				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 				MultiLocation::try_from(old_value).ok()
+			},
+		);
+
+		//migrate the value type of DelegatorsIndex2Multilocation
+		XcmDestWeightAndFee::<T>::translate(
+			|_key1, _key2, old_value: (xcm::v2::Weight, BalanceOf<T>)| {
+				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+				Some((Weight::from_ref_time(old_value.0), old_value.1))
 			},
 		);
 
