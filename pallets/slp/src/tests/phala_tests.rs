@@ -35,10 +35,7 @@ const VALIDATOR_0_ACCOUNT_ID_32: [u8; 32] =
 	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
 const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
 	parents: 1,
-	interior: X2(
-		Parachain(2004),
-		Junction::AccountId32 { network: None, id: VALIDATOR_0_ACCOUNT_ID_32 },
-	),
+	interior: X2(Parachain(2004), AccountId32 { network: None, id: VALIDATOR_0_ACCOUNT_ID_32 }),
 };
 
 const VALIDATOR_1_LOCATION: MultiLocation =
@@ -79,7 +76,7 @@ fn initialize_phala_delegator_works() {
 			parents: 1,
 			interior: X2(
 				Parachain(2004),
-				Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
+				AccountId32 { network: None, id: subaccount_id_0.into() },
 			),
 		};
 
@@ -176,10 +173,7 @@ fn phala_delegate_works() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(
-			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
-		),
+		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -382,10 +376,7 @@ fn phala_setup() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(
-			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
-		),
+		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
 	};
 
 	initialize_preparation_setup();
@@ -422,7 +413,7 @@ fn phala_bond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32 },
+			AccountId32 { network: None, id: subaccount_0_account_id_32 },
 		),
 	};
 
@@ -539,10 +530,7 @@ fn phala_unbond_works() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(
-			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_id_0.into() },
-		),
+		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -689,7 +677,7 @@ fn phala_rebond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -746,7 +734,7 @@ fn phala_undelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -843,7 +831,7 @@ fn phala_redelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -913,7 +901,7 @@ fn phala_liquidize_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1002,7 +990,7 @@ fn phala_bond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1079,7 +1067,7 @@ fn phala_unbond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1155,7 +1143,7 @@ fn phala_transfer_back_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1168,7 +1156,7 @@ fn phala_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1206,7 +1194,7 @@ fn phala_transfer_to_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1219,7 +1207,7 @@ fn phala_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] =
@@ -1228,7 +1216,7 @@ fn phala_transfer_to_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1266,7 +1254,7 @@ fn supplement_fee_account_whitelist_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1277,13 +1265,13 @@ fn supplement_fee_account_whitelist_works() {
 		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -1383,7 +1371,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1468,7 +1456,7 @@ fn add_validator_and_remove_validator_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 
@@ -1521,7 +1509,7 @@ fn phala_convert_asset_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			Junction::AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
 		),
 	};
 

@@ -1850,9 +1850,6 @@ pub mod pallet {
 		/// ********************************************************************
 		/// *************Outer Confirming Xcm queries functions ****************
 		/// ********************************************************************
-		/// ********************************************************************
-		/// *************Outer Confirming Xcm queries functions ****************
-		/// ********************************************************************
 		#[pallet::call_index(37)]
 		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(

@@ -344,7 +344,7 @@ fn register_multilocation_should_work() {
 				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				2000_000_000
+				Weight::from_ref_time(2000_000_000)
 			),
 			Error::<Runtime>::CurrencyIdNotExists
 		);
@@ -358,7 +358,7 @@ fn register_multilocation_should_work() {
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token2(0),
 			Box::new(location.clone()),
-			2000_000_000
+			Weight::from_ref_time(2000_000_000)
 		));
 
 		assert_noop!(
@@ -366,7 +366,7 @@ fn register_multilocation_should_work() {
 				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				2000_000_000
+				Weight::from_ref_time(2000_000_000)
 			),
 			Error::<Runtime>::CurrencyIdExisted
 		);
@@ -379,7 +379,10 @@ fn register_multilocation_should_work() {
 			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
 			Some(multi_location.clone())
 		);
-		assert_eq!(CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)), Some(2000_000_000));
+		assert_eq!(
+			CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
+			Some(Weight::from_ref_time(2000_000_000))
+		);
 	})
 }
 
@@ -404,7 +407,7 @@ fn force_set_multilocation_should_work() {
 				RuntimeOrigin::signed(CouncilAccount::get()),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				2000_000_000
+				Weight::from_ref_time(2000_000_000)
 			),
 			Error::<Runtime>::CurrencyIdNotExists
 		);
@@ -418,14 +421,14 @@ fn force_set_multilocation_should_work() {
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token2(0),
 			Box::new(location.clone()),
-			2000_000_000
+			Weight::from_ref_time(2000_000_000)
 		));
 
 		assert_ok!(AssetRegistry::force_set_multilocation(
 			RuntimeOrigin::signed(CouncilAccount::get()),
 			CurrencyId::Token2(0),
 			Box::new(location.clone()),
-			3000_000_000
+			Weight::from_ref_time(2000_000_000)
 		));
 
 		assert_eq!(
@@ -436,6 +439,9 @@ fn force_set_multilocation_should_work() {
 			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
 			Some(multi_location.clone())
 		);
-		assert_eq!(CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)), Some(3000_000_000));
+		assert_eq!(
+			CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
+			Some(Weight::from_ref_time(2000_000_000))
+		);
 	})
 }

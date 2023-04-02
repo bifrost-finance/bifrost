@@ -225,10 +225,10 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				1,
 				X2(
 					Parachain(2023),
-					Junction::AccountKey20 {
+					AccountKey20 {
 						network: None,
 						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),

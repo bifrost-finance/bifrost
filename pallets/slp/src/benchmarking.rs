@@ -49,7 +49,7 @@ fn kusama_setup<
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+			AccountKey20 { network: None, key: validator_0_account_id_20 },
 		),
 	};
 
@@ -269,7 +269,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+				AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -294,7 +294,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+				AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -326,7 +326,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+				AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -890,7 +890,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+				AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;
@@ -923,7 +923,7 @@ benchmarks! {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: None, key: validator_0_account_id_20 },
+				AccountKey20 { network: None, key: validator_0_account_id_20 },
 			),
 		};
 		kusama_setup::<T>()?;

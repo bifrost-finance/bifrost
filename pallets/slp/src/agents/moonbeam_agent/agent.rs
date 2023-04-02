@@ -1023,7 +1023,9 @@ impl<T: Config>
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailed { query_id });
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id,
+		});
 
 		Ok(())
 	}
@@ -1096,7 +1098,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
+		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
 
 		let (call_as_subaccount, fee, weight) =
 			Self::prepare_send_as_subaccount_call_params_with_query_id(
@@ -1108,7 +1110,7 @@ impl<T: Config> MoonbeamAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		Ok((query_id, timeout, fee, xcm_message))
 	}
@@ -1128,7 +1130,7 @@ impl<T: Config> MoonbeamAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
@@ -1148,8 +1150,15 @@ impl<T: Config> MoonbeamAgent<T> {
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
-		let remark_call =
-			MoonbeamCall::System(MoonbeamSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+		let remark_call = if currency_id == MOVR {
+			MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(
+				query_id.encode(),
+			)))
+		} else {
+			MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(
+				query_id.encode(),
+			)))
+		};
 
 		let call_batched_with_remark =
 			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
@@ -1708,7 +1717,6 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		currency_id: CurrencyId,
-		_query_id: Option<QueryId>,
 	) -> Result<Xcm<()>, Error<T>> {
 		let multi = Self::get_glmr_local_multilocation(currency_id)?;
 
@@ -1730,7 +1738,7 @@ impl<T: Config>
 			},
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(AccountKey20 {

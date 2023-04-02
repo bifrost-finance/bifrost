@@ -327,14 +327,14 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmSender = XcmRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ConstU32<64>;
-	type FeeManager = ();
-	type MessageExporter = ();
+	type MaxAssetsIntoHolding = ConstU32<8>;
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type FeeManager = ();
+	type MessageExporter = ();
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.

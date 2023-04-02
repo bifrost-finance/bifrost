@@ -128,7 +128,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 970,
+	spec_version: 971,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1869,9 +1869,13 @@ pub type Executive = frame_executive::Executive<
 	(
 		// "Use 2D weights in XCM v3" <https://github.com/paritytech/polkadot/pull/6134>
 		pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		// ConcreteFungibleBalances and AbstractFungibleBalances key  v2::Multilocation ->
+		// v3::Multilocation
 		orml_unknown_tokens::Migration<Runtime>,
 		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
 		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
+		// LocationToCurrencyIds value and CurrencyIdToLocations key v2::Multilocation ->
+		// v3::Multilocation
 		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
 		xcm_interface::migration::RemoveNonce<Runtime>,
 		bifrost_slp::migration::MigrateV2MultiLocationToV3<Runtime>,

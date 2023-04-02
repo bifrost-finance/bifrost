@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Config, CurrencyId, CurrencyIdToLocations, LocationToCurrencyIds, Weight};
+use crate::{
+	Config, CurrencyId, CurrencyIdToLocations, CurrencyIdToWeights, LocationToCurrencyIds, Weight,
+};
 use frame_support::{
 	log, migration::storage_key_iter, pallet_prelude::*, traits::OnRuntimeUpgrade,
 	StoragePrefixedMap,
@@ -56,6 +58,12 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV1MultiLocationToV3<T> {
 		CurrencyIdToLocations::<T>::translate(|_key, old_value: xcm::v2::MultiLocation| {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 			MultiLocation::try_from(old_value).ok()
+		});
+
+		//migrate the value type of CurrencyIdToWeights
+		CurrencyIdToWeights::<T>::translate(|_key, old_value: u128| {
+			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			Some(Weight::from_parts(old_value as u64, 0u64))
 		});
 
 		weight
