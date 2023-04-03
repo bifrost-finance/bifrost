@@ -190,43 +190,60 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 		//migrate the value type of FeeSources
 		FeeSources::<T>::translate(|_key, old_value: (xcm::v2::MultiLocation, BalanceOf<T>)| {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			log::info!("FeeSources ====== old_value:{:?}", old_value);
 			let new_multilocation: MultiLocation =
 				old_value.0.try_into().expect("FeeSources ===== Stored xcm::v2::MultiLocation");
+			log::info!("FeeSources ====== new_value:{:?}", new_multilocation);
 			Some((new_multilocation, old_value.1))
 		});
 
 		//migrate the value type of HostingFees
 		HostingFees::<T>::translate(|_key, old_value: (Permill, xcm::v2::MultiLocation)| {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+			log::info!("HostingFees ====== old_value:{:?}", old_value);
 			let new_multilocation: MultiLocation =
 				old_value.1.try_into().expect("HostingFees ===== Stored xcm::v2::MultiLocation");
+			log::info!("HostingFees ====== new_value:{:?}", new_multilocation);
 			Some((old_value.0, new_multilocation))
 		});
 
 		//migrate the value type of DelegatorsIndex2Multilocation
 		DelegatorsIndex2Multilocation::<T>::translate(
 			|_key1, _key2, old_value: xcm::v2::MultiLocation| {
+				log::info!("DelegatorsIndex2Multilocation ====== old_value:{:?}", old_value);
 				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-				MultiLocation::try_from(old_value).ok()
+				let new_multilcation = MultiLocation::try_from(old_value)
+					.expect("DelegatorsIndex2Multilocation ===== Stored xcm::v2::MultiLocation");
+				log::info!("DelegatorsIndex2Multilocation ====== new_value:{:?}", new_multilcation);
+				Some(new_multilcation)
 			},
 		);
 
 		//migrate the value type of DelegatorsIndex2Multilocation
 		XcmDestWeightAndFee::<T>::translate(
 			|_key1, _key2, old_value: (xcm::v2::Weight, BalanceOf<T>)| {
+				log::info!("XcmDestWeightAndFee ====== old_value:{:?}", old_value);
 				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+				log::info!(
+					"XcmDestWeightAndFee ====== new_value:{:?}",
+					(Weight::from_ref_time(old_value.0), old_value.1)
+				);
 				Some((Weight::from_ref_time(old_value.0), old_value.1))
 			},
 		);
 
 		//migrate the value type of Validators
-		Validators::<T>::translate(|_key, old_value: Vec<(xcm::v2::MultiLocation, Hash<T>)>| {
+		Validators::<T>::translate(|key, old_value: Vec<(xcm::v2::MultiLocation, Hash<T>)>| {
 			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 			let mut new_value: Vec<(MultiLocation, Hash<T>)> = Vec::new();
 			for i in old_value {
-				let new_multilcation =
-					i.0.try_into().expect("Validators ====== Stored xcm::v2::MultiLocation");
-				new_value.push((new_multilcation, i.1));
+				if let CurrencyId::Token2(4) = key {
+					log::info!("Validators ====== vFil does nothing ");
+				} else {
+					let new_multilcation =
+						i.0.try_into().expect("Validators ====== Stored xcm::v2::MultiLocation");
+					new_value.push((new_multilcation, i.1));
+				}
 			}
 			Some(new_value)
 		});
@@ -249,7 +266,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::translate(
 			|_key, old_value: (ValidatorsByDelegatorUpdateEntry<Hash<T>>, BlockNumberFor<T>)| {
 				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-
+				log::info!("ValidatorsByDelegatorXcmUpdateQueue ====== old_value:{:?}", old_value);
 				match old_value.0 {
 					ValidatorsByDelegatorUpdateEntry::Substrate(d) => {
 						let currency_id = d.currency_id;
@@ -269,6 +286,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 							crate::ValidatorsByDelegatorUpdateEntry::Substrate(
 								new_substrate_validators_by_delegator_update_entry,
 							);
+						log::info!(
+							"ValidatorsByDelegatorXcmUpdateQueue ====== new_value:{:?}",
+							(new_validators_by_delegator_update_entry.clone(), old_value.1)
+						);
 						Some((new_validators_by_delegator_update_entry, old_value.1))
 					},
 				};
@@ -280,7 +301,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::translate(
 			|_key, old_value: (LedgerUpdateEntry<BalanceOf<T>>, BlockNumberFor<T>)| {
 				weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-
+				log::info!("DelegatorLedgerXcmUpdateQueue ====== old_value:{:?}", old_value);
 				match old_value.0 {
 					LedgerUpdateEntry::Substrate(s) => {
 						let new_delegator_id = s.delegator_id.clone().try_into().expect(
@@ -374,9 +395,11 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 			let mut k2_material = Blake2_128Concat::reverse(k1_k2_material);
 			let k2: xcm::v2::MultiLocation = Decode::decode(&mut k2_material)
 				.expect("DelegatorsMultilocation2Index ===== Stored k2 xcm::v2::MultiLocation");
+			log::info!("DelegatorsMultilocation2Index ====== old_value:{:?}", k2);
 			let new_k2: MultiLocation = k2
 				.try_into()
 				.expect("DelegatorsMultilocation2Index ===== Stored k2 xcm::v2::MultiLocation");
+			log::info!("DelegatorsMultilocation2Index ====== new_value:{:?}", new_k2);
 			DelegatorsMultilocation2Index::<T>::insert(k1, new_k2, value);
 		}
 
@@ -394,21 +417,28 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 			let mut k1_k2_material = Blake2_128Concat::reverse(&raw_key);
 			let k1: CurrencyId = Decode::decode(&mut k1_k2_material)
 				.expect("ValidatorsByDelegator ===== Stored k1 CurrencyId");
-			let mut k2_material = Blake2_128Concat::reverse(k1_k2_material);
-			let k2: xcm::v2::MultiLocation = Decode::decode(&mut k2_material)
-				.expect("ValidatorsByDelegator ===== Stored k2 xcm::v2::MultiLocation");
-			let new_k2: MultiLocation = k2
-				.try_into()
-				.expect("ValidatorsByDelegator ===== Stored k2 xcm::v2::MultiLocation");
 
-			let mut new_value: Vec<(MultiLocation, Hash<T>)> = Vec::new();
-			for i in old_value {
-				let new_multilcation =
-					i.0.try_into()
-						.expect("ValidatorsByDelegator ====== Stored xcm::v2::MultiLocation");
-				new_value.push((new_multilcation, i.1));
+			if let CurrencyId::Token2(4) = k1 {
+				log::info!("ValidatorsByDelegator ====== vFil does nothing ");
+			} else {
+				let mut k2_material = Blake2_128Concat::reverse(k1_k2_material);
+				let k2: xcm::v2::MultiLocation = Decode::decode(&mut k2_material)
+					.expect("ValidatorsByDelegator ===== Stored k2 xcm::v2::MultiLocation");
+				log::info!("ValidatorsByDelegator ====== old_value:{:?}", k2);
+				let new_k2: MultiLocation = k2
+					.try_into()
+					.expect("ValidatorsByDelegator ===== Stored k2 xcm::v2::MultiLocation");
+				log::info!("ValidatorsByDelegator ====== new_value:{:?}", new_k2);
+				let mut new_value: Vec<(MultiLocation, Hash<T>)> = Vec::new();
+				for i in old_value {
+					let new_multilcation =
+						i.0.try_into()
+							.expect("ValidatorsByDelegator ====== Stored xcm::v2::MultiLocation");
+					new_value.push((new_multilcation, i.1));
+				}
+				log::info!("ValidatorsByDelegator ====== new_value:{:?}", new_value);
+				ValidatorsByDelegator::<T>::insert(k1, new_k2, new_value);
 			}
-			ValidatorsByDelegator::<T>::insert(k1, new_k2, new_value);
 		}
 
 		// migrate the key type of DelegatorLatestTuneRecord
@@ -423,14 +453,20 @@ impl<T: Config> OnRuntimeUpgrade for MigrateV2MultiLocationToV3<T> {
 
 			let mut k1_k2_material = Blake2_128Concat::reverse(&raw_key);
 			let k1: CurrencyId = Decode::decode(&mut k1_k2_material).expect("Stored k1 CurrencyId");
-			let mut k2_material = Blake2_128Concat::reverse(k1_k2_material);
-			let k2: xcm::v2::MultiLocation = Decode::decode(&mut k2_material)
-				.expect("DelegatorLatestTuneRecord ===== Stored k2 xcm::v2::MultiLocation");
-			let new_k2: MultiLocation = k2
-				.try_into()
-				.expect("DelegatorLatestTuneRecord ===== Stored k2 xcm::v2::MultiLocation");
 
-			DelegatorLatestTuneRecord::<T>::insert(k1, new_k2, value);
+			if let CurrencyId::Token2(4) = k1 {
+				log::info!("DelegatorLatestTuneRecord ====== vFil does nothing ");
+			} else {
+				let mut k2_material = Blake2_128Concat::reverse(k1_k2_material);
+				let k2: xcm::v2::MultiLocation = Decode::decode(&mut k2_material)
+					.expect("DelegatorLatestTuneRecord ===== Stored k2 xcm::v2::MultiLocation");
+				log::info!("DelegatorLatestTuneRecord ====== old_value:{:?}", k2);
+				let new_k2: MultiLocation = k2
+					.try_into()
+					.expect("DelegatorLatestTuneRecord ===== Stored k2 xcm::v2::MultiLocation");
+				log::info!("DelegatorLatestTuneRecord ====== new_value:{:?}", new_k2);
+				DelegatorLatestTuneRecord::<T>::insert(k1, new_k2, value);
+			}
 		}
 
 		// migrate the key type of DelegatorLedgers
