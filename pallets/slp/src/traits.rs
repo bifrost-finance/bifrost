@@ -19,7 +19,7 @@ use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
 use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
-use xcm::latest::Weight as XcmWeight;
+use xcm::v3::Weight as XcmWeight;
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -250,11 +250,11 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 }
 
 pub trait OnRefund<AccountId, CurrencyId, Balance> {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> XcmWeight;
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64;
 }
 
 impl<AccountId, CurrencyId, Balance> OnRefund<AccountId, CurrencyId, Balance> for () {
-	fn on_refund(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> XcmWeight {
+	fn on_refund(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> u64 {
 		0
 	}
 }

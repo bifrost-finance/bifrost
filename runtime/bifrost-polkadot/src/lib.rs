@@ -67,6 +67,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::FeeDealer,
@@ -97,8 +98,8 @@ pub use node_primitives::{
 };
 // zenlink imports
 use zenlink_protocol::{
-	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler,
-	MultiAssetsHandler, PairInfo, PairLpGenerate, ZenlinkMultiAssets,
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
+	PairLpGenerate, ZenlinkMultiAssets,
 };
 
 // xcm config
@@ -106,11 +107,10 @@ mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
-use xcm::latest::{prelude::*, Weight as XcmWeight};
+use xcm::v3::prelude::*;
 use xcm_config::{
-	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
-	MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia, StatemineTransferFee,
-	UmpTransactFee, XcmConfig, XcmRouter,
+	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
+	StatemineTransferFee, UmpTransactFee, XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
@@ -148,7 +148,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-	cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
+	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
 
 parameter_types! {
@@ -338,14 +338,10 @@ impl frame_system::Config for Runtime {
 	/// Converts a module to an index of this module in the runtime.
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = SS58Prefix;
-	type SystemWeightInfo = ();
+	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 	/// Runtime version.
 	type Version = Version;
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-parameter_types! {
-	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
+	type MaxConsumers = ConstU32<16>;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -353,7 +349,7 @@ impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	type OnTimestampSet = Aura;
-	type WeightInfo = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -367,7 +363,7 @@ impl pallet_utility::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type PalletsOrigin = OriginCaller;
-	type WeightInfo = ();
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -423,7 +419,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Indices(pallet_indices::Call::freeze{..}) |
 				// Specifically omitting Indices `transfer`, `force_transfer`
 				// Specifically omitting the entire Balances pallet
-				RuntimeCall::Authorship(..) |
 				RuntimeCall::Session(..) |
 				RuntimeCall::Democracy(..) |
 				RuntimeCall::Council(..) |
@@ -484,7 +479,7 @@ impl pallet_proxy::Config for Runtime {
 	type ProxyDepositBase = ProxyDepositBase;
 	type ProxyDepositFactor = ProxyDepositFactor;
 	type ProxyType = ProxyType;
-	type WeightInfo = ();
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -518,7 +513,7 @@ impl pallet_scheduler::Config for Runtime {
 	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 	type PalletsOrigin = OriginCaller;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = ();
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
 	type Preimages = Preimage;
 }
 
@@ -537,7 +532,7 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxSignatories = MaxSignatories;
-	type WeightInfo = ();
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -562,7 +557,7 @@ impl pallet_identity::Config for Runtime {
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
 	type RegistrarOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -574,7 +569,7 @@ impl pallet_indices::Config for Runtime {
 	type Currency = Balances;
 	type Deposit = IndexDeposit;
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -588,7 +583,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = ();
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -605,7 +600,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type MotionDuration = CouncilMotionDuration;
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
-	type WeightInfo = ();
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -622,7 +617,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type MotionDuration = TechnicalMotionDuration;
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
-	type WeightInfo = ();
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -635,7 +630,7 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type RemoveOrigin = MoreThanHalfCouncil;
 	type ResetOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
@@ -648,7 +643,7 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 	type RemoveOrigin = MoreThanHalfCouncil;
 	type ResetOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -686,7 +681,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type VotingBondFactor = VotingBondFactor;
 	type MaxCandidates = MaxCandidates;
 	type MaxVoters = MaxVoters;
-	type WeightInfo = ();
+	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -746,7 +741,7 @@ impl pallet_democracy::Config for Runtime {
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
 	type VotingPeriod = VotingPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
@@ -786,7 +781,7 @@ impl pallet_treasury::Config for Runtime {
 	type RejectOrigin = MoreThanHalfCouncil;
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -811,7 +806,7 @@ impl pallet_bounties::Config for Runtime {
 	type DataDepositPerByte = DataDepositPerByte;
 	type RuntimeEvent = RuntimeEvent;
 	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = ();
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
 	type ChildBountyManager = ();
 }
 
@@ -823,7 +818,7 @@ impl pallet_tips::Config for Runtime {
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
 	type Tippers = PhragmenElection;
-	type WeightInfo = ();
+	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -873,14 +868,12 @@ impl pallet_session::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	// we don't have stash and controller, thus we don't need the convert as well.
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type WeightInfo = ();
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_authorship::Config for Runtime {
 	type EventHandler = CollatorSelection;
-	type FilterUncle = ();
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = ConstU32<0>;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -919,7 +912,7 @@ impl pallet_vesting::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = ();
+	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
 // Bifrost modules start
@@ -1016,7 +1009,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			X2(
 				Parachain(parachains::moonbeam::ID.into()),
 				AccountKey20 {
-					network: NetworkId::Any,
+					network: None,
 					key: Slp::derivative_account_id_20(
 						polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
 							.into_account_truncating(),
@@ -1030,7 +1023,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		CurrencyId::Token2(DOT_TOKEN_ID) => MultiLocation::new(
 			1,
 			X1(AccountId32 {
-				network: NetworkId::Any,
+				network: None,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
 					index,
@@ -1042,7 +1035,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
 			0,
 			X1(AccountId32 {
-				network: NetworkId::Any,
+				network: None,
 				id: Utility::derivative_account_id(
 					polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
 						.into_account_truncating(),
@@ -1063,7 +1056,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 						X2(
 							Parachain(*para_id),
 							AccountId32 {
-								network: NetworkId::Any,
+								network: None,
 								id: Utility::derivative_account_id(
 									polkadot_parachain::primitives::Sibling::from(
 										ParachainInfo::get(),
@@ -1157,7 +1150,7 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 	}
 
 	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
-		PolkadotXcm::new_query(responder.clone(), timeout)
+		PolkadotXcm::new_query(*responder, timeout, Here)
 		// for xcm v3 version see the following
 		// PolkadotXcm::new_query(responder, timeout, Here)
 	}
@@ -1297,21 +1290,20 @@ parameter_types! {
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 
 	// xcm
-	pub const AnyNetwork: NetworkId = NetworkId::Any;
 	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
 		// Bifrost local and live, 0.01 BNC
-		(make_x2_location(2001), 10_000_000_000),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2001))), 10_000_000_000),
 		// Phala local and live, 1 PHA
-		(make_x2_location(2004), 1_000_000_000_000),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2004))), 1_000_000_000_000),
 		// Plasm local and live, 0.0000000000001 SDN
-		(make_x2_location(2007), 1_000_000),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2007))), 1_000_000),
 		// Sherpax live, 0 KSX
-		(make_x2_location(2013), 0),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2013))), 0),
 
 		// Zenlink local 1 for test
-		(make_x2_location(200), 1_000_000),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(200))), 1_000_000),
 		// Zenlink local 2 for test
-		(make_x2_location(300), 1_000_000),
+		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(300))), 1_000_000),
 	];
 }
 
@@ -1321,22 +1313,13 @@ impl zenlink_protocol::Config for Runtime {
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
 	type TargetChains = ZenlinkRegistedParaChains;
-	type XcmExecutor = ();
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
-	type AccountIdConverter = ZenlinkLocationToAccountId;
-	type AssetIdConverter = AssetIdConverter;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
 
-pub type ZenlinkLocationToAccountId = (
-	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<AnyNetwork, AccountId>,
-);
 pub struct OnRedeemSuccess;
 impl bifrost_vtoken_minting::OnRedeemSuccess<AccountId, CurrencyId, Balance> for OnRedeemSuccess {
 	fn on_redeem_success(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> Weight {
@@ -1512,7 +1495,7 @@ construct_runtime! {
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
 
 		// Collator support. the order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		Authorship: pallet_authorship::{Pallet, Storage} = 20,
 		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
@@ -1618,7 +1601,18 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	(
+		// "Use 2D weights in XCM v3" <https://github.com/paritytech/polkadot/pull/6134>
+		pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		// ConcreteFungibleBalances and AbstractFungibleBalances key  v2::Multilocation ->
+		// v3::Multilocation
+		orml_unknown_tokens::Migration<Runtime>,
+		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
+		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
+		// LocationToCurrencyIds value and CurrencyIdToLocations key v2::Multilocation ->
+		// v3::Multilocation
+		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
+	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1703,6 +1697,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(weight: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(weight)
+		}
+		fn query_length_to_fee(length: u32) -> Balance {
+			TransactionPayment::length_to_fee(length)
+		}
 	}
 
 	impl sp_api::Metadata<Block> for Runtime {
@@ -1765,12 +1765,6 @@ impl_runtime_apis! {
 			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
 		}
 
-		fn get_sovereigns_info(
-			asset_id: ZenlinkAssetId
-		) -> Vec<(u32, AccountId, AssetBalance)> {
-			ZenlinkProtocol::get_sovereigns_info(&asset_id)
-		}
-
 		fn get_pair_by_asset_id(
 			asset_0: ZenlinkAssetId,
 			asset_1: ZenlinkAssetId
@@ -1807,6 +1801,17 @@ impl_runtime_apis! {
 				amount_1_desired,
 				amount_0_min,
 				amount_1_min
+			)
+		}
+		fn calculate_remove_liquidity(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)>{
+			ZenlinkProtocol::calculate_remove_liquidity(
+				asset_0,
+				asset_1,
+				amount,
 			)
 		}
 	}

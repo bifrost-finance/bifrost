@@ -33,7 +33,7 @@ use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
-use xcm::prelude::*;
+use xcm::{v3::prelude::*, VersionedMultiLocation};
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -97,7 +97,7 @@ impl<T: Config> Pallet<T> {
 						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 					if let Err(index) = rs {
-						validator_list.insert(index, (who.clone(), multi_hash));
+						validator_list.insert(index, (*who, multi_hash));
 					} else {
 						Err(Error::<T>::AlreadyExist)?
 					}
@@ -134,7 +134,7 @@ impl<T: Config> Pallet<T> {
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		let multi_hash = T::Hashing::hash(&who.encode());
-		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
+		ensure!(validators_set.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
 
 		// Update corresponding storage.
 		Validators::<T>::mutate(currency_id, |validator_vec| {
@@ -206,11 +206,15 @@ impl<T: Config> Pallet<T> {
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 
-		let dest =
-			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
+		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(Parachain(
+			T::ParachainId::get().into(),
+		)))));
 
 		let beneficiary =
-			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
+			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
+				network: None,
+				id: to_32,
+			}))));
 
 		Ok((dest, beneficiary))
 	}
@@ -249,16 +253,16 @@ impl<T: Config> Pallet<T> {
 			WithdrawAsset(assets),
 			InitiateReserveWithdraw {
 				assets: All.into(),
-				reserve: dest.clone(),
+				reserve: *dest,
 				xcm: Xcm(vec![
 					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+					DepositAsset { assets: AllCounted(1).into(), beneficiary },
 				]),
 			},
 		]);
-
+		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+		T::XcmExecutor::execute_xcm_in_credit(*from, msg, hash, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
 

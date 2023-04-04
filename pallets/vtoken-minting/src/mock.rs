@@ -42,14 +42,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32,
 };
-use xcm::{
-	latest::{Junction, MultiLocation},
-	opaque::latest::{
-		Junction::Parachain,
-		Junctions::{X1, X2},
-		NetworkId,
-	},
-};
+use xcm::prelude::*;
 
 use crate as vtoken_minting;
 
@@ -239,10 +232,10 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				1,
 				X2(
 					Parachain(2023),
-					Junction::AccountKey20 {
-						network: NetworkId::Any,
+					AccountKey20 {
+						network: None,
 						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),
@@ -252,7 +245,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			_ => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,

@@ -1885,10 +1885,6 @@ pub mod pallet {
 		fn note_author(author: AccountIdOf<T>) {
 			Pallet::<T>::note_author(author);
 		}
-
-		fn note_uncle(_author: AccountIdOf<T>, _age: T::BlockNumber) {
-			// we too are not caring.
-		}
 	}
 
 	impl<T: Config> pallet_session::SessionManager<AccountIdOf<T>> for Pallet<T> {

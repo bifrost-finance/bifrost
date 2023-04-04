@@ -22,7 +22,7 @@ use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
-	traits::Get,
+	traits::{ContainsPair, Get},
 };
 use node_primitives::{
 	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
@@ -32,12 +32,11 @@ use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
-	FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-	TakeWeightCredit,
+	FixedWeightBounds, IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
+use xcm_executor::traits::MatchesFungible;
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
@@ -46,6 +45,7 @@ use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
+use sp_core::bounded::BoundedVec;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -60,7 +60,7 @@ where
 {
 	fn matches_fungible(a: &MultiAsset) -> Option<Amount> {
 		if let (Fungible(ref amount), Concrete(ref location)) = (&a.fun, &a.id) {
-			if CurrencyIdConvert::convert(location.clone()).is_some() {
+			if CurrencyIdConvert::convert(*location).is_some() {
 				return CheckedConversion::checked_from(*amount);
 			}
 		}
@@ -71,11 +71,11 @@ where
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
 pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
-impl<ReserveProvider> FilterAssetLocation for MultiNativeAsset<ReserveProvider>
+impl<ReserveProvider> ContainsPair<MultiAsset, MultiLocation> for MultiNativeAsset<ReserveProvider>
 where
 	ReserveProvider: Reserve,
 {
-	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {
 				return true;
@@ -86,7 +86,7 @@ where
 }
 
 fn native_currency_location(id: CurrencyId) -> MultiLocation {
-	MultiLocation::new(0, X1(GeneralKey(id.encode().try_into().unwrap())))
+	MultiLocation::new(0, X1(Junction::from(BoundedVec::try_from(id.encode()).unwrap())))
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
@@ -102,7 +102,7 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+		X1(AccountId32 { network: None, id: account.into() }).into()
 	}
 }
 
@@ -141,7 +141,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 			return Some(Token2(DOT_TOKEN_ID));
 		}
 
-		if let Some(currency_id) = AssetIdMaps::<Runtime>::get_currency_id(location.clone()) {
+		if let Some(currency_id) = AssetIdMaps::<Runtime>::get_currency_id(location) {
 			return Some(currency_id);
 		}
 
@@ -155,8 +155,9 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				_ => None,
 			},
 			MultiLocation { parents, interior } if parents == 0 => match interior {
-				X1(GeneralKey(key)) => {
+				X1(GeneralKey { data, length }) => {
 					// decode the general key
+					let key = &data[..length as usize];
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
 							Native(BNC) => Some(currency_id),
@@ -178,7 +179,7 @@ parameter_types! {
 	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub SelfParaChainId: CumulusParaId = ParachainInfo::parachain_id();
-	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -219,7 +220,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: XcmWeight = 200_000_000;
+	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -249,38 +250,42 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 >;
 
 parameter_types! {
-	pub DotPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), dot_per_second::<Runtime>());
-	pub BncPerSecond: (AssetId, u128) = (
+	pub DotPerSecond: (AssetId,u128, u128) = (MultiLocation::parent().into(), dot_per_second::<Runtime>(),0);
+	pub BncPerSecond: (AssetId,u128, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
+			X2(Parachain(SelfParaId::get()), Junction::from(BoundedVec::try_from(NativeCurrencyId::get().encode()).unwrap())),
 		).into(),
 		// BNC:DOT = 80:1
-		dot_per_second::<Runtime>() * 80
+		dot_per_second::<Runtime>() * 80,
+		0
 	);
-	pub BncNewPerSecond: (AssetId, u128) = (
+	pub BncNewPerSecond: (AssetId,u128, u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey((NativeCurrencyId::get().encode()).try_into().unwrap()))
+			X1(Junction::from(BoundedVec::try_from(NativeCurrencyId::get().encode()).unwrap()))
 		).into(),
 		// BNC:DOT = 80:1
-		dot_per_second::<Runtime>() * 80
+		dot_per_second::<Runtime>() * 80,
+	0
 	);
-	pub ZlkPerSecond: (AssetId, u128) = (
+	pub ZlkPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(SelfParaId::get()), GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+			X2(Parachain(SelfParaId::get()), Junction::from(BoundedVec::try_from(CurrencyId::Token(TokenSymbol::ZLK).encode()).unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
-		dot_per_second::<Runtime>() * 150 * 1_000_000
+		dot_per_second::<Runtime>() * 150 * 1_000_000,
+	0
 	);
-	pub ZlkNewPerSecond: (AssetId, u128) = (
+	pub ZlkNewPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			0,
-			X1(GeneralKey((CurrencyId::Token(TokenSymbol::ZLK).encode()).try_into().unwrap()))
+			X1(Junction::from(BoundedVec::try_from(CurrencyId::Token(TokenSymbol::ZLK).encode()).unwrap()))
 		).into(),
 		// ZLK:KSM = 150:1
-		dot_per_second::<Runtime>() * 150 * 1_000_000
+		dot_per_second::<Runtime>() * 150 * 1_000_000,
+	0
 	);
 	pub BasePerSecond: u128 = dot_per_second::<Runtime>();
 }
@@ -314,13 +319,22 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	type IsTeleporter = ();
-	type LocationInverter = LocationInverter<Ancestry>;
+	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
 	type Trader = Trader;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmSender = XcmRouter;
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<8>;
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
+	type AssetLocker = ();
+	type AssetExchanger = ();
+	type FeeManager = ();
+	type MessageExporter = ();
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -330,15 +344,20 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 /// queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
 
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+}
+
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type LocationInverter = LocationInverter<Ancestry>;
+	type UniversalLocation = UniversalLocation;
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
@@ -350,6 +369,14 @@ impl pallet_xcm::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
+	type TrustedLockers = ();
+	type SovereignAccountOf = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -365,12 +392,13 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = ();
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
+	type PriceForSiblingDelivery = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
+	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
@@ -380,7 +408,7 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 parameter_type_with_key! {
@@ -447,7 +475,7 @@ impl orml_tokens::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 	type CurrencyHooks = CurrencyHooks;
 }
 
@@ -455,6 +483,7 @@ parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
 	pub RelayXcmBaseWeight: u64 = (100 * milli::<Runtime>(RelayCurrencyId::get())) as u64;
+	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -470,11 +499,11 @@ impl orml_xtokens::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
-	type LocationInverter = LocationInverter<Ancestry>;
+	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type BaseXcmWeight = RelayXcmBaseWeight;
+	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
 	type MultiLocationsFilter = Everything;

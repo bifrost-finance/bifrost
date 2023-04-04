@@ -24,8 +24,8 @@ use scale_info::TypeInfo;
 use sp_runtime::traits::StaticLookup;
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{
-	latest::{prelude::*, Weight as XcmWeight},
-	opaque::latest::Instruction,
+	opaque::v3::Instruction,
+	v3::{prelude::*, Weight as XcmWeight},
 	VersionedMultiAssets, VersionedMultiLocation,
 };
 
@@ -196,7 +196,7 @@ impl<T: Config> SubstrateCall<T> {
 		};
 
 		Transact {
-			origin_type: OriginKind::SovereignAccount,
+			origin_kind: OriginKind::SovereignAccount,
 			require_weight_at_most: weight,
 			call: encoded_call.into(),
 		}

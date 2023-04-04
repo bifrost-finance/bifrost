@@ -18,23 +18,41 @@
 
 //! Relay chain and parachains emulation.
 
-use bifrost_runtime_common::dollar;
-use cumulus_primitives_core::ParaId;
-use frame_support::{assert_ok, traits::GenesisBuild, weights::Weight};
-use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
+use frame_support::{traits::GenesisBuild, weights::Weight};
+use polkadot_primitives::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::traits::AccountIdConversion;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
-use crate::polkadot_integration_tests::*;
+pub use codec::Encode;
+pub use node_primitives::*;
+pub use orml_traits::{Change, GetByKey, MultiCurrency};
+pub use sp_runtime::{
+	traits::{BadOrigin, Convert, Zero},
+	BuildStorage, DispatchError, DispatchResult, FixedPointNumber, MultiAddress,
+};
 
-pub const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
-pub const DECIMAL_10: u128 = 10_000_000_000;
+pub const ALICE: [u8; 32] = [0u8; 32];
+pub const BOB: [u8; 32] = [1u8; 32];
+
+pub use bifrost_imports::*;
+
+mod bifrost_imports {
+	pub use bifrost_polkadot_runtime::{
+		create_x2_multilocation, AccountId, AssetRegistry, Balance, Balances, BifrostCrowdloanId,
+		BlockNumber, Currencies, CurrencyId, ExistentialDeposit, NativeCurrencyId, OriginCaller,
+		ParachainInfo, ParachainSystem, Proxy, RelayCurrencyId, Runtime, RuntimeCall, RuntimeEvent,
+		RuntimeOrigin, Salp, Scheduler, Session, SlotLength, Slp, System, Tokens, TreasuryPalletId,
+		Utility, Vesting, XTokens,
+	};
+	pub use frame_support::parameter_types;
+	pub use sp_runtime::traits::AccountIdConversion;
+}
+
+pub const GLMR_DECIMALS: u128 = 1_000_000_000_000_000_000;
+pub const DOT_DECIMALS: u128 = 10_000_000_000;
 
 pub const DOT_TOKEN_ID: u8 = 0;
 pub const GLMR_TOKEN_ID: u8 = 1;
-pub const DOT_MINIMAL_BALANCE: u128 = 1_000_000;
-pub const GLMR_MINIMAL_BALANCE: u128 = 1_000_000_000_000;
 
 decl_test_relay_chain! {
 	pub struct PolkadotNet {
@@ -50,17 +68,7 @@ decl_test_parachain! {
 		RuntimeOrigin = RuntimeOrigin,
 		XcmpMessageHandler = bifrost_polkadot_runtime ::XcmpQueue,
 		DmpMessageHandler = bifrost_polkadot_runtime::DmpQueue,
-		new_ext = para_ext(2010),
-	}
-}
-
-decl_test_parachain! {
-	pub struct Sibling {
-		Runtime = Runtime,
-		RuntimeOrigin = RuntimeOrigin,
-		XcmpMessageHandler = bifrost_polkadot_runtime ::XcmpQueue,
-		DmpMessageHandler = bifrost_polkadot_runtime::DmpQueue,
-		new_ext = para_ext(2000),
+		new_ext = para_ext(),
 	}
 }
 
@@ -68,8 +76,7 @@ decl_test_network! {
 	pub struct TestNet {
 		relay_chain = PolkadotNet,
 		parachains = vec![
-			(2010, Bifrost),
-			(2000, Sibling),
+			(2030, Bifrost),
 		],
 	}
 }
@@ -112,19 +119,14 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 	}
 }
 
+// Polkadot initial configuration
 pub fn polkadot_ext() -> sp_io::TestExternalities {
 	use polkadot_runtime::{Runtime, System};
 
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![
-			(AccountId::from(ALICE), 100 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT)),
-			(
-				ParaId::from(2010u32).into_account_truncating(),
-				2 * dollar::<bifrost_polkadot_runtime::Runtime>(DOT),
-			),
-		],
+		balances: vec![(AccountId::from(ALICE), 100 * DOT_DECIMALS)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -136,7 +138,7 @@ pub fn polkadot_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(3) },
 		&mut t,
 	)
 	.unwrap();
@@ -146,45 +148,65 @@ pub fn polkadot_ext() -> sp_io::TestExternalities {
 	ext
 }
 
-pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
-	ExtBuilder::default()
-		.balances(vec![(AccountId::from(ALICE), RelayCurrencyId::get(), 10 * 10_000_000_000)])
-		.parachain_id(parachain_id)
-		.build()
-}
+// Bifrost initial configuration
+pub fn para_ext() -> sp_io::TestExternalities {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-pub fn register_token2_asset() {
-	Bifrost::execute_with(|| {
-		// Token
-		let items = vec![
+	bifrost_asset_registry::GenesisConfig::<Runtime> {
+		currency: vec![
 			(
 				CurrencyId::Token2(DOT_TOKEN_ID),
-				b"Polkadot DOT".to_vec(),
-				b"DOT".to_vec(),
-				10u8,
-				DOT_MINIMAL_BALANCE,
+				DOT_DECIMALS / 1000,
+				Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
 			),
 			(
 				CurrencyId::Token2(GLMR_TOKEN_ID),
-				b"Moonbeam Native Token".to_vec(),
-				b"GLMR".to_vec(),
-				18u8,
-				GLMR_MINIMAL_BALANCE,
+				GLMR_DECIMALS / 1000_000,
+				Some((String::from("Moonbeam Native Token"), String::from("GLMR"), 18u8)),
 			),
-		];
-		for (currency_id, metadata) in
-			items.iter().map(|(currency_id, name, symbol, decimals, minimal_balance)| {
-				(
-					currency_id,
-					bifrost_asset_registry::AssetMetadata {
-						name: (*name.clone()).to_vec(),
-						symbol: (*symbol.clone()).to_vec(),
-						decimals: *decimals,
-						minimal_balance: *minimal_balance,
-					},
-				)
-			}) {
-			assert_ok!(AssetRegistry::do_register_metadata(*currency_id, &metadata));
-		}
-	});
+		],
+		vcurrency: vec![CurrencyId::VToken2(DOT_TOKEN_ID)],
+		vsbond: vec![],
+		phantom: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	orml_tokens::GenesisConfig::<Runtime> {
+		balances: vec![(
+			AccountId::from(ALICE),
+			CurrencyId::Token2(DOT_TOKEN_ID),
+			10 * DOT_DECIMALS,
+		)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	pallet_membership::GenesisConfig::<Runtime, pallet_membership::Instance1> {
+		members: Default::default(),
+		phantom: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	<parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+		&parachain_info::GenesisConfig { parachain_id: 2030.into() },
+		&mut t,
+	)
+	.unwrap();
+
+	<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(3) },
+		&mut t,
+	)
+	.unwrap();
+
+	<bifrost_salp::GenesisConfig<Runtime> as GenesisBuild<Runtime>>::assimilate_storage(
+		&bifrost_salp::GenesisConfig { initial_multisig_account: Some(AccountId::new(ALICE)) },
+		&mut t,
+	)
+	.unwrap();
+
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

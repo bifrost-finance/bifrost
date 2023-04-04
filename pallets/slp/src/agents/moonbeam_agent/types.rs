@@ -23,7 +23,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{opaque::latest::WeightLimit, VersionedMultiLocation};
+use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {

@@ -22,15 +22,16 @@ use bifrost_asset_registry::{
 	Error, Event, LocationToCurrencyIds,
 };
 use frame_support::{assert_noop, assert_ok};
-use xcm::{latest::prelude::*, VersionedMultiLocation};
+use xcm::{
+	v3::{prelude::*, Weight},
+	VersionedMultiLocation,
+};
 
 #[test]
 fn register_native_asset_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		ExtBuilder::default().build().execute_with(|| {
-			let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-				xcm::v0::Junction::Parachain(1000),
-			));
+			let v0_location = VersionedMultiLocation::V3(X1(Parachain(1000)).into());
 
 			assert_ok!(AssetRegistry::register_native_asset(
 				RuntimeOrigin::root(),
@@ -43,17 +44,15 @@ fn register_native_asset_works() {
 					minimal_balance: 1,
 				})
 			));
-			System::assert_last_event(bifrost_kusama_runtime::RuntimeEvent::AssetRegistry(
-				Event::AssetRegistered {
-					asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
-					metadata: AssetMetadata {
-						name: b"Token Name".to_vec(),
-						symbol: b"TN".to_vec(),
-						decimals: 12,
-						minimal_balance: 1,
-					},
+			System::assert_last_event(RuntimeEvent::AssetRegistry(Event::AssetRegistered {
+				asset_id: AssetIds::NativeAssetId(CurrencyId::Token(TokenSymbol::DOT)),
+				metadata: AssetMetadata {
+					name: b"Token Name".to_vec(),
+					symbol: b"TN".to_vec(),
+					decimals: 12,
+					minimal_balance: 1,
 				},
-			));
+			}));
 
 			assert_eq!(
 				AssetMetadatas::<Runtime>::get(AssetIds::NativeAssetId(CurrencyId::Token(
@@ -89,9 +88,7 @@ fn register_native_asset_works() {
 fn update_native_asset_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		ExtBuilder::default().build().execute_with(|| {
-			let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-				xcm::v0::Junction::Parachain(1000),
-			));
+			let v0_location = VersionedMultiLocation::V3(X1(Parachain(1000)).into());
 			assert_noop!(
 				AssetRegistry::update_native_asset(
 					RuntimeOrigin::root(),
@@ -107,9 +104,7 @@ fn update_native_asset_works() {
 				Error::<Runtime>::AssetIdNotExists
 			);
 
-			let new_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-				xcm::v0::Junction::Parachain(2000),
-			));
+			let new_location = VersionedMultiLocation::V3(X1(Parachain(2000)).into());
 			assert_ok!(AssetRegistry::register_native_asset(
 				RuntimeOrigin::root(),
 				CurrencyId::Token(TokenSymbol::DOT),
@@ -274,10 +269,10 @@ fn register_multilocation() {
 				decimals: 12,
 				minimal_balance: 0,
 			};
-			// v1
-			let location = VersionedMultiLocation::V1(MultiLocation {
+
+			let location = VersionedMultiLocation::V3(MultiLocation {
 				parents: 1,
-				interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+				interior: X1(Parachain(2001)),
 			});
 			let multi_location: MultiLocation = location.clone().try_into().unwrap();
 
@@ -286,7 +281,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					2000_000_000
+					Weight::from_ref_time(2000_000_000)
 				),
 				Error::<Runtime>::CurrencyIdNotExists
 			);
@@ -300,7 +295,7 @@ fn register_multilocation() {
 				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				2000_000_000
+				Weight::from_ref_time(2000_000_000)
 			));
 
 			assert_noop!(
@@ -308,7 +303,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					2000_000_000
+					Weight::from_ref_time(2000_000_000)
 				),
 				Error::<Runtime>::CurrencyIdExisted
 			);
@@ -323,7 +318,7 @@ fn register_multilocation() {
 			);
 			assert_eq!(
 				CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
-				Some(2000_000_000)
+				Some(Weight::from_ref_time(2000_000_000))
 			);
 		})
 	})

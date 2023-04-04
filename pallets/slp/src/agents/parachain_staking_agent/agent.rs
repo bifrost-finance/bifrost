@@ -17,26 +17,24 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	primitives::{OneToManyDelegationAction, OneToManyLedger, OneToManyScheduledRequest},
-	DelegationsOccupied, Hash, MultiLocation, ValidatorsByDelegatorUpdateEntry,
+	pallet::Error,
+	primitives::{
+		Ledger, OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
+		OneToManyScheduledRequest, QueryId, BNC,
+	},
+	traits::StakingAgent,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied, DelegatorLedgers,
+	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
 use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use parachain_staking::ParachainStakingInterface;
-// use frame_system::pallet_prelude::BlockNumberFor;
-use crate::{
-	pallet::Error,
-	primitives::{Ledger, OneToManyDelegatorStatus, QueryId, BNC},
-	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgers,
-	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
-	Validators,
-};
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
+use parachain_staking::ParachainStakingInterface;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, Zero},
 	DispatchResult,
@@ -70,10 +68,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation.clone() != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -95,7 +90,7 @@ impl<T: Config>
 		// If not, check if amount is greater than minimum delegator stake. Afterwards, create the
 		// delegator ledger.
 		// If yes, check if amount is greater than minimum delegation requirement.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		// Ensure amount is no less than delegation_amount_minimum.
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
@@ -152,7 +147,7 @@ impl<T: Config>
 			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 				BTreeMap::new();
 			let new_ledger = OneToManyLedger::<BalanceOf<T>> {
-				account: who.clone(),
+				account: *who,
 				total: Zero::zero(),
 				less_total: Zero::zero(),
 				delegations: empty_delegation_set,
@@ -206,7 +201,7 @@ impl<T: Config>
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-					old_ledger.delegations.insert((*validator_multilocation).clone(), new_amount);
+					old_ledger.delegations.insert(*validator_multilocation, new_amount);
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
@@ -232,7 +227,7 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the delegator exists, if not, return error.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -286,7 +281,7 @@ impl<T: Config>
 
 					let new_amount =
 						original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-					old_ledger.delegations.insert((*validator_multilocation).clone(), new_amount);
+					old_ledger.delegations.insert(*validator_multilocation, new_amount);
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
@@ -312,7 +307,7 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the delegator exists, if not, return error.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -377,14 +372,14 @@ impl<T: Config>
 
 					// add a new entry in requests and request_briefs
 					let new_request = OneToManyScheduledRequest {
-						validator: (*validator_multilocation).clone(),
+						validator: *validator_multilocation,
 						when_executable: unlock_time_unit.clone(),
 						action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(amount),
 					};
 					old_ledger.requests.push(new_request);
 					old_ledger
 						.request_briefs
-						.insert((*validator_multilocation).clone(), (unlock_time_unit, amount));
+						.insert(*validator_multilocation, (unlock_time_unit, amount));
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
@@ -439,13 +434,13 @@ impl<T: Config>
 						BTreeMap::new();
 					for (vali, amt) in old_ledger.delegations.iter() {
 						let request_entry = OneToManyScheduledRequest {
-							validator: vali.clone(),
+							validator: *vali,
 							when_executable: unlock_time.clone(),
 							action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*amt),
 						};
 						new_requests.push(request_entry);
 
-						old_ledger.request_briefs.insert(vali.clone(), (unlock_time.clone(), *amt));
+						old_ledger.request_briefs.insert(*vali, (unlock_time.clone(), *amt));
 					}
 
 					old_ledger.requests = new_requests;
@@ -471,7 +466,7 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -622,14 +617,14 @@ impl<T: Config>
 
 					// add a new entry in requests and request_briefs
 					let new_request = OneToManyScheduledRequest {
-						validator: (*validator).clone(),
+						validator: *validator,
 						when_executable: unlock_time_unit.clone(),
 						action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(*revoke_amount),
 					};
 					old_ledger.requests.push(new_request);
 					old_ledger
 						.request_briefs
-						.insert((*validator).clone(), (unlock_time_unit, *revoke_amount));
+						.insert(*validator, (unlock_time_unit, *revoke_amount));
 					Ok(())
 				} else {
 					Err(Error::<T>::Unexpected)
@@ -712,7 +707,7 @@ impl<T: Config>
 		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mut leaving = false;
 		let now = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 			.ok_or(Error::<T>::TimeUnitNotExist)?;
@@ -883,7 +878,7 @@ impl<T: Config>
 						} else {
 							old_ledger
 								.delegations
-								.insert((*validator_multilocation).clone(), new_delegate_amount);
+								.insert(*validator_multilocation, new_delegate_amount);
 						}
 						Ok(())
 					} else {

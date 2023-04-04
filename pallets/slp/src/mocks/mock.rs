@@ -35,14 +35,14 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_core::{hashing::blake2_256, H256};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -280,7 +280,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X2(
 					Parachain(2023),
 					Junction::AccountKey20 {
-						network: NetworkId::Any,
+						network: None,
 						key: Slp::derivative_account_id_20(
 							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
@@ -293,7 +293,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -305,7 +305,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
 				0,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						polkadot_parachain::primitives::Sibling::from(2001u32)
 							.into_account_truncating(),
@@ -324,7 +324,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 							X2(
 								Parachain(*para_id),
 								Junction::AccountId32 {
-									network: NetworkId::Any,
+									network: None,
 									id: Self::derivative_account_id(
 										polkadot_parachain::primitives::Sibling::from(2001u32)
 											.into_account_truncating(),
@@ -387,8 +387,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 		match id {
 			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
 			Token(KSM) => Some(MultiLocation::parent()),
-			Native(BNC) =>
-				Some(MultiLocation::new(0, X1(GeneralKey("0x0001".encode().try_into().unwrap())))),
+			Native(BNC) => Some(MultiLocation::new(
+				0,
+				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
+			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
 			_ => None,
 		}

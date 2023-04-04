@@ -128,7 +128,7 @@ try-kusama-runtime-upgrade:
  			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
  			  --chain=bifrost-kusama-local on-runtime-upgrade \
  			  --checks=all live \
- 			  --uri=wss://bifrost-rpc.dwellir.com:443
+ 			  --uri=wss://bifrost-rpc.liebi.com:443/ws
 
 .PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
 try-polkadot-runtime-upgrade:

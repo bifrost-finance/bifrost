@@ -44,8 +44,8 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	opaque::v3::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	v3::prelude::*,
 	VersionedMultiAssets,
 };
 
@@ -76,10 +76,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation.clone() != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -127,7 +124,7 @@ impl<T: Config>
 		// Create a new delegator ledger
 		// The real bonded amount will be updated by services once the xcm transaction succeeds.
 		let ledger = SubstrateLedger::<BalanceOf<T>> {
-			account: who.clone(),
+			account: *who,
 			total: Zero::zero(),
 			active: Zero::zero(),
 			unlocking: vec![],
@@ -147,7 +144,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -204,7 +202,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -269,7 +268,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -310,7 +310,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
 		} else {
@@ -373,7 +374,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -433,7 +435,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -463,7 +466,7 @@ impl<T: Config>
 		let mut new_set: Vec<(MultiLocation, Hash<T>)> = vec![];
 		for (acc, acc_hash) in original_set.iter() {
 			if !targets.contains(acc) {
-				new_set.push((acc.clone(), *acc_hash))
+				new_set.push((*acc, *acc_hash))
 			}
 		}
 
@@ -500,7 +503,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -601,7 +605,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -649,7 +654,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -808,7 +814,7 @@ impl<T: Config>
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(who.clone(), multi_hash)) {
+			if validator_list.contains(&(*who, multi_hash)) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}
@@ -1059,7 +1065,8 @@ impl<T: Config> PolkadotAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
@@ -1270,7 +1277,7 @@ impl<T: Config> PolkadotAgent<T> {
 
 		let entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 			update_operation,
 			amount,
 			unlock_time,
@@ -1291,7 +1298,7 @@ impl<T: Config> PolkadotAgent<T> {
 		let entry = ValidatorsByDelegatorUpdateEntry::Substrate(
 			SubstrateValidatorsByDelegatorUpdateEntry {
 				currency_id,
-				delegator_id: who.clone(),
+				delegator_id: *who,
 				validators: validator_list,
 			},
 		);
@@ -1349,8 +1356,7 @@ impl<T: Config> PolkadotAgent<T> {
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::max_value(),
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(Parachain(T::ParachainId::get().into())),

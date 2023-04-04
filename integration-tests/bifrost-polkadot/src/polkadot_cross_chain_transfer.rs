@@ -20,106 +20,70 @@
 use frame_support::assert_ok;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
-use xcm_emulator::TestExt;
+use sp_runtime::traits::AccountIdConversion;
+use xcm::{v3::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use xcm_emulator::{ParaId, TestExt};
 
-use crate::{
-	polkadot_integration_tests::{ALICE, BOB},
-	polkadot_test_net::{register_token2_asset, Bifrost, PolkadotNet, DOT_TOKEN_ID},
-};
+use crate::config::{Bifrost, PolkadotNet, ALICE, BOB, DOT_DECIMALS, DOT_TOKEN_ID};
 use bifrost_polkadot_runtime::{
-	AccountId, Balances, RelayCurrencyId, Runtime, RuntimeOrigin, Tokens, XTokens,
+	AccountId, Balances, RelayCurrencyId, RuntimeOrigin, Tokens, XTokens,
 };
-use bifrost_runtime_common::dollar;
 
 #[test]
-fn transfer_from_relay_chain() {
+fn transfer_dot_between_bifrost_and_relay_chain() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		PolkadotNet::execute_with(|| {
+			// Polkadot alice(100 DOT) -> Bifrost bob 10 DOT
 			assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 				polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new(VersionedMultiLocation::V1(X1(Parachain(2010)).into())),
-				Box::new(VersionedMultiLocation::V1(
-					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any }).into()
+				Box::new(VersionedMultiLocation::V3(X1(Parachain(2030)).into())),
+				Box::new(VersionedMultiLocation::V3(
+					X1(Junction::AccountId32 { id: BOB, network: None }).into()
 				)),
-				Box::new(VersionedMultiAssets::V1(
-					(Here, 10 * dollar::<Runtime>(RelayCurrencyId::get())).into()
-				)),
+				Box::new(VersionedMultiAssets::V3((Here, 10 * DOT_DECIMALS).into())),
 				0,
 			));
-			assert_eq!(
-				Balances::free_balance(&AccountId::from(ALICE)),
-				90 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
+
+			//  Polkadot alice 90 DOT
+			assert_eq!(Balances::free_balance(&AccountId::from(ALICE)), 90 * DOT_DECIMALS);
+			// Parachain account 10 DOT
+			let parachain_account: AccountId = ParaId::from(2030).into_account_truncating();
+			assert_eq!(Balances::free_balance(parachain_account), 10 * DOT_DECIMALS);
 		});
 
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				9999991917600
+				99991987200
 			);
-		});
-	})
-}
-
-#[test]
-fn transfer_to_relay_chain() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
-
-		Bifrost::execute_with(|| {
+			// Bifrost bob (9.9 DOT) -> Polkadot BoB 2 DOT
 			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(ALICE.into()),
-				RelayCurrencyId::get(),
-				2 * dollar::<Runtime>(RelayCurrencyId::get()),
-				Box::new(xcm::VersionedMultiLocation::V1(MultiLocation::new(
+				RuntimeOrigin::signed(BOB.into()),
+				CurrencyId::Token2(DOT_TOKEN_ID),
+				2 * DOT_DECIMALS,
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::new(
 					1,
-					X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
+					X1(Junction::AccountId32 { id: BOB, network: None })
 				))),
-				xcm_emulator::Limited(4_000_000_000)
+				xcm_emulator::Unlimited
 			));
+
+			// Bifrost bob 7.9 DOT
 			assert_eq!(
-				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
-				8 * dollar::<Runtime>(RelayCurrencyId::get()),
+				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
+				79991987200,
 			);
 		});
 
 		PolkadotNet::execute_with(|| {
+			// Parachain account 8 DOT
+			let parachain_account: AccountId = ParaId::from(2030).into_account_truncating();
+			assert_eq!(Balances::free_balance(parachain_account), 8 * DOT_DECIMALS);
+
+			// Polkadot bob 1.9 DOT
 			assert_eq!(
 				polkadot_runtime::Balances::free_balance(&AccountId::from(BOB)),
-				19578565860
-			);
-		});
-	})
-}
-
-#[test]
-fn transfer_to_sibling() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
-
-		Bifrost::execute_with(|| {
-			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(ALICE.into()),
-				CurrencyId::Token2(DOT_TOKEN_ID),
-				2 * dollar::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)),
-				Box::new(
-					MultiLocation::new(
-						1,
-						X2(
-							Parachain(2000),
-							Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
-						)
-					)
-					.into()
-				),
-				xcm_emulator::Limited(1_000_000_000),
-			));
-
-			assert_eq!(
-				Tokens::free_balance(CurrencyId::Token2(DOT_TOKEN_ID), &AccountId::from(ALICE)),
-				8 * dollar::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID))
+				19637471000,
 			);
 		});
 	})
