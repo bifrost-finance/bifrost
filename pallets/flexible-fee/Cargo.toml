@@ -37,6 +37,10 @@ bifrost-asset-registry = { path = "../asset-registry" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 xcm-interface = { path = "../xcm-interface" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 
 [features]
 default = ["std"]
