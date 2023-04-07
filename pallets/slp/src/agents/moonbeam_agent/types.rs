@@ -87,9 +87,7 @@ pub enum MoonbeamXtokensCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamSystemCall {
 	#[codec(index = 7)]
-	MoonriverRemarkWithEvent(Box<Vec<u8>>),
-	#[codec(index = 8)]
-	MoonbeamRemarkWithEvent(Box<Vec<u8>>),
+	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
