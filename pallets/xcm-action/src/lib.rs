@@ -35,7 +35,10 @@ use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160};
 use sp_runtime::traits::BlakeTwo256;
 use sp_std::vec;
-use xcm::{latest::prelude::*, v1::MultiLocation};
+use xcm::{
+	latest::prelude::*,
+	v3::{MultiLocation, Weight},
+};
 
 pub mod weights;
 pub use weights::WeightInfo;
@@ -366,11 +369,18 @@ impl<T: Config> Pallet<T> {
 			parents: 1,
 			interior: X2(
 				Parachain(ASTA_PARA_ID),
-				AccountId32 { network: Any, id: receiver.encode().try_into().unwrap() },
+				AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 			),
 		};
 
-		T::XcmTransfer::transfer(caller, currency_id, amount, dest, Limited(5_000_000_000))
+		T::XcmTransfer::transfer(
+			caller,
+			currency_id,
+			amount,
+			dest,
+			Limited(Weight::from_ref_time(5_000_000_000)),
+		)?;
+		Ok(())
 	}
 
 	fn match_target_chain(

@@ -27,12 +27,12 @@ use frame_support::{ensure, traits::Get};
 use node_primitives::CurrencyId;
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
+	v3::prelude::*,
 };
 
 // Some untilities.
@@ -67,7 +67,7 @@ impl<T: Config> Pallet<T> {
 			// Check if the validator is in the validator whitelist
 			let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
 			ensure!(
-				validators_set.contains(&(validator.clone(), multi_hash)),
+				validators_set.contains(&(*validator, multi_hash)),
 				Error::<T>::ValidatorNotExist
 			);
 
@@ -75,7 +75,7 @@ impl<T: Config> Pallet<T> {
 			let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 			if let Err(index) = rs {
-				validators_list.insert(index, (validator.clone(), multi_hash));
+				validators_list.insert(index, (*validator, multi_hash));
 			}
 		}
 
@@ -117,7 +117,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_local_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let local_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: account_32 }),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(local_location)
@@ -129,16 +129,16 @@ impl<T: Config> Pallet<T> {
 		let inside: Junction = match location {
 			MultiLocation {
 				parents: _p,
-				interior: X2(Parachain(_para_id), AccountId32 { network: Any, id: account_32 }),
-			} => AccountId32 { network: Any, id: *account_32 },
+				interior: X2(Parachain(_para_id), AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			MultiLocation {
 				parents: _p,
-				interior: X2(Parachain(_para_id), AccountKey20 { network: Any, key: account_20 }),
-			} => AccountKey20 { network: Any, key: *account_20 },
+				interior: X2(Parachain(_para_id), AccountKey20 { network: None, key: account_20 }),
+			} => AccountKey20 { network: None, key: *account_20 },
 			MultiLocation {
 				parents: _p,
-				interior: X1(AccountId32 { network: Any, id: account_32 }),
-			} => AccountId32 { network: Any, id: *account_32 },
+				interior: X1(AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			_ => Err(Error::<T>::Unsupported)?,
 		};
 
@@ -150,7 +150,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_parent_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let parent_location = MultiLocation {
 			parents: 1,
-			interior: X1(AccountId32 { network: Any, id: account_32 }),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parent_location)
@@ -162,7 +162,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<MultiLocation, Error<T>> {
 		let parachain_location = MultiLocation {
 			parents: 1,
-			interior: X2(Parachain(chain_id), AccountId32 { network: Any, id: account_32 }),
+			interior: X2(Parachain(chain_id), AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parachain_location)

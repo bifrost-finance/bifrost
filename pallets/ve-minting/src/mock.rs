@@ -22,7 +22,6 @@
 #![allow(non_upper_case_globals)]
 
 use crate as bifrost_ve_minting;
-use crate::BNC;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -37,29 +36,24 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyIdMapping, Moment, TokenSymbol};
+use node_primitives::{CurrencyId, CurrencyIdMapping, TokenSymbol};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
+	traits::{
+		AccountIdConversion, BlakeTwo256, Convert, ConvertInto, IdentityLookup, TrailingZeroInput,
+	},
 	AccountId32,
 };
-use xcm::{
-	latest::{Junction, MultiLocation},
-	opaque::latest::{
-		Junction::Parachain,
-		Junctions::{X1, X2},
-		NetworkId,
-	},
-};
+use xcm::prelude::*;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-// pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-// pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
@@ -78,7 +72,6 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
@@ -186,19 +179,6 @@ impl orml_tokens::Config for Runtime {
 	type CurrencyHooks = ();
 }
 
-use bifrost_runtime_common::constants::time::SLOT_DURATION;
-parameter_types! {
-	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
-}
-
-impl pallet_timestamp::Config for Runtime {
-	type MinimumPeriod = MinimumPeriod;
-	/// A timestamp: milliseconds since the unix epoch.
-	type Moment = Moment;
-	type OnTimestampSet = ();
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
@@ -240,19 +220,28 @@ impl bifrost_asset_registry::Config for Runtime {
 }
 
 parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type Currency = Balances;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
-	// type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	// type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type IncentivePalletId = IncentivePalletId;
 	type WeightInfo = ();
-	type UnixTime = Timestamp;
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 pub struct SubAccountIndexMultiLocationConvertor;
@@ -263,8 +252,8 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				1,
 				X2(
 					Parachain(2023),
-					Junction::AccountKey20 {
-						network: NetworkId::Any,
+					AccountKey20 {
+						network: None,
 						key: Slp::derivative_account_id_20(
 							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
@@ -276,7 +265,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			_ => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -357,13 +346,15 @@ impl ExtBuilder {
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
-			(ALICE, BNC, 1000000000000000000000),
-			(BOB, BNC, 1000000000000),
-			(BOB, vKSM, 1000),
-			(BOB, KSM, 1000000000000),
-			(BOB, MOVR, 1000000000000000000000),
-			(CHARLIE, MOVR, 100000000000000000000000),
-			(VeMintingPalletId::get().into_account_truncating(), KSM, 10000),
+			(ALICE, BNC, 1_000_000_000_000),
+			(ALICE, vBNC, 1_000_000_000_000_000),
+			(ALICE, KSM, 1_000_000_000_000),
+			(BOB, BNC, 1_000_000_000_000),
+			(BOB, vBNC, 1_000_000_000_000_000),
+			(BOB, vKSM, 1_000_000_000_000),
+			(BOB, MOVR, 1_000_000_000_000),
+			(CHARLIE, BNC, 1_000_000_000_000),
+			(CHARLIE, vBNC, 1_000_000_000_000_000),
 		])
 	}
 

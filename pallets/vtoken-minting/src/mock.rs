@@ -42,14 +42,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32,
 };
-use xcm::{
-	latest::{Junction, MultiLocation},
-	opaque::latest::{
-		Junction::Parachain,
-		Junctions::{X1, X2},
-		NetworkId,
-	},
-};
+use xcm::prelude::*;
 
 use crate as vtoken_minting;
 
@@ -64,6 +57,10 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
 pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const FIL_TOKEN_ID: u8 = 4u8;
+pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
+pub const vFIL_TOKEN_ID: u8 = 4u8;
+pub const vFIL: CurrencyId = CurrencyId::VToken2(vFIL_TOKEN_ID);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -163,6 +160,8 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
+			&FIL => 0,
+			&vFIL => 0,
 			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			&CurrencyId::VToken(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
@@ -233,10 +232,10 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				1,
 				X2(
 					Parachain(2023),
-					Junction::AccountKey20 {
-						network: NetworkId::Any,
+					AccountKey20 {
+						network: None,
 						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),
@@ -246,7 +245,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			_ => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -332,6 +331,8 @@ impl ExtBuilder {
 			(BOB, vKSM, 1000),
 			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
+			(BOB, vFIL, 1000),
+			(BOB, FIL, 100000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
 		])
 	}

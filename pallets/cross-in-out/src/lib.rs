@@ -25,13 +25,16 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{ensure, pallet_prelude::*};
+use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::AccountIdConversion, PalletId};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
-use xcm::latest::MultiLocation;
+use xcm::{
+	opaque::v2::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
+	v2::MultiLocation,
+};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -58,6 +61,9 @@ pub mod pallet {
 
 		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+		/// Entrance account Pallet Id
+		type EntrancePalletId: Get<PalletId>;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -207,8 +213,21 @@ pub mod pallet {
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
 
-			let dest = Self::outer_multilocation_to_account(currency_id, location.clone())
-				.ok_or(Error::<T>::NoAccountIdMapping)?;
+			let entrance_account_mutlilcaition = Box::new(MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 {
+					network: Any,
+					id: T::EntrancePalletId::get().into_account_truncating(),
+				}),
+			});
+
+			// If the cross_in destination is entrance account, it is not required to be registered.
+			let dest = if entrance_account_mutlilcaition == location {
+				T::EntrancePalletId::get().into_account_truncating()
+			} else {
+				Self::outer_multilocation_to_account(currency_id, location.clone())
+					.ok_or(Error::<T>::NoAccountIdMapping)?
+			};
 
 			T::MultiCurrency::deposit(currency_id, &dest, amount)?;
 
@@ -305,8 +324,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			foreign_location: Box<MultiLocation>,
+			account: AccountIdOf<T>,
 		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),

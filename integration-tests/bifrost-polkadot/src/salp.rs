@@ -16,15 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-	polkadot_integration_tests::*,
-	polkadot_test_net::{register_token2_asset, Bifrost},
-};
+use crate::config::Bifrost;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_polkadot_runtime::{Runtime, Salp, SlotLength};
 use bifrost_salp::{FundInfo, FundStatus};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
+use node_primitives::CurrencyIdRegister;
 use xcm_emulator::TestExt;
 
 const DOT: u128 = 1_000_000_000_000;
@@ -32,7 +30,6 @@ const DOT: u128 = 1_000_000_000_000;
 #[test]
 fn create_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
 			assert_eq!(AssetIdMaps::<Runtime>::check_token2_registered(0), true);
 			assert_eq!(AssetIdMaps::<Runtime>::check_vsbond2_registered(0, 3000, 1, 8), false);

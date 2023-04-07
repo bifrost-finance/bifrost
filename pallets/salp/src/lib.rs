@@ -19,12 +19,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod migration {
-	pub fn migrate() {
-		log::info!("salp migration...");
-	}
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 #[cfg(test)]
@@ -301,7 +295,7 @@ pub mod pallet {
 	/// The balance can be redeemed to users.
 	#[pallet::storage]
 	#[pallet::getter(fn redeem_pool)]
-	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+	pub type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn failed_funds_to_refund)]

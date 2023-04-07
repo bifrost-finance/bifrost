@@ -19,21 +19,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
-use node_primitives::{Balance, BlockNumber, Timestamp};
+use node_primitives::{Balance, BlockNumber};
 use sp_api::decl_runtime_apis;
 use sp_core::U256;
 
 decl_runtime_apis! {
 	pub trait VeMintingRuntimeApi<AccountId> where
 		AccountId: Codec,
+		BlockNumber: Codec,
 	{
 		fn balance_of(
 			who: AccountId,
-			t: Option<Timestamp>,
+			t: Option<BlockNumber>,
 		) -> Balance;
 
 		fn total_supply(
-			t: Timestamp,
+			t: BlockNumber,
 		) -> Balance;
 
 		fn find_block_epoch(

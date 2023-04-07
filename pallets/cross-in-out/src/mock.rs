@@ -152,10 +152,15 @@ ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
+parameter_types! {
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+}
+
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = ();
 }
 

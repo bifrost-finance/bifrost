@@ -25,33 +25,28 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
+use node_primitives::Balance;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
+use sp_core::U256;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::{
+	generic::BlockId,
+	traits::{Block as BlockT, BlockIdTo},
+	SaturatedConversion,
+};
 
 #[rpc(client, server)]
 pub trait VeMintingRpcApi<BlockHash, AccountId> {
 	/// rpc method for getting user balance
 	#[method(name = "ve_minting_balanceOf")]
-	fn balance_of(
-		&self,
-		who: AccountId,
-		t: Option<Timestamp>,
-		at: Option<BlockHash>,
-	) -> RpcResult<NumberOrHex>;
+	fn balance_of(&self, who: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "ve_minting_total_supply")]
-	fn total_supply(&self, t: Timestamp, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
+	#[method(name = "ve_minting_totalSupply")]
+	fn total_supply(&self, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
 	#[method(name = "ve_minting_findBlockEpoch")]
-	fn find_block_epoch(
-		&self,
-		block: BlockNumber,
-		max_epoch: U256,
-		at: Option<BlockHash>,
-	) -> RpcResult<NumberOrHex>;
+	fn find_block_epoch(&self, max_epoch: U256, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 }
 
 #[derive(Clone, Debug)]
@@ -60,7 +55,11 @@ pub struct VeMintingRpc<C, Block> {
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> VeMintingRpc<C, Block> {
+impl<C, Block> VeMintingRpc<C, Block>
+where
+	Block: BlockT,
+	C: BlockIdTo<Block>,
+{
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
@@ -71,24 +70,37 @@ impl<C, Block, AccountId> VeMintingRpcApiServer<<Block as BlockT>::Hash, Account
 	for VeMintingRpc<C, Block>
 where
 	Block: BlockT,
-	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: VeMintingRuntimeApi<Block, AccountId, PoolId>,
+	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockIdTo<Block>,
+	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
+	// CallError: From<<C as BlockIdTo<Block>>::Error>,
 {
 	fn balance_of(
 		&self,
 		who: AccountId,
-		t: Option<Timestamp>,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let block_number = self
+			.client
+			.to_number(&at)
+			.map(|num| match num {
+				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
+				None => None,
+			})
+			.map_err(|e| {
+				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InternalError.code(),
+					"Failed to get balance_of.",
+					Some(format!("{:?}", e)),
+				)))
+			})?;
 
-		let rs: Result<Balance, _> = lm_rpc_api.balance_of(&at, who, t);
+		let rs: Result<Balance, _> = lm_rpc_api.balance_of(&at, who, block_number);
 
 		match rs {
-			Ok(rewards) =>
-				Ok(rewards.into_iter().map(|amount| NumberOrHex::Hex(amount.into())).collect()),
+			Ok(balane) => Ok(NumberOrHex::Hex(balane.into())),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get balance_of.",
@@ -98,19 +110,28 @@ where
 		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 
-	fn total_supply(
-		&self,
-		t: Timestamp,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<NumberOrHex> {
+	fn total_supply(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-		let rs: Result<Balance, _> = lm_rpc_api.total_supply(&at, t);
+		let block_number = self
+			.client
+			.to_number(&at)
+			.map(|num| match num {
+				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
+				None => None,
+			})
+			.map_err(|e| {
+				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InternalError.code(),
+					"Failed to get total_supply.",
+					Some(format!("{:?}", e)),
+				)))
+			})?;
+		let rs: Result<Balance, _> =
+			lm_rpc_api.total_supply(&at, block_number.expect("no block found"));
 
 		match rs {
-			Ok(rewards) =>
-				Ok(rewards.into_iter().map(|amount| NumberOrHex::Hex(amount.into())).collect()),
+			Ok(supply) => Ok(NumberOrHex::Hex(supply.into())),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get total_supply.",
@@ -122,18 +143,30 @@ where
 
 	fn find_block_epoch(
 		&self,
-		block: BlockNumber,
 		max_epoch: U256,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-		let rs: Result<U256, _> = lm_rpc_api.find_block_epoch(&at, block, max_epoch);
+		let block_number = self
+			.client
+			.to_number(&at)
+			.map(|num| match num {
+				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
+				None => None,
+			})
+			.map_err(|e| {
+				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+					ErrorCode::InternalError.code(),
+					"Failed to get find_block_epoch.",
+					Some(format!("{:?}", e)),
+				)))
+			})?;
+		let rs: Result<U256, _> =
+			lm_rpc_api.find_block_epoch(&at, block_number.expect("no block found"), max_epoch);
 
 		match rs {
-			Ok(rewards) =>
-				Ok(rewards.into_iter().map(|amount| NumberOrHex::Hex(amount.into())).collect()),
+			Ok(epoch) => Ok(NumberOrHex::Hex(epoch.into())),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get find_block_epoch.",

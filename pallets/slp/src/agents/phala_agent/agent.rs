@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	agents::{PhalaCall, PhalaUtilityCall, SystemCall, VaultCall, WrappedBalancesCall, XcmCall},
+	agents::{
+		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XtransferCall,
+	},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
@@ -35,22 +37,23 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{TokenSymbol, VtokenMintingOperator};
+use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
 	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom,
+		UniqueSaturatedInto, Zero,
 	},
 	DispatchResult, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{GeneralIndex, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
-	VersionedMultiAssets,
+	v3::prelude::*,
 };
 use xcm_interface::traits::parachains;
 
@@ -81,10 +84,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation.clone() != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -102,13 +102,12 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let pool_id = if let Some(Ledger::Phala(ledger)) =
-			DelegatorLedgers::<T>::get(currency_id, who.clone())
-		{
-			ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
-		} else {
-			Err(Error::<T>::DelegatorNotExist)
-		}?;
+		let pool_id =
+			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
+				ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
+			} else {
+				Err(Error::<T>::DelegatorNotExist)
+			}?;
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -140,8 +139,7 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			total_value.checked_div(*total_shares).ok_or(Error::<T>::OverFlow)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
 			Err(Error::<T>::SharePriceNotValid)
 		}?;
@@ -157,7 +155,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -184,16 +183,15 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let (pool_id, active_shares, unlocking_shares) = if let Some(Ledger::Phala(ledger)) =
-			DelegatorLedgers::<T>::get(currency_id, who.clone())
-		{
-			let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
-			let active_shares = ledger.active_shares;
-			let unlocking_shares = ledger.unlocking_shares;
-			Ok((pool_id, active_shares, unlocking_shares))
-		} else {
-			Err(Error::<T>::DelegatorNotExist)
-		}?;
+		let (pool_id, active_shares, unlocking_shares) =
+			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
+				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
+				let active_shares = ledger.active_shares;
+				let unlocking_shares = ledger.unlocking_shares;
+				Ok((pool_id, active_shares, unlocking_shares))
+			} else {
+				Err(Error::<T>::DelegatorNotExist)
+			}?;
 
 		// Ensure this delegator is not in the process of unbonding.
 		ensure!(unlocking_shares.is_zero(), Error::<T>::AlreadyRequested);
@@ -207,18 +205,10 @@ impl<T: Config>
 			interior: X2(GeneralIndex(total_value), GeneralIndex(total_shares)),
 		}) = share_price
 		{
-			ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
-			let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
-				.saturating_mul(amount.saturated_into::<u128>().into())
-				.checked_div((*total_value).saturated_into::<u128>().into())
-				.ok_or(Error::<T>::OverFlow)?
-				.as_u128()
-				.saturated_into();
-
-			BalanceOf::<T>::unique_saturated_from(shares)
+			Self::calculate_shares(total_value, total_shares, amount)
 		} else {
-			Err(Error::<T>::SharePriceNotValid)?
-		};
+			Err(Error::<T>::SharePriceNotValid)
+		}?;
 
 		// Check if shares exceeds the minimum requirement > 1000(existential value for shares).
 		ensure!(
@@ -256,7 +246,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -295,7 +286,7 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
-			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, who.clone()),
+			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, *who),
 			Error::<T>::DelegatorNotExist
 		);
 
@@ -317,7 +308,7 @@ impl<T: Config>
 
 			let multi_hash = T::Hashing::hash(&candidate.encode());
 			ensure!(
-				validators_set.contains(&(candidate.clone(), multi_hash)),
+				validators_set.contains(&(*candidate, multi_hash)),
 				Error::<T>::ValidatorNotExist
 			);
 
@@ -325,7 +316,7 @@ impl<T: Config>
 			if !DelegatorLedgers::<T>::contains_key(currency_id, &who.clone()) {
 				// Create a new delegator ledger\
 				let ledger = PhalaLedger::<BalanceOf<T>> {
-					account: who.clone(),
+					account: *who,
 					active_shares: Zero::zero(),
 					unlocking_shares: Zero::zero(),
 					unlocking_time_unit: None,
@@ -334,12 +325,12 @@ impl<T: Config>
 				};
 				let phala_ledger = Ledger::<BalanceOf<T>>::Phala(ledger);
 
-				DelegatorLedgers::<T>::insert(currency_id, who.clone(), phala_ledger);
+				DelegatorLedgers::<T>::insert(currency_id, *who, phala_ledger);
 			}
 
 			DelegatorLedgers::<T>::mutate_exists(
 				currency_id,
-				who.clone(),
+				*who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
 					if let Some(Ledger::Phala(ref mut ledger)) = old_ledger_opt {
 						ensure!(ledger.active_shares == Zero::zero(), Error::<T>::AlreadyBonded);
@@ -362,7 +353,7 @@ impl<T: Config>
 		// Emit event
 		Pallet::<T>::deposit_event(Event::Delegated {
 			currency_id,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 			targets: Some(targets.clone()),
 			query_id: Zero::zero(),
 			query_id_hash: Hash::<T>::default(),
@@ -382,7 +373,7 @@ impl<T: Config>
 		// Check if it has already delegated a validator.
 		DelegatorLedgers::<T>::mutate(
 			currency_id,
-			who.clone(),
+			*who,
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::Phala(ref mut ledger)) = old_ledger_opt {
 					// Ensure both active_shares and unlocking_shares are zero.
@@ -399,7 +390,7 @@ impl<T: Config>
 					// Emit event
 					Pallet::<T>::deposit_event(Event::Undelegated {
 						currency_id,
-						delegator_id: who.clone(),
+						delegator_id: *who,
 						targets: vec![],
 						query_id: Zero::zero(),
 						query_id_hash: Hash::<T>::default(),
@@ -438,13 +429,12 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let pool_id = if let Some(Ledger::Phala(ledger)) =
-			DelegatorLedgers::<T>::get(currency_id, who.clone())
-		{
-			ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
-		} else {
-			Err(Error::<T>::DelegatorNotExist)
-		}?;
+		let pool_id =
+			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
+				ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
+			} else {
+				Err(Error::<T>::DelegatorNotExist)
+			}?;
 
 		// Construct xcm message.
 		let check_and_maybe_force_withdraw_call =
@@ -461,7 +451,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -527,27 +518,21 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		let (dest, beneficiary) =
-			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+		let dest_account_32 = Pallet::<T>::multilocation_to_account_32(to)?;
+		let dest = Pallet::<T>::account_32_to_parachain_location(
+			dest_account_32,
+			T::ParachainId::get().into(),
+		)?;
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(Self::get_pha_multilocation()),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
-
-		// Prepare parameter fee_asset_item.
-		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = PhalaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
-			dest,
-			beneficiary,
-			assets,
-			fee_asset_item,
-		)));
+		let call =
+			PhalaCall::Xtransfer(XtransferCall::Transfer(Box::new(asset), Box::new(dest), None));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -598,7 +583,7 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// Check if delegator exists.
 		ensure!(
-			DelegatorLedgers::<T>::contains_key(currency_id, who.clone()),
+			DelegatorLedgers::<T>::contains_key(currency_id, *who),
 			Error::<T>::DelegatorNotExist
 		);
 
@@ -623,7 +608,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -632,13 +618,13 @@ impl<T: Config>
 		&self,
 		who: &Option<MultiLocation>,
 		token_amount: BalanceOf<T>,
-		shares_amount: BalanceOf<T>,
+		_vtoken_amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Ensure delegator has bonded to a validator.
-		if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, who.clone()) {
+		if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
 			ensure!(ledger.bonded_pool_id.is_some(), Error::<T>::DelegatorNotBonded);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
@@ -649,20 +635,6 @@ impl<T: Config>
 			token_amount,
 			currency_id,
 		)?;
-
-		// update delegator ledger
-		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
-			if let Some(Ledger::Phala(ref mut old_phala_ledger)) = old_ledger {
-				// Increase both the active and total amount.
-				old_phala_ledger.active_shares = old_phala_ledger
-					.active_shares
-					.checked_add(&shares_amount)
-					.ok_or(Error::<T>::OverFlow)?;
-				Ok(())
-			} else {
-				Err(Error::<T>::Unexpected)?
-			}
-		})?;
 
 		Ok(())
 	}
@@ -713,7 +685,7 @@ impl<T: Config>
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(who.clone(), multi_hash)) {
+			if validator_list.contains(&(*who, multi_hash)) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}
@@ -830,21 +802,23 @@ impl<T: Config>
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 
+		let self_sibling_parachain_account: [u8; 32] =
+			Sibling::from(T::ParachainId::get()).into_account_truncating();
+
 		Ok(Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
-				origin_type: OriginKind::SovereignAccount,
+				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: call.encode().into(),
 			},
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::MAX,
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(Parachain(T::ParachainId::get().into())),
+					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
 				},
 			},
 		]))
@@ -894,7 +868,7 @@ impl<T: Config> PhalaAgent<T> {
 		let call_as_subaccount = {
 			// Temporary wrapping remark event in Kusama for ease use of backend service.
 			let remark_call =
-				PhalaCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
+				PhalaCall::System(PhalaSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 			let mut all_calls = Vec::new();
 			all_calls.extend(calls.into_iter());
@@ -932,7 +906,8 @@ impl<T: Config> PhalaAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
 
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest = Self::get_pha_multilocation();
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
@@ -975,7 +950,7 @@ impl<T: Config> PhalaAgent<T> {
 
 		let entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 			update_operation,
 			amount: shares,
 			unlock_time,
@@ -1100,5 +1075,21 @@ impl<T: Config> PhalaAgent<T> {
 		);
 
 		Ok(())
+	}
+
+	fn calculate_shares(
+		total_value: &u128,
+		total_shares: &u128,
+		amount: BalanceOf<T>,
+	) -> Result<BalanceOf<T>, Error<T>> {
+		ensure!(total_shares > &0u128, Error::<T>::DividedByZero);
+		let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
+			.saturating_mul(amount.saturated_into::<u128>().into())
+			.checked_div((*total_value).saturated_into::<u128>().into())
+			.ok_or(Error::<T>::OverFlow)?
+			.as_u128()
+			.saturated_into();
+
+		Ok(BalanceOf::<T>::unique_saturated_from(shares))
 	}
 }

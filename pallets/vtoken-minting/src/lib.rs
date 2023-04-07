@@ -193,6 +193,9 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			time_unit: TimeUnit,
 		},
+		FastRedeemFailed {
+			err: DispatchError,
+		},
 	}
 
 	#[pallet::error]
@@ -308,13 +311,14 @@ pub mod pallet {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
 			Self::handle_on_initialize()
-				.map_err(|e| {
+				.map_err(|err| {
+					Self::deposit_event(Event::FastRedeemFailed { err });
 					log::error!(
 						target: "runtime::vtoken-minting",
 						"Received invalid justification for {:?}",
-						e,
+						err,
 					);
-					e
+					err
 				})
 				.ok();
 
@@ -1003,11 +1007,15 @@ pub mod pallet {
 			let unlock_duration_elem = match UnlockDuration::<T>::get(currency) {
 				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
 				Some(TimeUnit::Round(unlock_duration_round)) => unlock_duration_round,
+				Some(TimeUnit::Kblock(unlock_duration_kblock)) => unlock_duration_kblock,
+				Some(TimeUnit::Hour(unlock_duration_hour)) => unlock_duration_hour,
 				_ => 0,
 			};
 			let ongoing_elem = match OngoingTimeUnit::<T>::get(currency) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
 				Some(TimeUnit::Round(ongoing_round)) => ongoing_round,
+				Some(TimeUnit::Kblock(ongoing_kblock)) => ongoing_kblock,
+				Some(TimeUnit::Hour(ongoing_hour)) => ongoing_hour,
 				_ => 0,
 			};
 			if let Some((_total_locked, ledger_list, token_id)) =
@@ -1047,6 +1055,20 @@ pub mod pallet {
 							if ongoing_elem + unlock_duration_elem > *round {
 								*round =
 									round.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
+						TimeUnit::Kblock(kblock) => {
+							if ongoing_elem + unlock_duration_elem > *kblock {
+								*kblock =
+									kblock.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
+						TimeUnit::Hour(hour) => {
+							if ongoing_elem + unlock_duration_elem > *hour {
+								*hour =
+									hour.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
 							}
 							Ok(())
 						},

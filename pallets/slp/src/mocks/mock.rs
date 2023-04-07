@@ -20,10 +20,9 @@
 
 #![cfg(test)]
 
-use bifrost_asset_registry::AssetIdMaps;
-// use parachain_staking::ParachainStakingInterface;
 use crate as bifrost_slp;
 use crate::{Config, QueryResponseManager};
+use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -36,14 +35,14 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_core::{hashing::blake2_256, H256};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -59,6 +58,8 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
 pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
+#[cfg(feature = "runtime-benchmarks")]
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -74,12 +75,20 @@ construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Pallet, Call, Event}
 	}
 );
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
 	pub const RelayCurrencyId: CurrencyId = KSM;
+}
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -271,7 +280,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X2(
 					Parachain(2023),
 					Junction::AccountKey20 {
-						network: NetworkId::Any,
+						network: None,
 						key: Slp::derivative_account_id_20(
 							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
@@ -284,7 +293,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -296,7 +305,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
 				0,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						polkadot_parachain::primitives::Sibling::from(2001u32)
 							.into_account_truncating(),
@@ -315,7 +324,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 							X2(
 								Parachain(*para_id),
 								Junction::AccountId32 {
-									network: NetworkId::Any,
+									network: None,
 									id: Self::derivative_account_id(
 										polkadot_parachain::primitives::Sibling::from(2001u32)
 											.into_account_truncating(),
@@ -378,8 +387,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 		match id {
 			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
 			Token(KSM) => Some(MultiLocation::parent()),
-			Native(BNC) =>
-				Some(MultiLocation::new(0, X1(GeneralKey("0x0001".encode().try_into().unwrap())))),
+			Native(BNC) => Some(MultiLocation::new(
+				0,
+				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
+			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
 			_ => None,
 		}

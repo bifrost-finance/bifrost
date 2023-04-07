@@ -41,6 +41,8 @@ use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpc, LiquidityMiningRpcApi
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
+use bifrost_ve_minting_rpc_api::{VeMintingRpc, VeMintingRpcApiServer};
+use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
 use node_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use sc_rpc_api::DenyUnsafe;
@@ -48,12 +50,12 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use sp_runtime::traits::BlockIdTo;
 use substrate_frame_rpc_system::{System, SystemApiServer};
 use zenlink_protocol::AssetId;
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 use zenlink_stable_amm_rpc::{StableAmm, StableAmmApiServer};
-
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
 	/// The client instance to use.
@@ -116,12 +118,14 @@ where
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
-		+ 'static,
+		+ 'static
+		+ BlockIdTo<Block>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
@@ -135,6 +139,7 @@ where
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
+	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)

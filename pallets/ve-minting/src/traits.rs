@@ -18,180 +18,155 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 use crate::*;
-// use node_primitives::BlockNumber;
 
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(addr: &AccountId, value: Balance) -> DispatchResult;
-	fn _withdraw(addr: &AccountId) -> DispatchResult;
-	fn balance_of(addr: &AccountId, time: Option<Timestamp>) -> Result<Balance, DispatchError>;
-	fn balance_of_at(addr: &AccountId, block: BlockNumber) -> Result<Balance, DispatchError>;
-	fn total_supply(t: Timestamp) -> Balance;
-	fn supply_at(point: Point<Balance, BlockNumber>, t: Timestamp) -> Balance;
+	fn withdraw_inner(addr: &AccountId) -> DispatchResult;
+	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
+	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
+	fn supply_at(
+		point: Point<Balance, BlockNumber>,
+		t: BlockNumber,
+	) -> Result<Balance, DispatchError>;
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
-	fn _create_lock(addr: &AccountId, _value: Balance, _unlock_time: Timestamp) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
-	fn _increase_amount(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
-	fn _increase_unlock_time(addr: &AccountId, _unlock_time: Timestamp) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
+	fn create_lock_inner(
+		addr: &AccountId,
+		_value: Balance,
+		_unlock_time: BlockNumber,
+	) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
+	fn increase_amount_inner(addr: &AccountId, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	fn increase_unlock_time_inner(addr: &AccountId, _unlock_time: BlockNumber) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
 
-impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
+impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
 	for Pallet<T>
 {
-	fn _create_lock(
+	fn create_lock_inner(
 		addr: &AccountIdOf<T>,
 		_value: BalanceOf<T>,
-		_unlock_time: Timestamp,
+		_unlock_time: T::BlockNumber,
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
-		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
+		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
+		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
+		let unlock_time: T::BlockNumber = _unlock_time
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(
-			unlock_time > ve_config.min_time.saturating_add(current_timestamp),
+			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
 		ensure!(
-			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
+			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
-		ensure!(_value >= ve_config.min_mint, Error::<T>::Expired); // need non-zero value
+		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
-		Self::_deposit_for(addr, _value, unlock_time, _locked)
+		Self::_deposit_for(addr, _value, unlock_time, _locked)?;
+		Self::deposit_event(Event::LockCreated {
+			addr: addr.to_owned(),
+			value: _value,
+			unlock_time: _unlock_time,
+		});
+		Ok(())
 	}
 
-	fn _increase_unlock_time(addr: &AccountIdOf<T>, _unlock_time: Timestamp) -> DispatchResult {
+	fn increase_unlock_time_inner(
+		addr: &AccountIdOf<T>,
+		_unlock_time: T::BlockNumber,
+	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
-		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		let unlock_time: Timestamp = (_unlock_time / ve_config.week) * ve_config.week;
+		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
+		let unlock_time: T::BlockNumber = _unlock_time
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-		ensure!(_locked.end > current_timestamp, Error::<T>::Expired);
-		ensure!(unlock_time >= ve_config.min_time.saturating_add(_locked.end), Error::<T>::Expired);
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		ensure!(
-			unlock_time <= ve_config.max_time.saturating_add(current_timestamp),
+			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::Expired); // Withdraw old tokens first
+		ensure!(
+			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
+			Error::<T>::Expired
+		);
+		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
+		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
-		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)
+		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)?;
+		Self::deposit_event(Event::UnlockTimeIncreased {
+			addr: addr.to_owned(),
+			unlock_time: _unlock_time,
+		});
+		Ok(())
 	}
 
-	fn _increase_amount(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
-		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		Self::_deposit_for(addr, value, 0, _locked)
+	fn increase_amount_inner(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+		let ve_config = Self::ve_configs();
+		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
+		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
+		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
+		Self::_deposit_for(addr, value, Zero::zero(), _locked)?;
+		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
+		Ok(())
 	}
 
 	fn deposit_for(addr: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
-		let _locked: LockedBalance<BalanceOf<T>> = Self::locked(addr);
-		Self::_deposit_for(addr, value, 0, _locked)
+		let _locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = Self::locked(addr);
+		Self::_deposit_for(addr, value, Zero::zero(), _locked)
 	}
 
-	fn _withdraw(addr: &AccountIdOf<T>) -> DispatchResult {
+	fn withdraw_inner(addr: &AccountIdOf<T>) -> DispatchResult {
 		let mut _locked = Self::locked(addr);
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-		ensure!(current_timestamp > _locked.end, Error::<T>::Expired);
+		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
-		let old_locked: LockedBalance<BalanceOf<T>> = _locked.clone();
+		let old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber> = _locked.clone();
 		_locked.end = Zero::zero();
 		_locked.amount = Zero::zero();
 		Locked::<T>::insert(addr, _locked.clone());
 
 		let supply_before = Self::supply();
-		Supply::<T>::set(supply_before - value);
+		Supply::<T>::set(supply_before.saturating_sub(value));
+
+		// BNC should be transferred before checkpoint
+		T::MultiCurrency::transfer(
+			T::TokenType::get(),
+			&T::VeMintingPalletId::get().into_account_truncating(),
+			addr,
+			value,
+		)?;
 
 		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
-		// TODO: set_lock
-		T::Currency::set_lock(COLLATOR_LOCK_ID, addr, Zero::zero(), WithdrawReasons::all());
-
-		Self::deposit_event(Event::Supply { supply_before, supply: supply_before - value });
+		Self::deposit_event(Event::Withdrawn { addr: addr.to_owned(), value });
+		Self::deposit_event(Event::Supply {
+			supply_before,
+			supply: supply_before.saturating_sub(value),
+		});
 		Ok(())
 	}
 
 	fn balance_of(
 		addr: &AccountIdOf<T>,
-		time: Option<Timestamp>,
+		time: Option<T::BlockNumber>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let _t = match time {
-			Some(_t) => _t,
-			None => T::UnixTime::now().as_millis().saturated_into(),
-		};
-		let u_epoch = Self::user_point_epoch(addr);
-		if u_epoch == U256::zero() {
-			return Ok(Zero::zero());
-		} else {
-			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
-				Self::user_point_history(addr, u_epoch);
-
-			last_point.bias -= last_point
-				.slope
-				.saturating_mul((_t.saturating_sub(last_point.ts)).saturated_into());
-			if last_point.bias < Zero::zero() {
-				last_point.bias = Zero::zero();
-			}
-			Ok(last_point.fxs_amt + (Self::ve_configs().vote_weight_multiplier * last_point.bias))
+		match time {
+			Some(_t) => Self::balance_of_at(addr, _t),
+			None => Self::balance_of_current_block(addr),
 		}
 	}
 
-	fn balance_of_at(
-		addr: &AccountIdOf<T>,
-		_block: BlockNumberFor<T>,
-	) -> Result<BalanceOf<T>, DispatchError> {
-		let current_block_number: BlockNumberFor<T> =
-			frame_system::Pallet::<T>::block_number().into();
-		ensure!(_block <= current_block_number, Error::<T>::Expired);
-		let current_timestamp: Timestamp = T::UnixTime::now().as_millis().saturated_into();
-
-		// Binary search
-		let mut _min = U256::zero();
-		let mut _max = Self::user_point_epoch(addr);
-		for _i in 0..128 {
-			if _min >= _max {
-				break;
-			}
-			let _mid = (_min + _max + 1) / 2;
-
-			if Self::user_point_history(addr, _mid).blk <= _block {
-				_min = _mid
-			} else {
-				_max = _mid - 1
-			}
-		}
-
-		let mut upoint: Point<BalanceOf<T>, BlockNumberFor<T>> =
-			Self::user_point_history(addr, _min);
-
-		let max_epoch: U256 = Self::epoch();
-		let _epoch: U256 = Self::find_block_epoch(_block, max_epoch);
-		let point_0: Point<BalanceOf<T>, BlockNumberFor<T>> = Self::point_history(_epoch);
-		let d_block;
-		let d_t;
-		if _epoch < max_epoch {
-			let point_1 = Self::point_history(_epoch + 1);
-			d_block = point_1.blk - point_0.blk;
-			d_t = point_1.ts - point_0.ts;
-		} else {
-			d_block = current_block_number - point_0.blk;
-			d_t = current_timestamp - point_0.ts;
-		}
-
-		let mut block_time = point_0.ts;
-		if d_block != Zero::zero() {
-			block_time += d_t
-				.saturating_mul((_block - point_0.blk).saturated_into())
-				.saturating_div(d_block.saturated_into());
-		}
-		upoint.bias -= upoint.slope.saturating_mul((block_time - upoint.ts).saturated_into());
-
-		if (upoint.bias >= Zero::zero()) || (upoint.fxs_amt >= Zero::zero()) {
-			Ok(upoint.fxs_amt + (Self::ve_configs().vote_weight_multiplier * upoint.bias))
-		} else {
-			Ok(Zero::zero())
-		}
-	}
-
-	fn find_block_epoch(_block: BlockNumberFor<T>, max_epoch: U256) -> U256 {
+	fn find_block_epoch(_block: T::BlockNumber, max_epoch: U256) -> U256 {
 		let mut _min = U256::zero();
 		let mut _max = max_epoch;
 		for _i in 0..128 {
@@ -200,7 +175,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			}
 			let _mid = (_min + _max + 1) / 2;
 
-			if Self::point_history(_mid).blk <= _block {
+			if Self::point_history(_mid).block <= _block {
 				_min = _mid
 			} else {
 				_max = _mid - 1
@@ -209,19 +184,25 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		_min
 	}
 
-	fn total_supply(t: Timestamp) -> BalanceOf<T> {
+	fn total_supply(t: T::BlockNumber) -> Result<BalanceOf<T>, DispatchError> {
 		let g_epoch: U256 = Self::epoch();
 		let last_point = Self::point_history(g_epoch);
 		Self::supply_at(last_point, t)
 	}
 
-	fn supply_at(point: Point<BalanceOf<T>, BlockNumberFor<T>>, t: Timestamp) -> BalanceOf<T> {
-		let ve_config = Self::ve_configs();
-
+	fn supply_at(
+		point: Point<BalanceOf<T>, T::BlockNumber>,
+		t: T::BlockNumber,
+	) -> Result<BalanceOf<T>, DispatchError> {
 		let mut last_point = point;
-		let mut t_i: Timestamp = (last_point.ts / ve_config.week) * ve_config.week;
+		let mut t_i: T::BlockNumber = last_point
+			.block
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
 		for _i in 0..255 {
-			t_i += ve_config.week;
+			t_i += T::Week::get();
 			let mut d_slope = Zero::zero();
 			if t_i > t {
 				t_i = t
@@ -229,25 +210,105 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				d_slope = Self::slope_changes(t_i)
 			}
 
-			last_point.bias = U256::from(last_point.bias.saturated_into::<u128>())
+			last_point.bias = last_point
+				.bias
 				.checked_sub(
-					U256::from(last_point.slope.saturated_into::<u128>())
-						.saturating_mul(U256::from((t_i - last_point.ts).saturated_into::<u128>())),
+					last_point
+						.slope
+						.checked_mul(
+							t_i.checked_sub(&last_point.block)
+								.ok_or(ArithmeticError::Overflow)?
+								.saturated_into::<u128>()
+								.unique_saturated_into(),
+						)
+						.ok_or(ArithmeticError::Overflow)?,
 				)
-				.unwrap_or_default()
-				.as_u128()
-				.unique_saturated_into();
+				.ok_or(ArithmeticError::Overflow)?;
 
 			if t_i == t {
 				break;
 			}
-			last_point.slope += (d_slope as u128).saturated_into();
-			last_point.ts = t_i
+			last_point.slope += d_slope;
+			last_point.block = t_i
 		}
 
-		if last_point.bias < Zero::zero() {
-			last_point.bias = Zero::zero()
+		if last_point.bias < 0_i128 {
+			last_point.bias = 0_i128
 		}
-		last_point.fxs_amt + Self::ve_configs().vote_weight_multiplier * last_point.bias
+		Ok(last_point
+			.amount
+			.checked_add(
+				&T::VoteWeightMultiplier::get()
+					.checked_mul(&(last_point.bias as u128).unique_saturated_into())
+					.ok_or(ArithmeticError::Overflow)?,
+			)
+			.ok_or(ArithmeticError::Overflow)?)
+	}
+}
+
+pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
+	fn set_incentive(rewards_duration: Option<BlockNumber>);
+	fn add_reward(
+		addr: &AccountId,
+		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber>,
+		rewards: &Vec<(CurrencyId, Balance)>,
+		remaining: Balance,
+	) -> DispatchResult;
+}
+
+impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>
+	for Pallet<T>
+{
+	fn set_incentive(rewards_duration: Option<T::BlockNumber>) {
+		if let Some(rewards_duration) = rewards_duration {
+			let mut incentive_config = Self::incentive_configs();
+			incentive_config.rewards_duration = rewards_duration;
+			IncentiveConfigs::<T>::set(incentive_config);
+			Self::deposit_event(Event::IncentiveSet { rewards_duration });
+		};
+	}
+	fn add_reward(
+		addr: &AccountIdOf<T>,
+		conf: &mut IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,
+		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		remaining: BalanceOf<T>,
+	) -> DispatchResult {
+		rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+			let mut total_reward: BalanceOf<T> = *reward;
+			if remaining != Zero::zero() {
+				let leftover: BalanceOf<T> = conf
+					.reward_rate
+					.get(currency)
+					.unwrap_or(&Zero::zero())
+					.checked_mul(&remaining)
+					.ok_or(ArithmeticError::Overflow)?;
+				total_reward = total_reward.saturating_add(leftover);
+			}
+			let currency_amount = T::MultiCurrency::free_balance(
+				*currency,
+				&T::IncentivePalletId::get().into_account_truncating(),
+			);
+			// Make sure the new reward is less than or equal to the reward owned by the
+			// IncentivePalletId
+			ensure!(
+				total_reward <= currency_amount.saturating_add(*reward),
+				Error::<T>::NotEnoughBalance
+			);
+			let new_reward = total_reward
+				.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
+				.ok_or(ArithmeticError::Overflow)?;
+			conf.reward_rate
+				.entry(*currency)
+				.and_modify(|total_reward| {
+					*total_reward = new_reward;
+				})
+				.or_insert(new_reward);
+			T::MultiCurrency::transfer(
+				*currency,
+				addr,
+				&T::IncentivePalletId::get().into_account_truncating(),
+				*reward,
+			)
+		})
 	}
 }

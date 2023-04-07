@@ -47,17 +47,9 @@ use sp_runtime::{
 	},
 	AccountId32, SaturatedConversion,
 };
-use xcm::{
-	latest::{Junction, MultiLocation},
-	opaque::latest::{
-		Junction::Parachain,
-		Junctions::{X1, X2},
-		NetworkId,
-	},
-};
+use xcm::prelude::*;
 use zenlink_protocol::{
-	AssetBalance, AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate,
-	ZenlinkMultiAssets,
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
 
 use crate as bifrost_system_maker;
@@ -230,10 +222,10 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				1,
 				X2(
 					Parachain(2023),
-					Junction::AccountKey20 {
-						network: NetworkId::Any,
+					AccountKey20 {
+						network: None,
 						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
+							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
 						)
 						.into(),
@@ -243,7 +235,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			_ => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -343,12 +335,9 @@ impl zenlink_protocol::Config for Runtime {
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
 	type TargetChains = ();
-	type XcmExecutor = ();
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
