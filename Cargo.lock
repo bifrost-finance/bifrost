@@ -875,7 +875,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "curve25519-dalek 4.0.0-pre.5",
+ "curve25519-dalek 4.0.0-rc.2",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -2944,9 +2944,9 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "4.0.0-pre.5"
+version = "4.0.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67bc65846be335cb20f4e52d49a437b773a2c1fdb42b19fc84e79e6f6771536f"
+checksum = "03d928d978dbec61a1167414f5ec534f24bea0d7a0d24dd9b6233d3d8223e585"
 dependencies = [
  "cfg-if",
  "fiat-crypto",
@@ -11709,7 +11709,7 @@ dependencies = [
  "aes-gcm 0.9.4",
  "blake2",
  "chacha20poly1305",
- "curve25519-dalek 4.0.0-pre.5",
+ "curve25519-dalek 4.0.0-rc.2",
  "rand_core 0.6.4",
  "ring",
  "rustc_version",
