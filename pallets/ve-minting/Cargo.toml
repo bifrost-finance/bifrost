@@ -30,6 +30,10 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }

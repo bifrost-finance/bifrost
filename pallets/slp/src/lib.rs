@@ -18,10 +18,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::{
-	agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent, PolkadotAgent},
-	primitives::BASE_WEIGHT,
-};
+extern crate core;
+
+use crate::agents::PolkadotAgent;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
@@ -53,6 +52,7 @@ pub use weights::WeightInfo;
 use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
 
 mod agents;
+pub mod migration;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -81,10 +81,17 @@ type StakingAgentBoxType<T> = Box<
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use crate::agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent};
+	use pallet_xcm::ensure_response;
+	use xcm::v3::{MaybeErrorCode, Response};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
+			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
+
+		type RuntimeCall: Parameter + From<Call<Self>>;
 
 		/// Currency operations handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
@@ -113,13 +120,14 @@ pub mod pallet {
 		type XcmRouter: SendXcm;
 
 		/// XCM executor.
-		type XcmExecutor: ExecuteXcm<Self::RuntimeCall>;
+		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::RuntimeCall>;
 
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
 			QueryId,
 			MultiLocation,
 			BlockNumberFor<Self>,
+			<Self as pallet::Config>::RuntimeCall,
 		>;
 
 		/// Handler to notify the runtime when refund.
@@ -416,7 +424,7 @@ pub mod pallet {
 			query_id: QueryId,
 			entry: LedgerUpdateEntry<BalanceOf<T>>,
 		},
-		DelegatorLedgerQueryResponseFailSuccessfully {
+		DelegatorLedgerQueryResponseFailed {
 			#[codec(compact)]
 			query_id: QueryId,
 		},
@@ -425,7 +433,7 @@ pub mod pallet {
 			query_id: QueryId,
 			entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
 		},
-		ValidatorsByDelegatorQueryResponseFailSuccessfully {
+		ValidatorsByDelegatorQueryResponseFailed {
 			#[codec(compact)]
 			query_id: QueryId,
 		},
@@ -641,15 +649,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-			// For queries in update entry queues, search responses in pallet_xcm Queries storage.
-			let counter = Self::process_query_entry_records().unwrap_or(0);
-
-			// Calculate weight
-			Weight::from_ref_time(BASE_WEIGHT.saturating_mul(counter.into()))
-		}
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -1904,6 +1904,40 @@ pub mod pallet {
 			Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			Ok(())
 		}
+
+		#[pallet::call_index(41)]
+		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
+		pub fn confirm_delegator_ledger(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+			response: Response,
+		) -> DispatchResult {
+			// Ensure origin
+			ensure_response(<T as Config>::RuntimeOrigin::from(origin))?;
+			if let Response::DispatchResult(MaybeErrorCode::Success) = response {
+				Self::get_ledger_update_agent_then_process(query_id, true)?;
+			} else {
+				Self::do_fail_validators_by_delegator_query_response(query_id)?;
+			}
+			Ok(())
+		}
+
+		#[pallet::call_index(42)]
+		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
+		pub fn confirm_validators_by_delegator(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+			response: Response,
+		) -> DispatchResult {
+			// Ensure origin
+			ensure_response(<T as Config>::RuntimeOrigin::from(origin))?;
+			if let Response::DispatchResult(MaybeErrorCode::Success) = response {
+				Self::get_validators_by_delegator_update_agent_then_process(query_id, true)?;
+			} else {
+				Self::do_fail_validators_by_delegator_query_response(query_id)?;
+			}
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1935,6 +1969,20 @@ pub mod pallet {
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
+		}
+
+		pub fn confirm_delegator_ledger_call() -> <T as Config>::RuntimeCall {
+			let call =
+				Call::<T>::confirm_delegator_ledger { query_id: 0, response: Default::default() };
+			<T as Config>::RuntimeCall::from(call)
+		}
+
+		pub fn confirm_validators_by_delegator_call() -> <T as Config>::RuntimeCall {
+			let call = Call::<T>::confirm_validators_by_delegator {
+				query_id: 0,
+				response: Default::default(),
+			};
+			<T as Config>::RuntimeCall::from(call)
 		}
 	}
 

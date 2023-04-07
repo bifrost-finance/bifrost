@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet::Error, primitives::KSM, vec, AccountIdOf, BalanceOf, Config, CurrencyId};
+use crate::{pallet::Error, primitives::KSM, AccountIdOf, BalanceOf, Config, CurrencyId};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::DOT;
@@ -147,45 +147,39 @@ impl<T: Config> SubstrateCall<T> {
 		beneficiary: Box<VersionedMultiLocation>,
 		assets: Box<VersionedMultiAssets>,
 		fee_asset_item: u32,
+		weight_limit: WeightLimit,
 	) -> Result<Self, Error<T>> {
 		match currency_id {
-			KSM => Ok(Self::Kusama(KusamaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
-				dest,
-				beneficiary,
-				assets,
-				fee_asset_item,
-			))))),
-			DOT => Ok(Self::Polkadot(PolkadotCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
-				dest,
-				beneficiary,
-				assets,
-				fee_asset_item,
-			))))),
+			KSM =>
+				Ok(Self::Kusama(KusamaCall::Xcm(Box::new(XcmCall::LimitedReserveTransferAssets(
+					dest,
+					beneficiary,
+					assets,
+					fee_asset_item,
+					weight_limit,
+				))))),
+			DOT => Ok(Self::Polkadot(PolkadotCall::Xcm(Box::new(
+				XcmCall::LimitedReserveTransferAssets(
+					dest,
+					beneficiary,
+					assets,
+					fee_asset_item,
+					weight_limit,
+				),
+			)))),
 			_ => Err(Error::NotSupportedCurrencyId),
 		}
 	}
 
 	pub fn get_call_as_subaccount_from_call(
 		self,
-		query_id_op: Option<u64>,
 		sub_account_index: u16,
 	) -> Result<Self, Error<T>> {
 		match self {
 			SubstrateCall::Kusama(kusama_call) =>
-				if let Some(query_id) = query_id_op {
-					kusama_call
-						.get_call_as_subaccount_from_call_with_query_id(query_id, sub_account_index)
-				} else {
-					kusama_call.get_call_as_subaccount_from_call_without_query_id(sub_account_index)
-				},
+				kusama_call.get_call_as_subaccount_from_call(sub_account_index),
 			SubstrateCall::Polkadot(polkadot_call) =>
-				if let Some(query_id) = query_id_op {
-					polkadot_call
-						.get_call_as_subaccount_from_call_with_query_id(query_id, sub_account_index)
-				} else {
-					polkadot_call
-						.get_call_as_subaccount_from_call_without_query_id(sub_account_index)
-				},
+				polkadot_call.get_call_as_subaccount_from_call(sub_account_index),
 		}
 	}
 
@@ -218,38 +212,11 @@ pub enum KusamaCall<T: Config> {
 }
 
 impl<T: Config> KusamaCall<T> {
-	pub fn get_remark_with_event_call(query_id: u64) -> Self {
-		Self::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())))
-	}
-
 	pub fn get_derivative_call(sub_account_index: u16, call: Self) -> Self {
 		Self::Utility(Box::new(KusamaUtilityCall::AsDerivative(sub_account_index, Box::new(call))))
 	}
 
-	pub fn get_batch_all_two_calls(call_1: Self, call_2: Self) -> Self {
-		KusamaCall::Utility(Box::new(KusamaUtilityCall::BatchAll(Box::new(vec![
-			Box::new(call_1),
-			Box::new(call_2),
-		]))))
-	}
-
-	pub fn get_call_as_subaccount_from_call_with_query_id(
-		self,
-		query_id: u64,
-		sub_account_index: u16,
-	) -> Result<SubstrateCall<T>, Error<T>> {
-		// Temporary wrapping remark event in Kusama for ease use of backend service.
-		let remark_call = KusamaCall::<T>::get_remark_with_event_call(query_id);
-
-		let call_batched_with_remark = KusamaCall::<T>::get_batch_all_two_calls(self, remark_call);
-
-		let derivative_call =
-			KusamaCall::<T>::get_derivative_call(sub_account_index, call_batched_with_remark);
-
-		Ok(SubstrateCall::<T>::Kusama(derivative_call))
-	}
-
-	pub fn get_call_as_subaccount_from_call_without_query_id(
+	pub fn get_call_as_subaccount_from_call(
 		self,
 		sub_account_index: u16,
 	) -> Result<SubstrateCall<T>, Error<T>> {
@@ -274,10 +241,6 @@ pub enum PolkadotCall<T: Config> {
 }
 
 impl<T: Config> PolkadotCall<T> {
-	pub fn get_remark_with_event_call(query_id: u64) -> Self {
-		Self::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())))
-	}
-
 	pub fn get_derivative_call(sub_account_index: u16, call: Self) -> Self {
 		Self::Utility(Box::new(PolkadotUtilityCall::AsDerivative(
 			sub_account_index,
@@ -285,31 +248,7 @@ impl<T: Config> PolkadotCall<T> {
 		)))
 	}
 
-	pub fn get_batch_all_two_calls(call_1: Self, call_2: Self) -> Self {
-		Self::Utility(Box::new(PolkadotUtilityCall::BatchAll(Box::new(vec![
-			Box::new(call_1),
-			Box::new(call_2),
-		]))))
-	}
-
-	pub fn get_call_as_subaccount_from_call_with_query_id(
-		self,
-		query_id: u64,
-		sub_account_index: u16,
-	) -> Result<SubstrateCall<T>, Error<T>> {
-		// Temporary wrapping remark event in Kusama for ease use of backend service.
-		let remark_call = PolkadotCall::<T>::get_remark_with_event_call(query_id);
-
-		let call_batched_with_remark =
-			PolkadotCall::<T>::get_batch_all_two_calls(self, remark_call);
-
-		let derivative_call =
-			PolkadotCall::<T>::get_derivative_call(sub_account_index, call_batched_with_remark);
-
-		Ok(SubstrateCall::<T>::Polkadot(derivative_call))
-	}
-
-	pub fn get_call_as_subaccount_from_call_without_query_id(
+	pub fn get_call_as_subaccount_from_call(
 		self,
 		sub_account_index: u16,
 	) -> Result<SubstrateCall<T>, Error<T>> {
@@ -374,12 +313,13 @@ pub enum StakingCall<T: Config> {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum XcmCall {
-	#[codec(index = 2)]
-	ReserveTransferAssets(
+	#[codec(index = 8)]
+	LimitedReserveTransferAssets(
 		Box<VersionedMultiLocation>,
 		Box<VersionedMultiLocation>,
 		Box<VersionedMultiAssets>,
 		u32,
+		WeightLimit,
 	),
 }
 

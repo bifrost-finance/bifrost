@@ -666,7 +666,6 @@ impl orml_tokens::Config for Runtime {
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub RelayXcmBaseWeight: u64 = milli::<Runtime>(RelayCurrencyId::get()) as u64;
 	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -705,10 +704,10 @@ impl orml_xcm::Config for Runtime {
 
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
-	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub ContributionWeight: Weight =  Weight::from_parts(milli::<Runtime>(RelayCurrencyId::get()) as u64 , 1000_000u64);
 	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
 	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
-	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 4).into();
+	pub StatemineTransferWeight: Weight =  Weight::from_ref_time(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64);
 }
 
 impl xcm_interface::Config for Runtime {
@@ -724,4 +723,7 @@ impl xcm_interface::Config for Runtime {
 	type StatemineTransferFee = StatemineTransferFee;
 	type ContributionWeight = ContributionWeight;
 	type ContributionFee = UmpTransactFee;
+	type SalpHelper = Salp;
+	type ParachainId = SelfParaChainId;
+	type CallBackTimeOut = ConstU32<10>;
 }

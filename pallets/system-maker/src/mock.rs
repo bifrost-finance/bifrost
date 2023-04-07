@@ -31,14 +31,14 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{GenesisBuild, Nothing},
+	traits::{Everything, GenesisBuild, Nothing},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
-use sp_core::{hashing::blake2_256, H256};
+use sp_core::{hashing::blake2_256, ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{
@@ -47,7 +47,9 @@ use sp_runtime::{
 	},
 	AccountId32, SaturatedConversion,
 };
-use xcm::prelude::*;
+use xcm::{prelude::*, v3::Weight};
+use xcm_builder::FixedWeightBounds;
+use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -86,6 +88,7 @@ frame_support::construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 	}
 );
 
@@ -269,11 +272,15 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for SubstrateResponseManager {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
-	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
+	fn create_query_record(
+		_responder: &MultiLocation,
+		_call_back: Option<RuntimeCall>,
+		_timeout: u64,
+	) -> u64 {
 		Default::default()
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
@@ -283,6 +290,8 @@ impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseMana
 
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
@@ -399,6 +408,70 @@ where
 
 		Ok(amount)
 	}
+}
+
+parameter_types! {
+	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub const MaxInstructions: u32 = 100;
+	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+	type AssetClaims = PolkadotXcm;
+	type AssetTransactor = ();
+	type AssetTrap = PolkadotXcm;
+	type Barrier = ();
+	type RuntimeCall = RuntimeCall;
+	type IsReserve = ();
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
+	type OriginConverter = ();
+	type ResponseHandler = PolkadotXcm;
+	type SubscriptionService = PolkadotXcm;
+	type Trader = ();
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmSender = ();
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<64>;
+	type FeeManager = ();
+	type MessageExporter = ();
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
+	type AssetLocker = ();
+	type AssetExchanger = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+}
+
+impl pallet_xcm::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type UniversalLocation = UniversalLocation;
+	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmExecuteFilter = Nothing;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmReserveTransferFilter = Everything;
+	type XcmRouter = ();
+	type XcmTeleportFilter = Nothing;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = ConstU32<2>;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
+	type TrustedLockers = ();
+	type SovereignAccountOf = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 pub struct ExtBuilder {

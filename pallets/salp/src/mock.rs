@@ -26,7 +26,7 @@ use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
 	sp_std::marker::PhantomData,
-	traits::{EnsureOrigin, GenesisBuild, Get, Nothing},
+	traits::{EnsureOrigin, Everything, GenesisBuild, Get, Nothing},
 	weights::Weight,
 	PalletId,
 };
@@ -36,12 +36,15 @@ use node_primitives::{
 };
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 };
+use xcm::prelude::*;
+use xcm_builder::FixedWeightBounds;
+use xcm_executor::XcmExecutor;
 use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
@@ -72,6 +75,7 @@ construct_runtime!(
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Config<T>, Event<T>, Storage},
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 	}
 );
 
@@ -306,7 +310,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> RuntimeOrigin {
+	fn try_successful_origin() -> RuntimeOrigin {
 		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
 	}
 }
@@ -318,7 +322,11 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExecutor {
-	fn contribute(_index: ParaId, _value: Balance) -> Result<MessageId, DispatchError> {
+	fn contribute(
+		_contributer: AccountId,
+		_index: ParaId,
+		_value: Balance,
+	) -> Result<MessageId, DispatchError> {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {
@@ -331,6 +339,8 @@ impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExec
 impl salp::Config for Test {
 	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeOrigin = RuntimeOrigin;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
@@ -350,6 +360,70 @@ impl salp::Config for Test {
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type ParachainId = ParaInfo;
+}
+
+parameter_types! {
+	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub const MaxInstructions: u32 = 100;
+	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+	type AssetClaims = PolkadotXcm;
+	type AssetTransactor = ();
+	type AssetTrap = PolkadotXcm;
+	type Barrier = ();
+	type RuntimeCall = RuntimeCall;
+	type IsReserve = ();
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
+	type OriginConverter = ();
+	type ResponseHandler = PolkadotXcm;
+	type SubscriptionService = PolkadotXcm;
+	type Trader = ();
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmSender = ();
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<64>;
+	type FeeManager = ();
+	type MessageExporter = ();
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
+	type AssetLocker = ();
+	type AssetExchanger = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+}
+
+impl pallet_xcm::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type UniversalLocation = UniversalLocation;
+	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmExecuteFilter = Nothing;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmReserveTransferFilter = Everything;
+	type XcmRouter = ();
+	type XcmTeleportFilter = Nothing;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = ConstU32<2>;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
+	type TrustedLockers = ();
+	type SovereignAccountOf = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 pub struct ParaInfo;
