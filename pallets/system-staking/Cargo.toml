@@ -33,7 +33,7 @@ sp-io = { default-features = false, version = "7.0.0", git = "https://github.com
 pallet-balances = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 orml-currencies = "0.4.1-dev"
 orml-tokens = "0.4.1-dev"
-hex-literal = "0.3.4"
+hex-literal = "0.4.1"
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
