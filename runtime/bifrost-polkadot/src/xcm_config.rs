@@ -151,7 +151,19 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					if ((id == parachains::moonbeam::ID) &&
 						(index == parachains::moonbeam::PALLET_ID)) =>
 					Some(Token2(GLMR_TOKEN_ID)),
-
+				X2(Parachain(id), GeneralKey { data, length })
+					if (id == u32::from(ParachainInfo::parachain_id())) =>
+				{
+					let key = &data[..length as usize];
+					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
+						match currency_id {
+							Native(BNC) => Some(currency_id),
+							_ => None,
+						}
+					} else {
+						None
+					}
+				},
 				_ => None,
 			},
 			MultiLocation { parents, interior } if parents == 0 => match interior {
