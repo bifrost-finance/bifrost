@@ -80,15 +80,15 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo
-		+ MaxEncodedLen
-		+ Ord
-		+ Default;
+			+ Eq
+			+ PartialEq
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Debug
+			+ scale_info::TypeInfo
+			+ MaxEncodedLen
+			+ Ord
+			+ Default;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = Self::CurrencyId>;
 
