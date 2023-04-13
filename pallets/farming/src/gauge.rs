@@ -381,12 +381,12 @@ where
 	pub fn get_farming_rewards(
 		who: &T::AccountId,
 		pid: PoolId,
-	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
+	) -> Result<Vec<(T::CurrencyId, BalanceOf<T>)>, DispatchError> {
 		let share_info =
 			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
 		let pool_info = PoolInfos::<T>::get(pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 		let total_shares = U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
-		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
+		let mut result_vec = Vec::<(T::CurrencyId, BalanceOf<T>)>::new();
 
 		pool_info.rewards.iter().try_for_each(
 			|(reward_currency, (total_reward, total_withdrawn_reward))| -> DispatchResult {
@@ -421,9 +421,9 @@ where
 	pub fn get_gauge_rewards(
 		who: &T::AccountId,
 		pid: PoolId,
-	) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, DispatchError> {
+	) -> Result<Vec<(T::CurrencyId, BalanceOf<T>)>, DispatchError> {
 		let pool_info = PoolInfos::<T>::get(pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-		let mut result_vec = Vec::<(CurrencyId, BalanceOf<T>)>::new();
+		let mut result_vec = Vec::<(T::CurrencyId, BalanceOf<T>)>::new();
 
 		match pool_info.gauge {
 			None => (),
