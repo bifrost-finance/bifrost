@@ -88,7 +88,7 @@ pub mod pallet {
 		+ scale_info::TypeInfo
 		+ MaxEncodedLen
 		+ Ord
-		+ std::default::Default;
+		+ Default;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = Self::CurrencyId>;
 
