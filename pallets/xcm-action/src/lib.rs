@@ -22,23 +22,26 @@ use cumulus_pallet_xcm::Origin as CumulusOrigin;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
+	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::Get,
 	PalletId, RuntimeDebug,
 };
-use frame_system::Config as SystemConfig;
+use frame_system::{ensure_signed, pallet_prelude::OriginFor, Config as SystemConfig};
 use node_primitives::{CurrencyId, CurrencyIdMapping, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160};
 use sp_runtime::traits::BlakeTwo256;
 use sp_std::vec;
 use xcm::{
 	latest::prelude::*,
-	v3::{MultiLocation, Weight},
+	v3::MultiLocation,
 };
+use zenlink_protocol::AssetBalance;
 
 pub mod weights;
 pub use weights::WeightInfo;
@@ -85,8 +88,9 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::{ValueQuery, *};
-	use frame_system::pallet_prelude::*;
+	use frame_support::{
+		pallet_prelude::{ValueQuery, *},
+	};
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -137,25 +141,35 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		AddWhitelistAccountId {
 			target_chain: TargetChain,
-			account_id: AccountIdOf<T>,
+			evm_contract_account_id: AccountIdOf<T>,
 		},
 		RemoveWhitelistAccountId {
 			target_chain: TargetChain,
-			account_id: AccountIdOf<T>,
+			evm_contract_account_id: AccountIdOf<T>,
 		},
 		XcmMint {
-			caller: AccountIdOf<T>,
+			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			target_chain: TargetChain,
-			receiver: H160,
+		},
+		XcmMintFailed {
+			evm_caller: H160,
+			currency_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+			target_chain: TargetChain,
 		},
 		XcmSwap {
-			caller: AccountIdOf<T>,
+			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
 			target_chain: TargetChain,
-			receiver: H160,
+		},
+		XcmSwapFailed {
+			evm_caller: H160,
+			currency_id_in: CurrencyIdOf<T>,
+			currency_id_out: CurrencyIdOf<T>,
+			target_chain: TargetChain,
 		},
 	}
 
@@ -175,6 +189,7 @@ pub mod pallet {
 		VTokenMintError,
 		AccountIdAlreadyInWhitelist,
 		AccountIdNotInWhitelist,
+		ExceededWhitelistMaxNumber,
 	}
 
 	#[pallet::storage]
@@ -194,25 +209,27 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
+			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain,
-			receiver: H160,
 		) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
-			let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
-			ensure!(whitelist_account_ids.contains(&caller), Error::<T>::AccountIdNotInWhitelist);
+			Self::ensure_singer_on_whitelist(origin, target_chain)?;
 
 			let mut result = true;
-			let receiver_account_id = Self::h160_to_account_id(receiver);
-			let token_amount = T::MultiCurrency::free_balance(currency_id, &caller);
-			match T::VtokenMintingInterface::mint(caller.clone(), currency_id, token_amount) {
+			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let token_amount = T::MultiCurrency::free_balance(currency_id, &evm_caller_account_id);
+			match T::VtokenMintingInterface::mint(
+				evm_caller_account_id.clone(),
+				currency_id,
+				token_amount,
+			) {
 				Ok(_) => {},
 				Err(_) => {
 					Self::transfer_assets_to_astr(
-						caller.clone(),
+						evm_caller_account_id.clone(),
 						currency_id,
 						token_amount,
-						receiver_account_id.clone(),
+						evm_caller_account_id.clone(),
 					)?;
 					result = false;
 				},
@@ -222,22 +239,29 @@ pub mod pallet {
 				// success
 				let vtoken_id = T::VtokenMintingInterface::vtoken_id(currency_id)
 					.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
-				let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &caller);
+				let vtoken_amount =
+					T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
 
 				Self::match_target_chain(
-					caller.clone(),
+					evm_caller_account_id.clone(),
 					vtoken_id,
 					vtoken_amount,
 					target_chain,
-					receiver_account_id,
+					evm_caller_account_id,
 				)?;
 
 				Self::deposit_event(Event::XcmMint {
-					caller,
+					evm_caller,
 					currency_id,
 					token_amount,
 					target_chain,
-					receiver,
+				});
+			} else {
+				Self::deposit_event(Event::XcmMintFailed {
+					evm_caller,
+					currency_id,
+					token_amount,
+					target_chain,
 				});
 			}
 
@@ -249,14 +273,13 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::swap())]
 		pub fn swap(
 			origin: OriginFor<T>,
+			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
+			currency_id_out_min: AssetBalance,
 			target_chain: TargetChain,
-			receiver: H160,
 		) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
-			let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
-			ensure!(whitelist_account_ids.contains(&caller), Error::<T>::AccountIdNotInWhitelist);
+			Self::ensure_singer_on_whitelist(origin, target_chain)?;
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(currency_id_in, T::ParachainId::get().into())
@@ -266,23 +289,24 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
 
 			let mut result = true;
-			let receiver_account_id = Self::h160_to_account_id(receiver);
-			let currency_id_in_amount = T::MultiCurrency::free_balance(currency_id_in, &caller);
+			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let currency_id_in_amount =
+				T::MultiCurrency::free_balance(currency_id_in, &evm_caller_account_id);
 			let path = vec![in_asset_id, out_asset_id];
 			match T::DexOperator::inner_swap_exact_assets_for_assets(
-				&caller,
+				&evm_caller_account_id,
 				currency_id_in_amount.saturated_into(),
-				0,
+				currency_id_out_min,
 				&path,
-				&caller,
+				&evm_caller_account_id,
 			) {
 				Ok(_) => {},
 				Err(_) => {
 					Self::transfer_assets_to_astr(
-						caller.clone(),
+						evm_caller_account_id.clone(),
 						currency_id_in,
 						currency_id_in_amount,
-						receiver_account_id.clone(),
+						evm_caller_account_id.clone(),
 					)?;
 					result = false;
 				},
@@ -290,21 +314,27 @@ pub mod pallet {
 
 			if result {
 				let currency_id_out_amount =
-					T::MultiCurrency::free_balance(currency_id_out, &caller);
+					T::MultiCurrency::free_balance(currency_id_out, &evm_caller_account_id);
 				Self::match_target_chain(
-					caller.clone(),
+					evm_caller_account_id.clone(),
 					currency_id_out,
 					currency_id_out_amount,
 					target_chain,
-					receiver_account_id,
+					evm_caller_account_id,
 				)?;
 
 				Self::deposit_event(Event::XcmSwap {
-					caller,
+					evm_caller,
 					currency_id_in,
 					currency_id_out,
 					target_chain,
-					receiver,
+				});
+			} else {
+				Self::deposit_event(Event::XcmSwapFailed {
+					evm_caller,
+					currency_id_in,
+					currency_id_out,
+					target_chain,
 				});
 			}
 			Ok(().into())
@@ -314,22 +344,24 @@ pub mod pallet {
 		pub fn add_whitelist(
 			origin: OriginFor<T>,
 			target_chain: TargetChain,
-			account_id: T::AccountId,
+			evm_contract_account_id: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain).to_vec();
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
 
 			ensure!(
-				!whitelist_account_ids.contains(&account_id),
+				!whitelist_account_ids.contains(&evm_contract_account_id),
 				Error::<T>::AccountIdAlreadyInWhitelist
 			);
-			whitelist_account_ids.push(account_id.clone());
-			WhitelistAccountId::<T>::insert(
+			whitelist_account_ids
+				.try_push(evm_contract_account_id.clone())
+				.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
+			WhitelistAccountId::<T>::insert(target_chain, whitelist_account_ids);
+			Self::deposit_event(Event::AddWhitelistAccountId {
 				target_chain,
-				BoundedVec::try_from(whitelist_account_ids).unwrap(),
-			);
-			Self::deposit_event(Event::AddWhitelistAccountId { target_chain, account_id });
+				evm_contract_account_id,
+			});
 			Ok(().into())
 		}
 		#[pallet::call_index(3)]
@@ -337,28 +369,41 @@ pub mod pallet {
 		pub fn remove_whitelist(
 			origin: OriginFor<T>,
 			target_chain: TargetChain,
-			account_id: T::AccountId,
+			evm_contract_account_id: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain).to_vec();
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
 
 			ensure!(
-				whitelist_account_ids.contains(&account_id),
+				whitelist_account_ids.contains(&evm_contract_account_id),
 				Error::<T>::AccountIdNotInWhitelist
 			);
-			whitelist_account_ids.retain(|x| *x != account_id);
-			WhitelistAccountId::<T>::insert(
+			whitelist_account_ids.retain(|x| *x != evm_contract_account_id);
+			WhitelistAccountId::<T>::insert(target_chain, whitelist_account_ids);
+			Self::deposit_event(Event::RemoveWhitelistAccountId {
 				target_chain,
-				BoundedVec::try_from(whitelist_account_ids).unwrap(),
-			);
-			Self::deposit_event(Event::RemoveWhitelistAccountId { target_chain, account_id });
+				evm_contract_account_id,
+			});
 			Ok(().into())
 		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
+	fn ensure_singer_on_whitelist(
+		singer: OriginFor<T>,
+		target_chain: TargetChain,
+	) -> DispatchResult {
+		let evm_contract_account_id = ensure_signed(singer)?;
+		let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
+		ensure!(
+			whitelist_account_ids.contains(&evm_contract_account_id),
+			Error::<T>::AccountIdNotInWhitelist
+		);
+		Ok(())
+	}
+
 	fn transfer_assets_to_astr(
 		caller: T::AccountId,
 		currency_id: CurrencyIdOf<T>,
@@ -373,13 +418,7 @@ impl<T: Config> Pallet<T> {
 			),
 		};
 
-		T::XcmTransfer::transfer(
-			caller,
-			currency_id,
-			amount,
-			dest,
-			Limited(Weight::from_ref_time(5_000_000_000)),
-		)?;
+		T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 		Ok(())
 	}
 
