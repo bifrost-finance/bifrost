@@ -161,6 +161,7 @@ ord_parameter_types! {
 
 impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type TreasuryAccount = TreasuryAccount;
