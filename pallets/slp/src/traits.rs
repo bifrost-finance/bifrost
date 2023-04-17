@@ -19,7 +19,7 @@ use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
 use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
-use xcm::latest::Weight as XcmWeight;
+use xcm::v3::Weight as XcmWeight;
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -236,25 +236,30 @@ pub trait XcmBuilder<Balance, ChainCallType, Error> {
 		extra_fee: Balance,
 		weight: XcmWeight,
 		currency_id: CurrencyId,
+		query_id: Option<QueryId>,
 		// response_back_location: AccountId
 	) -> Result<Xcm<()>, Error>;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
-pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
+pub trait QueryResponseManager<QueryId, AccountId, BlockNumber, RuntimeCall> {
 	// If the query exists and we've already got the Response, then True is returned. Otherwise,
 	// False is returned.
 	fn get_query_response_record(query_id: QueryId) -> bool;
-	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
+	fn create_query_record(
+		responder: &AccountId,
+		call_back: Option<RuntimeCall>,
+		timeout: BlockNumber,
+	) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
 }
 
 pub trait OnRefund<AccountId, CurrencyId, Balance> {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> XcmWeight;
+	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64;
 }
 
 impl<AccountId, CurrencyId, Balance> OnRefund<AccountId, CurrencyId, Balance> for () {
-	fn on_refund(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> XcmWeight {
+	fn on_refund(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> u64 {
 		0
 	}
 }

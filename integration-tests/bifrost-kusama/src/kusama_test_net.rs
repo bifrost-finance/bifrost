@@ -19,13 +19,12 @@
 //! Relay chain and parachains emulation.
 
 use bifrost_runtime_common::dollar;
-use cumulus_primitives_core::ParaId;
 use frame_support::{traits::GenesisBuild, weights::Weight};
-use node_primitives::TokenSymbol::KSM;
-use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
+use pallet_staking::Forcing;
+use polkadot_primitives::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::traits::AccountIdConversion;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use sp_runtime::Perbill;
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, ParaId};
 
 use crate::kusama_integration_tests::*;
 
@@ -48,26 +47,6 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
-	pub struct SalpTest {
-		Runtime = Runtime,
-		RuntimeOrigin = RuntimeOrigin,
-		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
-		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext_salp(2001),
-	}
-}
-
-decl_test_parachain! {
-	pub struct Sibling {
-		Runtime = Runtime,
-		RuntimeOrigin = RuntimeOrigin,
-		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
-		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
-		new_ext = para_ext(2000),
-	}
-}
-
-decl_test_parachain! {
 	pub struct Statemine {
 		Runtime = statemine_runtime::Runtime,
 		RuntimeOrigin = statemine_runtime::RuntimeOrigin,
@@ -83,7 +62,6 @@ decl_test_network! {
 		parachains = vec![
 			(1000, Statemine),
 			(2001, Bifrost),
-			(2000, Sibling),
 		],
 	}
 }
@@ -133,15 +111,38 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
+			(AccountId::from(ALICE), 100 * KSM_DECIMALS),
+			(AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
+			(AccountId::from(KUSAMA_BOB_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
+			(ParaId::from(2001u32).into_account_truncating(), 2 * KSM_DECIMALS),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	pallet_staking::GenesisConfig::<Runtime> {
+		validator_count: 50,
+		minimum_validator_count: 2,
+		invulnerables: vec![
+			AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT),
+			AccountId::from(KUSAMA_BOB_STASH_ACCOUNT),
+		],
+		stakers: vec![
 			(
-				AccountId::from(ALICE),
-				2002 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM)),
+				AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT),
+				AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT),
+				100 * KSM_DECIMALS,
+				kusama_runtime::StakerStatus::Validator,
 			),
 			(
-				ParaId::from(2001u32).into_account_truncating(),
-				2 * dollar::<bifrost_kusama_runtime::Runtime>(CurrencyId::Token(KSM)),
+				AccountId::from(KUSAMA_BOB_STASH_ACCOUNT),
+				AccountId::from(KUSAMA_BOB_STASH_ACCOUNT),
+				100 * KSM_DECIMALS,
+				kusama_runtime::StakerStatus::Validator,
 			),
 		],
+		force_era: Forcing::ForceNone,
+		slash_reward_fraction: Perbill::from_percent(10),
+		..Default::default()
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -153,7 +154,7 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(3) },
 		&mut t,
 	)
 	.unwrap();
@@ -165,26 +166,16 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilder::default()
-		.balances(vec![(
-			AccountId::from(ALICE),
-			RelayCurrencyId::get(),
-			10 * dollar::<Runtime>(RelayCurrencyId::get()),
-		)])
-		.parachain_id(parachain_id)
-		.build()
-}
-pub fn para_ext_salp(parachain_id: u32) -> sp_io::TestExternalities {
-	ExtBuilder::default()
 		.balances(vec![
 			(
 				AccountId::from(ALICE),
 				RelayCurrencyId::get(),
-				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+				10 * dollar::<Runtime>(RelayCurrencyId::get()),
 			),
 			(
 				AccountId::from(BOB),
 				RelayCurrencyId::get(),
-				10 * dollar::<bifrost_kusama_runtime::Runtime>(RelayCurrencyId::get()),
+				10 * dollar::<Runtime>(RelayCurrencyId::get()),
 			),
 		])
 		.parachain_id(parachain_id)

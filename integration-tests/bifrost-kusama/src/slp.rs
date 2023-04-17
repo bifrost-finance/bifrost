@@ -19,162 +19,197 @@
 //! Cross-chain transfer tests within Kusama network.
 
 /*
+
 fail_validators_by_delegator_query_response
 confirm_validators_by_delegator_query_response
 fail_delegator_ledger_query_response
 confirm_delegator_ledger_query_response
+
 remove_supplement_fee_account_from_whitelist
 add_supplement_fee_account_to_whitelist
+supplement_fee_reserve
+
 set_ongoing_time_unit_update_interval
+update_ongoing_time_unit
+
 set_currency_tune_exchange_rate_limit
 set_hosting_fees
 set_currency_delays
 set_minimums_and_maximums
+
 set_delegator_ledger
 set_validators_by_delegator
-remove_validator
-add_validator
-remove_delegator
-add_delegator
 set_fee_source
 set_operate_origin
 set_xcm_dest_weight_and_fee
+
+remove_validator
+add_validator
+
+initialize_delegator
+remove_delegator
+add_delegator
+
 charge_host_fee_and_tune_vtoken_exchange_rate
-supplement_fee_reserve
 refund_currency_due_unbond
-update_ongoing_time_unit
+
 decrease_token_pool
 increase_token_pool
+
 transfer_to
 transfer_back
+
 chill
 liquidize
 payout
+
 redelegate
 undelegate
 delegate
+
 rebond
 unbond_all
 unbond
 bond_extra
 bond
-initialize_delegator
+
+
+bond/unbond/bond_extra/unbond_all/rebond/chill/liquidize  confirm_delegator_ledger_query_response
+delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
+
 */
 
 #![cfg(test)]
-
-use bifrost_polkadot_runtime::PolkadotXcm;
+use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
 use bifrost_slp::{
-	primitives::{
-		SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
-	},
-	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
-	ValidatorsByDelegatorUpdateEntry, XcmOperation,
+	primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation,
 };
-use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{assert_ok, BoundedVec};
 use node_primitives::TimeUnit;
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
-use pallet_xcm::QueryStatus;
-use polkadot_parachain::primitives::Id as ParaId;
-use sp_runtime::testing::H256;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use sp_runtime::Permill;
+use xcm::{prelude::*, v3::Weight, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
-const SUBACCOUNT_0_32: [u8; 32] =
-	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
-const SUBACCOUNT_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: SUBACCOUNT_0_32 }) };
-const ENTRANCE_ACCOUNT_32: [u8; 32] =
+const ENTRANCE_ACCOUNT: [u8; 32] =
 	hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"];
-const ENTRANCE_ACCOUNT_LOCATION: MultiLocation = MultiLocation {
+const BIFROST_TREASURY_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
+const KSM_DELEGATOR_0_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
+
+const EXIT_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"];
+
+const BIFROST_TREASURY_MULTILOCATION: MultiLocation = MultiLocation {
 	parents: 0,
-	interior: X1(AccountId32 { network: Any, id: ENTRANCE_ACCOUNT_32 }),
+	interior: X1(AccountId32 { network: None, id: BIFROST_TREASURY_ACCOUNT }),
 };
-const VALIDATOR_0_32: [u8; 32] =
-	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
-const VALIDATOR_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_0_32 }) };
-const VALIDATOR_1_32: [u8; 32] =
-	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
-const VALIDATOR_1_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: VALIDATOR_1_32 }) };
+const KSM_DELEGATOR_0_MULTILOCATION: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X1(AccountId32 { network: None, id: KSM_DELEGATOR_0_ACCOUNT }),
+};
+
+const ENTRANCE_ACCOUNT_MULTILOCATION: MultiLocation =
+	MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: ENTRANCE_ACCOUNT }) };
+
+const EXIT_ACCOUNT_MULTILOCATION: MultiLocation =
+	MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: EXIT_ACCOUNT }) };
+
+const KUSAMA_ALICE_MULTILOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: ALICE }) };
+const KUSAMA_ALICE_STASH_MULTILOCATION: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X1(AccountId32 { network: None, id: KUSAMA_ALICE_STASH_ACCOUNT }),
+};
+const KUSAMA_BOB_STASH_MULTILOCATION: MultiLocation = MultiLocation {
+	parents: 1,
+	interior: X1(AccountId32 { network: None, id: KUSAMA_BOB_STASH_ACCOUNT }),
+};
 
 /// ****************************************************
 /// *********  Preparation section  ********************
 /// ****************************************************
 
-// parachain 2001 subaccount index 0
-pub fn subaccount_0() -> AccountId {
-	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
-	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"].into()
-}
-pub fn validator_0() -> AccountId {
-	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
-	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"].into()
-}
-pub fn validator_1() -> AccountId {
-	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
-	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"].into()
-}
-
-pub fn para_account_2001() -> AccountId {
-	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
-	//70617261d1070000000000000000000000000000000000000000000000000000
-	ParaId::from(2001).into_account_truncating()
-}
-
-pub fn multi_hash_0() -> H256 {
-	<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode())
-}
-
-pub fn multi_hash_1() -> H256 {
-	<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_1_LOCATION.encode())
-}
-
 // Preparation: register sub-account index 0.
-fn register_subaccount_index_0() {
+fn slp_setup() {
+	cross_ksm_to_bifrost(BIFROST_TREASURY_ACCOUNT, 10000 * KSM_DECIMALS);
+	// cross_ksm_to_bifrost(ENTRANCE_ACCOUNT, 10000 * KSM_DECIMALS);
+	cross_ksm_to_bifrost(ALICE, 10000 * KSM_DECIMALS);
+	cross_ksm_to_bifrost(BOB, 10000 * KSM_DECIMALS);
+
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::Balances::set_balance(
+			kusama_runtime::RuntimeOrigin::root(),
+			sp_runtime::MultiAddress::Id(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			10000 * KSM_DECIMALS,
+			0,
+		));
+	});
+
 	Bifrost::execute_with(|| {
+		assert_ok!(Balances::set_balance(
+			RuntimeOrigin::root(),
+			sp_runtime::MultiAddress::Id(AccountId::from(BIFROST_TREASURY_ACCOUNT)),
+			10000 * BNC_DECIMALS,
+			0,
+		));
+	});
+
+	vksm_vtoken_minting_setup();
+
+	Bifrost::execute_with(|| {
+		// set operate origin to be ALICE for vksm
+		assert_ok!(Slp::set_operate_origin(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Some(AccountId::from(ALICE))
+		));
 		// Set OngoingTimeUnitUpdateInterval as 1/3 Era(1800 blocks per Era, 12 seconds per
 		// block)
 		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
-			Some(600)
+			Some(1)
 		));
-
-		System::set_block_number(600);
-
 		// Initialize ongoing timeunit as 0.
 		assert_ok!(Slp::update_ongoing_time_unit(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			TimeUnit::Era(0)
 		));
-
-		// Initialize currency delays.
-		let delay =
-			Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
-		assert_ok!(Slp::set_currency_delays(
+		assert_ok!(Slp::set_ongoing_time_unit_update_interval(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
-			Some(delay)
+			Some(600)
+		));
+
+		// set fee_source for ksm to be treasury
+		assert_ok!(Slp::set_fee_source(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Some((BIFROST_TREASURY_MULTILOCATION, 1 * KSM_DECIMALS))
+		));
+		// set fee_source for ksm to be treasury
+		assert_ok!(Slp::set_fee_source(
+			RuntimeOrigin::root(),
+			NativeCurrencyId::get(),
+			Some((BIFROST_TREASURY_MULTILOCATION, 1 * BNC_DECIMALS))
 		));
 
 		let mins_and_maxs = MinimumsMaximums {
-			delegator_bonded_minimum: 100_000_000_000,
-			bond_extra_minimum: 0,
-			unbond_minimum: 0,
-			rebond_minimum: 0,
+			delegator_bonded_minimum: KSM_DECIMALS / 10,
+			bond_extra_minimum: KSM_DECIMALS / 1000,
+			unbond_minimum: KSM_DECIMALS / 1000,
+			rebond_minimum: KSM_DECIMALS / 1000,
 			unbond_record_maximum: 32,
-			validators_back_maximum: 36,
-			delegator_active_staking_maximum: 200_000_000_000_000,
-			validators_reward_maximum: 0,
-			delegation_amount_minimum: 0,
+			validators_back_maximum: 24,
+			delegator_active_staking_maximum: 80000 * KSM_DECIMALS,
+			validators_reward_maximum: 256,
+			delegation_amount_minimum: KSM_DECIMALS / 1000,
 			delegators_maximum: 100,
 			validators_maximum: 300,
 		};
@@ -186,12 +221,37 @@ fn register_subaccount_index_0() {
 			Some(mins_and_maxs)
 		));
 
-		// First to setup index-multilocation relationship of subaccount_0
-		assert_ok!(Slp::add_delegator(
+		// Initialize currency delays.
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: TimeUnit::Era(0) };
+		assert_ok!(Slp::set_currency_delays(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
-			0u16,
-			Box::new(SUBACCOUNT_0_LOCATION),
+			Some(delay)
+		));
+
+		assert_ok!(Slp::set_hosting_fees(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Some((Permill::from_parts(1000), BIFROST_TREASURY_MULTILOCATION))
+		));
+
+		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Some((10, Permill::from_parts(1000)))
+		));
+
+		// add Alice and Bob to validators
+		assert_ok!(Slp::add_validator(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Box::new(KUSAMA_ALICE_STASH_MULTILOCATION),
+		));
+		assert_ok!(Slp::add_validator(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			Box::new(KUSAMA_BOB_STASH_MULTILOCATION),
 		));
 
 		// Register Operation weight and fee
@@ -199,351 +259,380 @@ fn register_subaccount_index_0() {
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferTo,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Bond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::BondExtra,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Unbond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Rebond,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Delegate,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Payout,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Liquidize,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Chill,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
 
 		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::TransferBack,
-			Some((20_000_000_000, 10_000_000_000)),
+			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 		));
+
+		// initialize two delegators
+		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::root(), RelayCurrencyId::get(), None));
 	});
 }
 
-fn register_delegator_ledger() {
+fn vksm_vtoken_minting_setup() {
 	Bifrost::execute_with(|| {
-		let sb_ledger = SubstrateLedger {
-			account: SUBACCOUNT_0_LOCATION,
-			total: dollar::<Runtime>(RelayCurrencyId::get()),
-			active: dollar::<Runtime>(RelayCurrencyId::get()),
-			unlocking: vec![],
-		};
-		let ledger = Ledger::Substrate(sb_ledger);
-
-		// Set delegator ledger
-		assert_ok!(Slp::set_delegator_ledger(
+		// Set the vtoken-minting mint and redeem fee rate to 0.1% with origin root. This is for all
+		// tokens, not just vksm.
+		assert_ok!(VtokenMinting::set_fees(
+			RuntimeOrigin::root(),
+			Permill::from_parts(1000),
+			Permill::from_parts(1000),
+		));
+		// set the number of fast-redeem user unlocking records to be 10 per block. This is for all
+		// tokens, not just vksm.
+		assert_ok!(VtokenMinting::set_hook_iteration_limit(RuntimeOrigin::root(), 10));
+		// set vksm unlock duration to be 28 eras
+		assert_ok!(VtokenMinting::set_unlock_duration(
 			RuntimeOrigin::root(),
 			RelayCurrencyId::get(),
-			Box::new(SUBACCOUNT_0_LOCATION),
-			Box::new(Some(ledger))
+			TimeUnit::Era(28)
+		));
+		// set vksm minimum mint amount to be 1 KSM
+		assert_ok!(VtokenMinting::set_minimum_mint(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			1 * KSM_DECIMALS
+		));
+		// set vksm minimum redeem amount to be 0.1 KSM
+		assert_ok!(VtokenMinting::set_minimum_redeem(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			KSM_DECIMALS / 10
+		));
+		// add vksm to be a supported rebond token
+		assert_ok!(VtokenMinting::add_support_rebond_token(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+		));
+		// set vksm starting fast-redeem timeunit to be era 0
+		assert_ok!(VtokenMinting::set_min_time_unit(
+			RuntimeOrigin::root(),
+			RelayCurrencyId::get(),
+			TimeUnit::Era(0)
+		));
+	})
+}
+
+fn cross_ksm_to_bifrost(to: [u8; 32], amount: u128) {
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::Balances::set_balance(
+			kusama_runtime::RuntimeOrigin::root(),
+			sp_runtime::MultiAddress::Id(AccountId::from(to)),
+			amount,
+			0,
+		));
+		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+			kusama_runtime::RuntimeOrigin::signed(to.into()),
+			Box::new(VersionedMultiLocation::V3(X1(Parachain(2001)).into())),
+			Box::new(VersionedMultiLocation::V3(
+				X1(Junction::AccountId32 { id: to, network: None }).into()
+			)),
+			Box::new(VersionedMultiAssets::V3((Here, amount).into())),
+			0,
 		));
 	});
 }
 
 #[test]
-fn register_validators() {
+fn vtoken_minting() {
 	sp_io::TestExternalities::default().execute_with(|| {
+		slp_setup();
 		Bifrost::execute_with(|| {
-			let mut valis = vec![];
-
-			let mins_and_maxs = MinimumsMaximums {
-				delegator_bonded_minimum: 100_000_000_000,
-				bond_extra_minimum: 0,
-				unbond_minimum: 0,
-				rebond_minimum: 0,
-				unbond_record_maximum: 32,
-				validators_back_maximum: 36,
-				delegator_active_staking_maximum: 200_000_000_000_000,
-				validators_reward_maximum: 0,
-				delegation_amount_minimum: 0,
-				delegators_maximum: 100,
-				validators_maximum: 300,
-			};
-
-			// Set minimums and maximums
-			assert_ok!(Slp::set_minimums_and_maximums(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Some(mins_and_maxs)
+			println!(
+				"{:?}",
+				Currencies::free_balance(
+					CurrencyId::VToken(TokenSymbol::KSM),
+					&AccountId::from(ALICE)
+				)
+			);
+			println!(
+				"{:?}",
+				Currencies::free_balance(
+					CurrencyId::Token(TokenSymbol::KSM),
+					&AccountId::from(ALICE)
+				)
+			);
+			assert_ok!(VtokenMinting::mint(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				CurrencyId::Token(TokenSymbol::KSM),
+				100 * KSM_DECIMALS
 			));
-
-			// Set delegator ledger
-			assert_ok!(Slp::add_validator(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(VALIDATOR_0_LOCATION),
-			));
-
-			// The storage is reordered by hash. So we need to adjust the push order here.
-			valis.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-			valis.push((VALIDATOR_0_LOCATION, multi_hash_0()));
-
-			// Set delegator ledger
-			assert_ok!(Slp::add_validator(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(VALIDATOR_1_LOCATION),
-			));
-
-			assert_eq!(Slp::get_validators(RelayCurrencyId::get()), Some(valis));
-		});
-	})
+			// alice account should have 99.9 vKSM
+			assert_eq!(
+				Currencies::free_balance(
+					CurrencyId::VToken(TokenSymbol::KSM),
+					&AccountId::from(ALICE)
+				),
+				99900000000000
+			);
+			// TODO : entrance_account should have 100 KSM
+			assert_eq!(
+				Currencies::free_balance(
+					CurrencyId::Token(TokenSymbol::KSM),
+					&AccountId::from(ENTRANCE_ACCOUNT)
+				),
+				99900000000000
+			)
+		})
+	});
 }
 
-// Preparation: transfer 1 KSM from Alice in Kusama to Bob in Bifrost.
-// Bob has a balance of
 #[test]
-fn transfer_2_ksm_to_entrance_account_in_bifrost() {
+fn transfer_to() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		let para_account_2001 = para_account_2001();
+		slp_setup();
 
-		let entrance_account_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-
-		// Cross-chain transfer some KSM to Bob account in Bifrost
 		KusamaNet::execute_with(|| {
-			assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new(VersionedMultiLocation::V1(X1(Parachain(2001)).into())),
-				Box::new(VersionedMultiLocation::V1(
-					X1(Junction::AccountId32 { id: entrance_account_32, network: NetworkId::Any })
-						.into()
-				)),
-				Box::new(VersionedMultiAssets::V1(
-					(Here, 2 * dollar::<Runtime>(RelayCurrencyId::get())).into()
-				)),
-				0,
-			));
-
-			// predefined 2 dollars + 2 dollar::<Runtime> from cross-chain transfer = 3 dollars
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				4 * dollar::<Runtime>(RelayCurrencyId::get())
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				10000 * KSM_DECIMALS
 			);
 		});
 
 		Bifrost::execute_with(|| {
-			//  entrance_account get the cross-transferred 2 dollar::<Runtime> KSM minus transaction
-			// fee.
-			assert_eq!(
-				Tokens::free_balance(RelayCurrencyId::get(), &entrance_account_32.into()),
-				1999919176000
-			);
-		});
-	})
-}
-
-// Preparation: transfer 1 KSM from Alice in Kusama to Bob in Bifrost.
-// Bob has a balance of
-#[test]
-fn transfer_2_ksm_to_subaccount_in_kusama() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		let subaccount_0 = subaccount_0();
-
-		KusamaNet::execute_with(|| {
-			assert_ok!(kusama_runtime::Balances::transfer(
-				kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-				MultiAddress::Id(subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
+			// Bond 50 ksm for sub-account index 0
+			assert_ok!(VtokenMinting::mint(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				CurrencyId::Token(TokenSymbol::KSM),
+				100 * KSM_DECIMALS
 			));
 
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-		});
-	})
-}
-
-#[test]
-fn locally_bond_subaccount_0_1ksm_in_kusama() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
-
-		KusamaNet::execute_with(|| {
-			assert_ok!(kusama_runtime::Staking::bond(
-				kusama_runtime::RuntimeOrigin::signed(subaccount_0.clone()),
-				MultiAddress::Id(subaccount_0.clone()),
-				dollar::<Runtime>(RelayCurrencyId::get()),
-				pallet_staking::RewardDestination::<AccountId>::Staked,
-			));
-
-			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
-				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-				})
-			);
-		});
-	})
-}
-
-/// ****************************************************
-/// *********  Test section  ********************
-/// ****************************************************
-
-#[test]
-fn transfer_to_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		register_subaccount_index_0();
-		transfer_2_ksm_to_entrance_account_in_bifrost();
-		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
-		let para_account_2001 = para_account_2001();
-
-		Bifrost::execute_with(|| {
-			// We use transfer_to to transfer some KSM to subaccount_0
 			assert_ok!(Slp::transfer_to(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(ENTRANCE_ACCOUNT_LOCATION),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				dollar::<Runtime>(RelayCurrencyId::get()),
+				Box::new(ENTRANCE_ACCOUNT_MULTILOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
 			));
+
+			assert_eq!(
+				Currencies::free_balance(
+					CurrencyId::Token(TokenSymbol::KSM),
+					&AccountId::from(ENTRANCE_ACCOUNT)
+				),
+				49900000000000
+			);
 		});
 
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				3 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			// Why not the transferred amount reach the sub-account?
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999895428355
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				10049999909712564
 			);
 		});
 	})
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
+fn transfer_back() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		slp_setup();
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+			System::reset_events();
+			assert_eq!(
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				10000 * KSM_DECIMALS
+			);
+		});
+
+		Bifrost::execute_with(|| {
+			// Bond 50 ksm for sub-account index 0
+			assert_eq!(
+				Currencies::free_balance(
+					CurrencyId::Token(TokenSymbol::KSM),
+					&AccountId::from(EXIT_ACCOUNT)
+				),
+				0
+			);
+
+			assert_ok!(Slp::transfer_back(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				Box::new(EXIT_ACCOUNT_MULTILOCATION),
+				50 * KSM_DECIMALS,
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_eq!(
+				Currencies::free_balance(
+					CurrencyId::Token(TokenSymbol::KSM),
+					&AccountId::from(EXIT_ACCOUNT)
+				),
+				49999919872000
+			);
+		});
+
+		KusamaNet::execute_with(|| {
+			assert_eq!(
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				9950 * KSM_DECIMALS
+			);
+		});
+	})
+}
+
+#[test]
 fn bond_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_subaccount_index_0();
-		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
+		slp_setup();
 
 		Bifrost::execute_with(|| {
-			// Bond 1 ksm for sub-account index 0
+			// Bond 50 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				dollar::<Runtime>(RelayCurrencyId::get()),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
 				None
 			));
 		});
 
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
+				kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
+					stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+					total: 50 * KSM_DECIMALS,
+					active: 50 * KSM_DECIMALS,
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
 					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
 			);
+		});
 
-			assert!(kusama_runtime::System::events().iter().any(|r| matches!(
-				r.event,
-				kusama_runtime::RuntimeEvent::System(frame_system::Event::Remarked {
-					sender: _,
-					hash: _
-				})
-			)));
+		Bifrost::execute_with(|| {
+			// Bond 50 ksm and auto confirm
+			assert_eq!(
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 50 * KSM_DECIMALS,
+					active: 50 * KSM_DECIMALS,
+					unlocking: vec![],
+				}))
+			);
 		});
 	})
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn bond_extra_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
+		slp_setup();
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+			System::reset_events();
+		});
 
 		Bifrost::execute_with(|| {
-			// Bond_extra 1 ksm for sub-account index 0
-			assert_ok!(Slp::bond_extra(
-				RuntimeOrigin::root(),
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
+		Bifrost::execute_with(|| {
+			// Bond_extra 20 ksm for sub-account index 0
+			assert_ok!(Slp::bond_extra(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				None,
-				dollar::<Runtime>(RelayCurrencyId::get()),
+				20 * KSM_DECIMALS,
 			));
 		});
 
-		// So the bonded amount should be 2 ksm
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
+				kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
+					stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+					total: 70 * KSM_DECIMALS,
+					active: 70 * KSM_DECIMALS,
 					unlocking: BoundedVec::try_from(vec![]).unwrap(),
 					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
 				})
+			);
+		});
+
+		Bifrost::execute_with(|| {
+			// Bond 70 ksm and auto confirm
+			assert_eq!(
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 70 * KSM_DECIMALS,
+					active: 70 * KSM_DECIMALS,
+					unlocking: vec![],
+				}))
 			);
 		});
 	})
@@ -552,24 +641,55 @@ fn bond_extra_works() {
 #[test]
 fn unbond_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
+		slp_setup();
 
-		KusamaNet::execute_with(|| {
-			kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
 		});
 
 		Bifrost::execute_with(|| {
-			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(Slp::unbond(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				None,
-				500_000_000_000,
+				20 * KSM_DECIMALS,
 			));
+		});
+		// KusamaNet::execute_with(|| {
+		// 	use kusama_runtime::System;
+		// 	assert_eq!(
+		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+		// 		Some(StakingLedger {
+		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+		// 			total: 50 * KSM_DECIMALS,
+		// 			active: 30 * KSM_DECIMALS,
+		// 			unlocking: _,
+		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
+		// 		})
+		// 	);
+		// });
+
+		Bifrost::execute_with(|| {
+			// Bond 70 ksm and auto confirm
+			assert_eq!(
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 50 * KSM_DECIMALS,
+					active: 30 * KSM_DECIMALS,
+					unlocking: vec![UnlockChunk {
+						value: 20 * KSM_DECIMALS,
+						unlock_time: TimeUnit::Era(0)
+					}],
+				}))
+			);
 		});
 	})
 }
@@ -577,18 +697,56 @@ fn unbond_works() {
 #[test]
 fn unbond_all_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
+		slp_setup();
 
 		Bifrost::execute_with(|| {
-			// Unbond the only bonded 1 ksm.
-			assert_ok!(Slp::unbond_all(
-				RuntimeOrigin::root(),
+			// Unbond 0.5 ksm, 0.5 ksm left.
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
 			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::unbond_all(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			));
+		});
+
+		// KusamaNet::execute_with(|| {
+		// 	use kusama_runtime::System;
+		// 	println!("{:?}", System::events());
+		// 	assert_eq!(
+		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+		// 		Some(StakingLedger {
+		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+		// 			total: 50 * KSM_DECIMALS,
+		// 			active: 0,
+		// 			unlocking: BoundedVec::try_from(vec![]).unwrap(),
+		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
+		// 		})
+		// 	);
+		// });
+
+		Bifrost::execute_with(|| {
+			// Bond 70 ksm and auto confirm
+			assert_eq!(
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 50 * KSM_DECIMALS,
+					active: 0,
+					unlocking: vec![UnlockChunk {
+						value: 50 * KSM_DECIMALS,
+						unlock_time: TimeUnit::Era(0)
+					}],
+				}))
+			);
 		});
 	})
 }
@@ -596,59 +754,127 @@ fn unbond_all_works() {
 #[test]
 fn rebond_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
+		slp_setup();
 
 		Bifrost::execute_with(|| {
-			// Unbond 0.5 ksm, 0.5 ksm left.
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
+
+		Bifrost::execute_with(|| {
 			assert_ok!(Slp::unbond(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				None,
-				500_000_000_000,
+				30 * KSM_DECIMALS
 			));
+		});
 
-			// Update Bifrost local ledger. This should be done by backend services.
-			let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(8) };
-			let sb_ledger = SubstrateLedger {
-				account: SUBACCOUNT_0_LOCATION,
-				total: dollar::<Runtime>(RelayCurrencyId::get()),
-				active: 500_000_000_000,
-				unlocking: vec![chunk],
-			};
-			let ledger = Ledger::Substrate(sb_ledger);
-
-			assert_ok!(Slp::set_delegator_ledger(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Box::new(Some(ledger))
-			));
-
+		Bifrost::execute_with(|| {
 			// rebond 0.5 ksm.
 			assert_ok!(Slp::rebond(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				None,
-				Some(500_000_000_000),
+				Some(20 * KSM_DECIMALS),
 			));
 		});
 
 		// So the bonded amount should be 1 ksm
-		KusamaNet::execute_with(|| {
+		// KusamaNet::execute_with(|| {
+		// 	assert_eq!(
+		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+		// 		Some(StakingLedger {
+		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+		// 			total: 50 * KSM_DECIMALS,
+		// 			active: 40 * KSM_DECIMALS,
+		// 			unlocking: BoundedVec::try_from(vec![]).unwrap(),
+		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
+		// 		})
+		// 	);
+		// });
+		Bifrost::execute_with(|| {
+			// Bond 70 ksm and auto confirm
 			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
-				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 50 * KSM_DECIMALS,
+					active: 40 * KSM_DECIMALS,
+					unlocking: vec![UnlockChunk {
+						value: 10 * KSM_DECIMALS,
+						unlock_time: TimeUnit::Era(0)
+					}],
+				}))
+			);
+		});
+	})
+}
+
+#[test]
+fn delegate_works() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		// bond 1 ksm for sub-account index 0
+		slp_setup();
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+			System::reset_events();
+		});
+
+		Bifrost::execute_with(|| {
+			// Unbond 0.5 ksm, 0.5 ksm left.
+			assert_ok!(VtokenMinting::mint(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				CurrencyId::Token(TokenSymbol::KSM),
+				100 * KSM_DECIMALS
+			));
+
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+			println!("{:?}", System::events());
+			System::reset_events();
+		});
+
+		Bifrost::execute_with(|| {
+			// delegate
+			assert_ok!(Slp::delegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+			));
+		});
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+			println!("{:?}", System::events());
+			assert_eq!(
+				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				Some(Nominations {
+					targets: BoundedVec::try_from(vec![
+						KUSAMA_BOB_STASH_ACCOUNT.into(),
+						KUSAMA_ALICE_STASH_ACCOUNT.into()
+					])
+					.unwrap(),
+					submitted_in: 0,
+					suppressed: false
 				})
 			);
 		});
@@ -656,80 +882,44 @@ fn rebond_works() {
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn delegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_validators();
-		register_delegator_ledger();
-
-		let subaccount_0 = subaccount_0();
-		let validator_0 = validator_0();
-		let validator_1 = validator_1();
-
-		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			targets.push(VALIDATOR_0_LOCATION);
-			targets.push(VALIDATOR_1_LOCATION);
-
-			// delegate
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets.clone(),
-			));
-
-			assert_ok!(Slp::set_validators_by_delegator(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets,
-			));
-		});
-
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Staking::nominators(&subaccount_0),
-				Some(Nominations {
-					targets: BoundedVec::try_from(vec![validator_1, validator_0]).unwrap(),
-					submitted_in: 0,
-					suppressed: false
-				},)
-			);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn undelegate_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		delegate_works();
-
-		let subaccount_0 = subaccount_0();
-		let validator_1 = validator_1();
+		slp_setup();
 
 		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			targets.push(VALIDATOR_0_LOCATION);
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
 
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::delegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+			));
+		});
+
+		Bifrost::execute_with(|| {
 			// Undelegate validator 0. Only validator 1 left.
 			assert_ok!(Slp::undelegate(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets.clone(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION],
 			));
 		});
 
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Staking::nominators(&subaccount_0),
+				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(Nominations {
-					targets: BoundedVec::try_from(vec![validator_1]).unwrap(),
+					targets: BoundedVec::try_from(vec![KUSAMA_BOB_STASH_ACCOUNT.into()]).unwrap(),
 					submitted_in: 0,
 					suppressed: false
 				},)
@@ -739,37 +929,60 @@ fn undelegate_works() {
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn redelegate_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		undelegate_works();
-
-		let subaccount_0 = subaccount_0();
-		let validator_0 = validator_0();
-		let validator_1 = validator_1();
+		slp_setup();
 
 		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			targets.push(VALIDATOR_1_LOCATION);
-			targets.push(VALIDATOR_0_LOCATION);
-
-			// Redelegate to a set of validator_0 and validator_1.
-			assert_ok!(Slp::redelegate(
-				RuntimeOrigin::root(),
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Some(targets.clone()),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::delegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			// Undelegate validator 0. Only validator 1 left.
+			assert_ok!(Slp::undelegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION],
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::redelegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				Some(vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION])
 			));
 		});
 
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Staking::nominators(&subaccount_0),
+				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(Nominations {
-					targets: BoundedVec::try_from(vec![validator_1, validator_0]).unwrap(),
+					targets: BoundedVec::try_from(vec![
+						KUSAMA_BOB_STASH_ACCOUNT.into(),
+						KUSAMA_ALICE_STASH_ACCOUNT.into()
+					])
+					.unwrap(),
 					submitted_in: 0,
 					suppressed: false
-				},)
+				})
 			);
 		});
 	})
@@ -778,16 +991,14 @@ fn redelegate_works() {
 #[test]
 fn payout_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_subaccount_index_0();
-		transfer_2_ksm_to_subaccount_in_kusama();
-
+		slp_setup();
 		Bifrost::execute_with(|| {
 			// Bond 1 ksm for sub-account index 0
 			assert_ok!(Slp::payout(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Box::new(VALIDATOR_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				Box::new(KUSAMA_ALICE_STASH_MULTILOCATION),
 				Some(TimeUnit::Era(27))
 			));
 		});
@@ -795,1204 +1006,161 @@ fn payout_works() {
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn liquidize_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		unbond_works();
-		let subaccount_0 = subaccount_0();
+		slp_setup();
 
-		KusamaNet::execute_with(|| {
-			// Kusama's unbonding period is 27 days = 100_800 blocks
-			kusama_runtime::System::set_block_number(101_000);
-			for _i in 0..29 {
-				kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
-			}
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
 
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::delegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::unbond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				None,
+				20 * KSM_DECIMALS
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			// Bond 70 ksm and auto confirm
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			// 1ksm is locked for half bonded and half unbonding.
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				dollar::<Runtime>(RelayCurrencyId::get())
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 50 * KSM_DECIMALS,
+					active: 30 * KSM_DECIMALS,
+					unlocking: vec![UnlockChunk {
+						value: 20 * KSM_DECIMALS,
+						unlock_time: TimeUnit::Era(0)
+					}],
+				}))
 			);
 		});
 
 		Bifrost::execute_with(|| {
 			assert_ok!(Slp::liquidize(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				Some(TimeUnit::SlashingSpan(5)),
 				None,
 				None
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Bifrost::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			// half of 1ksm unlocking has been freed. So the usable balance should be 1.5 ksm
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				1_500_000_000_000
+				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+				Some(Ledger::Substrate(SubstrateLedger {
+					account: KSM_DELEGATOR_0_MULTILOCATION,
+					total: 30 * KSM_DECIMALS,
+					active: 30 * KSM_DECIMALS,
+					unlocking: vec![],
+				}))
 			);
 		});
 	})
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn chill_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		delegate_works();
-		let subaccount_0 = subaccount_0();
+		slp_setup();
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				50 * KSM_DECIMALS,
+				None
+			));
+		});
+
+		Bifrost::execute_with(|| {
+			assert_ok!(Slp::delegate(
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
+				RelayCurrencyId::get(),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+			));
+		});
 
 		// check if sub-account index 0 belongs to the group of nominators
 		KusamaNet::execute_with(|| {
-			assert_eq!(kusama_runtime::Staking::nominators(&subaccount_0.clone()).is_some(), true);
+			assert_eq!(
+				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
+					.is_some(),
+				true
+			);
+			assert_eq!(
+				kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
+					.is_some(),
+				true
+			);
 		});
 
 		Bifrost::execute_with(|| {
 			assert_ok!(Slp::chill(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			));
 		});
 
 		// check if sub-account index 0 belongs to the group of nominators
 		KusamaNet::execute_with(|| {
-			assert_eq!(kusama_runtime::Staking::nominators(&subaccount_0.clone()).is_some(), false);
+			assert_eq!(
+				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
+					.is_some(),
+				false
+			);
 		});
 	})
 }
 
 #[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn transfer_back_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		bond_works();
-		let subaccount_0 = subaccount_0();
-		let para_account_2001 = para_account_2001();
-
-		let exit_account: AccountId =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
-
-		let exit_account_32 = Slp::account_id_to_account_32(exit_account.clone()).unwrap();
-		let exit_account_location: MultiLocation =
-			Slp::account_32_to_local_location(exit_account_32).unwrap();
-
-		KusamaNet::execute_with(|| {
-			// 1ksm is locked for half bonded and half unbonding.
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				1999291646569
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 0);
-
-			assert_ok!(Slp::transfer_back(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Box::new(exit_account_location),
-				500_000_000_000
-			));
-		});
-
-		// Parachain account has been deposited the transferred amount.
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				500_000_000_000
-			);
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-				2498583293138
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 499907304000);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
 fn supplement_fee_reserve_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		let subaccount_0 = subaccount_0();
-		delegate_works();
+		slp_setup();
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				10000 * KSM_DECIMALS
 			);
 		});
 
 		Bifrost::execute_with(|| {
-			// set fee source
-			let alice_location = Slp::account_32_to_local_location(ALICE).unwrap();
-			assert_ok!(Slp::set_fee_source(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Some((alice_location.clone(), dollar::<Runtime>(RelayCurrencyId::get())))
-			));
-
 			assert_ok!(Slp::supplement_fee_reserve(
 				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
+				Box::new(KUSAMA_ALICE_MULTILOCATION),
 			));
 		});
 
 		KusamaNet::execute_with(|| {
 			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2999989594258
+				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+				10000 * KSM_DECIMALS
 			);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn confirm_delegator_ledger_query_response_with_bond_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		register_subaccount_index_0();
-		transfer_2_ksm_to_subaccount_in_kusama();
-		let subaccount_0 = subaccount_0();
-
-		Bifrost::execute_with(|| {
-			// First call bond function, it will insert a query.
-			// Bond 1 ksm for sub-account index 0
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				dollar::<Runtime>(RelayCurrencyId::get()),
-				None
-			));
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(0),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Bond,
-						amount: dollar::<Runtime>(RelayCurrencyId::get()),
-						unlock_time: None
-					}),
-					1600
-				))
-			);
-		});
-
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
-				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-				})
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-		let subaccount_0 = subaccount_0();
-
-		Bifrost::execute_with(|| {
-			// Bond_extra 1 ksm for sub-account index 0
-			assert_ok!(Slp::bond_extra(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				None,
-				dollar::<Runtime>(RelayCurrencyId::get()),
-			));
-
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(0),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Bond,
-						amount: dollar::<Runtime>(RelayCurrencyId::get()),
-						unlock_time: None
-					}),
-					1600
-				))
-			);
-		});
-
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Staking::ledger(&subaccount_0),
-				Some(StakingLedger {
-					stash: subaccount_0.clone(),
-					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: BoundedVec::try_from(vec![]).unwrap(),
-					claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-				})
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 2 * dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-fn confirm_delegator_ledger_query_response_with_unbond_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-
-		Bifrost::execute_with(|| {
-			// Unbond 0.5 ksm, 0.5 ksm left.
-			assert_ok!(Slp::unbond(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				None,
-				500_000_000_000,
-			));
-
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(0),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Unlock,
-						amount: 500_000_000_000,
-						unlock_time: Some(TimeUnit::Era(10))
-					}),
-					1600
-				))
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 500_000_000_000,
-					unlocking: vec![UnlockChunk {
-						value: 500000000000,
-						unlock_time: TimeUnit::Era(10)
-					}]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-
-		Bifrost::execute_with(|| {
-			// Unbond the only bonded 1 ksm.
-			assert_ok!(Slp::unbond_all(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-			));
-
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(0),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Unlock,
-						amount: dollar::<Runtime>(RelayCurrencyId::get()),
-						unlock_time: Some(TimeUnit::Era(10))
-					}),
-					1600
-				))
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 0,
-					unlocking: vec![UnlockChunk {
-						value: dollar::<Runtime>(RelayCurrencyId::get()),
-						unlock_time: TimeUnit::Era(10)
-					}]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-fn confirm_delegator_ledger_query_response_with_rebond_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-
-		Bifrost::execute_with(|| {
-			// Unbond 0.5 ksm, 0.5 ksm left.
-			assert_ok!(Slp::unbond(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				None,
-				500_000_000_000,
-			));
-
-			// Update Bifrost local ledger. This should be done by backend services.
-			let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(10) };
-			let sb_ledger = SubstrateLedger {
-				account: SUBACCOUNT_0_LOCATION,
-				total: dollar::<Runtime>(RelayCurrencyId::get()),
-				active: 500_000_000_000,
-				unlocking: vec![chunk],
-			};
-			let ledger = Ledger::Substrate(sb_ledger);
-
-			assert_ok!(Slp::set_delegator_ledger(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Box::new(Some(ledger))
-			));
-
-			// rebond 0.5 ksm.
-			assert_ok!(Slp::rebond(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				None,
-				Some(500_000_000_000),
-			));
-
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 500_000_000_000,
-					unlocking: vec![UnlockChunk {
-						value: 500_000_000_000,
-						unlock_time: TimeUnit::Era(10)
-					}]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(1),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(1),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Rebond,
-						amount: 500_000_000_000,
-						unlock_time: None
-					}),
-					1600
-				))
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				1
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: dollar::<Runtime>(RelayCurrencyId::get()),
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(1),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(1), None);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn confirm_delegator_ledger_query_response_with_liquidize_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		confirm_delegator_ledger_query_response_with_unbond_works();
-		let subaccount_0 = subaccount_0();
-
-		KusamaNet::execute_with(|| {
-			// Kusama's unbonding period is 27 days = 100_800 blocks
-			kusama_runtime::System::set_block_number(101_000);
-			for _i in 0..29 {
-				kusama_runtime::Staking::trigger_new_era(0, BoundedVec::try_from(vec![]).unwrap());
-			}
-
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			// 1ksm is locked for half bonded and half unbonding.
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				dollar::<Runtime>(RelayCurrencyId::get())
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			System::set_block_number(1200);
-
-			// set ongoing era to be 11 which is greater than due era 10.
-			assert_ok!(Slp::update_ongoing_time_unit(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				TimeUnit::Era(11)
-			));
-
-			assert_ok!(Slp::liquidize(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Some(TimeUnit::SlashingSpan(5)),
-				None,
-				None
-			));
-
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: dollar::<Runtime>(RelayCurrencyId::get()),
-					active: 500_000_000_000,
-					unlocking: vec![UnlockChunk {
-						value: 500_000_000_000,
-						unlock_time: TimeUnit::Era(10)
-					}]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(1),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 2200
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(1),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Liquidize,
-						amount: 0,
-						unlock_time: Some(TimeUnit::Era(11))
-					}),
-					2200
-				))
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::confirm_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				1
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: 500_000_000_000,
-					active: 500_000_000_000,
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(1),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 2200
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(1), None);
-		});
-
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-				2 * dollar::<Runtime>(RelayCurrencyId::get())
-			);
-
-			// half of 1ksm unlocking has been freed. So the usable balance should be 1.5 ksm
-			assert_eq!(
-				kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
-				1_500_000_000_000
-			);
-		});
-	})
-}
-
-#[test]
-fn fail_delegator_ledger_query_response_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		register_subaccount_index_0();
-		transfer_2_ksm_to_subaccount_in_kusama();
-
-		Bifrost::execute_with(|| {
-			// First call bond function, it will insert a query.
-			// Bond 1 ksm for sub-account index 0
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				dollar::<Runtime>(RelayCurrencyId::get()),
-				None
-			));
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the existence of query in the response update queue storage.
-			assert_eq!(
-				Slp::get_delegator_ledger_update_entry(0),
-				Some((
-					LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
-						currency_id: RelayCurrencyId::get(),
-						delegator_id: SUBACCOUNT_0_LOCATION,
-						update_operation: SubstrateLedgerUpdateOperation::Bond,
-						amount: dollar::<Runtime>(RelayCurrencyId::get()),
-						unlock_time: None
-					}),
-					1600
-				))
-			);
-		});
-
-		Bifrost::execute_with(|| {
-			// Call confirm_delegator_ledger_query_response.
-			assert_ok!(Slp::fail_delegator_ledger_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// Check the ledger update.
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: SUBACCOUNT_0_LOCATION,
-					total: 0,
-					active: 0,
-					unlocking: vec![]
-				}))
-			);
-
-			// Check the existence of the query in pallet_xcm Queries storage.
-			// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the
-			// xcm message. And this query will be set to ready status after we received a query
-			// response. At that point, this check should be set to equal None.
-			assert_eq!(
-				PolkadotXcm::query(0),
-				Some(QueryStatus::Pending {
-					responder: VersionedMultiLocation::V1(MultiLocation {
-						parents: 1,
-						interior: Here
-					}),
-					maybe_notify: None,
-					timeout: 1600
-				})
-			);
-
-			// Check the inexistence of query in the response update queue storage.
-			assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-fn confirm_validators_by_delegator_query_response_with_delegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		register_validators();
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-
-		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			let mut valis = vec![];
-			targets.push(VALIDATOR_0_LOCATION);
-			targets.push(VALIDATOR_1_LOCATION);
-
-			valis.push((VALIDATOR_1_LOCATION.clone(), multi_hash_1()));
-			valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0()));
-
-			// delegate
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets.clone(),
-			));
-
-			// Before data: Delegate nobody.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				None
-			);
-
-			assert_eq!(
-				Slp::get_validators_by_delegator_update_entry(0),
-				Some((
-					ValidatorsByDelegatorUpdateEntry::Substrate(
-						SubstrateValidatorsByDelegatorUpdateEntry {
-							currency_id: RelayCurrencyId::get(),
-							delegator_id: SUBACCOUNT_0_LOCATION,
-							validators: valis.clone(),
-						}
-					),
-					1600
-				))
-			);
-
-			// confirm call
-			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0
-			));
-
-			// After delegation data.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(valis)
-			);
-
-			assert_eq!(Slp::get_validators_by_delegator_update_entry(0), None);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		delegate_works();
-
-		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			let mut valis_1 = vec![];
-			let mut valis_2 = vec![];
-
-			targets.push(VALIDATOR_0_LOCATION);
-
-			valis_1.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-
-			valis_2.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-			valis_2.push((VALIDATOR_0_LOCATION, multi_hash_0()));
-
-			// Undelegate validator 0. Only validator 1 left.
-			assert_ok!(Slp::undelegate(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets.clone(),
-			));
-
-			// Before data: Delegate 2 validators.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(valis_2)
-			);
-
-			assert_eq!(
-				Slp::get_validators_by_delegator_update_entry(1),
-				Some((
-					ValidatorsByDelegatorUpdateEntry::Substrate(
-						SubstrateValidatorsByDelegatorUpdateEntry {
-							currency_id: RelayCurrencyId::get(),
-							delegator_id: SUBACCOUNT_0_LOCATION,
-							validators: valis_1.clone(),
-						}
-					),
-					1600
-				))
-			);
-
-			// confirm call
-			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				1,
-			));
-
-			// After delegation data: delegate only 1 validator.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(valis_1)
-			);
-
-			assert_eq!(Slp::get_validators_by_delegator_update_entry(1), None);
-		});
-	})
-}
-
-#[test]
-#[ignore = "To wait til Polkadot v0.9.34."]
-fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		confirm_validators_by_delegator_query_response_with_undelegate_works();
-
-		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			let mut valis_1 = vec![];
-			let mut valis_2 = vec![];
-
-			targets.push(VALIDATOR_0_LOCATION);
-			targets.push(VALIDATOR_1_LOCATION);
-
-			valis_1.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-			valis_2.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-			valis_2.push((VALIDATOR_0_LOCATION, multi_hash_0()));
-
-			// Redelegate to a set of validator_0 and validator_1.
-			assert_ok!(Slp::redelegate(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				Some(targets.clone()),
-			));
-
-			// Before data: Delegate only 1 validator.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(valis_1)
-			);
-
-			assert_eq!(
-				Slp::get_validators_by_delegator_update_entry(2),
-				Some((
-					ValidatorsByDelegatorUpdateEntry::Substrate(
-						SubstrateValidatorsByDelegatorUpdateEntry {
-							currency_id: RelayCurrencyId::get(),
-							delegator_id: SUBACCOUNT_0_LOCATION,
-							validators: valis_2.clone(),
-						}
-					),
-					1600
-				))
-			);
-
-			// confirm call
-			assert_ok!(Slp::confirm_validators_by_delegator_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				2,
-			));
-
-			// After delegation data: delegate 2 validators.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				Some(valis_2)
-			);
-
-			assert_eq!(Slp::get_validators_by_delegator_update_entry(2), None);
-		});
-	})
-}
-
-#[test]
-fn fail_validators_by_delegator_query_response_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		// bond 1 ksm for sub-account index 0
-		register_validators();
-		locally_bond_subaccount_0_1ksm_in_kusama();
-		register_subaccount_index_0();
-		register_delegator_ledger();
-
-		Bifrost::execute_with(|| {
-			let mut targets = vec![];
-			let mut valis = vec![];
-
-			targets.push(VALIDATOR_0_LOCATION);
-			targets.push(VALIDATOR_1_LOCATION);
-
-			valis.push((VALIDATOR_1_LOCATION, multi_hash_1()));
-			valis.push((VALIDATOR_0_LOCATION, multi_hash_0()));
-
-			// delegate
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				Box::new(SUBACCOUNT_0_LOCATION),
-				targets.clone(),
-			));
-
-			// check before data: delegate nobody.
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				None
-			);
-
-			assert_eq!(
-				Slp::get_validators_by_delegator_update_entry(0),
-				Some((
-					ValidatorsByDelegatorUpdateEntry::Substrate(
-						SubstrateValidatorsByDelegatorUpdateEntry {
-							currency_id: RelayCurrencyId::get(),
-							delegator_id: SUBACCOUNT_0_LOCATION,
-							validators: valis,
-						}
-					),
-					1600
-				))
-			);
-
-			// call fail function
-			assert_ok!(Slp::fail_validators_by_delegator_query_response(
-				RuntimeOrigin::root(),
-				RelayCurrencyId::get(),
-				0,
-			));
-
-			// check after data
-			assert_eq!(
-				Slp::get_validators_by_delegator(RelayCurrencyId::get(), SUBACCOUNT_0_LOCATION),
-				None
-			);
-
-			assert_eq!(Slp::get_validators_by_delegator_update_entry(0), None);
 		});
 	})
 }

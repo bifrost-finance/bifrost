@@ -32,8 +32,8 @@ use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::{
-	latest::MultiLocation,
-	opaque::latest::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
+	opaque::v2::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
+	v2::MultiLocation,
 };
 
 #[cfg(feature = "runtime-benchmarks")]

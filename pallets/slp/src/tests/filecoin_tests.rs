@@ -24,8 +24,7 @@ use crate::{
 	FIL, *,
 };
 use frame_support::{assert_noop, assert_ok, PalletId};
-use sp_runtime::{traits::AccountIdConversion, WeakBoundedVec};
-use xcm::opaque::latest::NetworkId::Any;
+use sp_runtime::traits::AccountIdConversion;
 
 fn mins_maxs_setup() {
 	let mins_and_maxs = MinimumsMaximums {
@@ -47,10 +46,8 @@ fn mins_maxs_setup() {
 }
 
 fn initialize_delegator_setup() {
-	let location = MultiLocation {
-		parents: 100,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let location =
+		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 	mins_maxs_setup();
 	let _ = Slp::initialize_delegator(
@@ -61,15 +58,11 @@ fn initialize_delegator_setup() {
 }
 
 fn delegate_setup() {
-	let location = MultiLocation {
-		parents: 100,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let location =
+		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
-	let owner_location = MultiLocation {
-		parents: 111,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let owner_location =
+		MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
 	initialize_delegator_setup();
 
@@ -83,10 +76,8 @@ fn delegate_setup() {
 }
 
 fn bond_setup() {
-	let location = MultiLocation {
-		parents: 100,
-		interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-	};
+	let location =
+		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 	delegate_setup();
 
@@ -102,10 +93,8 @@ fn bond_setup() {
 #[test]
 fn initialize_delegator_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		System::set_block_number(1);
 
@@ -125,10 +114,8 @@ fn initialize_delegator_should_work() {
 #[test]
 fn bond_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		System::set_block_number(1);
 
@@ -191,15 +178,11 @@ fn bond_should_work() {
 #[test]
 fn delegate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
-		let owner_location = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let owner_location =
+			MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
 		System::set_block_number(1);
 
@@ -233,10 +216,8 @@ fn delegate_should_work() {
 #[test]
 fn bond_extra_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
 			Slp::bond_extra(
@@ -270,10 +251,8 @@ fn bond_extra_should_work() {
 #[test]
 fn unbond_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
 			Slp::unbond(
@@ -306,20 +285,14 @@ fn unbond_should_work() {
 #[test]
 fn undelegate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
-		let owner_location = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let owner_location =
+			MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
-		let other_location = MultiLocation {
-			parents: 120,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let other_location =
+			MultiLocation { parents: 120, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
 			Slp::undelegate(
@@ -380,10 +353,8 @@ fn undelegate_should_work() {
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		let treasury_id: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
 		let treasury_32: [u8; 32] = treasury_id.clone().into();
@@ -404,7 +375,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -457,10 +428,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 #[test]
 fn remove_delegator_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
 			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone())),
@@ -501,15 +470,11 @@ fn remove_delegator_should_work() {
 #[test]
 fn remove_validator_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location =
+			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
-		let owner_location = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let owner_location =
+			MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
 			Slp::remove_validator(
@@ -556,5 +521,68 @@ fn remove_validator_should_work() {
 
 		let empty_vec = vec![];
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(empty_vec));
+	});
+}
+
+#[test]
+fn filecoin_transfer_to_works() {
+	// miner
+	let location =
+		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
+
+	// worker
+	let owner_location =
+		MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		bond_setup();
+		let entrance_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
+				.into();
+
+		let entrance_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
+		};
+
+		let exit_account_id_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
+				.into();
+
+		let exit_account_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+		};
+
+		assert_noop!(
+			Slp::transfer_to(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(exit_account_location.clone()),
+				Box::new(owner_location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::InvalidAccount
+		);
+
+		assert_noop!(
+			Slp::transfer_to(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(entrance_account_location.clone()),
+				Box::new(location.clone()),
+				5_000_000_000_000_000_000,
+			),
+			Error::<Runtime>::ValidatorNotExist
+		);
+
+		assert_ok!(Slp::transfer_to(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			Box::new(entrance_account_location.clone()),
+			Box::new(owner_location.clone()),
+			0,
+		));
 	});
 }

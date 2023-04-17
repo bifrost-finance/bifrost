@@ -22,6 +22,7 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 use sp_std::prelude::*;
+use xcm::v3::QueryId;
 
 pub type MessageId = [u8; 32];
 
@@ -130,5 +131,19 @@ pub mod parachains {
 }
 
 pub trait XcmHelper<AccountId, Balance> {
-	fn contribute(index: ChainId, value: Balance) -> Result<MessageId, DispatchError>;
+	fn contribute(
+		contributer: AccountId,
+		index: ChainId,
+		value: Balance,
+	) -> Result<MessageId, DispatchError>;
+}
+
+pub trait SalpHelper<AccountId, RuntimeCall, Balance> {
+	fn confirm_contribute_call() -> RuntimeCall;
+	fn bind_query_id_and_contribution(
+		query_id: QueryId,
+		index: ChainId,
+		contributer: AccountId,
+		amount: Balance,
+	);
 }

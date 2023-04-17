@@ -6,10 +6,10 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// (at your option) None later version.
 
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// but WITHOUT None WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
@@ -33,7 +33,6 @@ use frame_support::{assert_noop, assert_ok, PalletId};
 use node_primitives::Balance;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::opaque::latest::NetworkId::Any;
 
 const VALIDATOR_0_ACCOUNT_ID_20: [u8; 20] =
 	hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"];
@@ -41,7 +40,7 @@ const VALIDATOR_0_LOCATION: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2023),
-		Junction::AccountKey20 { network: Any, key: VALIDATOR_0_ACCOUNT_ID_20 },
+		Junction::AccountKey20 { network: None, key: VALIDATOR_0_ACCOUNT_ID_20 },
 	),
 };
 
@@ -51,7 +50,7 @@ const VALIDATOR_1_LOCATION: MultiLocation = MultiLocation {
 	parents: 1,
 	interior: X2(
 		Parachain(2023),
-		Junction::AccountKey20 { network: Any, key: VALIDATOR_1_ACCOUNT_ID_20 },
+		Junction::AccountKey20 { network: None, key: VALIDATOR_1_ACCOUNT_ID_20 },
 	),
 };
 
@@ -80,7 +79,7 @@ fn initialize_moonriver_delegator() {
 			parents: 1,
 			interior: X2(
 				Parachain(2023),
-				Junction::AccountKey20 { network: Any, key: subaccount_id_0.0 },
+				Junction::AccountKey20 { network: None, key: subaccount_id_0.0 },
 			),
 		};
 
@@ -122,7 +121,7 @@ fn moonriver_setup() {
 	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: Any, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
 	};
 
 	// set operate_origins
@@ -193,84 +192,84 @@ fn moonriver_setup() {
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Bond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::BondExtra,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Unbond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Chill,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Rebond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Undelegate,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::CancelLeave,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::Liquidize,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::ExecuteLeave,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::TransferBack,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::XtokensTransferBack,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		MOVR,
 		XcmOperation::TransferTo,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	// Set delegator ledger
@@ -294,7 +293,7 @@ fn moonriver_bond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -325,7 +324,7 @@ fn moonriver_bond_extra_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -378,7 +377,7 @@ fn moonriver_unbond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -431,7 +430,7 @@ fn moonriver_unbond_all_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -478,7 +477,7 @@ fn moonriver_rebond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -541,7 +540,7 @@ fn moonriver_undelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -594,7 +593,7 @@ fn moonriver_redelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -656,7 +655,7 @@ fn moonriver_liquidize_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -808,7 +807,7 @@ fn moonriver_bond_and_bond_extra_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -946,7 +945,7 @@ fn moonriver_unbond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1143,7 +1142,7 @@ fn moonriver_unbond_all_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1277,7 +1276,7 @@ fn moonriver_rebond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1380,7 +1379,7 @@ fn moonriver_undelegate_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1558,7 +1557,7 @@ fn moonriver_redelegate_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1668,7 +1667,7 @@ fn moonriver_transfer_back_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1679,7 +1678,7 @@ fn moonriver_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1706,7 +1705,7 @@ fn moonriver_transfer_to_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1717,7 +1716,7 @@ fn moonriver_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		assert_noop!(
@@ -1744,7 +1743,7 @@ fn supplement_fee_account_whitelist_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1756,13 +1755,13 @@ fn supplement_fee_account_whitelist_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: entrance_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: entrance_account_id_32 }),
 		};
 
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: Any, id: exit_account_id_32 }),
+			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -1862,7 +1861,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2023),
-			Junction::AccountKey20 { network: Any, key: subaccount_0_account_id_20 },
+			Junction::AccountKey20 { network: None, key: subaccount_0_account_id_20 },
 		),
 	};
 
@@ -1919,7 +1918,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(

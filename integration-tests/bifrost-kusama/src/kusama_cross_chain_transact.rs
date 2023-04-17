@@ -17,42 +17,77 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::assert_ok;
-use xcm::latest::prelude::*;
-use xcm_emulator::TestExt;
+use xcm::v3::{prelude::*, Weight};
+use xcm_emulator::{ParaId, TestExt};
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
 
 #[test]
 fn relaychain_transact_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		let remark = kusama_runtime::RuntimeCall::System(frame_system::Call::<
+		let transfer = kusama_runtime::RuntimeCall::Balances(pallet_balances::Call::<
 			kusama_runtime::Runtime,
-		>::remark_with_event {
-			remark: "Hello from Bifrost!".as_bytes().to_vec(),
+		>::transfer {
+			dest: MultiAddress::Id(AccountId::from(BOB)),
+			value: 1 * KSM_DECIMALS,
 		});
 
-		let asset: MultiAsset =
-			MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(8000000000) };
-
-		let msg = Xcm(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: WeightLimit::Limited(6000000000) },
-			Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: 2000000000 as u64,
-				call: remark.encode().into(),
-			},
-		]);
+		// let notification_received = RuntimeCall::Salp(bifrost_salp::Call::<
+		// 	Runtime,
+		// >::notification_received {
+		// 	query_id: 0,
+		// 	response: Default::default(),
+		// });
 
 		Bifrost::execute_with(|| {
-			assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, Parent, msg));
+			// QueryStatus::Pending { responder: V3(MultiLocation { parents: 1, interior: Here }),
+			// maybe_match_querier: Some(V3(MultiLocation { parents: 0, interior: Here })),
+			// maybe_notify: Some((0, 7)), timeout: 100 } let query_id =
+			// pallet_xcm::Pallet::<Runtime>::new_notify_query( 	MultiLocation::parent(),
+			// 	notification_received.clone(),
+			// 	100u32.into(),
+			// 	Here,
+			// );
+
+			// QueryResponse { query_id: 0, response: DispatchResult(Success), max_weight: Weight {
+			// ref_time: 4000000000, proof_size: 0 }, querier: Some(MultiLocation { parents: 0,
+			// interior: Here }) }
+			let asset: MultiAsset =
+				MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(4000000000) };
+			let msg = Xcm(vec![
+				WithdrawAsset(asset.clone().into()),
+				BuyExecution { fees: asset, weight_limit: Unlimited },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most: Weight::from_ref_time(4000000000),
+					call: transfer.encode().into(),
+				},
+				// ReportTransactStatus(QueryResponseInfo {
+				// 	destination: MultiLocation::from(X1(Parachain(2001))),
+				// 	query_id,
+				// 	max_weight: Weight::from_ref_time(4000000000),
+				// }),
+				RefundSurplus,
+				DepositAsset {
+					assets: All.into(),
+					beneficiary: MultiLocation::from(AccountId32 { network: None, id: ALICE }),
+				},
+			]);
+			assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, MultiLocation::parent(), msg));
 		});
 
 		KusamaNet::execute_with(|| {
 			use kusama_runtime::{RuntimeEvent, System};
+			// Expect to transfer 1 KSM from parachain_account to bob_account
+			let _parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
+			let _bob_account: AccountId = AccountId::from(BOB);
 			assert!(System::events().iter().any(|r| matches!(
-				r.event,
-				RuntimeEvent::System(frame_system::Event::Remarked { sender: _, hash: _ })
+				&r.event,
+				RuntimeEvent::Balances(pallet_balances::Event::Transfer {
+					from: _parachain_account,
+					to: _bob_account,
+					amount: KSM_DECIMALS
+				})
 			)));
 		});
 	})

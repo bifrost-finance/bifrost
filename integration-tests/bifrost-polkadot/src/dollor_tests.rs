@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::polkadot_test_net::{
-	register_token2_asset, Bifrost, DECIMAL_10, DECIMAL_18, DOT_TOKEN_ID, GLMR_TOKEN_ID,
-};
+use crate::config::{Bifrost, DOT_DECIMALS, DOT_TOKEN_ID, GLMR_DECIMALS, GLMR_TOKEN_ID};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_polkadot_runtime::{AssetRegistry, Runtime};
 use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
@@ -28,7 +26,6 @@ use xcm_emulator::TestExt;
 #[test]
 fn dollar_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				AssetRegistry::currency_metadatas(CurrencyId::Token2(DOT_TOKEN_ID)),
@@ -36,7 +33,7 @@ fn dollar_should_work() {
 					name: b"Polkadot DOT".to_vec(),
 					symbol: b"DOT".to_vec(),
 					decimals: 10u8,
-					minimal_balance: 1_000_000,
+					minimal_balance: DOT_DECIMALS / 1000,
 				})
 			);
 			assert_eq!(
@@ -45,11 +42,11 @@ fn dollar_should_work() {
 					name: b"Moonbeam Native Token".to_vec(),
 					symbol: b"GLMR".to_vec(),
 					decimals: 18u8,
-					minimal_balance: 1_000_000_000_000,
+					minimal_balance: GLMR_DECIMALS / 1000_000,
 				})
 			);
-			assert_eq!(dollar::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DECIMAL_10);
-			assert_eq!(dollar::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), DECIMAL_18);
+			assert_eq!(dollar::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DOT_DECIMALS);
+			assert_eq!(dollar::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), GLMR_DECIMALS);
 		});
 	})
 }
@@ -57,10 +54,9 @@ fn dollar_should_work() {
 #[test]
 fn milli_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
-			assert_eq!(milli::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DECIMAL_10 / 1000);
-			assert_eq!(milli::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), DECIMAL_18 / 1000);
+			assert_eq!(milli::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DOT_DECIMALS / 1000);
+			assert_eq!(milli::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), GLMR_DECIMALS / 1000);
 		})
 	})
 }
@@ -68,10 +64,15 @@ fn milli_should_work() {
 #[test]
 fn micro_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
-			assert_eq!(micro::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DECIMAL_10 / 1_000_000);
-			assert_eq!(micro::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), DECIMAL_18 / 1_000_000);
+			assert_eq!(
+				micro::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)),
+				DOT_DECIMALS / 1_000_000
+			);
+			assert_eq!(
+				micro::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)),
+				GLMR_DECIMALS / 1_000_000
+			);
 		})
 	})
 }
@@ -79,10 +80,9 @@ fn micro_should_work() {
 #[test]
 fn cent_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
-			assert_eq!(cent::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DECIMAL_10 / 100);
-			assert_eq!(cent::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), DECIMAL_18 / 100);
+			assert_eq!(cent::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)), DOT_DECIMALS / 100);
+			assert_eq!(cent::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)), GLMR_DECIMALS / 100);
 		})
 	})
 }
@@ -90,15 +90,14 @@ fn cent_should_work() {
 #[test]
 fn millicent_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				millicent::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)),
-				DECIMAL_10 / 100_000
+				DOT_DECIMALS / 100_000
 			);
 			assert_eq!(
 				millicent::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)),
-				DECIMAL_18 / 100_000
+				GLMR_DECIMALS / 100_000
 			);
 		})
 	})
@@ -107,15 +106,14 @@ fn millicent_should_work() {
 #[test]
 fn microcent_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		register_token2_asset();
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				microcent::<Runtime>(CurrencyId::Token2(DOT_TOKEN_ID)),
-				DECIMAL_10 / 100_000_000
+				DOT_DECIMALS / 100_000_000
 			);
 			assert_eq!(
 				microcent::<Runtime>(CurrencyId::Token2(GLMR_TOKEN_ID)),
-				DECIMAL_18 / 100_000_000
+				GLMR_DECIMALS / 100_000_000
 			);
 		})
 	})
