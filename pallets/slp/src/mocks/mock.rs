@@ -29,20 +29,22 @@ use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{GenesisBuild, Nothing},
+	traits::{Everything, GenesisBuild, Nothing},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_core::{hashing::blake2_256, H256};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::latest::prelude::*;
+use xcm::v3::{prelude::*, Weight};
+use xcm_builder::FixedWeightBounds;
+use xcm_executor::XcmExecutor;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -75,7 +77,8 @@ construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
-		Utility: pallet_utility::{Pallet, Call, Event}
+		Utility: pallet_utility::{Pallet, Call, Event},
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 	}
 );
 
@@ -280,7 +283,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X2(
 					Parachain(2023),
 					Junction::AccountKey20 {
-						network: NetworkId::Any,
+						network: None,
 						key: Slp::derivative_account_id_20(
 							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
@@ -293,7 +296,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -305,7 +308,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
 				0,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						polkadot_parachain::primitives::Sibling::from(2001u32)
 							.into_account_truncating(),
@@ -324,7 +327,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 							X2(
 								Parachain(*para_id),
 								Junction::AccountId32 {
-									network: NetworkId::Any,
+									network: None,
 									id: Self::derivative_account_id(
 										polkadot_parachain::primitives::Sibling::from(2001u32)
 											.into_account_truncating(),
@@ -366,11 +369,15 @@ parameter_types! {
 	pub const MaxRefundPerBlock: u32 = 10;
 }
 
-impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
+impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for () {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
-	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
+	fn create_query_record(
+		_responder: &MultiLocation,
+		_call_back: Option<RuntimeCall>,
+		_timeout: u64,
+	) -> u64 {
 		Default::default()
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
@@ -387,8 +394,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 		match id {
 			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
 			Token(KSM) => Some(MultiLocation::parent()),
-			Native(BNC) =>
-				Some(MultiLocation::new(0, X1(GeneralKey("0x0001".encode().try_into().unwrap())))),
+			Native(BNC) => Some(MultiLocation::new(
+				0,
+				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
+			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
 			_ => None,
 		}
@@ -397,6 +406,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 
 impl Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
@@ -410,6 +421,70 @@ impl Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ParachainStaking;
+}
+
+parameter_types! {
+	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub const MaxInstructions: u32 = 100;
+	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+	type AssetClaims = PolkadotXcm;
+	type AssetTransactor = ();
+	type AssetTrap = PolkadotXcm;
+	type Barrier = ();
+	type RuntimeCall = RuntimeCall;
+	type IsReserve = ();
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
+	type OriginConverter = ();
+	type ResponseHandler = PolkadotXcm;
+	type SubscriptionService = PolkadotXcm;
+	type Trader = ();
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmSender = ();
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<64>;
+	type FeeManager = ();
+	type MessageExporter = ();
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
+	type AssetLocker = ();
+	type AssetExchanger = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+}
+
+impl pallet_xcm::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type UniversalLocation = UniversalLocation;
+	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmExecuteFilter = Nothing;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmReserveTransferFilter = Everything;
+	type XcmRouter = ();
+	type XcmTeleportFilter = Nothing;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = ConstU32<2>;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
+	type TrustedLockers = ();
+	type SovereignAccountOf = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 pub struct ExtBuilder {

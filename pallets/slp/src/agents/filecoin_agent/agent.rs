@@ -35,7 +35,7 @@ use sp_runtime::{
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 /// StakingAgent implementation for Filecoin
 pub struct FilecoinAgent<T>(PhantomData<T>);
@@ -100,8 +100,7 @@ impl<T: Config>
 		ensure!(miners.len() == 1, Error::<T>::VectorTooLong);
 
 		// Create a new delegator ledger
-		let ledger =
-			FilecoinLedger::<BalanceOf<T>> { account: who.clone(), initial_pledge: amount };
+		let ledger = FilecoinLedger::<BalanceOf<T>> { account: *who, initial_pledge: amount };
 		let filecoin_ledger = Ledger::<BalanceOf<T>>::Filecoin(ledger);
 
 		DelegatorLedgers::<T>::insert(currency_id, who, filecoin_ledger);
@@ -243,14 +242,11 @@ impl<T: Config>
 		let validators_vec =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		let multi_hash = T::Hashing::hash(&worker.encode());
-		ensure!(
-			validators_vec.contains(&(worker.clone(), multi_hash)),
-			Error::<T>::ValidatorNotExist
-		);
+		ensure!(validators_vec.contains(&(*worker, multi_hash)), Error::<T>::ValidatorNotExist);
 
-		let validators_list = vec![(worker.clone(), multi_hash)];
+		let validators_list = vec![(*worker, multi_hash)];
 		// update ledger
-		ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+		ValidatorsByDelegator::<T>::insert(currency_id, *who, validators_list.clone());
 
 		// query_id is nonsense for filecoin.
 		let query_id = Zero::zero();
@@ -259,7 +255,7 @@ impl<T: Config>
 		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 			currency_id,
 			validators_list,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 		});
 
 		Ok(query_id)
@@ -300,7 +296,7 @@ impl<T: Config>
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 				currency_id,
 				validators_list: vec![],
-				delegator_id: who.clone(),
+				delegator_id: *who,
 			});
 
 			Ok(query_id)
@@ -374,10 +370,7 @@ impl<T: Config>
 		// "to" account must be one of the validator(worker) accounts
 		let multi_hash = T::Hashing::hash(&to.encode());
 		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(
-				validator_vec.contains(&(to.clone(), multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validator_vec.contains(&(*to, multi_hash)), Error::<T>::ValidatorNotExist);
 		} else {
 			Err(Error::<T>::ValidatorNotExist)?;
 		}
@@ -417,10 +410,7 @@ impl<T: Config>
 
 		// ensure "who" is a valid validator
 		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(
-				validator_vec.contains(&(who.clone(), multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validator_vec.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
 		} else {
 			Err(Error::<T>::ValidatorNotExist)?;
 		}
@@ -502,7 +492,7 @@ impl<T: Config>
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(who.clone(), multi_hash)) {
+			if validator_list.contains(&(*who, multi_hash)) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}

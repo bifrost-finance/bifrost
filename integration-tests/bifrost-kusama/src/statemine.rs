@@ -21,7 +21,10 @@ use bifrost_asset_registry::AssetMetadata;
 use frame_support::assert_ok;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::{latest::prelude::*, v1::MultiAssets, VersionedMultiAssets, VersionedMultiLocation};
+use xcm::{
+	v3::{prelude::*, Weight},
+	VersionedMultiAssets, VersionedMultiLocation,
+};
 use xcm_emulator::TestExt;
 
 const USDT: u128 = 1_000_000;
@@ -29,8 +32,6 @@ const USDT: u128 = 1_000_000;
 #[test]
 fn cross_usdt() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		TestNet::reset();
-
 		Bifrost::execute_with(|| {
 			let metadata = AssetMetadata {
 				name: b"USDT".to_vec(),
@@ -44,93 +45,97 @@ fn cross_usdt() {
 				Box::new(metadata.clone())
 			));
 
-			// v1
-			let location = VersionedMultiLocation::V1(MultiLocation {
+			let location = VersionedMultiLocation::V3(MultiLocation {
 				parents: 1,
-				interior: Junctions::X3(Parachain(1000), PalletInstance(50), GeneralIndex(1984)),
+				interior: X3(Parachain(1000), PalletInstance(50), GeneralIndex(1984)),
 			});
 
 			assert_ok!(AssetRegistry::register_multilocation(
 				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				0
+				Weight::zero()
 			));
 		});
-		// env_logger::init();
+
 		Statemine::execute_with(|| {
 			use frame_support::traits::Currency;
 			use statemine_runtime::*;
 
 			let origin = RuntimeOrigin::signed(ALICE.into());
 
-			statemine_runtime::Balances::make_free_balance_be(&ALICE.into(), 10 * 10_000_000_000);
+			statemine_runtime::Balances::make_free_balance_be(&ALICE.into(), 10 * KSM_DECIMALS);
+			statemine_runtime::Balances::make_free_balance_be(&BOB.into(), 10 * KSM_DECIMALS);
 
 			// need to have some KSM to be able to receive user assets
 			statemine_runtime::Balances::make_free_balance_be(
 				&Sibling::from(2001).into_account_truncating(),
-				10 * 10_000_000_000,
+				10 * KSM_DECIMALS,
 			);
 
 			assert_ok!(Assets::create(
-				origin.clone(),
+				statemine_runtime::RuntimeOrigin::signed(ALICE.into()),
 				codec::Compact(1984),
 				MultiAddress::Id(ALICE.into()),
 				10
 			));
+
+			assert_ok!(Assets::set_metadata(
+				statemine_runtime::RuntimeOrigin::signed(ALICE.into()),
+				codec::Compact(1984),
+				b"USDT".to_vec(),
+				b"USDT".to_vec(),
+				6
+			));
+
 			assert_ok!(Assets::mint(
-				origin.clone(),
+				statemine_runtime::RuntimeOrigin::signed(ALICE.into()),
 				codec::Compact(1984),
 				MultiAddress::Id(ALICE.into()),
 				100 * USDT
 			));
 			assert_eq!(Assets::balance(1984, sp_runtime::AccountId32::from(ALICE)), 100 * USDT);
 
-			System::reset_events();
-
 			let para_acc: AccountId = Sibling::from(2001).into_account_truncating();
 			println!("{:?}", para_acc);
 
 			let assets = MultiAssets::from(vec![MultiAsset::from((
-				xcm::v1::AssetId::Concrete(MultiLocation::new(
-					0,
-					X2(PalletInstance(50), GeneralIndex(1984)),
-				)),
-				xcm::v1::Fungibility::from(10 * USDT),
+				Concrete(MultiLocation::new(0, X2(PalletInstance(50), GeneralIndex(1984)))),
+				Fungibility::from(10 * USDT),
 			))]);
 
 			assert_ok!(
 				pallet_xcm::Pallet::<statemine_runtime::Runtime>::limited_reserve_transfer_assets(
 					origin.clone(),
-					Box::new(VersionedMultiLocation::V1(MultiLocation::new(
+					Box::new(VersionedMultiLocation::V3(MultiLocation::new(
 						1,
 						X1(Parachain(2001))
 					))),
-					Box::new(VersionedMultiLocation::V1(MultiLocation::new(
+					Box::new(VersionedMultiLocation::V3(MultiLocation::new(
 						0,
-						X1(Junction::AccountId32 { id: ALICE, network: NetworkId::Any })
+						X1(Junction::AccountId32 { id: BOB, network: None })
 					))),
-					Box::new(VersionedMultiAssets::V1(assets)),
+					Box::new(VersionedMultiAssets::V3(assets)),
 					0,
 					WeightLimit::Unlimited,
 				)
 			);
-			println!("{:?}", System::events());
+			assert_eq!(Assets::balance(1984, para_acc), 10 * USDT);
+			System::reset_events();
 		});
 
 		Bifrost::execute_with(|| {
-			assert_eq!(
-				Tokens::free_balance(CurrencyId::Token2(0), &AccountId::from(ALICE),),
+			assert_ok!(Tokens::deposit(
+				CurrencyId::Token2(0),
+				&sp_runtime::AccountId32::from(ALICE),
 				10 * USDT
-			);
-
+			));
 			assert_ok!(XcmInterface::transfer_statemine_assets(
 				RuntimeOrigin::signed(ALICE.into()),
 				5 * USDT,
 				1984,
-				Some(sp_runtime::AccountId32::from(ALICE))
+				Some(sp_runtime::AccountId32::from(BOB))
 			));
-			println!("{:?}", System::events());
 
 			assert_eq!(
 				Tokens::free_balance(CurrencyId::Token2(0), &AccountId::from(ALICE),),
@@ -139,7 +144,15 @@ fn cross_usdt() {
 		});
 		Statemine::execute_with(|| {
 			use statemine_runtime::*;
-			assert_eq!(Assets::balance(1984, sp_runtime::AccountId32::from(ALICE)), 95 * USDT);
-		})
+			println!("{:?}", System::events());
+			assert_eq!(Assets::balance(1984, AccountId::from(BOB)), 5 * USDT);
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success {
+					message_hash: _,
+					weight: _
+				})
+			)));
+		});
 	})
 }

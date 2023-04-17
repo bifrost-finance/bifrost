@@ -27,7 +27,7 @@ use frame_support::{
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
-	weights::constants::WEIGHT_REF_TIME_PER_SECOND,
+	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
@@ -43,15 +43,14 @@ use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
 // MultiLocation in the future.
 use xcm::{
-	latest::Weight as XcmWeight,
-	opaque::latest::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
-	v1::MultiLocation,
+	opaque::v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
+	v3::MultiLocation,
 	VersionedMultiLocation,
 };
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
 
-mod migration;
+pub mod migration;
 mod mock;
 mod tests;
 pub mod weights;
@@ -120,7 +119,7 @@ pub mod pallet {
 		/// The CurrencyId registered.
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 		/// MultiLocation Force set.
-		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: u128 },
+		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: Weight },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -156,7 +155,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn currency_id_to_weight)]
 	pub type CurrencyIdToWeights<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, u128, OptionQuery>;
+		StorageMap<_, Twox64Concat, CurrencyId, Weight, OptionQuery>;
 
 	/// The storages for AssetMetadatas.
 	///
@@ -411,7 +410,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			location: Box<VersionedMultiLocation>,
-			weight: u128,
+			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -429,7 +428,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			location: Box<VersionedMultiLocation>,
-			weight: u128,
+			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
@@ -441,8 +440,8 @@ pub mod pallet {
 				Error::<T>::CurrencyIdNotExists
 			);
 
-			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
-			CurrencyIdToLocations::<T>::insert(currency_id, location.clone());
+			LocationToCurrencyIds::<T>::insert(location, currency_id);
+			CurrencyIdToLocations::<T>::insert(currency_id, location);
 			CurrencyIdToWeights::<T>::insert(currency_id, weight);
 
 			Pallet::<T>::deposit_event(Event::<T>::MultiLocationSet {
@@ -565,7 +564,7 @@ impl<T: Config> Pallet<T> {
 		LocationToCurrencyIds::<T>::remove(location);
 	}
 
-	pub fn do_register_weight(currency_id: CurrencyId, weight: u128) -> DispatchResult {
+	pub fn do_register_weight(currency_id: CurrencyId, weight: Weight) -> DispatchResult {
 		ensure!(
 			CurrencyMetadatas::<T>::get(currency_id).is_some(),
 			Error::<T>::CurrencyIdNotExists
@@ -843,7 +842,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 /// The constant `FixedRate` type parameter should be the concrete fungible ID and the amount of it
 /// required for one second of weight.
 pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
-	weight: XcmWeight,
+	weight: u64,
 	amount: u128,
 	ed_ratio: FixedU128,
 	multi_location: Option<MultiLocation>,
@@ -865,7 +864,7 @@ where
 		}
 	}
 
-	fn buy_weight(&mut self, weight: XcmWeight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -878,8 +877,7 @@ where
 		if let AssetId::Concrete(ref multi_location) = asset_id {
 			log::debug!(target: "asset-registry::weight", "buy_weight multi_location: {:?}", multi_location);
 
-			if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(multi_location.clone())
-			{
+			if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(multi_location) {
 				if let Some(currency_metadatas) = Pallet::<T>::currency_metadatas(currency_id) {
 					// The integration tests can ensure the ed is non-zero.
 					let ed_ratio = FixedU128::saturating_from_rational(
@@ -888,13 +886,13 @@ where
 					);
 					// The WEIGHT_REF_TIME_PER_SECOND is non-zero.
 					let weight_ratio = FixedU128::saturating_from_rational(
-						weight as u128,
+						weight.ref_time(),
 						WEIGHT_REF_TIME_PER_SECOND,
 					);
 					let amount = ed_ratio
 						.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
 
-					let required = MultiAsset { id: asset_id.clone(), fun: Fungible(amount) };
+					let required = MultiAsset { id: *asset_id, fun: Fungible(amount) };
 
 					log::trace!(
 						target: "asset-registry::weight", "buy_weight payment: {:?}, required: {:?}, fixed_rate: {:?}, ed_ratio: {:?}, weight_ratio: {:?}",
@@ -904,10 +902,10 @@ where
 						.clone()
 						.checked_sub(required)
 						.map_err(|_| XcmError::TooExpensive)?;
-					self.weight = self.weight.saturating_add(weight);
+					self.weight = self.weight.saturating_add(weight.ref_time());
 					self.amount = self.amount.saturating_add(amount);
 					self.ed_ratio = ed_ratio;
-					self.multi_location = Some(multi_location.clone());
+					self.multi_location = Some(*multi_location);
 					return Ok(unused);
 				}
 			}
@@ -917,27 +915,24 @@ where
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: XcmWeight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
 		log::trace!(
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
 		);
-		let weight = weight.min(self.weight);
+		let weight = weight.min(Weight::from_ref_time(self.weight));
 		let weight_ratio =
-			FixedU128::saturating_from_rational(weight as u128, WEIGHT_REF_TIME_PER_SECOND);
+			FixedU128::saturating_from_rational(weight.ref_time(), WEIGHT_REF_TIME_PER_SECOND);
 		let amount = self
 			.ed_ratio
 			.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
 
-		self.weight = self.weight.saturating_sub(weight);
+		self.weight = self.weight.saturating_sub(weight.ref_time());
 		self.amount = self.amount.saturating_sub(amount);
 
 		log::trace!(target: "asset-registry::weight", "refund_weight amount: {:?}", amount);
 		if amount > 0 && self.multi_location.is_some() {
-			Some(
-				(self.multi_location.as_ref().expect("checked is non-empty; qed").clone(), amount)
-					.into(),
-			)
+			Some((*self.multi_location.as_ref().expect("checked is non-empty; qed"), amount).into())
 		} else {
 			None
 		}
@@ -949,10 +944,7 @@ impl<T, FixedRate: Get<u128>, R: TakeRevenue> Drop for FixedRateOfAsset<T, Fixed
 		log::trace!(target: "asset-registry::weight", "take revenue, weight: {:?}, amount: {:?}, multi_location: {:?}", self.weight, self.amount, self.multi_location);
 		if self.amount > 0 && self.multi_location.is_some() {
 			R::take_revenue(
-				(
-					self.multi_location.as_ref().expect("checked is non-empty; qed").clone(),
-					self.amount,
-				)
+				(*self.multi_location.as_ref().expect("checked is non-empty; qed"), self.amount)
 					.into(),
 			);
 		}

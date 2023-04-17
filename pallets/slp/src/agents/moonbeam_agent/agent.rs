@@ -51,12 +51,12 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::{prelude::*, Weight as XcmWeight},
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation, WeightLimit,
 	},
+	v3::{prelude::*, Weight as XcmWeight},
 	VersionedMultiLocation,
 };
 use xcm_interface::traits::parachains;
@@ -88,10 +88,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation.clone() != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -113,7 +110,7 @@ impl<T: Config>
 		// If not, check if amount is greater than minimum delegator stake. Afterwards, create the
 		// delegator ledger.
 		// If yes, check if amount is greater than minimum delegation requirement.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = validator.ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		// Ensure amount is no less than delegation_amount_minimum.
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
@@ -170,7 +167,7 @@ impl<T: Config>
 			let request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<T>)> =
 				BTreeMap::new();
 			let new_ledger = OneToManyLedger::<BalanceOf<T>> {
-				account: who.clone(),
+				account: *who,
 				total: Zero::zero(),
 				less_total: Zero::zero(),
 				delegations: empty_delegation_set,
@@ -238,7 +235,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -256,7 +253,7 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the delegator exists, if not, return error.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
@@ -312,7 +309,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -330,7 +327,7 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the delegator exists, if not, return error.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
@@ -399,7 +396,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -451,7 +448,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -465,7 +462,7 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
@@ -526,7 +523,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -601,7 +598,7 @@ impl<T: Config>
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who,
-			Some(validator.clone()),
+			Some(*validator),
 			MoonbeamLedgerUpdateOperation::Revoke,
 			Zero::zero(),
 			query_id,
@@ -611,7 +608,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -665,7 +662,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -691,7 +688,7 @@ impl<T: Config>
 		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		let collator = validator.clone().ok_or(Error::<T>::ValidatorNotProvided)?;
+		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mut leaving = false;
 		let now = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 			.ok_or(Error::<T>::TimeUnitNotExist)?;
@@ -777,7 +774,7 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -814,7 +811,7 @@ impl<T: Config>
 			parents: 1,
 			interior: X2(
 				Parachain(T::ParachainId::get().into()),
-				AccountId32 { network: Any, id: to_32 },
+				AccountId32 { network: None, id: to_32 },
 			),
 		}));
 
@@ -1026,9 +1023,7 @@ impl<T: Config>
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
-			query_id,
-		});
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailed { query_id });
 
 		Ok(())
 	}
@@ -1101,7 +1096,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
+		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
 
 		let (call_as_subaccount, fee, weight) =
 			Self::prepare_send_as_subaccount_call_params_with_query_id(
@@ -1113,7 +1108,7 @@ impl<T: Config> MoonbeamAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
 		Ok((query_id, timeout, fee, xcm_message))
 	}
@@ -1133,10 +1128,10 @@ impl<T: Config> MoonbeamAgent<T> {
 			)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		T::XcmRouter::send_xcm(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(fee)
 	}
@@ -1153,15 +1148,8 @@ impl<T: Config> MoonbeamAgent<T> {
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
-		let remark_call = if currency_id == MOVR {
-			MoonbeamCall::System(MoonbeamSystemCall::MoonriverRemarkWithEvent(Box::new(
-				query_id.encode(),
-			)))
-		} else {
-			MoonbeamCall::System(MoonbeamSystemCall::MoonbeamRemarkWithEvent(Box::new(
-				query_id.encode(),
-			)))
-		};
+		let remark_call =
+			MoonbeamCall::System(MoonbeamSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 		let call_batched_with_remark =
 			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
@@ -1226,7 +1214,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 		let entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
 			currency_id,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 			validator_id: validator,
 			update_operation,
 			amount,
@@ -1305,16 +1293,16 @@ impl<T: Config> MoonbeamAgent<T> {
 			WithdrawAsset(assets.clone()),
 			InitiateReserveWithdraw {
 				assets: All.into(),
-				reserve: dest.clone(),
+				reserve: dest,
 				xcm: Xcm(vec![
-					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+					BuyExecution { fees: fee_asset, weight_limit: Limited(weight) },
+					DepositAsset { assets: AllCounted(1).into(), beneficiary },
 				]),
 			},
 		]);
-
+		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from.clone(), msg, weight, weight)
+		T::XcmExecutor::execute_xcm_in_credit(*from, msg, hash, weight, weight)
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmFailure)?;
 
@@ -1391,7 +1379,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 								// add a new entry in requests and request_briefs
 								let new_request = OneToManyScheduledRequest {
-									validator: validator_id.clone(),
+									validator: validator_id,
 									when_executable: unlock_time_unit.clone(),
 									action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(
 										amount,
@@ -1427,7 +1415,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 								// add a new entry in requests and request_briefs
 								let new_request = OneToManyScheduledRequest {
-									validator: validator_id.clone(),
+									validator: validator_id,
 									when_executable: unlock_time_unit.clone(),
 									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
 										*revoke_amount,
@@ -1487,7 +1475,7 @@ impl<T: Config> MoonbeamAgent<T> {
 								> = BTreeMap::new();
 								for (vali, amt) in old_ledger.delegations.iter() {
 									let request_entry = OneToManyScheduledRequest {
-										validator: vali.clone(),
+										validator: *vali,
 										when_executable: unlock_time.clone(),
 										action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
 											*amt,
@@ -1497,7 +1485,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 									old_ledger
 										.request_briefs
-										.insert(vali.clone(), (unlock_time.clone(), *amt));
+										.insert(*vali, (unlock_time.clone(), *amt));
 								}
 
 								old_ledger.requests = new_requests;
@@ -1720,6 +1708,7 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		currency_id: CurrencyId,
+		_query_id: Option<QueryId>,
 	) -> Result<Xcm<()>, Error<T>> {
 		let multi = Self::get_glmr_local_multilocation(currency_id)?;
 
@@ -1735,18 +1724,17 @@ impl<T: Config>
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
-				origin_type: OriginKind::SovereignAccount,
+				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: call.encode().into(),
 			},
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::MAX,
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(AccountKey20 {
-						network: Any,
+						network: None,
 						key: self_sibling_parachain_account,
 					}),
 				},

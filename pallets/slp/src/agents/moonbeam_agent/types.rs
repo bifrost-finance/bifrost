@@ -23,7 +23,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{opaque::latest::WeightLimit, VersionedMultiLocation};
+use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {
@@ -87,9 +87,7 @@ pub enum MoonbeamXtokensCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamSystemCall {
 	#[codec(index = 7)]
-	MoonriverRemarkWithEvent(Box<Vec<u8>>),
-	#[codec(index = 8)]
-	MoonbeamRemarkWithEvent(Box<Vec<u8>>),
+	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

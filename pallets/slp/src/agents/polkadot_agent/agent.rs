@@ -44,8 +44,8 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	opaque::v3::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
+	v3::{prelude::*, Weight},
 	VersionedMultiAssets,
 };
 
@@ -76,10 +76,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation.clone() != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
@@ -127,7 +124,7 @@ impl<T: Config>
 		// Create a new delegator ledger
 		// The real bonded amount will be updated by services once the xcm transaction succeeds.
 		let ledger = SubstrateLedger::<BalanceOf<T>> {
-			account: who.clone(),
+			account: *who,
 			total: Zero::zero(),
 			active: Zero::zero(),
 			unlocking: vec![],
@@ -147,7 +144,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -204,7 +202,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -269,7 +268,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -310,7 +310,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
 		} else {
@@ -373,7 +374,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -433,7 +435,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -463,7 +466,7 @@ impl<T: Config>
 		let mut new_set: Vec<(MultiLocation, Hash<T>)> = vec![];
 		for (acc, acc_hash) in original_set.iter() {
 			if !targets.contains(acc) {
-				new_set.push((acc.clone(), *acc_hash))
+				new_set.push((*acc, *acc_hash))
 			}
 		}
 
@@ -500,7 +503,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -601,7 +605,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -649,7 +654,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -679,6 +685,10 @@ impl<T: Config>
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;
 
+		let (weight_limit, _) =
+			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferBack)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
 		// Construct xcm message.
 		let call = SubstrateCall::<T>::get_reserve_transfer_assets_call(
 			currency_id,
@@ -686,6 +696,7 @@ impl<T: Config>
 			beneficiary,
 			assets,
 			fee_asset_item,
+			Limited(weight_limit),
 		)?;
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
@@ -808,7 +819,7 @@ impl<T: Config>
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(who.clone(), multi_hash)) {
+			if validator_list.contains(&(*who, multi_hash)) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}
@@ -912,9 +923,7 @@ impl<T: Config>
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
-			query_id,
-		});
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailed { query_id });
 
 		Ok(())
 	}
@@ -930,9 +939,7 @@ impl<T: Config>
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
 
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseFailSuccessfully {
-			query_id,
-		});
+		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseFailed { query_id });
 
 		Ok(())
 	}
@@ -951,39 +958,23 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		_currency_id: CurrencyId,
-		// response_back_location: MultiLocation
+		query_id: Option<QueryId>,
 	) -> Result<Xcm<()>, Error<T>> {
 		let mut xcm_message = Self::inner_construct_xcm_message(extra_fee);
 		let transact_instruct = call.get_transact_instruct(weight);
-
 		xcm_message.insert(2, transact_instruct);
+		if let Some(query_id) = query_id {
+			let report_transact_status_instruct =
+				Self::get_report_transact_status_instruct(query_id, weight);
+			xcm_message.insert(3, report_transact_status_instruct);
+		}
 		Ok(Xcm(xcm_message))
 	}
 }
 
 /// Internal functions.
 impl<T: Config> PolkadotAgent<T> {
-	fn prepare_send_as_subaccount_call_params_with_query_id(
-		operation: XcmOperation,
-		call: SubstrateCall<T>,
-		who: &MultiLocation,
-		query_id: QueryId,
-		currency_id: CurrencyId,
-	) -> Result<(SubstrateCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		let call_as_subaccount =
-			call.get_call_as_subaccount_from_call(Some(query_id), sub_account_index)?;
-
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
-	fn prepare_send_as_subaccount_call_params_without_query_id(
+	fn prepare_send_as_subaccount_call(
 		operation: XcmOperation,
 		call: SubstrateCall<T>,
 		who: &MultiLocation,
@@ -993,7 +984,7 @@ impl<T: Config> PolkadotAgent<T> {
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let call_as_subaccount = call.get_call_as_subaccount_from_call(None, sub_account_index)?;
+		let call_as_subaccount = call.get_call_as_subaccount_from_call(sub_account_index)?;
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
@@ -1011,33 +1002,42 @@ impl<T: Config> PolkadotAgent<T> {
 		let responder = MultiLocation::parent();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
+
+		// Generate query_id need( responder,callback, timeout)
+		let query_id = match operation {
+			XcmOperation::Bond |
+			XcmOperation::BondExtra |
+			XcmOperation::Rebond |
+			XcmOperation::Unbond |
+			XcmOperation::Chill |
+			XcmOperation::Liquidize => T::SubstrateResponseManager::create_query_record(
+				&responder,
+				Some(Pallet::<T>::confirm_delegator_ledger_call()),
+				timeout,
+			),
+
+			XcmOperation::Delegate | XcmOperation::Undelegate =>
+				T::SubstrateResponseManager::create_query_record(
+					&responder,
+					Some(Pallet::<T>::confirm_validators_by_delegator_call()),
+					timeout,
+				),
+			_ => {
+				ensure!(false, Error::<T>::Unsupported);
+				0
+			},
+		};
 
 		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_with_query_id(
-				operation,
-				call,
-				who,
-				query_id,
-				currency_id,
-			)?;
+			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
 
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
-
-		//【For xcm v3】
-		// let response_back_location = T::UniversalLocation::get()
-		// 	.invert_target(&responder)
-		// 	.map_err(|()| XcmError::MultiLocationNotInvertible)?;
-
-		// let xcm_message = Self::construct_xcm_message(
-		// 	call_as_subaccount,
-		// 	fee,
-		// 	weight,
-		// 	query_id,
-		//  currency_id,
-		// 	response_back_location,
-		// )?;
+		let xcm_message = Self::construct_xcm_message(
+			call_as_subaccount,
+			fee,
+			weight,
+			currency_id,
+			Some(query_id),
+		)?;
 
 		Ok((query_id, timeout, xcm_message))
 	}
@@ -1049,17 +1049,13 @@ impl<T: Config> PolkadotAgent<T> {
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_without_query_id(
-				operation,
-				call,
-				who,
-				currency_id,
-			)?;
+			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
 
 		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id)?;
+			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
@@ -1208,6 +1204,7 @@ impl<T: Config> PolkadotAgent<T> {
 		Ok(())
 	}
 
+	/// confirm_validators_by_delegator_query_response successfully
 	fn update_validators_by_delegator_query_response_storage(
 		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
@@ -1220,13 +1217,6 @@ impl<T: Config> PolkadotAgent<T> {
 
 		// update ValidatorsByDelegatorXcmUpdateQueue<T> storage
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
-
-		// Delete the query in pallet_xcm.
-
-		ensure!(
-			T::SubstrateResponseManager::remove_query_record(query_id),
-			Error::<T>::QueryResponseRemoveError
-		);
 
 		Ok(())
 	}
@@ -1252,6 +1242,7 @@ impl<T: Config> PolkadotAgent<T> {
 		Ok(Some(unlock_time_unit))
 	}
 
+	/// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		update_operation: SubstrateLedgerUpdateOperation,
@@ -1270,7 +1261,7 @@ impl<T: Config> PolkadotAgent<T> {
 
 		let entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id,
-			delegator_id: who.clone(),
+			delegator_id: *who,
 			update_operation,
 			amount,
 			unlock_time,
@@ -1280,6 +1271,7 @@ impl<T: Config> PolkadotAgent<T> {
 		Ok(())
 	}
 
+	/// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 	fn insert_validators_by_delegator_update_entry(
 		who: &MultiLocation,
 		validator_list: Vec<(MultiLocation, Hash<T>)>,
@@ -1287,11 +1279,10 @@ impl<T: Config> PolkadotAgent<T> {
 		timeout: BlockNumberFor<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		let entry = ValidatorsByDelegatorUpdateEntry::Substrate(
 			SubstrateValidatorsByDelegatorUpdateEntry {
 				currency_id,
-				delegator_id: who.clone(),
+				delegator_id: *who,
 				validators: validator_list,
 			},
 		);
@@ -1318,30 +1309,12 @@ impl<T: Config> PolkadotAgent<T> {
 		};
 
 		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
-
-		//【For xcm v3】
-		// let now = frame_system::Pallet::<T>::block_number();
-		// let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		// let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
-		// // Report the Error message of the xcm.
-		// // from the responder's point of view to get Here's MultiLocation.
-		// let destination = T::UniversalLocation::get()
-		// 	.invert_target(&dest)
-		// 	.map_err(|()| XcmError::MultiLocationNotInvertible)?;
-
-		// // Set the error reporting.
-		// let response_info = QueryResponseInfo { destination, query_id, max_weight: 0 };
-		// let report_error = Xcm(vec![ReportError(response_info)]);
-		// msg.0.insert(0, SetAppendix(report_error));
 	}
 
-	fn inner_construct_xcm_message(
-		extra_fee: BalanceOf<T>,
-		// response_back_location: MultiLocation
-	) -> Vec<Instruction> {
+	fn inner_construct_xcm_message(extra_fee: BalanceOf<T>) -> Vec<Instruction> {
 		let asset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
+			fun: Fungible(extra_fee.unique_saturated_into()),
 		};
 
 		vec![
@@ -1349,13 +1322,20 @@ impl<T: Config> PolkadotAgent<T> {
 			BuyExecution { fees: asset, weight_limit: Unlimited },
 			RefundSurplus,
 			DepositAsset {
-				assets: All.into(),
-				max_assets: u32::max_value(),
+				assets: AllCounted(8).into(),
 				beneficiary: MultiLocation {
 					parents: 0,
 					interior: X1(Parachain(T::ParachainId::get().into())),
 				},
 			},
 		]
+	}
+
+	fn get_report_transact_status_instruct(query_id: QueryId, max_weight: Weight) -> Instruction {
+		ReportTransactStatus(QueryResponseInfo {
+			destination: MultiLocation::from(X1(Parachain(u32::from(T::ParachainId::get())))),
+			query_id,
+			max_weight,
+		})
 	}
 }

@@ -22,12 +22,11 @@ use crate::{mocks::mock_kusama::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
-use xcm::opaque::latest::NetworkId::Any;
 
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
 const SUBACCOUNT_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X1(AccountId32 { network: Any, id: SUBACCOUNT_0_32 }) };
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: SUBACCOUNT_0_32 }) };
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {
@@ -39,12 +38,12 @@ fn set_xcm_dest_weight_and_fee_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			KSM,
 			XcmOperation::Bond,
-			Some((5_000_000_000, 5_000_000_000))
+			Some((5_000_000_000.into(), 5_000_000_000))
 		));
 
 		assert_eq!(
 			XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond),
-			Some((5_000_000_000, 5_000_000_000))
+			Some((5_000_000_000.into(), 5_000_000_000))
 		);
 
 		// Delete a record.
@@ -497,7 +496,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -548,7 +547,7 @@ fn set_hosting_fees_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -637,69 +636,69 @@ fn register_subaccount_index_0() {
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::TransferTo,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Bond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::BondExtra,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Unbond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Rebond,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Delegate,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Payout,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Liquidize,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::Chill,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 		RuntimeOrigin::signed(ALICE),
 		DOT,
 		XcmOperation::TransferBack,
-		Some((20_000_000_000, 10_000_000_000)),
+		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }

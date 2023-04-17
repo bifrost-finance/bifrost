@@ -20,11 +20,12 @@
 #![allow(clippy::unused_unit)]
 
 pub mod calls;
+pub mod migration;
 pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-pub use traits::{ChainId, MessageId, Nonce};
+pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
 
 macro_rules! use_relay {
     ({ $( $code:tt )* }) => {
@@ -36,7 +37,7 @@ macro_rules! use_relay {
             use kusama::RelaychainCall;
 
 			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Any {
+        } else if T::RelayNetwork::get() == NetworkId::Rococo {
             use rococo::RelaychainCall;
 
 			$( $code )*
@@ -57,6 +58,7 @@ pub(crate) type BalanceOf<T: Config> =
 
 #[frame_support::pallet]
 pub mod pallet {
+	use cumulus_primitives_core::ParaId;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
@@ -67,7 +69,7 @@ pub mod pallet {
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{
-		latest::{prelude::*, Weight as XcmWeight},
+		v3::{prelude::*, ExecuteXcm, Parent},
 		DoubleEncoded, VersionedXcm,
 	};
 
@@ -105,6 +107,13 @@ pub mod pallet {
 		/// Convert `T::AccountId` to `MultiLocation`.
 		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
 
+		/// Salp call encode
+		type SalpHelper: SalpHelper<
+			AccountIdOf<Self>,
+			<Self as pallet_xcm::Config>::RuntimeCall,
+			BalanceOf<Self>,
+		>;
+
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
 
@@ -112,13 +121,19 @@ pub mod pallet {
 		type StatemineTransferFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type StatemineTransferWeight: Get<XcmWeight>;
+		type StatemineTransferWeight: Get<Weight>;
 
 		#[pallet::constant]
 		type ContributionFee: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type ContributionWeight: Get<XcmWeight>;
+		type ContributionWeight: Get<Weight>;
+
+		#[pallet::constant]
+		type ParachainId: Get<ParaId>;
+
+		#[pallet::constant]
+		type CallBackTimeOut: Get<Self::BlockNumber>;
 	}
 
 	#[pallet::error]
@@ -132,7 +147,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmDestWeightUpdated(XcmInterfaceOperation, XcmWeight),
+		XcmDestWeightUpdated(XcmInterfaceOperation, Weight),
 		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
 		XcmFeeUpdated(XcmInterfaceOperation, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
@@ -145,7 +160,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (XcmWeight, BalanceOf<T>), OptionQuery>;
+		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
 
 	/// Tracker for the next nonce index
 	#[pallet::storage]
@@ -174,7 +189,7 @@ pub mod pallet {
 			))]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(XcmInterfaceOperation, Option<XcmWeight>, Option<BalanceOf<T>>)>,
+			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -227,19 +242,19 @@ pub mod pallet {
 
 			let mut assets = MultiAssets::new();
 			let statemine_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(
+				id: Concrete(MultiLocation::new(
 					1,
-					Junctions::X3(
-						Junction::Parachain(parachains::Statemine::ID),
-						Junction::PalletInstance(parachains::Statemine::PALLET_ID),
-						Junction::GeneralIndex(asset_id.into()),
+					X3(
+						Parachain(parachains::Statemine::ID),
+						PalletInstance(parachains::Statemine::PALLET_ID),
+						GeneralIndex(asset_id.into()),
 					),
 				)),
-				fun: Fungibility::Fungible(amount_u128),
+				fun: Fungible(amount_u128),
 			};
 			let fee_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(1, Junctions::Here)),
-				fun: Fungibility::Fungible(xcm_fee_u128),
+				id: Concrete(MultiLocation::new(1, Junctions::Here)),
+				fun: Fungible(xcm_fee_u128),
 			};
 			assets.push(statemine_asset);
 			assets.push(fee_asset.clone());
@@ -247,24 +262,18 @@ pub mod pallet {
 				WithdrawAsset(assets),
 				InitiateReserveWithdraw {
 					assets: All.into(),
-					reserve: MultiLocation::new(
-						1,
-						Junctions::X1(Junction::Parachain(parachains::Statemine::ID)),
-					),
+					reserve: MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
 					xcm: Xcm(vec![
 						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-						DepositAsset {
-							assets: All.into(),
-							max_assets: 2,
-							beneficiary: dst_location.clone(),
-						},
+						DepositAsset { assets: AllCounted(2).into(), beneficiary: dst_location },
 					]),
 				},
 			]);
-
+			let hash = msg.using_encoded(sp_io::hashing::blake2_256);
 			<T as pallet_xcm::Config>::XcmExecutor::execute_xcm_in_credit(
 				origin_location,
 				msg,
+				hash,
 				dest_weight,
 				dest_weight,
 			)
@@ -278,16 +287,32 @@ pub mod pallet {
 	}
 
 	impl<T: Config> XcmHelper<AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
-		fn contribute(index: ChainId, value: BalanceOf<T>) -> Result<MessageId, DispatchError> {
-			let contribute_call = Self::build_ump_crowdloan_contribute(index, value);
+		fn contribute(
+			contributer: AccountIdOf<T>,
+			index: ChainId,
+			amount: BalanceOf<T>,
+		) -> Result<MessageId, DispatchError> {
+			// Construct contribute call data
+			let contribute_call = Self::build_ump_crowdloan_contribute(index, amount);
 			let (dest_weight, xcm_fee) =
 				Self::xcm_dest_weight_and_fee(XcmInterfaceOperation::UmpContributeTransact)
 					.unwrap_or((T::ContributionWeight::get(), T::ContributionFee::get()));
 
-			let nonce = Self::next_nonce_index(index)?;
+			// Construct confirm_contribute_call
+			let confirm_contribute_call = T::SalpHelper::confirm_contribute_call();
+			// Generate query_id
+			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
+				MultiLocation::parent(),
+				confirm_contribute_call,
+				T::CallBackTimeOut::get(),
+				Here,
+			);
+
+			// Bind query_id and contribution
+			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer, amount);
 
 			let (msg_id, msg) =
-				Self::build_ump_transact(contribute_call, dest_weight, xcm_fee, nonce)?;
+				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;
 
 			let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
 			ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
@@ -296,22 +321,15 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn next_nonce_index(index: ChainId) -> Result<Nonce, Error<T>> {
-			CurrentNonce::<T>::try_mutate(index, |ni| {
-				*ni = ni.overflowing_add(1).0;
-				Ok(*ni)
-			})
-		}
-
 		pub(crate) fn transact_id(data: &[u8]) -> MessageId {
 			return sp_io::hashing::blake2_256(data);
 		}
 
 		pub(crate) fn build_ump_transact(
+			query_id: QueryId,
 			call: DoubleEncoded<()>,
-			weight: XcmWeight,
+			weight: Weight,
 			fee: BalanceOf<T>,
-			nonce: Nonce,
 		) -> Result<(MessageId, Xcm<()>), Error<T>> {
 			let sovereign_account: AccountIdOf<T> = T::ParachainSovereignAccount::get();
 			let sovereign_location: MultiLocation =
@@ -326,12 +344,19 @@ pub mod pallet {
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
-					origin_type: OriginKind::SovereignAccount,
-					require_weight_at_most: weight + nonce as u64,
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most: weight,
 					call,
 				},
+				ReportTransactStatus(QueryResponseInfo {
+					destination: MultiLocation::from(X1(Parachain(u32::from(
+						T::ParachainId::get(),
+					)))),
+					query_id,
+					max_weight: weight,
+				}),
 				RefundSurplus,
-				DepositAsset { assets: All.into(), max_assets: 1, beneficiary: sovereign_location },
+				DepositAsset { assets: AllCounted(1).into(), beneficiary: sovereign_location },
 			]);
 			let data = VersionedXcm::<()>::from(message.clone()).encode();
 			let id = Self::transact_id(&data[..]);

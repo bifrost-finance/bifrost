@@ -20,7 +20,7 @@ use crate::{agents::BalancesCall, BalanceOf, Config, MultiLocation};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{latest::Weight as XCMWeight, opaque::latest::MultiAsset};
+use xcm::{opaque::v3::MultiAsset, v3::Weight as XCMWeight};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum PhalaCall<T: Config> {
