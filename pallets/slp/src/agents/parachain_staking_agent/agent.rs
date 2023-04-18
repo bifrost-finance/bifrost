@@ -24,12 +24,11 @@ use crate::{
 	},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied, DelegatorLedgers,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
 	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
 };
-use codec::{alloc::collections::BTreeMap, Encode};
+use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
@@ -55,7 +54,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for ParachainStakingAgent<T>
 {
@@ -96,12 +95,12 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
 
 		// check if the validator is in the white list.
-		let multi_hash = T::Hashing::hash(&collator.encode());
 		let validator_list =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		validator_list
-			.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-			.map_err(|_| Error::<T>::ValidatorSetNotExist)?;
+			.iter()
+			.position(|va| va ==&collator)
+			.ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -1079,7 +1078,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

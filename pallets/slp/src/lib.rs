@@ -52,7 +52,6 @@ pub use weights::WeightInfo;
 use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
 
 mod agents;
-pub mod migration;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -73,7 +72,7 @@ type StakingAgentBoxType<T> = Box<
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		pallet::Error<T>,
 	>,
 >;
@@ -398,7 +397,7 @@ pub mod pallet {
 		},
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
-			validators_list: Vec<(MultiLocation, Hash<T>)>,
+			validators_list: Vec<MultiLocation>,
 			delegator_id: MultiLocation,
 		},
 		XcmDestWeightAndFeeSet {
@@ -431,7 +430,7 @@ pub mod pallet {
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+			entry: ValidatorsByDelegatorUpdateEntry,
 		},
 		ValidatorsByDelegatorQueryResponseFailed {
 			#[codec(compact)]
@@ -533,11 +532,10 @@ pub mod pallet {
 	#[pallet::getter(fn get_delegator_next_index)]
 	pub type DelegatorNextIndex<T> = StorageMap<_, Blake2_128Concat, CurrencyId, u16, ValueQuery>;
 
-	/// Validator in service. A validator is identified in MultiLocation format.
+	/// (VWL) Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
-	pub type Validators<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
+	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
@@ -548,7 +546,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Vec<(MultiLocation, Hash<T>)>,
+		Vec<MultiLocation>,
 		OptionQuery,
 	>;
 
@@ -558,7 +556,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(ValidatorsByDelegatorUpdateEntry<Hash<T>>, BlockNumberFor<T>),
+		(ValidatorsByDelegatorUpdateEntry, BlockNumberFor<T>),
 	>;
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
@@ -1590,8 +1588,7 @@ pub mod pallet {
 				Error::<T>::DelegatorNotBonded
 			);
 
-			let validators_list =
-				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
+			let validators_list = Self::remove_validators_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
 			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());

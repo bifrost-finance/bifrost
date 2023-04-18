@@ -72,13 +72,13 @@ pub struct SubstrateLedgerUpdateEntry<Balance> {
 
 /// A type for substrate validators by delegator updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateValidatorsByDelegatorUpdateEntry<HashT> {
+pub struct SubstrateValidatorsByDelegatorUpdateEntry {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
 	pub delegator_id: MultiLocation,
 	/// Validators vec to be updated
-	pub validators: Vec<(MultiLocation, HashT)>,
+	pub validators: Vec<MultiLocation>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

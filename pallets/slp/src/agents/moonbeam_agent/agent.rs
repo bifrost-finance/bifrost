@@ -31,12 +31,11 @@ use crate::{
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, FeeSources,
-	Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
+	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
 	ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -75,7 +74,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for MoonbeamAgent<T>
 {
@@ -116,12 +115,12 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
 
 		// check if the validator is in the white list.
-		let multi_hash = T::Hashing::hash(&collator.encode());
 		let validator_list =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		validator_list
-			.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-			.map_err(|_| Error::<T>::ValidatorSetNotExist)?;
+			.iter()
+			.position(|va| va == &collator)
+			.ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
@@ -1009,7 +1008,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

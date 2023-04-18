@@ -32,7 +32,6 @@ use crate::{
 };
 use codec::Encode;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -71,7 +70,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for PhalaAgent<T>
 {
@@ -306,11 +305,7 @@ impl<T: Config>
 			let validators_set =
 				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-			let multi_hash = T::Hashing::hash(&candidate.encode());
-			ensure!(
-				validators_set.contains(&(*candidate, multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validators_set.contains(candidate), Error::<T>::ValidatorNotExist);
 
 			// if the delegator is new, create a ledger for it
 			if !DelegatorLedgers::<T>::contains_key(currency_id, &who.clone()) {
@@ -681,11 +676,9 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(*who, multi_hash)) {
+			if validator_list.contains(&who) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}
@@ -753,7 +746,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

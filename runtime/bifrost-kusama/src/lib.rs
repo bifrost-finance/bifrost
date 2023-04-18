@@ -1878,7 +1878,6 @@ pub type Executive = frame_executive::Executive<
 		// v3::Multilocation
 		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
 		xcm_interface::migration::RemoveNonce<Runtime>,
-		bifrost_slp::migration::MigrateV2MultiLocationToV3<Runtime>,
 	),
 >;
 

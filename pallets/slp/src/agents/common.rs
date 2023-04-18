@@ -24,7 +24,6 @@ use crate::{
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
 	Zero,
 };
-use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -76,7 +75,6 @@ impl<T: Config> Pallet<T> {
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(currency_id);
 
@@ -88,19 +86,19 @@ impl<T: Config> Pallet<T> {
 		);
 
 		if validators_set.is_none() {
-			Validators::<T>::insert(currency_id, vec![(who, multi_hash)]);
+			Validators::<T>::insert(currency_id, vec![who]);
 		} else {
 			// Change corresponding storage.
 			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
 				if let Some(ref mut validator_list) = validator_vec {
-					let rs =
-						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+					// Check if the validator is in the already exist.
+					ensure!(
+						validator_list.iter().position(|multi| multi == who).is_none(),
+						Error::<T>::AlreadyExist
+					);
 
-					if let Err(index) = rs {
-						validator_list.insert(index, (*who, multi_hash));
-					} else {
-						Err(Error::<T>::AlreadyExist)?
-					}
+					// If the validator is not in the whitelist, add it.
+					validator_list.push(*who);
 				}
 				Ok(())
 			})?;
@@ -133,15 +131,14 @@ impl<T: Config> Pallet<T> {
 		let validators_set =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-		let multi_hash = T::Hashing::hash(&who.encode());
-		ensure!(validators_set.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
+		ensure!(validators_set.contains(who), Error::<T>::ValidatorNotExist);
 
 		// Update corresponding storage.
 		Validators::<T>::mutate(currency_id, |validator_vec| {
 			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+				let index_op = validator_list.clone().iter().position(|va| va == who);
 
-				if let Ok(index) = rs {
+				if let Some(index) = index_op {
 					validator_list.remove(index);
 				}
 			}

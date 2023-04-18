@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, Hash, LedgerUpdateEntry, Pallet,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, Pallet,
 	TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
 };
 use codec::Encode;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::CurrencyId;
@@ -55,26 +54,18 @@ impl<T: Config> Pallet<T> {
 		Ok(account)
 	}
 
-	pub fn sort_validators_and_remove_duplicates(
+	pub fn remove_validators_duplicates(
 		currency_id: CurrencyId,
 		validators: &Vec<MultiLocation>,
-	) -> Result<Vec<(MultiLocation, Hash<T>)>, Error<T>> {
+	) -> Result<Vec<MultiLocation>, Error<T>> {
 		let validators_set =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let mut validators_list: Vec<(MultiLocation, Hash<T>)> = vec![];
+		let mut validators_list: Vec<MultiLocation> = vec![];
 		for validator in validators.iter() {
 			// Check if the validator is in the validator whitelist
-			let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
-			ensure!(
-				validators_set.contains(&(*validator, multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
-
-			// sort the validators and remove duplicates
-			let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-			if let Err(index) = rs {
-				validators_list.insert(index, (*validator, multi_hash));
+			ensure!(validators_set.contains(&validator), Error::<T>::ValidatorNotExist);
+			if !validators_list.contains(&validator) {
+				validators_list.push(*validator);
 			}
 		}
 
