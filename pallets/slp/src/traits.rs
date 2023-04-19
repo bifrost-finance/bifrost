@@ -194,16 +194,6 @@ pub trait StakingAgent<
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
 	/// ************************************
-	/// Abstraction over a validator manager.
-	/// ************************************
-
-	/// Add a new serving validator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
-
-	/// Remove an existing serving validator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
-
-	/// ************************************
 	/// Abstraction over a QueryResponseChecker.
 	/// ************************************
 

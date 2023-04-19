@@ -660,25 +660,6 @@ impl<T: Config>
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		if let &MultiLocation {
-			parents: 1,
-			interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
-		} = who
-		{
-			Pallet::<T>::inner_add_validator(who, currency_id)
-		} else {
-			Err(Error::<T>::ValidatorMultilocationNotvalid)?
-		}
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
-	}
-
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,

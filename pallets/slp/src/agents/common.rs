@@ -18,7 +18,7 @@
 use crate::{
 	pallet::Error,
 	vec, BalanceOf, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
@@ -87,6 +87,9 @@ impl<T: Config> Pallet<T> {
 
 		if validators_set.is_none() {
 			Validators::<T>::insert(currency_id, vec![who]);
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 		} else {
 			// Change corresponding storage.
 			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
@@ -99,6 +102,12 @@ impl<T: Config> Pallet<T> {
 
 					// If the validator is not in the whitelist, add it.
 					validator_list.push(*who);
+
+					// Deposit event.
+					Pallet::<T>::deposit_event(Event::ValidatorsAdded {
+						currency_id,
+						validator_id: *who,
+					});
 				}
 				Ok(())
 			})?;
@@ -140,6 +149,11 @@ impl<T: Config> Pallet<T> {
 
 				if let Some(index) = index_op {
 					validator_list.remove(index);
+
+					Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
+						currency_id,
+						validator_id: *who,
+					});
 				}
 			}
 		});

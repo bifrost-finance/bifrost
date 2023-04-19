@@ -1011,17 +1011,6 @@ impl<T: Config>
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Pallet::<T>::inner_add_validator(who, currency_id)
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
-	}
-
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,

@@ -20,7 +20,7 @@
 
 extern crate core;
 
-use crate::agents::PolkadotAgent;
+use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
@@ -43,7 +43,6 @@ use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-
 use sp_core::H160;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
@@ -1558,11 +1557,20 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_validator(&who, currency_id)?;
+			if currency_id == PHA {
+				if let &MultiLocation {
+					parents: 1,
+					interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
+				} = who.as_ref()
+				{
+					Pallet::<T>::inner_add_validator(&who, currency_id)?;
+				} else {
+					Err(Error::<T>::ValidatorMultilocationNotvalid)?;
+				}
+			} else {
+				Pallet::<T>::inner_add_validator(&who, currency_id)?;
+			}
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 			Ok(())
 		}
 
@@ -1577,14 +1585,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.remove_validator(&who, currency_id)?;
+			Pallet::<T>::inner_remove_validator(&who, currency_id)?;
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
-				currency_id,
-				validator_id: *who,
-			});
 			Ok(())
 		}
 
