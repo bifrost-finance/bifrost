@@ -94,11 +94,9 @@ impl<T: Config> Pallet<T> {
 			// Change corresponding storage.
 			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
 				if let Some(ref mut validator_list) = validator_vec {
+					let rs = validator_list.iter().position(|multi| multi == who);
 					// Check if the validator is in the already exist.
-					ensure!(
-						validator_list.iter().position(|multi| multi == who).is_none(),
-						Error::<T>::AlreadyExist
-					);
+					ensure!(rs.is_none(), Error::<T>::AlreadyExist);
 
 					// If the validator is not in the whitelist, add it.
 					validator_list.push(*who);
