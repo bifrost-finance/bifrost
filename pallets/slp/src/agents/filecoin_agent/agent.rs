@@ -64,7 +64,7 @@ impl<T: Config>
 		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(*delegator_multilocation)
@@ -442,16 +442,6 @@ impl<T: Config>
 		}
 
 		Ok(())
-	}
-
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
 	}
 
 	/// Remove an existing serving delegator for a particular currency.

@@ -180,16 +180,6 @@ pub trait StakingAgent<
 		currency_id: CurrencyId,
 	) -> Result<(), Error>;
 
-	/// ************************************
-	/// Add a new serving delegator for a particular currency.
-	/// ************************************
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult;
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 

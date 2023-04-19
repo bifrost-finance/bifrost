@@ -1515,8 +1515,7 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_delegator(index, &who, currency_id)?;
+			Pallet::<T>::inner_add_delegator(index, &who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
