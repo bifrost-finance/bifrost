@@ -19,7 +19,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::convert::Into;
-
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -37,6 +36,7 @@ use sp_arithmetic::traits::SaturatedConversion;
 use sp_runtime::{
 	traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
+	BoundedVec,
 };
 use sp_std::{vec, vec::Vec};
 pub use weights::WeightInfo;
@@ -96,6 +96,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
 
+		#[pallet::constant]
+		type MaxFeeCurrencyOrderListLen: Get<u32>;
+
 		type ParachainId: Get<ParaId>;
 
 		/// The only origin that can set universal fee currency order list
@@ -124,11 +127,17 @@ pub mod pallet {
 		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
 
+	/// Deprecated. To-be removed after all data deleted.
+	#[pallet::storage]
+	#[pallet::getter(fn user_fee_charge_order_list)]
+	pub type UserFeeChargeOrderList<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, OptionQuery>;
+
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
 	#[pallet::getter(fn get_universal_fee_currency_order_list)]
 	pub type UniversalFeeCurrencyOrderList<T: Config> =
-		StorageValue<_, Vec<CurrencyIdOf<T>>, ValueQuery>;
+		StorageValue<_, BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>, ValueQuery>;
 
 	/// User default fee currency, if set, will be used as the first fee currency, and then use the
 	/// universal fee currency order list
@@ -175,12 +184,30 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::set_universal_fee_currency_order_list())]
 		pub fn set_universal_fee_currency_order_list(
 			origin: OriginFor<T>,
-			default_list: Vec<CurrencyIdOf<T>>,
+			default_list: BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			ensure!(default_list.len() > 0 as usize, Error::<T>::WrongListLength);
+
 			UniversalFeeCurrencyOrderList::<T>::set(default_list);
+
+			Ok(())
+		}
+
+		// Anyone can call this function to remove data from the user fee charge order list
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_from_user_fee_charge_order_list())]
+		pub fn remove_from_user_fee_charge_order_list(origin: OriginFor<T>) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			let remain_count = UserFeeChargeOrderList::<T>::iter().count();
+			ensure!(remain_count > 0, Error::<T>::WrongListLength);
+
+			// Remove the top 50 records from user fee charge order list
+			UserFeeChargeOrderList::<T>::iter().take(50).for_each(|(key, _)| {
+				UserFeeChargeOrderList::<T>::remove(key);
+			});
 
 			Ok(())
 		}
@@ -197,7 +224,8 @@ impl<T: Config> Pallet<T> {
 		};
 
 		// Get universal fee currency order list
-		let mut universal_fee_currency_order_list = UniversalFeeCurrencyOrderList::<T>::get();
+		let mut universal_fee_currency_order_list: Vec<CurrencyIdOf<T>> =
+			UniversalFeeCurrencyOrderList::<T>::get().into_iter().collect();
 
 		// Concat user default fee currency and universal fee currency order list
 		order_list.append(&mut universal_fee_currency_order_list);

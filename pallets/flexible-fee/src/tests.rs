@@ -21,9 +21,11 @@
 #![cfg(test)]
 
 use node_primitives::TryConvertFrom;
-
 // use balances::Call as BalancesCall;
-use crate::{mock::*, BlockNumberFor, DispatchError::BadOrigin, UserDefaultFeeCurrency};
+use crate::{
+	mock::*, BlockNumberFor, BoundedVec, Config, DispatchError::BadOrigin, UserDefaultFeeCurrency,
+	UserFeeChargeOrderList,
+};
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
@@ -185,8 +187,17 @@ fn set_user_default_fee_currency_should_work() {
 #[test]
 fn set_universal_fee_currency_order_list_should_work() {
 	new_test_ext().execute_with(|| {
-		let asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![
+			CURRENCY_ID_4,
+			CURRENCY_ID_3,
+			CURRENCY_ID_2,
+			CURRENCY_ID_1,
+			CURRENCY_ID_0,
+		])
+		.unwrap();
 		assert_noop!(
 			FlexibleFee::set_universal_fee_currency_order_list(
 				RuntimeOrigin::root(),
@@ -207,14 +218,24 @@ fn set_universal_fee_currency_order_list_should_work() {
 #[test]
 fn inner_get_user_fee_charge_order_list_should_work() {
 	new_test_ext().execute_with(|| {
-		let mut asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
+		let asset_order_list_bounded_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![
+			CURRENCY_ID_4,
+			CURRENCY_ID_3,
+			CURRENCY_ID_2,
+			CURRENCY_ID_1,
+			CURRENCY_ID_0,
+		])
+		.unwrap();
 
 		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
 			RuntimeOrigin::signed(CHARLIE),
-			asset_order_list_vec.clone(),
+			asset_order_list_bounded_vec.clone(),
 		));
 
+		let mut asset_order_list_vec = asset_order_list_bounded_vec.into_iter().collect::<Vec<_>>();
 		assert_eq!(
 			FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE),
 			asset_order_list_vec.clone()
@@ -241,8 +262,17 @@ fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
 		let origin_signed_bob = RuntimeOrigin::signed(BOB);
-		let asset_order_list_vec: Vec<CurrencyId> =
-			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![
+			CURRENCY_ID_4,
+			CURRENCY_ID_3,
+			CURRENCY_ID_2,
+			CURRENCY_ID_1,
+			CURRENCY_ID_0,
+		])
+		.unwrap();
 
 		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
 			RuntimeOrigin::signed(CHARLIE),
@@ -383,5 +413,24 @@ fn deduct_salp_fee_should_work() {
 			),
 			100000000
 		);
+	});
+}
+
+#[test]
+fn remove_from_user_fee_charge_order_list_should_work() {
+	new_test_ext().execute_with(|| {
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
+
+		UserFeeChargeOrderList::<Test>::insert(&ALICE, asset_order_list_vec.clone());
+		UserFeeChargeOrderList::<Test>::insert(&BOB, asset_order_list_vec.clone());
+
+		assert_eq!(UserFeeChargeOrderList::<Test>::iter().count(), 2);
+
+		assert_ok!(FlexibleFee::remove_from_user_fee_charge_order_list(RuntimeOrigin::signed(
+			CHARLIE
+		)));
+
+		assert_eq!(UserFeeChargeOrderList::<Test>::iter().count(), 0);
 	});
 }

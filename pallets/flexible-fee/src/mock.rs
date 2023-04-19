@@ -223,6 +223,7 @@ parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const SalpContributeFee: Balance = 100_000_000;
+	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
 ord_parameter_types! {
@@ -238,6 +239,7 @@ impl crate::Config for Test {
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;

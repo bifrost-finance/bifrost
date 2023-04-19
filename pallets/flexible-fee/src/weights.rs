@@ -55,6 +55,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn set_user_default_fee_currency() -> Weight;
 	fn set_universal_fee_currency_order_list() -> Weight;
+	fn remove_from_user_fee_charge_order_list() -> Weight;
 }
 
 /// Weights for bifrost_flexible_fee using the Bifrost node and recommended hardware.
@@ -70,6 +71,11 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		Weight::from_ref_time(6_000_000 as u64)
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
+
+	fn remove_from_user_fee_charge_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(50 as u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -83,5 +89,10 @@ impl WeightInfo for () {
 	fn set_universal_fee_currency_order_list() -> Weight {
 		Weight::from_ref_time(6_000_000 as u64)
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+	}
+
+	fn remove_from_user_fee_charge_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(50 as u64))
 	}
 }
