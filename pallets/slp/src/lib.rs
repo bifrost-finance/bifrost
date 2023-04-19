@@ -480,6 +480,11 @@ pub mod pallet {
 			who: MultiLocation,
 			due_block_number: BlockNumberFor<T>,
 		},
+
+		RemovedFromBoostList {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -2073,6 +2078,39 @@ pub mod pallet {
 				who: *who,
 				due_block_number,
 			});
+			Ok(())
+		}
+
+		/// Update storage Validator_boost_list<T>.
+		#[pallet::call_index(46)]
+		#[pallet::weight(T::WeightInfo::remove_from_validator_boot_list())]
+		pub fn remove_from_validator_boot_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// check if the validator is in the validator boost list
+			ValidatorBoostList::<T>::mutate(currency_id, |validator_boost_list_op| {
+				if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+					// if the validator is in the validator boost list, remove it
+					if let Some(index) = validator_boost_list
+						.iter()
+						.position(|(validator, _)| validator == who.as_ref())
+					{
+						validator_boost_list.remove(index);
+
+						// Deposit event.
+						Pallet::<T>::deposit_event(Event::RemovedFromBoostList {
+							currency_id,
+							who: *who,
+						});
+					}
+				}
+			});
+
 			Ok(())
 		}
 	}
