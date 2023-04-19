@@ -20,7 +20,6 @@
 #![allow(clippy::unused_unit)]
 
 pub mod calls;
-pub mod migration;
 pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;

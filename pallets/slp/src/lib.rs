@@ -51,6 +51,7 @@ pub use weights::WeightInfo;
 use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
 
 mod agents;
+pub mod migration2;
 mod mocks;
 pub mod primitives;
 mod tests;
