@@ -484,15 +484,6 @@ fn remove_validator_should_work() {
 		let validator_list = vec![owner_location.clone()];
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
-		assert_noop!(
-			Slp::remove_validator(
-				RuntimeOrigin::signed(ALICE),
-				FIL,
-				Box::new(owner_location.clone())
-			),
-			Error::<Runtime>::ValidatorStillInUse
-		);
-
 		// set ledger to zero
 		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
 		let ledger = Ledger::Filecoin(fil_ledger);

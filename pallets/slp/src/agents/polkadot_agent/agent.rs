@@ -812,12 +812,6 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
-		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&who) {
-				Err(Error::<T>::ValidatorStillInUse)?;
-			}
-		}
 		// Update corresponding storage.
 		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}

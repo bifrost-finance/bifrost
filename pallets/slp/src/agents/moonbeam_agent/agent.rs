@@ -925,18 +925,6 @@ impl<T: Config>
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Check all the delegators' delegations, to see whether this specific validator is in use.
-		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
-				ensure!(
-					!moonbeam_ledger.delegations.contains_key(who),
-					Error::<T>::ValidatorStillInUse
-				);
-			} else {
-				Err(Error::<T>::ProblematicLedger)?;
-			}
-		}
-
 		// Update corresponding storage.
 		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
