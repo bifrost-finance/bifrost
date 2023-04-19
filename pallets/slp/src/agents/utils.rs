@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, Pallet,
-	TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
 };
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
@@ -70,6 +70,28 @@ impl<T: Config> Pallet<T> {
 		}
 
 		Ok(validators_list)
+	}
+
+	pub fn check_length_and_deduplicate(
+		currency_id: CurrencyId,
+		validator_list: Vec<MultiLocation>,
+	) -> Result<Vec<MultiLocation>, Error<T>> {
+		ensure!(!validator_list.is_empty(), Error::<T>::ValidatorNotProvided);
+
+		// Ensure validator candidates in the whitelist is not greater than maximum.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+
+		ensure!(
+			validator_list.len() as u16 <= mins_maxs.validators_maximum,
+			Error::<T>::GreaterThanMaximum
+		);
+
+		// deduplicate validator list.
+		let mut validator_set = validator_list.clone();
+		validator_set.sort();
+		validator_set.dedup();
+
+		Ok(validator_set)
 	}
 
 	pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {

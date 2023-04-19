@@ -932,16 +932,6 @@ impl<T: Config>
 
 		Ok(())
 	}
-
-	/// Reset the whole set of validators for a particular currency.
-	fn reset_validators(
-		&self,
-		validator_list: &Vec<MultiLocation>,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		// Update corresponding storage.
-		Pallet::<T>::inner_reset_validators(validator_list, currency_id)
-	}
 }
 
 /// Trait XcmBuilder implementation for Kusama/Polkadot

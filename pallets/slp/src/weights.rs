@@ -97,6 +97,7 @@ pub trait WeightInfo {
 	fn fail_validators_by_delegator_query_response() -> Weight;
 	fn convert_asset() -> Weight;
 	fn reset_validators() -> Weight;
+	fn set_validator_boost_list() -> Weight;
 }
 
 /// Weights for bifrost_slp using the Bifrost node and recommended hardware.
@@ -562,6 +563,15 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 				.saturating_add(T::DbWeight::get().reads(1 as u64))
 				.saturating_add(T::DbWeight::get().writes(1 as u64))
 		}
+
+		
+
+				// Storage: Slp Validators (r:1 w:1)
+				fn set_validator_boost_list() -> Weight {
+					Weight::from_ref_time(90_428_000 as u64)
+						.saturating_add(T::DbWeight::get().reads(1 as u64))
+						.saturating_add(T::DbWeight::get().writes(1 as u64))
+				}
 }
 
 // For backwards compatibility and tests
@@ -1026,4 +1036,13 @@ impl WeightInfo for () {
 				.saturating_add(RocksDbWeight::get().reads(1 as u64))
 				.saturating_add(RocksDbWeight::get().writes(1 as u64))
 		}
+
+		
+
+				// Storage: Slp Validators (r:1 w:1)
+				fn set_validator_boost_list() -> Weight {
+					Weight::from_ref_time(90_428_000 as u64)
+						.saturating_add(RocksDbWeight::get().reads(1 as u64))
+						.saturating_add(RocksDbWeight::get().writes(1 as u64))
+				}
 }

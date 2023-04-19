@@ -107,31 +107,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub(crate) fn inner_reset_validators(
-		validator_list: &Vec<MultiLocation>,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		ensure!(!validator_list.is_empty(), Error::<T>::ValidatorNotProvided);
-
-		// Ensure validator candidates in the whitelist is not greater than maximum.
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-
-		ensure!(
-			validator_list.len() as u16 <= mins_maxs.validators_maximum,
-			Error::<T>::GreaterThanMaximum
-		);
-
-		// deduplicate validator list.
-		let mut validator_set = validator_list.clone();
-		validator_set.sort();
-		validator_set.dedup();
-
-		// Change corresponding storage.
-		Validators::<T>::insert(currency_id, validator_set);
-
-		Ok(())
-	}
-
 	pub(crate) fn inner_remove_delegator(
 		who: &MultiLocation,
 		currency_id: CurrencyId,

@@ -225,13 +225,6 @@ pub trait StakingAgent<
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 
 	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
-
-	/// Reset the whole set of validators for a particular currency.
-	fn reset_validators(
-		&self,
-		validator_list: &Vec<MultiLocation>,
-		currency_id: CurrencyId,
-	) -> DispatchResult;
 }
 
 /// Helper to build xcm message

@@ -46,7 +46,7 @@ use sp_arithmetic::{per_things::Permill, traits::Zero};
 
 use sp_core::H160;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedSub, Convert, TrailingZeroInput};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
@@ -76,6 +76,7 @@ type StakingAgentBoxType<T> = Box<
 		pallet::Error<T>,
 	>,
 >;
+const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -467,6 +468,11 @@ pub mod pallet {
 		ValidatorsReset {
 			currency_id: CurrencyId,
 			validator_list: Vec<MultiLocation>,
+		},
+
+		ValidatorBoostListSet {
+			currency_id: CurrencyId,
+			validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)>,
 		},
 	}
 
@@ -1957,11 +1963,55 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.reset_validators(&validator_list, currency_id)?;
+			let validator_set =
+				Pallet::<T>::check_length_and_deduplicate(currency_id, validator_list)?;
+
+			// Change corresponding storage.
+			Validators::<T>::insert(currency_id, validator_set.clone());
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsReset { currency_id, validator_list });
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: validator_set,
+			});
+			Ok(())
+		}
+
+		/// Reset the whole storage Validator_boost_list<T>.
+		#[pallet::call_index(44)]
+		#[pallet::weight(T::WeightInfo::set_validator_boost_list())]
+		pub fn set_validator_boost_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let validator_set =
+				Pallet::<T>::check_length_and_deduplicate(currency_id, validator_list)?;
+
+			// get current block number
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			// get the due block number
+			let due_block_number = current_block_number
+				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.ok_or(Error::<T>::OverFlow)?;
+
+			let mut validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)> = vec![];
+
+			for validator in validator_set.iter() {
+				validator_boost_list.push((*validator, due_block_number));
+			}
+
+			// Change corresponding storage.
+			ValidatorBoostList::<T>::insert(currency_id, validator_boost_list.clone());
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorBoostListSet {
+				currency_id,
+				validator_boost_list,
+			});
 			Ok(())
 		}
 	}
