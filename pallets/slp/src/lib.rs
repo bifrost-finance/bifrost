@@ -2103,6 +2103,11 @@ pub mod pallet {
 					{
 						validator_boost_list.remove(index);
 
+						// if the validator boost list is empty, remove it
+						if validator_boost_list.is_empty() {
+							*validator_boost_list_op = None;
+						}
+
 						// Deposit event.
 						Pallet::<T>::deposit_event(Event::RemovedFromBoostList {
 							currency_id,
