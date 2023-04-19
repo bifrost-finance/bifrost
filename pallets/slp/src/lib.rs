@@ -464,6 +464,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		},
+		ValidatorsReset {
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -536,6 +540,12 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
 	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
+
+	/// (VBL) Validator Boost List -> (validator multilocation, due block number)
+	#[pallet::storage]
+	#[pallet::getter(fn get_validator_boost_list)]
+	pub type ValidatorBoostList<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, BlockNumberFor<T>)>>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
@@ -1933,6 +1943,25 @@ pub mod pallet {
 			} else {
 				Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			}
+			Ok(())
+		}
+
+		/// Reset the whole storage Validators<T>.
+		#[pallet::call_index(43)]
+		#[pallet::weight(T::WeightInfo::reset_validators())]
+		pub fn reset_validators(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.reset_validators(&validator_list, currency_id)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset { currency_id, validator_list });
 			Ok(())
 		}
 	}

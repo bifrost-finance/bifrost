@@ -24,8 +24,8 @@ use crate::{
 	},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied, DelegatorLedgers,
-	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet,
+	TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
 };
 use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
@@ -99,7 +99,7 @@ impl<T: Config>
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		validator_list
 			.iter()
-			.position(|va| va ==&collator)
+			.position(|va| va == &collator)
 			.ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
@@ -1093,6 +1093,16 @@ impl<T: Config>
 		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
+	}
+
+	/// Reset the whole set of validators for a particular currency.
+	fn reset_validators(
+		&self,
+		validator_list: &Vec<MultiLocation>,
+		currency_id: CurrencyId,
+	) -> DispatchResult {
+		// Update corresponding storage.
+		Pallet::<T>::inner_reset_validators(validator_list, currency_id)
 	}
 }
 
