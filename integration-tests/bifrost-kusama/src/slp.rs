@@ -976,8 +976,8 @@ fn redelegate_works() {
 				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(Nominations {
 					targets: BoundedVec::try_from(vec![
+						KUSAMA_ALICE_STASH_ACCOUNT.into(),
 						KUSAMA_BOB_STASH_ACCOUNT.into(),
-						KUSAMA_ALICE_STASH_ACCOUNT.into()
 					])
 					.unwrap(),
 					submitted_in: 0,
