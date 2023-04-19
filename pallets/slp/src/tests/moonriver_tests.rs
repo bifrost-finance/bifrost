@@ -2089,9 +2089,9 @@ fn add_to_validator_boost_list_should_work() {
 
 		let validator_list_output_1 = vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300)];
 		let validator_list_output_2 =
-			vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + 400)];
+			vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64)];
 		let validator_list_output_3 = vec![
-			(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + 400),
+			(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64),
 			(VALIDATOR_1_LOCATION.clone(), SIX_MONTHS as u64 + 400),
 		];
 
