@@ -474,6 +474,12 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)>,
 		},
+
+		ValidatorBoostListAdded {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			due_block_number: BlockNumberFor<T>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -2011,6 +2017,61 @@ pub mod pallet {
 			Pallet::<T>::deposit_event(Event::ValidatorBoostListSet {
 				currency_id,
 				validator_boost_list,
+			});
+			Ok(())
+		}
+
+		#[pallet::call_index(45)]
+		#[pallet::weight(T::WeightInfo::add_to_validator_boost_list())]
+		pub fn add_to_validator_boost_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// get current block number
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+
+			// get the due block number if the validator is not in the validator boost list
+			let mut due_block_number = current_block_number
+				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.ok_or(Error::<T>::OverFlow)?;
+
+			ValidatorBoostList::<T>::mutate(
+				currency_id,
+				|validator_boost_list_op| -> DispatchResult {
+					if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+						// if the validator is in the validator boost list, change the due block
+						// number
+						if let Some(index) = validator_boost_list
+							.iter()
+							.position(|(validator, _)| validator == who.as_ref())
+						{
+							let original_due_block = validator_boost_list[index].1;
+							// get the due block number
+							due_block_number = original_due_block
+								.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+								.ok_or(Error::<T>::OverFlow)?;
+
+							validator_boost_list[index].1 = due_block_number;
+						} else {
+							validator_boost_list.push((*who, due_block_number));
+						}
+					} else {
+						*validator_boost_list_op = Some(vec![(*who, due_block_number)]);
+					}
+
+					Ok(())
+				},
+			)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorBoostListAdded {
+				currency_id,
+				who: *who,
+				due_block_number,
 			});
 			Ok(())
 		}
