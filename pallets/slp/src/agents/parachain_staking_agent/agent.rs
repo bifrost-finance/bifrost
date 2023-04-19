@@ -100,7 +100,7 @@ impl<T: Config>
 		validator_list
 			.iter()
 			.position(|va| va == &collator)
-			.ok_or(Error::<T>::ValidatorSetNotExist)?;
+			.ok_or(Error::<T>::ValidatorNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -227,6 +227,11 @@ impl<T: Config>
 
 		// check if the delegator exists, if not, return error.
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		// need to check if the validator is still in the validators list.
+		let validators =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+		ensure!(validators.contains(&collator), Error::<T>::ValidatorError);
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
