@@ -42,7 +42,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, SlpOperator, TimeUnit,
+	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, TimeUnit,
 	VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
@@ -69,6 +69,8 @@ pub type UnlockId = u32;
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+	use orml_traits::XcmTransfer;
+	use xcm::{prelude::*, v3::MultiLocation};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -91,6 +93,9 @@ pub mod pallet {
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
 		>;
+
+		/// xtokens xcm transfer interface
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		/// The amount of mint
 		#[pallet::constant]
@@ -261,7 +266,7 @@ pub mod pallet {
 		CurrencyIdOf<T>,
 		Blake2_128Concat,
 		UnlockId,
-		(T::AccountId, BalanceOf<T>, TimeUnit),
+		(T::AccountId, BalanceOf<T>, TimeUnit, RedeemType),
 		OptionQuery,
 	>;
 
@@ -348,7 +353,19 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let exchanger = ensure_signed(origin)?;
-			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
+			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
+		}
+
+		#[pallet::call_index(13)]
+		#[pallet::weight(T::WeightInfo::redeem())]
+		pub fn xcm_action_redeem(
+			origin: OriginFor<T>,
+			vtoken_id: CurrencyIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+			redeem_type: RedeemType,
+		) -> DispatchResultWithPostInfo {
+			let exchanger = ensure_signed(origin)?;
+			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, redeem_type)
 		}
 
 		#[pallet::call_index(2)]
@@ -373,11 +390,11 @@ pub mod pallet {
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_rev)
 						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 				ledger_list.retain(|index| {
-					if let Some((_, unlock_amount, time_unit)) =
+					if let Some((_, unlock_amount, time_unit, _)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
 						if tmp_amount >= unlock_amount {
-							if let Some((_, _, time_unit)) =
+							if let Some((_, _, time_unit, _)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
 								TimeUnitUnlockLedger::<T>::mutate_exists(
@@ -412,7 +429,7 @@ pub mod pallet {
 								&token_id,
 								&index,
 								|value| -> Result<(), Error<T>> {
-									if let Some((_, total_locked_origin, _)) = value {
+									if let Some((_, total_locked_origin, _, _)) = value {
 										if total_locked_origin == &tmp_amount {
 											*value = None;
 											return Ok(());
@@ -525,7 +542,7 @@ pub mod pallet {
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 
 			let unlock_amount = match Self::token_unlock_ledger(token_id, unlock_id) {
-				Some((who, unlock_amount, time_unit)) => {
+				Some((who, unlock_amount, time_unit, _)) => {
 					ensure!(who == exchanger, Error::<T>::CanNotRebond);
 					TimeUnitUnlockLedger::<T>::mutate_exists(
 						&time_unit,
@@ -845,6 +862,7 @@ pub mod pallet {
 			mut unlock_amount: BalanceOf<T>,
 			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
+			redeem_type: RedeemType,
 		) -> DispatchResult {
 			let ed = T::MultiCurrency::minimum_balance(token_id);
 			let mut account_to_send = account.clone();
@@ -907,7 +925,52 @@ pub mod pallet {
 						Ok(())
 					},
 				)?;
+
+				match redeem_type {
+					RedeemType::Astar => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(redeem_type.get_parachain_id()),
+								AccountId32 {
+									network: None,
+									id: account.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Moonbeam(evm_caller) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(redeem_type.get_parachain_id()),
+								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Native => {},
+				};
 			} else {
+				match redeem_type {
+					RedeemType::Astar | RedeemType::Moonbeam(_) => {
+						return Ok(());
+					},
+					RedeemType::Native => {},
+				};
 				unlock_amount = entrance_account_balance;
 				T::MultiCurrency::transfer(
 					token_id,
@@ -919,7 +982,7 @@ pub mod pallet {
 					&token_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
-						if let Some((_, total_locked_origin, _)) = value {
+						if let Some((_, total_locked_origin, _, _)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -1022,7 +1085,7 @@ pub mod pallet {
 				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
 			{
 				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
-					if let Some((account, unlock_amount, time_unit)) =
+					if let Some((account, unlock_amount, time_unit, redeem_type)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
 						let entrance_account_balance = T::MultiCurrency::free_balance(
@@ -1037,6 +1100,7 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
+								redeem_type,
 							)
 							.ok();
 						}
@@ -1115,6 +1179,7 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
+			redeem_type: RedeemType,
 		) -> DispatchResultWithPostInfo {
 			let token_id = T::CurrencyIdConversion::convert_to_token(vtoken_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
@@ -1146,6 +1211,7 @@ pub mod pallet {
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
+					// Calculate the time to be locked
 					let result_time_unit = Self::add_time_unit(
 						Self::unlock_duration(token_id)
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
@@ -1169,7 +1235,7 @@ pub mod pallet {
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
-						(&exchanger, token_amount, &result_time_unit),
+						(&exchanger, token_amount, &result_time_unit, redeem_type),
 					);
 
 					if UserUnlockLedger::<T>::get(&exchanger, &token_id).is_some() {
@@ -1358,7 +1424,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		index: u32,
 		deduct_amount: BalanceOf<T>,
 	) -> DispatchResult {
-		if let Some((who, unlock_amount, time_unit)) = Self::token_unlock_ledger(currency_id, index)
+		if let Some((who, unlock_amount, time_unit, _)) =
+			Self::token_unlock_ledger(currency_id, index)
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
@@ -1418,7 +1485,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 					&currency_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
-						if let Some((_, total_locked_origin, _)) = value {
+						if let Some((_, total_locked_origin, _, _)) = value {
 							if total_locked_origin == &deduct_amount {
 								*value = None;
 								return Ok(());
@@ -1447,7 +1514,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit)> {
+	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType)> {
 		Self::token_unlock_ledger(currency_id, index)
 	}
 }
@@ -1468,7 +1535,16 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
 	) -> DispatchResultWithPostInfo {
-		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
+		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
+	}
+
+	fn xcm_action_redeem(
+		exchanger: AccountIdOf<T>,
+		vtoken_id: CurrencyIdOf<T>,
+		vtoken_amount: BalanceOf<T>,
+		redeem_type: RedeemType,
+	) -> DispatchResultWithPostInfo {
+		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, redeem_type)
 	}
 
 	fn token_to_vtoken(

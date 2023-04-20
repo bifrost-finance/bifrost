@@ -1200,6 +1200,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {
@@ -1388,6 +1389,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {

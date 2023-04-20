@@ -37,10 +37,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160};
 use sp_runtime::traits::BlakeTwo256;
 use sp_std::vec;
-use xcm::{
-	latest::prelude::*,
-	v3::MultiLocation,
-};
+use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
 
 pub mod weights;
@@ -61,7 +58,8 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::CurrencyId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-pub const ASTA_PARA_ID: u32 = 2006;
+pub const ASTAR_PARA_ID: u32 = 2006;
+pub const MOONBEAM_PARA_ID: u32 = 2004;
 
 #[derive(
 	Encode,
@@ -88,9 +86,8 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::{ValueQuery, *},
-	};
+	use frame_support::pallet_prelude::{ValueQuery, *};
+	use node_primitives::RedeemType;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -171,6 +168,18 @@ pub mod pallet {
 			currency_id_out: CurrencyIdOf<T>,
 			target_chain: TargetChain,
 		},
+		XcmRedeem {
+			evm_caller: H160,
+			vtoken_id: CurrencyIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+			target_chain: TargetChain,
+		},
+		XcmRedeemFailed {
+			evm_caller: H160,
+			vtoken_id: CurrencyIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+			target_chain: TargetChain,
+		},
 	}
 
 	#[pallet::error]
@@ -215,7 +224,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_singer_on_whitelist(origin, target_chain)?;
 
-			let mut result = true;
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			let token_amount = T::MultiCurrency::free_balance(currency_id, &evm_caller_account_id);
 			match T::VtokenMintingInterface::mint(
@@ -223,48 +231,60 @@ pub mod pallet {
 				currency_id,
 				token_amount,
 			) {
-				Ok(_) => {},
-				Err(_) => {
-					Self::transfer_assets_to_astr(
-						evm_caller_account_id.clone(),
+				Ok(_) => {
+					// success
+					let vtoken_id = T::VtokenMintingInterface::vtoken_id(currency_id)
+						.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
+					let vtoken_amount =
+						T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
+
+					match target_chain {
+						TargetChain::Astar => Self::transfer_assets_to_astr(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller_account_id.clone(),
+						)?,
+						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller,
+						)?,
+						_ => ensure!(false, Error::<T>::ChainNotSupported),
+					};
+
+					Self::deposit_event(Event::XcmMint {
+						evm_caller,
 						currency_id,
 						token_amount,
-						evm_caller_account_id.clone(),
-					)?;
-					result = false;
+						target_chain,
+					});
+				},
+				Err(_) => {
+					match target_chain {
+						TargetChain::Astar => Self::transfer_assets_to_astr(
+							evm_caller_account_id.clone(),
+							currency_id,
+							token_amount,
+							evm_caller_account_id.clone(),
+						)?,
+						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							currency_id,
+							token_amount,
+							evm_caller,
+						)?,
+						_ => ensure!(false, Error::<T>::ChainNotSupported),
+					}
+					Self::deposit_event(Event::XcmMintFailed {
+						evm_caller,
+						currency_id,
+						token_amount,
+						target_chain,
+					});
 				},
 			};
-
-			if result {
-				// success
-				let vtoken_id = T::VtokenMintingInterface::vtoken_id(currency_id)
-					.ok_or(Error::<T>::TokenNotFoundInVtokenMinting)?;
-				let vtoken_amount =
-					T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
-
-				Self::match_target_chain(
-					evm_caller_account_id.clone(),
-					vtoken_id,
-					vtoken_amount,
-					target_chain,
-					evm_caller_account_id,
-				)?;
-
-				Self::deposit_event(Event::XcmMint {
-					evm_caller,
-					currency_id,
-					token_amount,
-					target_chain,
-				});
-			} else {
-				Self::deposit_event(Event::XcmMintFailed {
-					evm_caller,
-					currency_id,
-					token_amount,
-					target_chain,
-				});
-			}
-
 			Ok(().into())
 		}
 
@@ -288,7 +308,6 @@ pub mod pallet {
 				AssetId::try_convert_from(currency_id_out, T::ParachainId::get().into())
 					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
 
-			let mut result = true;
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			let currency_id_in_amount =
 				T::MultiCurrency::free_balance(currency_id_in, &evm_caller_account_id);
@@ -300,46 +319,110 @@ pub mod pallet {
 				&path,
 				&evm_caller_account_id,
 			) {
-				Ok(_) => {},
-				Err(_) => {
-					Self::transfer_assets_to_astr(
+				Ok(_) => {
+					let currency_id_out_amount =
+						T::MultiCurrency::free_balance(currency_id_out, &evm_caller_account_id);
+
+					match target_chain {
+						TargetChain::Astar => Self::transfer_assets_to_astr(
+							evm_caller_account_id.clone(),
+							currency_id_out,
+							currency_id_out_amount,
+							evm_caller_account_id.clone(),
+						)?,
+						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							currency_id_out,
+							currency_id_out_amount,
+							evm_caller,
+						)?,
+						_ => ensure!(false, Error::<T>::ChainNotSupported),
+					}
+
+					Self::deposit_event(Event::XcmSwap {
+						evm_caller,
+						currency_id_in,
+						currency_id_out,
+						target_chain,
+					});
+				},
+				Err(_) => match target_chain {
+					TargetChain::Astar => Self::transfer_assets_to_astr(
 						evm_caller_account_id.clone(),
 						currency_id_in,
 						currency_id_in_amount,
 						evm_caller_account_id.clone(),
-					)?;
-					result = false;
+					)?,
+					TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+						evm_caller_account_id.clone(),
+						currency_id_in,
+						currency_id_in_amount,
+						evm_caller,
+					)?,
+					_ => ensure!(false, Error::<T>::ChainNotSupported),
 				},
-			}
-
-			if result {
-				let currency_id_out_amount =
-					T::MultiCurrency::free_balance(currency_id_out, &evm_caller_account_id);
-				Self::match_target_chain(
-					evm_caller_account_id.clone(),
-					currency_id_out,
-					currency_id_out_amount,
-					target_chain,
-					evm_caller_account_id,
-				)?;
-
-				Self::deposit_event(Event::XcmSwap {
-					evm_caller,
-					currency_id_in,
-					currency_id_out,
-					target_chain,
-				});
-			} else {
-				Self::deposit_event(Event::XcmSwapFailed {
-					evm_caller,
-					currency_id_in,
-					currency_id_out,
-					target_chain,
-				});
 			}
 			Ok(().into())
 		}
+		/// Redeem
 		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::swap())]
+		pub fn redeem(
+			origin: OriginFor<T>,
+			evm_caller: H160,
+			vtoken_id: CurrencyIdOf<T>,
+			target_chain: TargetChain,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_singer_on_whitelist(origin, target_chain)?;
+
+			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
+
+			let redeem_type = match target_chain {
+				TargetChain::Astar => RedeemType::Astar,
+				TargetChain::Moonbeam => RedeemType::Moonbeam(evm_caller),
+				_ => ensure!(false, Error::<T>::ChainNotSupported),
+			};
+
+			match T::VtokenMintingInterface::xcm_action_redeem(
+				evm_caller_account_id.clone(),
+				vtoken_id,
+				vtoken_amount,
+				redeem_type,
+			) {
+				Ok(_) => Self::deposit_event(Event::XcmRedeem {
+					evm_caller,
+					vtoken_id,
+					vtoken_amount,
+					target_chain,
+				}),
+				Err(_) => {
+					match target_chain {
+						TargetChain::Astar => Self::transfer_assets_to_astr(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller_account_id.clone(),
+						)?,
+						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller,
+						)?,
+						_ => ensure!(false, Error::<T>::ChainNotSupported),
+					}
+					Self::deposit_event(Event::XcmRedeemFailed {
+						evm_caller,
+						vtoken_id,
+						vtoken_amount,
+						target_chain,
+					});
+				},
+			};
+			Ok(().into())
+		}
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn add_whitelist(
 			origin: OriginFor<T>,
@@ -364,7 +447,7 @@ pub mod pallet {
 			});
 			Ok(().into())
 		}
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn remove_whitelist(
 			origin: OriginFor<T>,
@@ -413,7 +496,7 @@ impl<T: Config> Pallet<T> {
 		let dest = MultiLocation {
 			parents: 1,
 			interior: X2(
-				Parachain(ASTA_PARA_ID),
+				Parachain(ASTAR_PARA_ID),
 				AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 			),
 		};
@@ -422,18 +505,22 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn match_target_chain(
+	fn transfer_assets_to_moonbeam(
 		caller: T::AccountId,
 		currency_id: CurrencyIdOf<T>,
-		token_amount: BalanceOf<T>,
-		target_chain: TargetChain,
-		receiver: T::AccountId,
+		amount: BalanceOf<T>,
+		receiver: H160,
 	) -> DispatchResult {
-		match target_chain {
-			TargetChain::Astar =>
-				Self::transfer_assets_to_astr(caller, currency_id, token_amount, receiver),
-			_ => Err(Error::<T>::ChainNotSupported.into()),
-		}
+		let dest = MultiLocation {
+			parents: 1,
+			interior: X2(
+				Parachain(MOONBEAM_PARA_ID),
+				AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
+			),
+		};
+
+		T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+		Ok(())
 	}
 
 	fn h160_to_account_id(address: H160) -> T::AccountId {

@@ -1426,6 +1426,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
 	type ParachainStaking = ParachainStaking;
+	type XcmTransfer = XTokens;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1639,6 +1640,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type XcmTransfer = XTokens;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
