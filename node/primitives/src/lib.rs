@@ -22,7 +22,7 @@
 
 use codec::MaxEncodedLen;
 use scale_info::TypeInfo;
-use sp_core::{Decode, Encode, RuntimeDebug};
+use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -200,6 +200,35 @@ impl PartialOrd for TimeUnit {
 			(Self::Kblock(a), Self::Kblock(b)) => Some(a.cmp(b)),
 			(Self::Hour(a), Self::Hour(b)) => Some(a.cmp(b)),
 			_ => None,
+		}
+	}
+}
+
+// For vtoken-minting
+#[derive(
+	PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, scale_info::TypeInfo,
+)]
+pub enum RedeemType {
+	/// Native chain.
+	Native,
+	/// Astar chain.
+	Astar,
+	/// Moonbeam chain.
+	Moonbeam(H160),
+}
+
+impl Default for RedeemType {
+	fn default() -> Self {
+		Self::Native
+	}
+}
+
+impl RedeemType {
+	pub fn get_parachain_id(self) -> u32 {
+		match self {
+			RedeemType::Native => 0,
+			RedeemType::Astar => 2006,
+			RedeemType::Moonbeam(_) => 2004,
 		}
 	}
 }

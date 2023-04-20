@@ -30,6 +30,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
+orml-xtokens = "0.4.1-dev"
+orml-traits = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }

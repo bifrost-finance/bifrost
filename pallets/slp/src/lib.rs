@@ -49,7 +49,10 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
+use xcm::{
+	prelude::*,
+	v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm},
+};
 
 mod agents;
 pub mod migration;
@@ -77,11 +80,16 @@ type StakingAgentBoxType<T> = Box<
 		pallet::Error<T>,
 	>,
 >;
+pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use crate::agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent};
+	use node_primitives::RedeemType;
+	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
 
@@ -108,6 +116,9 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
+
+		/// xtokens xcm transfer interface
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
@@ -1179,20 +1190,48 @@ pub mod pallet {
 					let idx_record_amount_op =
 						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
 
-					if let Some((user_account, idx_record_amount, _unlock_era)) =
+					if let Some((user_account, idx_record_amount, _unlock_era, redeem_type)) =
 						idx_record_amount_op
 					{
 						let mut deduct_amount = idx_record_amount;
 						if exit_account_balance < idx_record_amount {
+							match redeem_type {
+								RedeemType::Native => {},
+								RedeemType::Astar | RedeemType::Moonbeam(_) => break,
+							};
 							deduct_amount = exit_account_balance;
-						}
-						// Transfer some amount from the exit_account to the user's account
-						T::MultiCurrency::transfer(
-							currency_id,
-							&exit_account,
-							&user_account,
-							deduct_amount,
-						)?;
+						};
+						match redeem_type {
+							RedeemType::Native => {
+								// Transfer some amount from the exit_account to the user's account
+								T::MultiCurrency::transfer(
+									currency_id,
+									&exit_account,
+									&user_account,
+									deduct_amount,
+								)?;
+							},
+							RedeemType::Astar => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(redeem_type.get_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: user_account.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Moonbeam(_) => {},
+						};
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
 

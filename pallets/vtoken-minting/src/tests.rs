@@ -143,7 +143,10 @@ fn redeem() {
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
 			Some((294, ledger_list_origin.clone()))
 		);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 98, TimeUnit::Era(2))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 0),
+			Some((BOB, 98, TimeUnit::Era(2), RedeemType::Native))
+		);
 		let mut ledger_list_origin2 = BoundedVec::default();
 		assert_ok!(ledger_list_origin2.try_push(0));
 		assert_ok!(ledger_list_origin2.try_push(1));
@@ -174,7 +177,10 @@ fn rebond() {
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 1),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
@@ -189,7 +195,10 @@ fn rebond() {
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
 			Some((100, ledger_list_origin2.clone()))
 		);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 0),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), None);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 100); // 200 + 100 - 200
@@ -294,7 +303,10 @@ fn hook() {
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		VtokenMinting::on_initialize(0);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 2), Some((BOB, 100, TimeUnit::Era(6))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 2),
+			Some((BOB, 100, TimeUnit::Era(6), RedeemType::Native))
+		);
 		let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(ledger_list_origin.try_push(2));
 		let mut ledger_list_origin2 = BoundedVec::default();
@@ -348,7 +360,10 @@ fn rebond_by_unlock_id() {
 			Some((100, ledger_list_origin2.clone()))
 		);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), None);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 1),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 100); // 200 + 100 - 200
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
@@ -416,7 +431,7 @@ fn fast_redeem_for_fil() {
 		VtokenMinting::on_initialize(0);
 		assert_eq!(
 			VtokenMinting::token_unlock_ledger(FIL, 2),
-			Some((BOB, 100, TimeUnit::Kblock(6)))
+			Some((BOB, 100, TimeUnit::Kblock(6), RedeemType::Native))
 		);
 		let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(ledger_list_origin.try_push(2));
