@@ -935,7 +935,22 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
-					RedeemType::Moonbeam(_) => {},
+					RedeemType::Moonbeam(evm_caller) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(redeem_type.get_parachain_id()),
+								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
 					RedeemType::Native => {},
 				};
 			} else {

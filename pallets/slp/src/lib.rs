@@ -1230,7 +1230,25 @@ pub mod pallet {
 									Unlimited,
 								)?;
 							},
-							RedeemType::Moonbeam(_) => {},
+							RedeemType::Moonbeam(evm_caller) => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(redeem_type.get_parachain_id()),
+										AccountKey20 {
+											network: None,
+											key: evm_caller.to_fixed_bytes(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
 						};
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
