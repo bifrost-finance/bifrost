@@ -884,6 +884,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "invarch-xcm-builder",
  "log",
  "merkle-distributor",
  "node-primitives",
@@ -4666,6 +4667,20 @@ dependencies = [
  "waitgroup",
  "webrtc-srtp",
  "webrtc-util",
+]
+
+[[package]]
+name = "invarch-xcm-builder"
+version = "0.1.0"
+source = "git+https://github.com/InvArch/InvArch-XCM-Builder?branch=polkadot-v0.9.38#ec19f7333d7c12e3ebbcd51b0ff1d55efb1869fe"
+dependencies = [
+ "frame-support",
+ "log",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

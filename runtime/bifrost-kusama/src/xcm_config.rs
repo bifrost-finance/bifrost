@@ -34,6 +34,7 @@ pub use xcm_builder::{
 	FixedWeightBounds, IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	WithComputedOrigin,
 };
 use xcm_executor::traits::MatchesFungible;
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
@@ -251,6 +252,8 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	// Mapping Tinkernet multisig to the correctly derived AccountId32.
+	invarch_xcm_builder::TinkernetMultisigAsAccountId<AccountId>,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `RuntimeOrigin`
@@ -273,6 +276,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
+	// Derives signed AccountId32 origins for Tinkernet multisigs.
+	invarch_xcm_builder::DeriveOriginFromTinkernetMultisig<RuntimeOrigin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
 	XcmPassthrough<RuntimeOrigin>,
 );
@@ -295,6 +300,11 @@ pub type Barrier = (
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
+	WithComputedOrigin<
+		AllowTopLevelPaidExecutionFrom<invarch_xcm_builder::TinkernetMultisigMultiLocation>,
+		UniversalLocation,
+		ConstU32<1>,
+	>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
