@@ -53,24 +53,46 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_flexible_fee.
 pub trait WeightInfo {
-	fn set_user_fee_charge_order() -> Weight;
+	fn set_user_default_fee_currency() -> Weight;
+	fn set_universal_fee_currency_order_list() -> Weight;
+	fn remove_from_user_fee_charge_order_list() -> Weight;
 }
 
 /// Weights for bifrost_flexible_fee using the Bifrost node and recommended hardware.
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	// Storage: FlexibleFee UserFeeChargeOrderList (r:0 w:1)
-	fn set_user_fee_charge_order() -> Weight {
+	fn set_user_default_fee_currency() -> Weight {
 		Weight::from_ref_time(6_000_000 as u64)
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	}
+
+	fn set_universal_fee_currency_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	}
+
+	fn remove_from_user_fee_charge_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(T::DbWeight::get().writes(50 as u64))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	// Storage: FlexibleFee UserFeeChargeOrderList (r:0 w:1)
-	fn set_user_fee_charge_order() -> Weight {
+	fn set_user_default_fee_currency() -> Weight {
 		Weight::from_ref_time(6_000_000 as u64)
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+	}
+
+	fn set_universal_fee_currency_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+	}
+
+	fn remove_from_user_fee_charge_order_list() -> Weight {
+		Weight::from_ref_time(6_000_000 as u64)
+			.saturating_add(RocksDbWeight::get().writes(50 as u64))
 	}
 }

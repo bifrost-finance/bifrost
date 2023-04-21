@@ -72,10 +72,7 @@ pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
 #[allow(unused_imports)]
-use bifrost_flexible_fee::{
-	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 pub use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -1101,6 +1098,7 @@ impl Contains<RuntimeCall> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
+	pub MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
 pub type MiscFeeHandlers = (
@@ -1111,18 +1109,19 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FlexibleFee;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
 	type ParachainId = ParachainInfo;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
