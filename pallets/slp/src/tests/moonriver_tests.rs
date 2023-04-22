@@ -1967,8 +1967,6 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 fn add_validator_and_remove_validator_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
-		let multi_hash_0 =
-			<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode());
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -1999,7 +1997,7 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
-		valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0));
+		valis.push(VALIDATOR_0_LOCATION.clone());
 
 		assert_eq!(Slp::get_validators(MOVR), Some(valis));
 
@@ -2010,5 +2008,150 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		assert_eq!(Slp::get_validators(MOVR), Some(vec![]));
+	});
+}
+
+#[test]
+fn reset_validators_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		moonriver_setup();
+
+		let validator_list_empty = vec![];
+		let validator_list_input = vec![
+			VALIDATOR_0_LOCATION.clone(),
+			VALIDATOR_0_LOCATION.clone(),
+			VALIDATOR_1_LOCATION.clone(),
+		];
+		let validator_list_output =
+			vec![VALIDATOR_0_LOCATION.clone(), VALIDATOR_1_LOCATION.clone()];
+
+		// validator list is empty
+		assert_noop!(
+			Slp::reset_validators(RuntimeOrigin::signed(ALICE), MOVR, validator_list_empty),
+			Error::<Runtime>::ValidatorNotProvided
+		);
+
+		assert_ok!(Slp::reset_validators(RuntimeOrigin::signed(ALICE), MOVR, validator_list_input));
+
+		assert_eq!(Slp::get_validators(MOVR), Some(validator_list_output));
+	});
+}
+
+#[test]
+fn set_validator_boost_list_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		moonriver_setup();
+
+		let validator_list_empty = vec![];
+		let validator_list_input_1 = vec![VALIDATOR_0_LOCATION.clone()];
+		let validator_list_input_2 = vec![
+			VALIDATOR_0_LOCATION.clone(),
+			VALIDATOR_0_LOCATION.clone(),
+			VALIDATOR_1_LOCATION.clone(),
+		];
+
+		let validator_list_output_1 = vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300)];
+		let validator_list_output_2 = vec![
+			(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 400),
+			(VALIDATOR_1_LOCATION.clone(), SIX_MONTHS as u64 + 400),
+		];
+
+		// validator list is empty
+		assert_noop!(
+			Slp::set_validator_boost_list(RuntimeOrigin::signed(ALICE), MOVR, validator_list_empty),
+			Error::<Runtime>::ValidatorNotProvided
+		);
+
+		assert_ok!(Slp::set_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			validator_list_input_1
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
+
+		System::set_block_number(400);
+
+		assert_ok!(Slp::set_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			validator_list_input_2
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
+	});
+}
+
+#[test]
+fn add_to_validator_boost_list_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		moonriver_setup();
+
+		let validator_list_output_1 = vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300)];
+		let validator_list_output_2 =
+			vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64)];
+		let validator_list_output_3 = vec![
+			(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64),
+			(VALIDATOR_1_LOCATION.clone(), SIX_MONTHS as u64 + 400),
+		];
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_0_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
+
+		System::set_block_number(400);
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_0_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_1_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_3));
+	});
+}
+
+#[test]
+fn remove_from_validator_boost_list_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		moonriver_setup();
+
+		let validator_list_output = vec![(VALIDATOR_0_LOCATION.clone(), SIX_MONTHS as u64 + 300)];
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_0_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output.clone()));
+
+		assert_ok!(Slp::remove_from_validator_boot_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_1_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output));
+
+		assert_ok!(Slp::remove_from_validator_boot_list(
+			RuntimeOrigin::signed(ALICE),
+			MOVR,
+			Box::new(VALIDATOR_0_LOCATION.clone())
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MOVR), None);
 	});
 }
