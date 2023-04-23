@@ -296,6 +296,7 @@ parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 ord_parameter_types! {
@@ -313,6 +314,7 @@ impl bifrost_farming::Config for Runtime {
 	type WeightInfo = ();
 	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 }
 
 parameter_types! {
