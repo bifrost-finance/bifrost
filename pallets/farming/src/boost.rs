@@ -23,8 +23,8 @@ use bifrost_ve_minting::VeMintingInterface;
 pub struct BoostPoolInfo<CurrencyId, Balance, BlockNumber> {
 	pub rewards: BTreeMap<CurrencyId, Balance>, // Total rewards
 	pub basic_rewards: BTreeMap<CurrencyId, Balance>, // Basic rewards per block
-	pub voting_pools: BTreeMap<PoolId, Balance>, // Vec<(PoolId, Balance)>
-	pub total_votes: Balance,                   // Total number of veBNC voting
+	// pub voting_pools: BTreeMap<PoolId, Balance>, // Vec<(PoolId, Balance)>
+	pub total_votes: Balance, // Total number of veBNC voting
 	pub start_round: BlockNumber,
 	pub end_round: BlockNumber,
 	pub round_length: BlockNumber,
@@ -52,26 +52,32 @@ impl<T: Config> BoostInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 			// If the user's last voting block height is greater than or equal to the block height
 			// at the beginning of this round, refresh.
 			if user_boost_info.last_vote >= boost_pool_info.start_round {
-				user_boost_info.vote_list.iter().for_each(|(pid, proportion)| {
-					boost_pool_info
-						.voting_pools
-						.entry(*pid)
-						.and_modify(|total_votes| {
+				user_boost_info.vote_list.iter().try_for_each(
+					|(pid, proportion)| -> DispatchResult {
+						let increace = *proportion * new_vote_amount;
+						let mut boost_pool_info = Self::boost_voting_pools(pid);
+						BoostVotingPools::<T>::mutate(pid, |maybe_total_votes| -> DispatchResult {
+							// Must have been voted.
+							let mut total_votes =
+								maybe_total_votes.as_mut().ok_or(Error::<T>::NobodyVoting)?;
 							*total_votes = total_votes
-								.saturating_sub(*proportion * user_boost_info.vote_amount);
+								.checked_sub(&(*proportion * user_boost_info.vote_amount))
+								.ok_or(ArithmeticError::Overflow)?;
+							*total_votes = total_votes
+								.checked_add(&increace)
+								.ok_or(ArithmeticError::Overflow)?;
+							Ok(())
 						})
-						.or_insert(Zero::zero());
-					boost_pool_info
-						.voting_pools
-						.entry(*pid)
-						.and_modify(|total_votes| {
-							*total_votes =
-								total_votes.saturating_add(*proportion * new_vote_amount);
-						})
-						.or_insert(*proportion * new_vote_amount);
-				});
-				boost_pool_info.total_votes.saturating_sub(user_boost_info.vote_amount);
-				boost_pool_info.total_votes.saturating_add(new_vote_amount);
+					},
+				);
+				boost_pool_info.total_votes = boost_pool_info
+					.total_votes
+					.checked_sub(&user_boost_info.vote_amount)
+					.ok_or(ArithmeticError::Overflow)?;
+				boost_pool_info.total_votes = boost_pool_info
+					.total_votes
+					.checked_add(&new_vote_amount)
+					.ok_or(ArithmeticError::Overflow)?;
 				BoostPoolInfos::<T>::set(boost_pool_info);
 				user_boost_info.vote_amount = new_vote_amount;
 				UserBoostInfos::<T>::insert(who, user_boost_info);
@@ -109,27 +115,21 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn end_boost_round_inner() {
 		let mut boost_pool_info = Self::boost_pool_infos();
 		// Empty BoostBasicRewards
-		boost_pool_info
-			.voting_pools
-			.iter()
-			.filter_map(|(pid, _)| match Self::pool_infos(pid) {
-				Some(pool_info) => Some((pid, pool_info)),
-				None => None,
-			})
-			.for_each(|(pid, pool_info)| {
-				pool_info.basic_rewards.keys().for_each(|currency| {
-					BoostBasicRewards::<T>::mutate_exists(pid, currency, |value| *value = None);
-				});
-			});
-
+		// BoostVotingPools::<T>::iter_keys().for_each(|pid| {
+		// 	if let Some(pool_info) = Self::pool_infos(pid) {
+		// 		pool_info.basic_rewards.keys().for_each(|currency| {
+		// 			BoostBasicRewards::<T>::mutate_exists(pid, currency, |value| *value = None);
+		// 		});
+		// 	}
+		// });
+		let _ = BoostBasicRewards::<T>::clear(u32::max_value(), None);
+		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
 		Self::deposit_event(Event::RoundEnd {
-			voting_pools: boost_pool_info.voting_pools,
 			total_votes: boost_pool_info.total_votes,
 			start_round: boost_pool_info.start_round,
 			end_round: boost_pool_info.end_round,
 		});
 		boost_pool_info.start_round = Zero::zero();
-		boost_pool_info.voting_pools = BTreeMap::<PoolId, BalanceOf<T>>::new();
 		boost_pool_info.total_votes = Zero::zero();
 		boost_pool_info.end_round = Zero::zero();
 		BoostPoolInfos::<T>::set(boost_pool_info);
@@ -163,15 +163,13 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn send_boost_rewards(
 		boost_pool_info: &BoostPoolInfo<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
-		boost_pool_info
-			.voting_pools
-			.iter()
+		BoostVotingPools::<T>::iter()
 			.filter_map(|(pid, value)| match Self::pool_infos(pid) {
 				Some(pool_info) => Some((pid, value, pool_info)),
 				None => None,
 			})
 			.try_for_each(|(pid, value, pool_info)| -> DispatchResult {
-				let proportion = Percent::from_rational(*value, boost_pool_info.total_votes);
+				let proportion = Percent::from_rational(value, boost_pool_info.total_votes);
 				pool_info.basic_rewards.keys().try_for_each(|currency| -> DispatchResult {
 					// proportion * free_balance
 					let transfer_balance: BalanceOf<T> =
@@ -209,17 +207,24 @@ impl<T: Config> Pallet<T> {
 			// If the user's last voting block height is greater than or equal to the block height
 			// at the beginning of this round, subtract.
 			if user_boost_info.last_vote >= boost_pool_info.start_round {
-				user_boost_info.vote_list.iter().for_each(|(pid, proportion)| {
-					boost_pool_info
-						.voting_pools
-						.entry(*pid)
-						.and_modify(|total_votes| {
+				user_boost_info.vote_list.iter().try_for_each(
+					|(pid, proportion)| -> DispatchResult {
+						BoostVotingPools::<T>::mutate(pid, |maybe_total_votes| -> DispatchResult {
+							// Must have been voted.
+							let mut total_votes =
+								maybe_total_votes.as_mut().ok_or(Error::<T>::NobodyVoting)?;
 							*total_votes = total_votes
-								.saturating_sub(*proportion * user_boost_info.vote_amount);
+								.checked_sub(&(*proportion * user_boost_info.vote_amount))
+								.ok_or(ArithmeticError::Overflow)?;
+							Ok(())
 						})
-						.or_insert(Zero::zero());
-				});
-				boost_pool_info.total_votes.saturating_sub(user_boost_info.vote_amount);
+					},
+				)?;
+				boost_pool_info.total_votes = boost_pool_info
+					.total_votes
+					.checked_sub(&user_boost_info.vote_amount)
+					.ok_or(ArithmeticError::Overflow)?;
+				// boost_pool_info.total_votes.saturating_sub(user_boost_info.vote_amount);
 			}
 		}
 
@@ -229,14 +234,21 @@ impl<T: Config> Pallet<T> {
 				.0
 				.binary_search(pid)
 				.map_err(|_| Error::<T>::CalculationOverflow)?;
-			boost_pool_info
-				.voting_pools
-				.entry(*pid)
-				.and_modify(|total_votes| {
-					*total_votes = total_votes.saturating_add(*proportion * new_vote_amount);
-				})
-				.or_insert(*proportion * new_vote_amount);
-			boost_pool_info.total_votes.saturating_add(new_vote_amount);
+			let increace = *proportion * new_vote_amount;
+			BoostVotingPools::<T>::mutate(pid, |maybe_total_votes| -> DispatchResult {
+				match maybe_total_votes.as_mut() {
+					Some(total_votes) =>
+						*total_votes =
+							total_votes.checked_add(&increace).ok_or(ArithmeticError::Overflow)?,
+					None => *maybe_total_votes = Some(increace),
+				}
+				Ok(())
+			})?;
+			boost_pool_info.total_votes = boost_pool_info
+				.total_votes
+				.checked_add(&new_vote_amount)
+				.ok_or(ArithmeticError::Overflow)?;
+			// boost_pool_info.total_votes.saturating_add(new_vote_amount);
 			Ok(())
 		})?;
 		BoostPoolInfos::<T>::set(boost_pool_info);

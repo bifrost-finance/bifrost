@@ -40,7 +40,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv, Convert, Saturating, Zero,
+			AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Convert,
+			Saturating, Zero,
 		},
 		ArithmeticError, Perbill, Percent,
 	},
@@ -175,7 +176,7 @@ pub mod pallet {
 			limit: u32,
 		},
 		RoundEnd {
-			voting_pools: BTreeMap<PoolId, BalanceOf<T>>,
+			// voting_pools: BTreeMap<PoolId, BalanceOf<T>>,
 			total_votes: BalanceOf<T>,
 			start_round: BlockNumberFor<T>,
 			end_round: BlockNumberFor<T>,
@@ -216,6 +217,7 @@ pub mod pallet {
 		RoundNotOver,
 		RoundLengthNotSet,
 		WhitelistLimitExceeded,
+		NobodyVoting,
 	}
 
 	#[pallet::storage]
@@ -308,6 +310,10 @@ pub mod pallet {
 		),
 		ValueQuery,
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_voting_pools)]
+	pub type BoostVotingPools<T: Config> = StorageMap<_, Twox64Concat, PoolId, BalanceOf<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn boost_basic_rewards)]
