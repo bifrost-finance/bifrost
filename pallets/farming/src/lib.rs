@@ -218,6 +218,7 @@ pub mod pallet {
 		RoundLengthNotSet,
 		WhitelistLimitExceeded,
 		NobodyVoting,
+		NotInWhitelist,
 	}
 
 	#[pallet::storage]
@@ -284,11 +285,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn boost_pool_infos)]
-	pub type BoostPoolInfos<T: Config> = StorageValue<
-		_,
-		BoostPoolInfo<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
-		ValueQuery,
-	>;
+	pub type BoostPoolInfos<T: Config> =
+		StorageValue<_, BoostPoolInfo<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_boost_infos)]
@@ -299,17 +297,13 @@ pub mod pallet {
 		UserBoostInfo<BalanceOf<T>, BlockNumberFor<T>>,
 	>;
 
-	// Keep a whitelist of users who can vote. ( whitelist, next_round_whitelist )
 	#[pallet::storage]
 	#[pallet::getter(fn boost_whitelist)]
-	pub type BoostWhitelist<T: Config> = StorageValue<
-		_,
-		(
-			BoundedVec<PoolId, T::WhitelistMaximumLimit>,
-			BoundedVec<PoolId, T::WhitelistMaximumLimit>,
-		),
-		ValueQuery,
-	>;
+	pub type BoostWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_next_round_whitelist)]
+	pub type BoostNextRoundWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn boost_voting_pools)]
@@ -883,17 +877,12 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn add_boost_pool_whitelist(
 			origin: OriginFor<T>,
-			mut whitelist: Vec<PoolId>,
+			whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			let (boost_whitelist, next) = Self::boost_whitelist();
-			whitelist.extend(boost_whitelist.clone());
-			whitelist.sort();
-			whitelist.dedup();
-			let bounded_whitelist =
-				BoundedVec::<PoolId, T::WhitelistMaximumLimit>::try_from(whitelist)
-					.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;
-			BoostWhitelist::<T>::set((bounded_whitelist, next));
+			whitelist.iter().for_each(|pid| {
+				BoostWhitelist::<T>::insert(pid, ());
+			});
 			Ok(())
 		}
 
@@ -902,16 +891,12 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_next_round_whitelist(
 			origin: OriginFor<T>,
-			mut whitelist: Vec<PoolId>,
+			whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			whitelist.sort();
-			whitelist.dedup();
-			let bounded_whitelist =
-				BoundedVec::<PoolId, T::WhitelistMaximumLimit>::try_from(whitelist)
-					.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;
-			BoostWhitelist::<T>::mutate(|boost_whitelist| {
-				boost_whitelist.1 = bounded_whitelist;
+			let _ = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			whitelist.iter().for_each(|pid| {
+				BoostNextRoundWhitelist::<T>::insert(pid, ());
 			});
 			Ok(())
 		}
