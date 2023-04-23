@@ -28,8 +28,6 @@ pub struct BoostPoolInfo<CurrencyId, Balance, BlockNumber> {
 	pub start_round: BlockNumber,
 	pub end_round: BlockNumber,
 	pub round_length: BlockNumber,
-	pub whitelist: Vec<PoolId>, // Need to be sorted and deduplicated
-	pub next_round_whitelist: Vec<PoolId>, // Need to be sorted and deduplicated
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo)]
@@ -88,12 +86,13 @@ impl<T: Config> Pallet<T> {
 		ensure!(round_length != Zero::zero(), Error::<T>::RoundLengthNotSet);
 		let mut boost_pool_info = Self::boost_pool_infos();
 		ensure!(boost_pool_info.end_round == Zero::zero(), Error::<T>::RoundNotOver);
+		let mut whitelist = Self::boost_whitelist();
 		// Update whitelist
-		if !boost_pool_info.next_round_whitelist.is_empty() {
-			boost_pool_info.whitelist = boost_pool_info.next_round_whitelist;
-			boost_pool_info.next_round_whitelist = Vec::<PoolId>::new();
+		if !whitelist.1.is_empty() {
+			whitelist.0 = whitelist.1;
+			whitelist.1 = BoundedVec::<PoolId, T::WhitelistMaximumLimit>::default();
 		} else {
-			ensure!(!boost_pool_info.whitelist.is_empty(), Error::<T>::WhitelistEmpty);
+			ensure!(!whitelist.0.is_empty(), Error::<T>::WhitelistEmpty);
 		}
 
 		Self::send_boost_rewards(&boost_pool_info)?;
@@ -102,6 +101,7 @@ impl<T: Config> Pallet<T> {
 		boost_pool_info.round_length = round_length;
 		boost_pool_info.end_round = current_block_number + round_length;
 		BoostPoolInfos::<T>::set(boost_pool_info);
+		BoostWhitelist::<T>::set(whitelist);
 		Self::deposit_event(Event::RoundStart { round_length });
 		Ok(())
 	}
@@ -138,10 +138,12 @@ impl<T: Config> Pallet<T> {
 	// Only used in hook
 	pub(crate) fn auto_start_boost_round() {
 		let mut boost_pool_info = Self::boost_pool_infos();
-		if !boost_pool_info.next_round_whitelist.is_empty() {
-			boost_pool_info.whitelist = boost_pool_info.next_round_whitelist;
-			boost_pool_info.next_round_whitelist = Vec::<PoolId>::new();
-		} else if boost_pool_info.whitelist.is_empty() {
+		let mut whitelist = Self::boost_whitelist();
+		// Update whitelist
+		if !whitelist.1.is_empty() {
+			whitelist.0 = whitelist.1;
+			whitelist.1 = BoundedVec::<PoolId, T::WhitelistMaximumLimit>::default();
+		} else if whitelist.0.is_empty() {
 			return;
 		}
 
@@ -155,6 +157,7 @@ impl<T: Config> Pallet<T> {
 		boost_pool_info.end_round = current_block_number + boost_pool_info.round_length;
 		Self::deposit_event(Event::RoundStart { round_length: boost_pool_info.round_length });
 		BoostPoolInfos::<T>::set(boost_pool_info);
+		BoostWhitelist::<T>::set(whitelist);
 	}
 
 	pub(crate) fn send_boost_rewards(
@@ -222,8 +225,8 @@ impl<T: Config> Pallet<T> {
 
 		let new_vote_amount = T::VeMinting::balance_of(who, None)?;
 		vote_list.iter().try_for_each(|(pid, proportion)| -> DispatchResult {
-			boost_pool_info
-				.whitelist
+			Self::boost_whitelist()
+				.0
 				.binary_search(pid)
 				.map_err(|_| Error::<T>::CalculationOverflow)?;
 			boost_pool_info

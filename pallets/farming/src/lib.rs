@@ -108,6 +108,9 @@ pub mod pallet {
 		>;
 
 		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type WhitelistMaximumLimit: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -212,6 +215,7 @@ pub mod pallet {
 		WhitelistEmpty,
 		RoundNotOver,
 		RoundLengthNotSet,
+		WhitelistLimitExceeded,
 	}
 
 	#[pallet::storage]
@@ -291,6 +295,18 @@ pub mod pallet {
 		Blake2_128Concat,
 		T::AccountId,
 		UserBoostInfo<BalanceOf<T>, BlockNumberFor<T>>,
+	>;
+
+	// Keep a whitelist of users who can vote. ( whitelist, next_round_whitelist )
+	#[pallet::storage]
+	#[pallet::getter(fn boost_whitelist)]
+	pub type BoostWhitelist<T: Config> = StorageValue<
+		_,
+		(
+			BoundedVec<PoolId, T::WhitelistMaximumLimit>,
+			BoundedVec<PoolId, T::WhitelistMaximumLimit>,
+		),
+		ValueQuery,
 	>;
 
 	#[pallet::storage]
@@ -861,14 +877,17 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn add_boost_pool_whitelist(
 			origin: OriginFor<T>,
-			whitelist: Vec<PoolId>,
+			mut whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			let mut boost_pool_info = Self::boost_pool_infos();
-			boost_pool_info.whitelist.extend(whitelist);
-			boost_pool_info.whitelist.sort();
-			boost_pool_info.whitelist.dedup();
-			BoostPoolInfos::<T>::set(boost_pool_info);
+			let (boost_whitelist, next) = Self::boost_whitelist();
+			whitelist.extend(boost_whitelist.clone());
+			whitelist.sort();
+			whitelist.dedup();
+			let bounded_whitelist =
+				BoundedVec::<PoolId, T::WhitelistMaximumLimit>::try_from(whitelist)
+					.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;
+			BoostWhitelist::<T>::set((bounded_whitelist, next));
 			Ok(())
 		}
 
@@ -880,10 +899,13 @@ pub mod pallet {
 			mut whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			BoostPoolInfos::<T>::mutate(|boost_pool_info| {
-				whitelist.sort();
-				whitelist.dedup();
-				boost_pool_info.next_round_whitelist = whitelist;
+			whitelist.sort();
+			whitelist.dedup();
+			let bounded_whitelist =
+				BoundedVec::<PoolId, T::WhitelistMaximumLimit>::try_from(whitelist)
+					.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;
+			BoostWhitelist::<T>::mutate(|boost_whitelist| {
+				boost_whitelist.1 = bounded_whitelist;
 			});
 			Ok(())
 		}
