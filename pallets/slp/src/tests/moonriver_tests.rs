@@ -2069,6 +2069,7 @@ fn set_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
+		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
 
 		System::set_block_number(400);
 
@@ -2079,6 +2080,10 @@ fn set_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
+		assert_eq!(
+			Slp::get_validators(MOVR),
+			Some(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]),
+		);
 	});
 }
 
@@ -2102,6 +2107,7 @@ fn add_to_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
+		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
 
 		System::set_block_number(400);
 
@@ -2110,6 +2116,8 @@ fn add_to_validator_boost_list_should_work() {
 			MOVR,
 			Box::new(VALIDATOR_0_LOCATION.clone())
 		));
+
+		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
 
@@ -2120,6 +2128,10 @@ fn add_to_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_3));
+		assert_eq!(
+			Slp::get_validators(MOVR),
+			Some(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]),
+		);
 	});
 }
 
