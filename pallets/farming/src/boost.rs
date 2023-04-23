@@ -28,10 +28,11 @@ pub struct BoostPoolInfo<Balance, BlockNumber> {
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo)]
-pub struct UserBoostInfo<Balance, BlockNumber> {
-	pub vote_amount: Balance,
-	pub vote_list: Vec<(PoolId, Percent)>, // Change only when voting
-	pub last_vote: BlockNumber,            // Change only when voting
+#[scale_info(skip_type_params(T))]
+pub struct UserBoostInfo<T: Config> {
+	pub vote_amount: BalanceOf<T>,
+	pub vote_list: BoundedVec<(PoolId, Percent), T::WhitelistMaximumLimit>,
+	pub last_vote: BlockNumberFor<T>, // Change only when voting
 }
 
 pub trait BoostInterface<AccountId, CurrencyId, Balance, BlockNumber> {
@@ -235,13 +236,15 @@ impl<T: Config> Pallet<T> {
 				.total_votes
 				.checked_add(&new_vote_amount)
 				.ok_or(ArithmeticError::Overflow)?;
-			// boost_pool_info.total_votes.saturating_add(new_vote_amount);
 			Ok(())
 		})?;
 		BoostPoolInfos::<T>::set(boost_pool_info);
+		let vote_list_bound =
+			BoundedVec::<(PoolId, Percent), T::WhitelistMaximumLimit>::try_from(vote_list)
+				.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;
 		let new_user_boost_info = UserBoostInfo {
 			vote_amount: new_vote_amount,
-			vote_list,
+			vote_list: vote_list_bound,
 			last_vote: current_block_number,
 		};
 		UserBoostInfos::<T>::insert(who, new_user_boost_info);

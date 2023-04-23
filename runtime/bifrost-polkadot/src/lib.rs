@@ -1218,6 +1218,10 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const WhitelistMaximumLimit: u32 = 10;
+}
+
 impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1229,6 +1233,7 @@ impl bifrost_farming::Config for Runtime {
 	type FarmingBoost = FarmingBoostPalletId;
 	type VeMinting = VeMinting;
 	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 }
 
 parameter_types! {

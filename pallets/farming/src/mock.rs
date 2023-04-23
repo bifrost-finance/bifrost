@@ -155,7 +155,7 @@ parameter_types! {
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const WhitelistMaximumLimit:u32 = 10;
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 ord_parameter_types! {

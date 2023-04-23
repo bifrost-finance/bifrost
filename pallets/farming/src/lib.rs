@@ -290,12 +290,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_boost_infos)]
-	pub type UserBoostInfos<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		T::AccountId,
-		UserBoostInfo<BalanceOf<T>, BlockNumberFor<T>>,
-	>;
+	pub type UserBoostInfos<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, UserBoostInfo<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn boost_whitelist)]
