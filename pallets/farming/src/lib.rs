@@ -29,16 +29,21 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod boost;
 pub mod gauge;
 pub mod rewards;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use crate::boost::*;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
-		ArithmeticError, Perbill,
+		traits::{
+			AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Convert,
+			Saturating, Zero,
+		},
+		ArithmeticError, Perbill, Percent,
 	},
 	PalletId,
 };
@@ -92,6 +97,21 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RewardIssuer: Get<PalletId>;
+
+		#[pallet::constant]
+		type FarmingBoost: Get<PalletId>;
+
+		type VeMinting: bifrost_ve_minting::VeMintingInterface<
+			AccountIdOf<Self>,
+			CurrencyIdOf<Self>,
+			BalanceOf<Self>,
+			Self::BlockNumber,
+		>;
+
+		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type WhitelistMaximumLimit: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -155,6 +175,26 @@ pub mod pallet {
 		RetireLimitSet {
 			limit: u32,
 		},
+		RoundEnd {
+			// voting_pools: BTreeMap<PoolId, BalanceOf<T>>,
+			total_votes: BalanceOf<T>,
+			start_round: BlockNumberFor<T>,
+			end_round: BlockNumberFor<T>,
+		},
+		RoundStartError {
+			info: DispatchError,
+		},
+		RoundStart {
+			round_length: BlockNumberFor<T>,
+		},
+		Voted {
+			who: AccountIdOf<T>,
+			vote_list: Vec<(PoolId, Percent)>,
+		},
+		BoostCharged {
+			who: AccountIdOf<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -173,6 +213,12 @@ pub mod pallet {
 		WithdrawLimitCountExceeded,
 		ShareInfoNotExists,
 		CanNotDeposit,
+		WhitelistEmpty,
+		RoundNotOver,
+		RoundLengthNotSet,
+		WhitelistLimitExceeded,
+		NobodyVoting,
+		NotInWhitelist,
 	}
 
 	#[pallet::storage]
@@ -237,13 +283,45 @@ pub mod pallet {
 		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn boost_pool_infos)]
+	pub type BoostPoolInfos<T: Config> =
+		StorageValue<_, BoostPoolInfo<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn user_boost_infos)]
+	pub type UserBoostInfos<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, UserBoostInfo<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_whitelist)]
+	pub type BoostWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_next_round_whitelist)]
+	pub type BoostNextRoundWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_voting_pools)]
+	pub type BoostVotingPools<T: Config> = StorageMap<_, Twox64Concat, PoolId, BalanceOf<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn boost_basic_rewards)]
+	pub type BoostBasicRewards<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			PoolInfos::<T>::iter().for_each(|(pid, mut pool_info)| match pool_info.state {
 				PoolState::Ongoing => {
-					pool_info.basic_rewards.clone().iter().for_each(
+					pool_info.basic_rewards.clone().iter_mut().for_each(
 						|(reward_currency_id, reward_amount)| {
+							if let Some(boost_basic_reward) =
+								Self::boost_basic_rewards(pid, reward_currency_id)
+							{
+								*reward_amount = reward_amount.saturating_add(boost_basic_reward);
+							}
 							pool_info
 								.rewards
 								.entry(*reward_currency_id)
@@ -286,6 +364,10 @@ pub mod pallet {
 					_ => (),
 				},
 			);
+			if n == Self::boost_pool_infos().end_round {
+				Self::end_boost_round_inner();
+				Self::auto_start_boost_round();
+			}
 
 			T::WeightInfo::on_initialize()
 		}
@@ -783,6 +865,82 @@ pub mod pallet {
 			} else {
 				Self::deposit_event(Event::PartiallyForceGaugeClaimed { gid });
 			}
+			Ok(())
+		}
+
+		// Add whitelist and take effect immediately
+		#[pallet::call_index(14)]
+		#[pallet::weight(0)]
+		pub fn add_boost_pool_whitelist(
+			origin: OriginFor<T>,
+			whitelist: Vec<PoolId>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			whitelist.iter().for_each(|pid| {
+				BoostWhitelist::<T>::insert(pid, ());
+			});
+			Ok(())
+		}
+
+		// Whitelist for next round in effect
+		#[pallet::call_index(15)]
+		#[pallet::weight(0)]
+		pub fn set_next_round_whitelist(
+			origin: OriginFor<T>,
+			whitelist: Vec<PoolId>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			let _ = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			whitelist.iter().for_each(|pid| {
+				BoostNextRoundWhitelist::<T>::insert(pid, ());
+			});
+			Ok(())
+		}
+
+		#[pallet::call_index(16)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn vote(origin: OriginFor<T>, vote_list: Vec<(PoolId, Percent)>) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			Self::vote_inner(&exchanger, vote_list.clone())?;
+			Self::deposit_event(Event::Voted { who: exchanger, vote_list });
+			Ok(())
+		}
+
+		#[pallet::call_index(17)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn start_boost_round(
+			origin: OriginFor<T>,
+			round_length: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::start_boost_round_inner(round_length)?;
+			Ok(())
+		}
+
+		#[pallet::call_index(18)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn end_boost_round(origin: OriginFor<T>) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::end_boost_round_inner();
+			Ok(())
+		}
+
+		#[pallet::call_index(19)]
+		#[pallet::weight(T::WeightInfo::claim())]
+		pub fn charge_boost(
+			origin: OriginFor<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
+				T::MultiCurrency::transfer(
+					*currency,
+					&exchanger,
+					&T::FarmingBoost::get().into_account_truncating(),
+					*reward,
+				)
+			})?;
+			Self::deposit_event(Event::BoostCharged { who: exchanger, rewards });
 			Ok(())
 		}
 	}
