@@ -2023,8 +2023,32 @@ pub mod pallet {
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorBoostListSet {
 				currency_id,
-				validator_boost_list,
+				validator_boost_list: validator_boost_list.clone(),
 			});
+
+			// Add the boost list to the validator set
+			Validators::<T>::mutate(currency_id, |validator_set_op| {
+				if let Some(ref mut validator_set) = validator_set_op {
+					for (validator, _) in validator_boost_list.iter() {
+						if !validator_set.contains(validator) {
+							validator_set.push(*validator);
+						}
+					}
+				} else {
+					*validator_set_op =
+						Some(validator_boost_list.iter().map(|(v, _)| *v).collect());
+				}
+			});
+
+			let new_validator_set =
+				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: new_validator_set,
+			});
+
 			Ok(())
 		}
 
@@ -2080,6 +2104,27 @@ pub mod pallet {
 				who: *who,
 				due_block_number,
 			});
+
+			// Add the newly added validator to the validator set
+			Validators::<T>::mutate(currency_id, |validator_set_op| {
+				if let Some(ref mut validator_set) = validator_set_op {
+					if !validator_set.contains(who.as_ref()) {
+						validator_set.push(*who);
+					}
+				} else {
+					*validator_set_op = Some(vec![*who]);
+				}
+			});
+
+			let new_validator_set =
+				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: new_validator_set,
+			});
+
 			Ok(())
 		}
 
