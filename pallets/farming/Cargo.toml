@@ -21,6 +21,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 hex-literal = { version = "0.3.1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -28,6 +29,7 @@ orml-currencies = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 
 [features]
 default = ["std"]

@@ -311,6 +311,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 }
 
 impl frame_system::Config for Runtime {
@@ -1439,6 +1440,10 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const WhitelistMaximumLimit: u32 = 10;
+}
+
 impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1447,6 +1452,10 @@ impl bifrost_farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
+	type FarmingBoost = FarmingBoostPalletId;
+	type VeMinting = ();
+	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 }
 
 parameter_types! {
