@@ -462,6 +462,121 @@ pub type Trader = (
 	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
+/// A call filter for the XCM Transact instruction. This is a temporary measure until we properly
+/// account for proof size weights.
+///
+/// Calls that are allowed through this filter must:
+/// 1. Have a fixed weight;
+/// 2. Cannot lead to another call being made;
+/// 3. Have a defined proof size weight, e.g. no unbounded vecs in call parameters.
+pub struct SafeCallFilter;
+impl Contains<RuntimeCall> for SafeCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		#[cfg(feature = "runtime-benchmarks")]
+		{
+			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
+				return true;
+			}
+		}
+
+		match call {
+			RuntimeCall::System(
+				frame_system::Call::kill_prefix { .. } | frame_system::Call::set_heap_pages { .. },
+			) |
+			RuntimeCall::Timestamp(..) |
+			RuntimeCall::Indices(..) |
+			RuntimeCall::Balances(..) |
+			RuntimeCall::ParachainStaking(..) |
+			RuntimeCall::Session(pallet_session::Call::purge_keys { .. }) |
+			RuntimeCall::Treasury(..) |
+			RuntimeCall::Utility(pallet_utility::Call::as_derivative { .. }) |
+			RuntimeCall::Identity(
+				pallet_identity::Call::add_registrar { .. } |
+				pallet_identity::Call::set_identity { .. } |
+				pallet_identity::Call::clear_identity { .. } |
+				pallet_identity::Call::request_judgement { .. } |
+				pallet_identity::Call::cancel_request { .. } |
+				pallet_identity::Call::set_fee { .. } |
+				pallet_identity::Call::set_account_id { .. } |
+				pallet_identity::Call::set_fields { .. } |
+				pallet_identity::Call::provide_judgement { .. } |
+				pallet_identity::Call::kill_identity { .. } |
+				pallet_identity::Call::add_sub { .. } |
+				pallet_identity::Call::rename_sub { .. } |
+				pallet_identity::Call::remove_sub { .. } |
+				pallet_identity::Call::quit_sub { .. },
+			) |
+			RuntimeCall::Vesting(..) |
+			RuntimeCall::Bounties(
+				pallet_bounties::Call::propose_bounty { .. } |
+				pallet_bounties::Call::approve_bounty { .. } |
+				pallet_bounties::Call::propose_curator { .. } |
+				pallet_bounties::Call::unassign_curator { .. } |
+				pallet_bounties::Call::accept_curator { .. } |
+				pallet_bounties::Call::award_bounty { .. } |
+				pallet_bounties::Call::claim_bounty { .. } |
+				pallet_bounties::Call::close_bounty { .. },
+			) |
+			RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_reserve_transfer_assets { .. }) |
+			RuntimeCall::Proxy(..) |
+			RuntimeCall::Tokens(
+				orml_tokens::Call::transfer { .. } |
+				orml_tokens::Call::transfer_all { .. } |
+				orml_tokens::Call::transfer_keep_alive { .. }
+			) |
+			// Bifrost moudule
+			RuntimeCall::Farming(
+				bifrost_farming::Call::claim { .. } |
+				bifrost_farming::Call::deposit { .. } |
+				bifrost_farming::Call::withdraw { .. } |
+				bifrost_farming::Call::withdraw_claim { .. }
+			) |
+			RuntimeCall::Salp(
+				bifrost_salp::Call::contribute { .. } |
+				bifrost_salp::Call::batch_unlock { .. } |
+				bifrost_salp::Call::redeem { .. } |
+				bifrost_salp::Call::unlock { .. } |
+				bifrost_salp::Call::unlock_by_vsbond { .. } |
+				bifrost_salp::Call::unlock_vstoken { .. }
+			) |
+			RuntimeCall::VSBondAuction(
+				bifrost_vsbond_auction::Call::clinch_order { .. } |
+				bifrost_vsbond_auction::Call::create_order { .. } |
+				bifrost_vsbond_auction::Call::partial_clinch_order { .. } |
+				bifrost_vsbond_auction::Call::revoke_order { .. }
+			) |
+			RuntimeCall::VstokenConversion(
+				bifrost_vstoken_conversion::Call::vsbond_convert_to_vstoken { .. } |
+				bifrost_vstoken_conversion::Call::vstoken_convert_to_vsbond { .. }
+			) |
+			RuntimeCall::VtokenMinting(
+				bifrost_vtoken_minting::Call::mint { .. } |
+				bifrost_vtoken_minting::Call::rebond { .. } |
+				bifrost_vtoken_minting::Call::rebond_by_unlock_id { .. } |
+				bifrost_vtoken_minting::Call::redeem { .. }
+			) |
+			RuntimeCall::XcmInterface(
+				xcm_interface::Call::transfer_statemine_assets { .. }
+			) |
+			// TODO swap
+			RuntimeCall::ZenlinkProtocol(
+				zenlink_protocol::Call::add_liquidity { .. } |
+				zenlink_protocol::Call::remove_liquidity { .. } |
+				zenlink_protocol::Call::transfer { .. }
+			) |
+			RuntimeCall::ZenlinkStableAMM(
+				zenlink_stable_amm::Call::remove_liquidity_one_currency { .. } |
+				zenlink_stable_amm::Call::remove_pool_and_base_pool_liquidity_one_currency { .. } |
+				zenlink_stable_amm::Call::swap { .. } |
+				zenlink_stable_amm::Call::swap_pool_to_base { .. } |
+				zenlink_stable_amm::Call::swap_meta_pool_underlying { .. } |
+				zenlink_stable_amm::Call::withdraw_admin_fee { .. }
+			) => true,
+			_ => false,
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -482,7 +597,7 @@ impl xcm_executor::Config for XcmConfig {
 	type MaxAssetsIntoHolding = ConstU32<8>;
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
+	type SafeCallFilter = SafeCallFilter;
 	type AssetLocker = ();
 	type AssetExchanger = ();
 	type FeeManager = ();
