@@ -84,6 +84,9 @@ impl<T: Config> BoostInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 }
 
 impl<T: Config> Pallet<T> {
+	// Update whitelist, send boost rewards to the corresponding farming pool and record
+	// BoostBasicRewards, then clear BoostVotingPools and boost_pool_info.total_votes to initialize
+	// the next round.
 	pub(crate) fn start_boost_round_inner(round_length: BlockNumberFor<T>) -> DispatchResult {
 		ensure!(round_length != Zero::zero(), Error::<T>::RoundLengthNotSet);
 		let mut boost_pool_info = Self::boost_pool_infos();
@@ -105,22 +108,24 @@ impl<T: Config> Pallet<T> {
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.round_length = round_length;
 		boost_pool_info.end_round = current_block_number + round_length;
+		boost_pool_info.total_votes = Zero::zero();
 		BoostPoolInfos::<T>::set(boost_pool_info);
+		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
 		Self::deposit_event(Event::RoundStart { round_length });
 		Ok(())
 	}
 
+	// Clear boost_basic_rewards and boost_pool_info.end_round to eliminate the influence of boost
+	// in hook
 	pub(crate) fn end_boost_round_inner() {
 		let mut boost_pool_info = Self::boost_pool_infos();
 		let _ = BoostBasicRewards::<T>::clear(u32::max_value(), None);
-		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
 		Self::deposit_event(Event::RoundEnd {
 			total_votes: boost_pool_info.total_votes,
 			start_round: boost_pool_info.start_round,
 			end_round: boost_pool_info.end_round,
 		});
 		boost_pool_info.start_round = Zero::zero();
-		boost_pool_info.total_votes = Zero::zero();
 		boost_pool_info.end_round = Zero::zero();
 		BoostPoolInfos::<T>::set(boost_pool_info);
 	}
@@ -148,8 +153,10 @@ impl<T: Config> Pallet<T> {
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.end_round = current_block_number + boost_pool_info.round_length;
+		boost_pool_info.total_votes = Zero::zero();
 		Self::deposit_event(Event::RoundStart { round_length: boost_pool_info.round_length });
 		BoostPoolInfos::<T>::set(boost_pool_info);
+		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
 	}
 
 	pub(crate) fn send_boost_rewards(
@@ -239,6 +246,7 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 		BoostPoolInfos::<T>::set(boost_pool_info);
+
 		let vote_list_bound =
 			BoundedVec::<(PoolId, Percent), T::WhitelistMaximumLimit>::try_from(vote_list)
 				.map_err(|_| Error::<T>::WhitelistLimitExceeded)?;

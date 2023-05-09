@@ -454,7 +454,10 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			// ensure!(pool_info.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
+			ensure!(
+				pool_info.state == PoolState::UnCharged || pool_info.state == PoolState::Ongoing,
+				Error::<T>::InvalidPoolState
+			);
 			rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*reward_currency,
@@ -463,7 +466,9 @@ pub mod pallet {
 					*reward,
 				)
 			})?;
-			pool_info.state = PoolState::Charged;
+			if pool_info.state == PoolState::UnCharged {
+				pool_info.state = PoolState::Charged
+			}
 			PoolInfos::<T>::insert(&pid, pool_info);
 
 			Self::deposit_event(Event::Charged { who: exchanger, pid, rewards });

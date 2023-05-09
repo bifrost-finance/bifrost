@@ -20,14 +20,53 @@
 
 #![cfg(test)]
 
-use frame_support::{assert_err, assert_ok};
-
 use crate::{mock::*, *};
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_runtime_common::milli;
+use bifrost_ve_minting::VeMintingInterface;
+use frame_support::{assert_err, assert_ok};
+use node_primitives::TokenInfo;
+
+fn asset_registry() {
+	let items = vec![(KSM, 10 * milli::<Runtime>(KSM)), (BNC, 10 * milli::<Runtime>(BNC))];
+	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
+		(
+			currency_id,
+			AssetMetadata {
+				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
+				decimals: currency_id.decimals().unwrap_or_default(),
+				minimal_balance: *minimal_balance,
+			},
+		)
+	}) {
+		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
+	}
+}
 
 #[test]
 fn boost() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let (pid, _tokens) = init_no_gauge();
+		env_logger::try_init().unwrap_or(());
+		asset_registry();
+		System::set_block_number(System::block_number() + 20);
+		assert_ok!(VeMinting::set_config(
+			RuntimeOrigin::signed(ALICE),
+			Some(0),
+			Some(7 * 86400 / 12)
+		));
+
+		System::set_block_number(System::block_number() + 40);
+		assert_ok!(VeMinting::create_lock_inner(
+			&CHARLIE,
+			20_000_000_000,
+			System::block_number() + 4 * 365 * 86400 / 12
+		));
+		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(CHARLIE), 80_000_000_000));
+		assert_eq!(VeMinting::balance_of(&CHARLIE, None), Ok(399146883040));
+
+		let (pid, tokens) = init_no_gauge();
+		assert_ok!(Farming::deposit(RuntimeOrigin::signed(CHARLIE), pid, tokens, None));
 		assert_ok!(Farming::set_retire_limit(RuntimeOrigin::signed(ALICE), 10));
 		assert_err!(
 			Farming::claim(RuntimeOrigin::signed(ALICE), pid),
@@ -35,22 +74,27 @@ fn boost() {
 		);
 		System::set_block_number(System::block_number() + 100);
 		Farming::on_initialize(0);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 999999999000);
+
+		let whitelist: Vec<PoolId> = vec![pid];
+		let vote_list = vec![(pid, Percent::from_percent(100))];
+		let charge_list = vec![(KSM, 1000)];
+		assert_ok!(Farming::add_boost_pool_whitelist(RuntimeOrigin::signed(ALICE), whitelist));
+		assert_ok!(Farming::start_boost_round(RuntimeOrigin::signed(ALICE), 100));
+		assert_ok!(Farming::charge_boost(RuntimeOrigin::signed(ALICE), charge_list));
+		assert_ok!(Farming::vote(RuntimeOrigin::signed(CHARLIE), vote_list));
+		assert_eq!(Farming::boost_basic_rewards(pid, KSM), None);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
+		System::set_block_number(System::block_number() + 100);
+		Farming::on_initialize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		Farming::on_initialize(System::block_number());
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
+		assert_eq!(Farming::boost_basic_rewards(pid, KSM), Some(10));
 		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
-		Farming::on_initialize(0);
-		assert_ok!(Farming::withdraw_claim(RuntimeOrigin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2000);
-		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 3000);
-		Farming::on_initialize(0);
-		assert_ok!(Farming::close_pool(RuntimeOrigin::signed(ALICE), pid));
-		assert_ok!(Farming::force_retire_pool(RuntimeOrigin::signed(ALICE), pid));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 5000); // 3000 + 1000 + 1000
-		Farming::on_initialize(0);
-		assert_err!(
-			Farming::force_retire_pool(RuntimeOrigin::signed(ALICE), pid),
-			Error::<Runtime>::InvalidPoolState
-		);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 2005);
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 1000000000005);
 	});
 }
 
