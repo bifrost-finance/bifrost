@@ -78,7 +78,7 @@ fn boost() {
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 999999999000);
 
 		let whitelist: Vec<PoolId> = vec![pid];
-		let vote_list = vec![(pid, Percent::from_percent(100))];
+		let vote_list: Vec<(u32, Percent)> = vec![(pid, Percent::from_percent(100))];
 		let charge_list = vec![(KSM, 1000)];
 		assert_ok!(Farming::add_boost_pool_whitelist(RuntimeOrigin::signed(ALICE), whitelist));
 		assert_ok!(Farming::start_boost_round(RuntimeOrigin::signed(ALICE), 100));

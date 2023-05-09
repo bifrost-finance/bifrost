@@ -227,9 +227,12 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let new_vote_amount = T::VeMinting::balance_of(who, None)?;
+		let mut percent_check = Percent::from_percent(0);
 		vote_list.iter().try_for_each(|(pid, proportion)| -> DispatchResult {
 			ensure!(Self::boost_whitelist(pid) != None, Error::<T>::NotInWhitelist);
 			let increace = *proportion * new_vote_amount;
+			percent_check =
+				percent_check.checked_add(proportion).ok_or(Error::<T>::PercentOverflow)?;
 			BoostVotingPools::<T>::mutate(pid, |maybe_total_votes| -> DispatchResult {
 				match maybe_total_votes.as_mut() {
 					Some(total_votes) =>

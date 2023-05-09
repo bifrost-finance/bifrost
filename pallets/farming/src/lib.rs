@@ -219,6 +219,7 @@ pub mod pallet {
 		WhitelistLimitExceeded,
 		NobodyVoting,
 		NotInWhitelist,
+		PercentOverflow,
 	}
 
 	#[pallet::storage]
