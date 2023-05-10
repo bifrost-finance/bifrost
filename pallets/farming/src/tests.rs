@@ -88,6 +88,7 @@ fn boost() {
 			Error::<Runtime>::NotInWhitelist
 		);
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(CHARLIE), vote_list));
+		assert_ok!(Farming::refresh_voting(RuntimeOrigin::signed(CHARLIE)));
 		assert_eq!(Farming::boost_basic_rewards(pid, KSM), None);
 		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
 		System::set_block_number(System::block_number() + 100);
