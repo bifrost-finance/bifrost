@@ -91,16 +91,16 @@ impl<T: Config> Pallet<T> {
 		ensure!(round_length != Zero::zero(), Error::<T>::RoundLengthNotSet);
 		let mut boost_pool_info = Self::boost_pool_infos();
 		ensure!(boost_pool_info.end_round == Zero::zero(), Error::<T>::RoundNotOver);
-		let whitelist_iter = BoostWhitelist::<T>::iter_keys();
+
 		// Update whitelist
-		if BoostNextRoundWhitelist::<T>::iter().count() != 0 {
+		if BoostNextRoundWhitelist::<T>::iter_keys().count() != 0 {
 			let _ = BoostWhitelist::<T>::clear(u32::max_value(), None);
-			whitelist_iter.for_each(|pid| {
+			BoostNextRoundWhitelist::<T>::iter_keys().for_each(|pid| {
 				BoostWhitelist::<T>::insert(pid, ());
 			});
 			let _ = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
 		} else {
-			ensure!(whitelist_iter.count() != 0, Error::<T>::WhitelistEmpty);
+			ensure!(BoostWhitelist::<T>::iter_keys().count() != 0, Error::<T>::WhitelistEmpty);
 		}
 
 		Self::send_boost_rewards(&boost_pool_info)?;
