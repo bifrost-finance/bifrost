@@ -24,7 +24,7 @@ use crate::{mock::*, *};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_runtime_common::milli;
 use bifrost_ve_minting::VeMintingInterface;
-use frame_support::{assert_err, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok};
 use node_primitives::TokenInfo;
 
 fn asset_registry() {
@@ -77,12 +77,16 @@ fn boost() {
 		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 999999999000);
 
-		let whitelist: Vec<PoolId> = vec![pid];
 		let vote_list: Vec<(u32, Percent)> = vec![(pid, Percent::from_percent(100))];
 		let charge_list = vec![(KSM, 1000)];
-		assert_ok!(Farming::add_boost_pool_whitelist(RuntimeOrigin::signed(ALICE), whitelist));
+		assert_ok!(Farming::add_boost_pool_whitelist(RuntimeOrigin::signed(ALICE), vec![2]));
+		assert_ok!(Farming::set_next_round_whitelist(RuntimeOrigin::signed(ALICE), vec![pid]));
 		assert_ok!(Farming::start_boost_round(RuntimeOrigin::signed(ALICE), 100));
 		assert_ok!(Farming::charge_boost(RuntimeOrigin::signed(ALICE), charge_list));
+		assert_noop!(
+			Farming::vote(RuntimeOrigin::signed(CHARLIE), vec![(2, Percent::from_percent(100))]),
+			Error::<Runtime>::NotInWhitelist
+		);
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(CHARLIE), vote_list));
 		assert_eq!(Farming::boost_basic_rewards(pid, KSM), None);
 		assert_ok!(Farming::claim(RuntimeOrigin::signed(CHARLIE), pid));
