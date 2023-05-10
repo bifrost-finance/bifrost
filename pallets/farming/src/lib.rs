@@ -195,9 +195,6 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
-		VotingRefreshed {
-			who: AccountIdOf<T>,
-		},
 	}
 
 	#[pallet::error]
@@ -950,15 +947,6 @@ pub mod pallet {
 				)
 			})?;
 			Self::deposit_event(Event::BoostCharged { who: exchanger, rewards });
-			Ok(())
-		}
-
-		#[pallet::call_index(20)]
-		#[pallet::weight(T::WeightInfo::claim())]
-		pub fn refresh_voting(origin: OriginFor<T>) -> DispatchResult {
-			let exchanger = ensure_signed(origin)?;
-			Self::refresh_vebnc_farming(&exchanger)?;
-			Self::deposit_event(Event::VotingRefreshed { who: exchanger });
 			Ok(())
 		}
 	}
