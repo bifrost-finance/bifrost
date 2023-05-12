@@ -69,10 +69,10 @@ benchmarks! {
 	refund {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
+		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
+		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),
@@ -95,10 +95,10 @@ benchmarks! {
 	unlock {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
+		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
+		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),
@@ -119,7 +119,7 @@ benchmarks! {
 		let fund_index = create_fund::<T>(1);
 		let contribution = T::MinContribution::get();
 		let mut caller: T::AccountId = whitelisted_caller();
-		let confirmer: T::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
+		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		for i in 0 .. k {
 			caller = account("contributor", i, 0);
 			contribute_fund::<T>(&caller,fund_index);
@@ -143,10 +143,10 @@ benchmarks! {
 	redeem {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
+		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
+		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),

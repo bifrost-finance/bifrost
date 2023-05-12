@@ -15,28 +15,3 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-#![cfg(feature = "runtime-benchmarks")]
-
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
-
-use super::*;
-#[allow(unused_imports)]
-use crate::Pallet as FlexibleFee;
-
-benchmarks! {
-	set_user_fee_charge_order {
-		let order_vec = vec![CurrencyId::Token(TokenSymbol::try_from(0u8).unwrap_or_default())];
-		let caller: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Signed(caller), Some(order_vec))
-}
-
-impl_benchmark_test_suite!(
-	FlexibleFee,
-	crate::mock::ExtBuilder::default()
-		.one_hundred_precision_for_each_currency_type_for_whitelist_account()
-		.build(),
-	crate::mock::Test
-);

@@ -1884,7 +1884,6 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_flexible_fee, FlexibleFee]
 		[bifrost_salp, Salp]
 		[bifrost_salp_lite, SalpLite]
 		[bifrost_liquidity_mining, LiquidityMining]
