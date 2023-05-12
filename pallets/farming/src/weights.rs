@@ -59,109 +59,632 @@ pub trait WeightInfo {
 	fn withdraw() -> Weight;
 	fn claim() -> Weight;
 	fn gauge_withdraw() -> Weight;
+	fn withdraw_claim() -> Weight;
+	fn reset_pool() -> Weight;
+	fn force_retire_pool() -> Weight;
+	fn kill_pool() -> Weight;
+	fn edit_pool() -> Weight;
+	fn close_pool() -> Weight;
+	fn charge() -> Weight;
+	fn force_gauge_claim() -> Weight;
+	fn set_retire_limit() -> Weight;
+	fn add_boost_pool_whitelist() -> Weight;
+	fn set_next_round_whitelist() -> Weight;
+	fn vote() -> Weight;
+	fn start_boost_round() -> Weight;
+	fn end_boost_round() -> Weight;
+	fn charge_boost() -> Weight;
 }
 
 /// Weights for bifrost_farming using the Bifrost node and recommended hardware.
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
-	// Storage: Farming PoolInfos (r:1 w:0)
-	// Storage: Farming GaugePoolInfos (r:1 w:0)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostPoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
 	fn on_initialize() -> Weight {
-		Weight::from_ref_time(6_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `79`
+		//  Estimated: `5682`
+		// Minimum execution time: 10_359 nanoseconds.
+		Weight::from_parts(10_539_000, 5682)
+			.saturating_add(T::DbWeight::get().reads(3))
 	}
-	// Storage: Farming PoolNextId (r:1 w:1)
-	// Storage: Farming GaugePoolNextId (r:1 w:1)
-	// Storage: Farming GaugePoolInfos (r:0 w:1)
-	// Storage: Farming PoolInfos (r:0 w:1)
+	/// Storage: Farming PoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming PoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
 	fn create_farming_pool() -> Weight {
-		Weight::from_ref_time(22_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(4 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `76`
+		//  Estimated: `1294`
+		// Minimum execution time: 25_117 nanoseconds.
+		Weight::from_parts(25_699_000, 1294)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(4))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Tokens Accounts (r:2 w:2)
-	// Storage: System Account (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn deposit() -> Weight {
-		Weight::from_ref_time(53_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(5 as u64))
-			.saturating_add(T::DbWeight::get().writes(5 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `1743`
+		//  Estimated: `20443`
+		// Minimum execution time: 89_539 nanoseconds.
+		Weight::from_parts(90_381_000, 20443)
+			.saturating_add(T::DbWeight::get().reads(6))
+			.saturating_add(T::DbWeight::get().writes(5))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn withdraw() -> Weight {
-		Weight::from_ref_time(30_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `540`
+		//  Estimated: `6030`
+		// Minimum execution time: 40_056 nanoseconds.
+		Weight::from_parts(40_507_000, 6030)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
-	// Storage: Farming GaugeInfos (r:1 w:0)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:1 w:0)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
 	fn claim() -> Weight {
-		Weight::from_ref_time(31_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(3 as u64))
-			.saturating_add(T::DbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `577`
+		//  Estimated: `9156`
+		// Minimum execution time: 39_555 nanoseconds.
+		Weight::from_parts(39_886_000, 9156)
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	// Storage: Farming GaugePoolInfos (r:1 w:1)
-	// Storage: Farming GaugeInfos (r:1 w:1)
-	// Storage: Farming PoolInfos (r:1 w:0)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn gauge_withdraw() -> Weight {
-		Weight::from_ref_time(32_000_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(4 as u64))
-			.saturating_add(T::DbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `925`
+		//  Estimated: `13600`
+		// Minimum execution time: 41_168 nanoseconds.
+		Weight::from_parts(41_678_000, 13600)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	fn withdraw_claim() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `540`
+		//  Estimated: `6030`
+		// Minimum execution time: 24_236 nanoseconds.
+		Weight::from_parts(24_506_000, 6030)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn reset_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `435`
+		//  Estimated: `4275`
+		// Minimum execution time: 28_644 nanoseconds.
+		Weight::from_parts(29_085_000, 4275)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming RetireLimit (r:1 w:0)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn force_retire_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `657`
+		//  Estimated: `10548`
+		// Minimum execution time: 34_245 nanoseconds.
+		Weight::from_parts(34_625_000, 10548)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn kill_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `379`
+		//  Estimated: `2854`
+		// Minimum execution time: 22_683 nanoseconds.
+		Weight::from_parts(23_194_000, 2854)
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn edit_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `544`
+		//  Estimated: `6038`
+		// Minimum execution time: 50_535 nanoseconds.
+		Weight::from_parts(54_413_000, 6038)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn close_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `416`
+		//  Estimated: `2891`
+		// Minimum execution time: 20_969 nanoseconds.
+		Weight::from_parts(21_240_000, 2891)
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn charge() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `2081`
+		//  Estimated: `16901`
+		// Minimum execution time: 83_477 nanoseconds.
+		Weight::from_parts(84_489_000, 16901)
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	/// Storage: Farming RetireLimit (r:1 w:0)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:2 w:1)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	fn force_gauge_claim() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `948`
+		//  Estimated: `17610`
+		// Minimum execution time: 50_476 nanoseconds.
+		Weight::from_parts(51_176_000, 17610)
+			.saturating_add(T::DbWeight::get().reads(6))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	/// Storage: Farming RetireLimit (r:1 w:1)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	fn set_retire_limit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `76`
+		//  Estimated: `571`
+		// Minimum execution time: 12_864 nanoseconds.
+		Weight::from_parts(13_405_000, 571)
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostWhitelist (r:0 w:1)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	fn add_boost_pool_whitelist() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 4_739 nanoseconds.
+		Weight::from_ref_time(4_850_000)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostNextRoundWhitelist (r:0 w:1)
+	/// Proof Skipped: Farming BoostNextRoundWhitelist (max_values: None, max_size: None, mode: Measured)
+	fn set_next_round_whitelist() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `112`
+		//  Estimated: `112`
+		// Minimum execution time: 7_634 nanoseconds.
+		Weight::from_parts(7_935_000, 112)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming UserBoostInfos (r:1 w:1)
+	/// Proof Skipped: Farming UserBoostInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostWhitelist (r:1 w:0)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostVotingPools (r:1 w:1)
+	/// Proof Skipped: Farming BoostVotingPools (max_values: None, max_size: None, mode: Measured)
+	fn vote() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `112`
+		//  Estimated: `8368`
+		// Minimum execution time: 24_086 nanoseconds.
+		Weight::from_parts(24_506_000, 8368)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming BoostNextRoundWhitelist (r:1 w:0)
+	/// Proof Skipped: Farming BoostNextRoundWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostWhitelist (r:2 w:0)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostVotingPools (r:1 w:0)
+	/// Proof Skipped: Farming BoostVotingPools (max_values: None, max_size: None, mode: Measured)
+	fn start_boost_round() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `115`
+		//  Estimated: `10855`
+		// Minimum execution time: 32_000 nanoseconds.
+		Weight::from_parts(32_581_000, 10855)
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	fn end_boost_round() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `162`
+		//  Estimated: `657`
+		// Minimum execution time: 19_988 nanoseconds.
+		Weight::from_parts(20_789_000, 657)
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn charge_boost() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1437`
+		//  Estimated: `11701`
+		// Minimum execution time: 62_648 nanoseconds.
+		Weight::from_parts(63_400_000, 11701)
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	// Storage: Farming PoolInfos (r:1 w:0)
-	// Storage: Farming GaugePoolInfos (r:1 w:0)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostPoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
 	fn on_initialize() -> Weight {
-		Weight::from_ref_time(6_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `79`
+		//  Estimated: `5682`
+		// Minimum execution time: 10_359 nanoseconds.
+		Weight::from_parts(10_539_000, 5682)
+			.saturating_add(RocksDbWeight::get().reads(3))
 	}
-	// Storage: Farming PoolNextId (r:1 w:1)
-	// Storage: Farming GaugePoolNextId (r:1 w:1)
-	// Storage: Farming GaugePoolInfos (r:0 w:1)
-	// Storage: Farming PoolInfos (r:0 w:1)
+	/// Storage: Farming PoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming PoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
 	fn create_farming_pool() -> Weight {
-		Weight::from_ref_time(22_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(4 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `76`
+		//  Estimated: `1294`
+		// Minimum execution time: 25_117 nanoseconds.
+		Weight::from_parts(25_699_000, 1294)
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(4))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Tokens Accounts (r:2 w:2)
-	// Storage: System Account (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn deposit() -> Weight {
-		Weight::from_ref_time(53_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(5 as u64))
-			.saturating_add(RocksDbWeight::get().writes(5 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `1743`
+		//  Estimated: `20443`
+		// Minimum execution time: 89_539 nanoseconds.
+		Weight::from_parts(90_381_000, 20443)
+			.saturating_add(RocksDbWeight::get().reads(6))
+			.saturating_add(RocksDbWeight::get().writes(5))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn withdraw() -> Weight {
-		Weight::from_ref_time(30_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `540`
+		//  Estimated: `6030`
+		// Minimum execution time: 40_056 nanoseconds.
+		Weight::from_parts(40_507_000, 6030)
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(2))
 	}
-	// Storage: Farming PoolInfos (r:1 w:1)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
-	// Storage: Farming GaugeInfos (r:1 w:0)
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:1 w:0)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
 	fn claim() -> Weight {
-		Weight::from_ref_time(31_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(3 as u64))
-			.saturating_add(RocksDbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `577`
+		//  Estimated: `9156`
+		// Minimum execution time: 39_555 nanoseconds.
+		Weight::from_parts(39_886_000, 9156)
+			.saturating_add(RocksDbWeight::get().reads(3))
+			.saturating_add(RocksDbWeight::get().writes(2))
 	}
-	// Storage: Farming GaugePoolInfos (r:1 w:1)
-	// Storage: Farming GaugeInfos (r:1 w:1)
-	// Storage: Farming PoolInfos (r:1 w:0)
-	// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
 	fn gauge_withdraw() -> Weight {
-		Weight::from_ref_time(32_000_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(4 as u64))
-			.saturating_add(RocksDbWeight::get().writes(2 as u64))
+		// Proof Size summary in bytes:
+		//  Measured:  `925`
+		//  Estimated: `13600`
+		// Minimum execution time: 41_168 nanoseconds.
+		Weight::from_parts(41_678_000, 13600)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:1)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	fn withdraw_claim() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `540`
+		//  Estimated: `6030`
+		// Minimum execution time: 24_236 nanoseconds.
+		Weight::from_parts(24_506_000, 6030)
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolNextId (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolNextId (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:0 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn reset_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `435`
+		//  Estimated: `4275`
+		// Minimum execution time: 28_644 nanoseconds.
+		Weight::from_parts(29_085_000, 4275)
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(3))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming RetireLimit (r:1 w:0)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn force_retire_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `657`
+		//  Estimated: `10548`
+		// Minimum execution time: 34_245 nanoseconds.
+		Weight::from_parts(34_625_000, 10548)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn kill_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `379`
+		//  Estimated: `2854`
+		// Minimum execution time: 22_683 nanoseconds.
+		Weight::from_parts(23_194_000, 2854)
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn edit_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `544`
+		//  Estimated: `6038`
+		// Minimum execution time: 50_535 nanoseconds.
+		Weight::from_parts(54_413_000, 6038)
+			.saturating_add(RocksDbWeight::get().reads(2))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	fn close_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `416`
+		//  Estimated: `2891`
+		// Minimum execution time: 20_969 nanoseconds.
+		Weight::from_parts(21_240_000, 2891)
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming PoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn charge() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `2081`
+		//  Estimated: `16901`
+		// Minimum execution time: 83_477 nanoseconds.
+		Weight::from_parts(84_489_000, 16901)
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(4))
+	}
+	/// Storage: Farming RetireLimit (r:1 w:0)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming GaugeInfos (r:2 w:1)
+	/// Proof Skipped: Farming GaugeInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming GaugePoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming GaugePoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming PoolInfos (r:1 w:0)
+	/// Proof Skipped: Farming PoolInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming SharesAndWithdrawnRewards (r:1 w:0)
+	/// Proof Skipped: Farming SharesAndWithdrawnRewards (max_values: None, max_size: None, mode: Measured)
+	fn force_gauge_claim() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `948`
+		//  Estimated: `17610`
+		// Minimum execution time: 50_476 nanoseconds.
+		Weight::from_parts(51_176_000, 17610)
+			.saturating_add(RocksDbWeight::get().reads(6))
+			.saturating_add(RocksDbWeight::get().writes(2))
+	}
+	/// Storage: Farming RetireLimit (r:1 w:1)
+	/// Proof Skipped: Farming RetireLimit (max_values: Some(1), max_size: None, mode: Measured)
+	fn set_retire_limit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `76`
+		//  Estimated: `571`
+		// Minimum execution time: 12_864 nanoseconds.
+		Weight::from_parts(13_405_000, 571)
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostWhitelist (r:0 w:1)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	fn add_boost_pool_whitelist() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 4_739 nanoseconds.
+		Weight::from_ref_time(4_850_000)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostNextRoundWhitelist (r:0 w:1)
+	/// Proof Skipped: Farming BoostNextRoundWhitelist (max_values: None, max_size: None, mode: Measured)
+	fn set_next_round_whitelist() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `112`
+		//  Estimated: `112`
+		// Minimum execution time: 7_634 nanoseconds.
+		Weight::from_parts(7_935_000, 112)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming UserBoostInfos (r:1 w:1)
+	/// Proof Skipped: Farming UserBoostInfos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostWhitelist (r:1 w:0)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostVotingPools (r:1 w:1)
+	/// Proof Skipped: Farming BoostVotingPools (max_values: None, max_size: None, mode: Measured)
+	fn vote() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `112`
+		//  Estimated: `8368`
+		// Minimum execution time: 24_086 nanoseconds.
+		Weight::from_parts(24_506_000, 8368)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(3))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	/// Storage: Farming BoostNextRoundWhitelist (r:1 w:0)
+	/// Proof Skipped: Farming BoostNextRoundWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostWhitelist (r:2 w:0)
+	/// Proof Skipped: Farming BoostWhitelist (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Farming BoostVotingPools (r:1 w:0)
+	/// Proof Skipped: Farming BoostVotingPools (max_values: None, max_size: None, mode: Measured)
+	fn start_boost_round() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `115`
+		//  Estimated: `10855`
+		// Minimum execution time: 32_000 nanoseconds.
+		Weight::from_parts(32_581_000, 10855)
+			.saturating_add(RocksDbWeight::get().reads(5))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Farming BoostPoolInfos (r:1 w:1)
+	/// Proof Skipped: Farming BoostPoolInfos (max_values: Some(1), max_size: None, mode: Measured)
+	fn end_boost_round() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `162`
+		//  Estimated: `657`
+		// Minimum execution time: 19_988 nanoseconds.
+		Weight::from_parts(20_789_000, 657)
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: Tokens Accounts (r:2 w:2)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:1 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn charge_boost() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1437`
+		//  Estimated: `11701`
+		// Minimum execution time: 62_648 nanoseconds.
+		Weight::from_parts(63_400_000, 11701)
+			.saturating_add(RocksDbWeight::get().reads(4))
+			.saturating_add(RocksDbWeight::get().writes(3))
 	}
 }
