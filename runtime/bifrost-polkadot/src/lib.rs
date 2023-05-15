@@ -69,10 +69,7 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::{
-	fee_dealer::FeeDealer,
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -126,7 +123,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 972,
+	spec_version: 974,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -975,6 +972,7 @@ impl Contains<RuntimeCall> for StatemineTransferFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub UmpContributeFee: Balance = UmpTransactFee::get();
+	pub MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
 pub type MiscFeeHandlers = (
@@ -985,18 +983,19 @@ pub type MiscFeeHandlers = (
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FlexibleFee;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler = MiscFeeHandlers;
 	type ParachainId = ParachainInfo;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1622,20 +1621,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		// "Use 2D weights in XCM v3" <https://github.com/paritytech/polkadot/pull/6134>
-		pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-		// ConcreteFungibleBalances and AbstractFungibleBalances key  v2::Multilocation ->
-		// v3::Multilocation
-		orml_unknown_tokens::Migration<Runtime>,
-		// "Scheduler: remove empty agenda on cancel" <https://github.com/paritytech/substrate/pull/12989>
-		pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
-		// LocationToCurrencyIds value and CurrencyIdToLocations key v2::Multilocation ->
-		// v3::Multilocation
-		bifrost_asset_registry::migration::MigrateV1MultiLocationToV3<Runtime>,
-		xcm_interface::migration::RemoveNonce<Runtime>,
-		bifrost_slp::migration::MigrateV2MultiLocationToV3<Runtime>,
-	),
+	bifrost_slp::migration2::MigrateValidatorsAndValidatorsByDelegatorStorages<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
