@@ -38,7 +38,7 @@ pub fn lookup_of_account<T: Config>(
 
 fn kusama_setup<
 	T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config,
->() ->  Result<(), BenchmarkError>  {
+>() -> Result<(), BenchmarkError> {
 	let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin()
 		.map_err(|_| BenchmarkError::Weightless)?;
 	let caller: T::AccountId = whitelisted_caller();
@@ -122,91 +122,130 @@ fn kusama_setup<
 		origin.clone(),
 		KSM,
 		XcmOperation::BondExtra,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Unbond,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Chill,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Rebond,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Undelegate,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Delegate,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Payout,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::CancelLeave,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::Liquidize,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::ExecuteLeave,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::TransferBack,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::XtokensTransferBack,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	assert_ok!(Slp::<T>::set_xcm_dest_weight_and_fee(
 		origin.clone(),
 		KSM,
 		XcmOperation::TransferTo,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
+		Some((
+			Weight::from_parts(20_000_000_000, u64::MAX),
+			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
+		)),
 	));
 
 	let mins_and_maxs = MinimumsMaximums {
