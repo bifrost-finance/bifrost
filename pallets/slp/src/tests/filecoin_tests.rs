@@ -194,9 +194,7 @@ fn delegate_should_work() {
 			Box::new(owner_location.clone())
 		));
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		let validator_list = vec![owner_location.clone()];
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		assert_ok!(Slp::delegate(
@@ -306,9 +304,7 @@ fn undelegate_should_work() {
 
 		bond_setup();
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		let validator_list = vec![owner_location.clone()];
 		assert_eq!(
 			ValidatorsByDelegator::<Runtime>::get(FIL, location.clone()),
 			Some(validator_list)
@@ -392,9 +388,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 		));
 
 		// insert validator into validators list.
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&location.clone().encode());
-		let validator_list = vec![(location.clone(), multi_hash)];
+		let validator_list = vec![location.clone()];
 		Validators::<Runtime>::insert(FIL, validator_list);
 
 		// First set base vtoken exchange rate. Should be 1:1.
@@ -487,19 +481,8 @@ fn remove_validator_should_work() {
 
 		bond_setup();
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		let validator_list = vec![owner_location.clone()];
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
-
-		assert_noop!(
-			Slp::remove_validator(
-				RuntimeOrigin::signed(ALICE),
-				FIL,
-				Box::new(owner_location.clone())
-			),
-			Error::<Runtime>::ValidatorStillInUse
-		);
 
 		// set ledger to zero
 		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };

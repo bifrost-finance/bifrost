@@ -1014,8 +1014,6 @@ fn add_validator_and_remove_validator_works() {
 
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
-		let multi_hash_0 =
-			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -1046,7 +1044,7 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		valis.push(validator_0_location.clone());
 
 		assert_eq!(Slp::get_validators(BNC), Some(valis));
 

@@ -43,6 +43,7 @@ pub type Balance = u128;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -65,6 +66,7 @@ frame_support::construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
 		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>},
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
 	}
 );
 
@@ -201,6 +203,16 @@ impl bifrost_ve_minting::Config for Runtime {
 	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
@@ -221,7 +233,9 @@ impl ExtBuilder {
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
-			(CHARLIE, BNC, 100),
+			(CHARLIE, BNC, 1_000_000_000_000),
+			(CHARLIE, vBNC, 1_000_000_000_000_000),
+			(CHARLIE, KSM, 1_000_000_000_000),
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 100),
 			(ALICE, KSM, 3000),
