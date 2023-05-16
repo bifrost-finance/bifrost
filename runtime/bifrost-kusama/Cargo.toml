@@ -58,6 +58,7 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-preimage = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.38', default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -158,6 +159,7 @@ std = [
 	"pallet-indices/std",
 	"pallet-multisig/std",
 	"pallet-proxy/std",
+	"pallet-ranked-collective/std",
 	"pallet-referenda/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -243,6 +245,10 @@ runtime-benchmarks = [
 	"pallet-bounties/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
+	"pallet-conviction-voting/runtime-benchmarks",
+	"pallet-ranked-collective/runtime-benchmarks",
+	"pallet-referenda/runtime-benchmarks",
+	"pallet-whitelist/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
@@ -302,6 +308,10 @@ try-runtime = [
 	"pallet-proxy/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-identity/try-runtime",
+	"pallet-conviction-voting/try-runtime",
+	"pallet-ranked-collective/try-runtime",
+	"pallet-referenda/try-runtime",
+	"pallet-whitelist/try-runtime",
 	"pallet-vesting/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-bounties/try-runtime",

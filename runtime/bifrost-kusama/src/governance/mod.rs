@@ -16,16 +16,17 @@
 
 //! Governance configurations
 
-pub mod councils;
-mod democracy;
 pub mod referenda;
 
 use super::*;
 pub use bifrost_runtime_common::dollar;
 mod origins;
 pub use origins::{
-	custom_origins, Fellows, FellowshipAdmin, ReferendumCanceller, ReferendumKiller, SALPAdmin,
-	SystemStakingAdmin, ValidatorElection, WhitelistedCaller,
+	custom_origins, Fellows, FellowshipAdmin, FellowshipExperts, FellowshipInitiates,
+	FellowshipMasters, ReferendumCanceller, ReferendumKiller, SALPAdmin, SystemStakingAdmin,
+	ValidatorElection, WhitelistedCaller, *,
 };
 mod tracks;
 pub use tracks::TracksInfo;
+// pub mod fellowship;
+// pub use fellowship::{FellowshipCollectiveInstance, FellowshipReferendaInstance};
