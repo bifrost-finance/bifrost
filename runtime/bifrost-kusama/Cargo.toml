@@ -1,9 +1,9 @@
 [package]
+authors = ["Edwin Wang <lark930@gmail.com>"]
+build = "build.rs"
+edition = "2021"
 name = "bifrost-kusama-runtime"
 version = "0.8.0"
-authors = ["Edwin Wang <lark930@gmail.com>"]
-edition = "2021"
-build = "build.rs"
 
 [dependencies]
 # third-party dependencies
@@ -19,6 +19,8 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 ] }
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
+strum = { version = "0.24", default-features = false, features = [ "derive" ] }
+strum_macros = "0.24"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -47,14 +49,16 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-conviction-voting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-preimage = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.38', default-features = false }
+pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -63,6 +67,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-whitelist = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38", default-features = false }
@@ -85,45 +90,45 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
 
 # Bifrost
+bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
-bifrost-salp = { path = "../../pallets/salp", default-features = false }
-bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
-bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false }
-pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
+bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
-bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
-bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
-bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
-bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
+bifrost-salp = { path = "../../pallets/salp", default-features = false }
+bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false }
+bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
+bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
+bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
+pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 # xcm-support = { path = "../../xcm-support", default-features = false }
-bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
-bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
-bifrost-system-maker = { path = "../../pallets/system-maker", default-features = false }
-bifrost-cross-in-out = { path = "../../pallets/cross-in-out", default-features = false }
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
-bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
+bifrost-cross-in-out = { path = "../../pallets/cross-in-out", default-features = false }
 bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
-parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
+bifrost-system-maker = { path = "../../pallets/system-maker", default-features = false }
+bifrost-system-staking = { path = "../../pallets/system-staking", default-features = false }
+bifrost-vstoken-conversion = { path = "../../pallets/vstoken-conversion", default-features = false }
+bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
+parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-xtokens = { version = "0.4.1-dev", default-features = false }
 
 merkle-distributor = { version = "*", default-features = false }
+xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
-xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
 
 zenlink-stable-amm = { version = "*", default-features = false }
 zenlink-stable-amm-runtime-api = { version = "*", default-features = false }
@@ -147,11 +152,13 @@ std = [
 	"pallet-balances/std",
 	"pallet-bounties/std",
 	"pallet-collective/std",
+	"pallet-conviction-voting/std",
 	"pallet-democracy/std",
 	"pallet-identity/std",
 	"pallet-indices/std",
 	"pallet-multisig/std",
 	"pallet-proxy/std",
+	"pallet-referenda/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -160,6 +167,7 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-elections-phragmen/std",
 	"pallet-tips/std",
+	"pallet-whitelist/std",
 	"sp-api/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
