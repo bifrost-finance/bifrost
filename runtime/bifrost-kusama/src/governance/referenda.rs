@@ -1,18 +1,20 @@
-// Copyright 2019-2022 PureStake Inc.
-// This file is part of Moonbeam.
+// This file is part of Bifrost.
 
-// Moonbeam is free software: you can redistribute it and/or modify
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Moonbeam is distributed in the hope that it will be useful,
+// This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! # Gov2 config
 //! Includes runtime configs for these substrate pallets:
@@ -21,10 +23,8 @@
 //! 3. pallet-referenda
 
 use super::*;
-// use crate::currency::*;
-use frame_support::traits::{ConstU16, EitherOf, MapSuccess};
+use frame_support::traits::{ConstU16, EitherOf};
 use frame_system::EnsureRootWithSuccess;
-use sp_runtime::traits::Replace;
 
 parameter_types! {
 	pub const VoteLockingPeriod: BlockNumber = 1 * DAYS;
