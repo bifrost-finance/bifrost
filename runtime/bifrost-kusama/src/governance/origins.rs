@@ -159,17 +159,6 @@ pub mod custom_origins {
 		}
 	}
 
-	// decl_ensure! {
-	// 	pub type Spender: EnsureOrigin<Success = Balance> {
-	// 		SmallTipper = 250 * QUID,
-	// 		BigTipper = 1 * GRAND,
-	// 		SmallSpender = 10 * GRAND,
-	// 		MediumSpender = 100 * GRAND,
-	// 		BigSpender = 1_000 * GRAND,
-	// 		Treasurer = 10_000 * GRAND,
-	// 	}
-	// }
-
 	decl_ensure! {
 		pub type EnsureFellowship: EnsureOrigin<Success = u16> {
 			Fellowship1Dan = 1,

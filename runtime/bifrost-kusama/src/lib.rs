@@ -104,14 +104,7 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 
 // Governance configurations.
 pub mod governance;
-use governance::{
-	custom_origins,
-	// fellowship::{FellowshipCollectiveInstance, FellowshipReferendaInstance},
-	SALPAdmin,
-	SystemStakingAdmin,
-	ValidatorElection,
-};
-// pub use governance::fellowship::*;
+use governance::{custom_origins, SALPAdmin, SystemStakingAdmin, ValidatorElection};
 
 // xcm config
 mod xcm_config;
@@ -460,8 +453,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Utility(..) |
 				RuntimeCall::Proxy(..) |
 				RuntimeCall::Multisig(..) |
-				// RuntimeCall::FellowshipCollective(..) |
-				// RuntimeCall::FellowshipReferenda(..) |
 				RuntimeCall::ParachainStaking(..)
 			),
 			ProxyType::Staking =>
@@ -474,8 +465,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 						RuntimeCall::PhragmenElection(..) |
 						RuntimeCall::Treasury(..) |
 						RuntimeCall::Bounties(..) |
-						RuntimeCall::Tips(..) | RuntimeCall::Utility(..) /* RuntimeCall::FellowshipCollective(..) |
-					                                                   * RuntimeCall::FellowshipReferenda(..) */
+						RuntimeCall::Tips(..) | RuntimeCall::Utility(..)
 				),
 			ProxyType::CancelProxy => {
 				matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
@@ -1262,7 +1252,6 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<EnsureRoot<AccountId>, SALPAdmin>;
-	// EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -1436,7 +1425,6 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<EnsureRoot<AccountId>, ValidatorElection>;
-	// EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
@@ -1489,7 +1477,6 @@ impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<EnsureRoot<AccountId>, SystemStakingAdmin>;
-	// EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1798,8 +1785,6 @@ construct_runtime! {
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 36,
 		Referenda: pallet_referenda::{Pallet, Call, Storage, Event<T>} = 37,
-		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 38,
-		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 39,
 		Origins: custom_origins::{Origin} = 124,
 		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 125,
 
@@ -1928,8 +1913,7 @@ mod benches {
 		[bifrost_asset_registry, AssetRegistry]
 		[bifrost_fee_share, FeeShare]
 		[pallet_conviction_voting, ConvictionVoting]
-		[pallet_ranked_collective, FellowshipCollective]
-		[pallet_referenda, FellowshipReferenda]
+		[pallet_referenda, Referenda]
 		[pallet_whitelist, Whitelist]
 	);
 }

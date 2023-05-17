@@ -59,18 +59,6 @@ impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = pallet_whitelist::weights::SubstrateWeight<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	// type WhitelistOrigin = EitherOf<
-	// 	EnsureRootWithSuccess<Self::AccountId, ConstU16<65535>>,
-	// 	MapSuccess<
-	// 		pallet_collective::EnsureProportionAtLeast<
-	// 			Self::AccountId,
-	// 			OpenTechCommitteeInstance,
-	// 			5,
-	// 			9,
-	// 		>,
-	// 		Replace<ConstU16<6>>,
-	// 	>,
-	// >;
 	type WhitelistOrigin =
 		EitherOf<EnsureRootWithSuccess<Self::AccountId, ConstU16<65535>>, Fellows>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;

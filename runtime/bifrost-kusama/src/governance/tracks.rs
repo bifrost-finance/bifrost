@@ -39,7 +39,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 			// For Root origin this should generally be just one.
 			max_deciding: 1,
 			// Amount that must be placed on deposit before a decision can be made.
-			decision_deposit: 5_000 * DOLLARS,
+			decision_deposit: 5_000 * BNCS,
 			// Amount of time this must be submitted for before a decision can be made.
 			prepare_period: 2 * HOURS,
 			// Amount of time that a decision may take to be approved prior to cancellation.
@@ -61,7 +61,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "whitelisted_caller",
 			max_deciding: 100,
-			decision_deposit: 500 * DOLLARS,
+			decision_deposit: 500 * BNCS,
 			prepare_period: 15 * MINUTES,
 			decision_period: 14 * DAYS,
 			confirm_period: 10 * MINUTES,
@@ -81,7 +81,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "fellowship_admin",
 			max_deciding: 10,
-			decision_deposit: 250 * DOLLARS,
+			decision_deposit: 250 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 14 * DAYS,
 			confirm_period: 3 * HOURS,
@@ -95,7 +95,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "referendum_canceller",
 			max_deciding: 1_000,
-			decision_deposit: 500 * DOLLARS,
+			decision_deposit: 500 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 7 * DAYS,
 			confirm_period: 3 * HOURS,
@@ -109,7 +109,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "referendum_killer",
 			max_deciding: 1_000,
-			decision_deposit: 2_500 * DOLLARS,
+			decision_deposit: 2_500 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 14 * DAYS,
 			confirm_period: 3 * HOURS,
@@ -123,7 +123,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "validator_election",
 			max_deciding: 10,
-			decision_deposit: 250 * DOLLARS,
+			decision_deposit: 250 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 14 * DAYS,
 			confirm_period: 3 * HOURS,
@@ -137,7 +137,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "system_staking",
 			max_deciding: 2,
-			decision_deposit: 1_000 * DOLLARS,
+			decision_deposit: 1_000 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 14 * DAYS,
 			confirm_period: 3 * HOURS,
@@ -151,7 +151,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		pallet_referenda::TrackInfo {
 			name: "salp_admin",
 			max_deciding: 2,
-			decision_deposit: 250 * DOLLARS,
+			decision_deposit: 250 * BNCS,
 			prepare_period: 15 * MINUTES,
 			decision_period: 14 * DAYS,
 			confirm_period: 1 * HOURS,
