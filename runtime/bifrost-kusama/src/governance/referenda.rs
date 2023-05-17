@@ -23,8 +23,7 @@
 //! 3. pallet-referenda
 
 use super::*;
-use frame_support::traits::{ConstU16, EitherOf};
-use frame_system::EnsureRootWithSuccess;
+use frame_support::traits::EitherOf;
 
 parameter_types! {
 	pub const VoteLockingPeriod: BlockNumber = 1 * DAYS;
@@ -48,9 +47,6 @@ parameter_types! {
 	pub const UndecidingTimeout: BlockNumber = 14 * DAYS;
 }
 
-// Origin for general admin or root
-// pub type GeneralAdminOrRoot = EitherOf<EnsureRoot<AccountId>, origins::GeneralAdmin>;
-
 impl custom_origins::Config for Runtime {}
 
 // The purpose of this pallet is to queue calls to be dispatched as by root later => the Dispatch
@@ -59,8 +55,10 @@ impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = pallet_whitelist::weights::SubstrateWeight<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WhitelistOrigin =
-		EitherOf<EnsureRootWithSuccess<Self::AccountId, ConstU16<65535>>, Fellows>;
+	type WhitelistOrigin = EitherOfDiverse<
+		EnsureRoot<Self::AccountId>,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;
 	type Preimages = Preimage;
 }
