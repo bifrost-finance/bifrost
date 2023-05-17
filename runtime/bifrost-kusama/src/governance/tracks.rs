@@ -135,7 +135,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 	(
 		11,
 		pallet_referenda::TrackInfo {
-			name: "system_staking",
+			name: "system_staking_admin",
 			max_deciding: 2,
 			decision_deposit: 1_000 * BNCS,
 			prepare_period: 2 * HOURS,
