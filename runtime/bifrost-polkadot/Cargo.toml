@@ -211,7 +211,7 @@ runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"frame-system-benchmarking",
+	"frame-system-benchmarking/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
@@ -228,6 +228,7 @@ runtime-benchmarks = [
 	"bifrost-slp/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
+	"bifrost-ve-minting/runtime-benchmarks",
 	"bifrost-cross-in-out/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]

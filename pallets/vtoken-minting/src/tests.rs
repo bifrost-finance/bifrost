@@ -29,7 +29,6 @@ use node_primitives::TokenInfo;
 #[test]
 fn mint_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			RuntimeOrigin::signed(ALICE),
@@ -47,7 +46,6 @@ fn mint_bnc() {
 #[test]
 fn redeem_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		// AssetIdMaps::<Runtime>::register_vtoken_metadata(TokenSymbol::BNC)
 		// 	.expect("VToken register");
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), BNC, 0));
@@ -67,7 +65,6 @@ fn redeem_bnc() {
 #[test]
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 200));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
@@ -360,7 +357,6 @@ fn rebond_by_unlock_id() {
 fn fast_redeem_for_fil() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		env_logger::try_init().unwrap_or(());
-		asset_registry();
 		assert_ok!(VtokenMinting::set_min_time_unit(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
@@ -431,25 +427,4 @@ fn fast_redeem_for_fil() {
 			Some((100, ledger_list_origin2.clone()))
 		);
 	});
-}
-
-fn asset_registry() {
-	let items = vec![
-		(KSM, 10 * milli::<Runtime>(KSM)),
-		(BNC, 10 * milli::<Runtime>(BNC)),
-		(FIL, 10 * milli::<Runtime>(FIL)),
-	];
-	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
-		(
-			currency_id,
-			AssetMetadata {
-				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				decimals: currency_id.decimals().unwrap_or_default(),
-				minimal_balance: *minimal_balance,
-			},
-		)
-	}) {
-		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
-	}
 }

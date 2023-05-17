@@ -310,8 +310,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> RuntimeOrigin {
-		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
+		Ok(RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get())))
 	}
 }
 

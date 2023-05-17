@@ -18,7 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use node_primitives::ParaId;
@@ -164,6 +164,6 @@ benchmarks! {
 		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
 		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
-}
 
-impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
+	impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
+}

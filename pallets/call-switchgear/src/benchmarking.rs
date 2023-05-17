@@ -18,7 +18,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, v1::BenchmarkError};
+use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::dispatch::UnfilteredDispatchable;
 use node_primitives::{CurrencyId, TokenSymbol};
 
@@ -50,10 +50,10 @@ benchmarks! {
 		disable_call.dispatch_bypass_filter(origin.clone())?;
 		let enable_call = Call::<T>::enable_transfers{currency_id: CurrencyId::Token(TokenSymbol::KSM)};
 	}: {enable_call.dispatch_bypass_filter(origin)?}
-}
 
-impl_benchmark_test_suite!(
+	impl_benchmark_test_suite!(
 	CallSwitchgear,
 	crate::mock::ExtBuilder::default().build(),
 	crate::mock::Runtime
 );
+}

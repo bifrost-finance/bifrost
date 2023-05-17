@@ -18,15 +18,13 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, v1::BenchmarkError};
+use super::*;
+use crate::Pallet as AssetRegistry;
+use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::traits::UniqueSaturatedFrom;
 use xcm::v3::prelude::*;
-
-use super::*;
-#[allow(unused_imports)]
-use crate::Pallet as AssetRegistry;
 
 benchmarks! {
 	register_native_asset {
@@ -248,10 +246,11 @@ benchmarks! {
 		);
 		assert_eq!(CurrencyIdToWeights::<T>::get(CurrencyId::Token2(0)), Some(Weight::from_parts(2000_000_000, u64::MAX)));
 	}
-}
 
-impl_benchmark_test_suite!(
+	impl_benchmark_test_suite!(
 	AssetRegistry,
 	crate::mock::ExtBuilder::default().build(),
 	crate::mock::Runtime
 );
+
+}

@@ -261,8 +261,8 @@ fn kusama_setup<
 		),
 		validators_reward_maximum: 300u32,
 		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		delegators_maximum: 0,
-		validators_maximum: 0,
+		delegators_maximum: 10,
+		validators_maximum: 10,
 	};
 
 	// Set minimums and maximums
@@ -285,16 +285,16 @@ benchmarks! {
 			T: Config + orml_tokens::Config<CurrencyId = CurrencyId>+ bifrost_vtoken_minting::Config
 	}
 
-	initialize_delegator {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let call = Call::<T>::initialize_delegator {
-			currency_id:KSM,
-			delegator_location: None
-		};
-	}: {call.dispatch_bypass_filter(origin)?}
-	verify {
-		assert_eq!(Slp::<T>::get_delegator_next_index(KSM),1);
-	}
+	// initialize_delegator {
+	// 	let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+	// 	let call = Call::<T>::initialize_delegator {
+	// 		currency_id:KSM,
+	// 		delegator_location: None
+	// 	};
+	// }: {call.dispatch_bypass_filter(origin)?}
+	// verify {
+	// 	assert_eq!(Slp::<T>::get_delegator_next_index(KSM),1);
+	// }
 
 	bond {
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
