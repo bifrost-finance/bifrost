@@ -260,7 +260,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
 			min_mint: Option<BalanceOf<T>>,    // Minimum mint balance
@@ -282,7 +282,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::create_lock())]
 		pub fn create_lock(
 			origin: OriginFor<T>,
 			value: BalanceOf<T>,
@@ -293,28 +293,28 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::increase_amount())]
 		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
 			Self::increase_amount_inner(&exchanger, value)
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::increase_unlock_time())]
 		pub fn increase_unlock_time(origin: OriginFor<T>, time: T::BlockNumber) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::increase_unlock_time_inner(&exchanger, time)
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::withdraw_inner(&exchanger)
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		#[pallet::weight(T::WeightInfo::notify_rewards())]
 		pub fn notify_rewards(
 			origin: OriginFor<T>,
 			incentive_from: AccountIdOf<T>,
@@ -327,7 +327,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::get_rewards_inner(&exchanger)
