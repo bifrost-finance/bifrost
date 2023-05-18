@@ -637,10 +637,15 @@ dependencies = [
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-ve-minting",
+ "env_logger 0.10.0",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
+ "log",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -6224,7 +6229,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.72"
+version = "0.9.74"
 dependencies = [
  "clap",
  "cumulus-client-cli",

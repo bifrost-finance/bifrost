@@ -51,7 +51,7 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
-use traits::VeMintingInterface;
+pub use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]

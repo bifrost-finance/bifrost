@@ -312,3 +312,52 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::Bloc
 		})
 	}
 }
+
+impl<AccountId, CurrencyId, Balance, BlockNumber>
+	VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for ()
+where
+	Balance: orml_traits::arithmetic::Zero,
+{
+	fn create_lock_inner(
+		_addr: &AccountId,
+		_value: Balance,
+		_unlock_time: BlockNumber,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn increase_unlock_time_inner(_addr: &AccountId, _unlock_time: BlockNumber) -> DispatchResult {
+		Ok(())
+	}
+
+	fn increase_amount_inner(_addr: &AccountId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn deposit_for(_addr: &AccountId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn withdraw_inner(_addr: &AccountId) -> DispatchResult {
+		Ok(())
+	}
+
+	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
+	}
+
+	fn find_block_epoch(_block: BlockNumber, _max_epoch: U256) -> U256 {
+		U256::zero()
+	}
+
+	fn total_supply(_t: BlockNumber) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
+	}
+
+	fn supply_at(
+		_point: Point<Balance, BlockNumber>,
+		_t: BlockNumber,
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
+	}
+}
