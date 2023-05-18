@@ -207,16 +207,23 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 			"location: {:?}",
 			location.clone(),
 		);
-		let key32 = match location {
+		match location {
 			MultiLocation { parents: 1, interior: X2(Parachain(_id), AccountId32 { id, .. }) } =>
-				id,
+				log::trace!(
+					target: "xcm::ExternalAccountConverter::convert",
+					"AccountId32: {:?}",
+					id,
+				),
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(_id), AccountKey20 { key, .. }),
+			} => log::trace!(
+				target: "xcm::ExternalAccountConverter::convert",
+				"AccountKey20: {:?}",
+				key,
+			),
 			_ => return Err(location),
 		};
-		log::trace!(
-			target: "xcm::ExternalAccountConverter::convert",
-			"key32: {:?}",
-			key32,
-		);
 		let hash: [u8; 32] = ("multiloc", location.borrow()).borrow().using_encoded(blake2_256);
 		let mut account_id = [0u8; 32];
 		account_id.copy_from_slice(&hash[0..32]);
@@ -311,22 +318,24 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
 			.ok_or(())?;
 
+		Ok(())
+
 		// Then BuyExecution
-		let i = iter.next().ok_or(())?;
-		match i {
-			BuyExecution { weight_limit: Limited(ref mut weight), .. }
-				if weight.all_gte(max_weight) =>
-			{
-				weight.set_ref_time(max_weight.ref_time());
-				weight.set_proof_size(max_weight.proof_size());
-				Ok(())
-			},
-			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
-				*weight_limit = Limited(max_weight);
-				Ok(())
-			},
-			_ => Err(()),
-		}
+		// let i = iter.next().ok_or(())?;
+		// match i {
+		// 	BuyExecution { weight_limit: Limited(ref mut weight), .. }
+		// 		if weight.all_gte(max_weight) =>
+		// 	{
+		// 		weight.set_ref_time(max_weight.ref_time());
+		// 		weight.set_proof_size(max_weight.proof_size());
+		// 		Ok(())
+		// 	},
+		// 	BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+		// 		*weight_limit = Limited(max_weight);
+		// 		Ok(())
+		// 	},
+		// 	_ => Err(()),
+		// }
 	}
 }
 

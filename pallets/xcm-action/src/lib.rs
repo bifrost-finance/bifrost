@@ -381,7 +381,10 @@ pub mod pallet {
 			let redeem_type = match target_chain {
 				TargetChain::Astar => RedeemType::Astar,
 				TargetChain::Moonbeam => RedeemType::Moonbeam(evm_caller),
-				_ => ensure!(false, Error::<T>::ChainNotSupported),
+				_ => {
+					ensure!(false, Error::<T>::ChainNotSupported);
+					Default::default()
+				},
 			};
 
 			match T::VtokenMintingInterface::xcm_action_redeem(
