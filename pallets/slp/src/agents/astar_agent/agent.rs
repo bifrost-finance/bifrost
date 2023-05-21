@@ -95,6 +95,9 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		let contract_multilocation = validator.ok_or(Error::<T>::ValidatorNotProvided)?;
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		// Check if the amount exceeds the minimum requirement.
+		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the validator is in the white list.
 		let validator_list =
@@ -106,8 +109,6 @@ impl<T: Config>
 
 		if DelegatorLedgers::<T>::get(currency_id, who).is_none() {
 			// Check if the amount exceeds the minimum requirement. The first bond requires 500 ASTR
-			let mins_maxs =
-				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
 			// Create a new delegator ledger
