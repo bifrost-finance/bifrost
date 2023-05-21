@@ -33,7 +33,7 @@ pub const KUSAMA_ALICE_STASH_ACCOUNT: [u8; 32] =
 	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
 pub const KUSAMA_BOB_STASH_ACCOUNT: [u8; 32] =
 	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
-pub const CATHI: [u8; 32] = [2u8; 32];
+// pub const CATHI: [u8; 32] = [2u8; 32];
 
 pub const KSM_DECIMALS: u128 = 1000_000_000_000;
 pub const BNC_DECIMALS: u128 = 1000_000_000_000;

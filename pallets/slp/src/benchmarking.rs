@@ -88,6 +88,26 @@ fn kusama_setup<
 		Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
 	assert_ok!(Slp::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
 
+	let mins_and_maxs = MinimumsMaximums {
+		delegator_bonded_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+
+		bond_extra_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		unbond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		rebond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		unbond_record_maximum: 1u32,
+		validators_back_maximum: 100u32,
+		delegator_active_staking_maximum: BalanceOf::<T>::unique_saturated_from(
+			200_000_000_000_000_000_000u128,
+		),
+		validators_reward_maximum: 300u32,
+		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		delegators_maximum: 10,
+		validators_maximum: 10,
+	};
+
+	// Set minimums and maximums
+	assert_ok!(Slp::<T>::set_minimums_and_maximums(origin.clone(), KSM, Some(mins_and_maxs)));
+
 	// First to setup index-multilocation relationship of subaccount_0
 	assert_ok!(Slp::<T>::initialize_delegator(origin.clone(), KSM, None));
 	//DelegatorNotExist
@@ -248,26 +268,6 @@ fn kusama_setup<
 		)),
 	));
 
-	let mins_and_maxs = MinimumsMaximums {
-		delegator_bonded_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-
-		bond_extra_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		unbond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		rebond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		unbond_record_maximum: 1u32,
-		validators_back_maximum: 100u32,
-		delegator_active_staking_maximum: BalanceOf::<T>::unique_saturated_from(
-			200_000_000_000_000_000_000u128,
-		),
-		validators_reward_maximum: 300u32,
-		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		delegators_maximum: 10,
-		validators_maximum: 10,
-	};
-
-	// Set minimums and maximums
-	assert_ok!(Slp::<T>::set_minimums_and_maximums(origin.clone(), KSM, Some(mins_and_maxs)));
-
 	// Set delegator ledger
 	assert_ok!(Slp::<T>::add_validator(
 		origin.clone(),
@@ -282,19 +282,17 @@ fn kusama_setup<
 benchmarks! {
 	where_clause {
 		where
-			T: Config + orml_tokens::Config<CurrencyId = CurrencyId>+ bifrost_vtoken_minting::Config
+			T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config
 	}
 
-	// initialize_delegator {
-	// 	let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-	// 	let call = Call::<T>::initialize_delegator {
-	// 		currency_id:KSM,
-	// 		delegator_location: None
-	// 	};
-	// }: {call.dispatch_bypass_filter(origin)?}
-	// verify {
-	// 	assert_eq!(Slp::<T>::get_delegator_next_index(KSM),1);
-	// }
+	initialize_delegator {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let call = Call::<T>::initialize_delegator {
+			currency_id:KSM,
+			delegator_location: None
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
 
 	bond {
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -491,7 +489,8 @@ benchmarks! {
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
-		transfer_back {
+	transfer_back {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 
@@ -622,7 +621,7 @@ benchmarks! {
 	));
 	let call = Call::<T>::confirm_delegator_ledger_query_response {
 			currency_id:KSM,
-			query_id:0,
+			query_id:	0,
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
@@ -693,6 +692,7 @@ benchmarks! {
 	}
 
 	add_delegator {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 
@@ -702,7 +702,7 @@ benchmarks! {
 
 		let call = Call::<T>::add_delegator {
 			currency_id:KSM,
-			index:0u16,
+			index:2u16,
 			who:Box::new(subaccount_0_location.clone()),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
@@ -787,6 +787,7 @@ benchmarks! {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	add_validator {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
@@ -801,6 +802,7 @@ benchmarks! {
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_validator {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
@@ -1029,6 +1031,7 @@ benchmarks! {
 	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	transfer_to {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 
@@ -1073,6 +1076,7 @@ benchmarks! {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	chill {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 
@@ -1136,6 +1140,7 @@ benchmarks! {
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
 
 	supplement_fee_reserve {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 
@@ -1369,5 +1374,7 @@ benchmarks! {
 			query_id:0,
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+
+	impl_benchmark_test_suite!(Slp, crate::mocks::mock_kusama::ExtBuilder::default().build(), crate::mocks::mock_kusama::Runtime);
 
 }

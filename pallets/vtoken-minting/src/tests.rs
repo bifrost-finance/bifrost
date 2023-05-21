@@ -21,10 +21,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use bifrost_asset_registry::AssetMetadata;
-use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
-use node_primitives::TokenInfo;
 
 #[test]
 fn mint_bnc() {
