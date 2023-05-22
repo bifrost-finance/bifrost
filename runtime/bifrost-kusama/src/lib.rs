@@ -1916,7 +1916,7 @@ mod benches {
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[pallet_vesting, Vesting]
-    [pallet_conviction_voting, ConvictionVoting]
+		[pallet_conviction_voting, ConvictionVoting]
 		[pallet_referenda, Referenda]
 		[pallet_whitelist, Whitelist]
 	);
