@@ -17,7 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{
+	account, benchmarks, impl_benchmark_test_suite, v1::BenchmarkError, whitelisted_caller,
+};
 use frame_support::{dispatch::UnfilteredDispatchable, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
@@ -28,14 +30,14 @@ use crate::Pallet as TokenIssuer;
 
 benchmarks! {
 	add_to_issue_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let call = Call::<T>::add_to_issue_whitelist { currency_id, account };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_from_issue_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let add_call = Call::<T>::add_to_issue_whitelist { currency_id, account: account.clone() };
@@ -45,14 +47,14 @@ benchmarks! {
 	}: {remove_call.dispatch_bypass_filter(origin)?}
 
 	add_to_transfer_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let call = Call::<T>::add_to_transfer_whitelist { currency_id, account };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_from_transfer_whitelist {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let add_call = Call::<T>::add_to_transfer_whitelist { currency_id, account: account.clone() };
@@ -62,7 +64,7 @@ benchmarks! {
 	}: {remove_call.dispatch_bypass_filter(origin)?}
 
 	issue {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let caller: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let add_call = Call::<T>::add_to_issue_whitelist { currency_id: currency_id.clone(), account: caller.clone() };
@@ -76,7 +78,7 @@ benchmarks! {
 	}
 
 	transfer {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let caller: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 

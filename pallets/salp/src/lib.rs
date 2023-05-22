@@ -351,11 +351,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::set_multisig_confirm_account())]
 		pub fn set_multisig_confirm_account(
 			origin: OriginFor<T>,
 			account: AccountIdOf<T>,
@@ -368,11 +364,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::fund_success())]
 		pub fn fund_success(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -390,11 +382,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::fund_fail())]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -410,11 +398,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(T::WeightInfo::continue_fund())]
 		pub fn continue_fund(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -449,11 +433,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::fund_retire())]
 		pub fn fund_retire(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -471,11 +451,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::fund_end())]
 		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -495,11 +471,7 @@ pub mod pallet {
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::call_index(6)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -566,11 +538,7 @@ pub mod pallet {
 		///
 		/// Can only be called by Root origin.
 		#[pallet::call_index(7)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(T::WeightInfo::edit())]
 		pub fn edit(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -654,11 +622,7 @@ pub mod pallet {
 
 		/// Confirm contribute
 		#[pallet::call_index(9)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::confirm_contribute())]
 		pub fn confirm_contribute(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -907,11 +871,7 @@ pub mod pallet {
 		/// Withdraw full balance of the parachain.
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::call_index(14)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin.clone())?;
 
@@ -1067,11 +1027,7 @@ pub mod pallet {
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
 		#[pallet::call_index(17)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(T::WeightInfo::dissolve_refunded())]
 		pub fn dissolve_refunded(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -1094,11 +1050,7 @@ pub mod pallet {
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
 		#[pallet::call_index(18)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::dissolve())]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -1145,11 +1097,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(19)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(T::WeightInfo::buyback())]
 		pub fn buyback(
 			origin: OriginFor<T>,
 			#[pallet::compact] value: BalanceOf<T>,
@@ -1181,11 +1129,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(20)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::confirm_contribute())]
 		pub fn confirm_contribution(
 			origin: OriginFor<T>,
 			query_id: QueryId,

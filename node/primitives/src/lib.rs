@@ -39,8 +39,8 @@ mod tests;
 
 pub use crate::{
 	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, DOT, DOT_TOKEN_ID, FIL, GLMR,
-		GLMR_TOKEN_ID,
+		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, DOT,
+		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID,
 	},
 	traits::*,
 };

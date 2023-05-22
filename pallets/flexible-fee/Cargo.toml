@@ -41,6 +41,7 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
 [features]
 default = ["std"]
@@ -57,11 +58,15 @@ std = [
 	"sp-arithmetic/std",
 	"cumulus-primitives-core/std",
 	"bifrost-asset-registry/std",
+	"pallet-xcm/std",
 ]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
 ]
 try-runtime = [ "frame-support/try-runtime" ]

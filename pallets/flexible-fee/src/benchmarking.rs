@@ -18,25 +18,31 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
+use frame_support::{assert_ok, traits::EnsureOrigin, BoundedVec};
+
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
+use sp_std::vec;
 
-use super::*;
-#[allow(unused_imports)]
-use crate::Pallet as FlexibleFee;
+use crate::{Call, Config, Pallet as FlexibleFee, Pallet};
 
 benchmarks! {
-	set_user_fee_charge_order {
-		let order_vec = vec![CurrencyId::Token(TokenSymbol::try_from(0u8).unwrap_or_default())];
-		let caller: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Signed(caller), Some(order_vec))
-}
+	set_user_default_fee_currency {
+		let caller = whitelisted_caller();
+	}: _(RawOrigin::Signed(caller),Some(CurrencyId::Token(TokenSymbol::DOT)))
 
-impl_benchmark_test_suite!(
-	FlexibleFee,
-	crate::mock::ExtBuilder::default()
-		.one_hundred_precision_for_each_currency_type_for_whitelist_account()
-		.build(),
-	crate::mock::Test
-);
+	set_universal_fee_currency_order_list {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
+	}: _<T::RuntimeOrigin>(origin,default_list)
+
+	remove_from_user_fee_charge_order_list {
+		let caller = whitelisted_caller();
+		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
+		assert_ok!(FlexibleFee::<T>::set_universal_fee_currency_order_list(
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
+			default_list,
+		));
+	}: _(RawOrigin::Signed(caller))
+}

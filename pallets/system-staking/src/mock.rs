@@ -36,7 +36,9 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::{blake2_256, ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
+	traits::{
+		AccountIdConversion, BlakeTwo256, Convert, ConvertInto, IdentityLookup, TrailingZeroInput,
+	},
 	AccountId32,
 };
 use sp_std::vec;
@@ -293,6 +295,8 @@ impl bifrost_slp::Config for Runtime {
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 ord_parameter_types! {
@@ -306,7 +310,11 @@ impl bifrost_farming::Config for Runtime {
 	type TreasuryAccount = TreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type FarmingBoost = FarmingBoostPalletId;
 	type WeightInfo = ();
+	type VeMinting = ();
+	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 }
 
 parameter_types! {

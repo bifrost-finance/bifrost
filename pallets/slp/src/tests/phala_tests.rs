@@ -105,10 +105,10 @@ fn initialize_phala_delegator_works() {
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(PHA), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(PHA, 0),
-			Some(subaccount_0_location.clone())
+			Some(subaccount_0_location)
 		);
 		assert_eq!(
-			DelegatorsMultilocation2Index::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorsMultilocation2Index::<Runtime>::get(PHA, subaccount_0_location),
 			Some(0)
 		);
 	});
@@ -127,11 +127,7 @@ fn add_validator_works() {
 		);
 
 		assert_noop!(
-			Slp::add_validator(
-				RuntimeOrigin::signed(ALICE),
-				PHA,
-				Box::new(VALIDATOR_0_LOCATION.clone())
-			),
+			Slp::add_validator(RuntimeOrigin::signed(ALICE), PHA, Box::new(VALIDATOR_0_LOCATION)),
 			Error::<Runtime>::NotExist
 		);
 
@@ -184,8 +180,8 @@ fn phala_delegate_works() {
 			Slp::delegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				vec![VALIDATOR_0_LOCATION.clone()],
+				Box::new(subaccount_0_location),
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -196,7 +192,7 @@ fn phala_delegate_works() {
 			Slp::delegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				vec![],
 			),
 			Error::<Runtime>::VectorEmpty
@@ -206,7 +202,7 @@ fn phala_delegate_works() {
 			Slp::delegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION_WRONG],
 			),
 			Error::<Runtime>::ValidatorError
@@ -216,8 +212,8 @@ fn phala_delegate_works() {
 			Slp::delegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				vec![VALIDATOR_0_LOCATION.clone()],
+				Box::new(subaccount_0_location),
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::ValidatorSetNotExist
 		);
@@ -225,15 +221,15 @@ fn phala_delegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_1_LOCATION.clone())
+			Box::new(VALIDATOR_1_LOCATION)
 		));
 
 		assert_noop!(
 			Slp::delegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				vec![VALIDATOR_0_LOCATION.clone()],
+				Box::new(subaccount_0_location),
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::ValidatorNotExist
 		);
@@ -241,18 +237,18 @@ fn phala_delegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_0_LOCATION.clone())
+			Box::new(VALIDATOR_0_LOCATION)
 		));
 
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
-			vec![VALIDATOR_0_LOCATION.clone()],
+			Box::new(subaccount_0_location),
+			vec![VALIDATOR_0_LOCATION],
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -260,7 +256,7 @@ fn phala_delegate_works() {
 			bonded_pool_collection_id: Some(0),
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(new_ledger))
 		);
 	});
@@ -390,15 +386,15 @@ fn phala_setup() {
 	assert_ok!(Slp::add_validator(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
-		Box::new(VALIDATOR_0_LOCATION.clone()),
+		Box::new(VALIDATOR_0_LOCATION),
 	));
 
 	// delegate a validator for the delegator
 	assert_ok!(Slp::delegate(
 		RuntimeOrigin::signed(ALICE),
 		PHA,
-		Box::new(subaccount_0_location.clone()),
-		vec![VALIDATOR_0_LOCATION.clone()],
+		Box::new(subaccount_0_location),
+		vec![VALIDATOR_0_LOCATION],
 	));
 }
 
@@ -425,9 +421,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation.clone())
+				Some(share_price_multilocation)
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -440,9 +436,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation.clone())
+				Some(share_price_multilocation)
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -451,13 +447,13 @@ fn phala_bond_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_0_LOCATION.clone()),
+			Box::new(VALIDATOR_0_LOCATION),
 		));
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
-			vec![VALIDATOR_0_LOCATION.clone()],
+			Box::new(subaccount_0_location),
+			vec![VALIDATOR_0_LOCATION],
 		));
 
 		phala_xcm_setup();
@@ -466,9 +462,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				100_000_000_000,
-				Some(share_price_multilocation.clone())
+				Some(share_price_multilocation)
 			),
 			Error::<Runtime>::LowerThanMinimum
 		);
@@ -477,9 +473,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				2_000_000_000_000_000_000,
-				Some(share_price_multilocation.clone())
+				Some(share_price_multilocation)
 			),
 			Error::<Runtime>::ExceedActiveMaximum
 		);
@@ -489,9 +485,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(subaccount_0_location.clone())
+				Some(subaccount_0_location)
 			),
 			Error::<Runtime>::SharePriceNotValid
 		);
@@ -501,9 +497,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(VALIDATOR_0_LOCATION.clone())
+				Some(VALIDATOR_0_LOCATION)
 			),
 			Error::<Runtime>::DividedByZero
 		);
@@ -512,9 +508,9 @@ fn phala_bond_works() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation.clone())
+				Some(share_price_multilocation)
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -541,8 +537,8 @@ fn phala_unbond_works() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				1_000_000,
 			),
 			Error::<Runtime>::DelegatorNotExist
@@ -552,7 +548,7 @@ fn phala_unbond_works() {
 		phala_setup();
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 500_000_000_000,
 			unlocking_shares: 1,
 			unlocking_time_unit: None,
@@ -561,21 +557,21 @@ fn phala_unbond_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				1_000_000,
 			),
 			Error::<Runtime>::AlreadyRequested
 		);
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 500_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -584,14 +580,14 @@ fn phala_unbond_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				0,
 			),
 			Error::<Runtime>::AmountZero
@@ -601,8 +597,8 @@ fn phala_unbond_works() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
+				Some(subaccount_0_location),
 				1_000_000,
 			),
 			Error::<Runtime>::SharePriceNotValid
@@ -612,8 +608,8 @@ fn phala_unbond_works() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(VALIDATOR_0_LOCATION.clone()),
+				Box::new(subaccount_0_location),
+				Some(VALIDATOR_0_LOCATION),
 				1_000_000,
 			),
 			Error::<Runtime>::DividedByZero
@@ -623,8 +619,8 @@ fn phala_unbond_works() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				1_000_000,
 			),
 			Error::<Runtime>::LowerThanMinimum
@@ -634,15 +630,15 @@ fn phala_unbond_works() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				1_000_000_000_000,
 			),
 			Error::<Runtime>::NotEnoughToUnbond
 		);
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -651,14 +647,14 @@ fn phala_unbond_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				1_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure
@@ -692,8 +688,8 @@ fn phala_rebond_works() {
 			Slp::rebond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				None
 			),
 			Error::<Runtime>::InvalidAmount
@@ -703,8 +699,8 @@ fn phala_rebond_works() {
 			Slp::rebond(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Some(share_price_multilocation.clone()),
+				Box::new(subaccount_0_location),
+				Some(share_price_multilocation),
 				Some(0)
 			),
 			Error::<Runtime>::AmountZero
@@ -715,7 +711,7 @@ fn phala_rebond_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location),
-				Some(share_price_multilocation.clone()),
+				Some(share_price_multilocation),
 				Some(1_000_000_000_000)
 			),
 			Error::<Runtime>::XcmFailure
@@ -743,7 +739,7 @@ fn phala_undelegate_works() {
 		phala_setup();
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 500_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -752,20 +748,20 @@ fn phala_undelegate_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::undelegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				vec![VALIDATOR_0_LOCATION.clone()],
+				Box::new(subaccount_0_location),
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: 500_000_000_000,
 			unlocking_time_unit: None,
@@ -774,20 +770,20 @@ fn phala_undelegate_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::undelegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				vec![VALIDATOR_0_LOCATION.clone()],
+				Box::new(subaccount_0_location),
+				vec![VALIDATOR_0_LOCATION],
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -796,17 +792,17 @@ fn phala_undelegate_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_ok!(Slp::undelegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
-			vec![VALIDATOR_0_LOCATION.clone()],
+			Box::new(subaccount_0_location),
+			vec![VALIDATOR_0_LOCATION],
 		));
 
 		let undelegated_ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -814,7 +810,7 @@ fn phala_undelegate_works() {
 			bonded_pool_collection_id: None,
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(undelegated_ledger))
 		);
 	});
@@ -840,7 +836,7 @@ fn phala_redelegate_works() {
 		phala_setup();
 
 		let old_ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -848,7 +844,7 @@ fn phala_redelegate_works() {
 			bonded_pool_collection_id: Some(0),
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(old_ledger))
 		);
 
@@ -856,7 +852,7 @@ fn phala_redelegate_works() {
 			Slp::redelegate(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				None
 			),
 			Error::<Runtime>::ValidatorNotProvided
@@ -865,18 +861,18 @@ fn phala_redelegate_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_1_LOCATION.clone())
+			Box::new(VALIDATOR_1_LOCATION)
 		));
 
 		assert_ok!(Slp::redelegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
-			Some(vec![VALIDATOR_1_LOCATION.clone()])
+			Box::new(subaccount_0_location),
+			Some(vec![VALIDATOR_1_LOCATION])
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: Zero::zero(),
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -884,7 +880,7 @@ fn phala_redelegate_works() {
 			bonded_pool_collection_id: Some(1),
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(new_ledger))
 		);
 	});
@@ -910,7 +906,7 @@ fn phala_liquidize_works() {
 		phala_setup();
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: 1_000_000_000_000,
 			unlocking_time_unit: Some(TimeUnit::Hour(100)),
@@ -919,13 +915,13 @@ fn phala_liquidize_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		assert_noop!(
 			Slp::liquidize(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				None,
 				None,
 				Some(2_000_000_000_000)
@@ -936,14 +932,14 @@ fn phala_liquidize_works() {
 		assert_ok!(Slp::liquidize(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
+			Box::new(subaccount_0_location),
 			None,
 			None,
 			Some(500_000_000_000)
 		));
 
 		let compared_ledger_1 = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: 500_000_000_000,
 			unlocking_time_unit: Some(TimeUnit::Hour(100)),
@@ -951,21 +947,21 @@ fn phala_liquidize_works() {
 			bonded_pool_collection_id: Some(0),
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(compared_ledger_1))
 		);
 
 		assert_ok!(Slp::liquidize(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
+			Box::new(subaccount_0_location),
 			None,
 			None,
 			Some(Zero::zero())
 		));
 
 		let compared_ledger_2 = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -973,7 +969,7 @@ fn phala_liquidize_works() {
 			bonded_pool_collection_id: Some(0),
 		};
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(compared_ledger_2))
 		);
 	});
@@ -1000,7 +996,7 @@ fn phala_bond_confirm_works() {
 
 		// set ledger
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -1009,14 +1005,14 @@ fn phala_bond_confirm_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		// Bond confirm
 		// setup updateEntry
 		let query_id = 0;
 		let bond_update_entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id: PHA,
-			delegator_id: subaccount_0_location.clone(),
+			delegator_id: subaccount_0_location,
 			update_operation: SubstrateLedgerUpdateOperation::Bond,
 			amount: 10_000_000_000_000,
 			unlock_time: None,
@@ -1041,7 +1037,7 @@ fn phala_bond_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let ledger_new = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 15_000_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -1050,7 +1046,7 @@ fn phala_bond_confirm_works() {
 		};
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(ledger_new))
 		);
 	});
@@ -1077,7 +1073,7 @@ fn phala_unbond_confirm_works() {
 
 		// set ledger
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 15_000_000_000_000,
 			unlocking_shares: Zero::zero(),
 			unlocking_time_unit: None,
@@ -1086,13 +1082,13 @@ fn phala_unbond_confirm_works() {
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		// Unlock confirm
 		let query_id = 1;
 		let unlock_update_entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
 			currency_id: PHA,
-			delegator_id: subaccount_0_location.clone(),
+			delegator_id: subaccount_0_location,
 			update_operation: SubstrateLedgerUpdateOperation::Unlock,
 			amount: 10_000_000_000_000,
 			unlock_time: Some(TimeUnit::Hour(200)),
@@ -1117,7 +1113,7 @@ fn phala_unbond_confirm_works() {
 		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
 
 		let ledger_new = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 5_000_000_000_000,
 			unlocking_shares: 10_000_000_000_000,
 			unlocking_time_unit: Some(TimeUnit::Hour(200)),
@@ -1126,7 +1122,7 @@ fn phala_unbond_confirm_works() {
 		};
 
 		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location.clone()),
+			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
 			Some(Ledger::<BalanceOf<Runtime>>::Phala(ledger_new))
 		);
 	});
@@ -1163,8 +1159,8 @@ fn phala_transfer_back_works() {
 			Slp::transfer_back(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Box::new(exit_account_location.clone()),
+				Box::new(subaccount_0_location),
+				Box::new(exit_account_location),
 				Zero::zero(),
 			),
 			Error::<Runtime>::AmountZero
@@ -1174,8 +1170,8 @@ fn phala_transfer_back_works() {
 			Slp::transfer_back(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
-				Box::new(exit_account_location.clone()),
+				Box::new(subaccount_0_location),
+				Box::new(exit_account_location),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure
@@ -1223,8 +1219,8 @@ fn phala_transfer_to_works() {
 			Slp::transfer_to(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(exit_account_location.clone()),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(exit_account_location),
+				Box::new(subaccount_0_location),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::InvalidAccount
@@ -1234,8 +1230,8 @@ fn phala_transfer_to_works() {
 			Slp::transfer_to(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(entrance_account_location.clone()),
-				Box::new(subaccount_0_location.clone()),
+				Box::new(entrance_account_location),
+				Box::new(subaccount_0_location),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::XcmFailure
@@ -1279,7 +1275,7 @@ fn supplement_fee_account_whitelist_works() {
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Some((source_location.clone(), 1_000_000_000_000_000_000))
+			Some((source_location, 1_000_000_000_000_000_000))
 		));
 
 		// Dest should be one of delegators, operateOrigins or accounts in the whitelist.
@@ -1287,7 +1283,7 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -1296,7 +1292,7 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(entrance_account_location.clone()),
+				Box::new(entrance_account_location),
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
@@ -1312,7 +1308,7 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(entrance_account_location.clone()),
+				Box::new(entrance_account_location),
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -1321,7 +1317,7 @@ fn supplement_fee_account_whitelist_works() {
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(exit_account_location.clone()),
+				Box::new(exit_account_location),
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
@@ -1330,14 +1326,14 @@ fn supplement_fee_account_whitelist_works() {
 		assert_ok!(Slp::add_supplement_fee_account_to_whitelist(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(exit_account_location.clone()),
+			Box::new(exit_account_location),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(exit_account_location.clone()),
+				Box::new(exit_account_location),
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -1346,14 +1342,14 @@ fn supplement_fee_account_whitelist_works() {
 		assert_ok!(Slp::remove_supplement_fee_account_from_whitelist(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(exit_account_location.clone()),
+			Box::new(exit_account_location),
 		));
 
 		assert_noop!(
 			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(exit_account_location.clone()),
+				Box::new(exit_account_location),
 			),
 			Error::<Runtime>::DestAccountNotValid
 		);
@@ -1384,7 +1380,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(PHA, TimeUnit::Hour(1));
 
 		let ledger = PhalaLedger::<BalanceOf<Runtime>> {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			active_shares: 500_000_000_000,
 			unlocking_shares: 1,
 			unlocking_time_unit: None,
@@ -1394,7 +1390,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location.clone(), phala_ledger);
+		DelegatorLedgers::<Runtime>::insert(PHA, subaccount_0_location, phala_ledger);
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);
@@ -1425,7 +1421,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			100,
-			Some(subaccount_0_location.clone())
+			Some(subaccount_0_location)
 		));
 
 		// Tokenpool should have been added 100.
@@ -1462,8 +1458,6 @@ fn add_validator_and_remove_validator_works() {
 
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
-		let multi_hash_0 =
-			<Runtime as frame_system::Config>::Hashing::hash(&VALIDATOR_0_LOCATION.encode());
 
 		initialize_preparation_setup();
 
@@ -1473,25 +1467,25 @@ fn add_validator_and_remove_validator_works() {
 		assert_ok!(Slp::add_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_0_LOCATION.clone()),
+			Box::new(VALIDATOR_0_LOCATION),
 		));
 
 		// The storage is reordered by hash. So we need to adjust the push order here.
-		valis.push((VALIDATOR_0_LOCATION.clone(), multi_hash_0));
+		valis.push(VALIDATOR_0_LOCATION);
 
 		assert_eq!(Slp::get_validators(PHA), Some(valis));
 
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(subaccount_0_location.clone()),
-			vec![VALIDATOR_0_LOCATION.clone()],
+			Box::new(subaccount_0_location),
+			vec![VALIDATOR_0_LOCATION],
 		));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
 			PHA,
-			Box::new(VALIDATOR_0_LOCATION.clone()),
+			Box::new(VALIDATOR_0_LOCATION),
 		));
 
 		assert_eq!(Slp::get_validators(PHA), Some(vec![]));
@@ -1520,7 +1514,7 @@ fn phala_convert_asset_works() {
 			Slp::convert_asset(
 				RuntimeOrigin::signed(ALICE),
 				PHA,
-				Box::new(subaccount_0_location.clone()),
+				Box::new(subaccount_0_location),
 				1_000_000_000_000,
 				true
 			),

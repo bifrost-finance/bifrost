@@ -25,13 +25,11 @@ use crate::{
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
+	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 	XcmDestWeightAndFee, XcmWeight,
 };
-use codec::Encode;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -63,7 +61,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for PolkadotAgent<T>
 {
@@ -79,7 +77,7 @@ impl<T: Config>
 		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -401,13 +399,12 @@ impl<T: Config>
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		ensure!(vec_len <= mins_maxs.validators_back_maximum, Error::<T>::GreaterThanMaximum);
 
-		// Sort validators and remove duplicates
-		let sorted_dedup_list =
-			Pallet::<T>::sort_validators_and_remove_duplicates(currency_id, targets)?;
+		// remove duplicates
+		let dedup_list = Pallet::<T>::remove_validators_duplicates(currency_id, targets)?;
 
 		// Convert vec of multilocations into accounts.
 		let mut accounts = vec![];
-		for (multilocation_account, _hash) in sorted_dedup_list.iter() {
+		for multilocation_account in dedup_list.iter() {
 			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
 			let unlookup_account = T::Lookup::unlookup(account);
 			accounts.push(unlookup_account);
@@ -428,7 +425,7 @@ impl<T: Config>
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(
 			who,
-			sorted_dedup_list,
+			dedup_list,
 			query_id,
 			timeout,
 			currency_id,
@@ -463,10 +460,10 @@ impl<T: Config>
 			.ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		// Remove targets from the original set to make a new set.
-		let mut new_set: Vec<(MultiLocation, Hash<T>)> = vec![];
-		for (acc, acc_hash) in original_set.iter() {
+		let mut new_set: Vec<MultiLocation> = vec![];
+		for acc in original_set.iter() {
 			if !targets.contains(acc) {
-				new_set.push((*acc, *acc_hash))
+				new_set.push(*acc)
 			}
 		}
 
@@ -475,7 +472,7 @@ impl<T: Config>
 
 		// Convert new targets into account vec.
 		let mut accounts = vec![];
-		for (multilocation_account, _hash) in new_set.iter() {
+		for multilocation_account in new_set.iter() {
 			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
 			let unlookup_account = T::Lookup::unlookup(account);
 			accounts.push(unlookup_account);
@@ -780,16 +777,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
-	}
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		// Get the delegator ledger
@@ -806,25 +793,6 @@ impl<T: Config>
 		}
 
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
-	}
-
-	/// Add a new serving delegator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Pallet::<T>::inner_add_validator(who, currency_id)
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-
-		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
-		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(*who, multi_hash)) {
-				Err(Error::<T>::ValidatorStillInUse)?;
-			}
-		}
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -892,7 +860,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
-		entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		entry: ValidatorsByDelegatorUpdateEntry,
 		manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		let should_update = if manual_mode {
@@ -1207,7 +1175,7 @@ impl<T: Config> PolkadotAgent<T> {
 	/// confirm_validators_by_delegator_query_response successfully
 	fn update_validators_by_delegator_query_response_storage(
 		query_id: QueryId,
-		query_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		query_entry: ValidatorsByDelegatorUpdateEntry,
 	) -> Result<(), Error<T>> {
 		// update ValidatorsByDelegator<T> storage
 		let ValidatorsByDelegatorUpdateEntry::Substrate(
@@ -1274,7 +1242,7 @@ impl<T: Config> PolkadotAgent<T> {
 	/// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 	fn insert_validators_by_delegator_update_entry(
 		who: &MultiLocation,
-		validator_list: Vec<(MultiLocation, Hash<T>)>,
+		validator_list: Vec<MultiLocation>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 		currency_id: CurrencyId,

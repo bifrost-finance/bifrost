@@ -637,10 +637,15 @@ dependencies = [
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-ve-minting",
+ "env_logger 0.10.0",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
+ "log",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -731,6 +736,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-collective",
  "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",
@@ -1462,6 +1468,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-collective",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
@@ -1558,6 +1565,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm-builder",
 ]
 
 [[package]]
@@ -1579,6 +1587,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-collective",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
@@ -6254,7 +6263,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.72"
+version = "0.9.74"
 dependencies = [
  "clap",
  "cumulus-client-cli",

@@ -35,6 +35,7 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
+	"frame-benchmarking?/std",
 	"primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
@@ -46,4 +47,5 @@ runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
 ]

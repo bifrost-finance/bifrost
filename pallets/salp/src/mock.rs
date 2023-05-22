@@ -310,8 +310,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> RuntimeOrigin {
-		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
+		Ok(RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get())))
 	}
 }
 
@@ -452,6 +452,58 @@ impl WeightInfo for SalpWeightInfo {
 	}
 
 	fn batch_unlock(_k: u32) -> Weight {
+		Weight::zero()
+	}
+
+	fn set_multisig_confirm_account() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_success() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_fail() -> Weight {
+		Weight::zero()
+	}
+
+	fn continue_fund() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_retire() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_end() -> Weight {
+		Weight::zero()
+	}
+
+	fn create() -> Weight {
+		Weight::zero()
+	}
+
+	fn edit() -> Weight {
+		Weight::zero()
+	}
+
+	fn confirm_contribute() -> Weight {
+		Weight::zero()
+	}
+
+	fn withdraw() -> Weight {
+		Weight::zero()
+	}
+
+	fn dissolve_refunded() -> Weight {
+		Weight::zero()
+	}
+
+	fn dissolve() -> Weight {
+		Weight::zero()
+	}
+
+	fn buyback() -> Weight {
 		Weight::zero()
 	}
 }

@@ -128,6 +128,11 @@ pub mod parachains {
 		pub const ID: u32 = 2004;
 		pub const PALLET_ID: u8 = 10;
 	}
+
+	pub mod astar {
+		pub const ID: u32 = 2006;
+		pub const PALLET_ID: u8 = 34;
+	}
 }
 
 pub trait XcmHelper<AccountId, Balance> {

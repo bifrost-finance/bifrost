@@ -20,7 +20,6 @@
 #![allow(clippy::unused_unit)]
 
 pub mod calls;
-pub mod migration;
 pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;
@@ -182,11 +181,7 @@ pub mod pallet {
 		/// Parameters:
 		/// - `updates`: vec of tuple: (XcmInterfaceOperation, WeightChange, FeeChange).
 		#[pallet::call_index(0)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(16_690_000)]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
 			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
