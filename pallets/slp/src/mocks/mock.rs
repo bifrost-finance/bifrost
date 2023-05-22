@@ -399,7 +399,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
 			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
-			Token(ASTR) => Some(MultiLocation::new(1, X1(Parachain(2006)))),
 			_ => None,
 		}
 	}
