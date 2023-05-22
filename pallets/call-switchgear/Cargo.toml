@@ -28,6 +28,7 @@ std = [
 	"sp-runtime/std",
 	"frame-support/std",
 	"frame-system/std",
+	"frame-benchmarking?/std",
 	"sp-io/std",
 	"sp-std/std",
 	"scale-info/std",

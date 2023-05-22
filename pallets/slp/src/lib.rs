@@ -37,7 +37,7 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -81,7 +81,9 @@ const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent};
+	use crate::agents::{
+		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
+	};
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
 
@@ -2194,6 +2196,7 @@ pub mod pallet {
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
+				ASTR => Ok(Box::new(AstarAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

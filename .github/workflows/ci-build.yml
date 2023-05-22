@@ -36,10 +36,8 @@ jobs:
         run: make check-all
 
       - name: Cargo clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --features=with-all-runtime -- -D warnings
+        run: |
+          make clippy
 
       - name: Test All
         run: |

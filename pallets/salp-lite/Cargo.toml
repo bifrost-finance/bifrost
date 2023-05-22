@@ -42,6 +42,7 @@ std = [
 	"sp-arithmetic/std",
 	"scale-info/std",
 	"orml-traits/std",
+	"frame-benchmarking?/std",
 ]
 
 runtime-benchmarks = [
