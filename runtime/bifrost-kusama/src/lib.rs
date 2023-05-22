@@ -1884,7 +1884,6 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_flexible_fee, FlexibleFee]
 		[bifrost_salp, Salp]
 		[bifrost_salp_lite, SalpLite]
 		[bifrost_liquidity_mining, LiquidityMining]
@@ -1899,6 +1898,11 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_asset_registry, AssetRegistry]
 		[bifrost_fee_share, FeeShare]
+		[bifrost_cross_in_out, CrossInOut]
+		[bifrost_flexible_fee, FlexibleFee]
+		[bifrost_system_maker, SystemMaker]
+		[bifrost_vstoken_conversion, VstokenConversion]
+		[pallet_vesting, Vesting]
 	);
 }
 

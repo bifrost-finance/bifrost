@@ -32,6 +32,7 @@ orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
@@ -56,5 +57,10 @@ std = [
 	"bifrost-runtime-common/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+]
 try-runtime = ["frame-support/try-runtime"]

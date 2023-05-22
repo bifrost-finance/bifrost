@@ -14,6 +14,7 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false, optional = true }
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
@@ -21,7 +22,6 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 orml-tokens = { version = "0.4.1-dev" }
 orml-currencies = { version = "0.4.1-dev" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
@@ -33,9 +33,11 @@ std = [
 	"codec/std",
 	"scale-info/std",
 	"sp-std/std",
+	"sp-runtime/std",
 	"node-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
+	"frame-benchmarking?/std",
 	"orml-traits/std",
 	"xcm/std",
 ]
@@ -44,6 +46,7 @@ runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [ "frame-support/try-runtime" ]
 

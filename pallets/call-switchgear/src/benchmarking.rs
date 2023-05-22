@@ -18,7 +18,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::dispatch::UnfilteredDispatchable;
 use node_primitives::{CurrencyId, TokenSymbol};
 
@@ -28,32 +28,32 @@ use crate::Pallet as CallSwitchgear;
 
 benchmarks! {
 	switchoff_transaction {
-		let origin = T::UpdateOrigin::successful_origin();
+		let origin = T::UpdateOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let switchoff_call = Call::<T>::switchoff_transaction{pallet_name: b"Balances".to_vec(), function_name: b"transfer".to_vec()};
 	}: {switchoff_call.dispatch_bypass_filter(origin)?}
 
 	switchon_transaction {
-		let origin = T::UpdateOrigin::successful_origin();
+		let origin = T::UpdateOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let switchoff_call = Call::<T>::switchoff_transaction{pallet_name: b"Balances".to_vec(), function_name: b"transfer".to_vec()};
 		switchoff_call.dispatch_bypass_filter(origin.clone())?;
 		let switchon_call = Call::<T>::switchon_transaction{pallet_name: b"Balances".to_vec(), function_name: b"transfer".to_vec()};
 	}: {switchon_call.dispatch_bypass_filter(origin)?}
 
 	disable_transfers {
-		let origin = T::UpdateOrigin::successful_origin();
+		let origin = T::UpdateOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let disable_call = Call::<T>::disable_transfers{currency_id: CurrencyId::Token(TokenSymbol::KSM)};
 	}: {disable_call.dispatch_bypass_filter(origin)?}
 
 	enable_transfers {
-		let origin = T::UpdateOrigin::successful_origin();
+		let origin = T::UpdateOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let disable_call = Call::<T>::disable_transfers{currency_id: CurrencyId::Token(TokenSymbol::KSM)};
 		disable_call.dispatch_bypass_filter(origin.clone())?;
 		let enable_call = Call::<T>::enable_transfers{currency_id: CurrencyId::Token(TokenSymbol::KSM)};
 	}: {enable_call.dispatch_bypass_filter(origin)?}
-}
 
-impl_benchmark_test_suite!(
+	impl_benchmark_test_suite!(
 	CallSwitchgear,
 	crate::mock::ExtBuilder::default().build(),
 	crate::mock::Runtime
 );
+}
