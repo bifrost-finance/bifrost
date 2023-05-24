@@ -17,6 +17,7 @@ frame-benchmarking = {  git = "https://github.com/paritytech/substrate", branch 
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 hex-literal = { version = "0.3.1" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -37,7 +38,6 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
@@ -45,6 +45,7 @@ default = ["std"]
 std = [
 	"codec/std",
 	"scale-info/std",
+	"sp-runtime/std",
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking/std",
@@ -56,5 +57,10 @@ std = [
 	"bifrost-asset-registry/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+]
 try-runtime = ["frame-support/try-runtime"]

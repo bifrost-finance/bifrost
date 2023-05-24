@@ -18,7 +18,9 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{
+	account, benchmarks, impl_benchmark_test_suite, v1::BenchmarkError, whitelisted_caller,
+};
 use frame_support::{dispatch::UnfilteredDispatchable, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
 use node_primitives::TokenSymbol;
@@ -77,7 +79,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller),0u64, BalanceOf::<T>::unique_saturated_from(5u128))
 
 	set_buy_and_sell_transaction_fee_rate {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let buy_rate = 1000u32;
 		let sell_rate = 1000u32;
 		let call = Call::<T>::set_buy_and_sell_transaction_fee_rate { buy_rate, sell_rate };

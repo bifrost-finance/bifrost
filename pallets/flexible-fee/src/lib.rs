@@ -197,7 +197,7 @@ pub mod pallet {
 
 		// Anyone can call this function to remove data from the user fee charge order list
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_from_user_fee_charge_order_list())]
+		#[pallet::weight(200000000)]
 		pub fn remove_from_user_fee_charge_order_list(origin: OriginFor<T>) -> DispatchResult {
 			ensure_signed(origin)?;
 

@@ -143,6 +143,7 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"frame-benchmarking/std",
 	"node-primitives/std",
 	"pallet-balances/std",
 	"pallet-bounties/std",
@@ -227,8 +228,8 @@ std = [
 with-tracing = ["frame-executive/with-tracing"]
 
 runtime-benchmarks = [
-	"frame-benchmarking/runtime-benchmarks",
-	"frame-system-benchmarking",
+	"frame-benchmarking",
+	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
@@ -256,6 +257,7 @@ runtime-benchmarks = [
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
 	"bifrost-system-staking/runtime-benchmarks",
+	"bifrost-system-maker/runtime-benchmarks",
 	"bifrost-vstoken-conversion/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
 	"bifrost-asset-registry/runtime-benchmarks",

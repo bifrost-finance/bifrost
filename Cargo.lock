@@ -737,6 +737,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-collective",
  "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",
@@ -1470,6 +1471,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-collective",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
@@ -1566,6 +1568,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm-builder",
 ]
 
 [[package]]
@@ -1588,6 +1591,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-collective",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",

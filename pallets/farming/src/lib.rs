@@ -446,7 +446,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -592,7 +592,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::claim())]
+		#[pallet::weight(T::WeightInfo::withdraw_claim())]
 		pub fn withdraw_claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -605,7 +605,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::force_retire_pool())]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -647,7 +647,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::set_retire_limit())]
 		pub fn set_retire_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -660,7 +660,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::close_pool())]
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -674,7 +674,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(9)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::reset_pool())]
 		pub fn reset_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -737,7 +737,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::kill_pool())]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -754,7 +754,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::edit_pool())]
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -850,7 +850,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(13)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::force_gauge_claim())]
 		pub fn force_gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -876,7 +876,7 @@ pub mod pallet {
 
 		// Add whitelist and take effect immediately
 		#[pallet::call_index(14)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::add_boost_pool_whitelist())]
 		pub fn add_boost_pool_whitelist(
 			origin: OriginFor<T>,
 			whitelist: Vec<PoolId>,
@@ -890,7 +890,7 @@ pub mod pallet {
 
 		// Whitelist for next round in effect
 		#[pallet::call_index(15)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::set_next_round_whitelist())]
 		pub fn set_next_round_whitelist(
 			origin: OriginFor<T>,
 			whitelist: Vec<PoolId>,

@@ -1638,6 +1638,7 @@ mod benches {
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_slp, Slp]
 		[bifrost_salp, Salp]
+		[bifrost_ve_minting, VeMinting]
 	);
 }
 

@@ -372,12 +372,12 @@ fn register_multilocation_should_work() {
 		);
 
 		assert_eq!(
-			LocationToCurrencyIds::<Runtime>::get(multi_location.clone()),
+			LocationToCurrencyIds::<Runtime>::get(multi_location),
 			Some(CurrencyId::Token2(0))
 		);
 		assert_eq!(
 			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
-			Some(multi_location.clone())
+			Some(multi_location)
 		);
 		assert_eq!(
 			CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
@@ -432,12 +432,12 @@ fn force_set_multilocation_should_work() {
 		));
 
 		assert_eq!(
-			LocationToCurrencyIds::<Runtime>::get(multi_location.clone()),
+			LocationToCurrencyIds::<Runtime>::get(multi_location),
 			Some(CurrencyId::Token2(0))
 		);
 		assert_eq!(
 			CurrencyIdToLocations::<Runtime>::get(CurrencyId::Token2(0)),
-			Some(multi_location.clone())
+			Some(multi_location)
 		);
 		assert_eq!(
 			CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
