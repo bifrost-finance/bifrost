@@ -215,6 +215,8 @@ pub enum RedeemType {
 	Astar,
 	/// Moonbeam chain.
 	Moonbeam(H160),
+	/// Moonriver chain.
+	Moonriver(H160),
 }
 
 impl Default for RedeemType {
@@ -229,6 +231,7 @@ impl RedeemType {
 			RedeemType::Native => 0,
 			RedeemType::Astar => 2006,
 			RedeemType::Moonbeam(_) => 2004,
+			RedeemType::Moonriver(_) => 2023,
 		}
 	}
 }
