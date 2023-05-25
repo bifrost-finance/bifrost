@@ -1200,6 +1200,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {
@@ -1378,6 +1379,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {
@@ -1621,7 +1623,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

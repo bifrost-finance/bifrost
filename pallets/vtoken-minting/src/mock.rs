@@ -36,6 +36,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, CurrencyIdMapping, TokenSymbol};
+use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
@@ -77,6 +78,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>},
@@ -189,6 +191,35 @@ impl orml_tokens::Config for Runtime {
 	type CurrencyHooks = ();
 }
 
+parameter_type_with_key! {
+	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+		Some(u128::MAX)
+	};
+}
+
+parameter_types! {
+	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const MaxAssetsForTransfer: usize = 2;
+}
+
+impl orml_xtokens::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = ();
+	type AccountIdToMultiLocation = ();
+	type UniversalLocation = UniversalLocation;
+	type SelfLocation = SelfRelativeLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type BaseXcmWeight = BaseXcmWeight;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = RelativeReserveProvider;
+}
+
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
@@ -217,6 +248,7 @@ impl vtoken_minting::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type XcmTransfer = XTokens;
 }
 
 ord_parameter_types! {
@@ -317,6 +349,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {
@@ -459,5 +492,17 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+/// Run until a particular block.
+pub fn _run_to_block(n: BlockNumber) {
+	use frame_support::traits::Hooks;
+	while System::block_number() <= n {
+		VtokenMinting::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		VtokenMinting::on_initialize(System::block_number());
 	}
 }
