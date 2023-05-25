@@ -1785,8 +1785,8 @@ construct_runtime! {
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 36,
 		Referenda: pallet_referenda::{Pallet, Call, Storage, Event<T>} = 37,
-		Origins: custom_origins::{Origin} = 124,
-		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 125,
+		Origins: custom_origins::{Origin} = 38,
+		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 39,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
