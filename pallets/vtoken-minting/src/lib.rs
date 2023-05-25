@@ -914,10 +914,10 @@ pub mod pallet {
 						Ok(())
 					},
 				)?;
-
-				if redeem_type != RedeemType::Native {
-					let dest = match redeem_type {
-						RedeemType::Astar => MultiLocation {
+				match redeem_type {
+					RedeemType::Native => {},
+					RedeemType::Astar => {
+						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
 								Parachain(redeem_type.get_parachain_id()),
@@ -926,31 +926,35 @@ pub mod pallet {
 									id: account.encode().try_into().unwrap(),
 								},
 							),
-						},
-						RedeemType::Moonbeam(evm_caller) | RedeemType::Moonriver(evm_caller) =>
-							MultiLocation {
-								parents: 1,
-								interior: X2(
-									Parachain(redeem_type.get_parachain_id()),
-									AccountKey20 {
-										network: None,
-										key: evm_caller.to_fixed_bytes(),
-									},
-								),
-							},
-						_ => MultiLocation::default(),
-					};
-					T::XcmTransfer::transfer(
-						account.clone(),
-						token_id,
-						unlock_amount,
-						dest,
-						Unlimited,
-					)?;
-				}
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Moonbeam(evm_caller) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(redeem_type.get_parachain_id()),
+								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar | RedeemType::Moonbeam(_) | RedeemType::Moonriver(_) => {
+					RedeemType::Astar | RedeemType::Moonbeam(_) => {
 						return Ok(());
 					},
 					RedeemType::Native => {},

@@ -1224,23 +1224,22 @@ pub mod pallet {
 						if exit_account_balance < idx_record_amount {
 							match redeem_type {
 								RedeemType::Native => {},
-								RedeemType::Astar |
-								RedeemType::Moonbeam(_) |
-								RedeemType::Moonriver(_) => break,
+								RedeemType::Astar | RedeemType::Moonbeam(_) => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
-						if redeem_type == RedeemType::Native {
-							// Transfer some amount from the exit_account to the user's account
-							T::MultiCurrency::transfer(
-								currency_id,
-								&exit_account,
-								&user_account,
-								deduct_amount,
-							)?;
-						} else {
-							let dest = match redeem_type {
-								RedeemType::Astar => MultiLocation {
+						match redeem_type {
+							RedeemType::Native => {
+								// Transfer some amount from the exit_account to the user's account
+								T::MultiCurrency::transfer(
+									currency_id,
+									&exit_account,
+									&user_account,
+									deduct_amount,
+								)?;
+							},
+							RedeemType::Astar => {
+								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
 										Parachain(redeem_type.get_parachain_id()),
@@ -1249,9 +1248,17 @@ pub mod pallet {
 											id: user_account.encode().try_into().unwrap(),
 										},
 									),
-								},
-								RedeemType::Moonbeam(evm_caller) |
-								RedeemType::Moonriver(evm_caller) => MultiLocation {
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Moonbeam(evm_caller) => {
+								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
 										Parachain(redeem_type.get_parachain_id()),
@@ -1260,17 +1267,16 @@ pub mod pallet {
 											key: evm_caller.to_fixed_bytes(),
 										},
 									),
-								},
-								_ => MultiLocation::default(),
-							};
-							T::XcmTransfer::transfer(
-								user_account.clone(),
-								currency_id,
-								deduct_amount,
-								dest,
-								Unlimited,
-							)?;
-						}
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+						};
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
 
