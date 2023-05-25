@@ -423,10 +423,26 @@ fn create_farming_pool() {
 		let mut tokens_proportion_map = BTreeMap::<CurrencyIdOf<Runtime>, Perbill>::new();
 		tokens_proportion_map.entry(KSM).or_insert(Perbill::from_percent(100));
 		let tokens_proportion = vec![(KSM, Perbill::from_percent(100))];
+		let tokens_proportion2 = vec![];
+
 		let tokens = 1000;
 		let basic_rewards = vec![(KSM, 1000)];
 		let gauge_basic_rewards = vec![(KSM, 900)];
 
+		assert_err!(
+			Farming::create_farming_pool(
+				RuntimeOrigin::signed(ALICE),
+				tokens_proportion2,
+				basic_rewards.clone(),
+				Some((KSM, 1000, gauge_basic_rewards.clone())),
+				2,
+				1,
+				7,
+				6,
+				5
+			),
+			Error::<Runtime>::NotNullable
+		);
 		assert_ok!(Farming::create_farming_pool(
 			RuntimeOrigin::signed(ALICE),
 			tokens_proportion.clone(),

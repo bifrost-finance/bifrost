@@ -199,7 +199,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		CalculationOverflow,
+		NotNullable,
 		PoolDoesNotExist,
 		GaugePoolNotExist,
 		GaugeInfoNotExist,
@@ -402,7 +402,7 @@ pub mod pallet {
 			let pid = Self::pool_next_id();
 			let keeper = T::Keeper::get().into_sub_account_truncating(pid);
 			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
-			let basic_token = tokens_proportion[0];
+			let basic_token = tokens_proportion.get(0).ok_or(Error::<T>::NotNullable)?.clone();
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
 				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
