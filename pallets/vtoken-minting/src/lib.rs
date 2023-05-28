@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod migration;
 pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
@@ -354,18 +355,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let exchanger = ensure_signed(origin)?;
 			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
-		}
-
-		#[pallet::call_index(13)]
-		#[pallet::weight(T::WeightInfo::redeem())]
-		pub fn xcm_action_redeem(
-			origin: OriginFor<T>,
-			vtoken_id: CurrencyIdOf<T>,
-			vtoken_amount: BalanceOf<T>,
-			redeem_type: RedeemType,
-		) -> DispatchResultWithPostInfo {
-			let exchanger = ensure_signed(origin)?;
-			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, redeem_type)
 		}
 
 		#[pallet::call_index(2)]
@@ -925,8 +914,8 @@ pub mod pallet {
 						Ok(())
 					},
 				)?;
-
 				match redeem_type {
+					RedeemType::Native => {},
 					RedeemType::Astar => {
 						let dest = MultiLocation {
 							parents: 1,
@@ -962,7 +951,6 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
-					RedeemType::Native => {},
 				};
 			} else {
 				match redeem_type {

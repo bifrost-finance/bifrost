@@ -20,6 +20,7 @@
 
 use crate::{mocks::mock_kusama::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::RedeemType;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 
@@ -258,19 +259,19 @@ fn refund_currency_due_unbond_works() {
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
 
 		// Set TokenUnlockLedger records.
-		let record_bob = (BOB, 10, TimeUnit::Era(90));
+		let record_bob = (BOB, 10, TimeUnit::Era(90), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 0, record_bob);
 
-		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100));
+		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 1, record_charlie);
 
-		let record_dave = (DAVE, 30, TimeUnit::Era(100));
+		let record_dave = (DAVE, 30, TimeUnit::Era(100), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 2, record_dave);
 
-		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110));
+		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie_1);
 
-		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110));
+		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 4, record_eddie_2);
 
 		// insert TimeUnitUnlockLedger records
@@ -370,7 +371,7 @@ fn refund_currency_due_unbond_works() {
 		// Unlocking records for era 100
 		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
 		let time_record_100_new = (8, bounded_vec_100_new, KSM);
-		let record_dave_new = (DAVE, 8, TimeUnit::Era(100));
+		let record_dave_new = (DAVE, 8, TimeUnit::Era(100), RedeemType::Native);
 		assert_eq!(
 			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
 			Some(record_dave_new.clone())
