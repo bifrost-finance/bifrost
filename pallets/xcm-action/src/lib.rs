@@ -28,14 +28,16 @@ use frame_support::{
 	PalletId, RuntimeDebug,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor, Config as SystemConfig};
-use node_primitives::{CurrencyId, CurrencyIdMapping, TryConvertFrom, VtokenMintingInterface};
+use node_primitives::{
+	CurrencyId, CurrencyIdMapping, TokenSymbol, TryConvertFrom, VtokenMintingInterface,
+};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160};
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::{BlakeTwo256, UniqueSaturatedFrom};
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
@@ -60,6 +62,7 @@ pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountId
 
 pub const ASTAR_PARA_ID: u32 = 2006;
 pub const MOONBEAM_PARA_ID: u32 = 2004;
+pub const MOONRIVER_PARA_ID: u32 = 2023;
 
 #[derive(
 	Encode,
@@ -222,9 +225,19 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain,
 		) -> DispatchResultWithPostInfo {
-			Self::ensure_singer_on_whitelist(origin, target_chain)?;
-
+			let evm_contract_account_id = ensure_signed(origin)?;
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			Self::ensure_singer_on_whitelist(&evm_contract_account_id, target_chain)?;
+
+			if target_chain == TargetChain::Moonbeam || target_chain == TargetChain::Moonriver {
+				T::MultiCurrency::transfer(
+					CurrencyId::Native(TokenSymbol::BNC),
+					&evm_contract_account_id,
+					&evm_caller_account_id,
+					BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128),
+				)?;
+			}
+
 			let token_amount = T::MultiCurrency::free_balance(currency_id, &evm_caller_account_id);
 			match T::VtokenMintingInterface::mint(
 				evm_caller_account_id.clone(),
@@ -245,11 +258,19 @@ pub mod pallet {
 							vtoken_amount,
 							evm_caller_account_id.clone(),
 						)?,
-						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+						TargetChain::Moonbeam => Self::transfer_multiassets_to_moonbeam(
 							evm_caller_account_id.clone(),
 							vtoken_id,
 							vtoken_amount,
 							evm_caller,
+							MOONBEAM_PARA_ID,
+						)?,
+						TargetChain::Moonriver => Self::transfer_multiassets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller,
+							MOONRIVER_PARA_ID,
 						)?,
 						_ => ensure!(false, Error::<T>::ChainNotSupported),
 					};
@@ -269,11 +290,19 @@ pub mod pallet {
 							token_amount,
 							evm_caller_account_id.clone(),
 						)?,
-						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+						TargetChain::Moonbeam => Self::transfer_multiassets_to_moonbeam(
 							evm_caller_account_id.clone(),
 							currency_id,
 							token_amount,
 							evm_caller,
+							MOONBEAM_PARA_ID,
+						)?,
+						TargetChain::Moonriver => Self::transfer_multiassets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							currency_id,
+							token_amount,
+							evm_caller,
+							MOONRIVER_PARA_ID,
 						)?,
 						_ => ensure!(false, Error::<T>::ChainNotSupported),
 					}
@@ -299,7 +328,18 @@ pub mod pallet {
 			currency_id_out_min: AssetBalance,
 			target_chain: TargetChain,
 		) -> DispatchResultWithPostInfo {
-			Self::ensure_singer_on_whitelist(origin, target_chain)?;
+			let evm_contract_account_id = ensure_signed(origin)?;
+			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			Self::ensure_singer_on_whitelist(&evm_contract_account_id, target_chain)?;
+
+			if target_chain == TargetChain::Moonbeam || target_chain == TargetChain::Moonriver {
+				T::MultiCurrency::transfer(
+					CurrencyId::Native(TokenSymbol::BNC),
+					&evm_contract_account_id,
+					&evm_caller_account_id,
+					BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128),
+				)?;
+			}
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(currency_id_in, T::ParachainId::get().into())
@@ -308,7 +348,6 @@ pub mod pallet {
 				AssetId::try_convert_from(currency_id_out, T::ParachainId::get().into())
 					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
 
-			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			let currency_id_in_amount =
 				T::MultiCurrency::free_balance(currency_id_in, &evm_caller_account_id);
 			let path = vec![in_asset_id, out_asset_id];
@@ -330,11 +369,19 @@ pub mod pallet {
 							currency_id_out_amount,
 							evm_caller_account_id.clone(),
 						)?,
-						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+						TargetChain::Moonbeam => Self::transfer_multiassets_to_moonbeam(
 							evm_caller_account_id.clone(),
 							currency_id_out,
 							currency_id_out_amount,
 							evm_caller,
+							MOONBEAM_PARA_ID,
+						)?,
+						TargetChain::Moonriver => Self::transfer_multiassets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							currency_id_out,
+							currency_id_out_amount,
+							evm_caller,
+							MOONRIVER_PARA_ID,
 						)?,
 						_ => ensure!(false, Error::<T>::ChainNotSupported),
 					}
@@ -353,11 +400,19 @@ pub mod pallet {
 						currency_id_in_amount,
 						evm_caller_account_id.clone(),
 					)?,
-					TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+					TargetChain::Moonbeam => Self::transfer_multiassets_to_moonbeam(
 						evm_caller_account_id.clone(),
 						currency_id_in,
 						currency_id_in_amount,
 						evm_caller,
+						MOONBEAM_PARA_ID,
+					)?,
+					TargetChain::Moonriver => Self::transfer_multiassets_to_moonbeam(
+						evm_caller_account_id.clone(),
+						currency_id_in,
+						currency_id_in_amount,
+						evm_caller,
+						MOONRIVER_PARA_ID,
 					)?,
 					_ => ensure!(false, Error::<T>::ChainNotSupported),
 				},
@@ -373,9 +428,19 @@ pub mod pallet {
 			vtoken_id: CurrencyIdOf<T>,
 			target_chain: TargetChain,
 		) -> DispatchResultWithPostInfo {
-			Self::ensure_singer_on_whitelist(origin, target_chain)?;
-
+			let evm_contract_account_id = ensure_signed(origin)?;
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			Self::ensure_singer_on_whitelist(&evm_contract_account_id, target_chain)?;
+
+			if target_chain == TargetChain::Moonbeam || target_chain == TargetChain::Moonriver {
+				T::MultiCurrency::transfer(
+					CurrencyId::Native(TokenSymbol::BNC),
+					&evm_contract_account_id,
+					&evm_caller_account_id,
+					BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128),
+				)?;
+			}
+
 			let vtoken_amount = T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
 
 			let redeem_type = match target_chain {
@@ -407,11 +472,19 @@ pub mod pallet {
 							vtoken_amount,
 							evm_caller_account_id.clone(),
 						)?,
-						TargetChain::Moonbeam => Self::transfer_assets_to_moonbeam(
+						TargetChain::Moonbeam => Self::transfer_multiassets_to_moonbeam(
 							evm_caller_account_id.clone(),
 							vtoken_id,
 							vtoken_amount,
 							evm_caller,
+							MOONBEAM_PARA_ID,
+						)?,
+						TargetChain::Moonriver => Self::transfer_multiassets_to_moonbeam(
+							evm_caller_account_id.clone(),
+							vtoken_id,
+							vtoken_amount,
+							evm_caller,
+							MOONRIVER_PARA_ID,
 						)?,
 						_ => ensure!(false, Error::<T>::ChainNotSupported),
 					}
@@ -478,13 +551,12 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	fn ensure_singer_on_whitelist(
-		singer: OriginFor<T>,
+		evm_contract_account_id: &T::AccountId,
 		target_chain: TargetChain,
 	) -> DispatchResult {
-		let evm_contract_account_id = ensure_signed(singer)?;
 		let whitelist_account_ids = WhitelistAccountId::<T>::get(&target_chain);
 		ensure!(
-			whitelist_account_ids.contains(&evm_contract_account_id),
+			whitelist_account_ids.contains(evm_contract_account_id),
 			Error::<T>::AccountIdNotInWhitelist
 		);
 		Ok(())
@@ -508,21 +580,27 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn transfer_assets_to_moonbeam(
+	fn transfer_multiassets_to_moonbeam(
 		caller: T::AccountId,
 		currency_id: CurrencyIdOf<T>,
 		amount: BalanceOf<T>,
 		receiver: H160,
+		para_id: u32,
 	) -> DispatchResult {
 		let dest = MultiLocation {
 			parents: 1,
 			interior: X2(
-				Parachain(MOONBEAM_PARA_ID),
+				Parachain(para_id),
 				AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 			),
 		};
 
-		T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+		let fee = CurrencyId::Native(TokenSymbol::BNC);
+		let fee_amount = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128);
+
+		let assets = vec![(currency_id, amount), (fee, fee_amount)];
+
+		T::XcmTransfer::transfer_multicurrencies(caller, assets, 1, dest, Unlimited)?;
 		Ok(())
 	}
 

@@ -21,13 +21,13 @@ use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	parameter_types,
+	ensure, parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
 use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
-use sp_std::{convert::TryFrom, marker::PhantomData};
+use sp_std::{borrow::Borrow, convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
@@ -35,7 +35,7 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::traits::MatchesFungible;
+use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
@@ -50,6 +50,7 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
+use sp_io::hashing::blake2_256;
 use xcm::v3::prelude::*;
 
 /// Bifrost Asset Matcher
@@ -241,6 +242,50 @@ parameter_types! {
 	pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 }
 
+pub struct ExternalAccountConverter<Network, AccountId>(PhantomData<(Network, AccountId)>);
+impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone>
+	xcm_executor::traits::Convert<MultiLocation, AccountId>
+	for ExternalAccountConverter<Network, AccountId>
+{
+	fn convert(location: MultiLocation) -> Result<AccountId, MultiLocation> {
+		log::trace!(
+			target: "xcm::ExternalAccountConverter::convert",
+			"location: {:?}",
+			location.clone(),
+		);
+		match location {
+			MultiLocation { parents: 1, interior: X2(Parachain(_id), AccountId32 { id, .. }) } =>
+				log::trace!(
+					target: "xcm::ExternalAccountConverter::convert",
+					"AccountId32: {:?}",
+					id,
+				),
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(_id), AccountKey20 { key, .. }),
+			} => log::trace!(
+				target: "xcm::ExternalAccountConverter::convert",
+				"AccountKey20: {:?}",
+				key,
+			),
+			_ => return Err(location),
+		};
+		let hash: [u8; 32] = ("multiloc", location.borrow()).borrow().using_encoded(blake2_256);
+		let mut account_id = [0u8; 32];
+		account_id.copy_from_slice(&hash[0..32]);
+		log::trace!(
+			target: "xcm::ExternalAccountConverter::convert",
+			"account_id: {:?}",
+			account_id,
+		);
+		Ok(account_id.into())
+	}
+
+	fn reverse(who: AccountId) -> Result<MultiLocation, AccountId> {
+		Err(who)
+	}
+}
+
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch RuntimeOrigin.
@@ -251,6 +296,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	ExternalAccountConverter<RelayNetwork, AccountId>,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `RuntimeOrigin`
@@ -290,11 +336,49 @@ match_types! {
 	};
 }
 
+/// Barrier allowing a top level paid message with DescendOrigin instruction
+/// first
+pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut [Instruction<Call>],
+		max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ()> {
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
+		ensure!(T::contains(origin), ());
+		let mut iter = message.iter_mut();
+		// Make sure the first instruction is DescendOrigin
+		iter.next()
+			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
+			.ok_or(())?;
+
+		// Then WithdrawAsset
+		iter.next()
+			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
+			.ok_or(())?;
+
+		// Then BuyExecution
+		iter.next()
+			.filter(|instruction| matches!(instruction, BuyExecution { .. }))
+			.ok_or(())?;
+
+		Ok(())
+	}
+}
+
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
+	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
@@ -558,6 +642,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 			RuntimeCall::XcmInterface(
 				xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
+			RuntimeCall::XcmAction(..) |
 			// TODO swap
 			RuntimeCall::ZenlinkProtocol(
 				zenlink_protocol::Call::add_liquidity { .. } |

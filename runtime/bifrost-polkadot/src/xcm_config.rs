@@ -318,24 +318,12 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
 			.ok_or(())?;
 
-		Ok(())
-
 		// Then BuyExecution
-		// let i = iter.next().ok_or(())?;
-		// match i {
-		// 	BuyExecution { weight_limit: Limited(ref mut weight), .. }
-		// 		if weight.all_gte(max_weight) =>
-		// 	{
-		// 		weight.set_ref_time(max_weight.ref_time());
-		// 		weight.set_proof_size(max_weight.proof_size());
-		// 		Ok(())
-		// 	},
-		// 	BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
-		// 		*weight_limit = Limited(max_weight);
-		// 		Ok(())
-		// 	},
-		// 	_ => Err(()),
-		// }
+		iter.next()
+			.filter(|instruction| matches!(instruction, BuyExecution { .. }))
+			.ok_or(())?;
+
+		Ok(())
 	}
 }
 
@@ -514,6 +502,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 			RuntimeCall::XcmInterface(
 				xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
+			RuntimeCall::XcmAction(..) |
 			// TODO swap
 			RuntimeCall::ZenlinkProtocol(
 				zenlink_protocol::Call::add_liquidity { .. } |

@@ -87,7 +87,9 @@ const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::agents::{AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent};
+	use crate::agents::{
+		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
+	};
 	use node_primitives::RedeemType;
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
