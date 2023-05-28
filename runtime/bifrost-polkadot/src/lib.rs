@@ -1642,7 +1642,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	bifrost_slp::migration2::MigrateValidatorsAndValidatorsByDelegatorStorages<Runtime>,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
