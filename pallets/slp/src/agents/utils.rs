@@ -200,9 +200,9 @@ impl<T: Config> Pallet<T> {
 		Ok(account_h160)
 	}
 
-	/// **************************************/
-	/// ****** XCM confirming Functions ******/
-	/// **************************************/
+	/// **************************************
+	/// ****** XCM confirming Functions ******
+	/// **************************************
 	pub fn get_ledger_update_agent_then_process(
 		query_id: QueryId,
 		manual_mode: bool,

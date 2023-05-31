@@ -691,9 +691,9 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// *****************************/
-		/// ****** Outer Calls ******/
-		/// *****************************/
+		/// *****************************
+		/// ****** Outer Calls ******
+		/// *****************************
 		///
 		/// Delegator initialization work. Generate a new delegator and return its ID.
 		#[pallet::call_index(0)]
@@ -1489,9 +1489,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// *****************************/
-		/// ****** Storage Setters ******/
-		/// *****************************/
+		/// *****************************
+		/// ****** Storage Setters ******
+		/// *****************************
 		///
 		/// Update storage XcmDestWeightAndFee<T>.
 		#[pallet::call_index(21)]
