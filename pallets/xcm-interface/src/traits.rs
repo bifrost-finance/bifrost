@@ -96,9 +96,9 @@ pub enum ParachainDerivedProxyAccountType {
 
 #[allow(non_snake_case)]
 pub mod parachains {
-	/******************* */
-	/* Kusama parachains */
-	/******************* */
+	// *********************
+	// Kusama parachains**
+	// *********************
 
 	pub mod karura {
 		pub const ID: u32 = 2000;
@@ -121,9 +121,9 @@ pub mod parachains {
 		pub const PALLET_ID: u8 = 10;
 	}
 
-	/********************* */
-	/* Polkadot parachains */
-	/********************* */
+	//*********************
+	// Polkadot parachains
+	//*********************
 	pub mod moonbeam {
 		pub const ID: u32 = 2004;
 		pub const PALLET_ID: u8 = 10;

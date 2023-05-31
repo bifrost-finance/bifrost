@@ -205,8 +205,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
-		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
-		                       * with whitelistted_caller */
+		account("bechmarking_account_1", 0, 0),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
