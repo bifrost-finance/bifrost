@@ -16,67 +16,92 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(feature = "runtime-benchmarks")]
-#![allow(non_upper_case_globals)]
-#![allow(unused_imports)]
 
 use crate::{Pallet as XcmAction, *};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::sp_runtime::traits::UniqueSaturatedFrom;
+use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
+use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, traits::EnsureOrigin};
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
-use xcm::{latest::prelude::*, VersionedMultiLocation};
 
 benchmarks! {
+	add_whitelist {
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+	let contract: T::AccountId = whitelisted_caller();
+	}: _(RawOrigin::Root,SupportChain::Astar, contract)
+
+	remove_whitelist {
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let contract: T::AccountId = whitelisted_caller();
+		assert_ok!(XcmAction::<T>::add_whitelist(
+			origin,
+			SupportChain::Astar,
+			contract.clone()
+		));
+	}: _(RawOrigin::Root,SupportChain::Astar, contract)
+
+	set_execution_fee {
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let contract: T::AccountId = whitelisted_caller();
+	}: _(RawOrigin::Root,CurrencyId::Token2(0), 10u32.into())
+
+	set_transfer_to_fee {
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let contract: T::AccountId = whitelisted_caller();
+	}: _(RawOrigin::Root,SupportChain::Astar, 10u32.into())
+
+
 	mint {
-	let location = VersionedMultiLocation::V1(MultiLocation {
-		parents: 1,
-		interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
-	});
-	let multi_location: MultiLocation = location.clone().try_into().unwrap();
-	let caller: T::AccountId = whitelisted_caller();
-	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-	let receiver = H160::from(addr);
-	// const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
-	}: _(RawOrigin::Signed(caller.clone()), receiver, Box::new(multi_location), token_amount, 4_000_000_000u64)
+		let contract: T::AccountId = whitelisted_caller();
+		assert_ok!(XcmAction::<T>::add_whitelist(
+				RawOrigin::Root.into(),
+				SupportChain::Astar,
+				contract.clone()
+		));
+		assert_ok!(XcmAction::<T>::set_execution_fee(
+				RawOrigin::Root.into(),
+				CurrencyId::Native(TokenSymbol::BNC),
+				0u32.into()
+		));
+		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let receiver = H160::from(addr);
+		let evm_caller_account_id = XcmAction::<T>::h160_to_account_id(receiver);
+		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC), SupportChain::Astar)
 
-  redeem {
-	let location = VersionedMultiLocation::V1(MultiLocation {
-		parents: 1,
-		interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
-	});
-	let multi_location: MultiLocation = location.clone().try_into().unwrap();
-	let caller: T::AccountId = whitelisted_caller();
-	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-	let receiver = H160::from(addr);
-	// const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
-	}: _(RawOrigin::Signed(caller.clone()), receiver, Box::new(multi_location), token_amount)
+	redeem {
+		let contract: T::AccountId = whitelisted_caller();
+		assert_ok!(XcmAction::<T>::add_whitelist(
+				RawOrigin::Root.into(),
+				SupportChain::Astar,
+				contract.clone()
+		));
+		assert_ok!(XcmAction::<T>::set_execution_fee(
+				RawOrigin::Root.into(),
+				CurrencyId::VToken(TokenSymbol::BNC),
+				0u32.into()
+		));
+		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let receiver = H160::from(addr);
+		let evm_caller_account_id = XcmAction::<T>::h160_to_account_id(receiver);
+		T::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::VToken(TokenSymbol::BNC), SupportChain::Astar)
 
-  swap {
-	let location1 = VersionedMultiLocation::V1(MultiLocation {
-		parents: 1,
-		interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
-	});
-	let multi_location1: MultiLocation = location1.clone().try_into().unwrap();
-	let location2 = VersionedMultiLocation::V1(MultiLocation {
-		parents: 1,
-		interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
-	});
-	let multi_location2: MultiLocation = location2.clone().try_into().unwrap();
-	let caller: T::AccountId = whitelisted_caller();
-	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-	let receiver = H160::from(addr);
-	// const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	// const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-	let token_amount = BalanceOf::<T>::unique_saturated_from(10u128);
-	}: _(RawOrigin::Signed(caller.clone()), receiver, token_amount, token_amount, Box::new(multi_location1), Box::new(multi_location2), 4_000_000_000u64)
+
+	swap {
+		let contract: T::AccountId = whitelisted_caller();
+		assert_ok!(XcmAction::<T>::add_whitelist(
+				RawOrigin::Root.into(),
+				SupportChain::Astar,
+				contract.clone()
+		));
+		assert_ok!(XcmAction::<T>::set_execution_fee(
+				RawOrigin::Root.into(),
+				CurrencyId::Native(TokenSymbol::BNC),
+				0u32.into()
+		));
+		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let receiver = H160::from(addr);
+		let evm_caller_account_id = XcmAction::<T>::h160_to_account_id(receiver);
+		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC),CurrencyId::VToken(TokenSymbol::BNC), 0u32.into(),SupportChain::Astar)
 }
-
-impl_benchmark_test_suite!(
-	XcmAction,
-	crate::mock::ExtBuilder::default()
-		.one_hundred_precision_for_each_currency_type_for_whitelist_account()
-		.build(),
-	crate::mock::Test
-);

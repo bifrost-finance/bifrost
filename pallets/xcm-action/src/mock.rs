@@ -24,14 +24,14 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::*,
-	parameter_types, sp_io,
+	parameter_types,
 	traits::{Everything, Nothing},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
+use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
 	testing::Header,
@@ -44,25 +44,23 @@ use sp_runtime::{
 use sp_std::vec;
 pub use xcm::latest::prelude::*;
 use xcm::{
-	latest::{Junction, MultiLocation, Weight as XcmWeight},
+	latest::{Junction, MultiLocation},
 	opaque::latest::{
 		Junction::Parachain,
 		Junctions::{X1, X2},
-		NetworkId,
 	},
 };
 pub use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
 	ChildParachainAsNative, ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
 	CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-	IsConcrete, LocationInverter, NativeAsset, ParentAsSuperuser, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
+	IsConcrete, NativeAsset, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
-	AssetBalance, AssetId as ZenlinkAssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate,
-	ZenlinkMultiAssets,
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
 
 pub type Balance = u128;
@@ -70,16 +68,8 @@ pub type Amount = i128;
 pub type BlockNumber = u64;
 pub type AccountId = AccountId32;
 
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
-pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
-pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -100,6 +90,7 @@ construct_runtime!(
 	ZenlinkProtocol: zenlink_protocol,
 	XTokens: orml_xtokens,
 	XcmAction: xcm_action,
+	  PolkadotXcm: pallet_xcm
   }
 );
 
@@ -210,12 +201,13 @@ impl bifrost_vtoken_minting::Config for Test {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
-	type BifrostSlp = Slp;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
+	type BifrostSlp = Slp;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type XcmTransfer = XTokens;
 }
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -291,49 +283,50 @@ impl zenlink_protocol::Config for Test {
 	type SelfParaId = SelfParaId;
 
 	type TargetChains = ();
-	type XcmExecutor = ();
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
 }
 
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account_id: AccountId) -> MultiLocation {
-		MultiLocation::from(Junction::AccountId32 {
-			network: NetworkId::Any,
-			id: account_id.into(),
-		})
+		MultiLocation::from(Junction::AccountId32 { network: None, id: account_id.into() })
 	}
 }
 
 parameter_types! {
-	pub const BaseXcmWeight: XcmWeight = 100_000_000;
+	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
 	pub const MaxInstructions: u32 = 100;
-	pub const MaxAssetsForTransfer: usize = 2;
+	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
-
 pub struct XcmConfig;
-impl Config for XcmConfig {
-	type RuntimeCall = RuntimeCall;
-	type XcmSender = ();
-	// How to withdraw and deposit an asset.
-	type AssetTransactor = ();
-	type OriginConverter = ();
-	type IsReserve = NativeAsset;
-	type IsTeleporter = NativeAsset;
-	type LocationInverter = LocationInverter<Ancestry>;
-	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = ();
-	type ResponseHandler = ();
-	type AssetTrap = ();
+impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = ();
+	type AssetTransactor = ();
+	type AssetTrap = ();
+	type Barrier = ();
+	type RuntimeCall = RuntimeCall;
+	type IsReserve = ();
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
+	type OriginConverter = ();
+	type ResponseHandler = ();
 	type SubscriptionService = ();
+	type Trader = ();
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmSender = ();
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<64>;
+	type FeeManager = ();
+	type MessageExporter = ();
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
+	type AssetLocker = ();
+	type AssetExchanger = ();
 }
 
 parameter_type_with_key! {
@@ -343,8 +336,9 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub const UnitWeightCost: XcmWeight = 1;
-	pub Ancestry: MultiLocation = Here.into();
+	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const MaxAssetsForTransfer: usize = 2;
 }
 
 impl orml_xtokens::Config for Test {
@@ -352,16 +346,16 @@ impl orml_xtokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = AccountIdToMultiLocation;
-	type SelfLocation = ();
-	type MinXcmFee = ParachainMinFee;
+	type AccountIdToMultiLocation = ();
+	type UniversalLocation = UniversalLocation;
+	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type MultiLocationsFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
-	type LocationInverter = LocationInverter<Ancestry>;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
-	type ReserveProvider = AbsoluteReserveProvider;
+	type MinXcmFee = ParachainMinFee;
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = RelativeReserveProvider;
 }
 
 ord_parameter_types! {
@@ -383,7 +377,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X2(
 					Parachain(2023),
 					Junction::AccountKey20 {
-						network: NetworkId::Any,
+						network: None,
 						key: Slp::derivative_account_id_20(
 							hex!["7369626cd1070000000000000000000000000000"].into(),
 							sub_account_index,
@@ -395,7 +389,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			_ => MultiLocation::new(
 				1,
 				X1(Junction::AccountId32 {
-					network: NetworkId::Any,
+					network: None,
 					id: Self::derivative_account_id(
 						ParaId::from(2001u32).into_account_truncating(),
 						sub_account_index,
@@ -429,11 +423,15 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for SubstrateResponseManager {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
-	fn create_query_record(_responder: &MultiLocation, _timeout: u64) -> u64 {
+	fn create_query_record(
+		_responder: &MultiLocation,
+		_call_back: Option<RuntimeCall>,
+		_timeout: u64,
+	) -> u64 {
 		Default::default()
 	}
 	fn remove_query_record(_query_id: QueryId) -> bool {
@@ -443,6 +441,8 @@ impl QueryResponseManager<QueryId, MultiLocation, u64> for SubstrateResponseMana
 
 impl bifrost_slp::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
@@ -456,115 +456,53 @@ impl bifrost_slp::Config for Test {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
 }
 
-pub struct XcmFake;
-impl Into<Result<cumulus_pallet_xcm::Origin, XcmFake>> for XcmFake {
-	fn into(self) -> Result<cumulus_pallet_xcm::Origin, XcmFake> {
-		todo!("please test via local-integration-tests")
-	}
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
-impl From<RuntimeOrigin> for XcmFake {
-	fn from(_: RuntimeOrigin) -> Self {
-		todo!("please test via local-integration-tests")
-	}
-}
-impl SendXcm for XcmFake {
-	fn send_xcm(
-		_destination: impl Into<xcm::latest::MultiLocation>,
-		_message: xcm::latest::Xcm<()>,
-	) -> xcm::latest::SendResult {
-		todo!("please test via local-integration-tests")
-	}
+
+impl pallet_xcm::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type UniversalLocation = UniversalLocation;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmExecuteFilter = Nothing;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmReserveTransferFilter = Everything;
+	type XcmRouter = ();
+	type XcmTeleportFilter = Nothing;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = ConstU32<2>;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
+	type TrustedLockers = ();
+	type SovereignAccountOf = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 // Pallet xcm-action configuration
 parameter_types! {
-	pub const XcmActionPalletId: PalletId = PalletId(*b"/xcmactn");
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 impl xcm_action::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = XcmFake;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Test>;
-	type PalletId = XcmActionPalletId;
+	type TreasuryAccount = BifrostFeeAccount;
 	type ParachainId = ParachainId;
-	type NativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
-}
-
-pub struct ExtBuilder {
-	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-}
-
-impl Default for ExtBuilder {
-	fn default() -> Self {
-		Self { endowed_accounts: vec![] }
-	}
-}
-
-impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
-		self
-	}
-
-	pub fn one_hundred_for_alice_n_bob(self) -> Self {
-		self.balances(vec![
-			(ALICE, BNC, 10000),
-			(BOB, BNC, 10000),
-			(CHARLIE, BNC, 10000),
-			(ALICE, DOT, 10000),
-			(ALICE, vDOT, 40000),
-			(ALICE, KSM, 30000),
-			(ALICE, vKSM, 30000),
-			(BOB, vKSM, 10000),
-			(BOB, KSM, 10000000000),
-			(BOB, MOVR, 1000000000000000000000),
-		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![
-			(whitelist_caller.clone(), BNC, 10000),
-			(whitelist_caller.clone(), KSM, 10000),
-			(whitelist_caller.clone(), vKSM, 10000),
-		])
-	}
-
-	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-		pallet_balances::GenesisConfig::<Test> {
-			balances: self
-				.endowed_accounts
-				.clone()
-				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id == BNC)
-				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
-				.collect::<Vec<_>>(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		orml_tokens::GenesisConfig::<Test> {
-			balances: self
-				.endowed_accounts
-				.into_iter()
-				.filter(|(_, currency_id, _)| *currency_id != BNC)
-				.collect::<Vec<_>>(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		t.into()
-	}
 }

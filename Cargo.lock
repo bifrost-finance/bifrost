@@ -1634,6 +1634,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "serde",

@@ -1660,21 +1660,16 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type XcmTransfer = XTokens;
 }
 
-parameter_types! {
-	pub const XcmActionPalletId: PalletId = PalletId(*b"/xcmactn");
-}
-
 impl bifrost_xcm_action::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
-	type PalletId = XcmActionPalletId;
+	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
-	type NativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
 }
 
