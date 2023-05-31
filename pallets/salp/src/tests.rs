@@ -1411,7 +1411,25 @@ fn refund_meanwhile_issue_should_work() {
 		)
 		.unwrap();
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 100);
+		assert_eq!(
+			<Test as Config>::CurrencyIdRegister::check_vsbond_registered(
+				TokenSymbol::KSM,
+				3_000,
+				2,
+				SlotLength::get() + 1
+			),
+			false
+		);
 		assert_ok!(Salp::continue_fund(Some(ALICE).into(), 3_000, 2, SlotLength::get() + 1));
+		assert_eq!(
+			<Test as Config>::CurrencyIdRegister::check_vsbond_registered(
+				TokenSymbol::KSM,
+				3_000,
+				2,
+				SlotLength::get() + 1
+			),
+			true
+		);
 		let old_fund = Salp::failed_funds_to_refund((3_000, 1, SlotLength::get())).unwrap();
 		assert_eq!(old_fund.first_slot, 1);
 		assert_eq!(old_fund.raised, 100);
