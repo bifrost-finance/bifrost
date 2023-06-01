@@ -423,6 +423,33 @@ pub mod pallet {
 			let fund_new = FundInfo { status: FundStatus::Ongoing, first_slot, last_slot, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
 
+			match T::RelayChainToken::get() {
+				CurrencyId::Token(token_symbol) =>
+					if !T::CurrencyIdRegister::check_vsbond_registered(
+						token_symbol,
+						index,
+						first_slot,
+						last_slot,
+					) {
+						T::CurrencyIdRegister::register_vsbond_metadata(
+							token_symbol,
+							index,
+							first_slot,
+							last_slot,
+						)?;
+					},
+				CurrencyId::Token2(token_id) => {
+					if !T::CurrencyIdRegister::check_vsbond2_registered(
+						token_id, index, first_slot, last_slot,
+					) {
+						T::CurrencyIdRegister::register_vsbond2_metadata(
+							token_id, index, first_slot, last_slot,
+						)?;
+					}
+				},
+				_ => (),
+			}
+
 			Self::deposit_event(Event::<T>::Continued(
 				index,
 				fund_old.first_slot,
