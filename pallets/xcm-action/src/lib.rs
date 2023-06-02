@@ -34,8 +34,6 @@ use node_primitives::{
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160};
 use sp_runtime::{traits::BlakeTwo256, DispatchError};
 use sp_std::vec;
@@ -73,26 +71,26 @@ pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountId
 	Ord,
 	TypeInfo,
 )]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[non_exhaustive]
 pub enum SupportChain {
 	Astar,
 	Moonbeam,
 }
 
 impl SupportChain {
-	#[cfg(feature = "with-bifrost-kusama-runtime")]
 	pub fn get_parachain_id(self) -> u32 {
 		match self {
-			SupportChain::Astar => 2007,
-			SupportChain::Moonbeam => 2023,
-		}
-	}
-	#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			SupportChain::Astar => 2006,
-			SupportChain::Moonbeam => 2004,
+			SupportChain::Astar =>
+				if cfg!(feature = "with-bifrost-polkadot-runtime") {
+					2006
+				} else {
+					2007
+				},
+			SupportChain::Moonbeam =>
+				if cfg!(feature = "with-bifrost-polkadot-runtime") {
+					2004
+				} else {
+					2023
+				},
 		}
 	}
 }

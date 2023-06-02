@@ -19,7 +19,7 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
 # primitives
-node-primitives = { default-features = false, path = "../../node/primitives" }
+node-primitives = { default-features = false, path = "../../node/primitives", features=["with-bifrost-polkadot-runtime"] }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -104,7 +104,7 @@ bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-ap
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api", default-features = false }
-bifrost-xcm-action = { path = "../../pallets/xcm-action", default-features = false }
+bifrost-xcm-action = { path = "../../pallets/xcm-action", default-features = false, features=["with-bifrost-polkadot-runtime"] }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }

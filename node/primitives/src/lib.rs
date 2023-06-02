@@ -224,20 +224,26 @@ impl Default for RedeemType {
 }
 
 impl RedeemType {
-	#[cfg(feature = "with-bifrost-kusama-runtime")]
 	pub fn get_parachain_id(self) -> u32 {
 		match self {
-			RedeemType::Native => 2001,
-			RedeemType::Astar => 2007,
-			RedeemType::Moonbeam(_) => 2023,
-		}
-	}
-	#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			RedeemType::Native => 2030,
-			RedeemType::Astar => 2006,
-			RedeemType::Moonbeam(_) => 2004,
+			RedeemType::Native =>
+				if cfg!(feature = "with-bifrost-polkadot-runtime") {
+					2030
+				} else {
+					2001
+				},
+			RedeemType::Astar =>
+				if cfg!(feature = "with-bifrost-polkadot-runtime") {
+					2006
+				} else {
+					2007
+				},
+			RedeemType::Moonbeam(_) =>
+				if cfg!(feature = "with-bifrost-polkadot-runtime") {
+					2004
+				} else {
+					2023
+				},
 		}
 	}
 }
