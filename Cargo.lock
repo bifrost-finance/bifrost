@@ -1616,7 +1616,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-xcm-action"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-runtime-common",

@@ -1,9 +1,9 @@
 [package]
 name = "bifrost-xcm-action"
 description = "A pallet to manage the execution of XCM messages"
+authors = ["hqwangningbo <2536935847@qq.com>"]
 edition = "2021"
-version = "0.1.0"
-publish = false
+version = "0.8.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
