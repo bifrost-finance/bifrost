@@ -1349,14 +1349,6 @@ impl bifrost_token_issuer::Config for Runtime {
 	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
 }
 
-impl bifrost_lightening_redeem::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Tokens;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type PalletId = LighteningRedeemPalletId;
-	type WeightInfo = bifrost_lightening_redeem::weights::BifrostWeight<Runtime>;
-}
-
 impl bifrost_call_switchgear::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1829,7 +1821,6 @@ construct_runtime! {
 		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
-		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
@@ -1904,7 +1895,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	Migrations,
+	(bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>, Migrations),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1919,7 +1910,6 @@ mod benches {
 		[bifrost_liquidity_mining, LiquidityMining]
 		[bifrost_vsbond_auction, VSBondAuction]
 		[bifrost_token_issuer, TokenIssuer]
-		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
 		[parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
