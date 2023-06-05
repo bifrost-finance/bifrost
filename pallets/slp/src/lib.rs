@@ -1242,7 +1242,7 @@ pub mod pallet {
 								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
-										Parachain(redeem_type.get_parachain_id()),
+										Parachain(T::VtokenMinting::get_astar_parachain_id()),
 										AccountId32 {
 											network: None,
 											id: user_account.encode().try_into().unwrap(),
@@ -1261,7 +1261,7 @@ pub mod pallet {
 								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
-										Parachain(redeem_type.get_parachain_id()),
+										Parachain(T::VtokenMinting::get_moonbeam_parachain_id()),
 										AccountKey20 {
 											network: None,
 											key: evm_caller.to_fixed_bytes(),

@@ -222,28 +222,3 @@ impl Default for RedeemType {
 		Self::Native
 	}
 }
-
-impl RedeemType {
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			RedeemType::Native =>
-				if cfg!(feature = "with-bifrost-polkadot-runtime") {
-					2030
-				} else {
-					2001
-				},
-			RedeemType::Astar =>
-				if cfg!(feature = "with-bifrost-polkadot-runtime") {
-					2006
-				} else {
-					2007
-				},
-			RedeemType::Moonbeam(_) =>
-				if cfg!(feature = "with-bifrost-polkadot-runtime") {
-					2004
-				} else {
-					2023
-				},
-		}
-	}
-}

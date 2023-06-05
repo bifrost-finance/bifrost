@@ -76,25 +76,6 @@ pub enum SupportChain {
 	Moonbeam,
 }
 
-impl SupportChain {
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			SupportChain::Astar =>
-				if cfg!(feature = "with-bifrost-polkadot-runtime") {
-					2006
-				} else {
-					2007
-				},
-			SupportChain::Moonbeam =>
-				if cfg!(feature = "with-bifrost-polkadot-runtime") {
-					2004
-				} else {
-					2023
-				},
-		}
-	}
-}
-
 #[derive(
 	Encode,
 	Decode,
@@ -596,7 +577,7 @@ impl<T: Config> Pallet<T> {
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
-						Parachain(SupportChain::Astar.get_parachain_id()),
+						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};
@@ -607,7 +588,7 @@ impl<T: Config> Pallet<T> {
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
-						Parachain(SupportChain::Moonbeam.get_parachain_id()),
+						Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
 						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 					),
 				};
