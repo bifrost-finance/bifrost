@@ -18,9 +18,10 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok, sp_io};
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, sp_io};
 use hex_literal::hex;
 use sp_core::{bounded::BoundedVec, ConstU32};
+use zenlink_protocol::AssetId;
 
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
 
@@ -77,5 +78,44 @@ fn test_xcm_action_util() {
 			10
 		));
 		assert_eq!(XcmAction::transfer_to_fee(SupportChain::Moonbeam), Some(10));
+	});
+}
+
+#[test]
+fn test_zenlink() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::BNC), &ALICE, 50));
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 50));
+
+		let bnc_token: AssetId =
+			AssetId::try_convert_from(CurrencyId::Native(TokenSymbol::BNC), 2001).unwrap();
+		let ksm_token: AssetId =
+			AssetId::try_convert_from(CurrencyId::Token(TokenSymbol::KSM), 2001).unwrap();
+
+		assert_ok!(ZenlinkProtocol::create_pair(RawOrigin::Root.into(), bnc_token, ksm_token));
+		assert_ok!(ZenlinkProtocol::add_liquidity(
+			RawOrigin::Signed(ALICE).into(),
+			bnc_token,
+			ksm_token,
+			20u128,
+			20u128,
+			0,
+			0,
+			100
+		));
+		assert_eq!(Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE), 30u128);
+		assert_eq!(Currencies::free_balance(CurrencyId::Token(TokenSymbol::KSM), &ALICE), 30u128);
+
+		let path = vec![bnc_token, ksm_token];
+		let balance = Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE);
+		let minimum_balance = Currencies::minimum_balance(CurrencyId::Native(TokenSymbol::BNC));
+		assert_ok!(ZenlinkProtocol::swap_exact_assets_for_assets(
+			RawOrigin::Signed(ALICE).into(),
+			balance - minimum_balance,
+			0,
+			path,
+			ALICE,
+			100
+		));
 	});
 }
