@@ -74,9 +74,9 @@ use bifrost_asset_registry::AssetIdMaps;
 #[allow(unused_imports)]
 use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 pub use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test,
+	remove_pallet::RemovePallet, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
+	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -1262,29 +1262,6 @@ impl bifrost_salp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const PolkaMinContribution: Balance = 5 * 10_000_000_000;
-	pub const PolkaLeasePeriod: BlockNumber = POLKA_LEASE_PERIOD;
-	pub PolkaConfirmAsMultiSig: AccountId = hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
-}
-
-impl bifrost_salp_lite::Config for Runtime {
-	type BancorPool = ();
-	type RuntimeEvent = RuntimeEvent;
-	type LeasePeriod = PolkaLeasePeriod;
-	type MinContribution = PolkaMinContribution;
-	type MultiCurrency = Currencies;
-	type PalletId = BifrostSalpLiteCrowdloanId;
-	type RelayChainToken = PolkadotCurrencyId;
-	type ReleaseCycle = ReleaseCycle;
-	type ReleaseRatio = ReleaseRatio;
-	type BatchKeysLimit = RemoveKeysLimit;
-	type SlotLength = SlotLength;
-	type WeightInfo = bifrost_salp_lite::weights::BifrostWeight<Runtime>;
-	type EnsureConfirmAsGovernance =
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-}
-
-parameter_types! {
 	pub const MaximumOrderInTrade: u32 = 1_000;
 	pub const MinimumSupply: Balance = 0;
 }
@@ -1301,60 +1278,11 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
-parameter_types! {
-	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
-	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
-	pub MaximumDepositInPool: Balance = 1_000_000_000_000_000 * dollar::<Runtime>(NativeCurrencyId::get());
-	pub const MinimumDepositOfUser: Balance = 1_000_000;
-	pub const MinimumRewardPerBlock: Balance = 1_000;
-	pub const MinimumDuration: BlockNumber = HOURS;
-	pub const MaximumOptionRewards: u32 = 7;
-	pub const MaximumCharged: u32 = 32;
-}
-
-impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance1> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ControlOrigin = MoreThanHalfCouncil;
-	type MultiCurrency = Currencies;
-	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
-	type MaximumDepositInPool = MaximumDepositInPool;
-	type MinimumDepositOfUser = MinimumDepositOfUser;
-	type MinimumRewardPerBlock = MinimumRewardPerBlock;
-	type MinimumDuration = MinimumDuration;
-	type MaximumCharged = MaximumCharged;
-	type MaximumOptionRewards = MaximumOptionRewards;
-	type PalletId = LiquidityMiningPalletId;
-	type WeightInfo = bifrost_liquidity_mining::weights::BifrostWeight<Runtime>;
-}
-
-impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ControlOrigin = MoreThanHalfCouncil;
-	type MultiCurrency = Currencies;
-	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
-	type MaximumDepositInPool = MaximumDepositInPool;
-	type MinimumDepositOfUser = MinimumDepositOfUser;
-	type MinimumRewardPerBlock = MinimumRewardPerBlock;
-	type MinimumDuration = MinimumDuration;
-	type MaximumCharged = MaximumCharged;
-	type MaximumOptionRewards = MaximumOptionRewards;
-	type PalletId = LiquidityMiningDOTPalletId;
-	type WeightInfo = bifrost_liquidity_mining::weights::BifrostWeight<Runtime>;
-}
-
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
-}
-
-impl bifrost_lightening_redeem::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Tokens;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type PalletId = LighteningRedeemPalletId;
-	type WeightInfo = bifrost_lightening_redeem::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1826,11 +1754,7 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
-		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
-		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
-		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
-		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>} = 114,
@@ -1882,6 +1806,21 @@ pub type UncheckedExtrinsic =
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+
+parameter_types! {
+	pub const LiquidityMiningDOTStr: &'static str = "LiquidityMiningDOT";
+	pub const LiquidityMiningStr: &'static str = "LiquidityMining";
+	pub const LighteningRedeemStr: &'static str = "LighteningRedeem";
+	pub const SalpLiteStr: &'static str = "SalpLite";
+}
+
+pub type Migrations = (
+	RemovePallet<LiquidityMiningDOTStr, RocksDbWeight>,
+	RemovePallet<LiquidityMiningStr, RocksDbWeight>,
+	RemovePallet<LighteningRedeemStr, RocksDbWeight>,
+	RemovePallet<SalpLiteStr, RocksDbWeight>,
+);
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -1889,7 +1828,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>,
+	(bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>, Migrations),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1900,11 +1839,8 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[bifrost_salp, Salp]
-		[bifrost_salp_lite, SalpLite]
-		[bifrost_liquidity_mining, LiquidityMining]
 		[bifrost_vsbond_auction, VSBondAuction]
 		[bifrost_token_issuer, TokenIssuer]
-		[bifrost_lightening_redeem, LighteningRedeem]
 		[bifrost_call_switchgear, CallSwitchgear]
 		[parachain_staking, ParachainStaking]
 		[bifrost_vtoken_minting, VtokenMinting]
@@ -2174,24 +2110,6 @@ impl_runtime_apis! {
 			match rs {
 				Ok((val,status)) => (val,status.to_rpc()),
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
-			}
-		}
-
-		fn get_lite_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
-			let rs = SalpLite::contribution_by_fund(index, &who);
-			match rs {
-				Ok((val,status)) => (val,status.to_rpc()),
-				_ => (Zero::zero(),RpcContributionStatus::Idle),
-			}
-		}
-	}
-
-	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
-		fn get_rewards(who: AccountId, pid: PoolId, pallet_instance: u32) -> Vec<(CurrencyId, Balance)> {
-			match pallet_instance {
-				1 => LiquidityMining::rewards(who, pid).unwrap_or(Vec::new()),
-				2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
-				_ => Vec::new()
 			}
 		}
 	}
