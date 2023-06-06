@@ -338,6 +338,8 @@ match_types! {
 
 /// Barrier allowing a top level paid message with DescendOrigin instruction
 /// first
+pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
+pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
 pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
 impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
 	fn should_execute<Call>(
@@ -365,11 +367,30 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 			.ok_or(())?;
 
 		// Then BuyExecution
-		iter.next()
-			.filter(|instruction| matches!(instruction, BuyExecution { .. }))
-			.ok_or(())?;
+		let i = iter.next().ok_or(())?;
+		match i {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
+				if weight.all_gte(max_weight) {
+					weight.set_ref_time(max_weight.ref_time());
+					weight.set_proof_size(max_weight.proof_size());
+				};
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
+			},
+			_ => {},
+		};
 
-		Ok(())
+		// Then Transact
+		let i = iter.next().ok_or(())?;
+		match i {
+			Transact { ref mut require_weight_at_most, .. } => {
+				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
+				*require_weight_at_most = weight;
+				Ok(())
+			},
+			_ => Err(()),
+		}
 	}
 }
 

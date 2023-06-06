@@ -255,7 +255,6 @@ pub mod pallet {
 
 			let target_chain = Self::match_support_chain(
 				support_chain,
-				&evm_contract_account_id,
 				evm_caller_account_id.clone(),
 				evm_caller,
 			)?;
@@ -276,6 +275,7 @@ pub mod pallet {
 
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
 						vtoken_id,
 						vtoken_amount,
 						target_chain,
@@ -291,6 +291,7 @@ pub mod pallet {
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
 						currency_id,
 						token_amount,
 						target_chain,
@@ -323,7 +324,6 @@ pub mod pallet {
 
 			let target_chain = Self::match_support_chain(
 				support_chain,
-				&evm_contract_account_id,
 				evm_caller_account_id.clone(),
 				evm_caller,
 			)?;
@@ -352,6 +352,7 @@ pub mod pallet {
 
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
 						currency_id_out,
 						currency_id_out_amount,
 						target_chain,
@@ -366,6 +367,7 @@ pub mod pallet {
 				},
 				Err(_) => Self::transfer_to(
 					evm_caller_account_id.clone(),
+					&evm_contract_account_id,
 					currency_id_in,
 					currency_id_in_amount,
 					target_chain,
@@ -389,7 +391,6 @@ pub mod pallet {
 
 			let target_chain = Self::match_support_chain(
 				support_chain,
-				&evm_contract_account_id,
 				evm_caller_account_id.clone(),
 				evm_caller,
 			)?;
@@ -416,6 +417,7 @@ pub mod pallet {
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
 						vtoken_id,
 						vtoken_amount,
 						target_chain,
@@ -547,27 +549,18 @@ impl<T: Config> Pallet<T> {
 
 	fn match_support_chain(
 		support_chain: SupportChain,
-		evm_contract_account_id: &T::AccountId,
 		evm_caller_account_id: T::AccountId,
 		evm_caller: H160,
 	) -> Result<TargetChain<T::AccountId>, DispatchError> {
 		match support_chain {
 			SupportChain::Astar => Ok(TargetChain::Astar(evm_caller_account_id)),
-			SupportChain::Moonbeam => {
-				T::MultiCurrency::transfer(
-					CurrencyId::Native(TokenSymbol::BNC),
-					&evm_contract_account_id,
-					&evm_caller_account_id,
-					Self::transfer_to_fee(SupportChain::Moonbeam)
-						.unwrap_or_else(|| BalanceOf::<T>::saturated_from(100_000_000_000u128)),
-				)?;
-				Ok(TargetChain::Moonbeam(evm_caller))
-			},
+			SupportChain::Moonbeam => Ok(TargetChain::Moonbeam(evm_caller)),
 		}
 	}
 
 	fn transfer_to(
 		caller: T::AccountId,
+		evm_contract_account_id: &T::AccountId,
 		currency_id: CurrencyIdOf<T>,
 		amount: BalanceOf<T>,
 		target_chain: TargetChain<T::AccountId>,
@@ -593,13 +586,33 @@ impl<T: Config> Pallet<T> {
 					),
 				};
 
-				let fee = CurrencyId::Native(TokenSymbol::BNC);
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-					.unwrap_or_else(|| BalanceOf::<T>::saturated_from(100_000_000_000u128));
+				match currency_id {
+					CurrencyId::VToken(TokenSymbol::KSM) |
+					CurrencyId::VToken(TokenSymbol::MOVR) |
+					CurrencyId::VToken2(0) |
+					CurrencyId::VToken2(1) => {
+						T::MultiCurrency::transfer(
+							CurrencyId::Native(TokenSymbol::BNC),
+							evm_contract_account_id,
+							&caller,
+							Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| {
+								BalanceOf::<T>::saturated_from(100_000_000_000u128)
+							}),
+						)?;
+						let fee = CurrencyId::Native(TokenSymbol::BNC);
+						let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+							.unwrap_or_else(|| BalanceOf::<T>::saturated_from(100_000_000_000u128));
 
-				let assets = vec![(currency_id, amount), (fee, fee_amount)];
+						let assets = vec![(currency_id, amount), (fee, fee_amount)];
 
-				T::XcmTransfer::transfer_multicurrencies(caller, assets, 1, dest, Unlimited)?;
+						T::XcmTransfer::transfer_multicurrencies(
+							caller, assets, 1, dest, Unlimited,
+						)?;
+					},
+					_ => {
+						T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+					},
+				};
 			},
 		};
 		Ok(())
