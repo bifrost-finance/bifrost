@@ -1853,10 +1853,6 @@ impl_runtime_apis! {
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
 		}
-
-		fn get_lite_contribution(_index: ParaId, _who: AccountId) -> (Balance,RpcContributionStatus) {
-				(Zero::zero(),RpcContributionStatus::Idle)
-		}
 	}
 
 	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {

@@ -859,12 +859,8 @@ dependencies = [
  "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
- "bifrost-lightening-redeem",
- "bifrost-liquidity-mining",
- "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-salp",
- "bifrost-salp-lite",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
  "bifrost-system-maker",
@@ -1003,32 +999,6 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
- "sp-std",
-]
-
-[[package]]
-name = "bifrost-liquidity-mining-rpc-api"
-version = "0.8.0"
-dependencies = [
- "bifrost-liquidity-mining-rpc-runtime-api",
- "jsonrpsee",
- "node-primitives",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-rpc",
- "sp-runtime",
-]
-
-[[package]]
-name = "bifrost-liquidity-mining-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "node-primitives",
- "parity-scale-codec",
- "sp-api",
  "sp-std",
 ]
 
@@ -1240,6 +1210,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-inherents",
+ "sp-io",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -6348,8 +6319,6 @@ dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
- "bifrost-liquidity-mining-rpc-api",
- "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-ve-minting-rpc-api",
@@ -6380,7 +6349,6 @@ dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
- "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-polkadot-runtime",
  "bifrost-runtime-common",
  "bifrost-salp-rpc-runtime-api",

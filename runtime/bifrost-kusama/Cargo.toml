@@ -97,13 +97,9 @@ bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
-bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
-bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
-bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
-bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
 # xcm-support = { path = "../../xcm-support", default-features = false }
@@ -216,12 +212,8 @@ std = [
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
-	"bifrost-salp-lite/std",
 	"bifrost-vsbond-auction/std",
-	"bifrost-liquidity-mining/std",
-	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
-	"bifrost-lightening-redeem/std",
 	"bifrost-slp/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-asset-registry/std",
@@ -266,11 +258,8 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-	"bifrost-salp-lite/runtime-benchmarks",
-	"bifrost-liquidity-mining/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
-	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
@@ -334,10 +323,7 @@ try-runtime = [
 	"zenlink-swap-router/try-runtime",
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
-	"bifrost-liquidity-mining/try-runtime",
 	"bifrost-token-issuer/try-runtime",
-	"bifrost-lightening-redeem/try-runtime",
-	"bifrost-salp-lite/try-runtime",
 	"bifrost-call-switchgear/try-runtime",
 	"bifrost-vsbond-auction/try-runtime",
 	"bifrost-asset-registry/try-runtime",
