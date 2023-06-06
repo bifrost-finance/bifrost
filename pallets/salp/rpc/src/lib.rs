@@ -66,14 +66,6 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 		who: AccountId,
 		at: Option<BlockHash>,
 	) -> RpcResult<(NumberOrHex, RpcContributionStatus)>;
-
-	#[method(name = "salp_getLiteContribution")]
-	fn get_lite_contribution(
-		&self,
-		index: ParaId,
-		who: AccountId,
-		at: Option<BlockHash>,
-	) -> RpcResult<(NumberOrHex, RpcContributionStatus)>;
 }
 
 #[async_trait]
@@ -96,31 +88,6 @@ where
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
-
-		match rs {
-			Ok((val, status)) => match convert_rpc_params(val) {
-				Ok(value) => Ok((value, status)),
-				Err(e) => Err(e),
-			},
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
-				ErrorCode::InternalError.code(),
-				"Failed to get salp contribution.",
-				Some(format!("{:?}", e)),
-			)))
-			.map_err(|e| jsonrpsee::core::Error::Call(e)),
-		}
-	}
-
-	fn get_lite_contribution(
-		&self,
-		index: ParaId,
-		account: AccountId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<(NumberOrHex, RpcContributionStatus)> {
-		let salp_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-		let rs = salp_rpc_api.get_lite_contribution(&at, index, account);
 
 		match rs {
 			Ok((val, status)) => match convert_rpc_params(val) {
