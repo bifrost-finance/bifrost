@@ -222,22 +222,3 @@ impl Default for RedeemType {
 		Self::Native
 	}
 }
-
-impl RedeemType {
-	#[cfg(feature = "with-bifrost-kusama-runtime")]
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			RedeemType::Native => 2001,
-			RedeemType::Astar => 2007,
-			RedeemType::Moonbeam(_) => 2023,
-		}
-	}
-	#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
-	pub fn get_parachain_id(self) -> u32 {
-		match self {
-			RedeemType::Native => 2030,
-			RedeemType::Astar => 2006,
-			RedeemType::Moonbeam(_) => 2004,
-		}
-	}
-}

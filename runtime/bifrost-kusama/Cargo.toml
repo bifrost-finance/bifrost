@@ -28,6 +28,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -112,6 +113,7 @@ bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
+bifrost-xcm-action = { path = "../../pallets/xcm-action", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -168,6 +170,7 @@ std = [
 	"pallet-tips/std",
 	"pallet-whitelist/std",
 	"sp-api/std",
+	"sp-io/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -219,6 +222,7 @@ std = [
 	"bifrost-cross-in-out/std",
 	"parachain-staking/std",
 	"bifrost-fee-share/std",
+	"bifrost-xcm-action/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -332,6 +336,7 @@ try-runtime = [
 	"bifrost-system-maker/try-runtime",
 	"bifrost-fee-share/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
+	"bifrost-xcm-action/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

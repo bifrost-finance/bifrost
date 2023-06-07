@@ -870,6 +870,7 @@ dependencies = [
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
+ "bifrost-xcm-action",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -937,6 +938,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-inherents",
+ "sp-io",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -1089,6 +1091,7 @@ dependencies = [
  "bifrost-vesting",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
+ "bifrost-xcm-action",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -1150,6 +1153,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-inherents",
+ "sp-io",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -1579,6 +1583,41 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-xcm-action"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-pallet-xcm",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+ "xcm-interface",
+ "xcm-simulator",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -14824,6 +14863,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "xcm-simulator"
+version = "0.9.38"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.38#097ffd245c42aeff28cf80f8a3568e1bee2e7da7"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

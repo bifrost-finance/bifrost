@@ -117,6 +117,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayChainToken: Get<CurrencyId>;
 
+		#[pallet::constant]
+		type AstarParachainId: Get<u32>;
+
+		#[pallet::constant]
+		type MoonbeamParachainId: Get<u32>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
@@ -920,7 +926,7 @@ pub mod pallet {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
-								Parachain(redeem_type.get_parachain_id()),
+								Parachain(T::AstarParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: account.encode().try_into().unwrap(),
@@ -939,7 +945,7 @@ pub mod pallet {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
-								Parachain(redeem_type.get_parachain_id()),
+								Parachain(T::MoonbeamParachainId::get()),
 								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
 							),
 						};
@@ -1505,6 +1511,13 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType)> {
 		Self::token_unlock_ledger(currency_id, index)
 	}
+
+	fn get_astar_parachain_id() -> u32 {
+		T::AstarParachainId::get()
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		T::MoonbeamParachainId::get()
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1561,5 +1574,12 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 
 	fn get_minimums_redeem(vtoken_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		MinimumRedeem::<T>::get(vtoken_id)
+	}
+
+	fn get_astar_parachain_id() -> u32 {
+		T::AstarParachainId::get()
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		T::MoonbeamParachainId::get()
 	}
 }

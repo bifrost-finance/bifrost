@@ -1586,6 +1586,21 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2007>;
+	type MoonbeamParachainId = ConstU32<2023>;
+}
+
+impl bifrost_xcm_action::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MultiCurrency = Currencies;
+	type DexOperator = ZenlinkProtocol;
+	type VtokenMintingInterface = VtokenMinting;
+	type XcmTransfer = XTokens;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1767,6 +1782,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
+		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 125,
 	}
 }
 

@@ -229,6 +229,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2007>;
+	type MoonbeamParachainId = ConstU32<2023>;
 }
 
 parameter_types! {

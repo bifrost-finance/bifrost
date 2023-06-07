@@ -249,6 +249,8 @@ impl vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2007>;
+	type MoonbeamParachainId = ConstU32<2023>;
 }
 
 ord_parameter_types! {
