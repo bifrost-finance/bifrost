@@ -23,7 +23,8 @@
 //! 3. pallet-referenda
 
 use super::*;
-use frame_support::traits::EitherOf;
+use frame_support::traits::{ConstU16, EitherOf};
+use frame_system::EnsureRootWithSuccess;
 
 parameter_types! {
 	pub const VoteLockingPeriod: BlockNumber = 1 * DAYS;
@@ -55,10 +56,8 @@ impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = pallet_whitelist::weights::SubstrateWeight<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WhitelistOrigin = EitherOfDiverse<
-		EnsureRoot<Self::AccountId>,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type WhitelistOrigin =
+		EitherOf<EnsureRootWithSuccess<Self::AccountId, ConstU16<65535>>, Fellows>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;
 	type Preimages = Preimage;
 }
