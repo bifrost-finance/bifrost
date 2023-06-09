@@ -447,6 +447,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Treasury(..) |
 				RuntimeCall::Bounties(..) |
 				RuntimeCall::Tips(..) |
+				RuntimeCall::ConvictionVoting(..) |
+				RuntimeCall::Referenda(..) |
+				RuntimeCall::FellowshipCollective(..) |
+				RuntimeCall::FellowshipReferenda(..) |
+				RuntimeCall::Whitelist(..) |
 				RuntimeCall::Vesting(pallet_vesting::Call::vest{..}) |
 				RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
@@ -457,16 +462,21 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			),
 			ProxyType::Staking =>
 				matches!(c, RuntimeCall::ParachainStaking(..) | RuntimeCall::Utility(..)),
-			ProxyType::Governance =>
-				matches!(
-					c,
-					RuntimeCall::Democracy(..) |
+			ProxyType::Governance => matches!(
+				c,
+				RuntimeCall::Democracy(..) |
 						RuntimeCall::Council(..) | RuntimeCall::TechnicalCommittee(..) |
 						RuntimeCall::PhragmenElection(..) |
 						RuntimeCall::Treasury(..) |
 						RuntimeCall::Bounties(..) |
-						RuntimeCall::Tips(..) | RuntimeCall::Utility(..)
-				),
+						RuntimeCall::Tips(..) | RuntimeCall::Utility(..) |
+						// OpenGov calls
+						RuntimeCall::ConvictionVoting(..) |
+						RuntimeCall::Referenda(..) |
+						RuntimeCall::FellowshipCollective(..) |
+						RuntimeCall::FellowshipReferenda(..) |
+						RuntimeCall::Whitelist(..)
+			),
 			ProxyType::CancelProxy => {
 				matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
@@ -1783,6 +1793,8 @@ construct_runtime! {
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 125,
+		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
+		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 	}
 }
 
@@ -1871,7 +1883,9 @@ mod benches {
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[pallet_vesting, Vesting]
 		[pallet_conviction_voting, ConvictionVoting]
+		[pallet_ranked_collective, FellowshipCollective]
 		[pallet_referenda, Referenda]
+		[pallet_referenda, FellowshipReferenda]
 		[pallet_whitelist, Whitelist]
 	);
 }
