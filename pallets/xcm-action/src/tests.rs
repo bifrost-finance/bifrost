@@ -119,3 +119,26 @@ fn test_zenlink() {
 		));
 	});
 }
+
+#[test]
+fn test_get_default_fee() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_eq!(XcmAction::get_default_fee(NATIVE_CURRENCY), 10_000_000_000u128);
+		assert_eq!(
+			XcmAction::get_default_fee(CurrencyId::Token(TokenSymbol::KSM)),
+			10_000_000_000u128
+		);
+		assert_eq!(
+			XcmAction::get_default_fee(CurrencyId::Token(TokenSymbol::MOVR)),
+			10_000_000_000_000_000u128
+		);
+		assert_eq!(
+			XcmAction::get_default_fee(CurrencyId::VToken(TokenSymbol::KSM)),
+			10_000_000_000u128
+		);
+		assert_eq!(
+			XcmAction::get_default_fee(CurrencyId::VToken(TokenSymbol::MOVR)),
+			10_000_000_000_000_000u128
+		);
+	});
+}
