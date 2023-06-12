@@ -29,7 +29,7 @@ use frame_support::{
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{
-	CurrencyId, CurrencyIdMapping, TokenSymbol, TryConvertFrom, VtokenMintingInterface,
+	CurrencyId, CurrencyIdMapping, TokenInfo, TokenSymbol, TryConvertFrom, VtokenMintingInterface,
 };
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
@@ -57,6 +57,9 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub const NATIVE_CURRENCY: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const DOT_TOKEN_ID: u8 = 0;
+pub const GLMR_TOKEN_ID: u8 = 1;
 
 #[derive(
 	Encode,
@@ -253,11 +256,8 @@ pub mod pallet {
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
 
-			let target_chain = Self::match_support_chain(
-				support_chain,
-				evm_caller_account_id.clone(),
-				evm_caller,
-			)?;
+			let target_chain =
+				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
 
 			let token_amount = Self::charge_execution_fee(currency_id, &evm_caller_account_id)?;
 
@@ -322,11 +322,8 @@ pub mod pallet {
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
 
-			let target_chain = Self::match_support_chain(
-				support_chain,
-				evm_caller_account_id.clone(),
-				evm_caller,
-			)?;
+			let target_chain =
+				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(currency_id_in, T::ParachainId::get().into())
@@ -389,11 +386,8 @@ pub mod pallet {
 			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
 
-			let target_chain = Self::match_support_chain(
-				support_chain,
-				evm_caller_account_id.clone(),
-				evm_caller,
-			)?;
+			let target_chain =
+				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
 
 			let vtoken_amount = Self::charge_execution_fee(vtoken_id, &evm_caller_account_id)?;
 
@@ -536,7 +530,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
 		let execution_fee =
-			Self::execution_fee(currency_id).ok_or(Error::<T>::NotSetExecutionFee)?;
+			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
 		let minimum_balance = T::MultiCurrency::minimum_balance(currency_id);
 		ensure!(
 			free_balance > execution_fee.saturating_add(minimum_balance),
@@ -555,10 +549,10 @@ impl<T: Config> Pallet<T> {
 		support_chain: SupportChain,
 		evm_caller_account_id: T::AccountId,
 		evm_caller: H160,
-	) -> Result<TargetChain<T::AccountId>, DispatchError> {
+	) -> TargetChain<T::AccountId> {
 		match support_chain {
-			SupportChain::Astar => Ok(TargetChain::Astar(evm_caller_account_id)),
-			SupportChain::Moonbeam => Ok(TargetChain::Moonbeam(evm_caller)),
+			SupportChain::Astar => TargetChain::Astar(evm_caller_account_id),
+			SupportChain::Moonbeam => TargetChain::Moonbeam(evm_caller),
 		}
 	}
 
@@ -589,25 +583,20 @@ impl<T: Config> Pallet<T> {
 						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 					),
 				};
-
+				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+					.unwrap_or_else(|| Self::get_default_fee(NATIVE_CURRENCY));
 				match currency_id {
 					CurrencyId::VToken(TokenSymbol::KSM) |
 					CurrencyId::VToken(TokenSymbol::MOVR) |
-					CurrencyId::VToken2(0) |
-					CurrencyId::VToken2(1) => {
+					CurrencyId::VToken2(DOT_TOKEN_ID) |
+					CurrencyId::VToken2(GLMR_TOKEN_ID) => {
 						T::MultiCurrency::transfer(
-							CurrencyId::Native(TokenSymbol::BNC),
+							NATIVE_CURRENCY,
 							evm_contract_account_id,
 							&caller,
-							Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| {
-								BalanceOf::<T>::saturated_from(100_000_000_000u128)
-							}),
+							fee_amount,
 						)?;
-						let fee = CurrencyId::Native(TokenSymbol::BNC);
-						let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-							.unwrap_or_else(|| BalanceOf::<T>::saturated_from(100_000_000_000u128));
-
-						let assets = vec![(currency_id, amount), (fee, fee_amount)];
+						let assets = vec![(currency_id, amount), (NATIVE_CURRENCY, fee_amount)];
 
 						T::XcmTransfer::transfer_multicurrencies(
 							caller, assets, 1, dest, Unlimited,
@@ -630,5 +619,17 @@ impl<T: Config> Pallet<T> {
 
 		let account_id_32 = sp_runtime::AccountId32::from(Into::<[u8; 32]>::into(hash));
 		T::AccountId::decode(&mut account_id_32.as_ref()).expect("Fail to decode address")
+	}
+
+	pub fn get_default_fee(currency_id: CurrencyId) -> BalanceOf<T> {
+		let decimals = currency_id
+			.decimals()
+			.unwrap_or(
+				T::CurrencyIdConvert::get_currency_metadata(currency_id)
+					.map_or(12, |metatata| metatata.decimals.into()),
+			)
+			.into();
+
+		BalanceOf::<T>::saturated_from(10u128.saturating_pow(decimals).saturating_div(100u128))
 	}
 }
