@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
 
 extern crate core;
 
@@ -1076,7 +1075,7 @@ pub mod pallet {
 		// true. if we convert from some other currency to currency_id, then if_from_currency should
 		// be false.
 		#[pallet::call_index(14)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::convert_asset())]
 		pub fn convert_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1088,7 +1087,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			// staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
+			staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
@@ -1426,7 +1425,7 @@ pub mod pallet {
 			let pool_token = T::VtokenMinting::get_token_pool(currency_id);
 			// Calculate max increase allowed.
 			let max_to_increase = max_permill.mul_floor(pool_token);
-			// ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
+			ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
 
 			// Ensure this tune is within limit.
 			// Get current TimeUnit.
@@ -2190,7 +2189,7 @@ pub mod pallet {
 
 		/// Update storage Validator_boost_list<T>.
 		#[pallet::call_index(46)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::remove_from_validator_boot_list())]
 		pub fn remove_from_validator_boot_list(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,

@@ -1142,13 +1142,13 @@ pub mod pallet {
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![relay_asset_id, relay_vstoken_asset_id];
 
-			// T::DexOperator::inner_swap_exact_assets_for_assets(
-			// 	&T::BuybackPalletId::get().into_account_truncating(),
-			// 	value.saturated_into(),
-			// 	Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
-			// 	&path,
-			// 	&T::TreasuryAccount::get(),
-			// )?;
+			T::DexOperator::inner_swap_exact_assets_for_assets(
+				&T::BuybackPalletId::get().into_account_truncating(),
+				value.saturated_into(),
+				Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
+				&path,
+				&T::TreasuryAccount::get(),
+			)?;
 
 			Self::deposit_event(Event::<T>::Buyback(value));
 

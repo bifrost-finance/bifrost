@@ -23,8 +23,8 @@
 use frame_benchmarking::{account, benchmarks, v1::BenchmarkError, whitelisted_caller};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use frame_system::RawOrigin;
-use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
 use node_primitives::TokenSymbol;
+use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
 
 #[allow(unused_imports)]
 pub use crate::{Pallet as Slp, *};
