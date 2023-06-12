@@ -3,7 +3,7 @@
 ## EXAMPLE
 ##
 ## Generate the weightInfo files of `bifrost-runtimes`;
-# sh ./script/generate-weights.sh bifrost
+# sh ./scripts/generate-weights.sh bifrost
 
 # 1. Build all-release which is added with "runtime-benchmarks" feature;
 make build-all-release-with-bench

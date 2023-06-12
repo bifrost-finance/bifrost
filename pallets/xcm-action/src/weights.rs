@@ -27,7 +27,7 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-06-12, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -73,8 +73,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `109`
 		//  Estimated: `2813`
-		// Minimum execution time: 10_000_000 picoseconds.
-		Weight::from_parts(11_000_000, 2813)
+		// Minimum execution time: 34_393_000 picoseconds.
+		Weight::from_parts(35_349_000, 2813)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
@@ -84,8 +84,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `218`
 		//  Estimated: `2813`
-		// Minimum execution time: 11_000_000 picoseconds.
-		Weight::from_parts(12_000_000, 2813)
+		// Minimum execution time: 37_884_000 picoseconds.
+		Weight::from_parts(38_449_000, 2813)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
@@ -95,8 +95,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		// Minimum execution time: 20_535_000 picoseconds.
+		Weight::from_parts(21_107_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: XcmAction TransferToFee (r:0 w:1)
@@ -105,8 +105,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		// Minimum execution time: 20_762_000 picoseconds.
+		Weight::from_parts(21_610_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: XcmAction WhitelistAccountId (r:1 w:0)
@@ -131,8 +131,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `2180`
 		//  Estimated: `28305`
-		// Minimum execution time: 91_000_000 picoseconds.
-		Weight::from_parts(92_000_000, 28305)
+		// Minimum execution time: 213_010_000 picoseconds.
+		Weight::from_parts(215_837_000, 28305)
 			.saturating_add(T::DbWeight::get().reads(11_u64))
 			.saturating_add(T::DbWeight::get().writes(5_u64))
 	}
@@ -160,8 +160,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1866`
 		//  Estimated: `27153`
-		// Minimum execution time: 39_000_000 picoseconds.
-		Weight::from_parts(40_000_000, 27153)
+		// Minimum execution time: 103_512_000 picoseconds.
+		Weight::from_parts(104_442_000, 27153)
 			.saturating_add(T::DbWeight::get().reads(10_u64))
 	}
 	/// Storage: XcmAction WhitelistAccountId (r:1 w:0)
@@ -180,8 +180,8 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1703`
 		//  Estimated: `17810`
-		// Minimum execution time: 31_000_000 picoseconds.
-		Weight::from_parts(32_000_000, 17810)
+		// Minimum execution time: 88_961_000 picoseconds.
+		Weight::from_parts(90_236_000, 17810)
 			.saturating_add(T::DbWeight::get().reads(7_u64))
 	}
 }
@@ -194,8 +194,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `109`
 		//  Estimated: `2813`
-		// Minimum execution time: 10_000_000 picoseconds.
-		Weight::from_parts(11_000_000, 2813)
+		// Minimum execution time: 34_393_000 picoseconds.
+		Weight::from_parts(35_349_000, 2813)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
@@ -205,8 +205,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `218`
 		//  Estimated: `2813`
-		// Minimum execution time: 11_000_000 picoseconds.
-		Weight::from_parts(12_000_000, 2813)
+		// Minimum execution time: 37_884_000 picoseconds.
+		Weight::from_parts(38_449_000, 2813)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
@@ -216,8 +216,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		// Minimum execution time: 20_535_000 picoseconds.
+		Weight::from_parts(21_107_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: XcmAction TransferToFee (r:0 w:1)
@@ -226,8 +226,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		// Minimum execution time: 20_762_000 picoseconds.
+		Weight::from_parts(21_610_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: XcmAction WhitelistAccountId (r:1 w:0)
@@ -252,8 +252,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `2180`
 		//  Estimated: `28305`
-		// Minimum execution time: 91_000_000 picoseconds.
-		Weight::from_parts(92_000_000, 28305)
+		// Minimum execution time: 213_010_000 picoseconds.
+		Weight::from_parts(215_837_000, 28305)
 			.saturating_add(RocksDbWeight::get().reads(11_u64))
 			.saturating_add(RocksDbWeight::get().writes(5_u64))
 	}
@@ -281,8 +281,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `1866`
 		//  Estimated: `27153`
-		// Minimum execution time: 39_000_000 picoseconds.
-		Weight::from_parts(40_000_000, 27153)
+		// Minimum execution time: 103_512_000 picoseconds.
+		Weight::from_parts(104_442_000, 27153)
 			.saturating_add(RocksDbWeight::get().reads(10_u64))
 	}
 	/// Storage: XcmAction WhitelistAccountId (r:1 w:0)
@@ -301,8 +301,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `1703`
 		//  Estimated: `17810`
-		// Minimum execution time: 31_000_000 picoseconds.
-		Weight::from_parts(32_000_000, 17810)
+		// Minimum execution time: 88_961_000 picoseconds.
+		Weight::from_parts(90_236_000, 17810)
 			.saturating_add(RocksDbWeight::get().reads(7_u64))
 	}
 }
