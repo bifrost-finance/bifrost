@@ -822,6 +822,86 @@ benchmarks! {
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 
+	reset_validators {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::reset_validators {
+			currency_id:KSM,
+			validator_list:vec![subaccount_0_location],
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	set_validator_boost_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::set_validator_boost_list {
+			currency_id:KSM,
+			validator_list:vec![subaccount_0_location],
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	convert_asset {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::convert_asset {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000_000u128),
+			if_from_currency: true
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	add_to_validator_boost_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::add_to_validator_boost_list {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	remove_from_validator_boot_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_ok!(Slp::<T>::add_to_validator_boost_list(origin.clone(),KSM,Box::new(subaccount_0_location.clone())));
+
+		let call = Call::<T>::remove_from_validator_boot_list {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+
 	set_minimums_and_maximums {
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 

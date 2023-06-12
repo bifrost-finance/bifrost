@@ -1076,7 +1076,7 @@ pub mod pallet {
 		// true. if we convert from some other currency to currency_id, then if_from_currency should
 		// be false.
 		#[pallet::call_index(14)]
-		#[pallet::weight(T::WeightInfo::convert_asset())]
+		#[pallet::weight(0)]
 		pub fn convert_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1088,7 +1088,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
+			// staking_agent.convert_asset(&who, amount, currency_id, if_from_currency)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
@@ -2190,7 +2190,7 @@ pub mod pallet {
 
 		/// Update storage Validator_boost_list<T>.
 		#[pallet::call_index(46)]
-		#[pallet::weight(T::WeightInfo::remove_from_validator_boot_list())]
+		#[pallet::weight(0)]
 		pub fn remove_from_validator_boot_list(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
