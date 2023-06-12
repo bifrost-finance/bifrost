@@ -724,8 +724,6 @@ name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
- "bifrost-kusama-runtime",
- "bifrost-runtime-common",
  "bifrost-salp",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -737,7 +735,6 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
- "pallet-collective",
  "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",

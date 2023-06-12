@@ -200,14 +200,14 @@ fn set_universal_fee_currency_order_list_should_work() {
 		.unwrap();
 		assert_noop!(
 			FlexibleFee::set_universal_fee_currency_order_list(
-				RuntimeOrigin::root(),
+				RuntimeOrigin::signed(CHARLIE),
 				asset_order_list_vec.clone()
 			),
 			BadOrigin
 		);
 
 		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
-			RuntimeOrigin::signed(CHARLIE),
+			RuntimeOrigin::root(),
 			asset_order_list_vec.clone()
 		));
 
@@ -231,7 +231,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		.unwrap();
 
 		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
-			RuntimeOrigin::signed(CHARLIE),
+			RuntimeOrigin::root(),
 			asset_order_list_bounded_vec.clone(),
 		));
 
@@ -275,7 +275,7 @@ fn ensure_can_charge_fee_should_work() {
 		.unwrap();
 
 		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
-			RuntimeOrigin::signed(CHARLIE),
+			RuntimeOrigin::root(),
 			asset_order_list_vec.clone()
 		));
 

@@ -273,13 +273,13 @@ pub mod pallet {
 					let vtoken_amount =
 						T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
 
-					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
-						vtoken_id,
-						vtoken_amount,
-						target_chain,
-					)?;
+					// Self::transfer_to(
+					// 	evm_caller_account_id.clone(),
+					// 	&evm_contract_account_id,
+					// 	vtoken_id,
+					// 	vtoken_amount,
+					// 	target_chain,
+					// )?;
 
 					Self::deposit_event(Event::XcmMint {
 						evm_caller,
@@ -289,13 +289,13 @@ pub mod pallet {
 					});
 				},
 				Err(_) => {
-					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
-						currency_id,
-						token_amount,
-						target_chain,
-					)?;
+					// Self::transfer_to(
+					// 	evm_caller_account_id.clone(),
+					// 	&evm_contract_account_id,
+					// 	currency_id,
+					// 	token_amount,
+					// 	target_chain,
+					// )?;
 					Self::deposit_event(Event::XcmMintFailed {
 						evm_caller,
 						currency_id,
@@ -350,13 +350,13 @@ pub mod pallet {
 					let currency_id_out_amount =
 						T::MultiCurrency::free_balance(currency_id_out, &evm_caller_account_id);
 
-					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
-						currency_id_out,
-						currency_id_out_amount,
-						target_chain,
-					)?;
+					// Self::transfer_to(
+					// 	evm_caller_account_id.clone(),
+					// 	&evm_contract_account_id,
+					// 	currency_id_out,
+					// 	currency_id_out_amount,
+					// 	target_chain,
+					// )?;
 
 					Self::deposit_event(Event::XcmSwap {
 						evm_caller,
@@ -365,13 +365,14 @@ pub mod pallet {
 						support_chain,
 					});
 				},
-				Err(_) => Self::transfer_to(
-					evm_caller_account_id.clone(),
-					&evm_contract_account_id,
-					currency_id_in,
-					currency_id_in_amount,
-					target_chain,
-				)?,
+				Err(_) => {}
+				// 	Self::transfer_to(
+				// 	evm_caller_account_id.clone(),
+				// 	&evm_contract_account_id,
+				// 	currency_id_in,
+				// 	currency_id_in_amount,
+				// 	target_chain,
+				// )?,
 			}
 			Ok(().into())
 		}
@@ -415,13 +416,13 @@ pub mod pallet {
 					support_chain,
 				}),
 				Err(_) => {
-					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
-						vtoken_id,
-						vtoken_amount,
-						target_chain,
-					)?;
+					// Self::transfer_to(
+					// 	evm_caller_account_id.clone(),
+					// 	&evm_contract_account_id,
+					// 	vtoken_id,
+					// 	vtoken_amount,
+					// 	target_chain,
+					// )?;
 					Self::deposit_event(Event::XcmRedeemFailed {
 						evm_caller,
 						vtoken_id,

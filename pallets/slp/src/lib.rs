@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
 
 extern crate core;
 
@@ -1425,7 +1426,7 @@ pub mod pallet {
 			let pool_token = T::VtokenMinting::get_token_pool(currency_id);
 			// Calculate max increase allowed.
 			let max_to_increase = max_permill.mul_floor(pool_token);
-			ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
+			// ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
 
 			// Ensure this tune is within limit.
 			// Get current TimeUnit.

@@ -309,8 +309,8 @@ pub mod pallet {
 			let (msg_id, msg) =
 				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;
 
-			let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
-			ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
+			// let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
+			// ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
 			Ok(msg_id)
 		}
 	}

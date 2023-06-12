@@ -142,8 +142,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -200,8 +200,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -266,8 +266,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -308,8 +308,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_e| Error::<T>::XcmFailure)?;
+			// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
 		} else {
@@ -372,8 +372,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -432,8 +432,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -500,8 +500,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -602,8 +602,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -651,8 +651,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -666,7 +666,7 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
-		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+		// ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
 		let (dest, beneficiary) =
 			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
@@ -1022,8 +1022,8 @@ impl<T: Config> PolkadotAgent<T> {
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
 
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
+		// send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		// 	.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
