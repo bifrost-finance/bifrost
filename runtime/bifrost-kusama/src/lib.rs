@@ -1881,12 +1881,7 @@ mod benches {
 		[bifrost_flexible_fee, FlexibleFee]
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
-		[pallet_vesting, Vesting]
-		[pallet_conviction_voting, ConvictionVoting]
-		[pallet_ranked_collective, FellowshipCollective]
-		[pallet_referenda, Referenda]
-		[pallet_referenda, FellowshipReferenda]
-		[pallet_whitelist, Whitelist]
+		[bifrost_xcm_action, XcmAction]
 	);
 }
 

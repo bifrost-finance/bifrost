@@ -115,7 +115,7 @@ benchmarks! {
 	}
 
 	batch_unlock {
-		let k in 1 .. T::RemoveKeysLimit::get();
+		let k in 1 .. 5;
 		let fund_index = create_fund::<T>(1);
 		let contribution = T::MinContribution::get();
 		let mut caller: T::AccountId = whitelisted_caller();

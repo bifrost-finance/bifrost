@@ -17,11 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
+#![recursion_limit = "256"]
 #![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::{account, benchmarks, v1::BenchmarkError, whitelisted_caller};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use frame_system::RawOrigin;
+use node_primitives::TokenSymbol;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
 
 #[allow(unused_imports)]
@@ -558,6 +560,7 @@ benchmarks! {
   }: {call.dispatch_bypass_filter(origin)?}
 
 	charge_host_fee_and_tune_vtoken_exchange_rate {
+		kusama_setup::<T>()?;
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let who: T::AccountId = whitelisted_caller();
 		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
@@ -567,7 +570,6 @@ benchmarks! {
 		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
 		let validator_0_location: MultiLocation =
 			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
 		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
 
@@ -580,19 +582,22 @@ benchmarks! {
 			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 		assert_ok!(Slp::<T>::set_hosting_fees(origin.clone(), KSM, Some((pct, treasury_location))));
-		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
 		assert_ok!(Slp::<T>::set_currency_tune_exchange_rate_limit(origin.clone(), KSM,Some((1, pct_100))));
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::KSM), &who, BalanceOf::<T>::unique_saturated_from(1000000000000u128)));
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::KSM), &who, BalanceOf::<T>::unique_saturated_from(1000000000000u128)));
+
+		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
 		assert_ok!(Slp::<T>::bond(
 			RawOrigin::Signed(who.clone()).into(),
 			KSM,
 			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
 			Some(validator_0_location.clone()),
 		));
 
 		let call = Call::<T>::charge_host_fee_and_tune_vtoken_exchange_rate {
 			currency_id:KSM,
-			value:BalanceOf::<T>::unique_saturated_from(100u128),
+			value: BalanceOf::<T>::unique_saturated_from(100_000_000_000u128),
 			who:Some(subaccount_0_location.clone()),
 		};
   }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
@@ -816,6 +821,86 @@ benchmarks! {
 			who:Box::new(subaccount_0_location.clone()),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
+
+	reset_validators {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::reset_validators {
+			currency_id:KSM,
+			validator_list:vec![subaccount_0_location],
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	set_validator_boost_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::set_validator_boost_list {
+			currency_id:KSM,
+			validator_list:vec![subaccount_0_location],
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	convert_asset {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::convert_asset {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000_000u128),
+			if_from_currency: true
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	add_to_validator_boost_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let call = Call::<T>::add_to_validator_boost_list {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	remove_from_validator_boot_list {
+		kusama_setup::<T>()?;
+		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let who: T::AccountId = whitelisted_caller();
+		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_ok!(Slp::<T>::add_to_validator_boost_list(origin.clone(),KSM,Box::new(subaccount_0_location.clone())));
+
+		let call = Call::<T>::remove_from_validator_boot_list {
+			currency_id:KSM,
+			who:Box::new(subaccount_0_location.clone()),
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
 
 	set_minimums_and_maximums {
 		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
