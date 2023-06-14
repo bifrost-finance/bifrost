@@ -293,6 +293,7 @@ try-runtime = [
 	"bifrost-fee-share/try-runtime",
 	"bifrost-ve-minting/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
+	"bifrost-xcm-action/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
