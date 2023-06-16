@@ -123,7 +123,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 974,
+	spec_version: 976,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1200,6 +1200,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
 }
 
 parameter_types! {
@@ -1284,6 +1285,19 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+}
+
+impl bifrost_xcm_action::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MultiCurrency = Currencies;
+	type DexOperator = ZenlinkProtocol;
+	type VtokenMintingInterface = VtokenMinting;
+	type XcmTransfer = XTokens;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
 }
 
 // Bifrost modules end
@@ -1378,6 +1392,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2006>;
+	type MoonbeamParachainId = ConstU32<2004>;
 }
 
 parameter_types! {
@@ -1575,6 +1592,7 @@ construct_runtime! {
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
+		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 125,
 	}
 }
 
@@ -1621,7 +1639,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1637,6 +1655,7 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_salp, Salp]
 		[bifrost_ve_minting, VeMinting]
+		[bifrost_xcm_action, XcmAction]
 	);
 }
 
@@ -1833,10 +1852,6 @@ impl_runtime_apis! {
 				Ok((val,status)) => (val,status.to_rpc()),
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
-		}
-
-		fn get_lite_contribution(_index: ParaId, _who: AccountId) -> (Balance,RpcContributionStatus) {
-				(Zero::zero(),RpcContributionStatus::Idle)
 		}
 	}
 

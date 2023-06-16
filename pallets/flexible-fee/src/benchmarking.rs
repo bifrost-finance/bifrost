@@ -33,16 +33,11 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller),Some(CurrencyId::Token(TokenSymbol::DOT)))
 
 	set_universal_fee_currency_order_list {
-		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
-	}: _<T::RuntimeOrigin>(origin,default_list)
+	}: _(RawOrigin::Root,default_list)
 
-	remove_from_user_fee_charge_order_list {
-		let caller = whitelisted_caller();
-		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
-		assert_ok!(FlexibleFee::<T>::set_universal_fee_currency_order_list(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			default_list,
-		));
-	}: _(RawOrigin::Signed(caller))
+	impl_benchmark_test_suite!(
+	FlexibleFee,
+	crate::mock::ExtBuilder::default().build(),
+	crate::mock::Test)
 }

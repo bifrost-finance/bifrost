@@ -211,11 +211,7 @@ pub mod pallet {
 		// edit exchange discount price
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::edit_exchange_price())]
-		pub fn edit_exchange_price(
-			origin: OriginFor<T>,
-			price: BalanceOf<T>, /* the mumber of ksm we can get by giving out 100 vsksm and 100
-			                      * vsbond */
-		) -> DispatchResult {
+		pub fn edit_exchange_price(origin: OriginFor<T>, price: BalanceOf<T>) -> DispatchResult {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			ensure!(price <= BalanceOf::<T>::unique_saturated_from(100u128), Error::<T>::Overflow);

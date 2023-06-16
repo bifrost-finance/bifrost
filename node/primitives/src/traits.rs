@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, TokenId, TokenSymbol};
+use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -145,7 +145,9 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit)>;
+	) -> Option<(AccountId, Balance, TimeUnit, RedeemType)>;
+	fn get_astar_parachain_id() -> u32;
+	fn get_moonbeam_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
@@ -309,6 +311,12 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> DispatchResultWithPostInfo;
+	fn xcm_action_redeem(
+		exchanger: AccountId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: Balance,
+		redeem: RedeemType,
+	) -> DispatchResultWithPostInfo;
 	fn token_to_vtoken(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
@@ -322,6 +330,8 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
+	fn get_astar_parachain_id() -> u32;
+	fn get_moonbeam_parachain_id() -> u32;
 }
 
 pub trait TryConvertFrom<CurrencyId> {

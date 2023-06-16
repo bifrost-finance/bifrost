@@ -31,6 +31,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
+orml-xtokens = "0.4.1-dev"
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }

@@ -524,10 +524,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		(Token(DOT), DOLLARS / 1000_000, None),
 	];
 	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
-	let vsbond = vec![
-		// Token, ParaId, first_slot, last_slot
-		(CurrencyId::Token(TokenSymbol::KSM), 3000, 2, 9),
-	];
+	let vsbond = vec![];
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency,
 		vcurrency,

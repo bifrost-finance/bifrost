@@ -246,7 +246,7 @@ impl crate::Config for Test {
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
 	type ParachainId = ParaInfo;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 }
 
 pub struct ParaInfo;

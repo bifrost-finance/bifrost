@@ -25,7 +25,7 @@ use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
 	GenesisConfig, IndicesConfig, InflationInfo, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig,
+	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
 	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
@@ -123,7 +123,6 @@ pub fn bifrost_genesis(
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
-	salp_lite_multisig_key_salp: AccountId,
 	asset_registry: (
 		Vec<(CurrencyId, Balance, Option<(String, String, u8)>)>,
 		Vec<CurrencyId>,
@@ -179,7 +178,6 @@ pub fn bifrost_genesis(
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
-		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
 		parachain_staking: ParachainStakingConfig {
 			candidates: candidates
 				.iter()
@@ -222,9 +220,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
-	let salp_lite_multisig: AccountId =
-		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-
 	bifrost_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -239,7 +234,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
-		salp_lite_multisig,
 		(vec![], vec![], vec![]),
 	)
 }
@@ -274,8 +268,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
-		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
-		                       * with whitelistted_caller */
+		account("bechmarking_account_1", 0, 0),
 		// dKwyFv7RL79j1pAukZnZtAmxwG6a3USBmjZyFCLRSbghdiV
 		hex!["46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"].into(),
 		// eCSrvbA5gGNQr7VZ48fkCX5vkt1H16F8Np9g2hYssRXHZJF
@@ -312,8 +305,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
-		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-	let salp_lite_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	// Token
@@ -378,7 +369,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
-		salp_lite_multisig,
 		(currency, vcurrency, vsbond),
 	)
 }
@@ -446,8 +436,6 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	let salp_lite_multisig: AccountId =
-		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 
 	let council_membership = vec![
 		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
@@ -468,7 +456,6 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
-		salp_lite_multisig,
 		(
 			vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
@@ -513,7 +500,6 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 
 	let salp_multisig: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
-	let salp_lite_multisig: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -539,7 +525,6 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
-		salp_lite_multisig,
 		(vec![(Token(DOT), 100_000_000, None), (Token(KSM), 10_000_000, None)], vec![], vec![]),
 	)
 }
@@ -644,8 +629,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	let salp_lite_multisig: AccountId =
-		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
@@ -658,7 +641,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![], // council membership
 		vec![], // technical committee membership
 		salp_multisig,
-		salp_lite_multisig,
 		(vec![], vec![], vec![]),
 	)
 }

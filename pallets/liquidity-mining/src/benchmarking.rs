@@ -19,8 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{
-	account, benchmarks_instance_pallet, impl_benchmark_test_suite, v1::BenchmarkError,
-	whitelisted_caller,
+	account, benchmarks_instance_pallet, impl_benchmark_test_suite, whitelisted_caller,
 };
 use frame_support::{
 	assert_ok,
