@@ -90,6 +90,9 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
+# Nuts Finance
+nutsfinance-stable-asset = { git = "https://github.com/nutsfinance/stable-asset", branch = "polkadot-v0.9.38", default-features = false }
+
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
@@ -204,6 +207,7 @@ std = [
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
 	"orml-xcm-support/std",
+	"nutsfinance-stable-asset/std",
 	"bifrost-runtime-common/std",
 	"bifrost-farming/std",
 	"bifrost-farming-rpc-runtime-api/std",

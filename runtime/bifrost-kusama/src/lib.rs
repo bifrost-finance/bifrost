@@ -36,8 +36,8 @@ use bifrost_token_issuer::migrations::v2::TokenIssuerMigration;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything, InstanceFilter,
-		IsInVec, NeverEnsureOrigin, Nothing, Randomness,
+		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
+		InstanceFilter, IsInVec, NeverEnsureOrigin, Nothing, Randomness,
 	},
 	weights::{
 		constants::{
@@ -1653,6 +1653,33 @@ impl bifrost_slpx::Config for Runtime {
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
+pub struct EnsurePoolAssetId;
+impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+	fn validate(_: CurrencyId) -> bool {
+		true
+	}
+}
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
+
+/// Configure the pallet nutsfinance_stable_asset in pallets/nutsfinance_stable_asset.
+impl nutsfinance_stable_asset::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AssetId = CurrencyId;
+	type Balance = Balance;
+	type Assets = Tokens;
+	type PalletId = StableAssetPalletId;
+	type AtLeast64BitUnsigned = u128; // AtLeast64BitUnsigned;
+	type FeePrecision = ConstU128<10_000_000_000>;
+	type APrecision = ConstU128<100>;
+	type PoolAssetLimit = ConstU32<5>;
+	type SwapExactOverAmount = ConstU128<100>;
+	type WeightInfo = ();
+	type ListingOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type EnsurePoolAssetId = EnsurePoolAssetId;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1835,6 +1862,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+		StableAsset: nutsfinance_stable_asset::{Pallet, Call, Storage, Event<T>} = 128,
 	}
 }
 

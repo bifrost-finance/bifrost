@@ -882,6 +882,7 @@ dependencies = [
  "log",
  "merkle-distributor",
  "node-primitives",
+ "nutsfinance-stable-asset",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
