@@ -24,6 +24,7 @@ members = [
 	"pallets/fee-share",
 	"pallets/parachain-staking",
 	"pallets/ve-minting",
+	"pallets/stable-pool",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]
