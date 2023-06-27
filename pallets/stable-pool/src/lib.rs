@@ -17,7 +17,7 @@ use frame_support::{
 	traits::{tokens::currency, Currency},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 
 #[allow(type_alias_bounds)]
@@ -48,6 +48,13 @@ pub mod pallet {
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		type StableAsset: nutsfinance_stable_asset::StableAsset;
+
+		type VtokenMinting: VtokenMintingOperator<
+			CurrencyId,
+			BalanceOf<Self>,
+			AccountIdOf<Self>,
+			TimeUnit,
+		>;
 	}
 
 	#[pallet::storage]
