@@ -11,6 +11,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+node-primitives = { path = "../../node/primitives", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false, optional = true }
@@ -25,9 +27,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 orml-xtokens = "0.4.1-dev"
-orml-traits = "0.4.1-dev"
 env_logger = "0.10.0"
-node-primitives = { path = "../../node/primitives", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
