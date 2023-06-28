@@ -49,7 +49,7 @@ frame_support::construct_runtime!(
 		AssetRegistry: bifrost_asset_registry,
 		StableAsset: nutsfinance_stable_asset,
 		StablePool: bifrost_stable_pool,
-		BifrostVtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -64,7 +64,7 @@ impl frame_system::Config for Test {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
@@ -206,12 +206,12 @@ impl pallet_balances::Config for Test {
 }
 
 ord_parameter_types! {
-	pub const One: u64 = 1;
+	pub const One: u128 = 1;
 }
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<One, u64>;
+	type RegisterOrigin = EnsureSignedBy<One, u128>;
 	type WeightInfo = ();
 }
 
@@ -237,7 +237,7 @@ impl nutsfinance_stable_asset::Config for Test {
 	type PoolAssetLimit = ConstU32<5>;
 	type SwapExactOverAmount = ConstU128<100>;
 	type WeightInfo = ();
-	type ListingOrigin = EnsureSignedBy<One, u64>;
+	type ListingOrigin = EnsureSignedBy<One, u128>;
 	type EnsurePoolAssetId = EnsurePoolAssetId;
 }
 
@@ -246,7 +246,8 @@ impl bifrost_stable_pool::Config for Test {
 	type WeightInfo = ();
 	type MultiCurrency = Tokens;
 	type StableAsset = StableAsset;
-	type VtokenMinting = BifrostVtokenMinting;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
 }
 
 parameter_types! {
@@ -258,14 +259,13 @@ parameter_types! {
 }
 
 ord_parameter_types! {
-	// pub const One: AccountId = ALICE;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
 impl bifrost_vtoken_minting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;
-	type ControlOrigin = EnsureSignedBy<One, u64>;
+	type ControlOrigin = EnsureSignedBy<One, u128>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = BifrostEntranceAccount;
@@ -321,7 +321,7 @@ impl pallet_xcm::Config for Test {
 }
 
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(u64, CurrencyId, Balance)>,
+	endowed_accounts: Vec<(u128, CurrencyId, Balance)>,
 }
 
 impl Default for ExtBuilder {
@@ -331,7 +331,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(u64, CurrencyId, Balance)>) -> Self {
+	pub fn balances(mut self, endowed_accounts: Vec<(u128, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
 		self
 	}
@@ -339,8 +339,10 @@ impl ExtBuilder {
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
 			(1, BNC, 1_000_000_000_000),
-			(1, vDOT, 100_000_000),
-			(1, DOT, 100_000_000),
+			// (1, vDOT, 100_000_000),
+			(1, DOT, 100_000_000_000_000),
+			// (2, vDOT, 100_000_000_000_000),
+			(3, DOT, 200_000_000),
 		])
 	}
 	// Build genesis storage according to the mock runtime.
