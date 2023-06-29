@@ -19,6 +19,13 @@ fn it_works_for_default_value() {
 	});
 }
 
+fn last_event() -> RuntimeEvent {
+	frame_system::pallet::Pallet::<Test>::events()
+		.pop()
+		.expect("RuntimeEvent expected")
+		.event
+}
+
 fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = vDOT;
@@ -198,10 +205,9 @@ fn mint_successful_equal_amounts() {
 				assert_eq!(Tokens::free_balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
 				assert_eq!(Tokens::free_balance(coin1, &swap_id), 10000000u128 - BALANCE_OFF);
 				let pool_account: u128 = StableAssetPalletId::get().into_account_truncating();
-				let vtoken_issuance = <Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
+				let vtoken_issuance =
+					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("pool_account{:?}vtoken_issuance{:?}", pool_account, vtoken_issuance);
-				// let pallet_id = StableAssetPalletId::get();
-				// let account_id: AccountId = pallet_id.into_account();
 				// assert_eq!(
 				// 	Tokens::free_balance(pool_asset, &pool_account),
 				// 	199800000000000000u128 - BALANCE_OFF
@@ -210,7 +216,7 @@ fn mint_successful_equal_amounts() {
 					Tokens::free_balance(pool_asset, &3),
 					199800000000000000u128 - BALANCE_OFF
 				);
-				assert_eq!(Tokens::free_balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF);
+				assert_eq!(Tokens::free_balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF); // fee_recipient
 			},
 		}
 	});
@@ -280,18 +286,27 @@ fn swap_successful() {
 fn get_swap_output_amount() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		// assert_ok!(VtokenMinting::mint(Some(1).into(), DOT, 100_000_000_000));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		// assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(vDOT, &BRUCE, &CATHI, 50));
+		// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, vDOT, 200_000_000, 0));
+
 		let pool_tokens = create_pool();
 		System::set_block_number(2);
 		match pool_tokens {
 			(coin0, coin1, pool_asset, swap_id) => {
 				let amounts = vec![10000000u128, 20000000u128];
+				let vtoken_issuance =
+					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
+				log::debug!("vtoken_issuance{:?}", vtoken_issuance);
 				assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
+				let vtoken_issuance2 =
+					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
+				log::debug!("vtoken_issuance2{:?}", vtoken_issuance2);
 				let swap_out = StableAsset::get_swap_output_amount(0, 0, 1, 5000000u128);
-				log::debug!("{:?}", swap_out);
-				assert_ok!(StablePool::on_swap(0, 0, 1, 5000000u128));
-				assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0, 2));
+				log::debug!("swap_out{:?}StableAsset::pools(0){:?}", swap_out, StableAsset::pools(0));
+				assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128));
+				// assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0,
+				// 2));
 				assert_eq!(
 					StableAsset::pools(0),
 					Some(StableAssetPoolInfo {
@@ -317,6 +332,14 @@ fn get_swap_output_amount() {
 				assert_eq!(Tokens::free_balance(coin1, &3), 84999301u128 - BALANCE_OFF);
 				assert_eq!(Tokens::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
 				assert_eq!(Tokens::free_balance(coin1, &swap_id), 15000699u128 - BALANCE_OFF);
+				// assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128));
+				// log::debug!("===pools{:?}", StableAsset::pools(0));
+
+				// assert_eq!(
+				// 	Tokens::free_balance(pool_asset, &3),
+				// 	199800000000000000u128 - BALANCE_OFF
+				// );
+				// assert_eq!(Tokens::free_balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF);
 			},
 		}
 	});

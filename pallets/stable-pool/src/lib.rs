@@ -55,6 +55,7 @@ pub mod pallet {
 		type StableAsset: nutsfinance_stable_asset::StableAsset<
 			AssetId = CurrencyId,
 			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
 		>;
 
 		type VtokenMinting: VtokenMintingOperator<
@@ -91,6 +92,7 @@ pub mod pallet {
 		PoolNotExist,
 		NotNullable,
 		CantBeZero,
+		Math,
 	}
 
 	#[pallet::call]
@@ -124,13 +126,14 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn on_swap(
+		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		let pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
-
+		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let upscale_out = Self::upscale(
 			amount,
 			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
@@ -140,18 +143,41 @@ impl<T: Config> Pallet<T> {
 			currency_id_in,
 			currency_id_out,
 			amount,
-		);
+		)
+		.ok_or(Error::<T>::CantBeZero)?;
 		log::debug!("amount_out:{:?}", amount_out);
-
-		// amount_out.ok_or(Error::<T>::CantBeZero)?;
 		let downscale_out = Self::downscale(
-			amount_out.ok_or(Error::<T>::CantBeZero)?.dy, // TODO
+			amount_out.dy, // TODO
 			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
 		log::debug!("downscale_out:{:?}", downscale_out);
 		if downscale_out.is_zero() {
 			// TODO
 		}
+
+		let mut balances = pool_info.balances.clone();
+		let i_usize = currency_id_in as usize;
+		let j_usize = currency_id_out as usize;
+		balances[i_usize] = amount_out.balance_i;
+		balances[j_usize] = amount_out.y;
+		T::MultiCurrency::transfer(pool_info.assets[i_usize], who, &pool_info.account_id, amount)?;
+		T::MultiCurrency::transfer(
+			pool_info.assets[j_usize],
+			&pool_info.account_id,
+			who,
+			downscale_out,
+		)?;
+		let asset_i = pool_info.assets[i_usize];
+		let asset_j = pool_info.assets[j_usize];
+		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
+		T::StableAsset::insert_pool(pool_id, &pool_info);
+		// let a = T::StableAsset::get_a(
+		// 	pool_info.a,
+		// 	pool_info.a_block,
+		// 	pool_info.future_a,
+		// 	pool_info.future_a_block,
+		// )
+		// .ok_or(Error::<T>::Math)?;
 		Ok(())
 	}
 
@@ -183,11 +209,6 @@ impl<T: Config> Pallet<T> {
 		amount: BalanceOf<T>,
 		vcurrency_id: CurrencyId,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		// if let Some(rate) = Self::token_rate_caches(currency) {
-		// 	amount * rate
-		// } else {
-		// 	amount
-		// }
 		let currency_id = T::CurrencyIdConversion::convert_to_token(vcurrency_id)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 		let vtoken_issuance = T::MultiCurrency::total_issuance(vcurrency_id);
@@ -195,18 +216,6 @@ impl<T: Config> Pallet<T> {
 		log::debug!("vtoken_issuance:{:?}token_pool{:?}", vtoken_issuance, token_pool);
 
 		Ok(Self::calculate_scaling(amount, token_pool, vtoken_issuance))
-
-		// let amount: u128 = amount.unique_saturated_into();
-		// let vtoken_issuance: u128 = vtoken_issuance.unique_saturated_into();
-		// let token_pool: u128 = token_pool.unique_saturated_into();
-		// let can_get_vtoken = U256::from(amount)
-		// 	.checked_mul(U256::from(token_pool))
-		// 	.and_then(|n| n.checked_div(U256::from(vtoken_issuance)))
-		// 	.and_then(|n| TryInto::<u128>::try_into(n).ok())
-		// 	.unwrap_or_else(Zero::zero);
-
-		// let charge_amount = BalanceOf::<T>::unique_saturated_from(can_get_vtoken);
-		// Ok(charge_amount)
 	}
 
 	pub fn downscale_vtoken(
@@ -218,18 +227,12 @@ impl<T: Config> Pallet<T> {
 		let vtoken_issuance = T::MultiCurrency::total_issuance(vcurrency_id);
 		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
 		// let amount: u128 = amount.unique_saturated_into();
-		log::debug!("downscale_vtoken--vtoken_issuance:{:?}token_pool{:?}", vtoken_issuance, token_pool);
+		log::debug!(
+			"downscale_vtoken--vtoken_issuance:{:?}token_pool{:?}",
+			vtoken_issuance,
+			token_pool
+		);
 		Ok(Self::calculate_scaling(amount, vtoken_issuance, token_pool))
-		// let vtoken_issuance: u128 = vtoken_issuance.unique_saturated_into();
-		// let token_pool: u128 = token_pool.unique_saturated_into();
-		// let can_get_vtoken = U256::from(amount)
-		// 	.checked_mul(U256::from(vtoken_issuance))
-		// 	.and_then(|n| n.checked_div(U256::from(token_pool)))
-		// 	.and_then(|n| TryInto::<u128>::try_into(n).ok())
-		// 	.unwrap_or_else(Zero::zero);
-
-		// let charge_amount = BalanceOf::<T>::unique_saturated_from(can_get_vtoken);
-		// Ok(charge_amount)
 	}
 
 	fn calculate_scaling(
