@@ -20,7 +20,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdConversion, TimeUnit, VtokenMintingOperator};
 use nutsfinance_stable_asset::{
-	PoolTokenIndex, StableAsset, StableAssetPoolId, StableAssetPoolInfo,
+	PoolTokenIndex, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
 };
 use orml_traits::MultiCurrency;
 use sp_core::U256;
@@ -118,10 +118,36 @@ impl<T: Config> Pallet<T> {
 			// getCurrentRate
 			BalanceOf::<T>::default()
 		}
-		// Ok(())
 	}
 
 	pub fn get_scaling_factors(something: u32) -> DispatchResult {
+		Ok(())
+	}
+
+	fn mint(
+		who: &AccountIdOf<T>,
+		pool_id: StableAssetPoolId,
+		mut amounts: Vec<BalanceOf<T>>,
+		min_mint_amount: BalanceOf<T>,
+	) -> DispatchResult {
+		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		for (i, amount) in amounts.iter_mut().enumerate() {
+			*amount = Self::upscale(
+				*amount,
+				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+			)?;
+		}
+		log::debug!("amounts:{:?}", amounts);
+
+		// let upscale_out = Self::upscale(
+		// 	amount,
+		// 	*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
+		// )?;
+		// Self::collect_yield(pool_id, pool_info)?;
+		T::StableAsset::mint(who, pool_id, amounts, min_mint_amount)?;
+
+		// T::StableAsset::get_mint_amount(who, pool_id, amounts, min_mint_amount)?;
+		// get_mint_amount
 		Ok(())
 	}
 
@@ -138,16 +164,17 @@ impl<T: Config> Pallet<T> {
 			amount,
 			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
-		let amount_out = T::StableAsset::get_swap_output_amount(
+		// let amount_out
+		let SwapResult { dx: _, dy, y, balance_i } = T::StableAsset::get_swap_output_amount(
 			pool_id,
 			currency_id_in,
 			currency_id_out,
 			amount,
 		)
 		.ok_or(Error::<T>::CantBeZero)?;
-		log::debug!("amount_out:{:?}", amount_out);
+		log::debug!("amount_out:{:?}", dy);
 		let downscale_out = Self::downscale(
-			amount_out.dy, // TODO
+			dy, // TODO
 			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
 		log::debug!("downscale_out:{:?}", downscale_out);
@@ -158,8 +185,8 @@ impl<T: Config> Pallet<T> {
 		let mut balances = pool_info.balances.clone();
 		let i_usize = currency_id_in as usize;
 		let j_usize = currency_id_out as usize;
-		balances[i_usize] = amount_out.balance_i;
-		balances[j_usize] = amount_out.y;
+		balances[i_usize] = balance_i;
+		balances[j_usize] = y;
 		T::MultiCurrency::transfer(pool_info.assets[i_usize], who, &pool_info.account_id, amount)?;
 		T::MultiCurrency::transfer(
 			pool_info.assets[j_usize],

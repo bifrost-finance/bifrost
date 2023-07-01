@@ -288,7 +288,7 @@ fn get_swap_output_amount() {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
 		// assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(vDOT, &BRUCE, &CATHI, 50));
-		// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, vDOT, 200_000_000, 0));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, vDOT, 200_000_000, 0));
 
 		let pool_tokens = create_pool();
 		System::set_block_number(2);
@@ -299,6 +299,7 @@ fn get_swap_output_amount() {
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance{:?}", vtoken_issuance);
 				assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
+				// assert_ok!(StablePool::mint(&1, 0, amounts, 0));
 				let vtoken_issuance2 =
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance2{:?}", vtoken_issuance2);
