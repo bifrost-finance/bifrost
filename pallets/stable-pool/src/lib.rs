@@ -56,6 +56,7 @@ pub mod pallet {
 			AssetId = CurrencyId,
 			Balance = BalanceOf<Self>,
 			AccountId = AccountIdOf<Self>,
+			AtLeast64BitUnsigned = u128,
 		>;
 
 		type VtokenMinting: VtokenMintingOperator<
@@ -79,7 +80,22 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		SomethingStored { something: u32, who: T::AccountId },
+		SomethingStored {
+			something: u32,
+			who: T::AccountId,
+		},
+		TokenSwapped {
+			swapper: AccountIdOf<T>,
+			pool_id: StableAssetPoolId,
+			a: u128,
+			input_asset: CurrencyId,
+			output_asset: CurrencyId,
+			input_amount: BalanceOf<T>,
+			min_output_amount: BalanceOf<T>,
+			balances: Vec<BalanceOf<T>>,
+			total_supply: BalanceOf<T>,
+			output_amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -93,6 +109,8 @@ pub mod pallet {
 		NotNullable,
 		CantBeZero,
 		Math,
+		CantScaling,
+		SwapUnderMin,
 	}
 
 	#[pallet::call]
@@ -138,16 +156,8 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 		log::debug!("amounts:{:?}", amounts);
-
-		// let upscale_out = Self::upscale(
-		// 	amount,
-		// 	*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
-		// )?;
-		// Self::collect_yield(pool_id, pool_info)?;
 		T::StableAsset::mint(who, pool_id, amounts, min_mint_amount)?;
-
 		// T::StableAsset::get_mint_amount(who, pool_id, amounts, min_mint_amount)?;
-		// get_mint_amount
 		Ok(())
 	}
 
@@ -157,30 +167,25 @@ impl<T: Config> Pallet<T> {
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: BalanceOf<T>,
+		min_dy: BalanceOf<T>,
 	) -> DispatchResult {
 		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-		let upscale_out = Self::upscale(
+		let dx = Self::upscale(
 			amount,
 			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
 		// let amount_out
-		let SwapResult { dx: _, dy, y, balance_i } = T::StableAsset::get_swap_output_amount(
-			pool_id,
-			currency_id_in,
-			currency_id_out,
-			amount,
-		)
-		.ok_or(Error::<T>::CantBeZero)?;
+		let SwapResult { dx: _, dy, y, balance_i } =
+			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
+				.ok_or(Error::<T>::CantBeZero)?;
 		log::debug!("amount_out:{:?}", dy);
 		let downscale_out = Self::downscale(
 			dy, // TODO
 			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
 		log::debug!("downscale_out:{:?}", downscale_out);
-		if downscale_out.is_zero() {
-			// TODO
-		}
+		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
 		let mut balances = pool_info.balances.clone();
 		let i_usize = currency_id_in as usize;
@@ -198,13 +203,25 @@ impl<T: Config> Pallet<T> {
 		let asset_j = pool_info.assets[j_usize];
 		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
 		T::StableAsset::insert_pool(pool_id, &pool_info);
-		// let a = T::StableAsset::get_a(
-		// 	pool_info.a,
-		// 	pool_info.a_block,
-		// 	pool_info.future_a,
-		// 	pool_info.future_a_block,
-		// )
-		// .ok_or(Error::<T>::Math)?;
+		let a = T::StableAsset::get_a(
+			pool_info.a,
+			pool_info.a_block,
+			pool_info.future_a,
+			pool_info.future_a_block,
+		)
+		.ok_or(Error::<T>::Math)?;
+		Self::deposit_event(Event::TokenSwapped {
+			swapper: who.clone(),
+			pool_id,
+			a,
+			input_asset: asset_i,
+			output_asset: asset_j,
+			input_amount: amount,
+			min_output_amount: min_dy,
+			balances: pool_info.balances.clone(),
+			total_supply: pool_info.total_supply,
+			output_amount: downscale_out,
+		});
 		Ok(())
 	}
 
@@ -241,7 +258,7 @@ impl<T: Config> Pallet<T> {
 		let vtoken_issuance = T::MultiCurrency::total_issuance(vcurrency_id);
 		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
 		log::debug!("vtoken_issuance:{:?}token_pool{:?}", vtoken_issuance, token_pool);
-
+		ensure!(vtoken_issuance <= token_pool, Error::<T>::CantScaling);
 		Ok(Self::calculate_scaling(amount, token_pool, vtoken_issuance))
 	}
 
@@ -259,20 +276,21 @@ impl<T: Config> Pallet<T> {
 			vtoken_issuance,
 			token_pool
 		);
+		ensure!(vtoken_issuance <= token_pool, Error::<T>::CantScaling);
 		Ok(Self::calculate_scaling(amount, vtoken_issuance, token_pool))
 	}
 
 	fn calculate_scaling(
 		amount: BalanceOf<T>,
-		denominator: BalanceOf<T>,
 		numerator: BalanceOf<T>,
+		denominator: BalanceOf<T>,
 	) -> BalanceOf<T> {
 		let amount: u128 = amount.unique_saturated_into();
 		let denominator: u128 = denominator.unique_saturated_into();
 		let numerator: u128 = numerator.unique_saturated_into();
 		let can_get_vtoken = U256::from(amount)
-			.checked_mul(U256::from(denominator))
-			.and_then(|n| n.checked_div(U256::from(numerator)))
+			.checked_mul(U256::from(numerator))
+			.and_then(|n| n.checked_div(U256::from(denominator)))
 			.and_then(|n| TryInto::<u128>::try_into(n).ok())
 			.unwrap_or_else(Zero::zero);
 
