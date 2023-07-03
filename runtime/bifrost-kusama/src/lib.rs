@@ -1261,7 +1261,10 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<EnsureRoot<AccountId>, SALPAdmin>;
+	type EnsureConfirmAsGovernance = EitherOfDiverse<
+		SALPAdmin,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -1362,7 +1365,10 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<EnsureRoot<AccountId>, ValidatorElection>;
+	type ControlOrigin = EitherOfDiverse<
+		ValidatorElection,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
@@ -1415,7 +1421,10 @@ parameter_types! {
 impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<EnsureRoot<AccountId>, SystemStakingAdmin>;
+	type EnsureConfirmAsGovernance = EitherOfDiverse<
+		SystemStakingAdmin,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
