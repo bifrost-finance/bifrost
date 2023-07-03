@@ -150,7 +150,7 @@ pub mod pallet {
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
-	/// The dest weight limit and fee for execution XCM msg sended by XcmInterface. Must be
+	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
 	///
 	/// XcmDestWeightAndFee: map: XcmInterfaceOperation => (Weight, Balance)
@@ -281,7 +281,7 @@ pub mod pallet {
 
 	impl<T: Config> XcmHelper<AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
 		fn contribute(
-			contributer: AccountIdOf<T>,
+			contributor: AccountIdOf<T>,
 			index: ChainId,
 			amount: BalanceOf<T>,
 		) -> Result<MessageId, DispatchError> {
@@ -302,7 +302,7 @@ pub mod pallet {
 			);
 
 			// Bind query_id and contribution
-			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer, amount);
+			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributor, amount);
 
 			let (msg_id, msg) =
 				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;

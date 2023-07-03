@@ -581,7 +581,7 @@ pub mod pallet {
 			if let Some(ref gid) = pool_info.gauge {
 				Self::gauge_claim_inner(&exchanger, *gid)?;
 			}
-			Self::process_withraw_list(&exchanger, pid, &pool_info, true)?;
+			Self::process_withdraw_list(&exchanger, pid, &pool_info, true)?;
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
 			Ok(())
@@ -594,7 +594,7 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			Self::process_withraw_list(&exchanger, pid, &pool_info, false)?;
+			Self::process_withdraw_list(&exchanger, pid, &pool_info, false)?;
 
 			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
 			Ok(())
@@ -622,7 +622,7 @@ pub mod pallet {
 				if let Some(ref gid) = pool_info.gauge {
 					Self::gauge_claim_inner(&who, *gid)?;
 				}
-				Self::process_withraw_list(&who, pid, &pool_info, true)?;
+				Self::process_withdraw_list(&who, pid, &pool_info, true)?;
 			}
 
 			if all_retired {
