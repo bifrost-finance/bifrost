@@ -1639,7 +1639,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

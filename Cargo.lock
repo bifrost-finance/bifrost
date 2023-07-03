@@ -784,7 +784,6 @@ dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
- "bifrost-liquidity-mining",
  "bifrost-polkadot-runtime",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -958,48 +957,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-lightening-redeem"
-version = "0.8.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-tokens",
- "orml-traits",
- "pallet-collective",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "bifrost-liquidity-mining"
-version = "0.8.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-collective",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-std",
-]
-
-[[package]]
 name = "bifrost-polkadot-integration-tests"
 version = "0.8.0"
 dependencies = [
@@ -1007,7 +964,6 @@ dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
- "bifrost-liquidity-mining",
  "bifrost-polkadot-runtime",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -1253,30 +1209,6 @@ dependencies = [
  "xcm-executor",
  "xcm-interface",
  "zenlink-protocol",
-]
-
-[[package]]
-name = "bifrost-salp-lite"
-version = "0.8.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-multisig",
- "parity-scale-codec",
- "scale-info",
- "smallvec",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

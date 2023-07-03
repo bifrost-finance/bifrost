@@ -60,7 +60,6 @@ pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -297,7 +296,7 @@ impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for Substrat
 	}
 	fn create_query_record(
 		_responder: &MultiLocation,
-		call_back: Option<RuntimeCall>,
+		_call_back: Option<RuntimeCall>,
 		_timeout: u64,
 	) -> u64 {
 		Default::default()
@@ -525,19 +524,4 @@ pub(crate) fn roll_to(n: u64) -> u64 {
 		num_blocks += 1;
 	}
 	num_blocks
-}
-
-/// Rolls block-by-block to the beginning of the specified round.
-/// This will complete the block in which the round change occurs.
-/// Returns the number of blocks played.
-pub(crate) fn roll_to_round_begin(round: u64) -> u64 {
-	let block = (round - 1) * BlocksPerRound::get() as u64;
-	roll_to(block)
-}
-
-/// Rolls block-by-block to the end of the specified round.
-/// The block following will be the one in which the specified round change occurs.
-pub(crate) fn roll_to_round_end(round: u64) -> u64 {
-	let block = round * BlocksPerRound::get() as u64 - 1;
-	roll_to(block)
 }

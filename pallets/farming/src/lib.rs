@@ -53,20 +53,16 @@ use node_primitives::{CurrencyId, FarmingInfo, PoolId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
-// use sp_arithmetic::per_things::Percent;
 use sp_runtime::SaturatedConversion;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-#[allow(type_alias_bounds)]
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -585,7 +581,7 @@ pub mod pallet {
 			if let Some(ref gid) = pool_info.gauge {
 				Self::gauge_claim_inner(&exchanger, *gid)?;
 			}
-			Self::process_withraw_list(&exchanger, pid, &pool_info, true)?;
+			Self::process_withdraw_list(&exchanger, pid, &pool_info, true)?;
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
 			Ok(())
@@ -598,7 +594,7 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			Self::process_withraw_list(&exchanger, pid, &pool_info, false)?;
+			Self::process_withdraw_list(&exchanger, pid, &pool_info, false)?;
 
 			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
 			Ok(())
@@ -626,7 +622,7 @@ pub mod pallet {
 				if let Some(ref gid) = pool_info.gauge {
 					Self::gauge_claim_inner(&who, *gid)?;
 				}
-				Self::process_withraw_list(&who, pid, &pool_info, true)?;
+				Self::process_withdraw_list(&who, pid, &pool_info, true)?;
 			}
 
 			if all_retired {
