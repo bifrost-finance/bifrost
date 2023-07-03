@@ -662,8 +662,8 @@ impl<T: Config> Pallet<T> {
 		address: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-		vtoken_amount: BalanceOf<T>,
-		fee: BalanceOf<T>,
+		_vtoken_amount: BalanceOf<T>,
+		_fee: BalanceOf<T>,
 	) -> Weight {
 		//Get pallet account
 		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
