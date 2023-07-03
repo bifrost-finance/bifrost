@@ -54,13 +54,10 @@ use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 pub use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
-#[allow(type_alias_bounds)]
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;

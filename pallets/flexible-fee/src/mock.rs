@@ -407,7 +407,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 // To control the result returned by `MockXcmExecutor`
 pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 // Mock XcmExecutor

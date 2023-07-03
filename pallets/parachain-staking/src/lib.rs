@@ -72,7 +72,6 @@ pub use traits::*;
 pub use types::*;
 use weights::WeightInfo;
 pub use RoundIndex;
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 

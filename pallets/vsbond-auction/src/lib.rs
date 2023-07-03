@@ -106,15 +106,13 @@ pub enum OrderType {
 
 type OrderId = u64;
 
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 #[allow(type_alias_bounds)]
 type BalanceOf<T: Config<I>, I: 'static = ()> =
 	<<T as Config<I>>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-#[allow(type_alias_bounds)]
-type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
+type LeasePeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
 pub mod pallet {
