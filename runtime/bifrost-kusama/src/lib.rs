@@ -74,9 +74,9 @@ use bifrost_asset_registry::AssetIdMaps;
 #[allow(unused_imports)]
 use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 pub use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test,
-	remove_pallet::RemovePallet, AuraId, CouncilCollective, EnsureRootOrAllTechnicalCommittee,
-	MoreThanHalfCouncil, SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -1835,20 +1835,6 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
-parameter_types! {
-	pub const LiquidityMiningDOTStr: &'static str = "LiquidityMiningDOT";
-	pub const LiquidityMiningStr: &'static str = "LiquidityMining";
-	pub const LighteningRedeemStr: &'static str = "LighteningRedeem";
-	pub const SalpLiteStr: &'static str = "SalpLite";
-}
-
-pub type Migrations = (
-	RemovePallet<LiquidityMiningDOTStr, RocksDbWeight>,
-	RemovePallet<LiquidityMiningStr, RocksDbWeight>,
-	RemovePallet<LighteningRedeemStr, RocksDbWeight>,
-	RemovePallet<SalpLiteStr, RocksDbWeight>,
-);
-
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -1856,7 +1842,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(bifrost_vtoken_minting::migration::MigrateTokenUnlockLedger<Runtime>, Migrations),
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
