@@ -27,7 +27,7 @@ use frame_support::traits::{ConstU16, EitherOf};
 use frame_system::EnsureRootWithSuccess;
 
 parameter_types! {
-	pub const VoteLockingPeriod: BlockNumber = 1 * DAYS;
+	pub const VoteLockingPeriod: BlockNumber = 7 * DAYS;
 }
 
 impl pallet_conviction_voting::Config for Runtime {
