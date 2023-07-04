@@ -850,12 +850,15 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
+			a.eq(&ZenklinkFeeAccount::get())
 	}
 }
 
 parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	// gVLo8SqxQsm11cXpkFJnaqXhAd6qtxwi2DhxfUFE7pSiyoi
+	pub ZenklinkFeeAccount: AccountId = hex!["d2ca9ceb400cc68dcf58de4871bd261406958fd17338d2d82ad2592db62e6a2a"].into();
 }
 
 pub struct CurrencyHooks;
