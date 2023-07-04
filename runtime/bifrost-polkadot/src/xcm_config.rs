@@ -678,7 +678,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 	// gVLo8SqxQsm11cXpkFJnaqXhAd6qtxwi2DhxfUFE7pSiyoi
-	pub ZenklinkFeeAccount: AccountId = hex!("d2ca9ceb400cc68dcf58de4871bd261406958fd17338d2d82ad2592db62e6a2a").into();
+	pub ZenklinkFeeAccount: AccountId = hex!["d2ca9ceb400cc68dcf58de4871bd261406958fd17338d2d82ad2592db62e6a2a"].into();
 }
 
 pub struct CurrencyHooks;
