@@ -367,7 +367,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn process_withraw_list(
+	pub fn process_withdraw_list(
 		who: &T::AccountId,
 		pool: PoolId,
 		pool_info: &PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,

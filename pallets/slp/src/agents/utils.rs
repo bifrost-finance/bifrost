@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, Hash, LedgerUpdateEntry, Pallet,
-	TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
 };
 use codec::Encode;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::CurrencyId;
@@ -55,30 +54,44 @@ impl<T: Config> Pallet<T> {
 		Ok(account)
 	}
 
-	pub fn sort_validators_and_remove_duplicates(
+	pub fn remove_validators_duplicates(
 		currency_id: CurrencyId,
 		validators: &Vec<MultiLocation>,
-	) -> Result<Vec<(MultiLocation, Hash<T>)>, Error<T>> {
+	) -> Result<Vec<MultiLocation>, Error<T>> {
 		let validators_set =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let mut validators_list: Vec<(MultiLocation, Hash<T>)> = vec![];
+		let mut validators_list: Vec<MultiLocation> = vec![];
 		for validator in validators.iter() {
 			// Check if the validator is in the validator whitelist
-			let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
-			ensure!(
-				validators_set.contains(&(*validator, multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
-
-			// sort the validators and remove duplicates
-			let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-			if let Err(index) = rs {
-				validators_list.insert(index, (*validator, multi_hash));
+			ensure!(validators_set.contains(&validator), Error::<T>::ValidatorNotExist);
+			if !validators_list.contains(&validator) {
+				validators_list.push(*validator);
 			}
 		}
 
 		Ok(validators_list)
+	}
+
+	pub fn check_length_and_deduplicate(
+		currency_id: CurrencyId,
+		validator_list: Vec<MultiLocation>,
+	) -> Result<Vec<MultiLocation>, Error<T>> {
+		ensure!(!validator_list.is_empty(), Error::<T>::ValidatorNotProvided);
+
+		// Ensure validator candidates in the whitelist is not greater than maximum.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+
+		ensure!(
+			validator_list.len() as u16 <= mins_maxs.validators_maximum,
+			Error::<T>::GreaterThanMaximum
+		);
+
+		// deduplicate validator list.
+		let mut validator_set = validator_list.clone();
+		validator_set.sort();
+		validator_set.dedup();
+
+		Ok(validator_set)
 	}
 
 	pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
@@ -187,9 +200,9 @@ impl<T: Config> Pallet<T> {
 		Ok(account_h160)
 	}
 
-	/// **************************************/
-	/// ****** XCM confirming Functions ******/
-	/// **************************************/
+	/// **************************************
+	/// ****** XCM confirming Functions ******
+	/// **************************************
 	pub fn get_ledger_update_agent_then_process(
 		query_id: QueryId,
 		manual_mode: bool,

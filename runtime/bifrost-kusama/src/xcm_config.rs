@@ -21,13 +21,13 @@ use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	parameter_types,
+	ensure, parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
 use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
-use sp_std::{convert::TryFrom, marker::PhantomData};
+use sp_std::{borrow::Borrow, convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
@@ -36,7 +36,7 @@ pub use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 	WithComputedOrigin,
 };
-use xcm_executor::traits::MatchesFungible;
+use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
@@ -51,6 +51,7 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
+use sp_io::hashing::blake2_256;
 use xcm::v3::prelude::*;
 
 /// Bifrost Asset Matcher
@@ -242,6 +243,50 @@ parameter_types! {
 	pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 }
 
+pub struct ExternalAccountConverter<Network, AccountId>(PhantomData<(Network, AccountId)>);
+impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone>
+	xcm_executor::traits::Convert<MultiLocation, AccountId>
+	for ExternalAccountConverter<Network, AccountId>
+{
+	fn convert(location: MultiLocation) -> Result<AccountId, MultiLocation> {
+		log::trace!(
+			target: "xcm::ExternalAccountConverter::convert",
+			"location: {:?}",
+			location.clone(),
+		);
+		match location {
+			MultiLocation { parents: 1, interior: X2(Parachain(_id), AccountId32 { id, .. }) } =>
+				log::trace!(
+					target: "xcm::ExternalAccountConverter::convert",
+					"AccountId32: {:?}",
+					id,
+				),
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(_id), AccountKey20 { key, .. }),
+			} => log::trace!(
+				target: "xcm::ExternalAccountConverter::convert",
+				"AccountKey20: {:?}",
+				key,
+			),
+			_ => return Err(location),
+		};
+		let hash: [u8; 32] = ("multiloc", location.borrow()).borrow().using_encoded(blake2_256);
+		let mut account_id = [0u8; 32];
+		account_id.copy_from_slice(&hash[0..32]);
+		log::trace!(
+			target: "xcm::ExternalAccountConverter::convert",
+			"account_id: {:?}",
+			account_id,
+		);
+		Ok(account_id.into())
+	}
+
+	fn reverse(who: AccountId) -> Result<MultiLocation, AccountId> {
+		Err(who)
+	}
+}
+
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch RuntimeOrigin.
@@ -254,6 +299,7 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 	// Mapping Tinkernet multisig to the correctly derived AccountId32.
 	invarch_xcm_builder::TinkernetMultisigAsAccountId<AccountId>,
+	ExternalAccountConverter<RelayNetwork, AccountId>,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `RuntimeOrigin`
@@ -295,16 +341,70 @@ match_types! {
 	};
 }
 
+/// Barrier allowing a top level paid message with DescendOrigin instruction
+/// first
+pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
+pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
+pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut [Instruction<Call>],
+		max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ()> {
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
+		ensure!(T::contains(origin), ());
+		let mut iter = message.iter_mut();
+		// Make sure the first instruction is DescendOrigin
+		iter.next()
+			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
+			.ok_or(())?;
+
+		// Then WithdrawAsset
+		iter.next()
+			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
+			.ok_or(())?;
+
+		// Then BuyExecution
+		let i = iter.next().ok_or(())?;
+		match i {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
+				if weight.all_gte(max_weight) {
+					weight.set_ref_time(max_weight.ref_time());
+					weight.set_proof_size(max_weight.proof_size());
+				};
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
+			},
+			_ => {},
+		};
+
+		// Then Transact
+		let i = iter.next().ok_or(())?;
+		match i {
+			Transact { ref mut require_weight_at_most, .. } => {
+				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
+				*require_weight_at_most = weight;
+				Ok(())
+			},
+			_ => Err(()),
+		}
+	}
+}
+
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
-	WithComputedOrigin<
-		AllowTopLevelPaidExecutionFrom<invarch_xcm_builder::TinkernetMultisigMultiLocation>,
-		UniversalLocation,
-		ConstU32<1>,
-	>,
+	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
@@ -472,6 +572,122 @@ pub type Trader = (
 	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
+/// A call filter for the XCM Transact instruction. This is a temporary measure until we properly
+/// account for proof size weights.
+///
+/// Calls that are allowed through this filter must:
+/// 1. Have a fixed weight;
+/// 2. Cannot lead to another call being made;
+/// 3. Have a defined proof size weight, e.g. no unbounded vecs in call parameters.
+pub struct SafeCallFilter;
+impl Contains<RuntimeCall> for SafeCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		#[cfg(feature = "runtime-benchmarks")]
+		{
+			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
+				return true;
+			}
+		}
+
+		match call {
+			RuntimeCall::System(
+				frame_system::Call::kill_prefix { .. } | frame_system::Call::set_heap_pages { .. },
+			) |
+			RuntimeCall::Timestamp(..) |
+			RuntimeCall::Indices(..) |
+			RuntimeCall::Balances(..) |
+			RuntimeCall::ParachainStaking(..) |
+			RuntimeCall::Session(pallet_session::Call::purge_keys { .. }) |
+			RuntimeCall::Treasury(..) |
+			RuntimeCall::Utility(pallet_utility::Call::as_derivative { .. }) |
+			RuntimeCall::Identity(
+				pallet_identity::Call::add_registrar { .. } |
+				pallet_identity::Call::set_identity { .. } |
+				pallet_identity::Call::clear_identity { .. } |
+				pallet_identity::Call::request_judgement { .. } |
+				pallet_identity::Call::cancel_request { .. } |
+				pallet_identity::Call::set_fee { .. } |
+				pallet_identity::Call::set_account_id { .. } |
+				pallet_identity::Call::set_fields { .. } |
+				pallet_identity::Call::provide_judgement { .. } |
+				pallet_identity::Call::kill_identity { .. } |
+				pallet_identity::Call::add_sub { .. } |
+				pallet_identity::Call::rename_sub { .. } |
+				pallet_identity::Call::remove_sub { .. } |
+				pallet_identity::Call::quit_sub { .. },
+			) |
+			RuntimeCall::Vesting(..) |
+			RuntimeCall::Bounties(
+				pallet_bounties::Call::propose_bounty { .. } |
+				pallet_bounties::Call::approve_bounty { .. } |
+				pallet_bounties::Call::propose_curator { .. } |
+				pallet_bounties::Call::unassign_curator { .. } |
+				pallet_bounties::Call::accept_curator { .. } |
+				pallet_bounties::Call::award_bounty { .. } |
+				pallet_bounties::Call::claim_bounty { .. } |
+				pallet_bounties::Call::close_bounty { .. },
+			) |
+			RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_reserve_transfer_assets { .. }) |
+			RuntimeCall::Proxy(..) |
+			RuntimeCall::Tokens(
+				orml_tokens::Call::transfer { .. } |
+				orml_tokens::Call::transfer_all { .. } |
+				orml_tokens::Call::transfer_keep_alive { .. }
+			) |
+			// Bifrost moudule
+			RuntimeCall::Farming(
+				bifrost_farming::Call::claim { .. } |
+				bifrost_farming::Call::deposit { .. } |
+				bifrost_farming::Call::withdraw { .. } |
+				bifrost_farming::Call::withdraw_claim { .. }
+			) |
+			RuntimeCall::Salp(
+				bifrost_salp::Call::contribute { .. } |
+				bifrost_salp::Call::batch_unlock { .. } |
+				bifrost_salp::Call::redeem { .. } |
+				bifrost_salp::Call::unlock { .. } |
+				bifrost_salp::Call::unlock_by_vsbond { .. } |
+				bifrost_salp::Call::unlock_vstoken { .. }
+			) |
+			RuntimeCall::VSBondAuction(
+				bifrost_vsbond_auction::Call::clinch_order { .. } |
+				bifrost_vsbond_auction::Call::create_order { .. } |
+				bifrost_vsbond_auction::Call::partial_clinch_order { .. } |
+				bifrost_vsbond_auction::Call::revoke_order { .. }
+			) |
+			RuntimeCall::VstokenConversion(
+				bifrost_vstoken_conversion::Call::vsbond_convert_to_vstoken { .. } |
+				bifrost_vstoken_conversion::Call::vstoken_convert_to_vsbond { .. }
+			) |
+			RuntimeCall::VtokenMinting(
+				bifrost_vtoken_minting::Call::mint { .. } |
+				bifrost_vtoken_minting::Call::rebond { .. } |
+				bifrost_vtoken_minting::Call::rebond_by_unlock_id { .. } |
+				bifrost_vtoken_minting::Call::redeem { .. }
+			) |
+			RuntimeCall::XcmInterface(
+				xcm_interface::Call::transfer_statemine_assets { .. }
+			) |
+			RuntimeCall::XcmAction(..) |
+			// TODO swap
+			RuntimeCall::ZenlinkProtocol(
+				zenlink_protocol::Call::add_liquidity { .. } |
+				zenlink_protocol::Call::remove_liquidity { .. } |
+				zenlink_protocol::Call::transfer { .. }
+			) |
+			RuntimeCall::ZenlinkStableAMM(
+				zenlink_stable_amm::Call::remove_liquidity_one_currency { .. } |
+				zenlink_stable_amm::Call::remove_pool_and_base_pool_liquidity_one_currency { .. } |
+				zenlink_stable_amm::Call::swap { .. } |
+				zenlink_stable_amm::Call::swap_pool_to_base { .. } |
+				zenlink_stable_amm::Call::swap_meta_pool_underlying { .. } |
+				zenlink_stable_amm::Call::withdraw_admin_fee { .. }
+			) => true,
+			_ => false,
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -492,7 +708,7 @@ impl xcm_executor::Config for XcmConfig {
 	type MaxAssetsIntoHolding = ConstU32<8>;
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
+	type SafeCallFilter = SafeCallFilter;
 	type AssetLocker = ();
 	type AssetExchanger = ();
 	type FeeManager = ();
@@ -639,12 +855,15 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
+			a.eq(&ZenklinkFeeAccount::get())
 	}
 }
 
 parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	// gVLo8SqxQsm11cXpkFJnaqXhAd6qtxwi2DhxfUFE7pSiyoi
+	pub ZenklinkFeeAccount: AccountId = hex!["d2ca9ceb400cc68dcf58de4871bd261406958fd17338d2d82ad2592db62e6a2a"].into();
 }
 
 pub struct CurrencyHooks;

@@ -17,8 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
-#![allow(deprecated)] // TODO: clean transactional
 
 extern crate alloc;
 
@@ -214,7 +212,6 @@ impl<T: Config> Contains<CurrencyId> for DisableTransfersFilter<T> {
 
 pub struct OverallToggleFilter<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OverallToggleFilter<T> {
-	#[allow(dead_code)]
 	pub fn get_overall_toggle_status() -> bool {
 		OverallToggle::<T>::get()
 	}

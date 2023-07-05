@@ -250,10 +250,6 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	(pid, tokens)
 }
 
-fn increase_farming_no_gauge(pid: u32) {
-	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, 1000, None));
-}
-
 fn asset_registry() {
 	let items = vec![(KSM, 10 * milli::<Runtime>(KSM))];
 	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {

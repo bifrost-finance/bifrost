@@ -53,12 +53,9 @@ use zenlink_protocol::{
 };
 
 use super::*;
-use crate as flexible_fee;
 #[allow(unused_imports)]
-use crate::{
-	fee_dealer::FixedCurrencyFeeRate,
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+use crate::{self as flexible_fee, tests::CHARLIE};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -89,10 +86,6 @@ frame_support::construct_runtime!(
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 	}
 );
-
-ord_parameter_types! {
-	pub const One: AccountId = ALICE;
-}
 
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -230,24 +223,30 @@ parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const SalpContributeFee: Balance = 100_000_000;
+	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
+}
+
+ord_parameter_types! {
+	pub const One: AccountId = CHARLIE;
 }
 
 impl crate::Config for Test {
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FlexibleFee;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
 	type MiscFeeHandler =
 		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
 	type ParachainId = ParaInfo;
+	type ControlOrigin = EnsureRoot<AccountId>;
 }
 
 pub struct ParaInfo;
@@ -408,7 +407,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 // To control the result returned by `MockXcmExecutor`
 pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 // Mock XcmExecutor

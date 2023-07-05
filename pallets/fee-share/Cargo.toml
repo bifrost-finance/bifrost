@@ -29,6 +29,8 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branc
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
+orml-xtokens = "0.4.1-dev"
+orml-traits = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
@@ -54,5 +56,8 @@ std = [
 	"bifrost-asset-registry/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"sp-runtime/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks"
+]
 try-runtime = ["frame-support/try-runtime"]

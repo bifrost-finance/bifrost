@@ -21,15 +21,11 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use bifrost_asset_registry::AssetMetadata;
-use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
-use node_primitives::TokenInfo;
 
 #[test]
 fn mint_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			RuntimeOrigin::signed(ALICE),
@@ -47,7 +43,6 @@ fn mint_bnc() {
 #[test]
 fn redeem_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		// AssetIdMaps::<Runtime>::register_vtoken_metadata(TokenSymbol::BNC)
 		// 	.expect("VToken register");
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), BNC, 0));
@@ -67,7 +62,6 @@ fn redeem_bnc() {
 #[test]
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 200));
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
@@ -143,7 +137,10 @@ fn redeem() {
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
 			Some((294, ledger_list_origin.clone()))
 		);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 98, TimeUnit::Era(2))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 0),
+			Some((BOB, 98, TimeUnit::Era(2), RedeemType::Native))
+		);
 		let mut ledger_list_origin2 = BoundedVec::default();
 		assert_ok!(ledger_list_origin2.try_push(0));
 		assert_ok!(ledger_list_origin2.try_push(1));
@@ -174,7 +171,10 @@ fn rebond() {
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 1),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
@@ -189,7 +189,10 @@ fn rebond() {
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
 			Some((100, ledger_list_origin2.clone()))
 		);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 0),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), None);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 100); // 200 + 100 - 200
@@ -294,7 +297,10 @@ fn hook() {
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		VtokenMinting::on_initialize(0);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 2), Some((BOB, 100, TimeUnit::Era(6))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 2),
+			Some((BOB, 100, TimeUnit::Era(6), RedeemType::Native))
+		);
 		let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(ledger_list_origin.try_push(2));
 		let mut ledger_list_origin2 = BoundedVec::default();
@@ -348,7 +354,10 @@ fn rebond_by_unlock_id() {
 			Some((100, ledger_list_origin2.clone()))
 		);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), None);
-		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(
+			VtokenMinting::token_unlock_ledger(KSM, 1),
+			Some((BOB, 100, TimeUnit::Era(1), RedeemType::Native))
+		);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 100); // 200 + 100 - 200
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
@@ -360,7 +369,6 @@ fn rebond_by_unlock_id() {
 fn fast_redeem_for_fil() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		env_logger::try_init().unwrap_or(());
-		asset_registry();
 		assert_ok!(VtokenMinting::set_min_time_unit(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
@@ -416,7 +424,7 @@ fn fast_redeem_for_fil() {
 		VtokenMinting::on_initialize(0);
 		assert_eq!(
 			VtokenMinting::token_unlock_ledger(FIL, 2),
-			Some((BOB, 100, TimeUnit::Kblock(6)))
+			Some((BOB, 100, TimeUnit::Kblock(6), RedeemType::Native))
 		);
 		let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(ledger_list_origin.try_push(2));
@@ -431,25 +439,4 @@ fn fast_redeem_for_fil() {
 			Some((100, ledger_list_origin2.clone()))
 		);
 	});
-}
-
-fn asset_registry() {
-	let items = vec![
-		(KSM, 10 * milli::<Runtime>(KSM)),
-		(BNC, 10 * milli::<Runtime>(BNC)),
-		(FIL, 10 * milli::<Runtime>(FIL)),
-	];
-	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
-		(
-			currency_id,
-			AssetMetadata {
-				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				decimals: currency_id.decimals().unwrap_or_default(),
-				minimal_balance: *minimal_balance,
-			},
-		)
-	}) {
-		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
-	}
 }

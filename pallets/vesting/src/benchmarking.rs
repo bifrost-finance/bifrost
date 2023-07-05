@@ -20,7 +20,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_system::{Pallet as System, RawOrigin};
 use sp_runtime::traits::Bounded;
 
@@ -225,10 +225,7 @@ benchmarks! {
 			"Lock not created",
 		);
 	}
-}
 
-impl_benchmark_test_suite!(
-	Vesting,
-	crate::tests::ExtBuilder::default().existential_deposit(256).build(),
-	crate::tests::Test,
+	impl_benchmark_test_suite!(Vesting,crate::tests::ExtBuilder::default().existential_deposit(256).build(),crate::tests::Test,
 );
+}

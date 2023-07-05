@@ -20,7 +20,7 @@
 
 extern crate core;
 
-use crate::agents::PolkadotAgent;
+use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
@@ -37,22 +37,24 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-
 use sp_core::H160;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedSub, Convert, TrailingZeroInput};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm};
+use xcm::{
+	prelude::*,
+	v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm},
+};
 
 mod agents;
-pub mod migration;
+pub mod migration2;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -73,15 +75,23 @@ type StakingAgentBoxType<T> = Box<
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		pallet::Error<T>,
 	>,
 >;
+pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
+const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::agents::{FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent};
+	use crate::agents::{
+		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
+	};
+	use node_primitives::RedeemType;
+	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
 
@@ -108,6 +118,9 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
+
+		/// xtokens xcm transfer interface
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
@@ -398,7 +411,7 @@ pub mod pallet {
 		},
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
-			validators_list: Vec<(MultiLocation, Hash<T>)>,
+			validators_list: Vec<MultiLocation>,
 			delegator_id: MultiLocation,
 		},
 		XcmDestWeightAndFeeSet {
@@ -431,7 +444,7 @@ pub mod pallet {
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+			entry: ValidatorsByDelegatorUpdateEntry,
 		},
 		ValidatorsByDelegatorQueryResponseFailed {
 			#[codec(compact)]
@@ -462,6 +475,26 @@ pub mod pallet {
 			who: MultiLocation,
 		},
 		SupplementFeeAccountWhitelistRemoved {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		},
+		ValidatorsReset {
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		},
+
+		ValidatorBoostListSet {
+			currency_id: CurrencyId,
+			validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)>,
+		},
+
+		ValidatorBoostListAdded {
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			due_block_number: BlockNumberFor<T>,
+		},
+
+		RemovedFromBoostList {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		},
@@ -533,11 +566,16 @@ pub mod pallet {
 	#[pallet::getter(fn get_delegator_next_index)]
 	pub type DelegatorNextIndex<T> = StorageMap<_, Blake2_128Concat, CurrencyId, u16, ValueQuery>;
 
-	/// Validator in service. A validator is identified in MultiLocation format.
+	/// (VWL) Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
-	pub type Validators<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
+	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
+
+	/// (VBL) Validator Boost List -> (validator multilocation, due block number)
+	#[pallet::storage]
+	#[pallet::getter(fn get_validator_boost_list)]
+	pub type ValidatorBoostList<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, BlockNumberFor<T>)>>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
@@ -548,7 +586,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Vec<(MultiLocation, Hash<T>)>,
+		Vec<MultiLocation>,
 		OptionQuery,
 	>;
 
@@ -558,7 +596,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(ValidatorsByDelegatorUpdateEntry<Hash<T>>, BlockNumberFor<T>),
+		(ValidatorsByDelegatorUpdateEntry, BlockNumberFor<T>),
 	>;
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
@@ -653,9 +691,9 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// *****************************/
-		/// ****** Outer Calls ******/
-		/// *****************************/
+		/// *****************************
+		/// ****** Outer Calls ******
+		/// *****************************
 		///
 		/// Delegator initialization work. Generate a new delegator and return its ID.
 		#[pallet::call_index(0)]
@@ -1179,20 +1217,66 @@ pub mod pallet {
 					let idx_record_amount_op =
 						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
 
-					if let Some((user_account, idx_record_amount, _unlock_era)) =
+					if let Some((user_account, idx_record_amount, _unlock_era, redeem_type)) =
 						idx_record_amount_op
 					{
 						let mut deduct_amount = idx_record_amount;
 						if exit_account_balance < idx_record_amount {
+							match redeem_type {
+								RedeemType::Native => {},
+								RedeemType::Astar | RedeemType::Moonbeam(_) => break,
+							};
 							deduct_amount = exit_account_balance;
-						}
-						// Transfer some amount from the exit_account to the user's account
-						T::MultiCurrency::transfer(
-							currency_id,
-							&exit_account,
-							&user_account,
-							deduct_amount,
-						)?;
+						};
+						match redeem_type {
+							RedeemType::Native => {
+								// Transfer some amount from the exit_account to the user's account
+								T::MultiCurrency::transfer(
+									currency_id,
+									&exit_account,
+									&user_account,
+									deduct_amount,
+								)?;
+							},
+							RedeemType::Astar => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_astar_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: user_account.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Moonbeam(evm_caller) => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_moonbeam_parachain_id()),
+										AccountKey20 {
+											network: None,
+											key: evm_caller.to_fixed_bytes(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+						};
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
 
@@ -1405,9 +1489,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// *****************************/
-		/// ****** Storage Setters ******/
-		/// *****************************/
+		/// *****************************
+		/// ****** Storage Setters ******
+		/// *****************************
 		///
 		/// Update storage XcmDestWeightAndFee<T>.
 		#[pallet::call_index(21)]
@@ -1491,8 +1575,7 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_delegator(index, &who, currency_id)?;
+			Pallet::<T>::inner_add_delegator(index, &who, currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
@@ -1533,11 +1616,20 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.add_validator(&who, currency_id)?;
+			if currency_id == PHA {
+				if let &MultiLocation {
+					parents: 1,
+					interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
+				} = who.as_ref()
+				{
+					Pallet::<T>::inner_add_validator(&who, currency_id)?;
+				} else {
+					Err(Error::<T>::ValidatorMultilocationNotvalid)?;
+				}
+			} else {
+				Pallet::<T>::inner_add_validator(&who, currency_id)?;
+			}
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 			Ok(())
 		}
 
@@ -1552,14 +1644,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.remove_validator(&who, currency_id)?;
+			Pallet::<T>::inner_remove_validator(&who, currency_id)?;
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
-				currency_id,
-				validator_id: *who,
-			});
 			Ok(())
 		}
 
@@ -1590,8 +1676,7 @@ pub mod pallet {
 				Error::<T>::DelegatorNotBonded
 			);
 
-			let validators_list =
-				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
+			let validators_list = Self::remove_validators_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
 			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
@@ -1938,6 +2023,207 @@ pub mod pallet {
 			}
 			Ok(())
 		}
+
+		/// Reset the whole storage Validators<T>.
+		#[pallet::call_index(43)]
+		#[pallet::weight(T::WeightInfo::reset_validators())]
+		pub fn reset_validators(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let validator_set =
+				Pallet::<T>::check_length_and_deduplicate(currency_id, validator_list)?;
+
+			// Change corresponding storage.
+			Validators::<T>::insert(currency_id, validator_set.clone());
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: validator_set,
+			});
+			Ok(())
+		}
+
+		/// Reset the whole storage Validator_boost_list<T>.
+		#[pallet::call_index(44)]
+		#[pallet::weight(T::WeightInfo::set_validator_boost_list())]
+		pub fn set_validator_boost_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			validator_list: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let validator_set =
+				Pallet::<T>::check_length_and_deduplicate(currency_id, validator_list)?;
+
+			// get current block number
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			// get the due block number
+			let due_block_number = current_block_number
+				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.ok_or(Error::<T>::OverFlow)?;
+
+			let mut validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)> = vec![];
+
+			for validator in validator_set.iter() {
+				validator_boost_list.push((*validator, due_block_number));
+			}
+
+			// Change corresponding storage.
+			ValidatorBoostList::<T>::insert(currency_id, validator_boost_list.clone());
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorBoostListSet {
+				currency_id,
+				validator_boost_list: validator_boost_list.clone(),
+			});
+
+			// Add the boost list to the validator set
+			Validators::<T>::mutate(currency_id, |validator_set_op| {
+				if let Some(ref mut validator_set) = validator_set_op {
+					for (validator, _) in validator_boost_list.iter() {
+						if !validator_set.contains(validator) {
+							validator_set.push(*validator);
+						}
+					}
+				} else {
+					*validator_set_op =
+						Some(validator_boost_list.iter().map(|(v, _)| *v).collect());
+				}
+			});
+
+			let new_validator_set =
+				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: new_validator_set,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(45)]
+		#[pallet::weight(T::WeightInfo::add_to_validator_boost_list())]
+		pub fn add_to_validator_boost_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// get current block number
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+
+			// get the due block number if the validator is not in the validator boost list
+			let mut due_block_number = current_block_number
+				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.ok_or(Error::<T>::OverFlow)?;
+
+			ValidatorBoostList::<T>::mutate(
+				currency_id,
+				|validator_boost_list_op| -> DispatchResult {
+					if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+						// if the validator is in the validator boost list, change the due block
+						// number
+						if let Some(index) = validator_boost_list
+							.iter()
+							.position(|(validator, _)| validator == who.as_ref())
+						{
+							let original_due_block = validator_boost_list[index].1;
+							// get the due block number
+							due_block_number = original_due_block
+								.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+								.ok_or(Error::<T>::OverFlow)?;
+
+							validator_boost_list[index].1 = due_block_number;
+						} else {
+							validator_boost_list.push((*who, due_block_number));
+						}
+					} else {
+						*validator_boost_list_op = Some(vec![(*who, due_block_number)]);
+					}
+
+					Ok(())
+				},
+			)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorBoostListAdded {
+				currency_id,
+				who: *who,
+				due_block_number,
+			});
+
+			// Add the newly added validator to the validator set
+			Validators::<T>::mutate(currency_id, |validator_set_op| {
+				if let Some(ref mut validator_set) = validator_set_op {
+					if !validator_set.contains(who.as_ref()) {
+						validator_set.push(*who);
+					}
+				} else {
+					*validator_set_op = Some(vec![*who]);
+				}
+			});
+
+			let new_validator_set =
+				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsReset {
+				currency_id,
+				validator_list: new_validator_set,
+			});
+
+			Ok(())
+		}
+
+		/// Update storage Validator_boost_list<T>.
+		#[pallet::call_index(46)]
+		#[pallet::weight(T::WeightInfo::remove_from_validator_boot_list())]
+		pub fn remove_from_validator_boot_list(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: Box<MultiLocation>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// check if the validator is in the validator boost list
+			ValidatorBoostList::<T>::mutate(currency_id, |validator_boost_list_op| {
+				if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+					// if the validator is in the validator boost list, remove it
+					if let Some(index) = validator_boost_list
+						.iter()
+						.position(|(validator, _)| validator == who.as_ref())
+					{
+						validator_boost_list.remove(index);
+
+						// if the validator boost list is empty, remove it
+						if validator_boost_list.is_empty() {
+							*validator_boost_list_op = None;
+						}
+
+						// Deposit event.
+						Pallet::<T>::deposit_event(Event::RemovedFromBoostList {
+							currency_id,
+							who: *who,
+						});
+					}
+				}
+			});
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1967,6 +2253,7 @@ pub mod pallet {
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
+				ASTR => Ok(Box::new(AstarAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

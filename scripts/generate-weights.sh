@@ -3,7 +3,7 @@
 ## EXAMPLE
 ##
 ## Generate the weightInfo files of `bifrost-runtimes`;
-# sh ./script/generate-weights.sh bifrost
+# sh ./scripts/generate-weights.sh bifrost
 
 # 1. Build all-release which is added with "runtime-benchmarks" feature;
 make build-all-release-with-bench
@@ -16,7 +16,9 @@ do
     target/release/bifrost benchmark pallet --chain=$chain --list | sed -n '2,$p' | grep -Eio "^\w+" | uniq |
         while IFS= read -r line
         do
-            pallet=$line;
+		  	pallet=$line
+		  	temp=${pallet/bifrost_/}
+		  	pallet_dir=${temp//_/-}
             if [ "$pallet" != "parachain_staking" ]; then
                 echo "benchmark pallet ${pallet}"
                 echo "benchmark runtime ${runtime}"
@@ -28,7 +30,7 @@ do
                 --execution=wasm \
                 --wasm-execution=compiled \
                 --heap-pages=4096 \
-                --output="./runtime/${runtime}/src/weights/${pallet}.rs" \
+                --output="./pallets/${pallet_dir}/src/weights.rs" \
                 --template="./frame-weight-template.hbs";
             fi
         done

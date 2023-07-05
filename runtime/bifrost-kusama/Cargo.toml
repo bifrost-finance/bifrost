@@ -19,6 +19,8 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 ] }
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
+strum = { version = "0.24", default-features = false, features = [ "derive" ] }
+strum_macros = "0.24"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -26,6 +28,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -47,6 +50,7 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-conviction-voting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -55,6 +59,8 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-preimage = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.38', default-features = false }
+pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -63,6 +69,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-whitelist = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38", default-features = false }
@@ -90,13 +97,9 @@ bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
-bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
-bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
-bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
-bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
 bifrost-slp = { path = "../../pallets/slp", default-features = false }
 # xcm-support = { path = "../../xcm-support", default-features = false }
@@ -110,6 +113,7 @@ bifrost-farming = { path = "../../pallets/farming", default-features = false }
 bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api", default-features = false }
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
+bifrost-xcm-action = { path = "../../pallets/xcm-action", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -146,15 +150,19 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"frame-benchmarking/std",
 	"node-primitives/std",
 	"pallet-balances/std",
 	"pallet-bounties/std",
 	"pallet-collective/std",
+	"pallet-conviction-voting/std",
 	"pallet-democracy/std",
 	"pallet-identity/std",
 	"pallet-indices/std",
 	"pallet-multisig/std",
 	"pallet-proxy/std",
+	"pallet-ranked-collective/std",
+	"pallet-referenda/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -163,7 +171,9 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-elections-phragmen/std",
 	"pallet-tips/std",
+	"pallet-whitelist/std",
 	"sp-api/std",
+	"sp-io/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -205,12 +215,8 @@ std = [
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
-	"bifrost-salp-lite/std",
 	"bifrost-vsbond-auction/std",
-	"bifrost-liquidity-mining/std",
-	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
-	"bifrost-lightening-redeem/std",
 	"bifrost-slp/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-asset-registry/std",
@@ -219,6 +225,7 @@ std = [
 	"bifrost-cross-in-out/std",
 	"parachain-staking/std",
 	"bifrost-fee-share/std",
+	"bifrost-xcm-action/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -230,14 +237,17 @@ std = [
 with-tracing = ["frame-executive/with-tracing"]
 
 runtime-benchmarks = [
-	"frame-benchmarking/runtime-benchmarks",
-	"frame-system-benchmarking",
+	"frame-benchmarking",
+	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
+	"pallet-conviction-voting/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
+	"pallet-ranked-collective/runtime-benchmarks",
+	"pallet-referenda/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
@@ -246,19 +256,18 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"pallet-tips/runtime-benchmarks",
 	"pallet-elections-phragmen/runtime-benchmarks",
+	"pallet-whitelist/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-	"bifrost-salp-lite/runtime-benchmarks",
-	"bifrost-liquidity-mining/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
-	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
 	"bifrost-system-staking/runtime-benchmarks",
+	"bifrost-system-maker/runtime-benchmarks",
 	"bifrost-vstoken-conversion/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
 	"bifrost-asset-registry/runtime-benchmarks",
@@ -266,6 +275,7 @@ runtime-benchmarks = [
 	"sp-api/disable-logging",
 	"bifrost-cross-in-out/runtime-benchmarks",
 	"bifrost-fee-share/runtime-benchmarks",
+	"bifrost-xcm-action/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -286,6 +296,7 @@ try-runtime = [
 	"parachain-staking/try-runtime",
 	"pallet-democracy/try-runtime",
 	"pallet-collective/try-runtime",
+	"pallet-conviction-voting/try-runtime",
 	"pallet-elections-phragmen/try-runtime",
 	"pallet-membership/try-runtime",
 	"cumulus-pallet-xcmp-queue/try-runtime",
@@ -297,11 +308,14 @@ try-runtime = [
 	"pallet-proxy/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-identity/try-runtime",
+	"pallet-ranked-collective/try-runtime",
+	"pallet-referenda/try-runtime",
 	"pallet-vesting/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-bounties/try-runtime",
 	"pallet-tips/try-runtime",
 	"pallet-preimage/try-runtime",
+	"pallet-whitelist/try-runtime",
 	"orml-xtokens/try-runtime",
 	"orml-tokens/try-runtime",
 	"orml-currencies/try-runtime",
@@ -313,10 +327,7 @@ try-runtime = [
 	"zenlink-swap-router/try-runtime",
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
-	"bifrost-liquidity-mining/try-runtime",
 	"bifrost-token-issuer/try-runtime",
-	"bifrost-lightening-redeem/try-runtime",
-	"bifrost-salp-lite/try-runtime",
 	"bifrost-call-switchgear/try-runtime",
 	"bifrost-vsbond-auction/try-runtime",
 	"bifrost-asset-registry/try-runtime",
@@ -329,6 +340,7 @@ try-runtime = [
 	"bifrost-system-maker/try-runtime",
 	"bifrost-fee-share/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
+	"bifrost-xcm-action/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

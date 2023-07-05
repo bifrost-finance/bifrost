@@ -37,7 +37,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
-use orml_traits::MultiCurrency;
+use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::{hashing::blake2_256, ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
@@ -81,6 +81,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage},
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>},
@@ -298,6 +299,36 @@ impl bifrost_slp::Config for Runtime {
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
 	type ParachainStaking = ();
+	type XcmTransfer = XTokens;
+}
+
+parameter_type_with_key! {
+	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+		Some(u128::MAX)
+	};
+}
+
+parameter_types! {
+	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const MaxAssetsForTransfer: usize = 2;
+}
+
+impl orml_xtokens::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = ();
+	type AccountIdToMultiLocation = ();
+	type UniversalLocation = UniversalLocation;
+	type SelfLocation = SelfRelativeLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type BaseXcmWeight = BaseXcmWeight;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = RelativeReserveProvider;
 }
 
 parameter_types! {
@@ -323,6 +354,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
+	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2007>;
+	type MoonbeamParachainId = ConstU32<2023>;
 }
 
 parameter_types! {

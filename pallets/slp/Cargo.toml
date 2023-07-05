@@ -39,12 +39,16 @@ bifrost-asset-registry = { path = "../asset-registry", default-features = false 
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false}
 
 [dev-dependencies]
-#bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
+orml-tokens = "0.4.1-dev"
+orml-xtokens = "0.4.1-dev"
+orml-traits = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
 bifrost-asset-registry = { path = "../asset-registry"}
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+
 env_logger = "0.10.0"
 
 [features]
@@ -78,5 +82,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
 ]
 try-runtime = [ "frame-support/try-runtime" ]

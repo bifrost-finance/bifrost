@@ -22,7 +22,7 @@
 
 use codec::MaxEncodedLen;
 use scale_info::TypeInfo;
-use sp_core::{Decode, Encode, RuntimeDebug};
+use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -39,8 +39,8 @@ mod tests;
 
 pub use crate::{
 	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, DOT, DOT_TOKEN_ID, FIL, GLMR,
-		GLMR_TOKEN_ID,
+		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, DOT,
+		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID,
 	},
 	traits::*,
 };
@@ -201,5 +201,24 @@ impl PartialOrd for TimeUnit {
 			(Self::Hour(a), Self::Hour(b)) => Some(a.cmp(b)),
 			_ => None,
 		}
+	}
+}
+
+// For vtoken-minting
+#[derive(
+	PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, scale_info::TypeInfo,
+)]
+pub enum RedeemType {
+	/// Native chain.
+	Native,
+	/// Astar chain.
+	Astar,
+	/// Moonbeam chain.
+	Moonbeam(H160),
+}
+
+impl Default for RedeemType {
+	fn default() -> Self {
+		Self::Native
 	}
 }

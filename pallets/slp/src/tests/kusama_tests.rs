@@ -20,6 +20,7 @@
 
 use crate::{mocks::mock_kusama::*, BNC, KSM, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::RedeemType;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 
@@ -96,7 +97,7 @@ fn set_fee_source_works() {
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
 			KSM,
-			Some((alice_location.clone(), 1_000_000_000_000))
+			Some((alice_location, 1_000_000_000_000))
 		));
 		assert_eq!(FeeSources::<Runtime>::get(KSM), Some((alice_location, 1_000_000_000_000)));
 	});
@@ -112,7 +113,7 @@ fn supplement_fee_reserve_works() {
 		assert_ok!(Slp::set_fee_source(
 			RuntimeOrigin::signed(ALICE),
 			BNC,
-			Some((alice_location.clone(), 10))
+			Some((alice_location, 10))
 		));
 
 		// supplement fee
@@ -152,8 +153,8 @@ fn remove_delegator_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-		DelegatorsIndex2Multilocation::<Runtime>::insert(KSM, 0, subaccount_0_location.clone());
-		DelegatorsMultilocation2Index::<Runtime>::insert(KSM, subaccount_0_location.clone(), 0);
+		DelegatorsIndex2Multilocation::<Runtime>::insert(KSM, 0, subaccount_0_location);
+		DelegatorsMultilocation2Index::<Runtime>::insert(KSM, subaccount_0_location, 0);
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -173,7 +174,7 @@ fn remove_delegator_works() {
 		MinimumsAndMaximums::<Runtime>::insert(KSM, mins_and_maxs);
 
 		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			total: 0,
 			active: 0,
 			unlocking: vec![],
@@ -181,19 +182,16 @@ fn remove_delegator_works() {
 		let ledger = Ledger::Substrate(sb_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location, ledger);
 
 		assert_ok!(Slp::remove_delegator(
 			RuntimeOrigin::signed(ALICE),
 			KSM,
-			Box::new(subaccount_0_location.clone())
+			Box::new(subaccount_0_location)
 		));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(KSM, 0), None);
-		assert_eq!(
-			DelegatorsMultilocation2Index::<Runtime>::get(KSM, subaccount_0_location.clone()),
-			None
-		);
+		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(KSM, subaccount_0_location), None);
 		assert_eq!(DelegatorLedgers::<Runtime>::get(KSM, subaccount_0_location), None);
 	});
 }
@@ -261,19 +259,19 @@ fn refund_currency_due_unbond_works() {
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
 
 		// Set TokenUnlockLedger records.
-		let record_bob = (BOB, 10, TimeUnit::Era(90));
+		let record_bob = (BOB, 10, TimeUnit::Era(90), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 0, record_bob);
 
-		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100));
+		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 1, record_charlie);
 
-		let record_dave = (DAVE, 30, TimeUnit::Era(100));
+		let record_dave = (DAVE, 30, TimeUnit::Era(100), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 2, record_dave);
 
-		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110));
+		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie_1);
 
-		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110));
+		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110), RedeemType::Native);
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 4, record_eddie_2);
 
 		// insert TimeUnitUnlockLedger records
@@ -373,7 +371,7 @@ fn refund_currency_due_unbond_works() {
 		// Unlocking records for era 100
 		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
 		let time_record_100_new = (8, bounded_vec_100_new, KSM);
-		let record_dave_new = (DAVE, 8, TimeUnit::Era(100));
+		let record_dave_new = (DAVE, 8, TimeUnit::Era(100), RedeemType::Native);
 		assert_eq!(
 			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
 			Some(record_dave_new.clone())
@@ -461,8 +459,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(1));
 
-		DelegatorsIndex2Multilocation::<Runtime>::insert(KSM, 0, subaccount_0_location.clone());
-		DelegatorsMultilocation2Index::<Runtime>::insert(KSM, subaccount_0_location.clone(), 0);
+		DelegatorsIndex2Multilocation::<Runtime>::insert(KSM, 0, subaccount_0_location);
+		DelegatorsMultilocation2Index::<Runtime>::insert(KSM, subaccount_0_location, 0);
 
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
@@ -482,7 +480,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		MinimumsAndMaximums::<Runtime>::insert(KSM, mins_and_maxs);
 
 		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
+			account: subaccount_0_location,
 			total: 0,
 			active: 0,
 			unlocking: vec![],
@@ -490,7 +488,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let ledger = Ledger::Substrate(sb_ledger);
 
 		// Set delegator ledger
-		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location, ledger);
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);
@@ -521,7 +519,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			RuntimeOrigin::signed(ALICE),
 			KSM,
 			100,
-			Some(subaccount_0_location.clone())
+			Some(subaccount_0_location)
 		));
 
 		// Tokenpool should have been added 100.
@@ -553,7 +551,7 @@ fn set_hosting_fees_works() {
 		assert_ok!(Slp::set_hosting_fees(
 			RuntimeOrigin::signed(ALICE),
 			KSM,
-			Some((pct, treasury_location.clone()))
+			Some((pct, treasury_location))
 		));
 
 		let (fee, location) = Slp::get_hosting_fee(KSM).unwrap();

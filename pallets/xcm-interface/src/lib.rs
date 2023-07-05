@@ -17,10 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
 
 pub mod calls;
-pub mod migration;
 pub mod traits;
 pub use calls::*;
 use orml_traits::MultiCurrency;
@@ -52,8 +50,7 @@ pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub(crate) type CurrencyIdOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-pub(crate) type BalanceOf<T: Config> =
+pub(crate) type BalanceOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
@@ -153,7 +150,7 @@ pub mod pallet {
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
-	/// The dest weight limit and fee for execution XCM msg sended by XcmInterface. Must be
+	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
 	///
 	/// XcmDestWeightAndFee: map: XcmInterfaceOperation => (Weight, Balance)
@@ -182,11 +179,7 @@ pub mod pallet {
 		/// Parameters:
 		/// - `updates`: vec of tuple: (XcmInterfaceOperation, WeightChange, FeeChange).
 		#[pallet::call_index(0)]
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::weight(16_690_000)]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
 			updates: Vec<(XcmInterfaceOperation, Option<Weight>, Option<BalanceOf<T>>)>,
@@ -288,7 +281,7 @@ pub mod pallet {
 
 	impl<T: Config> XcmHelper<AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
 		fn contribute(
-			contributer: AccountIdOf<T>,
+			contributor: AccountIdOf<T>,
 			index: ChainId,
 			amount: BalanceOf<T>,
 		) -> Result<MessageId, DispatchError> {
@@ -309,7 +302,7 @@ pub mod pallet {
 			);
 
 			// Bind query_id and contribution
-			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributer, amount);
+			T::SalpHelper::bind_query_id_and_contribution(query_id, index, contributor, amount);
 
 			let (msg_id, msg) =
 				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;

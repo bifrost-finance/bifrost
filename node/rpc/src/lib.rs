@@ -37,8 +37,6 @@ use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpc, LiquidityMiningRpcApiServer};
-use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use bifrost_ve_minting_rpc_api::{VeMintingRpc, VeMintingRpcApiServer};
@@ -85,7 +83,6 @@ where
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -101,7 +98,6 @@ where
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
-	module.merge(LiquidityMiningRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StableAmm::new(client).into_rpc())?;
 
