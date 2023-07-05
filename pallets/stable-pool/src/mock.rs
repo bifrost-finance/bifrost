@@ -9,7 +9,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, TokenSymbol, ASTR, DOT,
-	DOT_TOKEN_ID, FIL, GLMR,
+	DOT_TOKEN_ID, GLMR,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
@@ -26,9 +26,8 @@ use xcm_executor::XcmExecutor;
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const vDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
-// pub const vDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
-pub const LP_KSM_ETH: CurrencyId =
-	CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::ETH, 2u8);
+pub const LP_KSM_BNC: CurrencyId =
+	CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -47,7 +46,7 @@ frame_support::construct_runtime!(
 		// Currencies: orml_currencies::{Pallet, Call, Storage},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 		AssetRegistry: bifrost_asset_registry,
-		StableAsset: nutsfinance_stable_asset,
+		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
 		StablePool: bifrost_stable_pool,
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 	}
@@ -96,11 +95,9 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Test>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
-			&FIL => 0,
-			&vFIL => 0,
-			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Test>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Test>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::BNC) => 10 * milli::<Test>(NativeCurrencyId::get()),  // 0.01 BNC
+			&DOT => 0,
+			&vDOT => 0,
+			&LP_KSM_BNC => 10_000_000,
 			_ => bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
@@ -343,6 +340,7 @@ impl ExtBuilder {
 			(1, DOT, 100_000_000_000_000),
 			// (2, vDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
+			(4, DOT, 100_000_000),
 		])
 	}
 	// Build genesis storage according to the mock runtime.
@@ -357,7 +355,6 @@ impl ExtBuilder {
 				(DOT, 10_000_000, None),
 				(ASTR, 10_000_000, None),
 				(GLMR, 10_000_000, None),
-				(FIL, 10_000_000, None),
 			],
 			vcurrency: vec![],
 			vsbond: vec![],
