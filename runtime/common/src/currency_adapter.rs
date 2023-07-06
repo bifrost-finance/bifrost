@@ -61,6 +61,7 @@ pub trait OnDepositFail<CurrencyId, AccountId, Balance> {
 		Err(XcmError::FailedToTransactAsset(err.into()))
 	}
 
+	/// Called on `MultiLocation` to `AccountId` conversion errors.
 	fn on_account_id_convert_fail(currency_id: CurrencyId, amount: Balance) -> Result;
 }
 
