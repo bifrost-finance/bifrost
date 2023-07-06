@@ -5,20 +5,6 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 pub const BALANCE_OFF: u128 = 0;
 
-#[test]
-fn it_works_for_default_value() {
-	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		// Go past genesis block so events get deposited
-		System::set_block_number(1);
-		// Dispatch a signed extrinsic.
-		assert_ok!(StablePool::do_something(RuntimeOrigin::signed(1), 42));
-		// Read pallet storage and assert an expected result.
-		assert_eq!(StablePool::something(), Some(42));
-		// Assert that the correct event was deposited
-		System::assert_last_event(Event::SomethingStored { something: 42, who: 1 }.into());
-	});
-}
-
 fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = VDOT;
@@ -66,34 +52,30 @@ fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	));
 	(coin0, coin1, pool_asset, 30160825295207673652903702381u128)
 }
-// #[test]
-// fn create_pool_successful() {
-// 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-// 		assert_eq!(StableAsset::pool_count(), 0);
-// 		let pool_tokens: (i64, i64, i64, u128) = create_pool();
-// 		assert_eq!(
-// 			StableAsset::pools(0),
-// 			Some(StableAssetPoolInfo {
-// 				pool_asset: 1,
-// 				assets: vec![1, 2],
-// 				precisions: vec![1u128, 1u128],
-// 				mint_fee: 1u128,
-// 				swap_fee: 1u128,
-// 				redeem_fee: 1u128,
-// 				total_supply: 0u128,
-// 				a: 1u128,
-// 				a_block: 0,
-// 				future_a: 1u128,
-// 				future_a_block: 0,
-// 				balances: vec![0, 0],
-// 				fee_recipient: 1,
-// 				account_id: 30160825295207673652903702381u128,
-// 				yield_recipient: 1,
-// 				precision: 1000000000000000000u128,
-// 			})
-// 		);
-// 	});
-// }
+
+fn create_pool3() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
+	let coin0 = DOT;
+	let coin1 = VDOT;
+	let pool_asset = LP_KSM_BNC;
+	// let amount: Balance = 100_000_000;
+	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin0, amount, 0));
+	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin1, amount, 0));
+
+	assert_ok!(StableAsset::create_pool(
+		RuntimeOrigin::signed(1),
+		pool_asset,
+		vec![coin0, coin1],
+		vec![10_000_000_000u128, 11_111_111_111u128],
+		10000000u128,
+		20000000u128,
+		50000000u128,
+		10000u128,
+		2,
+		1,
+		1_000_000_000_000u128,
+	));
+	(coin0, coin1, pool_asset, 30160825295207673652903702381u128)
+}
 
 #[test]
 fn modify_a_argument_error_failed() {
@@ -191,7 +173,7 @@ fn mint_successful_equal_amounts() {
 					),
 					nutsfinance_stable_asset::Error::<Test>::MintUnderMin
 				);
-				assert_ok!(StablePool::mint(&3, 0, amounts, 0));
+				assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
 				// assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts.clone(), 0));
 				assert_eq!(
 					StableAsset::pools(0),
@@ -314,7 +296,7 @@ fn get_swap_output_amount() {
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance{:?}", vtoken_issuance);
 				// assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
-				assert_ok!(StablePool::mint(&3, 0, amounts, 0));
+				assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
 				let vtoken_issuance2 =
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance2{:?}", vtoken_issuance2);
@@ -367,9 +349,10 @@ fn get_swap_output_amount() {
 }
 
 #[test]
-fn mint_swap_redeem() {
+fn mint_swap_redeem1() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+		StableAsset::set_token_rate(VDOT, Some((90_000_000, 100_000_000)));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
 		// assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(VDOT, &BRUCE, &CATHI, 50));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
@@ -383,7 +366,7 @@ fn mint_swap_redeem() {
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance{:?}", vtoken_issuance);
 				// assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
-				assert_ok!(StablePool::mint(&3, 0, amounts, 0));
+				assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
 				let vtoken_issuance2 =
 					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
 				log::debug!("vtoken_issuance2{:?}", vtoken_issuance2);
@@ -438,10 +421,10 @@ fn mint_swap_redeem() {
 				);
 				// log::debug!("===pools{:?}", StableAsset::pools(0));
 				assert_noop!(
-					StablePool::redeem_proportion(&3, 0, 15_000_000u128, vec![0]),
+					StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
 					Error::<Test>::NotNullable
 				);
-				assert_ok!(StablePool::redeem_proportion(
+				assert_ok!(StablePool::redeem_proportion_inner(
 					&3,
 					0,
 					15_000_000_000_000u128,
@@ -463,6 +446,9 @@ fn mint_swap_redeem() {
 fn mint_swap_redeem2() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+		StableAsset::set_token_rate(VDOT, Some((90_000_000, 100_000_000)));
+		// assert_ok!(StableAsset::set_token_rate(VDOT, Some((90_000_000, 100_000_000))));
+
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let pool_tokens = create_pool2();
@@ -470,13 +456,23 @@ fn mint_swap_redeem2() {
 		match pool_tokens {
 			(coin0, coin1, pool_asset, swap_id) => {
 				let amounts = vec![10_000_000u128, 20_000_000u128];
-				assert_ok!(StablePool::mint(&3, 0, amounts, 0));
-				assert_eq!(Tokens::free_balance(coin1, &3), 70_000_001 - BALANCE_OFF); // 90_000_000 - 19_999_999
+				assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
+				assert_eq!(Tokens::free_balance(coin1, &3), 70_000_000 - BALANCE_OFF); // 90_000_000 - 20_000_000
+				log::debug!(
+					"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
+					StableAsset::pools(0),
+					Tokens::free_balance(coin0, &swap_id),
+					Tokens::free_balance(coin1, &swap_id),
+					Tokens::free_balance(coin0, &3),
+					Tokens::free_balance(coin1, &3),
+					Tokens::free_balance(pool_asset, &3),
+					Tokens::free_balance(pool_asset, &2)
+				);
 				assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
 				assert_eq!(Tokens::free_balance(coin0, &3), 85000000u128 - BALANCE_OFF);
-				assert_eq!(Tokens::free_balance(coin1, &3), 74499371u128 - BALANCE_OFF); // 90_000_000 - 19_999_999 + 4_499_370
+				assert_eq!(Tokens::free_balance(coin1, &3), 74502743u128 - BALANCE_OFF); // 90_000_000 - 20_000_000 + 4502743
 				assert_eq!(Tokens::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
-				assert_eq!(Tokens::free_balance(coin1, &swap_id), 15500629 - BALANCE_OFF);
+				assert_eq!(Tokens::free_balance(coin1, &swap_id), 15497257u128 - BALANCE_OFF);
 				// assert_ok!(StablePool::on_swap(&4u128, 0, 0, 1, 15_000_000u128, 0));
 				// assert_ok!(StablePool::on_swap(&1u128, 0, 0, 1, 500_000_000u128, 0));
 				log::debug!(
@@ -490,11 +486,92 @@ fn mint_swap_redeem2() {
 					Tokens::free_balance(pool_asset, &2)
 				);
 				assert_noop!(
-					StablePool::redeem_proportion(&3, 0, 15_000_000u128, vec![0]),
+					StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
 					Error::<Test>::NotNullable
 				);
-				// assert_ok!(StablePool::redeem_proportion(&3, 0, 32_176_560, vec![0, 0]));
-				assert_ok!(StablePool::redeem_proportion(&3, 0, 30500609, vec![0, 0]));
+				assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
+				// assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 30_500_608, vec![0, 0]));
+
+				let redeem_proportion_amount = StableAsset::get_redeem_proportion_amount(
+					&StableAsset::pools(0).unwrap(),
+					32176560,
+				);
+				log::debug!(
+					"get_redeem_proportion_amount{:?}StableAsset::pools(0){:?}",
+					redeem_proportion_amount,
+					StableAsset::pools(0)
+				);
+
+				let vtoken_issuance2 =
+					<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
+				log::debug!("vtoken_issuance2:{:?}", vtoken_issuance2);
+				log::debug!(
+					"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
+					StableAsset::pools(0),
+					Tokens::free_balance(coin0, &swap_id),
+					Tokens::free_balance(coin1, &swap_id),
+					Tokens::free_balance(coin0, &3),
+					Tokens::free_balance(coin1, &3),
+					Tokens::free_balance(pool_asset, &3),
+					Tokens::free_balance(pool_asset, &2)
+				);
+			},
+		}
+	});
+}
+
+#[test]
+fn mint_swap_redeem_for_precisions() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
+		let pool_tokens = create_pool3();
+		System::set_block_number(2);
+		match pool_tokens {
+			(coin0, coin1, pool_asset, swap_id) => {
+				let amounts = vec![10_000_000u128, 20_000_000u128];
+				assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
+				assert_eq!(Tokens::free_balance(coin1, &3), 70_000_000 - BALANCE_OFF); // 90_000_000 - 20_000_000
+				log::debug!(
+					"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
+					StableAsset::pools(0),
+					Tokens::free_balance(coin0, &swap_id),
+					Tokens::free_balance(coin1, &swap_id),
+					Tokens::free_balance(coin0, &3),
+					Tokens::free_balance(coin1, &3),
+					Tokens::free_balance(pool_asset, &3),
+					Tokens::free_balance(pool_asset, &2)
+				);
+				assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+				assert_eq!(Tokens::free_balance(coin0, &3), 85000000u128 - BALANCE_OFF);
+				// assert_eq!(Tokens::free_balance(coin1, &3), 74502744u128 - BALANCE_OFF); // 90_000_000 - 20_000_000 + 4502744
+				// assert_eq!(Tokens::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
+				// assert_eq!(Tokens::free_balance(coin1, &swap_id), 15497256 - BALANCE_OFF);
+				// assert_ok!(StablePool::on_swap(&4u128, 0, 0, 1, 15_000_000u128, 0));
+				// assert_ok!(StablePool::on_swap(&1u128, 0, 0, 1, 500_000_000u128, 0));
+				log::debug!(
+					"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
+					StableAsset::pools(0),
+					Tokens::free_balance(coin0, &swap_id),
+					Tokens::free_balance(coin1, &swap_id),
+					Tokens::free_balance(coin0, &3),
+					Tokens::free_balance(coin1, &3),
+					Tokens::free_balance(pool_asset, &3),
+					Tokens::free_balance(pool_asset, &2)
+				);
+				assert_noop!(
+					StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
+					Error::<Test>::NotNullable
+				);
+				// assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 321765598209115093, vec![0,
+				// 0]));
+				assert_ok!(StablePool::redeem_proportion_inner(
+					&3,
+					0,
+					321765598178614485,
+					vec![0, 0]
+				));
 
 				let redeem_proportion_amount = StableAsset::get_redeem_proportion_amount(
 					&StableAsset::pools(0).unwrap(),

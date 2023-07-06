@@ -54,6 +54,8 @@ pub mod pallet {
 
 		type WeightInfo: WeightInfo;
 
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
 		type MultiCurrency: fungibles::Inspect<AccountIdOf<Self>, AssetId = CurrencyId, Balance = Self::Balance>
 			+ fungibles::Mutate<AccountIdOf<Self>, AssetId = CurrencyId, Balance = Self::Balance>
 			+ fungibles::Transfer<AccountIdOf<Self>, AssetId = CurrencyId, Balance = Self::Balance>;
@@ -81,10 +83,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn something)]
 	pub type Something<T> = StorageValue<_, u32>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_rate_caches)]
-	pub type TokenRateCaches<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, T::Balance>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -133,46 +131,106 @@ pub mod pallet {
 		SwapUnderMin,
 		RedeemUnderMin,
 		MintUnderMin,
+		CantMint,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(10)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		pub fn set_token_rate(
+			origin: OriginFor<T>,
+			currency: CurrencyId,
+			token_rate: Option<(u128, u128)>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			T::StableAsset::set_token_rate(currency, token_rate);
+			Ok(())
+		}
+
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			<Something<T>>::put(something);
+		#[transactional]
+		pub fn create_pool(
+			origin: OriginFor<T>,
+			pool_asset: CurrencyId,
+			assets: Vec<CurrencyId>,
+			precisions: Vec<u128>,
+			mint_fee: u128,
+			swap_fee: u128,
+			redeem_fee: u128,
+			initial_a: u128,
+			fee_recipient: T::AccountId,
+			yield_recipient: T::AccountId,
+			precision: u128,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			T::StableAsset::create_pool(
+				pool_asset,
+				assets,
+				precisions,
+				mint_fee,
+				swap_fee,
+				redeem_fee,
+				initial_a,
+				fee_recipient,
+				yield_recipient,
+				precision,
+			)
+		}
 
-			Self::deposit_event(Event::SomethingStored { something, who });
-			Ok(())
+		#[pallet::call_index(1)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[transactional]
+		pub fn mint(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			amounts: Vec<T::Balance>,
+			min_mint_amount: T::Balance,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::mint_inner(&who, pool_id, amounts, min_mint_amount)
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[transactional]
+		pub fn swap(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			i: PoolTokenIndex,
+			j: PoolTokenIndex,
+			dx: T::Balance,
+			min_dy: T::Balance,
+			// asset_length: u32,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::on_swap(&who, pool_id, i, j, dx, min_dy)
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		pub fn redeem_proportion(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			amount: T::Balance,
+			min_redeem_amounts: Vec<T::Balance>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::redeem_proportion_inner(&who, pool_id, amount, min_redeem_amounts)
 		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	// type Balance = T::Balance;
-
-	// pub fn get_token_rates(currency: CurrencyId) -> T::Balance {
-	// 	if let Some(rate) = Self::token_rate_caches(currency) {
-	// 		// getTokenRateCache
-	// 		rate
-	// 	} else {
-	// 		// getCurrentRate
-	// 		T::Balance::default()
-	// 	}
-	// }
-
-	pub fn get_scaling_factors(something: u32) -> DispatchResult {
-		Ok(())
-	}
-
-	fn mint(
+	fn mint_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
 		mut amounts: Vec<T::Balance>,
 		min_mint_amount: T::Balance,
 	) -> DispatchResult {
 		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let amounts_old = amounts.clone();
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
 				*amount,
@@ -193,24 +251,27 @@ impl<T: Config> Pallet<T> {
 		)
 		.ok_or(Error::<T>::Math)?;
 		ensure!(mint_amount >= min_mint_amount, Error::<T>::MintUnderMin);
-		for (i, amount) in amounts.iter_mut().enumerate() {
+		for (i, amount) in amounts.iter().enumerate() {
 			if *amount == Zero::zero() {
 				continue;
 			}
-			*amount = Self::downscale(
-				*amount,
-				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
-			)?;
+			ensure!(
+				amounts_old[i] >=
+					Self::downscale(
+						*amount,
+						*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+					)?,
+				Error::<T>::CantMint
+			);
 			<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
 				pool_info.assets[i],
 				who,
 				&pool_info.account_id,
-				*amount,
+				amounts_old[i],
 				false,
 			)?;
 		}
-		log::debug!("mint___amounts:{:?}", amounts);
-		// let zero: T::Balance = Zero::zero();
+		log::debug!("mint___amounts:{:?}{:?}", amounts, total_supply);
 		if fee_amount > Zero::zero() {
 			<<T as pallet::Config>::MultiCurrency as fungibles::Mutate<AccountIdOf<T>>>::mint_into(
 				pool_info.pool_asset,
@@ -242,7 +303,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	#[transactional]
-	fn redeem_proportion(
+	fn redeem_proportion_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
 		amount: T::Balance,
@@ -250,7 +311,6 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let mut pool_info: StableAssetPoolInfo<
 			CurrencyId,
-			// <T as nutsfinance_stable_asset::Config>::AssetId,
 			u128,
 			<T as nutsfinance_stable_asset::Config>::Balance,
 			AccountIdOf<T>,
@@ -420,6 +480,14 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		vcurrency_id: CurrencyId,
 	) -> Result<T::Balance, DispatchError> {
+		if let Some((demoninator, numerator)) = T::StableAsset::get_token_rate(vcurrency_id) {
+			return Ok(Self::calculate_scaling(
+				amount.into(),
+				numerator.into(),
+				demoninator.into(),
+			));
+		}
+
 		let currency_id = T::CurrencyIdConversion::convert_to_token(vcurrency_id)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 		let vtoken_issuance = <<T as pallet::Config>::MultiCurrency as fungibles::Inspect<
@@ -435,6 +503,14 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		vcurrency_id: CurrencyId,
 	) -> Result<T::Balance, DispatchError> {
+		if let Some((numerator, demoninator)) = T::StableAsset::get_token_rate(vcurrency_id) {
+			return Ok(Self::calculate_scaling(
+				amount.into(),
+				numerator.into(),
+				demoninator.into(),
+			));
+		}
+
 		let currency_id = T::CurrencyIdConversion::convert_to_token(vcurrency_id)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 		let vtoken_issuance = <<T as pallet::Config>::MultiCurrency as fungibles::Inspect<
