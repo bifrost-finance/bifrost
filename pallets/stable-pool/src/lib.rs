@@ -31,6 +31,7 @@ use nutsfinance_stable_asset::{
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::SaturatedConversion;
+use sp_std::prelude::*;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
