@@ -5,8 +5,12 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.3.1", default-features = false, features = [
+	"derive",
+] }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false, optional = true }
@@ -20,7 +24,7 @@ orml-currencies = { version = "0.4.1-dev", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-
+log = { version = "0.4.17", default-features = false }
 
 [features]
 default = ["std"]
@@ -39,7 +43,7 @@ std = [
 	"orml-currencies/std",
 	"pallet-balances/std",
 	"pallet-balances/std",
-	"sp-core/std"
+	"sp-core/std",
 ]
 
 runtime-benchmarks = [
@@ -47,4 +51,4 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 ]
-try-runtime = [ "frame-support/try-runtime" ]
+try-runtime = ["frame-support/try-runtime"]

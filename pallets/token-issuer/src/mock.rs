@@ -167,12 +167,17 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const MaxLengthLimit: u32 = 100;
+}
+
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin =
 		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub struct ExtBuilder {

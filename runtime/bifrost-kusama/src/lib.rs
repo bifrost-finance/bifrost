@@ -1294,11 +1294,16 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
+parameter_types! {
+	pub const MaxLengthLimit: u32 = 100;
+}
+
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1866,8 +1871,28 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	(TokenIssuerMigration),
 >;
+
+pub struct TokenIssuerMigration;
+
+impl OnRuntimeUpgrade for TokenIssuerMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_token_issuer::migrations::v2::migrate_to_v2::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		bifrost_token_issuer::migrations::v2::pre_migrate::<R>();
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		bifrost_token_issuer::migrations::v2::post_migrate::<R>();
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
