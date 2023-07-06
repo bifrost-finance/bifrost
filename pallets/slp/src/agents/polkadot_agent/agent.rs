@@ -24,7 +24,7 @@ use crate::{
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
+	AccountIdOf, BalanceOf, BoundedVec, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 	XcmDestWeightAndFee, XcmWeight,
@@ -1181,7 +1181,16 @@ impl<T: Config> PolkadotAgent<T> {
 		let ValidatorsByDelegatorUpdateEntry::Substrate(
 			SubstrateValidatorsByDelegatorUpdateEntry { currency_id, delegator_id, validators },
 		) = query_entry;
-		ValidatorsByDelegator::<T>::insert(currency_id, delegator_id, validators);
+
+		// ensure the length of validators does not exceed MaxLengthLimit
+		ensure!(
+			validators.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
+
+		let bounded_validators =
+			BoundedVec::try_from(validators).map_err(|_| Error::<T>::FailToConvert)?;
+		ValidatorsByDelegator::<T>::insert(currency_id, delegator_id, bounded_validators);
 
 		// update ValidatorsByDelegatorXcmUpdateQueue<T> storage
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);

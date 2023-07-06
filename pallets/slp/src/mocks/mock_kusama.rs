@@ -413,6 +413,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct BifrostCurrencyIdConvert;
@@ -469,6 +470,7 @@ impl Config for Runtime {
 	type OnRefund = ();
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 parameter_types! {

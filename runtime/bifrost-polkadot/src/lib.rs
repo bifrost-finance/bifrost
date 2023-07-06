@@ -1139,6 +1139,7 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct SubstrateResponseManager;
@@ -1201,6 +1202,7 @@ impl bifrost_slp::Config for Runtime {
 	type OnRefund = OnRefund;
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 parameter_types! {
@@ -1639,8 +1641,46 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	(SlpMigration, FlexibleFeeMigration),
 >;
+
+pub struct SlpMigration;
+impl OnRuntimeUpgrade for SlpMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_slp::migrations::v2::migrate_to_v2::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		bifrost_slp::migrations::v2::pre_migrate::<Runtime>();
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		bifrost_slp::migrations::v2::post_migrate::<Runtime>();
+		Ok(())
+	}
+}
+
+pub struct FlexibleFeeMigration;
+impl OnRuntimeUpgrade for FlexibleFeeMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_flexible_fee::migrations::v2::migrate_to_v2::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		bifrost_flexible_fee::migrations::v2::pre_migrate::<Runtime>();
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		bifrost_flexible_fee::migrations::v2::post_migrate::<Runtime>();
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

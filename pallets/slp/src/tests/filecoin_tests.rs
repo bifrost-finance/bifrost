@@ -176,7 +176,7 @@ fn delegate_should_work() {
 
 		assert_ok!(Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location)));
 
-		let validator_list = vec![owner_location];
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		assert_ok!(Slp::delegate(
@@ -285,7 +285,7 @@ fn undelegate_should_work() {
 
 		bond_setup();
 
-		let validator_list = vec![owner_location];
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
 		assert_eq!(ValidatorsByDelegator::<Runtime>::get(FIL, location), Some(validator_list));
 
 		assert_noop!(
@@ -366,7 +366,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 		));
 
 		// insert validator into validators list.
-		let validator_list = vec![location];
+		let validator_list = BoundedVec::try_from(vec![location]).unwrap();
 		Validators::<Runtime>::insert(FIL, validator_list);
 
 		// First set base vtoken exchange rate. Should be 1:1.
@@ -450,7 +450,7 @@ fn remove_validator_should_work() {
 
 		bond_setup();
 
-		let validator_list = vec![owner_location];
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		// set ledger to zero
@@ -471,7 +471,7 @@ fn remove_validator_should_work() {
 			Box::new(owner_location)
 		));
 
-		let empty_vec = vec![];
+		let empty_vec = BoundedVec::default();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(empty_vec));
 	});
 }
