@@ -25,7 +25,7 @@ use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const vDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
+pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const LP_KSM_BNC: CurrencyId =
 	CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 
@@ -88,16 +88,13 @@ orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		env_logger::try_init().unwrap_or(());
 
-		log::debug!(
-			"{:?}",currency_id
-		);
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Test>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
 			&DOT => 0,
-			&vDOT => 0,
-			&LP_KSM_BNC => 10_000_000,
+			&VDOT => 0,
+			&LP_KSM_BNC => 0,
 			_ => bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
@@ -336,9 +333,9 @@ impl ExtBuilder {
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
 			(1, BNC, 1_000_000_000_000),
-			// (1, vDOT, 100_000_000),
+			// (1, VDOT, 100_000_000),
 			(1, DOT, 100_000_000_000_000),
-			// (2, vDOT, 100_000_000_000_000),
+			// (2, VDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
 		])
