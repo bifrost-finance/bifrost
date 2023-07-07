@@ -1281,12 +1281,17 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+parameter_types! {
+	pub const MaxLengthLimit: u32 = 100;
+}
+
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 impl bifrost_xcm_action::Config for Runtime {
@@ -1641,7 +1646,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(SlpMigration, FlexibleFeeMigration),
+	(SlpMigration, FlexibleFeeMigration, CrossInOutMigration),
 >;
 
 pub struct SlpMigration;
@@ -1678,6 +1683,25 @@ impl OnRuntimeUpgrade for FlexibleFeeMigration {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
 		bifrost_flexible_fee::migrations::v2::post_migrate::<Runtime>();
+		Ok(())
+	}
+}
+
+pub struct CrossInOutMigration;
+impl OnRuntimeUpgrade for CrossInOutMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		bifrost_cross_in_out::migrations::v2::migrate_to_v2::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		bifrost_cross_in_out::migrations::v2::pre_migrate::<Runtime>();
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		bifrost_cross_in_out::migrations::v2::post_migrate::<Runtime>();
 		Ok(())
 	}
 }

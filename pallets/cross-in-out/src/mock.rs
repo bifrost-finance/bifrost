@@ -154,6 +154,7 @@ ord_parameter_types! {
 
 parameter_types! {
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -162,6 +163,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub struct ExtBuilder {
