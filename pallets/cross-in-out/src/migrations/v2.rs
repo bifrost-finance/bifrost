@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
+use alloc::vec::Vec;
 
 const LOG_TARGET: &str = "cross-in-out::migration";
 

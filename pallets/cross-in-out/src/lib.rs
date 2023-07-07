@@ -22,7 +22,7 @@
 // pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::AccountIdConversion, PalletId};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;

@@ -21,6 +21,7 @@
 
 extern crate alloc;
 
+use alloc::{vec, vec::Vec};
 use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
