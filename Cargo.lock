@@ -1146,6 +1146,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xcm-support",
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",

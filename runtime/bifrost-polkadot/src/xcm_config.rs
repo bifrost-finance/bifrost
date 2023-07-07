@@ -42,10 +42,10 @@ use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
+use bifrost_runtime_common::currency_adapter::{DepositToAlternative, MultiCurrencyAdapter};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
-use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 
