@@ -90,7 +90,7 @@ pub mod pallet {
 	use crate::agents::{
 		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
 	};
-	use node_primitives::RedeemType;
+	use node_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
@@ -118,6 +118,8 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
+
+		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
@@ -1268,13 +1270,28 @@ pub mod pallet {
 										},
 									),
 								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
+								if currency_id == FIL {
+									let assets = vec![
+										(currency_id, deduct_amount),
+										(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
+									];
+
+									T::XcmTransfer::transfer_multicurrencies(
+										user_account.clone(),
+										assets,
+										1,
+										dest,
+										Unlimited,
+									)?;
+								} else {
+									T::XcmTransfer::transfer(
+										user_account.clone(),
+										currency_id,
+										deduct_amount,
+										dest,
+										Unlimited,
+									)?;
+								}
 							},
 						};
 						// Delete the corresponding unlocking record storage.

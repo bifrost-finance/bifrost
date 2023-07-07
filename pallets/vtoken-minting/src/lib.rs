@@ -43,13 +43,13 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, TimeUnit,
-	VtokenMintingInterface, VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator,
+	TimeUnit, VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 pub use traits::*;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -66,6 +66,7 @@ pub type UnlockId = u32;
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+	use node_primitives::{currency::BNC, FIL};
 	use orml_traits::XcmTransfer;
 	use xcm::{prelude::*, v3::MultiLocation};
 
@@ -120,6 +121,8 @@ pub mod pallet {
 		type MoonbeamParachainId: Get<u32>;
 
 		type BifrostSlp: SlpOperator<CurrencyId>;
+
+		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
@@ -945,13 +948,28 @@ pub mod pallet {
 								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
 							),
 						};
-						T::XcmTransfer::transfer(
-							account.clone(),
-							token_id,
-							unlock_amount,
-							dest,
-							Unlimited,
-						)?;
+						if token_id == FIL {
+							let assets = vec![
+								(token_id, unlock_amount),
+								(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
+							];
+
+							T::XcmTransfer::transfer_multicurrencies(
+								account.clone(),
+								assets,
+								1,
+								dest,
+								Unlimited,
+							)?;
+						} else {
+							T::XcmTransfer::transfer(
+								account.clone(),
+								token_id,
+								unlock_amount,
+								dest,
+								Unlimited,
+							)?;
+						}
 					},
 				};
 			} else {

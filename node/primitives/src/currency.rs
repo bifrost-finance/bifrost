@@ -37,12 +37,19 @@ use crate::{
 
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
+pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
+pub const VGLMR: CurrencyId = CurrencyId::VToken2(GLMR_TOKEN_ID);
 pub const ASTR_TOKEN_ID: u8 = 3u8;
 pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
+pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const VBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
