@@ -30,6 +30,7 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
+use frame_support::traits::OnRuntimeUpgrade;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -1294,10 +1295,6 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
-parameter_types! {
-	pub const MaxLengthLimit: u32 = 100;
-}
-
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1474,10 +1471,6 @@ impl bifrost_fee_share::Config for Runtime {
 	>;
 	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
-}
-
-parameter_types! {
-	pub const MaxLengthLimit: u32 = 100;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {

@@ -1281,10 +1281,6 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
-parameter_types! {
-	pub const MaxLengthLimit: u32 = 100;
-}
-
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
