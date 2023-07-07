@@ -21,7 +21,7 @@ use crate::{
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, BoundedVec, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
@@ -33,7 +33,9 @@ use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID};
+use node_primitives::{
+	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID,
+};
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedInto, Zero,

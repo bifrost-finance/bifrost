@@ -19,6 +19,7 @@
 #![cfg(test)]
 
 use frame_support::{assert_noop, assert_ok};
+use node_primitives::currency::ZLK;
 
 use crate::{mock::*, *};
 
@@ -48,8 +49,8 @@ fn add_to_issue_whitelist_should_work() {
 			CHARLIE
 		));
 
-		let bounded_List = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_List));
+		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_list));
 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
 		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
@@ -110,8 +111,8 @@ fn add_to_transfer_whitelist_should_work() {
 			CHARLIE
 		));
 
-		let bounded_List = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_List));
+		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_list));
 		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
 		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);

@@ -24,7 +24,7 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR, PHA,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -37,6 +37,7 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
+	currency::{BNC, KSM, MOVR, PHA},
 	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;

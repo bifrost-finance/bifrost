@@ -19,11 +19,9 @@
 use crate::MultiLocation;
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
+use node_primitives::{CurrencyId, TimeUnit};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
-
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct SubstrateLedger<Balance> {

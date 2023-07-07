@@ -24,10 +24,10 @@ use crate::{
 	kusama_integration_tests::{RelayCurrencyId, RuntimeOrigin, TimeUnit, ALICE, BLOCKS_PER_YEAR},
 	kusama_test_net::{Bifrost, KusamaNet},
 };
-use node_primitives::{AccountId, CurrencyId, TokenSymbol, TryConvertFrom, VtokenMintingOperator};
-
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+use node_primitives::{
+	currency::{KSM, VKSM},
+	AccountId, TryConvertFrom, VtokenMintingOperator,
+};
 
 pub fn para_account_2001() -> AccountId {
 	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E

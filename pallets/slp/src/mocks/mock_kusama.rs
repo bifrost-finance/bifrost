@@ -33,7 +33,10 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{
+	currency::{BNC, KSM, VKSM},
+	Amount, Balance, CurrencyId, TokenSymbol,
+};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
@@ -58,10 +61,6 @@ pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
 pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
-
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 
 construct_runtime!(
 	pub enum Runtime where

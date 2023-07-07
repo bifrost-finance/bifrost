@@ -422,6 +422,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct SubstrateResponseManager;
@@ -459,6 +460,7 @@ impl bifrost_slp::Config for Test {
 	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

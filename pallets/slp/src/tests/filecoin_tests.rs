@@ -18,12 +18,9 @@
 
 #![cfg(test)]
 
-use crate::{
-	mocks::mock::{VFIL, *},
-	primitives::FilecoinLedger,
-	FIL, *,
-};
+use crate::{mocks::mock::*, primitives::FilecoinLedger, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::currency::{FIL, VFIL};
 use sp_runtime::traits::AccountIdConversion;
 
 fn mins_maxs_setup() {

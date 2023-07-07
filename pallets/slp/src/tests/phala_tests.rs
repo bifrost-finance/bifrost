@@ -26,6 +26,7 @@ use crate::{
 	*,
 };
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::currency::VPHA;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 

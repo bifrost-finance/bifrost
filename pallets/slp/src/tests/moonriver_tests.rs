@@ -26,11 +26,11 @@ use crate::{
 	},
 	Junction::Parachain,
 	Junctions::X2,
-	MOVR, *,
+	*,
 };
 use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::Balance;
+use node_primitives::{currency::VMOVR, Balance};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 

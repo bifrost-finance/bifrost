@@ -25,7 +25,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{
+	currency::{BNC, DOT, KSM, VDOT},
+	CurrencyId, TokenSymbol,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -40,10 +43,7 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -188,7 +188,7 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, VDOT, 400),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
