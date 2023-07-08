@@ -101,6 +101,7 @@ use zenlink_protocol::{
 
 // xcm config
 mod xcm_config;
+use bifrost_runtime_common::remove_pallet::RemovePallet;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
@@ -1634,6 +1635,11 @@ pub type UncheckedExtrinsic =
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+
+parameter_types! {
+	pub const XcmActionStr: &'static str = "XcmAction";
+}
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -1641,7 +1647,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	RemovePallet<XcmActionStr, RocksDbWeight>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

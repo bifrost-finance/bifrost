@@ -111,6 +111,7 @@ use governance::{
 
 // xcm config
 mod xcm_config;
+use bifrost_runtime_common::remove_pallet::RemovePallet;
 use pallet_xcm::QueryStatus;
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1861,6 +1862,10 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub const XcmActionStr: &'static str = "XcmAction";
+}
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -1868,7 +1873,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	RemovePallet<XcmActionStr, RocksDbWeight>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
