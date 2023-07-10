@@ -861,6 +861,7 @@ dependencies = [
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
+ "bifrost-slpx",
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
@@ -868,7 +869,6 @@ dependencies = [
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
- "bifrost-xcm-action",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -1039,6 +1039,7 @@ dependencies = [
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
+ "bifrost-slpx",
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-ve-minting",
@@ -1046,7 +1047,6 @@ dependencies = [
  "bifrost-vesting",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
- "bifrost-xcm-action",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -1273,6 +1273,41 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "xcm-interface",
+]
+
+[[package]]
+name = "bifrost-slpx"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-pallet-xcm",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+ "xcm-interface",
+ "xcm-simulator",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -1516,41 +1551,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
-]
-
-[[package]]
-name = "bifrost-xcm-action"
-version = "0.8.0"
-dependencies = [
- "bifrost-asset-registry",
- "bifrost-runtime-common",
- "bifrost-slp",
- "bifrost-vtoken-minting",
- "cumulus-pallet-xcm",
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "orml-xtokens",
- "pallet-balances",
- "pallet-xcm",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
- "xcm-interface",
- "xcm-simulator",
- "zenlink-protocol",
 ]
 
 [[package]]

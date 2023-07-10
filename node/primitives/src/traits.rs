@@ -155,6 +155,11 @@ pub trait SlpOperator<CurrencyId> {
 	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
 }
 
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpxOperator<Balance> {
+	fn get_moonbeam_transfer_to_fee() -> Balance;
+}
+
 /// A mapping between CurrencyId and AssetMetadata.
 pub trait CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata> {
 	/// Returns the AssetMetadata associated with a given `AssetIds`.
