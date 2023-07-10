@@ -21,8 +21,9 @@ use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
+	ensure,
 	sp_runtime::traits::{CheckedConversion, Convert},
-	traits::{ContainsPair, Get},
+	traits::{ContainsPair, Get, ProcessMessageError},
 };
 use node_primitives::{
 	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
@@ -37,7 +38,7 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::traits::MatchesFungible;
+use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
@@ -47,7 +48,7 @@ use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
-use xcm_builder::WithComputedOrigin;
+use xcm_builder::{CreateMatcher, MatchXcm};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -291,78 +292,73 @@ match_types! {
 }
 
 /// Barrier allowing a top level paid message with DescendOrigin instruction
-/// first
-// pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
-// pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
-// pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
-// impl<T: Contains<MultiLocation>> ShouldExecute for
-// AllowTopLevelPaidExecutionDescendOriginFirst<T> { 	fn should_execute<Call>(
-// 		origin: &MultiLocation,
-// 		message: &mut [Instruction<Call>],
-// 		max_weight: Weight,
-// 		_weight_credit: &mut Weight,
-// 	) -> Result<(), ()> {
-// 		log::trace!(
-// 			target: "xcm::barriers",
-// 			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
-// 			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
-// 			origin, message, max_weight, _weight_credit,
-// 		);
-// 		ensure!(T::contains(origin), ());
-// 		let mut iter = message.iter_mut();
-// 		// Make sure the first instruction is DescendOrigin
-// 		iter.next()
-// 			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
-// 			.ok_or(())?;
-//
-// 		// Then WithdrawAsset
-// 		iter.next()
-// 			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
-// 			.ok_or(())?;
-//
-// 		// Then BuyExecution
-// 		let i = iter.next().ok_or(())?;
-// 		match i {
-// 			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
-// 				if weight.all_gte(max_weight) {
-// 					weight.set_ref_time(max_weight.ref_time());
-// 					weight.set_proof_size(max_weight.proof_size());
-// 				};
-// 			},
-// 			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
-// 				*weight_limit = Limited(max_weight);
-// 			},
-// 			_ => {},
-// 		};
-//
-// 		// Then Transact
-// 		let i = iter.next().ok_or(())?;
-// 		match i {
-// 			Transact { ref mut require_weight_at_most, .. } => {
-// 				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
-// 				*require_weight_at_most = weight;
-// 				Ok(())
-// 			},
-// 			_ => Err(()),
-// 		}
-// 	}
-// }
+pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
+pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
+pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut [Instruction<Call>],
+		max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ProcessMessageError> {
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
+		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
+		let mut iter = message.iter_mut();
+		// Make sure the first instruction is DescendOrigin
+		iter.next()
+			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
+			.ok_or(ProcessMessageError::Unsupported)?;
+
+		// Then WithdrawAsset
+		iter.next()
+			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
+			.ok_or(ProcessMessageError::Unsupported)?;
+
+		// Then BuyExecution
+		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
+		match i {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
+				if weight.all_gte(max_weight) {
+					weight.set_ref_time(max_weight.ref_time());
+					weight.set_proof_size(max_weight.proof_size());
+				};
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
+			},
+			_ => {},
+		};
+
+		// Then Transact
+		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
+		match i {
+			Transact { ref mut require_weight_at_most, .. } => {
+				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
+				*require_weight_at_most = weight;
+				Ok(())
+			},
+			_ => Err(ProcessMessageError::Unsupported),
+		}
+	}
+}
 
 pub type Barrier = (
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
-	WithComputedOrigin<
-		(
-			// If the message is one that immediately attemps to pay for execution, then allow it.
-			AllowTopLevelPaidExecutionFrom<Everything>,
-			// Subscriptions for version tracking are OK.
-			AllowSubscriptionsFrom<Everything>,
-		),
-		UniversalLocation,
-		ConstU32<8>,
-	>,
+	// If the message is one that immediately attemps to pay for execution, then allow it.
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
+	// Barrier allowing a top level paid message with DescendOrigin instruction
+	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
