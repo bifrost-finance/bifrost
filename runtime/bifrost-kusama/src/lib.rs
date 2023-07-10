@@ -111,6 +111,7 @@ use governance::{
 
 // xcm config
 mod xcm_config;
+use bifrost_runtime_common::remove_pallet::RemovePallet;
 use pallet_xcm::QueryStatus;
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1374,6 +1375,7 @@ impl bifrost_slp::Config for Runtime {
 	>;
 	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
+	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type XcmRouter = XcmRouter;
@@ -1614,6 +1616,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type BifrostSlpx = Slpx;
 	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
 	type OnRedeemSuccess = OnRedeemSuccess;
 	type RelayChainToken = RelayCurrencyId;
@@ -1624,7 +1627,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2023>;
 }
 
-impl bifrost_xcm_action::Config for Runtime {
+impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
@@ -1634,7 +1637,7 @@ impl bifrost_xcm_action::Config for Runtime {
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
-	type WeightInfo = bifrost_xcm_action::weights::BifrostWeight<Runtime>;
+	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1816,7 +1819,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
 		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
-		XcmAction: bifrost_xcm_action::{Pallet, Call, Storage, Event<T>} = 125,
+		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 	}
@@ -1859,6 +1862,10 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub const XcmActionStr: &'static str = "XcmAction";
+}
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -1866,7 +1873,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	RemovePallet<XcmActionStr, RocksDbWeight>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1891,7 +1898,7 @@ mod benches {
 		[bifrost_flexible_fee, FlexibleFee]
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
-		[bifrost_xcm_action, XcmAction]
+		[bifrost_slpx, Slpx]
 	);
 }
 

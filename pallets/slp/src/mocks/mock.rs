@@ -34,7 +34,7 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
@@ -226,6 +226,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type BifrostSlp = Slp;
+	type BifrostSlpx = SlpxInterface;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
@@ -438,6 +439,13 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 	}
 }
 
+pub struct SlpxInterface;
+impl SlpxOperator<Balance> for SlpxInterface {
+	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
 impl Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -446,6 +454,7 @@ impl Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
+	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmRouter = ();

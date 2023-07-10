@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-xcm-action"
+name = "bifrost-slpx"
 description = "A pallet to manage the execution of XCM messages"
 authors = ["hqwangningbo <2536935847@qq.com>"]
 edition = "2021"
