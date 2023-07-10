@@ -104,7 +104,7 @@ bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-ap
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api", default-features = false }
-bifrost-xcm-action = { path = "../../pallets/xcm-action", default-features = false, features=["with-bifrost-polkadot-runtime"] }
+bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features=["with-bifrost-polkadot-runtime"] }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -207,8 +207,8 @@ std = [
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
 	"bifrost-cross-in-out/std",
-	"bifrost-xcm-action/std",
 	"substrate-wasm-builder",
+	"bifrost-slpx/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 
@@ -235,7 +235,7 @@ runtime-benchmarks = [
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-ve-minting/runtime-benchmarks",
 	"bifrost-cross-in-out/runtime-benchmarks",
-	"bifrost-xcm-action/runtime-benchmarks",
+	"bifrost-slpx/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 
@@ -294,7 +294,7 @@ try-runtime = [
 	"bifrost-fee-share/try-runtime",
 	"bifrost-ve-minting/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
-	"bifrost-xcm-action/try-runtime",
+	"bifrost-slpx/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

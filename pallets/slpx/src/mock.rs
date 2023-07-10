@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(test)]
 
-use crate as xcm_action;
+use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -30,7 +30,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
@@ -89,7 +89,7 @@ construct_runtime!(
 	VtokenMinting: bifrost_vtoken_minting,
 	ZenlinkProtocol: zenlink_protocol,
 	XTokens: orml_xtokens,
-	XcmAction: xcm_action,
+	Slpx: slpx,
 	  PolkadotXcm: pallet_xcm
   }
 );
@@ -196,6 +196,13 @@ ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
+pub struct SlpxInterface;
+impl SlpxOperator<Balance> for SlpxInterface {
+	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
 impl bifrost_vtoken_minting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -209,6 +216,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type BifrostSlp = Slp;
+	type BifrostSlpx = SlpxInterface;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
@@ -453,6 +461,7 @@ impl bifrost_slp::Config for Test {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
+	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmRouter = ();
@@ -496,12 +505,12 @@ impl pallet_xcm::Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
-// Pallet xcm-action configuration
+// Pallet slpx configuration
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
-impl xcm_action::Config for Test {
+impl slpx::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type MultiCurrency = Currencies;

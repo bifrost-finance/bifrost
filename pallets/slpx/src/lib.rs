@@ -29,7 +29,8 @@ use frame_support::{
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{
-	CurrencyId, CurrencyIdMapping, TokenInfo, TokenSymbol, TryConvertFrom, VtokenMintingInterface,
+	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
 };
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
@@ -57,9 +58,6 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-pub const NATIVE_CURRENCY: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const DOT_TOKEN_ID: u8 = 0;
-pub const GLMR_TOKEN_ID: u8 = 1;
 
 #[derive(
 	Encode,
@@ -395,6 +393,17 @@ pub mod pallet {
 				SupportChain::Moonbeam => RedeemType::Moonbeam(evm_caller),
 			};
 
+			if vtoken_id == VFIL {
+				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+					.unwrap_or_else(|| Self::get_default_fee(BNC));
+				T::MultiCurrency::transfer(
+					BNC,
+					&evm_contract_account_id,
+					&evm_caller_account_id,
+					fee_amount,
+				)?;
+			}
+
 			match T::VtokenMintingInterface::xcm_action_redeem(
 				evm_caller_account_id.clone(),
 				vtoken_id,
@@ -583,19 +592,16 @@ impl<T: Config> Pallet<T> {
 					),
 				};
 				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-					.unwrap_or_else(|| Self::get_default_fee(NATIVE_CURRENCY));
+					.unwrap_or_else(|| Self::get_default_fee(BNC));
 				match currency_id {
-					CurrencyId::VToken(TokenSymbol::KSM) |
-					CurrencyId::VToken(TokenSymbol::MOVR) |
-					CurrencyId::VToken2(DOT_TOKEN_ID) |
-					CurrencyId::VToken2(GLMR_TOKEN_ID) => {
+					VKSM | VMOVR | VBNC | FIL | VFIL | VDOT | VGLMR => {
 						T::MultiCurrency::transfer(
-							NATIVE_CURRENCY,
+							BNC,
 							evm_contract_account_id,
 							&caller,
 							fee_amount,
 						)?;
-						let assets = vec![(currency_id, amount), (NATIVE_CURRENCY, fee_amount)];
+						let assets = vec![(currency_id, amount), (BNC, fee_amount)];
 
 						T::XcmTransfer::transfer_multicurrencies(
 							caller, assets, 1, dest, Unlimited,
@@ -630,5 +636,12 @@ impl<T: Config> Pallet<T> {
 			.into();
 
 		BalanceOf::<T>::saturated_from(10u128.saturating_pow(decimals).saturating_div(100u128))
+	}
+}
+
+// Functions to be called by other pallets.
+impl<T: Config> SlpxOperator<BalanceOf<T>> for Pallet<T> {
+	fn get_moonbeam_transfer_to_fee() -> BalanceOf<T> {
+		Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| Self::get_default_fee(BNC))
 	}
 }
