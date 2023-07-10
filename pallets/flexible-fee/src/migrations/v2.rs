@@ -17,42 +17,61 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
+use frame_support::traits::OnRuntimeUpgrade;
 
 const LOG_TARGET: &str = "flexible-fee::migration";
 
-// contains checks and transforms storage to V2 format
-pub fn migrate_to_v2<T: Config>() -> Weight {
-	// Check the storage version
-	let onchain_version = Pallet::<T>::on_chain_storage_version();
-	if onchain_version < 2 {
-		// Remove the UserFeeChargeOrderList storage content
-		let count = UserFeeChargeOrderList::<T>::clear(u32::MAX, None).unique as u64;
+pub struct FlexibleFeeMigration<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// Check the storage version
+		let onchain_version = Pallet::<T>::on_chain_storage_version();
+		if onchain_version < 2 {
+			log::info!(target: LOG_TARGET, "Start to migrate flexible-fee storage...");
+			// Remove the UserFeeChargeOrderList storage content
+			let count = UserFeeChargeOrderList::<T>::clear(u32::MAX, None).unique as u64;
 
-		// Update the storage version
-		StorageVersion::new(2).put::<Pallet<T>>();
+			// Update the storage version
+			StorageVersion::new(2).put::<Pallet<T>>();
 
-		// Return the consumed weight
-		Weight::from(T::DbWeight::get().reads_writes(count as u64 + 1, count as u64 + 1))
-	} else {
-		// We don't do anything here.
-		Weight::zero()
+			// Return the consumed weight
+			Weight::from(T::DbWeight::get().reads_writes(count as u64 + 1, count as u64 + 1))
+		} else {
+			// We don't do anything here.
+			Weight::zero()
+		}
 	}
-}
 
-pub fn pre_migrate<T: Config>() {
-	// print out the pre-migrate storage count
-	log::info!(
-		target: LOG_TARGET,
-		"UserFeeChargeOrderList pre-migrate storage count: {:?}",
-		UserFeeChargeOrderList::<T>::iter().count()
-	);
-}
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		let cnt = UserFeeChargeOrderList::<T>::iter().count();
 
-pub fn post_migrate<T: Config>() {
-	// print out the post-migrate storage count
-	log::info!(
-		target: LOG_TARGET,
-		"UserFeeChargeOrderList post-migrate storage count: {:?}",
-		UserFeeChargeOrderList::<T>::iter().count()
-	);
+		// print out the pre-migrate storage count
+		log::info!(
+			target: LOG_TARGET,
+			"UserFeeChargeOrderList pre-migrate storage count: {:?}",
+			cnt
+		);
+		Ok((cnt as u64).encode())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
+		let new_count = UserFeeChargeOrderList::<T>::iter().count();
+		// decode cnt to u64
+		let old_count = u64::decode(&mut &cnt[..]).unwrap();
+
+		// print out the post-migrate storage count
+		log::info!(
+			target: LOG_TARGET,
+			"UserFeeChargeOrderList post-migrate storage count: {:?}",
+			UserFeeChargeOrderList::<T>::iter().count()
+		);
+
+		ensure!(
+			new_count as u64 == old_count,
+			"Post-migration storage count does not match pre-migration count"
+		);
+		Ok(())
+	}
 }

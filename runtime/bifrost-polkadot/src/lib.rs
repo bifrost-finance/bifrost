@@ -28,15 +28,16 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_slp::QueryResponseManager;
+use bifrost_cross_in_out::migrations::v2::CrossInOutMigration;
+use bifrost_slp::{migrations::v2::SlpMigration, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything, Imbalance,
-		InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing, OnRuntimeUpgrade,
-		OnUnbalanced, Randomness,
+		InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing, OnUnbalanced,
+		Randomness,
 	},
 	weights::{
 		constants::{
@@ -69,7 +70,10 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+use bifrost_flexible_fee::{
+	migrations::v2::FlexibleFeeMigration,
+	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
+};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -1642,65 +1646,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(SlpMigration, FlexibleFeeMigration, CrossInOutMigration),
+	(SlpMigration<Runtime>, FlexibleFeeMigration<Runtime>, CrossInOutMigration<Runtime>),
 >;
-
-pub struct SlpMigration;
-impl OnRuntimeUpgrade for SlpMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		bifrost_slp::migrations::v2::migrate_to_v2::<Runtime>()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		bifrost_slp::migrations::v2::pre_migrate::<Runtime>();
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		bifrost_slp::migrations::v2::post_migrate::<Runtime>();
-		Ok(())
-	}
-}
-
-pub struct FlexibleFeeMigration;
-impl OnRuntimeUpgrade for FlexibleFeeMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		bifrost_flexible_fee::migrations::v2::migrate_to_v2::<Runtime>()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		bifrost_flexible_fee::migrations::v2::pre_migrate::<Runtime>();
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		bifrost_flexible_fee::migrations::v2::post_migrate::<Runtime>();
-		Ok(())
-	}
-}
-
-pub struct CrossInOutMigration;
-impl OnRuntimeUpgrade for CrossInOutMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		bifrost_cross_in_out::migrations::v2::migrate_to_v2::<Runtime>()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		bifrost_cross_in_out::migrations::v2::pre_migrate::<Runtime>();
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		bifrost_cross_in_out::migrations::v2::post_migrate::<Runtime>();
-		Ok(())
-	}
-}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

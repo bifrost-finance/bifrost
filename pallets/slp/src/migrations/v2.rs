@@ -17,119 +17,159 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
+use frame_support::traits::OnRuntimeUpgrade;
 
 const LOG_TARGET: &str = "SLP::migration";
 
-// contains checks and transforms storage to V2 format
-pub fn migrate_to_v2<T: Config>() -> Weight {
-	// Check the storage version
-	let onchain_version = Pallet::<T>::on_chain_storage_version();
-	if onchain_version < 2 {
-		// Transform storage values
-		// We transform the storage values from the old into the new format.
-		log::info!(target: LOG_TARGET, "Start to migrate Validators storage...");
-		Validators::<T>::translate(|k: CurrencyId, value: Vec<MultiLocation>| {
-			log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?}...", k);
-
-			let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
-
-			if value.len() != 0 {
-				target_bounded_vec = BoundedVec::try_from(value).unwrap();
-			} else {
-				target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
-			}
-
-			Some(target_bounded_vec)
-		});
-
-		log::info!(target: LOG_TARGET, "Start to migrate ValidatorsByDelegator storage...");
-		//migrate the value type of ValidatorsByDelegator
-		ValidatorsByDelegator::<T>::translate(|key1, key2, value: Vec<MultiLocation>| {
-			log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?} - {:?}...", key1, key2);
-
-			let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
-
-			if value.len() != 0 {
-				target_bounded_vec = BoundedVec::try_from(value).unwrap();
-			} else {
-				target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
-			}
-
-			Some(target_bounded_vec)
-		});
-
-		log::info!(target: LOG_TARGET, "Start to migrate ValidatorBoostList storage...");
-		//migrate the value type of ValidatorBoostList
-		ValidatorBoostList::<T>::translate(
-			|k: CurrencyId, value: Vec<(MultiLocation, BlockNumberFor<T>)>| {
+pub struct SlpMigration<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// Check the storage version
+		let onchain_version = Pallet::<T>::on_chain_storage_version();
+		if onchain_version < 2 {
+			// Transform storage values
+			// We transform the storage values from the old into the new format.
+			log::info!(target: LOG_TARGET, "Start to migrate Validators storage...");
+			Validators::<T>::translate(|k: CurrencyId, value: Vec<MultiLocation>| {
 				log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?}...", k);
 
-				let target_bounded_vec: BoundedVec<
-					(MultiLocation, BlockNumberFor<T>),
-					T::MaxLengthLimit,
-				>;
+				let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
 
 				if value.len() != 0 {
 					target_bounded_vec = BoundedVec::try_from(value).unwrap();
 				} else {
-					target_bounded_vec = BoundedVec::<
-						(MultiLocation, BlockNumberFor<T>),
-						T::MaxLengthLimit,
-					>::default();
+					target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
 				}
 
 				Some(target_bounded_vec)
-			},
+			});
+
+			log::info!(target: LOG_TARGET, "Start to migrate ValidatorsByDelegator storage...");
+			//migrate the value type of ValidatorsByDelegator
+			ValidatorsByDelegator::<T>::translate(|key1, key2, value: Vec<MultiLocation>| {
+				log::info!(
+					target: LOG_TARGET,
+					"Migrated to boundedvec for {:?} - {:?}...",
+					key1,
+					key2
+				);
+
+				let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
+
+				if value.len() != 0 {
+					target_bounded_vec = BoundedVec::try_from(value).unwrap();
+				} else {
+					target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
+				}
+
+				Some(target_bounded_vec)
+			});
+
+			log::info!(target: LOG_TARGET, "Start to migrate ValidatorBoostList storage...");
+			//migrate the value type of ValidatorBoostList
+			ValidatorBoostList::<T>::translate(
+				|k: CurrencyId, value: Vec<(MultiLocation, BlockNumberFor<T>)>| {
+					log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?}...", k);
+
+					let target_bounded_vec: BoundedVec<
+						(MultiLocation, BlockNumberFor<T>),
+						T::MaxLengthLimit,
+					>;
+
+					if value.len() != 0 {
+						target_bounded_vec = BoundedVec::try_from(value).unwrap();
+					} else {
+						target_bounded_vec = BoundedVec::<
+							(MultiLocation, BlockNumberFor<T>),
+							T::MaxLengthLimit,
+						>::default();
+					}
+
+					Some(target_bounded_vec)
+				},
+			);
+
+			// Update the storage version
+			StorageVersion::new(2).put::<Pallet<T>>();
+
+			// Return the consumed weight
+			let count = Validators::<T>::iter().count() +
+				ValidatorsByDelegator::<T>::iter().count() +
+				ValidatorBoostList::<T>::iter().count();
+			Weight::from(T::DbWeight::get().reads_writes(count as u64 + 1, count as u64 + 1))
+		} else {
+			// We don't do anything here.
+			Weight::zero()
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		let validator_cnt = Validators::<T>::iter().count();
+		// print out the pre-migrate storage count
+		log::info!(target: LOG_TARGET, "Validators pre-migrate storage count: {:?}", validator_cnt);
+
+		let validator_by_delegator_cnt = ValidatorsByDelegator::<T>::iter().count();
+		log::info!(
+			target: LOG_TARGET,
+			"ValidatorsByDelegator pre-migrate storage count: {:?}",
+			validator_by_delegator_cnt
 		);
 
-		// Update the storage version
-		StorageVersion::new(2).put::<Pallet<T>>();
+		let validator_boost_list_cnt = ValidatorBoostList::<T>::iter().count();
+		log::info!(
+			target: LOG_TARGET,
+			"ValidatorBoostList pre-migrate storage count: {:?}",
+			validator_boost_list_cnt
+		);
 
-		// Return the consumed weight
-		let count = Validators::<T>::iter().count() +
-			ValidatorsByDelegator::<T>::iter().count() +
-			ValidatorBoostList::<T>::iter().count();
-		Weight::from(T::DbWeight::get().reads_writes(count as u64 + 1, count as u64 + 1))
-	} else {
-		// We don't do anything here.
-		Weight::zero()
+		let cnt = (
+			validator_cnt as u32,
+			validator_by_delegator_cnt as u32,
+			validator_boost_list_cnt as u32,
+		);
+		Ok(cnt.encode())
 	}
-}
 
-pub fn pre_migrate<T: Config>() {
-	// print out the pre-migrate storage count
-	log::info!(
-		target: LOG_TARGET,
-		"Validators pre-migrate storage count: {:?}",
-		Validators::<T>::iter().count()
-	);
-	log::info!(
-		target: LOG_TARGET,
-		"ValidatorsByDelegator pre-migrate storage count: {:?}",
-		ValidatorsByDelegator::<T>::iter().count()
-	);
-	log::info!(
-		target: LOG_TARGET,
-		"ValidatorBoostList pre-migrate storage count: {:?}",
-		ValidatorBoostList::<T>::iter().count()
-	);
-}
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
+		let (validator_cnt_old, validator_by_delegator_cnt_old, validator_boost_list_cnt_old) =
+			<(u32, u32, u32)>::decode(&mut &cnt[..]).map_err(|_| "Invalid data")?;
 
-pub fn post_migrate<T: Config>() {
-	// print out the post-migrate storage count
-	log::info!(
-		target: LOG_TARGET,
-		"Validators post-migrate storage count: {:?}",
-		Validators::<T>::iter().count()
-	);
-	log::info!(
-		target: LOG_TARGET,
-		"ValidatorsByDelegator post-migrate storage count: {:?}",
-		ValidatorsByDelegator::<T>::iter().count()
-	);
-	log::info!(
-		target: LOG_TARGET,
-		"ValidatorBoostList post-migrate storage count: {:?}",
-		ValidatorBoostList::<T>::iter().count()
-	);
+		let validator_cnt_new = Validators::<T>::iter().count();
+		// print out the post-migrate storage count
+		log::info!(
+			target: LOG_TARGET,
+			"Validators post-migrate storage count: {:?}",
+			Validators::<T>::iter().count()
+		);
+		ensure!(
+			validator_cnt_new == validator_cnt_old,
+			"Validators post-migrate storage count not match"
+		);
+
+		let validator_by_delegator_cnt_new = ValidatorsByDelegator::<T>::iter().count();
+		log::info!(
+			target: LOG_TARGET,
+			"ValidatorsByDelegator post-migrate storage count: {:?}",
+			ValidatorsByDelegator::<T>::iter().count()
+		);
+		ensure!(
+			validator_by_delegator_cnt_new == validator_by_delegator_cnt_old,
+			"ValidatorsByDelegator post-migrate storage count not match"
+		);
+
+		let validator_boost_list_cnt_new = ValidatorBoostList::<T>::iter().count();
+		log::info!(
+			target: LOG_TARGET,
+			"ValidatorBoostList post-migrate storage count: {:?}",
+			ValidatorBoostList::<T>::iter().count()
+		);
+		ensure!(
+			validator_boost_list_cnt_new == validator_boost_list_cnt_old,
+			"ValidatorBoostList post-migrate storage count not match"
+		);
+
+		Ok(())
+	}
 }
