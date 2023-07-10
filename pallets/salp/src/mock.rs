@@ -30,7 +30,7 @@ use frame_support::{
 	weights::Weight,
 	PalletId,
 };
-use frame_system::{EnsureSignedBy, RawOrigin};
+use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use node_primitives::{
 	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, ParaId, TokenSymbol, TokenSymbol::*,
 };
@@ -117,7 +117,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 1;
 	pub const TransferFee: u128 = 0;
 	pub const CreationFee: u128 = 0;
 	pub const TransactionByteFee: u128 = 0;
@@ -137,6 +137,10 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -364,7 +368,7 @@ impl salp::Config for Test {
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
@@ -424,6 +428,7 @@ impl pallet_xcm::Config for Test {
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 pub struct ParaInfo;

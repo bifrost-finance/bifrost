@@ -19,13 +19,15 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use crate::Weight;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
+use frame_system::EnsureRoot;
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -124,6 +126,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -153,6 +159,7 @@ parameter_types! {
 	pub const CouncilMotionDuration: BlockNumber = 2 * 7_200;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
+	pub MaxProposalWeight: Weight = Default::default();
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -165,6 +172,8 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = MaxProposalWeight;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 impl bifrost_token_issuer::Config for Runtime {

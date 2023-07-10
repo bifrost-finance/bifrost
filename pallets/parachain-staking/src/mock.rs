@@ -23,7 +23,7 @@ use frame_support::{
 	},
 	PalletId,
 };
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -102,6 +102,10 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 parameter_types! {
 	pub const MinBlocksPerRound: u32 = 3;

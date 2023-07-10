@@ -1314,7 +1314,7 @@ pub mod pallet {
 			if extra_weight != 0 {
 				Ok(Some(
 					T::WeightInfo::refund_currency_due_unbond() +
-						Weight::from_ref_time(extra_weight),
+						Weight::from_parts(extra_weight, 0),
 				)
 				.into())
 			} else {

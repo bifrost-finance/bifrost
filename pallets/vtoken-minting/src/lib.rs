@@ -70,7 +70,6 @@ pub mod pallet {
 	use xcm::{prelude::*, v3::MultiLocation};
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -748,7 +747,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -763,7 +762,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(12)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,

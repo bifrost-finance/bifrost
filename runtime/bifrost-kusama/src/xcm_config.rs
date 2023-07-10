@@ -21,13 +21,13 @@ use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ensure, parameter_types,
+	parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
 use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
-use sp_std::{borrow::Borrow, convert::TryFrom, marker::PhantomData};
+use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
@@ -35,7 +35,7 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::traits::{MatchesFungible, ShouldExecute};
+use xcm_executor::traits::MatchesFungible;
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
@@ -52,6 +52,7 @@ use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 use sp_io::hashing::blake2_256;
 use xcm::v3::prelude::*;
+use xcm_builder::WithComputedOrigin;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -253,7 +254,7 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 			"location: {:?}",
 			location.clone(),
 		);
-		match location {
+		match location.clone() {
 			MultiLocation { parents: 1, interior: X2(Parachain(_id), AccountId32 { id, .. }) } =>
 				log::trace!(
 					target: "xcm::ExternalAccountConverter::convert",
@@ -270,7 +271,7 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 			),
 			_ => return Err(location),
 		};
-		let hash: [u8; 32] = ("multiloc", location.borrow()).borrow().using_encoded(blake2_256);
+		let hash: [u8; 32] = ("multiloc", location).using_encoded(blake2_256);
 		let mut account_id = [0u8; 32];
 		account_id.copy_from_slice(&hash[0..32]);
 		log::trace!(
@@ -325,7 +326,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -338,68 +339,77 @@ match_types! {
 
 /// Barrier allowing a top level paid message with DescendOrigin instruction
 /// first
-pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
-pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
-pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
-impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
-	fn should_execute<Call>(
-		origin: &MultiLocation,
-		message: &mut [Instruction<Call>],
-		max_weight: Weight,
-		_weight_credit: &mut Weight,
-	) -> Result<(), ()> {
-		log::trace!(
-			target: "xcm::barriers",
-			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
-			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
-			origin, message, max_weight, _weight_credit,
-		);
-		ensure!(T::contains(origin), ());
-		let mut iter = message.iter_mut();
-		// Make sure the first instruction is DescendOrigin
-		iter.next()
-			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
-			.ok_or(())?;
-
-		// Then WithdrawAsset
-		iter.next()
-			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
-			.ok_or(())?;
-
-		// Then BuyExecution
-		let i = iter.next().ok_or(())?;
-		match i {
-			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
-				if weight.all_gte(max_weight) {
-					weight.set_ref_time(max_weight.ref_time());
-					weight.set_proof_size(max_weight.proof_size());
-				};
-			},
-			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
-				*weight_limit = Limited(max_weight);
-			},
-			_ => {},
-		};
-
-		// Then Transact
-		let i = iter.next().ok_or(())?;
-		match i {
-			Transact { ref mut require_weight_at_most, .. } => {
-				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
-				*require_weight_at_most = weight;
-				Ok(())
-			},
-			_ => Err(()),
-		}
-	}
-}
+// pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
+// pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
+// pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
+// impl<T: Contains<MultiLocation>> ShouldExecute for
+// AllowTopLevelPaidExecutionDescendOriginFirst<T> { 	fn should_execute<Call>(
+// 		origin: &MultiLocation,
+// 		message: &mut [Instruction<Call>],
+// 		max_weight: Weight,
+// 		_weight_credit: &mut Weight,
+// 	) -> Result<(), ()> {
+// 		log::trace!(
+// 			target: "xcm::barriers",
+// 			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+// 			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+// 			origin, message, max_weight, _weight_credit,
+// 		);
+// 		ensure!(T::contains(origin), ());
+// 		let mut iter = message.iter_mut();
+// 		// Make sure the first instruction is DescendOrigin
+// 		iter.next()
+// 			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
+// 			.ok_or(())?;
+//
+// 		// Then WithdrawAsset
+// 		iter.next()
+// 			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
+// 			.ok_or(())?;
+//
+// 		// Then BuyExecution
+// 		let i = iter.next().ok_or(())?;
+// 		match i {
+// 			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
+// 				if weight.all_gte(max_weight) {
+// 					weight.set_ref_time(max_weight.ref_time());
+// 					weight.set_proof_size(max_weight.proof_size());
+// 				};
+// 			},
+// 			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+// 				*weight_limit = Limited(max_weight);
+// 			},
+// 			_ => {},
+// 		};
+//
+// 		// Then Transact
+// 		let i = iter.next().ok_or(())?;
+// 		match i {
+// 			Transact { ref mut require_weight_at_most, .. } => {
+// 				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
+// 				*require_weight_at_most = weight;
+// 				Ok(())
+// 			},
+// 			_ => Err(()),
+// 		}
+// 	}
+// }
 
 pub type Barrier = (
+	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
-	AllowSubscriptionsFrom<Everything>,
-	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
+	WithComputedOrigin<
+		(
+			// If the message is one that immediately attemps to pay for execution, then allow it.
+			AllowTopLevelPaidExecutionFrom<Everything>,
+			// Subscriptions for version tracking are OK.
+			AllowSubscriptionsFrom<Everything>,
+		),
+		UniversalLocation,
+		ConstU32<8>,
+	>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
@@ -750,6 +760,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -890,7 +901,7 @@ impl orml_tokens::Config for Runtime {
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -931,7 +942,7 @@ parameter_types! {
 	pub ContributionWeight: Weight =  Weight::from_parts(milli::<Runtime>(RelayCurrencyId::get()) as u64 , 1000_000u64);
 	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
 	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
-	pub StatemineTransferWeight: Weight =  Weight::from_ref_time(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64);
+	pub StatemineTransferWeight: Weight =  Weight::from_parts(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64, 0);
 }
 
 impl xcm_interface::Config for Runtime {

@@ -32,7 +32,9 @@ use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
-	construct_runtime, match_types, parameter_types,
+	construct_runtime,
+	inherent::Vec,
+	match_types, parameter_types,
 	traits::{
 		ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything, Imbalance,
 		InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing, OnRuntimeUpgrade,
@@ -85,7 +87,7 @@ use frame_support::{
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{EitherOfDiverse, Get},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
@@ -570,17 +572,34 @@ impl pallet_indices::Config for Runtime {
 	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
+// pallet-treasury did not impl OnUnbalanced<Credit>, need an adapter to handle dust.
+type NegativeImbalance =
+	<Balances as frame_support::traits::Currency<AccountId>>::NegativeImbalance;
+type CreditOf =
+	frame_support::traits::fungible::Credit<<Runtime as frame_system::Config>::AccountId, Balances>;
+pub struct DustRemovalAdapter;
+impl OnUnbalanced<CreditOf> for DustRemovalAdapter {
+	fn on_nonzero_unbalanced(amount: CreditOf) {
+		let new_amount = NegativeImbalance::new(amount.peek());
+		Treasury::on_nonzero_unbalanced(new_amount);
+	}
+}
+
 impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
-	type DustRemoval = Treasury;
+	type DustRemoval = DustRemovalAdapter;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -599,12 +618,15 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = MaxProposalWeight;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
 	pub const TechnicalMotionDuration: BlockNumber = 7 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
 	pub const TechnicalMaxMembers: u32 = 100;
+	pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
@@ -616,6 +638,8 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = MaxProposalWeight;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -656,6 +680,7 @@ parameter_types! {
 	pub const DesiredRunnersUp: u32 = 20;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
 	pub const MaxVoters: u32 = 512;
+	 pub const MaxVotesPerVoter: u32 = 16;
 	pub const MaxCandidates: u32 = 64;
 }
 
@@ -679,6 +704,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type VotingBondFactor = VotingBondFactor;
 	type MaxCandidates = MaxCandidates;
 	type MaxVoters = MaxVoters;
+	type MaxVotesPerVoter = MaxVotesPerVoter;
 	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
 }
 
@@ -743,6 +769,7 @@ impl pallet_democracy::Config for Runtime {
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
+	type SubmitOrigin = EnsureSigned<AccountId>;
 }
 
 parameter_types! {
@@ -1322,23 +1349,6 @@ impl merkle_distributor::Config for Runtime {
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
-
-	// xcm
-	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
-		// Bifrost local and live, 0.01 BNC
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2001))), 10_000_000_000),
-		// Phala local and live, 1 PHA
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2004))), 1_000_000_000_000),
-		// Plasm local and live, 0.0000000000001 SDN
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2007))), 1_000_000),
-		// Sherpax live, 0 KSX
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(2013))), 0),
-
-		// Zenlink local 1 for test
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(200))), 1_000_000),
-		// Zenlink local 2 for test
-		(MultiLocation::new(1, Junctions::X1(Junction::Parachain(300))), 1_000_000),
-	];
 }
 
 impl zenlink_protocol::Config for Runtime {
@@ -1346,7 +1356,7 @@ impl zenlink_protocol::Config for Runtime {
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
-	type TargetChains = ZenlinkRegistedParaChains;
+	type TargetChains = ();
 	type WeightInfo = ();
 	type AssetId = ZenlinkAssetId;
 	type LpGenerate = PairLpGenerate<Self>;
@@ -1737,6 +1747,12 @@ impl_runtime_apis! {
 	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
+		}
+		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+			Runtime::metadata_at_version(version)
+		}
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
 		}
 	}
 

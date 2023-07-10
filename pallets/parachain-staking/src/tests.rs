@@ -7066,7 +7066,7 @@ mod jit_migrate_reserve_to_locks_tests {
 					delegators: vec![Default::default(); num_delegators],
 				};
 				let info = call.get_dispatch_info();
-				assert_eq!(info.weight, Weight::from_ref_time(expected_weight));
+				assert_eq!(info.weight, Weight::from_parts(expected_weight, 0));
 			};
 			test_with_num_delegators(0, 50_000_000u64);
 			test_with_num_delegators(1, 150_000_000u64);
@@ -7082,7 +7082,7 @@ mod jit_migrate_reserve_to_locks_tests {
 					collators: vec![Default::default(); num_collators],
 				};
 				let info = call.get_dispatch_info();
-				assert_eq!(info.weight, Weight::from_ref_time(expected_weight));
+				assert_eq!(info.weight, Weight::from_parts(expected_weight, 0));
 			};
 			test_with_num_collators(0, 50_000_000u64);
 			test_with_num_collators(1, 150_000_000u64);
@@ -7158,7 +7158,7 @@ fn test_delegator_with_deprecated_status_leaving_can_schedule_leave_delegators_a
 		.build()
 		.execute_with(|| {
 			<DelegatorState<Test>>::mutate(2, |value| {
-				value.as_mut().map(|mut state| {
+				value.as_mut().map(|state| {
 					state.status = DelegatorStatus::Leaving(2);
 				})
 			});
@@ -7190,7 +7190,7 @@ fn test_delegator_with_deprecated_status_leaving_can_cancel_leave_delegators_as_
 		.build()
 		.execute_with(|| {
 			<DelegatorState<Test>>::mutate(2, |value| {
-				value.as_mut().map(|mut state| {
+				value.as_mut().map(|state| {
 					state.status = DelegatorStatus::Leaving(2);
 				})
 			});
@@ -7217,7 +7217,7 @@ fn test_delegator_with_deprecated_status_leaving_can_execute_leave_delegators_as
 		.build()
 		.execute_with(|| {
 			<DelegatorState<Test>>::mutate(2, |value| {
-				value.as_mut().map(|mut state| {
+				value.as_mut().map(|state| {
 					state.status = DelegatorStatus::Leaving(2);
 				})
 			});
@@ -7243,7 +7243,7 @@ fn test_delegator_with_deprecated_status_leaving_cannot_execute_leave_delegators
 		.build()
 		.execute_with(|| {
 			<DelegatorState<Test>>::mutate(2, |value| {
-				value.as_mut().map(|mut state| {
+				value.as_mut().map(|state| {
 					state.status = DelegatorStatus::Leaving(2);
 				})
 			});

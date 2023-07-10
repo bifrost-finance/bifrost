@@ -130,8 +130,13 @@ pub mod pallet {
 	/// Deprecated. To-be removed after all data deleted.
 	#[pallet::storage]
 	#[pallet::getter(fn user_fee_charge_order_list)]
-	pub type UserFeeChargeOrderList<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, OptionQuery>;
+	pub type UserFeeChargeOrderList<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>,
+		OptionQuery,
+	>;
 
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
@@ -147,8 +152,6 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, T::AccountId, CurrencyIdOf<T>, OptionQuery>;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::error]
@@ -197,7 +200,7 @@ pub mod pallet {
 
 		// Anyone can call this function to remove data from the user fee charge order list
 		#[pallet::call_index(2)]
-		#[pallet::weight(200000000)]
+		#[pallet::weight({200000000})]
 		pub fn remove_from_user_fee_charge_order_list(origin: OriginFor<T>) -> DispatchResult {
 			ensure_signed(origin)?;
 

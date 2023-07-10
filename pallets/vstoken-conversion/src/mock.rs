@@ -28,7 +28,7 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -130,6 +130,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
