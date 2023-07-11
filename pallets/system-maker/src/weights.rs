@@ -59,6 +59,7 @@ pub trait WeightInfo {
 	fn charge() -> Weight;
 	fn close() -> Weight;
 	fn payout() -> Weight;
+	fn on_idle() -> Weight;
 }
 
 /// Weights for bifrost_system_maker using the Bifrost node and recommended hardware.
@@ -115,6 +116,20 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(5_u64))
 			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
+	/// Storage: SystemMaker Infos (r:2 w:0)
+	/// Proof Skipped: SystemMaker Infos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: ParachainInfo ParachainId (r:1 w:0)
+	/// Proof: ParachainInfo ParachainId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
+	/// Storage: Tokens Accounts (r:2 w:0)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	fn on_idle() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `709`
+		//  Estimated: `11344`
+		// Minimum execution time: 591_941 nanoseconds.
+		Weight::from_parts(594_646_000, 11344)
+			.saturating_add(T::DbWeight::get().reads(5))
+	}
 }
 
 // For backwards compatibility and tests
@@ -169,5 +184,19 @@ impl WeightInfo for () {
 		Weight::from_parts(93_527_000, 14353)
 			.saturating_add(RocksDbWeight::get().reads(5_u64))
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
+	}
+	/// Storage: SystemMaker Infos (r:2 w:0)
+	/// Proof Skipped: SystemMaker Infos (max_values: None, max_size: None, mode: Measured)
+	/// Storage: ParachainInfo ParachainId (r:1 w:0)
+	/// Proof: ParachainInfo ParachainId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
+	/// Storage: Tokens Accounts (r:2 w:0)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	fn on_idle() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `709`
+		//  Estimated: `11344`
+		// Minimum execution time: 591_941 nanoseconds.
+		Weight::from_parts(594_646_000, 11344)
+			.saturating_add(RocksDbWeight::get().reads(5))
 	}
 }

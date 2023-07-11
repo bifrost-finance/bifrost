@@ -335,8 +335,8 @@ pub mod pallet {
 					{
 						pool_info.block_startup = Some(n);
 						pool_info.state = PoolState::Ongoing;
+						PoolInfos::<T>::insert(pid, &pool_info);
 					}
-					PoolInfos::<T>::insert(pid, &pool_info);
 				},
 				_ => (),
 			});
