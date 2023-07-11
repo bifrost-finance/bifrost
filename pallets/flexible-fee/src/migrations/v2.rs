@@ -17,9 +17,18 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{storage_alias, traits::OnRuntimeUpgrade};
 
 const LOG_TARGET: &str = "flexible-fee::migration";
+
+#[storage_alias]
+pub type UserFeeChargeOrderList<T: Config> = StorageMap<
+	Pallet<T>,
+	Twox64Concat,
+	<T as frame_system::Config>::AccountId,
+	Vec<CurrencyIdOf<T>>,
+	OptionQuery,
+>;
 
 pub struct FlexibleFeeMigration<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {

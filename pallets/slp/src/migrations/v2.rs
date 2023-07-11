@@ -144,7 +144,7 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			Validators::<T>::iter().count()
 		);
 		ensure!(
-			validator_cnt_new == validator_cnt_old,
+			validator_cnt_new as u32 == validator_cnt_old,
 			"Validators post-migrate storage count not match"
 		);
 
@@ -155,7 +155,7 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			ValidatorsByDelegator::<T>::iter().count()
 		);
 		ensure!(
-			validator_by_delegator_cnt_new == validator_by_delegator_cnt_old,
+			validator_by_delegator_cnt_new as u32 == validator_by_delegator_cnt_old,
 			"ValidatorsByDelegator post-migrate storage count not match"
 		);
 
@@ -166,7 +166,7 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			ValidatorBoostList::<T>::iter().count()
 		);
 		ensure!(
-			validator_boost_list_cnt_new == validator_boost_list_cnt_old,
+			validator_boost_list_cnt_new as u32 == validator_boost_list_cnt_old,
 			"ValidatorBoostList post-migrate storage count not match"
 		);
 

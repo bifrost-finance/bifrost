@@ -132,17 +132,6 @@ pub mod pallet {
 	/// boundedVec).
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-	/// Deprecated. To-be removed after all data deleted.
-	#[pallet::storage]
-	#[pallet::getter(fn user_fee_charge_order_list)]
-	pub type UserFeeChargeOrderList<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		T::AccountId,
-		BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>,
-		OptionQuery,
-	>;
-
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
 	#[pallet::getter(fn get_universal_fee_currency_order_list)]
