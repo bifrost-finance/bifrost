@@ -207,7 +207,7 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 			"location: {:?}",
 			location.clone(),
 		);
-		match location.clone() {
+		match location {
 			MultiLocation { parents: 1, interior: X2(Parachain(_id), AccountId32 { id, .. }) } =>
 				log::trace!(
 					target: "xcm::ExternalAccountConverter::convert",
