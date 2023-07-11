@@ -18,9 +18,12 @@
 
 #![cfg(test)]
 
-use crate::{mocks::mock_kusama::*, BNC, KSM, *};
+use crate::{mocks::mock_kusama::*, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::RedeemType;
+use node_primitives::{
+	currency::{BNC, KSM, VKSM},
+	RedeemType,
+};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 

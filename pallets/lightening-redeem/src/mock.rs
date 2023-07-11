@@ -24,7 +24,10 @@ use frame_support::{
 	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
 	PalletId,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{
+	currency::{BNC, KSM, VSKSM},
+	CurrencyId, TokenSymbol,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -38,9 +41,7 @@ pub type BlockNumber = u64;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+
 pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
@@ -166,9 +167,9 @@ impl ExtBuilder {
 		self.balances(vec![
 			(ALICE, KSM, 100),
 			(ALICE, vsBond, 100),
-			(ALICE, vsKSM, 100),
+			(ALICE, VSKSM, 100),
 			(BOB, vsBond, 100),
-			(BOB, vsKSM, 100),
+			(BOB, VSKSM, 100),
 		])
 	}
 
@@ -181,7 +182,7 @@ impl ExtBuilder {
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
-			(whitelist_caller.clone(), vsKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), VSKSM, 100_000_000_000_000),
 			(whitelist_caller.clone(), vsBond, 100_000_000_000_000),
 			(pool_account.clone(), KSM, 100_000_000_000_000),
 		])

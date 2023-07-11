@@ -46,6 +46,7 @@ use crate::misc_fees::{FeeDeductor, FeeGetter};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod migrations;
 pub mod misc_fees;
 mod mock;
 mod tests;
@@ -127,6 +128,10 @@ pub mod pallet {
 		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
 
+	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
+	/// boundedVec).
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// Deprecated. To-be removed after all data deleted.
 	#[pallet::storage]
 	#[pallet::getter(fn user_fee_charge_order_list)]
@@ -152,6 +157,8 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, T::AccountId, CurrencyIdOf<T>, OptionQuery>;
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::error]
@@ -194,23 +201,6 @@ pub mod pallet {
 			ensure!(default_list.len() > 0 as usize, Error::<T>::WrongListLength);
 
 			UniversalFeeCurrencyOrderList::<T>::set(default_list);
-
-			Ok(())
-		}
-
-		// Anyone can call this function to remove data from the user fee charge order list
-		#[pallet::call_index(2)]
-		#[pallet::weight({200000000})]
-		pub fn remove_from_user_fee_charge_order_list(origin: OriginFor<T>) -> DispatchResult {
-			ensure_signed(origin)?;
-
-			let remain_count = UserFeeChargeOrderList::<T>::iter().count();
-			ensure!(remain_count > 0, Error::<T>::WrongListLength);
-
-			// Remove the top 50 records from user fee charge order list
-			UserFeeChargeOrderList::<T>::iter().take(50).for_each(|(key, _)| {
-				UserFeeChargeOrderList::<T>::remove(key);
-			});
 
 			Ok(())
 		}

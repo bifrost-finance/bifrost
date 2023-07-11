@@ -26,7 +26,7 @@ use crate::{
 	primitives::{
 		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
 		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, XcmOperation, MOVR, TIMEOUT_BLOCKS,
+		OneToManyScheduledRequest, QueryId, XcmOperation, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
@@ -39,7 +39,10 @@ use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, GLMR, GLMR_TOKEN_ID};
+use node_primitives::{
+	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
+	CurrencyId, TokenSymbol, VtokenMintingOperator,
+};
 use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{

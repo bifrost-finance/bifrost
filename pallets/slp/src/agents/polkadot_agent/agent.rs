@@ -21,10 +21,10 @@ use crate::{
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM, TIMEOUT_BLOCKS,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
+	AccountIdOf, BalanceOf, BoundedVec, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 	XcmDestWeightAndFee, XcmWeight,
@@ -33,7 +33,9 @@ use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID};
+use node_primitives::{
+	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID,
+};
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedInto, Zero,
@@ -1181,7 +1183,16 @@ impl<T: Config> PolkadotAgent<T> {
 		let ValidatorsByDelegatorUpdateEntry::Substrate(
 			SubstrateValidatorsByDelegatorUpdateEntry { currency_id, delegator_id, validators },
 		) = query_entry;
-		ValidatorsByDelegator::<T>::insert(currency_id, delegator_id, validators);
+
+		// ensure the length of validators does not exceed MaxLengthLimit
+		ensure!(
+			validators.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
+
+		let bounded_validators =
+			BoundedVec::try_from(validators).map_err(|_| Error::<T>::FailToConvert)?;
+		ValidatorsByDelegator::<T>::insert(currency_id, delegator_id, bounded_validators);
 
 		// update ValidatorsByDelegatorXcmUpdateQueue<T> storage
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);

@@ -23,6 +23,7 @@ use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::CurrencyId;
+use sp_core::Get;
 use sp_std::prelude::*;
 use xcm::{
 	opaque::v3::{
@@ -80,6 +81,12 @@ impl<T: Config> Pallet<T> {
 
 		// Ensure validator candidates in the whitelist is not greater than maximum.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+
+		// ensure validator candidates in the whitelist does not exceed MaxLengthLimit.
+		ensure!(
+			validator_list.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
 
 		ensure!(
 			validator_list.len() as u16 <= mins_maxs.validators_maximum,

@@ -26,6 +26,7 @@ use crate::{
 	*,
 };
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::currency::VPHA;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
@@ -1473,7 +1474,8 @@ fn add_validator_and_remove_validator_works() {
 		// The storage is reordered by hash. So we need to adjust the push order here.
 		valis.push(VALIDATOR_0_LOCATION);
 
-		assert_eq!(Slp::get_validators(PHA), Some(valis));
+		let bounded_valis = BoundedVec::try_from(valis).unwrap();
+		assert_eq!(Slp::get_validators(PHA), Some(bounded_valis));
 
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
@@ -1488,7 +1490,8 @@ fn add_validator_and_remove_validator_works() {
 			Box::new(VALIDATOR_0_LOCATION),
 		));
 
-		assert_eq!(Slp::get_validators(PHA), Some(vec![]));
+		let empty_bounded_vec = BoundedVec::default();
+		assert_eq!(Slp::get_validators(PHA), Some(empty_bounded_vec));
 	});
 }
 

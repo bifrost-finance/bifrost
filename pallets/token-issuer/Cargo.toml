@@ -20,7 +20,7 @@ orml-currencies = { version = "0.4.1-dev", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-
+log = { version = "0.4.17", default-features = false }
 
 [features]
 default = ["std"]
@@ -39,7 +39,7 @@ std = [
 	"orml-currencies/std",
 	"pallet-balances/std",
 	"pallet-balances/std",
-	"sp-core/std"
+	"sp-core/std",
 ]
 
 runtime-benchmarks = [
@@ -47,4 +47,4 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 ]
-try-runtime = [ "frame-support/try-runtime" ]
+try-runtime = ["frame-support/try-runtime"]

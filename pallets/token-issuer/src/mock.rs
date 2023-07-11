@@ -26,7 +26,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::EnsureRoot;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{
+	currency::{BNC, DOT, KSM, VDOT},
+	CurrencyId, TokenSymbol,
+};
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
@@ -41,11 +44,7 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -176,12 +175,17 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
+parameter_types! {
+	pub const MaxLengthLimit: u32 = 100;
+}
+
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin =
 		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub struct ExtBuilder {
@@ -206,7 +210,7 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, VDOT, 400),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
