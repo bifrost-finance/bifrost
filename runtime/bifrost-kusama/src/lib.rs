@@ -1347,7 +1347,7 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
-	pub const MaxLengthLimit: u32 = 100;
+	pub const MaxLengthLimit: u32 = 500;
 }
 
 pub struct SubstrateResponseManager;
