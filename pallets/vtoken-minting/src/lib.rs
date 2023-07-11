@@ -786,24 +786,35 @@ pub mod pallet {
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
-					TimeUnit::Era(era_b) => TimeUnit::Era(era_a + era_b),
+					TimeUnit::Era(era_b) => TimeUnit::Era(
+						era_a.checked_add(era_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Round(round_a) => match b {
-					TimeUnit::Round(round_b) => TimeUnit::Round(round_a + round_b),
+					TimeUnit::Round(round_b) => TimeUnit::Round(
+						round_a.checked_add(round_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
-					TimeUnit::SlashingSpan(slashing_span_b) =>
-						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
+					TimeUnit::SlashingSpan(slashing_span_b) => TimeUnit::SlashingSpan(
+						slashing_span_a
+							.checked_add(slashing_span_b)
+							.ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Kblock(kblock_a) => match b {
-					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
+					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(
+						kblock_a.checked_add(kblock_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Hour(hour_a) => match b {
-					TimeUnit::Hour(hour_b) => TimeUnit::Hour(hour_a + hour_b),
+					TimeUnit::Hour(hour_b) => TimeUnit::Hour(
+						hour_a.checked_add(hour_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
