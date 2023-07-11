@@ -21,10 +21,12 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.38",default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38",default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38",default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
+log = { version = "0.4.17", default-features = false }
 
 node-primitives = { path = "../../node/primitives", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }

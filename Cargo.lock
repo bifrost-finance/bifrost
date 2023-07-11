@@ -1289,6 +1289,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "log",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",

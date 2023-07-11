@@ -1636,6 +1636,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 
 impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
