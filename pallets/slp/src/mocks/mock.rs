@@ -34,7 +34,12 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
-use node_primitives::{Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol};
+#[cfg(feature = "runtime-benchmarks")]
+use node_primitives::currency::VKSM;
+use node_primitives::{
+	currency::{BNC, KSM},
+	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol,
+};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
@@ -55,14 +60,6 @@ pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
-
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
-pub const VFIL: CurrencyId = CurrencyId::VToken2(2u8);
-pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
-#[cfg(feature = "runtime-benchmarks")]
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -402,6 +399,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for () {
@@ -465,6 +463,7 @@ impl Config for Runtime {
 	type OnRefund = ();
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 parameter_types! {

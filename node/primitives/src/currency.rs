@@ -35,6 +35,17 @@ use crate::{
 	LeasePeriod, ParaId, PoolId, TryConvertFrom,
 };
 
+pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
+pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const VBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+pub const VSKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
+pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
+pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
+
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
 pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
@@ -46,10 +57,6 @@ pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const VBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

@@ -17,8 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, BalanceOf, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, Event,
+	vec, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
+	Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
@@ -85,31 +86,32 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::GreaterThanMaximum
 		);
 
-		if validators_set.is_none() {
-			Validators::<T>::insert(currency_id, vec![who]);
+		// ensure validator candidates are less than MaxLengthLimit
+		ensure!(
+			validators_set.len() < T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
+		let mut validators_vec;
+		if let Some(validators_bounded_vec) = validators_set {
+			validators_vec = validators_bounded_vec.to_vec();
+			let rs = validators_vec.iter().position(|multi| multi == who);
+			// Check if the validator is in the already exist.
+			ensure!(rs.is_none(), Error::<T>::AlreadyExist);
+
+			// If the validator is not in the whitelist, add it.
+			validators_vec.push(*who);
 		} else {
-			// Change corresponding storage.
-			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
-				if let Some(ref mut validator_list) = validator_vec {
-					let rs = validator_list.iter().position(|multi| multi == who);
-					// Check if the validator is in the already exist.
-					ensure!(rs.is_none(), Error::<T>::AlreadyExist);
-
-					// If the validator is not in the whitelist, add it.
-					validator_list.push(*who);
-
-					// Deposit event.
-					Pallet::<T>::deposit_event(Event::ValidatorsAdded {
-						currency_id,
-						validator_id: *who,
-					});
-				}
-				Ok(())
-			})?;
+			validators_vec = vec![*who];
 		}
+
+		let bounded_list =
+			BoundedVec::try_from(validators_vec).map_err(|_| Error::<T>::FailToConvert)?;
+
+		Validators::<T>::insert(currency_id, bounded_list);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 
 		Ok(())
 	}

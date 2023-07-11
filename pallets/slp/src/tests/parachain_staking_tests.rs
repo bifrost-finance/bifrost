@@ -1041,7 +1041,8 @@ fn add_validator_and_remove_validator_works() {
 		// The storage is reordered by hash. So we need to adjust the push order here.
 		valis.push(validator_0_location);
 
-		assert_eq!(Slp::get_validators(BNC), Some(valis));
+		let bounded_valis = BoundedVec::try_from(valis).unwrap();
+		assert_eq!(Slp::get_validators(BNC), Some(bounded_valis));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
@@ -1049,6 +1050,7 @@ fn add_validator_and_remove_validator_works() {
 			Box::new(validator_0_location),
 		));
 
-		assert_eq!(Slp::get_validators(BNC), Some(vec![]));
+		let empty_bounded_vec = BoundedVec::default();
+		assert_eq!(Slp::get_validators(BNC), Some(empty_bounded_vec));
 	});
 }

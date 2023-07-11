@@ -28,7 +28,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_slp::QueryResponseManager;
+use bifrost_cross_in_out::migrations::v2::CrossInOutMigration;
+use bifrost_flexible_fee::migrations::v2::FlexibleFeeMigration;
+use bifrost_slp::{migrations::v2::SlpMigration, QueryResponseManager};
+use bifrost_token_issuer::migrations::v2::TokenIssuerMigration;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -1300,6 +1303,7 @@ impl bifrost_token_issuer::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1318,6 +1322,7 @@ impl bifrost_asset_registry::Config for Runtime {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct SubstrateResponseManager;
@@ -1386,6 +1391,7 @@ impl bifrost_slp::Config for Runtime {
 	type OnRefund = OnRefund;
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1477,6 +1483,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 // Bifrost modules end
@@ -1873,7 +1880,13 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	RemovePallet<XcmActionStr, RocksDbWeight>,
+	(
+		TokenIssuerMigration<Runtime>,
+		SlpMigration<Runtime>,
+		FlexibleFeeMigration<Runtime>,
+		CrossInOutMigration<Runtime>,
+		RemovePallet<XcmActionStr, RocksDbWeight>,
+	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

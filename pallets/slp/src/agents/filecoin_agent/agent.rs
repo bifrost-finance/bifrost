@@ -19,15 +19,16 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, LedgerUpdateEntry,
-	MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators, ValidatorsByDelegator,
-	ValidatorsByDelegatorUpdateEntry,
+	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
+	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
+use sp_core::Get;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Zero},
 	DispatchResult,
@@ -241,7 +242,15 @@ impl<T: Config>
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		ensure!(validators_vec.contains(worker), Error::<T>::ValidatorNotExist);
 
-		let validators_list = vec![*worker];
+		// ensure the length of validators_vec does not exceed the MaxLengthLimit.
+		ensure!(
+			validators_vec.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
+
+		let validators_list =
+			BoundedVec::try_from(vec![*worker]).map_err(|_| Error::<T>::FailToConvert)?;
+
 		// update ledger
 		ValidatorsByDelegator::<T>::insert(currency_id, *who, validators_list.clone());
 
@@ -251,7 +260,7 @@ impl<T: Config>
 		// Deposit event.
 		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 			currency_id,
-			validators_list,
+			validators_list: validators_list.to_vec(),
 			delegator_id: *who,
 		});
 
