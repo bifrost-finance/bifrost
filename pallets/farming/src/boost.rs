@@ -107,7 +107,7 @@ impl<T: Config> Pallet<T> {
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.round_length = round_length;
-		boost_pool_info.end_round = current_block_number + round_length;
+		boost_pool_info.end_round = current_block_number.saturating_add(round_length);
 		boost_pool_info.total_votes = Zero::zero();
 		BoostPoolInfos::<T>::set(boost_pool_info);
 		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
@@ -152,7 +152,8 @@ impl<T: Config> Pallet<T> {
 			.ok();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
-		boost_pool_info.end_round = current_block_number + boost_pool_info.round_length;
+		boost_pool_info.end_round =
+			current_block_number.saturating_add(boost_pool_info.round_length);
 		boost_pool_info.total_votes = Zero::zero();
 		Self::deposit_event(Event::RoundStart { round_length: boost_pool_info.round_length });
 		BoostPoolInfos::<T>::set(boost_pool_info);

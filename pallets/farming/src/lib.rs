@@ -18,8 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(deprecated)] // TODO: remove_prefix: Use `clear_prefix` instead
-
 #[cfg(test)]
 mod mock;
 
@@ -216,6 +214,7 @@ pub mod pallet {
 		NobodyVoting,
 		NotInWhitelist,
 		PercentOverflow,
+		PoolNotCleared,
 	}
 
 	#[pallet::storage]
@@ -573,7 +572,8 @@ pub mod pallet {
 			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			ensure!(
-				share_info.claim_last_block + pool_info.claim_limit_time <= current_block_number,
+				share_info.claim_last_block.saturating_add(pool_info.claim_limit_time) <=
+					current_block_number,
 				Error::<T>::CanNotClaim
 			);
 
@@ -742,7 +742,8 @@ pub mod pallet {
 				pool_info.state == PoolState::Retired || pool_info.state == PoolState::UnCharged,
 				Error::<T>::InvalidPoolState
 			);
-			SharesAndWithdrawnRewards::<T>::remove_prefix(pid, None);
+			let res = SharesAndWithdrawnRewards::<T>::clear_prefix(pid, u32::max_value(), None);
+			ensure!(res.maybe_cursor.is_none(), Error::<T>::PoolNotCleared);
 			PoolInfos::<T>::remove(pid);
 
 			Self::deposit_event(Event::FarmingPoolKilled { pid });

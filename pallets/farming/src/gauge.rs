@@ -173,7 +173,12 @@ where
 
 				ensure!(
 					gauge_pool_info.max_block >=
-						gauge_info.gauge_stop_block - gauge_info.gauge_start_block + gauge_block,
+						gauge_info
+							.gauge_stop_block
+							.checked_sub(&gauge_info.gauge_start_block)
+							.ok_or(ArithmeticError::Overflow)?
+							.checked_add(&gauge_block)
+							.ok_or(ArithmeticError::Overflow)?,
 					Error::<T>::GaugeMaxBlockOverflow
 				);
 
@@ -190,17 +195,25 @@ where
 					let time_factor_a = gauge_value
 						.saturated_into::<u128>()
 						.checked_mul(
-							(gauge_info.gauge_stop_block - current_block_number)
-								.saturated_into::<u128>(),
+							(gauge_info
+								.gauge_stop_block
+								.checked_sub(&current_block_number)
+								.ok_or(ArithmeticError::Overflow)?)
+							.saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
 					let time_factor_b = gauge_block
 						.saturated_into::<u128>()
 						.checked_mul(
-							(gauge_value + gauge_info.gauge_amount).saturated_into::<u128>(),
+							(gauge_value
+								.checked_add(&gauge_info.gauge_amount)
+								.ok_or(ArithmeticError::Overflow)?)
+							.saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
-					let incease_total_time_factor = time_factor_a + time_factor_b;
+					let incease_total_time_factor = time_factor_a
+						.checked_add(time_factor_b)
+						.ok_or(ArithmeticError::Overflow)?;
 					gauge_info.total_time_factor = gauge_info
 						.total_time_factor
 						.checked_add(incease_total_time_factor)
@@ -210,8 +223,10 @@ where
 						.gauge_amount
 						.saturated_into::<u128>()
 						.checked_mul(
-							(current_block_number - gauge_info.gauge_last_block)
-								.saturated_into::<u128>(),
+							(current_block_number
+								.checked_sub(&gauge_info.gauge_last_block)
+								.ok_or(ArithmeticError::Overflow)?)
+							.saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
 					gauge_info.latest_time_factor = gauge_info
@@ -226,7 +241,10 @@ where
 					.gauge_amount
 					.checked_add(&gauge_value)
 					.ok_or(ArithmeticError::Overflow)?;
-				gauge_info.gauge_stop_block = gauge_info.gauge_stop_block + gauge_block;
+				gauge_info.gauge_stop_block = gauge_info
+					.gauge_stop_block
+					.checked_add(&gauge_block)
+					.ok_or(ArithmeticError::Overflow)?;
 
 				gauge_pool_info.total_time_factor = gauge_pool_info
 					.total_time_factor
@@ -274,11 +292,16 @@ where
 						.gauge_amount
 						.saturated_into::<u128>()
 						.checked_mul(
-							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
+							(start_block
+								.checked_sub(&gauge_info.gauge_last_block)
+								.ok_or(ArithmeticError::Overflow)?)
+							.saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
 				let gauge_rate = Perbill::from_rational(
-					latest_claimed_time_factor - gauge_info.claimed_time_factor,
+					latest_claimed_time_factor
+						.checked_sub(gauge_info.claimed_time_factor)
+						.ok_or(ArithmeticError::Overflow)?,
 					gauge_pool_info.total_time_factor,
 				);
 				let total_shares =
@@ -445,11 +468,16 @@ where
 						.gauge_amount
 						.saturated_into::<u128>()
 						.checked_mul(
-							(start_block - gauge_info.gauge_last_block).saturated_into::<u128>(),
+							(start_block
+								.checked_sub(&gauge_info.gauge_last_block)
+								.ok_or(ArithmeticError::Overflow)?)
+							.saturated_into::<u128>(),
 						)
 						.ok_or(ArithmeticError::Overflow)?;
 				let gauge_rate = Perbill::from_rational(
-					latest_claimed_time_factor - gauge_info.claimed_time_factor,
+					latest_claimed_time_factor
+						.checked_sub(gauge_info.claimed_time_factor)
+						.ok_or(ArithmeticError::Overflow)?,
 					gauge_pool_info.total_time_factor,
 				);
 				let total_shares =
