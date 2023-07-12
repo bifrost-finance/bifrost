@@ -36,7 +36,7 @@ check-all: format
 
 .PHONY: test-all # cargo test all runtime
 test-all:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --workspace --exclude bifrost-kusama-runtime --lib
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
 
 .PHONY: integration-test # integration test
 integration-test:
