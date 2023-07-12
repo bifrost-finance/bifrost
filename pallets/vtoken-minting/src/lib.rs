@@ -120,6 +120,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MoonbeamParachainId: Get<u32>;
 
+		#[pallet::constant]
+		type HydradxParachainId: Get<u32>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
 		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
@@ -940,6 +943,25 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
+					RedeemType::Hydradx => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::HydradxParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: account.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
 					RedeemType::Moonbeam(evm_caller) => {
 						let dest = MultiLocation {
 							parents: 1,
@@ -974,7 +996,7 @@ pub mod pallet {
 				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar | RedeemType::Moonbeam(_) => {
+					RedeemType::Astar | RedeemType::Moonbeam(_) | RedeemType::Hydradx => {
 						return Ok(());
 					},
 					RedeemType::Native => {},
@@ -1532,6 +1554,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_moonbeam_parachain_id() -> u32 {
 		T::MoonbeamParachainId::get()
 	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1595,5 +1620,8 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 	fn get_moonbeam_parachain_id() -> u32 {
 		T::MoonbeamParachainId::get()
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
 	}
 }

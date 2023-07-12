@@ -215,6 +215,8 @@ pub enum RedeemType {
 	Astar,
 	/// Moonbeam chain.
 	Moonbeam(H160),
+	/// Hydradx chain.
+	Hydradx,
 }
 
 impl Default for RedeemType {
