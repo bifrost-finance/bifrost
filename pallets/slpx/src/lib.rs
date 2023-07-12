@@ -75,6 +75,7 @@ pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountId
 pub enum SupportChain {
 	Astar,
 	Moonbeam,
+	Hydradx,
 }
 
 #[derive(
@@ -93,6 +94,7 @@ pub enum SupportChain {
 pub enum TargetChain<AccountId> {
 	Astar(AccountId),
 	Moonbeam(H160),
+	Hydradx(AccountId),
 }
 
 #[frame_support::pallet]
@@ -250,8 +252,12 @@ pub mod pallet {
 			support_chain: SupportChain,
 		) -> DispatchResultWithPostInfo {
 			let evm_contract_account_id = ensure_signed(origin)?;
-			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+
+			if support_chain == SupportChain::Hydradx {
+				evm_caller_account_id = evm_contract_account_id.clone();
+			}
 
 			let target_chain =
 				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
@@ -316,8 +322,12 @@ pub mod pallet {
 			support_chain: SupportChain,
 		) -> DispatchResultWithPostInfo {
 			let evm_contract_account_id = ensure_signed(origin)?;
-			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+
+			if support_chain == SupportChain::Hydradx {
+				evm_caller_account_id = evm_contract_account_id.clone();
+			}
 
 			let target_chain =
 				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
@@ -380,8 +390,12 @@ pub mod pallet {
 			support_chain: SupportChain,
 		) -> DispatchResultWithPostInfo {
 			let evm_contract_account_id = ensure_signed(origin)?;
-			let evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
 			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+
+			if support_chain == SupportChain::Hydradx {
+				evm_caller_account_id = evm_contract_account_id.clone();
+			}
 
 			let target_chain =
 				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
@@ -391,6 +405,7 @@ pub mod pallet {
 			let redeem_type = match support_chain {
 				SupportChain::Astar => RedeemType::Astar,
 				SupportChain::Moonbeam => RedeemType::Moonbeam(evm_caller),
+				SupportChain::Hydradx => RedeemType::Hydradx,
 			};
 
 			if vtoken_id == VFIL {
@@ -561,6 +576,7 @@ impl<T: Config> Pallet<T> {
 		match support_chain {
 			SupportChain::Astar => TargetChain::Astar(evm_caller_account_id),
 			SupportChain::Moonbeam => TargetChain::Moonbeam(evm_caller),
+			SupportChain::Hydradx => TargetChain::Hydradx(evm_caller_account_id),
 		}
 	}
 
@@ -577,6 +593,17 @@ impl<T: Config> Pallet<T> {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
+					),
+				};
+
+				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+			},
+			TargetChain::Hydradx(receiver) => {
+				let dest = MultiLocation {
+					parents: 1,
+					interior: X2(
+						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};

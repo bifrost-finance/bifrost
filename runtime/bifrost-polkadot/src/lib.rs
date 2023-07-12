@@ -1415,6 +1415,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = ConstU32<2006>;
 	type MoonbeamParachainId = ConstU32<2004>;
+	type HydradxParachainId = ConstU32<2034>;
 }
 
 parameter_types! {

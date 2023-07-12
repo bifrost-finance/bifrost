@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
 
 extern crate core;
 
@@ -1241,7 +1242,9 @@ pub mod pallet {
 						if exit_account_balance < idx_record_amount {
 							match redeem_type {
 								RedeemType::Native => {},
-								RedeemType::Astar | RedeemType::Moonbeam(_) => break,
+								RedeemType::Astar |
+								RedeemType::Moonbeam(_) |
+								RedeemType::Hydradx => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
@@ -1260,6 +1263,25 @@ pub mod pallet {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_astar_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: user_account.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Hydradx => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
 										AccountId32 {
 											network: None,
 											id: user_account.encode().try_into().unwrap(),
