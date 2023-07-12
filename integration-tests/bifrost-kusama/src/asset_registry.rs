@@ -281,7 +281,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					Weight::from_ref_time(2000_000_000)
+					Weight::from_parts(2000_000_000, 0)
 				),
 				Error::<Runtime>::CurrencyIdNotExists
 			);
@@ -295,7 +295,7 @@ fn register_multilocation() {
 				RuntimeOrigin::root(),
 				CurrencyId::Token2(0),
 				Box::new(location.clone()),
-				Weight::from_ref_time(2000_000_000)
+				Weight::from_parts(2000_000_000, 0)
 			));
 
 			assert_noop!(
@@ -303,7 +303,7 @@ fn register_multilocation() {
 					RuntimeOrigin::root(),
 					CurrencyId::Token2(0),
 					Box::new(location.clone()),
-					Weight::from_ref_time(2000_000_000)
+					Weight::from_parts(2000_000_000, 0)
 				),
 				Error::<Runtime>::CurrencyIdExisted
 			);
@@ -318,7 +318,7 @@ fn register_multilocation() {
 			);
 			assert_eq!(
 				CurrencyIdToWeights::<Runtime>::get(CurrencyId::Token2(0)),
-				Some(Weight::from_ref_time(2000_000_000))
+				Some(Weight::from_parts(2000_000_000, 0))
 			);
 		})
 	})

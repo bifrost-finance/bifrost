@@ -1365,7 +1365,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(15)]
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight({1_000_000})]
 		pub fn lazy_migration_v2_0_0(
 			_origin: OriginFor<T>,
 			max_nums: u32,

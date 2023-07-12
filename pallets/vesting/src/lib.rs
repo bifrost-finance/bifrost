@@ -154,7 +154,6 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AccountId, VestingInfo<BalanceOf<T>, T::BlockNumber>>;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
@@ -380,7 +379,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn force_set_vested(
 			origin: OriginFor<T>,
 			source: <T::Lookup as StaticLookup>::Source,
@@ -411,7 +410,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn init_vesting_start_at(
 			origin: OriginFor<T>,
 			vesting_start_at: T::BlockNumber,
@@ -424,7 +423,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn set_vesting_per_block(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
@@ -467,7 +466,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn force_set_cliff(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
@@ -595,7 +594,9 @@ mod tests {
 	use sp_runtime::{
 		testing::Header,
 		traits::{BadOrigin, BlakeTwo256, Identity, IdentityLookup},
+		DispatchError::Token,
 		ModuleError,
+		TokenError::Frozen,
 	};
 
 	use super::*;
@@ -658,10 +659,14 @@ mod tests {
 		type MaxReserves = ();
 		type ReserveIdentifier = [u8; 8];
 		type WeightInfo = ();
+		type HoldIdentifier = ();
+		type FreezeIdentifier = ();
+		type MaxHolds = ConstU32<0>;
+		type MaxFreezes = ConstU32<0>;
 	}
 	parameter_types! {
 		pub const MinVestedTransfer: u64 = 256 * 2;
-		pub static ExistentialDeposit: u64 = 0;
+		pub static ExistentialDeposit: u64 = 1;
 	}
 	impl Config for Test {
 		type BlockNumberToBalance = Identity;
@@ -779,10 +784,8 @@ mod tests {
 			System::set_block_number(11);
 			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
-			assert_noop!(
-				Balances::transfer(Some(1).into(), 2, 56),
-				pallet_balances::Error::<Test, _>::LiquidityRestrictions,
-			); // Account 1 cannot send more than vested amount
+			assert_noop!(Balances::transfer(Some(1).into(), 2, 56), Token(Frozen),); // Account 1 cannot send
+			                                                             // more than vested amount
 		});
 	}
 

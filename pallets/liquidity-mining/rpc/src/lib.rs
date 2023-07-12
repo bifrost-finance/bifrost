@@ -77,10 +77,10 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		let rs: Result<Vec<(CurrencyId, Balance)>, _> =
-			lm_rpc_api.get_rewards(&at, who, pid, pallet_instance);
+			lm_rpc_api.get_rewards(at, who, pid, pallet_instance);
 
 		match rs {
 			Ok(rewards) => Ok(rewards

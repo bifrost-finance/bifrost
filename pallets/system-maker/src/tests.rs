@@ -46,7 +46,7 @@ fn on_idle() {
 		assert_eq!(Tokens::free_balance(KSM, &system_maker), 10000);
 		SystemMaker::on_idle(
 			<frame_system::Pallet<Runtime>>::block_number(),
-			Weight::from_ref_time(100000000),
+			Weight::from_parts(100000000, 0),
 		);
 		System::set_block_number(System::block_number() + 1);
 		assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);

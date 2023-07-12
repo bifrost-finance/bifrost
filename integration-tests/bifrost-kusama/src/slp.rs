@@ -142,20 +142,18 @@ fn slp_setup() {
 	cross_ksm_to_bifrost(BOB, 10000 * KSM_DECIMALS);
 
 	KusamaNet::execute_with(|| {
-		assert_ok!(kusama_runtime::Balances::set_balance(
+		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-			10000 * KSM_DECIMALS,
-			0,
+			10000 * KSM_DECIMALS
 		));
 	});
 
 	Bifrost::execute_with(|| {
-		assert_ok!(Balances::set_balance(
+		assert_ok!(Balances::force_set_balance(
 			RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(BIFROST_TREASURY_ACCOUNT)),
-			10000 * BNC_DECIMALS,
-			0,
+			10000 * BNC_DECIMALS
 		));
 	});
 
@@ -376,11 +374,10 @@ fn vksm_vtoken_minting_setup() {
 
 fn cross_ksm_to_bifrost(to: [u8; 32], amount: u128) {
 	KusamaNet::execute_with(|| {
-		assert_ok!(kusama_runtime::Balances::set_balance(
+		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(to)),
-			amount,
-			0,
+			amount
 		));
 		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 			kusama_runtime::RuntimeOrigin::signed(to.into()),
@@ -478,7 +475,7 @@ fn transfer_to() {
 		KusamaNet::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				10049999909712564
+				10049999909994200
 			);
 		});
 	})
@@ -523,7 +520,7 @@ fn transfer_back() {
 					CurrencyId::Token(TokenSymbol::KSM),
 					&AccountId::from(EXIT_ACCOUNT)
 				),
-				49999919872000
+				49999929608000
 			);
 		});
 

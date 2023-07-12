@@ -32,7 +32,7 @@ use frame_support::{
 	traits::{Everything, GenesisBuild, Nothing},
 	PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 #[cfg(feature = "runtime-benchmarks")]
 use node_primitives::currency::VKSM;
@@ -125,7 +125,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 1;
 	pub const MaxLocks: u32 = 999_999;
 	pub const MaxReserves: u32 = 999_999;
 }
@@ -142,6 +142,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -181,7 +185,7 @@ parameter_type_with_key! {
 
 parameter_types! {
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -469,7 +473,7 @@ impl Config for Runtime {
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
@@ -529,6 +533,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 pub struct ExtBuilder {

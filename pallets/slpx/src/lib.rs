@@ -105,7 +105,6 @@ pub mod pallet {
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]

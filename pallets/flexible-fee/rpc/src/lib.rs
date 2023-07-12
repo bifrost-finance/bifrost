@@ -31,10 +31,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{Block as BlockT, Zero},
-};
+use sp_runtime::traits::{Block as BlockT, Zero};
 
 pub struct FlexibleFeeRpc<Client, Block> {
 	client: Arc<Client>,
@@ -99,7 +96,7 @@ where
 		// ))
 
 		let api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let encoded_len = encoded_xt.len() as u32;
 
 		let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(|e| {
@@ -110,7 +107,7 @@ where
 			))
 		})?;
 
-		let fee_details = api.query_fee_details(&at, uxt, encoded_len).map_err(|e| {
+		let fee_details = api.query_fee_details(at, uxt, encoded_len).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to query fee details.",
@@ -130,7 +127,7 @@ where
 			}
 		};
 
-		let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
+		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee);
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {
