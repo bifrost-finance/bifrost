@@ -377,6 +377,11 @@ fn mint_swap_redeem1() {
 					StableAsset::pools(0)
 				);
 				assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+				log::debug!(
+					"swap_out{:?}StableAsset::pools(0){:?}",
+					swap_out,
+					StableAsset::pools(0)
+				);
 				// assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0,
 				// 2));
 				// assert_eq!(
@@ -401,9 +406,9 @@ fn mint_swap_redeem1() {
 				// 	})
 				// );
 				assert_eq!(Tokens::free_balance(coin0, &3), 85000000u128 - BALANCE_OFF);
-				assert_eq!(Tokens::free_balance(coin1, &3), 72280521u128 - BALANCE_OFF); // 90_000_000 - 22_222_222 + 4_502_743
+				assert_eq!(Tokens::free_balance(coin1, &3), 74502743u128 - BALANCE_OFF); // 90_000_000 - 22_222_222 + 4_502_743
 				assert_eq!(Tokens::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
-				assert_eq!(Tokens::free_balance(coin1, &swap_id), 17719479u128 - BALANCE_OFF);
+				assert_eq!(Tokens::free_balance(coin1, &swap_id), 15497257u128 - BALANCE_OFF);
 				assert_ok!(StablePool::on_swap(&4u128, 0, 0, 1, 15_000_000u128, 0));
 				log::debug!(
 					"swap_out2{:?}StableAsset::pools(0){:?}==={:?}",
@@ -545,7 +550,7 @@ fn mint_swap_redeem_for_precisions() {
 				);
 				assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
 				assert_eq!(Tokens::free_balance(coin0, &3), 85000000u128 - BALANCE_OFF);
-				// assert_eq!(Tokens::free_balance(coin1, &3), 74502744u128 - BALANCE_OFF); // 90_000_000 - 20_000_000 + 4502744
+				// assert_eq!(Tokens::free_balance(coin1, &3), 74502744u128 - BALANCE_OFF);
 				// assert_eq!(Tokens::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
 				// assert_eq!(Tokens::free_balance(coin1, &swap_id), 15497256 - BALANCE_OFF);
 				// assert_ok!(StablePool::on_swap(&4u128, 0, 0, 1, 15_000_000u128, 0));

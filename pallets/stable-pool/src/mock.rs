@@ -9,7 +9,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, TokenSymbol, ASTR, DOT,
-	DOT_TOKEN_ID, GLMR,
+	DOT_TOKEN_ID, GLMR, VDOT,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
@@ -25,7 +25,6 @@ use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const LP_KSM_BNC: CurrencyId =
 	CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 
@@ -239,6 +238,7 @@ impl bifrost_stable_pool::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type ControlOrigin = EnsureSignedBy<One, u128>;
+	// type AssetId = CurrencyId;
 	type MultiCurrency = Tokens;
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
