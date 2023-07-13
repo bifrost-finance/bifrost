@@ -19,13 +19,18 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use crate::Weight;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use frame_system::EnsureRoot;
+use node_primitives::{
+	currency::{BNC, DOT, KSM, VDOT},
+	CurrencyId, TokenSymbol,
+};
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -39,11 +44,7 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -124,6 +125,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -153,6 +158,7 @@ parameter_types! {
 	pub const CouncilMotionDuration: BlockNumber = 2 * 7_200;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
+	pub MaxProposalWeight: Weight = Default::default();
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -165,6 +171,12 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = MaxProposalWeight;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
+}
+
+parameter_types! {
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 impl bifrost_token_issuer::Config for Runtime {
@@ -173,6 +185,7 @@ impl bifrost_token_issuer::Config for Runtime {
 	type ControlOrigin =
 		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub struct ExtBuilder {
@@ -197,7 +210,7 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, VDOT, 400),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])

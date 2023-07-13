@@ -142,7 +142,7 @@ pub mod pallet {
 					Self::handle_redeem_by_currency_id(&system_maker, &info, redeem_amount);
 				}
 			}
-			Weight::zero()
+			T::WeightInfo::on_idle()
 		}
 	}
 

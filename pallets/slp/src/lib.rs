@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
 
 extern crate core;
 
@@ -24,7 +25,7 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, BNC, KSM, MOVR, PHA,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -37,13 +38,14 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
+	currency::{BNC, KSM, MOVR, PHA},
 	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-use sp_core::H160;
+use sp_core::{bounded::BoundedVec, H160};
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -54,7 +56,7 @@ use xcm::{
 };
 
 mod agents;
-pub mod migration2;
+pub mod migrations;
 mod mocks;
 pub mod primitives;
 mod tests;
@@ -90,7 +92,7 @@ pub mod pallet {
 	use crate::agents::{
 		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
 	};
-	use node_primitives::RedeemType;
+	use node_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
@@ -118,6 +120,8 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
+
+		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
@@ -158,6 +162,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxRefundPerBlock: Get<u32>;
+
+		#[pallet::constant]
+		type MaxLengthLimit: Get<u32>;
 
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
 	}
@@ -239,6 +246,7 @@ pub mod pallet {
 		ValidatorMultilocationNotvalid,
 		AmountNotProvided,
 		FailToConvert,
+		ExceedMaxLengthLimit,
 	}
 
 	#[pallet::event]
@@ -500,6 +508,10 @@ pub mod pallet {
 		},
 	}
 
+	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
+	/// boundedVec).
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
 	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
 	///
@@ -569,24 +581,29 @@ pub mod pallet {
 	/// (VWL) Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
-	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
+	pub type Validators<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<MultiLocation, T::MaxLengthLimit>>;
 
 	/// (VBL) Validator Boost List -> (validator multilocation, due block number)
 	#[pallet::storage]
 	#[pallet::getter(fn get_validator_boost_list)]
-	pub type ValidatorBoostList<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, BlockNumberFor<T>)>>;
+	pub type ValidatorBoostList<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyId,
+		BoundedVec<(MultiLocation, BlockNumberFor<T>), T::MaxLengthLimit>,
+	>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators_by_delegator)]
-	pub type ValidatorsByDelegator<T> = StorageDoubleMap<
+	pub type ValidatorsByDelegator<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Vec<MultiLocation>,
+		BoundedVec<MultiLocation, T::MaxLengthLimit>,
 		OptionQuery,
 	>;
 
@@ -684,6 +701,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -1224,7 +1242,9 @@ pub mod pallet {
 						if exit_account_balance < idx_record_amount {
 							match redeem_type {
 								RedeemType::Native => {},
-								RedeemType::Astar | RedeemType::Moonbeam(_) => break,
+								RedeemType::Astar |
+								RedeemType::Moonbeam(_) |
+								RedeemType::Hydradx => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
@@ -1257,6 +1277,25 @@ pub mod pallet {
 									Unlimited,
 								)?;
 							},
+							RedeemType::Hydradx => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: user_account.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
 							RedeemType::Moonbeam(evm_caller) => {
 								let dest = MultiLocation {
 									parents: 1,
@@ -1268,13 +1307,28 @@ pub mod pallet {
 										},
 									),
 								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
+								if currency_id == FIL {
+									let assets = vec![
+										(currency_id, deduct_amount),
+										(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
+									];
+
+									T::XcmTransfer::transfer_multicurrencies(
+										user_account.clone(),
+										assets,
+										1,
+										dest,
+										Unlimited,
+									)?;
+								} else {
+									T::XcmTransfer::transfer(
+										user_account.clone(),
+										currency_id,
+										deduct_amount,
+										dest,
+										Unlimited,
+									)?;
+								}
 							},
 						};
 						// Delete the corresponding unlocking record storage.
@@ -1314,7 +1368,7 @@ pub mod pallet {
 			if extra_weight != 0 {
 				Ok(Some(
 					T::WeightInfo::refund_currency_due_unbond() +
-						Weight::from_ref_time(extra_weight),
+						Weight::from_parts(extra_weight, 0),
 				)
 				.into())
 			} else {
@@ -1669,6 +1723,12 @@ pub mod pallet {
 				Error::<T>::GreaterThanMaximum
 			);
 
+			// ensure the length of validators does not exceed MaxLengthLimit
+			ensure!(
+				validators.len() <= T::MaxLengthLimit::get() as usize,
+				Error::<T>::ExceedMaxLengthLimit
+			);
+
 			// check delegator
 			// Check if it is bonded already.
 			ensure!(
@@ -1678,8 +1738,15 @@ pub mod pallet {
 
 			let validators_list = Self::remove_validators_duplicates(currency_id, &validators)?;
 
+			let bounded_validators = BoundedVec::try_from(validators_list.clone())
+				.map_err(|_| Error::<T>::FailToConvert)?;
+
 			// Update ValidatorsByDelegator storage
-			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+			ValidatorsByDelegator::<T>::insert(
+				currency_id,
+				who.clone(),
+				bounded_validators.clone(),
+			);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
@@ -2038,8 +2105,12 @@ pub mod pallet {
 			let validator_set =
 				Pallet::<T>::check_length_and_deduplicate(currency_id, validator_list)?;
 
+			let bounded_validators =
+				BoundedVec::<MultiLocation, T::MaxLengthLimit>::try_from(validator_set.clone())
+					.map_err(|_| Error::<T>::FailToConvert)?;
+
 			// Change corresponding storage.
-			Validators::<T>::insert(currency_id, validator_set.clone());
+			Validators::<T>::insert(currency_id, bounded_validators);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsReset {
@@ -2076,8 +2147,14 @@ pub mod pallet {
 				validator_boost_list.push((*validator, due_block_number));
 			}
 
+			let bounded_validator_boost_list = BoundedVec::<
+				(MultiLocation, BlockNumberFor<T>),
+				T::MaxLengthLimit,
+			>::try_from(validator_boost_list.clone())
+			.map_err(|_| Error::<T>::FailToConvert)?;
+
 			// Change corresponding storage.
-			ValidatorBoostList::<T>::insert(currency_id, validator_boost_list.clone());
+			ValidatorBoostList::<T>::insert(currency_id, bounded_validator_boost_list);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorBoostListSet {
@@ -2086,26 +2163,34 @@ pub mod pallet {
 			});
 
 			// Add the boost list to the validator set
-			Validators::<T>::mutate(currency_id, |validator_set_op| {
-				if let Some(ref mut validator_set) = validator_set_op {
-					for (validator, _) in validator_boost_list.iter() {
-						if !validator_set.contains(validator) {
-							validator_set.push(*validator);
-						}
-					}
-				} else {
-					*validator_set_op =
-						Some(validator_boost_list.iter().map(|(v, _)| *v).collect());
-				}
-			});
+			let mut validator_vec;
+			if let Some(validator_set) = Self::get_validators(currency_id) {
+				validator_vec = validator_set.to_vec();
+			} else {
+				validator_vec = vec![];
+			}
 
-			let new_validator_set =
-				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+			for (validator, _) in validator_boost_list.iter() {
+				if !validator_vec.contains(validator) {
+					validator_vec.push(*validator);
+				}
+			}
+
+			ensure!(
+				validator_vec.len() <= T::MaxLengthLimit::get() as usize,
+				Error::<T>::ExceedMaxLengthLimit
+			);
+
+			let bounded_validator_set: BoundedVec<MultiLocation, T::MaxLengthLimit> =
+				BoundedVec::try_from(validator_vec.clone())
+					.map_err(|_| Error::<T>::FailToConvert)?;
+
+			Validators::<T>::insert(currency_id, bounded_validator_set);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsReset {
 				currency_id,
-				validator_list: new_validator_set,
+				validator_list: validator_vec,
 			});
 
 			Ok(())
@@ -2129,33 +2214,44 @@ pub mod pallet {
 				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
 				.ok_or(Error::<T>::OverFlow)?;
 
-			ValidatorBoostList::<T>::mutate(
-				currency_id,
-				|validator_boost_list_op| -> DispatchResult {
-					if let Some(ref mut validator_boost_list) = validator_boost_list_op {
-						// if the validator is in the validator boost list, change the due block
-						// number
-						if let Some(index) = validator_boost_list
-							.iter()
-							.position(|(validator, _)| validator == who.as_ref())
-						{
-							let original_due_block = validator_boost_list[index].1;
-							// get the due block number
-							due_block_number = original_due_block
-								.checked_add(&T::BlockNumber::from(SIX_MONTHS))
-								.ok_or(Error::<T>::OverFlow)?;
+			let validator_boost_list_op = ValidatorBoostList::<T>::get(currency_id);
 
-							validator_boost_list[index].1 = due_block_number;
-						} else {
-							validator_boost_list.push((*who, due_block_number));
-						}
-					} else {
-						*validator_boost_list_op = Some(vec![(*who, due_block_number)]);
-					}
+			let mut validator_boost_vec;
+			if let Some(validator_boost_list) = validator_boost_list_op {
+				// if the validator is in the validator boost list, change the due block
+				// number
+				validator_boost_vec = validator_boost_list.to_vec();
+				if let Some(index) =
+					validator_boost_vec.iter().position(|(validator, _)| validator == who.as_ref())
+				{
+					let original_due_block = validator_boost_vec[index].1;
+					// get the due block number
+					due_block_number = original_due_block
+						.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+						.ok_or(Error::<T>::OverFlow)?;
 
-					Ok(())
-				},
-			)?;
+					validator_boost_vec[index].1 = due_block_number;
+				} else {
+					validator_boost_vec.push((*who, due_block_number));
+				}
+			} else {
+				validator_boost_vec = vec![(*who, due_block_number)];
+			}
+
+			// ensure the length of the validator boost list is less than the maximum
+			ensure!(
+				validator_boost_vec.len() <= T::MaxLengthLimit::get() as usize,
+				Error::<T>::ExceedMaxLengthLimit
+			);
+
+			let bounded_list =
+				BoundedVec::<(MultiLocation, BlockNumberFor<T>), T::MaxLengthLimit>::try_from(
+					validator_boost_vec,
+				)
+				.map_err(|_| Error::<T>::FailToConvert)?;
+
+			// Change corresponding storage.
+			ValidatorBoostList::<T>::insert(currency_id, bounded_list);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorBoostListAdded {
@@ -2164,24 +2260,36 @@ pub mod pallet {
 				due_block_number,
 			});
 
-			// Add the newly added validator to the validator set
-			Validators::<T>::mutate(currency_id, |validator_set_op| {
-				if let Some(ref mut validator_set) = validator_set_op {
-					if !validator_set.contains(who.as_ref()) {
-						validator_set.push(*who);
-					}
-				} else {
-					*validator_set_op = Some(vec![*who]);
-				}
-			});
+			let validator_set_op = Self::get_validators(currency_id);
 
-			let new_validator_set =
-				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+			let mut validator_vec;
+			// Add the newly added validator to the validator set
+			if let Some(validator_set) = validator_set_op {
+				validator_vec = validator_set.to_vec();
+				if !validator_vec.contains(who.as_ref()) {
+					validator_vec.push(*who);
+				}
+			} else {
+				validator_vec = vec![*who];
+			}
+
+			// ensure the length of the validator set is less than the maximum
+			ensure!(
+				validator_vec.len() <= T::MaxLengthLimit::get() as usize,
+				Error::<T>::ExceedMaxLengthLimit
+			);
+
+			let bouded_list =
+				BoundedVec::<MultiLocation, T::MaxLengthLimit>::try_from(validator_vec.clone())
+					.map_err(|_| Error::<T>::FailToConvert)?;
+
+			// Change corresponding storage.
+			Validators::<T>::insert(currency_id, bouded_list);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsReset {
 				currency_id,
-				validator_list: new_validator_set,
+				validator_list: validator_vec,
 			});
 
 			Ok(())

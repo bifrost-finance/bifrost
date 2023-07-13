@@ -33,9 +33,12 @@ use frame_support::{
 	traits::{Everything, GenesisBuild, Nothing},
 	PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyIdMapping, TokenSymbol};
+use node_primitives::{
+	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
+	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
+};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
@@ -56,16 +59,7 @@ pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
-pub const FIL_TOKEN_ID: u8 = 4u8;
-pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
-pub const vFIL_TOKEN_ID: u8 = 4u8;
-pub const vFIL: CurrencyId = CurrencyId::VToken2(vFIL_TOKEN_ID);
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -154,6 +148,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -164,14 +162,14 @@ orml_traits::parameter_type_with_key! {
 			"{:?}",currency_id
 		);
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
-			&CurrencyId::Token(TokenSymbol::KSM) => 0,
-			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
+			&BNC => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
+			&KSM => 0,
+			&VKSM => 0,
 			&FIL => 0,
-			&vFIL => 0,
-			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::MOVR) => 1 * micro::<Runtime>(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
-			&CurrencyId::VToken(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
+			&VFIL => 0,
+			&MOVR => 1 * micro::<Runtime>(MOVR),	// MOVR has a decimals of 10e18
+			&VMOVR => 1 * micro::<Runtime>(MOVR),	// MOVR has a decimals of 10e18
+			&VBNC => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
 			_ => AssetIdMaps::<Runtime>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
@@ -199,7 +197,7 @@ parameter_type_with_key! {
 
 parameter_types! {
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -243,6 +241,7 @@ impl vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
+	type BifrostSlpx = SlpxInterface;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
@@ -251,6 +250,7 @@ impl vtoken_minting::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
+	type HydradxParachainId = ConstU32<2034>;
 }
 
 ord_parameter_types! {
@@ -315,6 +315,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct SubstrateResponseManager;
@@ -334,6 +335,13 @@ impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for Substrat
 	}
 }
 
+pub struct SlpxInterface;
+impl SlpxOperator<Balance> for SlpxInterface {
+	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -342,6 +350,7 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
+	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmRouter = ();
@@ -352,11 +361,12 @@ impl bifrost_slp::Config for Runtime {
 	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
@@ -416,6 +426,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 pub struct ExtBuilder {
@@ -438,10 +449,10 @@ impl ExtBuilder {
 		self.balances(vec![
 			(ALICE, BNC, 1000000000000000000000),
 			(BOB, BNC, 1000000000000),
-			(BOB, vKSM, 1000),
+			(BOB, VKSM, 1000),
 			(BOB, KSM, 1000000000000),
 			(BOB, MOVR, 1000000000000000000000),
-			(BOB, vFIL, 1000),
+			(BOB, VFIL, 1000),
 			(BOB, FIL, 100000000000000000000000),
 			(CHARLIE, MOVR, 100000000000000000000000),
 		])
@@ -481,10 +492,10 @@ impl ExtBuilder {
 
 		bifrost_asset_registry::GenesisConfig::<Runtime> {
 			currency: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
-				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
-				(CurrencyId::Native(TokenSymbol::BNC), 10_000_000, None),
-				(CurrencyId::Token2(FIL_TOKEN_ID), 10_000_000, None),
+				(DOT, 100_000_000, None),
+				(KSM, 10_000_000, None),
+				(BNC, 10_000_000, None),
+				(FIL, 10_000_000, None),
 			],
 			vcurrency: vec![],
 			vsbond: vec![],

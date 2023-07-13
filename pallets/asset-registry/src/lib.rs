@@ -919,7 +919,7 @@ where
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
 		);
-		let weight = weight.min(Weight::from_ref_time(self.weight));
+		let weight = weight.min(Weight::from_parts(self.weight, 0));
 		let weight_ratio =
 			FixedU128::saturating_from_rational(weight.ref_time(), WEIGHT_REF_TIME_PER_SECOND);
 		let amount = self

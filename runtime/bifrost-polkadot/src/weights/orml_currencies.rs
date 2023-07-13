@@ -51,7 +51,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
 	// Storage: System Account (r:1 w:1)
 	fn transfer_non_native_currency() -> Weight {
 		// Minimum execution time: 46_505 nanoseconds.
-		Weight::from_ref_time(47_602_000)
+		Weight::from_parts(47_602_000, 0)
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -59,7 +59,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
 	// Storage: EvmAccounts EvmAddresses (r:1 w:0)
 	fn transfer_native_currency() -> Weight {
 		// Minimum execution time: 36_413 nanoseconds.
-		Weight::from_ref_time(37_625_000)
+		Weight::from_parts(37_625_000, 0)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -68,14 +68,14 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
 	// Storage: System Account (r:1 w:1)
 	fn update_balance_non_native_currency() -> Weight {
 		// Minimum execution time: 27_242 nanoseconds.
-		Weight::from_ref_time(28_038_000)
+		Weight::from_parts(28_038_000, 0)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	// Storage: System Account (r:1 w:1)
 	fn update_balance_native_currency_creating() -> Weight {
 		// Minimum execution time: 27_678 nanoseconds.
-		Weight::from_ref_time(28_544_000)
+		Weight::from_parts(28_544_000, 0)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -83,7 +83,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
 	// Storage: EvmAccounts EvmAddresses (r:1 w:0)
 	fn update_balance_native_currency_killing() -> Weight {
 		// Minimum execution time: 27_789 nanoseconds.
-		Weight::from_ref_time(29_601_000)
+		Weight::from_parts(29_601_000, 0)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

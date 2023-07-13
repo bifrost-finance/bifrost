@@ -20,6 +20,7 @@
 
 use frame_support::{assert_noop, assert_ok};
 use mock::{RuntimeEvent, *};
+use node_primitives::currency::KSM;
 use sp_runtime::traits::BadOrigin;
 
 use super::*;

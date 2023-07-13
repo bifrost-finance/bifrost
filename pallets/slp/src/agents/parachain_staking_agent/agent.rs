@@ -20,7 +20,7 @@ use crate::{
 	pallet::Error,
 	primitives::{
 		Ledger, OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, BNC,
+		OneToManyScheduledRequest, QueryId,
 	},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied, DelegatorLedgers,
@@ -31,7 +31,7 @@ use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
+use node_primitives::{currency::BNC, CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 use sp_runtime::{

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(test)]
 
-use crate as xcm_action;
+use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -28,9 +28,9 @@ use frame_support::{
 	traits::{Everything, Nothing},
 	PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::{blake2_256, H256};
 use sp_runtime::{
@@ -89,7 +89,7 @@ construct_runtime!(
 	VtokenMinting: bifrost_vtoken_minting,
 	ZenlinkProtocol: zenlink_protocol,
 	XTokens: orml_xtokens,
-	XcmAction: xcm_action,
+	Slpx: slpx,
 	  PolkadotXcm: pallet_xcm
   }
 );
@@ -141,6 +141,10 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -192,6 +196,13 @@ ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
+pub struct SlpxInterface;
+impl SlpxOperator<Balance> for SlpxInterface {
+	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
 impl bifrost_vtoken_minting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -205,11 +216,13 @@ impl bifrost_vtoken_minting::Config for Test {
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type BifrostSlp = Slp;
+	type BifrostSlpx = SlpxInterface;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
+	type HydradxParachainId = ConstU32<2034>;
 }
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -299,7 +312,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
@@ -339,7 +352,7 @@ parameter_type_with_key! {
 
 parameter_types! {
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -422,6 +435,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 pub struct SubstrateResponseManager;
@@ -449,6 +463,7 @@ impl bifrost_slp::Config for Test {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
+	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmRouter = ();
@@ -459,6 +474,7 @@ impl bifrost_slp::Config for Test {
 	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -489,14 +505,15 @@ impl pallet_xcm::Config for Test {
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
-// Pallet xcm-action configuration
+// Pallet slpx configuration
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
-impl xcm_action::Config for Test {
+impl slpx::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type MultiCurrency = Currencies;

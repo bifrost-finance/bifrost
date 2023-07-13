@@ -19,12 +19,9 @@
 use crate::MultiLocation;
 use codec::{alloc::collections::BTreeMap, Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
+use node_primitives::{CurrencyId, TimeUnit};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
-
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct OneToManyLedger<Balance> {

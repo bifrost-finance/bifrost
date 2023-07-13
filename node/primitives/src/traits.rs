@@ -87,7 +87,7 @@ pub trait BancorHandler<Balance> {
 
 impl<Balance> BancorHandler<Balance> for () {
 	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
-		DispatchResult::from(DispatchError::Token(TokenError::NoFunds))
+		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
 	}
 }
 
@@ -148,11 +148,17 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	) -> Option<(AccountId, Balance, TimeUnit, RedeemType)>;
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
+	fn get_hydradx_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
 pub trait SlpOperator<CurrencyId> {
 	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
+}
+
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpxOperator<Balance> {
+	fn get_moonbeam_transfer_to_fee() -> Balance;
 }
 
 /// A mapping between CurrencyId and AssetMetadata.
@@ -332,6 +338,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
+	fn get_hydradx_parachain_id() -> u32;
 }
 
 pub trait TryConvertFrom<CurrencyId> {

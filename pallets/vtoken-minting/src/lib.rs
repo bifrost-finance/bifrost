@@ -43,13 +43,13 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, TimeUnit,
-	VtokenMintingInterface, VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator,
+	TimeUnit, VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 pub use traits::*;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -66,11 +66,11 @@ pub type UnlockId = u32;
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+	use node_primitives::{currency::BNC, FIL};
 	use orml_traits::XcmTransfer;
 	use xcm::{prelude::*, v3::MultiLocation};
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -119,7 +119,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type MoonbeamParachainId: Get<u32>;
 
+		#[pallet::constant]
+		type HydradxParachainId: Get<u32>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
+
+		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
@@ -748,7 +753,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -763,7 +768,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(12)]
-		#[pallet::weight(0)]
+		#[pallet::weight({0})]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -783,24 +788,35 @@ pub mod pallet {
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
-					TimeUnit::Era(era_b) => TimeUnit::Era(era_a + era_b),
+					TimeUnit::Era(era_b) => TimeUnit::Era(
+						era_a.checked_add(era_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Round(round_a) => match b {
-					TimeUnit::Round(round_b) => TimeUnit::Round(round_a + round_b),
+					TimeUnit::Round(round_b) => TimeUnit::Round(
+						round_a.checked_add(round_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
-					TimeUnit::SlashingSpan(slashing_span_b) =>
-						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
+					TimeUnit::SlashingSpan(slashing_span_b) => TimeUnit::SlashingSpan(
+						slashing_span_a
+							.checked_add(slashing_span_b)
+							.ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Kblock(kblock_a) => match b {
-					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
+					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(
+						kblock_a.checked_add(kblock_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Hour(hour_a) => match b {
-					TimeUnit::Hour(hour_b) => TimeUnit::Hour(hour_a + hour_b),
+					TimeUnit::Hour(hour_b) => TimeUnit::Hour(
+						hour_a.checked_add(hour_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
@@ -937,12 +953,15 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
-					RedeemType::Moonbeam(evm_caller) => {
+					RedeemType::Hydradx => {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
-								Parachain(T::MoonbeamParachainId::get()),
-								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+								Parachain(T::HydradxParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: account.encode().try_into().unwrap(),
+								},
 							),
 						};
 						T::XcmTransfer::transfer(
@@ -953,10 +972,41 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
+					RedeemType::Moonbeam(evm_caller) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::MoonbeamParachainId::get()),
+								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+							),
+						};
+						if token_id == FIL {
+							let assets = vec![
+								(token_id, unlock_amount),
+								(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
+							];
+
+							T::XcmTransfer::transfer_multicurrencies(
+								account.clone(),
+								assets,
+								1,
+								dest,
+								Unlimited,
+							)?;
+						} else {
+							T::XcmTransfer::transfer(
+								account.clone(),
+								token_id,
+								unlock_amount,
+								dest,
+								Unlimited,
+							)?;
+						}
+					},
 				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar | RedeemType::Moonbeam(_) => {
+					RedeemType::Astar | RedeemType::Moonbeam(_) | RedeemType::Hydradx => {
 						return Ok(());
 					},
 					RedeemType::Native => {},
@@ -1514,6 +1564,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_moonbeam_parachain_id() -> u32 {
 		T::MoonbeamParachainId::get()
 	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1577,5 +1630,8 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 	fn get_moonbeam_parachain_id() -> u32 {
 		T::MoonbeamParachainId::get()
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
 	}
 }

@@ -28,6 +28,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{traits::Bounded, FixedPointNumber, Perquintill};
 
 pub mod constants;
+pub mod currency_adapter;
 pub mod remove_pallet;
 
 #[cfg(test)]

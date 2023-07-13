@@ -20,6 +20,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, sp_io};
 use hex_literal::hex;
+use node_primitives::TokenSymbol;
 use sp_core::{bounded::BoundedVec, ConstU32};
 use zenlink_protocol::AssetId;
 
@@ -29,7 +30,7 @@ const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
 fn test_xcm_action_util() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		let address = H160::from_slice(&EVM_ADDR);
-		let account_id: AccountId = XcmAction::h160_to_account_id(address);
+		let account_id: AccountId = Slpx::h160_to_account_id(address);
 		assert_eq!(
 			account_id,
 			sp_runtime::AccountId32::new(hex!(
@@ -42,42 +43,38 @@ fn test_xcm_action_util() {
 			hex!("b1c2dde9e562a738e264a554e467b30e5cd58e95ab98459946fb8e518cfe71c2")
 		);
 
-		assert_ok!(XcmAction::add_whitelist(
-			RuntimeOrigin::signed(ALICE),
-			SupportChain::Astar,
-			ALICE
-		));
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE));
 		assert_eq!(
-			XcmAction::whitelist_account_ids(SupportChain::Astar),
+			Slpx::whitelist_account_ids(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE]).unwrap()
 		);
 		assert_noop!(
-			XcmAction::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE),
+			Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE),
 			Error::<Test>::AccountIdAlreadyInWhitelist
 		);
-		assert_ok!(XcmAction::remove_whitelist(
+		assert_ok!(Slpx::remove_whitelist(
 			RuntimeOrigin::signed(ALICE),
 			SupportChain::Astar,
 			ALICE
 		));
 		assert_eq!(
-			XcmAction::whitelist_account_ids(SupportChain::Astar),
+			Slpx::whitelist_account_ids(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::default()
 		);
 
-		assert_ok!(XcmAction::set_execution_fee(
+		assert_ok!(Slpx::set_execution_fee(
 			RuntimeOrigin::signed(ALICE),
 			CurrencyId::Token2(0),
 			10
 		));
-		assert_eq!(XcmAction::execution_fee(CurrencyId::Token2(0)), Some(10));
+		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10));
 
-		assert_ok!(XcmAction::set_transfer_to_fee(
+		assert_ok!(Slpx::set_transfer_to_fee(
 			RuntimeOrigin::signed(ALICE),
 			SupportChain::Moonbeam,
 			10
 		));
-		assert_eq!(XcmAction::transfer_to_fee(SupportChain::Moonbeam), Some(10));
+		assert_eq!(Slpx::transfer_to_fee(SupportChain::Moonbeam), Some(10));
 	});
 }
 
@@ -123,21 +120,15 @@ fn test_zenlink() {
 #[test]
 fn test_get_default_fee() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_eq!(XcmAction::get_default_fee(NATIVE_CURRENCY), 10_000_000_000u128);
+		assert_eq!(Slpx::get_default_fee(BNC), 10_000_000_000u128);
+		assert_eq!(Slpx::get_default_fee(CurrencyId::Token(TokenSymbol::KSM)), 10_000_000_000u128);
 		assert_eq!(
-			XcmAction::get_default_fee(CurrencyId::Token(TokenSymbol::KSM)),
-			10_000_000_000u128
-		);
-		assert_eq!(
-			XcmAction::get_default_fee(CurrencyId::Token(TokenSymbol::MOVR)),
+			Slpx::get_default_fee(CurrencyId::Token(TokenSymbol::MOVR)),
 			10_000_000_000_000_000u128
 		);
+		assert_eq!(Slpx::get_default_fee(CurrencyId::VToken(TokenSymbol::KSM)), 10_000_000_000u128);
 		assert_eq!(
-			XcmAction::get_default_fee(CurrencyId::VToken(TokenSymbol::KSM)),
-			10_000_000_000u128
-		);
-		assert_eq!(
-			XcmAction::get_default_fee(CurrencyId::VToken(TokenSymbol::MOVR)),
+			Slpx::get_default_fee(CurrencyId::VToken(TokenSymbol::MOVR)),
 			10_000_000_000_000_000u128
 		);
 	});

@@ -36,7 +36,7 @@ check-all: format
 
 .PHONY: test-all # cargo test all runtime
 test-all:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
 
 .PHONY: integration-test # integration test
 integration-test:
@@ -126,7 +126,7 @@ try-kusama-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
  			  -- try-runtime \
  			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-kusama-local on-runtime-upgrade \
+ 			  --chain=bifrost-kusama on-runtime-upgrade \
  			  --checks=all live \
  			  --uri=wss://bifrost-rpc.liebi.com:443/ws
 
@@ -135,7 +135,7 @@ try-polkadot-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
  			  -- try-runtime \
  			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-polkadot-local on-runtime-upgrade \
+ 			  --chain=bifrost-polkadot on-runtime-upgrade \
  			  --checks=all live \
  			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 

@@ -26,11 +26,11 @@ use crate::{
 	},
 	Junction::Parachain,
 	Junctions::X2,
-	MOVR, *,
+	*,
 };
 use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::Balance;
+use node_primitives::{currency::VMOVR, Balance};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
@@ -1964,7 +1964,9 @@ fn add_validator_and_remove_validator_works() {
 		// The storage is reordered by hash. So we need to adjust the push order here.
 		valis.push(VALIDATOR_0_LOCATION);
 
-		assert_eq!(Slp::get_validators(MOVR), Some(valis));
+		let bounded_valis = BoundedVec::try_from(valis).unwrap();
+
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_valis));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
@@ -1972,7 +1974,8 @@ fn add_validator_and_remove_validator_works() {
 			Box::new(VALIDATOR_0_LOCATION),
 		));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(vec![]));
+		let empty_bounded_vec = BoundedVec::default();
+		assert_eq!(Slp::get_validators(MOVR), Some(empty_bounded_vec));
 	});
 }
 
@@ -1984,7 +1987,8 @@ fn reset_validators_should_work() {
 		let validator_list_empty = vec![];
 		let validator_list_input =
 			vec![VALIDATOR_0_LOCATION, VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION];
-		let validator_list_output = vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION];
+		let validator_list_output =
+			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
 
 		// validator list is empty
 		assert_noop!(
@@ -2008,11 +2012,13 @@ fn set_validator_boost_list_should_work() {
 		let validator_list_input_2 =
 			vec![VALIDATOR_0_LOCATION, VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION];
 
-		let validator_list_output_1 = vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)];
-		let validator_list_output_2 = vec![
+		let validator_list_output_1 =
+			BoundedVec::try_from(vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)]).unwrap();
+		let validator_list_output_2 = BoundedVec::try_from(vec![
 			(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 400),
 			(VALIDATOR_1_LOCATION, SIX_MONTHS as u64 + 400),
-		];
+		])
+		.unwrap();
 
 		// validator list is empty
 		assert_noop!(
@@ -2026,8 +2032,11 @@ fn set_validator_boost_list_should_work() {
 			validator_list_input_1
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
-		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
+		let bounded_validator_list_output_1 =
+			BoundedVec::try_from(validator_list_output_1).unwrap();
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(bounded_validator_list_output_1));
+		let bounded_validator_0 = BoundedVec::try_from(vec![VALIDATOR_0_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0));
 
 		System::set_block_number(400);
 
@@ -2037,11 +2046,12 @@ fn set_validator_boost_list_should_work() {
 			validator_list_input_2
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
-		assert_eq!(
-			Slp::get_validators(MOVR),
-			Some(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]),
-		);
+		let bounded_validator_list_output_2 =
+			BoundedVec::try_from(validator_list_output_2).unwrap();
+		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(bounded_validator_list_output_2));
+		let bounded_validator_0_1 =
+			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0_1),);
 	});
 }
 
@@ -2050,13 +2060,18 @@ fn add_to_validator_boost_list_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		moonriver_setup();
 
-		let validator_list_output_1 = vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)];
-		let validator_list_output_2 =
-			vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64)];
-		let validator_list_output_3 = vec![
+		let validator_list_output_1 =
+			BoundedVec::try_from(vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)]).unwrap();
+		let validator_list_output_2 = BoundedVec::try_from(vec![(
+			VALIDATOR_0_LOCATION,
+			SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64,
+		)])
+		.unwrap();
+		let validator_list_output_3 = BoundedVec::try_from(vec![
 			(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64),
 			(VALIDATOR_1_LOCATION, SIX_MONTHS as u64 + 400),
-		];
+		])
+		.unwrap();
 
 		assert_ok!(Slp::add_to_validator_boost_list(
 			RuntimeOrigin::signed(ALICE),
@@ -2065,7 +2080,9 @@ fn add_to_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
-		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
+
+		let bounded_validator_0 = BoundedVec::try_from(vec![VALIDATOR_0_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0.clone()));
 
 		System::set_block_number(400);
 
@@ -2075,7 +2092,7 @@ fn add_to_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_0_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(vec![VALIDATOR_0_LOCATION]));
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
 
@@ -2086,10 +2103,9 @@ fn add_to_validator_boost_list_should_work() {
 		));
 
 		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_3));
-		assert_eq!(
-			Slp::get_validators(MOVR),
-			Some(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]),
-		);
+		let bounded_validator_0_1 =
+			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0_1),);
 	});
 }
 
@@ -2098,7 +2114,8 @@ fn remove_from_validator_boost_list_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		moonriver_setup();
 
-		let validator_list_output = vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)];
+		let validator_list_output =
+			BoundedVec::try_from(vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)]).unwrap();
 
 		assert_ok!(Slp::add_to_validator_boost_list(
 			RuntimeOrigin::signed(ALICE),

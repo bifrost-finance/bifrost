@@ -20,6 +20,7 @@
 
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
+use node_primitives::currency::KSM;
 use sp_runtime::DispatchError::BadOrigin;
 use xcm::opaque::v2::{Junction, Junctions::X1};
 
@@ -81,7 +82,8 @@ fn cross_in_and_cross_out_should_work() {
 			Error::<Runtime>::NotAllowed
 		);
 
-		IssueWhiteList::<Runtime>::insert(KSM, vec![ALICE]);
+		let bounded_vector = BoundedVec::try_from(vec![ALICE]).unwrap();
+		IssueWhiteList::<Runtime>::insert(KSM, bounded_vector);
 
 		assert_noop!(
 			CrossInOut::cross_in(
@@ -118,7 +120,8 @@ fn add_to_and_remove_from_issue_whitelist_should_work() {
 		assert_eq!(CrossInOut::get_issue_whitelist(KSM), None);
 
 		assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), KSM, ALICE));
-		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(vec![ALICE]));
+		let bounded_vector = BoundedVec::try_from(vec![ALICE]).unwrap();
+		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(bounded_vector));
 
 		assert_noop!(
 			CrossInOut::remove_from_issue_whitelist(RuntimeOrigin::signed(ALICE), KSM, BOB),
@@ -130,7 +133,8 @@ fn add_to_and_remove_from_issue_whitelist_should_work() {
 			KSM,
 			ALICE
 		));
-		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(vec![]));
+		let empty_vec = BoundedVec::default();
+		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(empty_vec));
 	});
 }
 
