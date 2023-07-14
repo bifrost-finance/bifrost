@@ -16,8 +16,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	traits::{
-		fungibles::{Inspect, Mutate, Transfer},
-		tokens::{currency, fungibles},
+		fungibles::{Inspect, Mutate},
+		tokens::{currency, fungibles, Fortitude, Precision, Preservation},
 		Currency,
 	},
 	transactional,
@@ -27,8 +27,8 @@ use node_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, TimeUnit, VtokenMintingOperator,
 };
 use nutsfinance_stable_asset::{
-	MintResult, PoolTokenIndex, RedeemMultiResult, RedeemProportionResult, StableAsset,
-	StableAssetPoolId, StableAssetPoolInfo, SwapResult,
+	MintResult, PoolTokenIndex, RedeemMultiResult, RedeemProportionResult, RedeemSingleResult,
+	StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
 };
 use orml_traits::MultiCurrency;
 use sp_core::U256;
@@ -45,6 +45,12 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 #[allow(type_alias_bounds)]
 pub type AssetIdOf<T> = <T as Config>::CurrencyId;
+
+// #[allow(type_alias_bounds)]
+// pub type ControlOriginOf<T> = <T as frame_system::Config>::RuntimeOrigin;
+
+// #[allow(type_alias_bounds)]
+// pub type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -68,12 +74,7 @@ pub mod pallet {
 				AccountIdOf<Self>,
 				AssetId = AssetIdOf<Self>,
 				Balance = Self::Balance,
-			> + fungibles::Mutate<AccountIdOf<Self>, AssetId = AssetIdOf<Self>, Balance = Self::Balance>
-			+ fungibles::Transfer<
-				AccountIdOf<Self>,
-				AssetId = AssetIdOf<Self>,
-				Balance = Self::Balance,
-			>;
+			> + fungibles::Mutate<AccountIdOf<Self>, AssetId = AssetIdOf<Self>, Balance = Self::Balance>;
 
 		type CurrencyId: Parameter
 			+ Ord
@@ -110,7 +111,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		SomethingStored {
 			something: u32,
-			who: T::AccountId,
+			who: AccountIdOf<T>,
 		},
 		TokenSwapped {
 			swapper: AccountIdOf<T>,
@@ -185,8 +186,8 @@ pub mod pallet {
 			swap_fee: <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned,
 			redeem_fee: <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned,
 			initial_a: <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned,
-			fee_recipient: T::AccountId,
-			yield_recipient: T::AccountId,
+			fee_recipient: AccountIdOf<T>,
+			yield_recipient: AccountIdOf<T>,
 			precision: <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -323,23 +324,23 @@ impl<T: Config> Pallet<T> {
 					)?,
 				Error::<T>::CantMint
 			);
-			<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.assets[i],
 				who,
 				&pool_info.account_id,
 				amounts_old[i],
-				false,
+				Preservation::Expendable,
 			)?;
 		}
 		log::debug!("mint___amounts:{:?}{:?}", amounts, total_supply);
 		if fee_amount > Zero::zero() {
-			<<T as pallet::Config>::MultiCurrency as fungibles::Mutate<AccountIdOf<T>>>::mint_into(
+			<T as nutsfinance_stable_asset::Config>::Assets::mint_into(
 				pool_info.pool_asset,
 				&pool_info.fee_recipient,
 				fee_amount,
 			)?;
 		}
-		<<T as pallet::Config>::MultiCurrency as fungibles::Mutate<AccountIdOf<T>>>::mint_into(
+		<T as nutsfinance_stable_asset::Config>::Assets::mint_into(
 			pool_info.pool_asset,
 			who,
 			mint_amount.into(),
@@ -396,27 +397,29 @@ impl<T: Config> Pallet<T> {
 				amounts[i] >= *min_redeem_amounts.get(i as usize).ok_or(Error::<T>::NotNullable)?,
 				Error::<T>::RedeemUnderMin
 			);
-			<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.assets[i],
 				&pool_info.account_id,
 				who,
 				amounts[i],
-				false,
+				Preservation::Expendable,
 			)?;
 		}
 		if fee_amount > zero {
-			<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
 				who,
 				&pool_info.fee_recipient,
 				fee_amount,
-				false,
+				Preservation::Expendable,
 			)?;
 		}
-		<<T as pallet::Config>::MultiCurrency as fungibles::Mutate<AccountIdOf<T>>>::burn_from(
+		<T as nutsfinance_stable_asset::Config>::Assets::burn_from(
 			pool_info.pool_asset,
 			who,
 			redeem_amount,
+			Precision::Exact,
+			Fortitude::Polite,
 		)?;
 
 		pool_info.total_supply = total_supply;
@@ -453,17 +456,17 @@ impl<T: Config> Pallet<T> {
 		let RedeemMultiResult { redeem_amount, fee_amount, balances, total_supply, burn_amount } =
 			nutsfinance_stable_asset::Pallet::<T>::get_redeem_multi_amount(
 				&mut pool_info,
-				&amounts,
+				&new_amounts,
 			)?;
 		let zero: T::Balance = Zero::zero();
 		ensure!(redeem_amount <= max_redeem_amount, Error::<T>::RedeemOverMax);
 		if fee_amount > zero {
-			<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
 				who,
 				&pool_info.fee_recipient,
 				fee_amount,
-				false,
+				Preservation::Expendable,
 			)?;
 		}
 		for (idx, amount) in amounts.iter().enumerate() {
@@ -472,25 +475,27 @@ impl<T: Config> Pallet<T> {
 			// 	*pool_info.assets.get(idx as usize).ok_or(Error::<T>::NotNullable)?,
 			// )?;
 			if *amount > zero {
-				<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+				<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 					pool_info.assets[idx],
 					&pool_info.account_id,
 					who,
 					*amount,
-					false,
+					Preservation::Expendable,
 				)?;
 			}
 		}
-		<<T as pallet::Config>::MultiCurrency as fungibles::Mutate<AccountIdOf<T>>>::burn_from(
+		<T as nutsfinance_stable_asset::Config>::Assets::burn_from(
 			pool_info.pool_asset,
 			who,
 			burn_amount,
+			Precision::Exact,
+			Fortitude::Polite,
 		)?;
 
 		pool_info.total_supply = total_supply;
 		pool_info.balances = balances;
 		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
-		// T::StableAsset::insert_pool(pool_id, &pool_info);
+		T::StableAsset::insert_pool(pool_id, &pool_info);
 		let a = T::StableAsset::get_a(
 			pool_info.a,
 			pool_info.a_block,
@@ -498,7 +503,108 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a_block,
 		)
 		.ok_or(Error::<T>::Math)?;
+		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
+			nutsfinance_stable_asset::Event::<T>::RedeemedMulti {
+				redeemer: who.clone(),
+				pool_id,
+				a,
+				output_amounts: amounts,
+				max_input_amount: max_redeem_amount,
+				balances: pool_info.balances.clone(),
+				total_supply: pool_info.total_supply,
+				fee_amount,
+				input_amount: redeem_amount,
+			},
+		);
 		Ok(())
+	}
+
+	fn redeem_single_inner(
+		who: &AccountIdOf<T>,
+		pool_id: StableAssetPoolId,
+		amount: T::Balance,
+		i: PoolTokenIndex,
+		min_redeem_amount: T::Balance,
+		asset_length: u32,
+	) -> Result<(T::Balance, T::Balance), DispatchError> {
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+
+		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
+		let RedeemSingleResult { dy, fee_amount, total_supply, balances, redeem_amount } =
+			nutsfinance_stable_asset::Pallet::<T>::get_redeem_single_amount(
+				&mut pool_info,
+				amount,
+				i,
+			)?;
+		let i_usize = i as usize;
+		let pool_size = pool_info.assets.len();
+		let asset_length_usize = asset_length as usize;
+		ensure!(
+			asset_length_usize == pool_size,
+			nutsfinance_stable_asset::Error::<T>::ArgumentsError
+		);
+		ensure!(dy >= min_redeem_amount, Error::<T>::RedeemUnderMin);
+		if fee_amount > Zero::zero() {
+			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+				pool_info.pool_asset,
+				who,
+				&pool_info.fee_recipient,
+				fee_amount,
+				Preservation::Expendable,
+			)?;
+		}
+		<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+			pool_info.assets[i_usize],
+			&pool_info.account_id,
+			who,
+			dy,
+			Preservation::Expendable,
+		)?;
+		<T as nutsfinance_stable_asset::Config>::Assets::burn_from(
+			pool_info.pool_asset,
+			who,
+			redeem_amount,
+			Precision::Exact,
+			Fortitude::Polite,
+		)?;
+		let mut amounts: Vec<T::Balance> = Vec::new();
+		for idx in 0..pool_size {
+			if idx == i_usize {
+				amounts.push(dy);
+			} else {
+				amounts.push(Zero::zero());
+			}
+		}
+
+		pool_info.total_supply = total_supply;
+		pool_info.balances = balances;
+		// Since the output amounts are round down, collect fee updates pool balances and total
+		// supply.
+		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
+		T::StableAsset::insert_pool(pool_id, &pool_info);
+		let a: T::AtLeast64BitUnsigned = T::StableAsset::get_a(
+			pool_info.a,
+			pool_info.a_block,
+			pool_info.future_a,
+			pool_info.future_a_block,
+		)
+		.ok_or(Error::<T>::Math)?;
+		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
+			nutsfinance_stable_asset::Event::<T>::RedeemedSingle {
+				redeemer: who.clone(),
+				pool_id,
+				a,
+				input_amount: amount,
+				output_asset: pool_info.assets[i as usize],
+				min_output_amount: min_redeem_amount,
+				balances: pool_info.balances.clone(),
+				total_supply: pool_info.total_supply,
+				fee_amount,
+				output_amount: dy,
+			},
+		);
+		Ok((amount, dy))
 	}
 
 	fn on_swap(
@@ -532,19 +638,19 @@ impl<T: Config> Pallet<T> {
 		let j_usize = currency_id_out as usize;
 		balances[i_usize] = balance_i;
 		balances[j_usize] = y;
-		<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+		<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 			pool_info.assets[i_usize],
 			who,
 			&pool_info.account_id,
 			amount,
-			false,
+			Preservation::Expendable,
 		)?;
-		<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
+		<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 			pool_info.assets[j_usize],
 			&pool_info.account_id,
 			who,
 			downscale_out,
-			false,
+			Preservation::Expendable,
 		)?;
 		let asset_i = pool_info.assets[i_usize];
 		let asset_j = pool_info.assets[j_usize];

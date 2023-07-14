@@ -1305,6 +1305,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-stable-pool"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-vtoken-minting",
+ "env_logger 0.10.0",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "nutsfinance-stable-asset",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
 name = "bifrost-system-maker"
 version = "0.8.0"
 dependencies = [
@@ -6646,6 +6677,20 @@ name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+
+[[package]]
+name = "nutsfinance-stable-asset"
+version = "0.1.0"
+source = "git+https://github.com/bifrost-finance/stable-asset?branch=master#c522af452c07d2e84dbe856a7ef441c480d0b3af"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "object"

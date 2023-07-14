@@ -8,8 +8,8 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 pub use node_primitives::{
-	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, TokenSymbol, ASTR, DOT,
-	DOT_TOKEN_ID, GLMR, VDOT,
+	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
+	ASTR, DOT, DOT_TOKEN_ID, GLMR, VDOT,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
@@ -196,6 +196,10 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 ord_parameter_types! {
@@ -253,6 +257,13 @@ parameter_types! {
 	// pub BifrostFeeAccount: AccountId = 1.into();
 }
 
+pub struct SlpxInterface;
+impl SlpxOperator<Balance> for SlpxInterface {
+	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
 ord_parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
@@ -275,6 +286,8 @@ impl bifrost_vtoken_minting::Config for Test {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
+	type BifrostSlpx = SlpxInterface;
+	type HydradxParachainId = ConstU32<2034>;
 }
 
 pub struct Slp;
@@ -313,6 +326,7 @@ impl pallet_xcm::Config for Test {
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureSignedBy<One, u128>;
 }
 
 pub struct ExtBuilder {
