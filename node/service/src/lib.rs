@@ -20,10 +20,6 @@
 
 pub mod chain_spec;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
-pub mod client_kusama;
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
-pub mod client_polkadot;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub mod collator_kusama;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub mod collator_polkadot;

@@ -81,10 +81,10 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let block_number = self
 			.client
-			.to_number(&at)
+			.to_number(&BlockId::Hash(at))
 			.map(|num| match num {
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
@@ -97,7 +97,7 @@ where
 				)))
 			})?;
 
-		let rs: Result<Balance, _> = lm_rpc_api.balance_of(&at, who, block_number);
+		let rs: Result<Balance, _> = lm_rpc_api.balance_of(at, who, block_number);
 
 		match rs {
 			Ok(balane) => Ok(NumberOrHex::Hex(balane.into())),
@@ -112,10 +112,10 @@ where
 
 	fn total_supply(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let block_number = self
 			.client
-			.to_number(&at)
+			.to_number(&BlockId::Hash(at))
 			.map(|num| match num {
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
@@ -128,7 +128,7 @@ where
 				)))
 			})?;
 		let rs: Result<Balance, _> =
-			lm_rpc_api.total_supply(&at, block_number.expect("no block found"));
+			lm_rpc_api.total_supply(at, block_number.expect("no block found"));
 
 		match rs {
 			Ok(supply) => Ok(NumberOrHex::Hex(supply.into())),
@@ -147,10 +147,10 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let block_number = self
 			.client
-			.to_number(&at)
+			.to_number(&BlockId::Hash(at))
 			.map(|num| match num {
 				Some(inner_num) => Some(inner_num.saturated_into::<u32>()),
 				None => None,
@@ -163,7 +163,7 @@ where
 				)))
 			})?;
 		let rs: Result<U256, _> =
-			lm_rpc_api.find_block_epoch(&at, block_number.expect("no block found"), max_epoch);
+			lm_rpc_api.find_block_epoch(at, block_number.expect("no block found"), max_epoch);
 
 		match rs {
 			Ok(epoch) => Ok(NumberOrHex::Hex(epoch.into())),

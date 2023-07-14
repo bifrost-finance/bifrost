@@ -233,9 +233,6 @@ macro_rules! with_runtime_or_err {
 		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-			use service::client_kusama::new_chain_ops;
-			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
 			use service::collator_kusama::{bifrost_kusama_runtime::{Block, RuntimeApi},BifrostExecutor as Executor,start_node,new_partial};
 
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
@@ -244,9 +241,6 @@ macro_rules! with_runtime_or_err {
 			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
 			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_bifrost_polkadot() {
-			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::client_polkadot::new_chain_ops;
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_polkadot::{bifrost_polkadot_runtime::{Block, RuntimeApi},BifrostPolkadotExecutor as Executor,start_node,new_partial};
@@ -291,9 +285,12 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, import_queue), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.import_queue),
+						components.task_manager,
+					))
 				});
 			})
 		},
@@ -304,9 +301,9 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, config.database), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((cmd.run(components.client, config.database), components.task_manager))
 				});
 			})
 		},
@@ -317,9 +314,9 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, config.chain_spec), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((cmd.run(components.client, config.chain_spec), components.task_manager))
 				});
 			})
 		},
@@ -352,11 +349,13 @@ pub fn run() -> Result<()> {
 			let chain_spec = &runner.config().chain_spec;
 
 			set_default_ss58_version(chain_spec);
-
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, import_queue), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.import_queue),
+						components.task_manager,
+					))
 				});
 			})
 		},
@@ -385,9 +384,12 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, backend, None), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.backend, None),
+						components.task_manager,
+					))
 				});
 			})
 		},
@@ -450,10 +452,15 @@ pub fn run() -> Result<()> {
 		},
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
+			use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+			use try_runtime_cli::block_building_info::timestamp_with_aura_info;
+
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
 
 			set_default_ss58_version(chain_spec);
+
+			let info_provider = timestamp_with_aura_info(6000);
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
@@ -463,15 +470,15 @@ pub fn run() -> Result<()> {
 							.map_err(|e| {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
-					use sc_executor::{
-						sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch,
-					};
 					type HostFunctionsOf<E> = ExtendedHostFunctions<
 						sp_io::SubstrateHostFunctions,
 						<E as NativeExecutionDispatch>::ExtendHostFunctions,
 					>;
 
-					Ok((cmd.run::<Block, HostFunctionsOf<Executor>>(), task_manager))
+					Ok((
+						cmd.run::<Block, HostFunctionsOf<Executor>, _>(Some(info_provider)),
+						task_manager,
+					))
 				});
 			})
 		},
@@ -486,7 +493,7 @@ pub fn run() -> Result<()> {
 			runner.run_node_until_exit(|config| async move {
 				let hwbench = (!cli.no_hardware_benchmarks).then_some(
 					config.database.path().map(|database_path| {
-						let _ = std::fs::create_dir_all(&database_path);
+						let _ = std::fs::create_dir_all(database_path);
 						sc_sysinfo::gather_hwbench(Some(database_path))
 					})).flatten();
 
@@ -524,7 +531,7 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.len() > 0 {
+				if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relay_chain_args.is_empty() {
 					log::warn!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
 				}
 

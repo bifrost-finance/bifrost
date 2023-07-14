@@ -59,13 +59,13 @@ fn relaychain_transact_works() {
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: Weight::from_ref_time(4000000000),
+					require_weight_at_most: Weight::from_parts(4000000000, 0),
 					call: transfer.encode().into(),
 				},
 				// ReportTransactStatus(QueryResponseInfo {
 				// 	destination: MultiLocation::from(X1(Parachain(2001))),
 				// 	query_id,
-				// 	max_weight: Weight::from_ref_time(4000000000),
+				// 	max_weight: Weight::from_parts(4000000000, 0),
 				// }),
 				RefundSurplus,
 				DepositAsset {

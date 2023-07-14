@@ -54,7 +54,7 @@ fn transfer_dot_between_bifrost_and_relay_chain() {
 		Bifrost::execute_with(|| {
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				99991987200
+				99992960800
 			);
 			// Bifrost bob (9.9 DOT) -> Polkadot BoB 2 DOT
 			assert_ok!(XTokens::transfer(
@@ -71,7 +71,7 @@ fn transfer_dot_between_bifrost_and_relay_chain() {
 			// Bifrost bob 7.9 DOT
 			assert_eq!(
 				Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-				79991987200,
+				79992960800,
 			);
 		});
 
@@ -83,7 +83,7 @@ fn transfer_dot_between_bifrost_and_relay_chain() {
 			// Polkadot bob 1.9 DOT
 			assert_eq!(
 				polkadot_runtime::Balances::free_balance(&AccountId::from(BOB)),
-				19637471000,
+				19635578476,
 			);
 		});
 	})

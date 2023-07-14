@@ -353,7 +353,7 @@ fn correct_and_deposit_fee_should_work() {
 
 		// prepare post info
 		let post_info = PostDispatchInfo {
-			actual_weight: Some(Weight::from_ref_time(20)),
+			actual_weight: Some(Weight::from_parts(20, 0)),
 			pays_fee: Pays::Yes,
 		};
 

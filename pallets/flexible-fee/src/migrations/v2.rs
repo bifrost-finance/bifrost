@@ -17,9 +17,18 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{storage_alias, traits::OnRuntimeUpgrade};
 
 const LOG_TARGET: &str = "flexible-fee::migration";
+
+#[storage_alias]
+pub type UserFeeChargeOrderList<T: Config> = StorageMap<
+	Pallet<T>,
+	Twox64Concat,
+	<T as frame_system::Config>::AccountId,
+	Vec<CurrencyIdOf<T>>,
+	OptionQuery,
+>;
 
 pub struct FlexibleFeeMigration<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
@@ -58,18 +67,16 @@ impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
 		let new_count = UserFeeChargeOrderList::<T>::iter().count();
-		// decode cnt to u64
-		let old_count = u64::decode(&mut &cnt[..]).unwrap();
 
 		// print out the post-migrate storage count
 		log::info!(
 			target: LOG_TARGET,
 			"UserFeeChargeOrderList post-migrate storage count: {:?}",
-			UserFeeChargeOrderList::<T>::iter().count()
+			new_count
 		);
 
 		ensure!(
-			new_count as u64 == old_count,
+			new_count as u64 == 0,
 			"Post-migration storage count does not match pre-migration count"
 		);
 		Ok(())

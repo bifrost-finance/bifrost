@@ -27,7 +27,7 @@ use frame_support::{
 };
 use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
-use sp_std::{borrow::Borrow, convert::TryFrom, marker::PhantomData};
+use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
@@ -41,7 +41,7 @@ pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 // orml imports
 use bifrost_runtime_common::currency_adapter::{DepositToAlternative, MultiCurrencyAdapter};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::ContainsPair;
+use frame_support::traits::{ContainsPair, ProcessMessageError};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{
 	currency::MutationHooks,
@@ -270,7 +270,7 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 			),
 			_ => return Err(location),
 		};
-		let hash: [u8; 32] = ("multiloc", location.borrow()).borrow().using_encoded(blake2_256);
+		let hash: [u8; 32] = ("multiloc", location).using_encoded(blake2_256);
 		let mut account_id = [0u8; 32];
 		account_id.copy_from_slice(&hash[0..32]);
 		log::trace!(
@@ -325,7 +325,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -337,7 +337,6 @@ match_types! {
 }
 
 /// Barrier allowing a top level paid message with DescendOrigin instruction
-/// first
 pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
 pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
 pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
@@ -347,27 +346,27 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		message: &mut [Instruction<Call>],
 		max_weight: Weight,
 		_weight_credit: &mut Weight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
 			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
 			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
 			origin, message, max_weight, _weight_credit,
 		);
-		ensure!(T::contains(origin), ());
+		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
 		let mut iter = message.iter_mut();
 		// Make sure the first instruction is DescendOrigin
 		iter.next()
 			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
-			.ok_or(())?;
+			.ok_or(ProcessMessageError::Unsupported)?;
 
 		// Then WithdrawAsset
 		iter.next()
 			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
-			.ok_or(())?;
+			.ok_or(ProcessMessageError::Unsupported)?;
 
 		// Then BuyExecution
-		let i = iter.next().ok_or(())?;
+		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
 			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
 				if weight.all_gte(max_weight) {
@@ -382,23 +381,28 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		};
 
 		// Then Transact
-		let i = iter.next().ok_or(())?;
+		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
 			Transact { ref mut require_weight_at_most, .. } => {
 				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
 				*require_weight_at_most = weight;
 				Ok(())
 			},
-			_ => Err(()),
+			_ => Err(ProcessMessageError::Unsupported),
 		}
 	}
 }
 
 pub type Barrier = (
+	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
+	// If the message is one that immediately attemps to pay for execution, then allow it.
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Subscriptions for version tracking are OK.
 	AllowSubscriptionsFrom<Everything>,
+	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
 );
 
@@ -750,6 +754,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -890,7 +895,7 @@ impl orml_tokens::Config for Runtime {
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
-	pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -931,7 +936,7 @@ parameter_types! {
 	pub ContributionWeight: Weight =  Weight::from_parts(milli::<Runtime>(RelayCurrencyId::get()) as u64 , 1000_000u64);
 	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
 	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
-	pub StatemineTransferWeight: Weight =  Weight::from_ref_time(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64);
+	pub StatemineTransferWeight: Weight =  Weight::from_parts(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64, 0);
 }
 
 impl xcm_interface::Config for Runtime {
