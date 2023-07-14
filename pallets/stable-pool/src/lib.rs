@@ -466,13 +466,7 @@ impl<T: Config> Pallet<T> {
 				false,
 			)?;
 		}
-		// for (i, mut amount) in amounts.iter_mut().enumerate() {
-		// 	*amount = Self::downscale(
-		// 		*amount,
-		// 		*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
-		// 	)?;
-		// }
-		for (idx, amount) in amounts.iter_mut().enumerate() {
+		for (idx, amount) in amounts.iter().enumerate() {
 			// *amount = Self::downscale(
 			// 	*amount,
 			// 	*pool_info.assets.get(idx as usize).ok_or(Error::<T>::NotNullable)?,
