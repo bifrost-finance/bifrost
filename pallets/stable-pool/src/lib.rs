@@ -44,10 +44,7 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // >>::CurrencyId;
 
 #[allow(type_alias_bounds)]
-pub type AssetIdOf<T> = <T as Config>::AssetId2;
-
-// #[allow(type_alias_bounds)]
-// pub type AssetIdOf<T> = <T as nutsfinance_stable_asset::Config>::AssetId;
+pub type AssetIdOf<T> = <T as Config>::CurrencyId;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -58,7 +55,9 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + nutsfinance_stable_asset::Config {
+	pub trait Config:
+		frame_system::Config + nutsfinance_stable_asset::Config<AssetId = AssetIdOf<Self>>
+	{
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type WeightInfo: WeightInfo;
@@ -75,13 +74,13 @@ pub mod pallet {
 				AssetId = AssetIdOf<Self>,
 				Balance = Self::Balance,
 			>;
-		// + MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type AssetId2: Parameter
+		type CurrencyId: Parameter
 			+ Ord
 			+ Copy
-			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ CurrencyIdExt;
+			+ CurrencyIdExt
+			+ From<CurrencyId>
+			+ Into<CurrencyId>;
 
 		type StableAsset: nutsfinance_stable_asset::StableAsset<
 			AssetId = AssetIdOf<Self>,
@@ -93,14 +92,13 @@ pub mod pallet {
 		>;
 
 		type VtokenMinting: VtokenMintingOperator<
-			CurrencyId,
+			AssetIdOf<Self>,
 			Self::Balance,
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
-		// type CurrencyId:  + Currency<AccountIdOf<Self>>;
 	}
 
 	#[pallet::storage]
@@ -293,7 +291,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
 		let amounts_old = amounts.clone();
-		for (i, mut amount) in amounts.iter_mut().enumerate() {
+		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
 				*amount,
 				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
@@ -384,7 +382,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::CantBeZero)?;
 		log::debug!("redeem_proportion++amounts:{:?}redeem_amount{:?}", amounts, redeem_amount);
 
-		for (i, mut amount) in amounts.iter_mut().enumerate() {
+		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::downscale(
 				*amount,
 				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
@@ -445,6 +443,13 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
+		let mut new_amounts = amounts.clone();
+		for (i, amount) in new_amounts.iter_mut().enumerate() {
+			*amount = Self::upscale(
+				*amount,
+				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+			)?;
+		}
 		let RedeemMultiResult { redeem_amount, fee_amount, balances, total_supply, burn_amount } =
 			nutsfinance_stable_asset::Pallet::<T>::get_redeem_multi_amount(
 				&mut pool_info,
@@ -467,17 +472,17 @@ impl<T: Config> Pallet<T> {
 		// 		*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
 		// 	)?;
 		// }
-		for (idx, mut amount) in amounts.iter_mut().enumerate() {
-			*amount = Self::downscale(
-				*amount,
-				*pool_info.assets.get(idx as usize).ok_or(Error::<T>::NotNullable)?,
-			)?;
+		for (idx, amount) in amounts.iter_mut().enumerate() {
+			// *amount = Self::downscale(
+			// 	*amount,
+			// 	*pool_info.assets.get(idx as usize).ok_or(Error::<T>::NotNullable)?,
+			// )?;
 			if *amount > zero {
 				<<T as pallet::Config>::MultiCurrency as fungibles::Transfer<AccountIdOf<T>>>::transfer(
 					pool_info.assets[idx],
 					&pool_info.account_id,
 					who,
-					amounts[idx],
+					*amount,
 					false,
 				)?;
 			}

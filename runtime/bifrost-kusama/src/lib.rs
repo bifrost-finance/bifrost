@@ -1684,6 +1684,7 @@ impl bifrost_stable_pool::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type CurrencyId = CurrencyId;
 	type MultiCurrency = Tokens;
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
