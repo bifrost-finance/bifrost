@@ -423,7 +423,6 @@ fn vtoken_minting() {
 				),
 				99900000000000
 			);
-			// TODO : entrance_account should have 100 KSM
 			assert_eq!(
 				Currencies::free_balance(
 					CurrencyId::Token(TokenSymbol::KSM),
