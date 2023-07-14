@@ -385,87 +385,95 @@ pub mod pallet {
 				ledger_list =
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_rev)
 						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
-				ledger_list.retain(|index| {
-					if let Some((_, unlock_amount, time_unit, _)) =
-						Self::token_unlock_ledger(token_id, index)
-					{
-						if tmp_amount >= unlock_amount {
-							if let Some((_, _, time_unit, _)) =
-								TokenUnlockLedger::<T>::take(&token_id, &index)
-							{
-								TimeUnitUnlockLedger::<T>::mutate_exists(
-									&time_unit,
+				let mut tmp = ledger_list
+					.iter()
+					.map(|&index| -> Result<(UnlockId, bool), Error<T>> {
+						if let Some((_, unlock_amount, time_unit, _)) =
+							Self::token_unlock_ledger(token_id, index)
+						{
+							if tmp_amount >= unlock_amount {
+								if let Some((_, _, time_unit, _)) =
+									TokenUnlockLedger::<T>::take(&token_id, &index)
+								{
+									TimeUnitUnlockLedger::<T>::mutate_exists(
+										&time_unit,
+										&token_id,
+										|value| -> Result<(), Error<T>> {
+											if let Some((
+												total_locked_origin,
+												ledger_list_origin,
+												_,
+											)) = value
+											{
+												if total_locked_origin == &unlock_amount {
+													*value = None;
+													return Ok(());
+												}
+												*total_locked_origin = total_locked_origin
+													.checked_sub(&unlock_amount)
+													.ok_or(Error::<T>::CalculationOverflow)?;
+												ledger_list_origin.retain(|&x| x != index);
+											} else {
+												return Err(
+													Error::<T>::TimeUnitUnlockLedgerNotFound,
+												);
+											}
+											Ok(())
+										},
+									)?;
+									tmp_amount = tmp_amount.saturating_sub(unlock_amount);
+								} else {
+									return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+								}
+								Ok((index, false))
+							} else {
+								TokenUnlockLedger::<T>::mutate_exists(
 									&token_id,
+									&index,
 									|value| -> Result<(), Error<T>> {
-										if let Some((total_locked_origin, ledger_list_origin, _)) =
-											value
-										{
-											if total_locked_origin == &unlock_amount {
+										if let Some((_, total_locked_origin, _, _)) = value {
+											if total_locked_origin == &tmp_amount {
 												*value = None;
 												return Ok(());
 											}
 											*total_locked_origin = total_locked_origin
-												.checked_sub(&unlock_amount)
+												.checked_sub(&tmp_amount)
 												.ok_or(Error::<T>::CalculationOverflow)?;
-											ledger_list_origin.retain(|x| x != index);
+										} else {
+											return Err(Error::<T>::TokenUnlockLedgerNotFound);
+										}
+										Ok(())
+									},
+								)?;
+								TimeUnitUnlockLedger::<T>::mutate_exists(
+									&time_unit,
+									&token_id,
+									|value| -> Result<(), Error<T>> {
+										if let Some((total_locked_origin, _, _)) = value {
+											if total_locked_origin == &tmp_amount {
+												*value = None;
+												return Ok(());
+											}
+											*total_locked_origin = total_locked_origin
+												.checked_sub(&tmp_amount)
+												.ok_or(Error::<T>::CalculationOverflow)?;
 										} else {
 											return Err(Error::<T>::TimeUnitUnlockLedgerNotFound);
 										}
 										Ok(())
 									},
-								)
-								.ok();
-								tmp_amount = tmp_amount.saturating_sub(unlock_amount);
-								// } else {
-								// 	return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+								)?;
+								Ok((index, true))
 							}
-							false
 						} else {
-							TokenUnlockLedger::<T>::mutate_exists(
-								&token_id,
-								&index,
-								|value| -> Result<(), Error<T>> {
-									if let Some((_, total_locked_origin, _, _)) = value {
-										if total_locked_origin == &tmp_amount {
-											*value = None;
-											return Ok(());
-										}
-										*total_locked_origin = total_locked_origin
-											.checked_sub(&tmp_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-									} else {
-										return Err(Error::<T>::TokenUnlockLedgerNotFound);
-									}
-									Ok(())
-								},
-							)
-							.ok();
-							TimeUnitUnlockLedger::<T>::mutate_exists(
-								&time_unit,
-								&token_id,
-								|value| -> Result<(), Error<T>> {
-									if let Some((total_locked_origin, _, _)) = value {
-										if total_locked_origin == &tmp_amount {
-											*value = None;
-											return Ok(());
-										}
-										*total_locked_origin = total_locked_origin
-											.checked_sub(&tmp_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-									} else {
-										return Err(Error::<T>::TimeUnitUnlockLedgerNotFound);
-									}
-									Ok(())
-								},
-							)
-							.ok();
-							true
+							Ok((index, true))
 						}
-					} else {
-						true
-					}
-				});
-				let ledger_list_tmp: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
+					})
+					.collect::<Result<Vec<(UnlockId, bool)>, Error<T>>>()?;
+				tmp.retain(|(_index, result)| *result);
+
+				let ledger_list_tmp: Vec<UnlockId> =
+					tmp.into_iter().map(|(index, _)| index).rev().collect();
 
 				ledger_list =
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_tmp)
