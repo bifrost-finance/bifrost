@@ -36,7 +36,10 @@ use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
-use sp_runtime::{traits::BlakeTwo256, DispatchError, Saturating};
+use sp_runtime::{
+	traits::{BlakeTwo256, CheckedSub},
+	DispatchError, Saturating,
+};
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
@@ -555,17 +558,16 @@ impl<T: Config> Pallet<T> {
 		let execution_fee =
 			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
 		let minimum_balance = T::MultiCurrency::minimum_balance(currency_id);
-		ensure!(
-			free_balance > execution_fee.saturating_add(minimum_balance),
-			Error::<T>::FreeBalanceTooLow
-		);
 		T::MultiCurrency::transfer(
 			currency_id,
 			evm_caller_account_id,
 			&T::TreasuryAccount::get(),
 			execution_fee,
 		)?;
-		Ok(free_balance - execution_fee.saturating_add(minimum_balance))
+		let balance_exclude_fee = free_balance
+			.checked_sub(&execution_fee.saturating_add(minimum_balance))
+			.ok_or(Error::<T>::FreeBalanceTooLow)?;
+		Ok(balance_exclude_fee)
 	}
 
 	fn match_support_chain(
