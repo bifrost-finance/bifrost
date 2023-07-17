@@ -81,9 +81,6 @@ pub mod pallet {
 	pub trait Config:
 		frame_system::Config + nutsfinance_stable_asset::Config<AssetId = AssetIdOf<Self>>
 	{
-		// type RuntimeEvent: From<Event<Self>> + IsType<<Self as
-		// frame_system::Config>::RuntimeEvent>;
-
 		type WeightInfo: WeightInfo;
 
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -119,34 +116,6 @@ pub mod pallet {
 
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
 	}
-
-	// #[pallet::event]
-	// #[pallet::generate_deposit(pub(super) fn deposit_event)]
-	// pub enum Event<T: Config> {
-	// 	TokenSwapped {
-	// 		swapper: AccountIdOf<T>,
-	// 		pool_id: StableAssetPoolId,
-	// 		a: AtLeast64BitUnsignedOf<T>,
-	// 		input_asset: AssetIdOf<T>,
-	// 		output_asset: AssetIdOf<T>,
-	// 		input_amount: T::Balance,
-	// 		min_output_amount: T::Balance,
-	// 		balances: Vec<T::Balance>,
-	// 		total_supply: T::Balance,
-	// 		output_amount: T::Balance,
-	// 	},
-	// 	Minted {
-	// 		minter: AccountIdOf<T>,
-	// 		pool_id: StableAssetPoolId,
-	// 		a: AtLeast64BitUnsignedOf<T>,
-	// 		input_amounts: Vec<T::Balance>,
-	// 		min_output_amount: T::Balance,
-	// 		balances: Vec<T::Balance>,
-	// 		total_supply: T::Balance,
-	// 		fee_amount: T::Balance,
-	// 		output_amount: T::Balance,
-	// 	},
-	// }
 
 	#[pallet::error]
 	pub enum Error<T> {

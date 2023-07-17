@@ -26,9 +26,6 @@ fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = VDOT;
 	let pool_asset = LP_KSM_BNC;
-	let amount: Balance = 100_000_000;
-	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin0, amount, 0));
-	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin1, amount, 0));
 
 	assert_ok!(StableAsset::create_pool(
 		RuntimeOrigin::signed(1),
@@ -50,9 +47,6 @@ fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = VDOT;
 	let pool_asset = LP_KSM_BNC;
-	// let amount: Balance = 100_000_000;
-	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin0, amount, 0));
-	// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 1, coin1, amount, 0));
 
 	assert_ok!(StableAsset::create_pool(
 		RuntimeOrigin::signed(1),
@@ -593,12 +587,7 @@ fn mint_swap_redeem_for_precisions() {
 				);
 				// assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 321765598209115093, vec![0,
 				// 0]));
-				assert_ok!(StablePool::redeem_proportion_inner(
-					&3,
-					0,
-					32176560,
-					vec![0, 0]
-				));
+				assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
 
 				let redeem_proportion_amount = StableAsset::get_redeem_proportion_amount(
 					&StableAsset::pools(0).unwrap(),

@@ -256,7 +256,6 @@ impl nutsfinance_stable_asset::Config for Test {
 }
 
 impl bifrost_stable_pool::Config for Test {
-	// type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type ControlOrigin = EnsureSignedBy<One, u128>;
 	type CurrencyId = CurrencyId;
@@ -310,7 +309,7 @@ impl bifrost_vtoken_minting::Config for Test {
 pub struct Slp;
 // Functions to be called by other pallets.
 impl SlpOperator<CurrencyId> for Slp {
-	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
+	fn all_delegation_requests_occupied(_currency_id: CurrencyId) -> bool {
 		true
 	}
 }
