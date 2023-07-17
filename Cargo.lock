@@ -6681,7 +6681,7 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 [[package]]
 name = "nutsfinance-stable-asset"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/stable-asset?branch=master#c522af452c07d2e84dbe856a7ef441c480d0b3af"
+source = "git+https://github.com/bifrost-finance/stable-asset?branch=master#21b69fbd3b8d6a8fb27db8f7d52bf762b03f4bf2"
 dependencies = [
  "frame-support",
  "frame-system",

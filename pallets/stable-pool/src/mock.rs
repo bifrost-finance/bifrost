@@ -256,7 +256,7 @@ impl nutsfinance_stable_asset::Config for Test {
 }
 
 impl bifrost_stable_pool::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
+	// type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type ControlOrigin = EnsureSignedBy<One, u128>;
 	type CurrencyId = CurrencyId;

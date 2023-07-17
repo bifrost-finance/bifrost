@@ -28,15 +28,13 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 pub use weights::*;
-pub mod traits;
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	sp_runtime::traits::Zero,
 	traits::{
-		fungibles::{Inspect, Mutate},
-		tokens::{currency, fungibles, Fortitude, Precision, Preservation},
-		Currency,
+		fungibles::Mutate,
+		tokens::{fungibles, Fortitude, Precision, Preservation},
 	},
 	transactional,
 };
@@ -46,13 +44,11 @@ use node_primitives::{
 };
 use nutsfinance_stable_asset::{
 	MintResult, PoolTokenIndex, RedeemMultiResult, RedeemProportionResult, RedeemSingleResult,
-	StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
+	StableAsset, StableAssetPoolId, SwapResult,
 };
-use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
-pub use traits::StablePool;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -85,7 +81,8 @@ pub mod pallet {
 	pub trait Config:
 		frame_system::Config + nutsfinance_stable_asset::Config<AssetId = AssetIdOf<Self>>
 	{
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		// type RuntimeEvent: From<Event<Self>> + IsType<<Self as
+		// frame_system::Config>::RuntimeEvent>;
 
 		type WeightInfo: WeightInfo;
 
@@ -123,52 +120,33 @@ pub mod pallet {
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type Something<T> = StorageValue<_, u32>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_rate_caches)]
-	pub type TokenRateCaches<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		StableAssetPoolId,
-		Twox64Concat,
-		AssetIdOf<T>,
-		(T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned),
-	>;
-
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		SomethingStored {
-			something: u32,
-			who: AccountIdOf<T>,
-		},
-		TokenSwapped {
-			swapper: AccountIdOf<T>,
-			pool_id: StableAssetPoolId,
-			a: AtLeast64BitUnsignedOf<T>,
-			input_asset: AssetIdOf<T>,
-			output_asset: AssetIdOf<T>,
-			input_amount: T::Balance,
-			min_output_amount: T::Balance,
-			balances: Vec<T::Balance>,
-			total_supply: T::Balance,
-			output_amount: T::Balance,
-		},
-		Minted {
-			minter: AccountIdOf<T>,
-			pool_id: StableAssetPoolId,
-			a: AtLeast64BitUnsignedOf<T>,
-			input_amounts: Vec<T::Balance>,
-			min_output_amount: T::Balance,
-			balances: Vec<T::Balance>,
-			total_supply: T::Balance,
-			fee_amount: T::Balance,
-			output_amount: T::Balance,
-		},
-	}
+	// #[pallet::event]
+	// #[pallet::generate_deposit(pub(super) fn deposit_event)]
+	// pub enum Event<T: Config> {
+	// 	TokenSwapped {
+	// 		swapper: AccountIdOf<T>,
+	// 		pool_id: StableAssetPoolId,
+	// 		a: AtLeast64BitUnsignedOf<T>,
+	// 		input_asset: AssetIdOf<T>,
+	// 		output_asset: AssetIdOf<T>,
+	// 		input_amount: T::Balance,
+	// 		min_output_amount: T::Balance,
+	// 		balances: Vec<T::Balance>,
+	// 		total_supply: T::Balance,
+	// 		output_amount: T::Balance,
+	// 	},
+	// 	Minted {
+	// 		minter: AccountIdOf<T>,
+	// 		pool_id: StableAssetPoolId,
+	// 		a: AtLeast64BitUnsignedOf<T>,
+	// 		input_amounts: Vec<T::Balance>,
+	// 		min_output_amount: T::Balance,
+	// 		balances: Vec<T::Balance>,
+	// 		total_supply: T::Balance,
+	// 		fee_amount: T::Balance,
+	// 		output_amount: T::Balance,
+	// 	},
+	// }
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -203,7 +181,7 @@ pub mod pallet {
 			)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			Self::set_token_rate(pool_id, token_rate_info)
+			nutsfinance_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
 
 		#[pallet::call_index(0)]
@@ -290,14 +268,7 @@ pub mod pallet {
 			asset_length: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			T::StableAsset::redeem_single(
-				&who,
-				pool_id,
-				amount,
-				i,
-				min_redeem_amount,
-				asset_length,
-			)?;
+			Self::redeem_single_inner(&who, pool_id, amount, i, min_redeem_amount, asset_length)?;
 			Ok(())
 		}
 
@@ -472,6 +443,19 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a_block,
 		)
 		.ok_or(Error::<T>::Math)?;
+		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
+			nutsfinance_stable_asset::Event::<T>::RedeemedProportion {
+				redeemer: who.clone(),
+				pool_id,
+				a,
+				input_amount: amount,
+				min_output_amounts: min_redeem_amounts,
+				balances: pool_info.balances.clone(),
+				total_supply: pool_info.total_supply,
+				fee_amount,
+				output_amounts: amounts,
+			},
+		);
 		Ok(())
 	}
 
@@ -755,7 +739,9 @@ impl<T: Config> Pallet<T> {
 		pool_id: StableAssetPoolId,
 		vcurrency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
-		if let Some((demoninator, numerator)) = Self::get_token_rate(pool_id, vcurrency_id) {
+		if let Some((demoninator, numerator)) =
+			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, vcurrency_id)
+		{
 			return Ok(Self::calculate_scaling(
 				amount.into(),
 				numerator.into(),
@@ -779,7 +765,9 @@ impl<T: Config> Pallet<T> {
 		pool_id: StableAssetPoolId,
 		vcurrency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
-		if let Some((numerator, demoninator)) = Self::get_token_rate(pool_id, vcurrency_id) {
+		if let Some((numerator, demoninator)) =
+			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, vcurrency_id)
+		{
 			return Ok(Self::calculate_scaling(
 				amount.into(),
 				numerator.into(),
