@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate as bifrost_stable_pool;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_runtime_common::{micro, milli};
+use bifrost_runtime_common::milli;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything, GenesisBuild, Nothing},
@@ -132,7 +132,7 @@ impl orml_tokens::Config for Test {
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_ref_time(200_000_000);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
