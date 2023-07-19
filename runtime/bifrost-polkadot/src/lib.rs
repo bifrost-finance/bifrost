@@ -1327,6 +1327,7 @@ impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
+	type MaxWhitelistNumber = ConstU32<10>;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type XcmTransfer = XTokens;

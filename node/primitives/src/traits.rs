@@ -317,7 +317,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> DispatchResultWithPostInfo;
-	fn xcm_action_redeem(
+	fn slpx_redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,

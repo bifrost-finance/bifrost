@@ -75,25 +75,6 @@ pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountId
 	Ord,
 	TypeInfo,
 )]
-pub enum SupportChain {
-	Astar,
-	Moonbeam,
-	Hydradx,
-}
-
-#[derive(
-	Encode,
-	Decode,
-	MaxEncodedLen,
-	Eq,
-	PartialEq,
-	Copy,
-	Clone,
-	RuntimeDebug,
-	PartialOrd,
-	Ord,
-	TypeInfo,
-)]
 pub enum TargetChain<AccountId> {
 	Astar(AccountId),
 	Moonbeam(H160),
@@ -140,6 +121,9 @@ pub mod pallet {
 		type TreasuryAccount: Get<AccountIdOf<Self>>;
 
 		#[pallet::constant]
+		type MaxWhitelistNumber: Get<u32>;
+
+		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
 
 		type WeightInfo: WeightInfo;
@@ -149,52 +133,49 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		AddWhitelistAccountId {
-			support_chain: SupportChain,
-			evm_contract_account_id: AccountIdOf<T>,
+			wasm_caller: AccountIdOf<T>,
 		},
 		RemoveWhitelistAccountId {
-			support_chain: SupportChain,
-			evm_contract_account_id: AccountIdOf<T>,
+			wasm_caller: AccountIdOf<T>,
 		},
 		XcmMint {
 			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmMintFailed {
 			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmSwap {
 			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmSwapFailed {
 			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmRedeem {
 			evm_caller: H160,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmRedeemFailed {
 			evm_caller: H160,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		SetTransferToFee {
-			support_chain: SupportChain,
-			transfer_to_fee: BalanceOf<T>,
+			fee: BalanceOf<T>,
 		},
 		SetExecutionFee {
 			currency_id: CurrencyId,
@@ -223,25 +204,19 @@ pub mod pallet {
 	/// Contract whitelist
 	#[pallet::storage]
 	#[pallet::getter(fn whitelist_account_ids)]
-	pub type WhitelistAccountId<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		SupportChain,
-		BoundedVec<AccountIdOf<T>, ConstU32<10>>,
-		ValueQuery,
-	>;
+	pub type WhitelistAccountId<T: Config> =
+		StorageValue<_, BoundedVec<AccountIdOf<T>, T::MaxWhitelistNumber>, ValueQuery>;
 
 	/// Charge corresponding fees for different CurrencyId
 	#[pallet::storage]
 	#[pallet::getter(fn execution_fee)]
 	pub type ExecutionFee<T: Config> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>, ValueQuery>;
 
 	/// XCM fee for transferring to Moonbeam(BNC)
 	#[pallet::storage]
-	#[pallet::getter(fn transfer_to_fee)]
-	pub type TransferToFee<T: Config> =
-		StorageMap<_, Blake2_128Concat, SupportChain, BalanceOf<T>, OptionQuery>;
+	#[pallet::getter(fn transfer_to_moonbeam_fee)]
+	pub type TransferToMoonbeamFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -252,20 +227,18 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
-			let evm_contract_account_id = ensure_signed(origin)?;
-			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
-			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+			let wasm_caller = ensure_signed(origin)?;
+			Self::ensure_singer_on_whitelist(&wasm_caller)?;
 
-			if support_chain == SupportChain::Hydradx {
-				evm_caller_account_id = evm_contract_account_id.clone();
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			if let TargetChain::Hydradx(_) = target_chain {
+				evm_caller_account_id = wasm_caller.clone();
 			}
 
-			let target_chain =
-				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
-
-			let token_amount = Self::charge_execution_fee(currency_id, &evm_caller_account_id)?;
+			let token_amount =
+				Self::exclude_other_fee(&target_chain, currency_id, &evm_caller_account_id)?;
 
 			match T::VtokenMintingInterface::mint(
 				evm_caller_account_id.clone(),
@@ -280,40 +253,40 @@ pub mod pallet {
 						T::MultiCurrency::free_balance(vtoken_id, &evm_caller_account_id);
 
 					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
+						evm_caller_account_id,
+						&wasm_caller,
 						vtoken_id,
 						vtoken_amount,
-						target_chain,
+						&target_chain,
 					)?;
 
 					Self::deposit_event(Event::XcmMint {
 						evm_caller,
 						currency_id,
 						token_amount,
-						support_chain,
+						target_chain,
 					});
 				},
 				Err(_) => {
 					Self::transfer_to(
-						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
+						evm_caller_account_id,
+						&wasm_caller,
 						currency_id,
 						token_amount,
-						target_chain,
+						&target_chain,
 					)?;
 					Self::deposit_event(Event::XcmMintFailed {
 						evm_caller,
 						currency_id,
 						token_amount,
-						support_chain,
+						target_chain,
 					});
 				},
 			};
 			Ok(().into())
 		}
 
-		/// Swap and transfer to target chain
+		// Swap and transfer to target chain
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::swap())]
 		pub fn swap(
@@ -322,18 +295,18 @@ pub mod pallet {
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
 			currency_id_out_min: AssetBalance,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
-			let evm_contract_account_id = ensure_signed(origin)?;
-			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
-			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+			let wasm_caller = ensure_signed(origin)?;
+			Self::ensure_singer_on_whitelist(&wasm_caller)?;
 
-			if support_chain == SupportChain::Hydradx {
-				evm_caller_account_id = evm_contract_account_id.clone();
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			if let TargetChain::Hydradx(_) = target_chain {
+				evm_caller_account_id = wasm_caller.clone();
 			}
 
-			let target_chain =
-				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
+			let currency_id_in_amount =
+				Self::exclude_other_fee(&target_chain, currency_id_in, &evm_caller_account_id)?;
 
 			let in_asset_id: AssetId =
 				AssetId::try_convert_from(currency_id_in, T::ParachainId::get().into())
@@ -341,9 +314,6 @@ pub mod pallet {
 			let out_asset_id: AssetId =
 				AssetId::try_convert_from(currency_id_out, T::ParachainId::get().into())
 					.map_err(|_| Error::<T>::TokenNotFoundInZenlink)?;
-
-			let currency_id_in_amount =
-				Self::charge_execution_fee(currency_id_in, &evm_caller_account_id)?;
 
 			let path = vec![in_asset_id, out_asset_id];
 			match T::DexOperator::inner_swap_exact_assets_for_assets(
@@ -359,25 +329,25 @@ pub mod pallet {
 
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
+						&wasm_caller,
 						currency_id_out,
 						currency_id_out_amount,
-						target_chain,
+						&target_chain,
 					)?;
 
 					Self::deposit_event(Event::XcmSwap {
 						evm_caller,
 						currency_id_in,
 						currency_id_out,
-						support_chain,
+						target_chain,
 					});
 				},
 				Err(_) => Self::transfer_to(
 					evm_caller_account_id.clone(),
-					&evm_contract_account_id,
+					&wasm_caller,
 					currency_id_in,
 					currency_id_in_amount,
-					target_chain,
+					&target_chain,
 				)?,
 			}
 			Ok(().into())
@@ -390,39 +360,35 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			evm_caller: H160,
 			vtoken_id: CurrencyIdOf<T>,
-			support_chain: SupportChain,
+			target_chain: TargetChain<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
-			let evm_contract_account_id = ensure_signed(origin)?;
-			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
-			Self::ensure_singer_on_whitelist(&evm_contract_account_id, support_chain)?;
+			let wasm_caller = ensure_signed(origin)?;
+			Self::ensure_singer_on_whitelist(&wasm_caller)?;
 
-			if support_chain == SupportChain::Hydradx {
-				evm_caller_account_id = evm_contract_account_id.clone();
+			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
+			if let TargetChain::Hydradx(_) = target_chain {
+				evm_caller_account_id = wasm_caller.clone();
 			}
 
-			let target_chain =
-				Self::match_support_chain(support_chain, evm_caller_account_id.clone(), evm_caller);
+			let vtoken_amount =
+				Self::exclude_other_fee(&target_chain, vtoken_id, &evm_caller_account_id)?;
 
-			let vtoken_amount = Self::charge_execution_fee(vtoken_id, &evm_caller_account_id)?;
-
-			let redeem_type = match support_chain {
-				SupportChain::Astar => RedeemType::Astar,
-				SupportChain::Moonbeam => RedeemType::Moonbeam(evm_caller),
-				SupportChain::Hydradx => RedeemType::Hydradx,
+			let redeem_type = match target_chain {
+				TargetChain::Astar(_) => RedeemType::Astar,
+				TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
+				TargetChain::Hydradx(_) => RedeemType::Hydradx,
 			};
 
 			if vtoken_id == VFIL {
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-					.unwrap_or_else(|| Self::get_default_fee(BNC));
 				T::MultiCurrency::transfer(
 					BNC,
-					&evm_contract_account_id,
+					&wasm_caller,
 					&evm_caller_account_id,
-					fee_amount,
+					Self::transfer_to_moonbeam_fee(),
 				)?;
 			}
 
-			match T::VtokenMintingInterface::xcm_action_redeem(
+			match T::VtokenMintingInterface::slpx_redeem(
 				evm_caller_account_id.clone(),
 				vtoken_id,
 				vtoken_amount,
@@ -432,21 +398,21 @@ pub mod pallet {
 					evm_caller,
 					vtoken_id,
 					vtoken_amount,
-					support_chain,
+					target_chain,
 				}),
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
-						&evm_contract_account_id,
+						&wasm_caller,
 						vtoken_id,
 						vtoken_amount,
-						target_chain,
+						&target_chain,
 					)?;
 					Self::deposit_event(Event::XcmRedeemFailed {
 						evm_caller,
 						vtoken_id,
 						vtoken_amount,
-						support_chain,
+						target_chain,
 					});
 				},
 			};
@@ -457,26 +423,22 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::add_whitelist())]
 		pub fn add_whitelist(
 			origin: OriginFor<T>,
-			support_chain: SupportChain,
-			evm_contract_account_id: T::AccountId,
+			wasm_caller: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get();
 
 			ensure!(
-				!whitelist_account_ids.contains(&evm_contract_account_id),
+				!whitelist_account_ids.contains(&wasm_caller),
 				Error::<T>::AccountIdAlreadyInWhitelist
 			);
 			whitelist_account_ids
-				.try_push(evm_contract_account_id.clone())
+				.try_push(wasm_caller.clone())
 				.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
-			WhitelistAccountId::<T>::insert(support_chain, whitelist_account_ids);
-			Self::deposit_event(Event::AddWhitelistAccountId {
-				support_chain,
-				evm_contract_account_id,
-			});
+			WhitelistAccountId::<T>::set(whitelist_account_ids);
+			Self::deposit_event(Event::AddWhitelistAccountId { wasm_caller });
 			Ok(().into())
 		}
 
@@ -484,24 +446,20 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::remove_whitelist())]
 		pub fn remove_whitelist(
 			origin: OriginFor<T>,
-			support_chain: SupportChain,
-			evm_contract_account_id: T::AccountId,
+			wasm_caller: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
+			let mut whitelist_account_ids = WhitelistAccountId::<T>::get();
 
 			ensure!(
-				whitelist_account_ids.contains(&evm_contract_account_id),
+				whitelist_account_ids.contains(&wasm_caller),
 				Error::<T>::AccountIdNotInWhitelist
 			);
-			whitelist_account_ids.retain(|x| *x != evm_contract_account_id);
-			WhitelistAccountId::<T>::insert(support_chain, whitelist_account_ids);
-			Self::deposit_event(Event::RemoveWhitelistAccountId {
-				support_chain,
-				evm_contract_account_id,
-			});
+			whitelist_account_ids.retain(|x| *x != wasm_caller);
+			WhitelistAccountId::<T>::set(whitelist_account_ids);
+			Self::deposit_event(Event::RemoveWhitelistAccountId { wasm_caller });
 			Ok(().into())
 		}
 
@@ -521,15 +479,14 @@ pub mod pallet {
 
 		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
-		pub fn set_transfer_to_fee(
+		pub fn set_transfer_to_moonbeam_fee(
 			origin: OriginFor<T>,
-			support_chain: SupportChain,
-			transfer_to_fee: BalanceOf<T>,
+			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
-			TransferToFee::<T>::insert(support_chain, transfer_to_fee);
-			Self::deposit_event(Event::SetTransferToFee { support_chain, transfer_to_fee });
+			TransferToMoonbeamFee::<T>::set(fee);
+			Self::deposit_event(Event::SetTransferToFee { fee });
 			Ok(().into())
 		}
 	}
@@ -537,57 +494,49 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	/// Check if the signer is in the whitelist
-	fn ensure_singer_on_whitelist(
-		evm_contract_account_id: &T::AccountId,
-		support_chain: SupportChain,
-	) -> DispatchResult {
-		let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
-		ensure!(
-			whitelist_account_ids.contains(evm_contract_account_id),
-			Error::<T>::AccountIdNotInWhitelist
-		);
+	fn ensure_singer_on_whitelist(wasm_caller: &T::AccountId) -> DispatchResult {
+		let whitelist_account_ids = WhitelistAccountId::<T>::get();
+		ensure!(whitelist_account_ids.contains(wasm_caller), Error::<T>::AccountIdNotInWhitelist);
 		Ok(())
 	}
 
 	/// Charge an execution fee
-	fn charge_execution_fee(
+	fn exclude_other_fee(
+		target_chain: &TargetChain<AccountIdOf<T>>,
 		currency_id: CurrencyIdOf<T>,
 		evm_caller_account_id: &T::AccountId,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
-		let execution_fee =
-			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
 		let minimum_balance = T::MultiCurrency::minimum_balance(currency_id);
-		T::MultiCurrency::transfer(
-			currency_id,
-			evm_caller_account_id,
-			&T::TreasuryAccount::get(),
-			execution_fee,
-		)?;
-		let balance_exclude_fee = free_balance
-			.checked_sub(&execution_fee.saturating_add(minimum_balance))
-			.ok_or(Error::<T>::FreeBalanceTooLow)?;
-		Ok(balance_exclude_fee)
-	}
-
-	fn match_support_chain(
-		support_chain: SupportChain,
-		evm_caller_account_id: T::AccountId,
-		evm_caller: H160,
-	) -> TargetChain<T::AccountId> {
-		match support_chain {
-			SupportChain::Astar => TargetChain::Astar(evm_caller_account_id),
-			SupportChain::Moonbeam => TargetChain::Moonbeam(evm_caller),
-			SupportChain::Hydradx => TargetChain::Hydradx(evm_caller_account_id),
+		match target_chain {
+			TargetChain::Hydradx(_) => {
+				let exclude_fee = free_balance
+					.checked_sub(&minimum_balance)
+					.ok_or(Error::<T>::FreeBalanceTooLow)?;
+				Ok(exclude_fee)
+			},
+			_ => {
+				let execution_fee = Self::execution_fee(currency_id);
+				T::MultiCurrency::transfer(
+					currency_id,
+					evm_caller_account_id,
+					&T::TreasuryAccount::get(),
+					execution_fee,
+				)?;
+				let exclude_fee = free_balance
+					.checked_sub(&execution_fee.saturating_add(minimum_balance))
+					.ok_or(Error::<T>::FreeBalanceTooLow)?;
+				Ok(exclude_fee)
+			},
 		}
 	}
 
 	fn transfer_to(
 		caller: T::AccountId,
-		evm_contract_account_id: &T::AccountId,
+		wasm_caller: &T::AccountId,
 		currency_id: CurrencyIdOf<T>,
 		amount: BalanceOf<T>,
-		target_chain: TargetChain<T::AccountId>,
+		target_chain: &TargetChain<T::AccountId>,
 	) -> DispatchResult {
 		match target_chain {
 			TargetChain::Astar(receiver) => {
@@ -620,16 +569,10 @@ impl<T: Config> Pallet<T> {
 						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 					),
 				};
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-					.unwrap_or_else(|| Self::get_default_fee(BNC));
+				let fee_amount = Self::transfer_to_moonbeam_fee();
 				match currency_id {
 					VKSM | VMOVR | VBNC | FIL | VFIL | VDOT | VGLMR => {
-						T::MultiCurrency::transfer(
-							BNC,
-							evm_contract_account_id,
-							&caller,
-							fee_amount,
-						)?;
+						T::MultiCurrency::transfer(BNC, wasm_caller, &caller, fee_amount)?;
 						let assets = vec![(currency_id, amount), (BNC, fee_amount)];
 
 						T::XcmTransfer::transfer_multicurrencies(
@@ -654,23 +597,11 @@ impl<T: Config> Pallet<T> {
 		let account_id_32 = sp_runtime::AccountId32::from(Into::<[u8; 32]>::into(hash));
 		T::AccountId::decode(&mut account_id_32.as_ref()).expect("Fail to decode address")
 	}
-
-	pub fn get_default_fee(currency_id: CurrencyId) -> BalanceOf<T> {
-		let decimals = currency_id
-			.decimals()
-			.unwrap_or(
-				T::CurrencyIdConvert::get_currency_metadata(currency_id)
-					.map_or(12, |metatata| metatata.decimals.into()),
-			)
-			.into();
-
-		BalanceOf::<T>::saturated_from(10u128.saturating_pow(decimals).saturating_div(100u128))
-	}
 }
 
 // Functions to be called by other pallets.
 impl<T: Config> SlpxOperator<BalanceOf<T>> for Pallet<T> {
 	fn get_moonbeam_transfer_to_fee() -> BalanceOf<T> {
-		Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| Self::get_default_fee(BNC))
+		Self::transfer_to_moonbeam_fee()
 	}
 }

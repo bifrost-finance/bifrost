@@ -1596,7 +1596,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
 	}
 
-	fn xcm_action_redeem(
+	fn slpx_redeem(
 		exchanger: AccountIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
