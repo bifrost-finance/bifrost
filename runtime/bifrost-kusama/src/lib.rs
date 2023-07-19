@@ -1958,6 +1958,7 @@ mod benches {
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
+		[bifrost_stable_pool, StablePool]
 	);
 }
 

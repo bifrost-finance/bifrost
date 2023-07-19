@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate};
 use nutsfinance_stable_asset::{StableAsset as StableAssetInterface, StableAssetPoolInfo};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
@@ -502,5 +502,89 @@ fn mint_swap_redeem_for_precisions() {
 			Tokens::free_balance(pool_asset, &3),
 			Tokens::free_balance(pool_asset, &2)
 		);
+	});
+}
+
+#[test]
+fn redeem_single() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		// assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+		// assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
+		// let (coin0, coin1, pool_asset, swap_id) = create_pool2();
+		// assert_ok!(StableAsset::set_token_rate(0, vec![(VDOT, (90_000_000, 100_000_000))]));
+
+		// let amounts = vec![10_000_000u128, 20_000_000u128];
+		// assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
+
+		// // assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
+		// assert_ok!(StablePool::redeem_single_inner(&3, 0, 10_000_000u128, 1, 0, 2));
+
+		// let redeem_proportion_amount =
+		// 	StableAsset::get_redeem_proportion_amount(&StableAsset::pools(0).unwrap(), 32176560);
+		// log::debug!(
+		// 	"get_redeem_proportion_amount{:?}StableAsset::pools(0){:?}",
+		// 	redeem_proportion_amount,
+		// 	StableAsset::pools(0)
+		// );
+
+		// let vtoken_issuance2 = <Test as
+		// crate::Config>::MultiCurrency::total_issuance(pool_asset); log::debug!("vtoken_issuance2:
+		// {:?}", vtoken_issuance2); log::debug!(
+		// 	"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
+		// 	StableAsset::pools(0),
+		// 	Tokens::free_balance(coin0, &swap_id),
+		// 	Tokens::free_balance(coin1, &swap_id),
+		// 	Tokens::free_balance(coin0, &3),
+		// 	Tokens::free_balance(coin1, &3),
+		// 	Tokens::free_balance(pool_asset, &3),
+		// 	Tokens::free_balance(pool_asset, &2)
+		// );
+		// let test_account: T::AccountId = whitelisted_caller();
+		// let fee_account: T::AccountId = account("seed", 1, 1);
+		pub const LP_KSM_BNC: CurrencyId =
+			CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
+		let coin0 = BNC;
+		let coin1 = BNC;
+		let pool_asset = BNC;
+		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
+			BNC.into(),
+			&6,
+			1000_000_000_000u128
+		));
+		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::signed(1),
+			pool_asset.into(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			6,
+			6,
+			1000000000000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(1),
+			0,
+			vec![(BNC.into(), (9u128.into(), 10u128.into()))]
+		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
+		let vtoken_issuance2 = <Test as crate::Config>::MultiCurrency::total_issuance(pool_asset);
+		log::debug!(
+			"vtoken_issuance2:
+		{:?}",
+			vtoken_issuance2
+		);
+		assert_ok!(StablePool::redeem_single(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			5_000_000u128,
+			0,
+			0,
+			2
+		));
 	});
 }

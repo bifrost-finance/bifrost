@@ -52,5 +52,8 @@ std = [
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
 ]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+]
 try-runtime = ["frame-support/try-runtime"]

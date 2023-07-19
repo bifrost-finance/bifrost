@@ -371,6 +371,17 @@ impl ExtBuilder {
 			(4, DOT, 100_000_000),
 		])
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn for_benchmark(self) -> Self {
+		use frame_benchmarking::whitelisted_caller;
+		let whitelist_caller: AccountId = whitelisted_caller();
+		self.balances(vec![
+			(whitelist_caller.clone(), DOT, 100_000_000_000_000),
+			(whitelist_caller.clone(), VDOT, 100_000_000_000_000),
+		])
+	}
+
 	// Build genesis storage according to the mock runtime.
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
@@ -380,11 +391,11 @@ impl ExtBuilder {
 				// (CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
 				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 				(CurrencyId::Native(TokenSymbol::BNC), 10_000_000, None),
-				(DOT, 10_000_000, None),
+				(DOT, 1_000_000, None),
 				(ASTR, 10_000_000, None),
 				(GLMR, 10_000_000, None),
 			],
-			vcurrency: vec![],
+			vcurrency: vec![VDOT],
 			vsbond: vec![],
 			phantom: Default::default(),
 		}

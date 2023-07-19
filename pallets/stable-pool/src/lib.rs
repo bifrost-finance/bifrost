@@ -43,8 +43,8 @@ use node_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, TimeUnit, VtokenMintingOperator,
 };
 use nutsfinance_stable_asset::{
-	MintResult, PoolTokenIndex, RedeemMultiResult, RedeemProportionResult, RedeemSingleResult,
-	StableAsset, StableAssetPoolId, SwapResult,
+	MintResult, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
+	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,
 };
 use sp_core::U256;
 use sp_runtime::SaturatedConversion;
@@ -53,18 +53,11 @@ use sp_std::prelude::*;
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-// #[allow(type_alias_bounds)]
-// pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-// 	<T as frame_system::Config>::AccountId,
-// >>::CurrencyId;
-
 #[allow(type_alias_bounds)]
 pub type AssetIdOf<T> = <T as Config>::CurrencyId;
 
 #[allow(type_alias_bounds)]
 pub type AtLeast64BitUnsignedOf<T> = <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned;
-// #[allow(type_alias_bounds)]
-// pub type ControlOriginOf<T> = <T as frame_system::Config>::RuntimeOrigin;
 
 // #[allow(type_alias_bounds)]
 // pub type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
@@ -140,7 +133,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(10)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
 		pub fn edit_token_rate(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -154,7 +147,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::create_pool())]
 		#[transactional]
 		pub fn create_pool(
 			origin: OriginFor<T>,
@@ -185,9 +178,9 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::add_liquidity())]
 		#[transactional]
-		pub fn mint(
+		pub fn add_liquidity(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			amounts: Vec<T::Balance>,
@@ -198,7 +191,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::swap())]
 		#[transactional]
 		pub fn swap(
 			origin: OriginFor<T>,
@@ -214,7 +207,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_proportion())]
 		pub fn redeem_proportion(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -226,7 +219,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_single())]
 		#[transactional]
 		pub fn redeem_single(
 			origin: OriginFor<T>,
@@ -242,7 +235,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::do_something())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_multi())]
 		pub fn redeem_multi(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -251,6 +244,86 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::redeem_multi_inner(&who, pool_id, amounts, max_redeem_amount)
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_a())]
+		#[transactional]
+		pub fn modify_a(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			a: T::AtLeast64BitUnsigned,
+			future_a_block: T::BlockNumber,
+		) -> DispatchResult {
+			T::ListingOrigin::ensure_origin(origin)?;
+			T::StableAsset::modify_a(pool_id, a, future_a_block)
+		}
+
+		#[pallet::call_index(7)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_fees())]
+		#[transactional]
+		pub fn modify_fees(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			mint_fee: Option<T::AtLeast64BitUnsigned>,
+			swap_fee: Option<T::AtLeast64BitUnsigned>,
+			redeem_fee: Option<T::AtLeast64BitUnsigned>,
+		) -> DispatchResult {
+			T::ListingOrigin::ensure_origin(origin)?;
+			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
+				let pool_info = maybe_pool_info
+					.as_mut()
+					.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+				if let Some(fee) = mint_fee {
+					pool_info.mint_fee = fee;
+				}
+				if let Some(fee) = swap_fee {
+					pool_info.swap_fee = fee;
+				}
+				if let Some(fee) = redeem_fee {
+					pool_info.redeem_fee = fee;
+				}
+				nutsfinance_stable_asset::Pallet::<T>::deposit_event(
+					nutsfinance_stable_asset::Event::<T>::FeeModified {
+						pool_id,
+						mint_fee: pool_info.mint_fee,
+						swap_fee: pool_info.swap_fee,
+						redeem_fee: pool_info.redeem_fee,
+					},
+				);
+				Ok(())
+			})
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_recipients())]
+		#[transactional]
+		pub fn modify_recipients(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			fee_recipient: Option<T::AccountId>,
+			yield_recipient: Option<T::AccountId>,
+		) -> DispatchResult {
+			T::ListingOrigin::ensure_origin(origin)?;
+			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
+				let pool_info = maybe_pool_info
+					.as_mut()
+					.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+				if let Some(recipient) = fee_recipient {
+					pool_info.fee_recipient = recipient;
+				}
+				if let Some(recipient) = yield_recipient {
+					pool_info.yield_recipient = recipient;
+				}
+				nutsfinance_stable_asset::Pallet::<T>::deposit_event(
+					nutsfinance_stable_asset::Event::<T>::RecipientModified {
+						pool_id,
+						fee_recipient: pool_info.fee_recipient.clone(),
+						yield_recipient: pool_info.yield_recipient.clone(),
+					},
+				);
+				Ok(())
+			})
 		}
 	}
 }
