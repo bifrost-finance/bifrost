@@ -586,7 +586,7 @@ impl<T: Config> Pallet<T> {
 	fn redeem_single_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
-		amount: T::Balance,
+		amount: T::Balance, // LP
 		i: PoolTokenIndex,
 		min_redeem_amount: T::Balance,
 		asset_length: u32,
@@ -849,5 +849,33 @@ impl<T: Config> Pallet<T> {
 
 		let charge_amount: AtLeast64BitUnsignedOf<T> = can_get_vtoken.into();
 		charge_amount.into()
+	}
+
+	pub fn get_swap_output(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: T::Balance,
+		min_dy: T::Balance,
+	) -> Result<T::Balance, DispatchError> {
+		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
+		let dx = Self::upscale(
+			amount,
+			pool_id,
+			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
+		)?;
+		// let amount_out
+		let SwapResult { dx: _, dy, .. } =
+			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
+				.ok_or(Error::<T>::CantBeZero)?;
+		let downscale_out = Self::downscale(
+			dy,
+			pool_id,
+			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
+		)?;
+		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
+
+		Ok(downscale_out)
 	}
 }

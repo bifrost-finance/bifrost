@@ -857,6 +857,7 @@ dependencies = [
  "bifrost-slp",
  "bifrost-slpx",
  "bifrost-stable-pool",
+ "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
@@ -1334,6 +1335,32 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-stable-pool-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-stable-pool-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-stable-pool-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
 ]
 
 [[package]]
@@ -6477,6 +6504,8 @@ dependencies = [
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-stable-pool-rpc-api",
+ "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-ve-minting-rpc-api",
  "bifrost-ve-minting-rpc-runtime-api",
  "jsonrpsee",

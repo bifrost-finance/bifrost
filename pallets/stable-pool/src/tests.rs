@@ -508,40 +508,6 @@ fn mint_swap_redeem_for_precisions() {
 #[test]
 fn redeem_single() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		// assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		// assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
-		// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
-		// let (coin0, coin1, pool_asset, swap_id) = create_pool2();
-		// assert_ok!(StableAsset::set_token_rate(0, vec![(VDOT, (90_000_000, 100_000_000))]));
-
-		// let amounts = vec![10_000_000u128, 20_000_000u128];
-		// assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
-
-		// // assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
-		// assert_ok!(StablePool::redeem_single_inner(&3, 0, 10_000_000u128, 1, 0, 2));
-
-		// let redeem_proportion_amount =
-		// 	StableAsset::get_redeem_proportion_amount(&StableAsset::pools(0).unwrap(), 32176560);
-		// log::debug!(
-		// 	"get_redeem_proportion_amount{:?}StableAsset::pools(0){:?}",
-		// 	redeem_proportion_amount,
-		// 	StableAsset::pools(0)
-		// );
-
-		// let vtoken_issuance2 = <Test as
-		// crate::Config>::MultiCurrency::total_issuance(pool_asset); log::debug!("vtoken_issuance2:
-		// {:?}", vtoken_issuance2); log::debug!(
-		// 	"StableAsset::pools(0){:?}==={:?},{:?}+{:?},{:?}pool_asset{:?},{:?}",
-		// 	StableAsset::pools(0),
-		// 	Tokens::free_balance(coin0, &swap_id),
-		// 	Tokens::free_balance(coin1, &swap_id),
-		// 	Tokens::free_balance(coin0, &3),
-		// 	Tokens::free_balance(coin1, &3),
-		// 	Tokens::free_balance(pool_asset, &3),
-		// 	Tokens::free_balance(pool_asset, &2)
-		// );
-		// let test_account: T::AccountId = whitelisted_caller();
-		// let fee_account: T::AccountId = account("seed", 1, 1);
 		pub const LP_KSM_BNC: CurrencyId =
 			CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 		let coin0 = BNC;

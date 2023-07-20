@@ -2232,6 +2232,17 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi<Block> for Runtime {
+		fn get_swap_output(
+			pool_id: u32,
+			currency_id_in: u32,
+			currency_id_out: u32,
+			amount: Balance,
+			min_dy: Balance,) -> Balance {
+			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount,min_dy).unwrap_or(Zero::zero())
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (

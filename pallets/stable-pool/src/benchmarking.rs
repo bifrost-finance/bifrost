@@ -258,5 +258,5 @@ benchmarks! {
 			1000000000000u128.into()));
 	}: _(RawOrigin::Root, 0, Some(test_account.clone()), Some(test_account))
 
-	impl_benchmark_test_suite!(StablePool, crate::mock::ExtBuilder::for_benchmark().build(), crate::mock::Test);
+	impl_benchmark_test_suite!(StablePool, crate::mock::ExtBuilder::build(), crate::mock::Test);
 }
