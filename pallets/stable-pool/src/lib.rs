@@ -128,6 +128,7 @@ pub mod pallet {
 		CantMint,
 		RedeemOverMax,
 		TokenRateNotCleared,
+		TokenRateNotSet,
 	}
 
 	#[pallet::call]
@@ -248,20 +249,18 @@ pub mod pallet {
 
 		#[pallet::call_index(6)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_a())]
-		#[transactional]
 		pub fn modify_a(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			a: T::AtLeast64BitUnsigned,
 			future_a_block: T::BlockNumber,
 		) -> DispatchResult {
-			T::ListingOrigin::ensure_origin(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 			T::StableAsset::modify_a(pool_id, a, future_a_block)
 		}
 
 		#[pallet::call_index(7)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_fees())]
-		#[transactional]
 		pub fn modify_fees(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -269,7 +268,7 @@ pub mod pallet {
 			swap_fee: Option<T::AtLeast64BitUnsigned>,
 			redeem_fee: Option<T::AtLeast64BitUnsigned>,
 		) -> DispatchResult {
-			T::ListingOrigin::ensure_origin(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
@@ -297,14 +296,13 @@ pub mod pallet {
 
 		#[pallet::call_index(8)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_recipients())]
-		#[transactional]
 		pub fn modify_recipients(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			fee_recipient: Option<T::AccountId>,
 			yield_recipient: Option<T::AccountId>,
 		) -> DispatchResult {
-			T::ListingOrigin::ensure_origin(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
@@ -344,8 +342,6 @@ impl<T: Config> Pallet<T> {
 				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
 			)?;
 		}
-		log::debug!("amounts:{:?}", amounts);
-		// T::StableAsset::mint(who, pool_id, amounts, min_mint_amount)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let MintResult { mint_amount, fee_amount, balances, total_supply } =
 			T::StableAsset::get_mint_amount(pool_id, &amounts).ok_or(Error::<T>::CantBeZero)?;
@@ -379,7 +375,6 @@ impl<T: Config> Pallet<T> {
 				Preservation::Expendable,
 			)?;
 		}
-		log::debug!("mint___amounts:{:?}{:?}", amounts, total_supply);
 		if fee_amount > Zero::zero() {
 			<T as nutsfinance_stable_asset::Config>::Assets::mint_into(
 				pool_info.pool_asset,
@@ -430,7 +425,6 @@ impl<T: Config> Pallet<T> {
 			redeem_amount,
 		} = T::StableAsset::get_redeem_proportion_amount(&pool_info, amount)
 			.ok_or(Error::<T>::CantBeZero)?;
-		log::debug!("redeem_proportion++amounts:{:?}redeem_amount{:?}", amounts, redeem_amount);
 
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::downscale(
@@ -439,7 +433,6 @@ impl<T: Config> Pallet<T> {
 				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
 			)?;
 		}
-		log::debug!("redeem_proportion==amounts:{:?}", amounts);
 
 		let zero = Zero::zero();
 		for i in 0..amounts.len() {
@@ -695,13 +688,11 @@ impl<T: Config> Pallet<T> {
 		let SwapResult { dx: _, dy, y, balance_i } =
 			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
 				.ok_or(Error::<T>::CantBeZero)?;
-		log::debug!("amount_out:{:?}", dy);
 		let downscale_out = Self::downscale(
 			dy, // TODO
 			pool_id,
 			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
-		log::debug!("downscale_out:{:?}", downscale_out);
 		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
 		let mut balances = pool_info.balances.clone();
@@ -756,59 +747,24 @@ impl<T: Config> Pallet<T> {
 		pool_id: StableAssetPoolId,
 		currency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
-		log::debug!("upscale currency_id:{:?}", currency_id);
-		if currency_id.is_vtoken() {
-			Self::upscale_vtoken(amount, pool_id, currency_id)
-		} else {
-			Ok(amount)
+		if let Some((demoninator, numerator)) =
+			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
+		{
+			return Ok(Self::calculate_scaling(
+				amount.into(),
+				numerator.into(),
+				demoninator.into(),
+			));
 		}
+		return Err(Error::<T>::TokenRateNotSet.into());
 	}
 	pub fn downscale(
 		amount: T::Balance,
 		pool_id: StableAssetPoolId,
 		currency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
-		log::debug!("downscale currency_id:{:?}", currency_id);
-		if currency_id.is_vtoken() {
-			Self::downscale_vtoken(amount, pool_id, currency_id)
-		} else {
-			Ok(amount)
-		}
-	}
-
-	pub fn upscale_vtoken(
-		amount: T::Balance,
-		pool_id: StableAssetPoolId,
-		vcurrency_id: AssetIdOf<T>,
-	) -> Result<T::Balance, DispatchError> {
-		if let Some((demoninator, numerator)) =
-			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, vcurrency_id)
-		{
-			return Ok(Self::calculate_scaling(
-				amount.into(),
-				numerator.into(),
-				demoninator.into(),
-			));
-		}
-
-		let currency_id = T::CurrencyIdConversion::convert_to_token(vcurrency_id)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-		let vtoken_issuance = <<T as pallet::Config>::MultiCurrency as fungibles::Inspect<
-			AccountIdOf<T>,
-		>>::total_issuance(vcurrency_id);
-		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
-		log::debug!("vtoken_issuance:{:?}token_pool{:?}", vtoken_issuance, token_pool);
-		ensure!(vtoken_issuance <= token_pool, Error::<T>::CantScaling);
-		Ok(Self::calculate_scaling(amount.into(), token_pool.into(), vtoken_issuance.into()))
-	}
-
-	pub fn downscale_vtoken(
-		amount: T::Balance,
-		pool_id: StableAssetPoolId,
-		vcurrency_id: AssetIdOf<T>,
-	) -> Result<T::Balance, DispatchError> {
 		if let Some((numerator, demoninator)) =
-			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, vcurrency_id)
+			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
 		{
 			return Ok(Self::calculate_scaling(
 				amount.into(),
@@ -816,21 +772,7 @@ impl<T: Config> Pallet<T> {
 				demoninator.into(),
 			));
 		}
-
-		let currency_id = T::CurrencyIdConversion::convert_to_token(vcurrency_id)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-		let vtoken_issuance = <<T as pallet::Config>::MultiCurrency as fungibles::Inspect<
-			AccountIdOf<T>,
-		>>::total_issuance(vcurrency_id);
-		let token_pool = T::VtokenMinting::get_token_pool(currency_id);
-		// let amount: u128 = amount.unique_saturated_into();
-		log::debug!(
-			"downscale_vtoken--vtoken_issuance:{:?}token_pool{:?}",
-			vtoken_issuance,
-			token_pool
-		);
-		ensure!(vtoken_issuance <= token_pool, Error::<T>::CantScaling);
-		Ok(Self::calculate_scaling(amount.into(), vtoken_issuance.into(), token_pool.into()))
+		return Err(Error::<T>::TokenRateNotSet.into());
 	}
 
 	fn calculate_scaling(
@@ -838,7 +780,7 @@ impl<T: Config> Pallet<T> {
 		numerator: AtLeast64BitUnsignedOf<T>,
 		denominator: AtLeast64BitUnsignedOf<T>,
 	) -> T::Balance {
-		let amount: u128 = amount.saturated_into::<u128>(); //.unique_saturated_into();
+		let amount: u128 = amount.saturated_into::<u128>();
 		let denominator: u128 = denominator.saturated_into::<u128>();
 		let numerator: u128 = numerator.saturated_into::<u128>();
 		let can_get_vtoken = U256::from(amount)
@@ -864,7 +806,6 @@ impl<T: Config> Pallet<T> {
 			pool_id,
 			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
-		// let amount_out
 		let SwapResult { dx: _, dy, .. } =
 			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
 				.ok_or(Error::<T>::CantBeZero)?;
