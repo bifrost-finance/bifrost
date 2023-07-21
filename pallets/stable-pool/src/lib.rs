@@ -856,7 +856,6 @@ impl<T: Config> Pallet<T> {
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
-		min_dy: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
 		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
@@ -874,7 +873,6 @@ impl<T: Config> Pallet<T> {
 			pool_id,
 			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
 		)?;
-		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
 		Ok(downscale_out)
 	}

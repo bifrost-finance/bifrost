@@ -29,7 +29,6 @@ decl_runtime_apis! {
 			currency_id_in: u32,
 			currency_id_out: u32,
 			amount: Balance,
-			min_dy: Balance,
 		) -> Balance;
 	}
 }

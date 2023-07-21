@@ -32,7 +32,7 @@ use sp_runtime::traits::Block as BlockT;
 
 #[rpc(client, server)]
 pub trait StablePoolRpcApi<BlockHash> {
-	/// rpc method for getting stable_pool rewards
+	/// rpc method for getting stable_pool swap output amount
 	#[method(name = "stable_pool_getSwapOutputAmount")]
 	fn get_swap_output_amount(
 		&self,
@@ -40,7 +40,6 @@ pub trait StablePoolRpcApi<BlockHash> {
 		currency_id_in: u32,
 		currency_id_out: u32,
 		amount: Balance,
-		min_dy: Balance,
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
 }
@@ -70,20 +69,13 @@ where
 		currency_id_in: u32,
 		currency_id_out: u32,
 		amount: Balance,
-		min_dy: Balance,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		let rs: Result<Balance, _> = lm_rpc_api.get_swap_output(
-			at,
-			pool_id,
-			currency_id_in,
-			currency_id_out,
-			amount,
-			min_dy,
-		);
+		let rs: Result<Balance, _> =
+			lm_rpc_api.get_swap_output(at, pool_id, currency_id_in, currency_id_out, amount);
 
 		match rs {
 			Ok(amount) => Ok(NumberOrHex::Hex(amount.into())),

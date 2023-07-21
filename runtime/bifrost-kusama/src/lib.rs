@@ -2237,9 +2237,8 @@ impl_runtime_apis! {
 			pool_id: u32,
 			currency_id_in: u32,
 			currency_id_out: u32,
-			amount: Balance,
-			min_dy: Balance,) -> Balance {
-			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount,min_dy).unwrap_or(Zero::zero())
+			amount: Balance,) -> Balance {
+			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount).unwrap_or(Zero::zero())
 		}
 	}
 
