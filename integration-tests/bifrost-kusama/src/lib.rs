@@ -26,5 +26,6 @@ mod kusama_test_net;
 // mod salp;
 mod slp;
 mod statemine;
+mod total_issuance;
 mod treasury;
 mod vtoken_minting;
