@@ -21,13 +21,10 @@ use crate::{
 	kusama_test_net::Bifrost,
 };
 use bifrost_kusama_runtime::{
-	constants::currency::{DOLLARS, MILLIBNC},
-	Balances, Runtime, RuntimeOrigin, System, TransactionPayment,
+	constants::currency::MILLIBNC, Balances, Runtime, RuntimeOrigin, System,
 };
-use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
 use bifrost_slp::BalanceOf;
 use frame_support::{assert_ok, traits::Currency};
-use node_primitives::{CurrencyId, TokenSymbol::*};
 use sp_runtime::{traits::AccountIdConversion, AccountId32, SaturatedConversion};
 use xcm_emulator::TestExt;
 
@@ -68,14 +65,14 @@ fn dollar_should_work() {
 			assert_ok!(Balances::transfer_allow_death(
 				RuntimeOrigin::signed(ALICE.into()),
 				sp_runtime::MultiAddress::Id(BOB.into()),
-				BalanceOf::<Runtime>::saturated_from(15 * MILLIBNC)
+				BalanceOf::<Runtime>::saturated_from(20 * MILLIBNC - 1)
 			));
 
 			println!("{:?}", System::events());
 
 			// As expected dust balance is removed.
 			assert_eq!(Balances::free_balance(&ALICE.into()), 0);
-			assert_eq!(Balances::free_balance(&treasury_account.into()), 25000000000);
+			assert_eq!(Balances::free_balance(&treasury_account.into()), 20 * MILLIBNC + 1);
 
 			assert_eq!(
 				Balances::total_issuance(),
