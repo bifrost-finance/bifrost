@@ -89,7 +89,7 @@ use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
-	traits::{EitherOfDiverse, Get},
+	traits::{Currency, EitherOfDiverse, Get},
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
@@ -130,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 976,
+	spec_version: 978,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -578,15 +578,15 @@ impl pallet_indices::Config for Runtime {
 }
 
 // pallet-treasury did not impl OnUnbalanced<Credit>, need an adapter to handle dust.
-type NegativeImbalance =
-	<Balances as frame_support::traits::Currency<AccountId>>::NegativeImbalance;
 type CreditOf =
 	frame_support::traits::fungible::Credit<<Runtime as frame_system::Config>::AccountId, Balances>;
 pub struct DustRemovalAdapter;
 impl OnUnbalanced<CreditOf> for DustRemovalAdapter {
 	fn on_nonzero_unbalanced(amount: CreditOf) {
-		let new_amount = NegativeImbalance::new(amount.peek());
-		Treasury::on_nonzero_unbalanced(new_amount);
+		let _ = <Balances as Currency<AccountId>>::deposit_creating(
+			&TreasuryPalletId::get().into_account_truncating(),
+			amount.peek(),
+		);
 	}
 }
 
