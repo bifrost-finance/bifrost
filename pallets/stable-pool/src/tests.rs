@@ -261,8 +261,34 @@ fn get_swap_output_amount() {
 		let swap_out = StableAsset::get_swap_output_amount(0, 0, 1, 5000000u128);
 		log::debug!("swap_out{:?}StableAsset::pools(0){:?}", swap_out, StableAsset::pools(0));
 		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
-		// assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0,
-		// 2));
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 1, 1, 5000000u128, 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 3, 0, 1, 5000000u128, 0),
+			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 2, 1, 5000000u128, 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 0, 2, 5000000u128, 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 0, 1, 0u128, 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 50000000000000000u128),
+			Error::<Test>::SwapUnderMin
+		);
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 0, 1, 500000000u128, 0u128),
+			orml_tokens::Error::<Test>::BalanceTooLow
+		);
 		assert_eq!(
 			StableAsset::pools(0),
 			Some(StableAssetPoolInfo {
@@ -365,7 +391,7 @@ fn mint_swap_redeem1() {
 		// log::debug!("===pools{:?}", StableAsset::pools(0));
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			Error::<Test>::NotNullable
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 15_000_000_000_000u128, vec![0, 0]));
 		log::debug!(
@@ -424,7 +450,28 @@ fn mint_swap_redeem2() {
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			Error::<Test>::NotNullable
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+		);
+		assert_noop!(
+			StablePool::redeem_proportion_inner(&3, 0, 0u128, vec![0u128, 0u128]),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0, 0, 0]),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+		);
+		assert_noop!(
+			StablePool::redeem_proportion_inner(
+				&3,
+				0,
+				15_000_000u128,
+				vec![100000000000000000u128, 0]
+			),
+			nutsfinance_stable_asset::Error::<Test>::RedeemUnderMin
+		);
+		assert_noop!(
+			StablePool::redeem_proportion_inner(&3, 3, 15_000_000u128, vec![0, 0]),
+			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
 		);
 		assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
 		// assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 30_500_608, vec![0, 0]));
@@ -491,7 +538,7 @@ fn mint_swap_redeem_for_precisions() {
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			Error::<Test>::NotNullable
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
 
@@ -577,6 +624,54 @@ fn redeem_single() {
 			0,
 			2
 		));
+		assert_noop!(
+			StablePool::redeem_single(RuntimeOrigin::signed(6), 0, 0u128, 0, 0u128, 2),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::redeem_single(
+				RuntimeOrigin::signed(6),
+				0,
+				1000000000000000000u128,
+				0,
+				0u128,
+				2
+			),
+			nutsfinance_stable_asset::Error::<Test>::Math
+		);
+		assert_noop!(
+			StablePool::redeem_single(
+				RuntimeOrigin::signed(6),
+				0,
+				5_000_000_000u128,
+				0,
+				6_000_000_000u128,
+				2
+			),
+			nutsfinance_stable_asset::Error::<Test>::RedeemUnderMin
+		);
+		assert_noop!(
+			StablePool::redeem_single(
+				RuntimeOrigin::signed(6),
+				0,
+				100000000000000000u128,
+				3,
+				0u128,
+				2
+			),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			StablePool::redeem_single(
+				RuntimeOrigin::signed(6),
+				3,
+				100000000000000000u128,
+				3,
+				0u128,
+				2
+			),
+			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+		);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 204_955_833_377);
 		assert_eq!(Tokens::free_balance(coin0, &6), 904_942_938_280);
 		assert_eq!(Tokens::free_balance(coin1, &6), 900_000_000_000u128);
@@ -632,11 +727,53 @@ fn redeem_multi() {
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (10, 11))]
 		));
+
+		assert_noop!(
+			StablePool::add_liquidity(
+				RuntimeOrigin::signed(6),
+				0,
+				amounts.clone(),
+				2000000000000000000000000u128
+			),
+			Error::<Test>::MintUnderMin
+		);
+		let amounts2 = vec![10000000u128, 20000000u128, 20000000u128];
+		assert_noop!(
+			StablePool::add_liquidity(RuntimeOrigin::signed(1), 0, amounts2.clone(), 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+		);
+		assert_noop!(
+			StablePool::add_liquidity(RuntimeOrigin::signed(1), 3, amounts2, 0),
+			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+		);
+		let amounts_has_zero = vec![0u128, 20000000u128];
+		assert_noop!(
+			StablePool::add_liquidity(RuntimeOrigin::signed(1), 0, amounts_has_zero, 0),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
 		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
 		assert_eq!(Tokens::free_balance(coin0, &6), 900_000_000_000u128);
 		assert_eq!(Tokens::free_balance(coin1, &6), 900_000_000_000u128);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 209_955_833_377);
 
+		assert_noop!(
+			StablePool::redeem_multi(
+				RuntimeOrigin::signed(1),
+				0,
+				vec![200_000_000_000u128, 200_000_000_000u128],
+				1100000000000000000u128,
+			),
+			nutsfinance_stable_asset::Error::<Test>::Math
+		);
+		assert_noop!(
+			StablePool::redeem_multi(
+				RuntimeOrigin::signed(1),
+				0,
+				vec![20_000_000_000u128, 20_000_000_000u128],
+				1_000_000_000u128,
+			),
+			Error::<Test>::RedeemOverMax
+		);
 		assert_ok!(StablePool::redeem_multi(
 			RuntimeOrigin::signed(6).into(),
 			0,

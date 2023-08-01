@@ -117,13 +117,9 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
 		NotSupportTokenType,
-		PoolNotExist,
-		NotNullable,
-		CantBeZero,
 		Math,
 		CantScaling,
 		SwapUnderMin,
-		RedeemUnderMin,
 		MintUnderMin,
 		CantMint,
 		RedeemOverMax,
@@ -333,19 +329,22 @@ impl<T: Config> Pallet<T> {
 		mut amounts: Vec<T::Balance>,
 		min_mint_amount: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		let amounts_old = amounts.clone();
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
 				*amount,
 				pool_id,
-				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+				*pool_info
+					.assets
+					.get(i as usize)
+					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let MintResult { mint_amount, fee_amount, balances, total_supply } =
-			T::StableAsset::get_mint_amount(pool_id, &amounts).ok_or(Error::<T>::CantBeZero)?;
-
+			nutsfinance_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 		let a = T::StableAsset::get_a(
 			pool_info.a,
 			pool_info.a_block,
@@ -363,7 +362,10 @@ impl<T: Config> Pallet<T> {
 					Self::downscale(
 						*amount,
 						pool_id,
-						*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+						*pool_info
+							.assets
+							.get(i as usize)
+							.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 					)?,
 				Error::<T>::CantMint
 			);
@@ -414,31 +416,40 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		min_redeem_amounts: Vec<T::Balance>,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-
+		ensure!(
+			min_redeem_amounts.len() == pool_info.assets.len(),
+			nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch
+		);
 		let RedeemProportionResult {
 			mut amounts,
 			balances,
 			fee_amount,
 			total_supply,
 			redeem_amount,
-		} = T::StableAsset::get_redeem_proportion_amount(&pool_info, amount)
-			.ok_or(Error::<T>::CantBeZero)?;
+		} = nutsfinance_stable_asset::Pallet::<T>::get_redeem_proportion_amount(&pool_info, amount)?;
 
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::downscale(
 				*amount,
 				pool_id,
-				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+				*pool_info
+					.assets
+					.get(i as usize)
+					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 
 		let zero = Zero::zero();
 		for i in 0..amounts.len() {
 			ensure!(
-				amounts[i] >= *min_redeem_amounts.get(i as usize).ok_or(Error::<T>::NotNullable)?,
-				Error::<T>::RedeemUnderMin
+				amounts[i] >=
+					*min_redeem_amounts
+						.get(i as usize)
+						.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				nutsfinance_stable_asset::Error::<T>::RedeemUnderMin
 			);
 			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.assets[i],
@@ -500,14 +511,18 @@ impl<T: Config> Pallet<T> {
 		amounts: Vec<T::Balance>,
 		max_redeem_amount: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let mut new_amounts = amounts.clone();
 		for (i, amount) in new_amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
 				*amount,
 				pool_id,
-				*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+				*pool_info
+					.assets
+					.get(i as usize)
+					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 		let RedeemMultiResult { redeem_amount, fee_amount, balances, total_supply, burn_amount } =
@@ -527,10 +542,6 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 		for (idx, amount) in amounts.iter().enumerate() {
-			// *amount = Self::downscale(
-			// 	*amount,
-			// 	*pool_info.assets.get(idx as usize).ok_or(Error::<T>::NotNullable)?,
-			// )?;
 			if *amount > zero {
 				<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 					pool_info.assets[idx],
@@ -597,7 +608,10 @@ impl<T: Config> Pallet<T> {
 		dy = Self::downscale(
 			dy,
 			pool_id,
-			*pool_info.assets.get(i as usize).ok_or(Error::<T>::NotNullable)?,
+			*pool_info
+				.assets
+				.get(i as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		let i_usize = i as usize;
 		let pool_size = pool_info.assets.len();
@@ -606,7 +620,7 @@ impl<T: Config> Pallet<T> {
 			asset_length_usize == pool_size,
 			nutsfinance_stable_asset::Error::<T>::ArgumentsError
 		);
-		ensure!(dy >= min_redeem_amount, Error::<T>::RedeemUnderMin);
+		ensure!(dy >= min_redeem_amount, nutsfinance_stable_asset::Error::<T>::RedeemUnderMin);
 		if fee_amount > Zero::zero() {
 			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
@@ -677,21 +691,32 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		min_dy: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let dx = Self::upscale(
 			amount,
 			pool_id,
-			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
+			*pool_info
+				.assets
+				.get(currency_id_in as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
-		// let amount_out
 		let SwapResult { dx: _, dy, y, balance_i } =
-			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
-				.ok_or(Error::<T>::CantBeZero)?;
+			nutsfinance_stable_asset::Pallet::<T>::get_swap_amount(
+				&pool_info,
+				currency_id_in,
+				currency_id_out,
+				dx,
+			)?;
+
 		let downscale_out = Self::downscale(
-			dy, // TODO
+			dy,
 			pool_id,
-			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
+			*pool_info
+				.assets
+				.get(currency_id_out as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
@@ -776,7 +801,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn calculate_scaling(
-		amount: AtLeast64BitUnsignedOf<T>, // T::Balance,
+		amount: AtLeast64BitUnsignedOf<T>,
 		numerator: AtLeast64BitUnsignedOf<T>,
 		denominator: AtLeast64BitUnsignedOf<T>,
 	) -> T::Balance {
@@ -799,20 +824,30 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
-		let mut pool_info = T::StableAsset::pool(pool_id).ok_or(Error::<T>::PoolNotExist)?;
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let dx = Self::upscale(
 			amount,
 			pool_id,
-			*pool_info.assets.get(currency_id_in as usize).ok_or(Error::<T>::NotNullable)?,
+			*pool_info
+				.assets
+				.get(currency_id_in as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
-		let SwapResult { dx: _, dy, .. } =
-			T::StableAsset::get_swap_output_amount(pool_id, currency_id_in, currency_id_out, dx)
-				.ok_or(Error::<T>::CantBeZero)?;
+		let SwapResult { dx: _, dy, .. } = nutsfinance_stable_asset::Pallet::<T>::get_swap_amount(
+			&pool_info,
+			currency_id_in,
+			currency_id_out,
+			dx,
+		)?;
 		let downscale_out = Self::downscale(
 			dy,
 			pool_id,
-			*pool_info.assets.get(currency_id_out as usize).ok_or(Error::<T>::NotNullable)?,
+			*pool_info
+				.assets
+				.get(currency_id_out as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 
 		Ok(downscale_out)
