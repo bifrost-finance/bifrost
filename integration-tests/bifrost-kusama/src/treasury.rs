@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::assert_ok;
-use sp_runtime::{traits::AccountIdConversion, AccountId32};
+use sp_runtime::{traits::AccountIdConversion, AccountId32, BoundedVec};
 use xcm_emulator::TestExt;
 
 use crate::{
@@ -79,6 +79,7 @@ fn bifrost_treasury_operations() {
 				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account.clone()),
 				RelayCurrencyId::get(),
 				25_000_000_000_000_000,
+				BoundedVec::default()
 			));
 
 			assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::create_pair(
