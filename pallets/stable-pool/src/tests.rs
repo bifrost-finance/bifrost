@@ -27,7 +27,7 @@ fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin1 = VDOT;
 	let pool_asset = LP_KSM_BNC;
 
-	assert_ok!(StableAsset::create_pool(
+	assert_ok!(StablePool::create_pool(
 		RuntimeOrigin::signed(1),
 		pool_asset,
 		vec![coin0, coin1],
@@ -48,7 +48,7 @@ fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin1 = VDOT;
 	let pool_asset = LP_KSM_BNC;
 
-	assert_ok!(StableAsset::create_pool(
+	assert_ok!(StablePool::create_pool(
 		RuntimeOrigin::signed(1),
 		pool_asset,
 		vec![coin0, coin1],
@@ -96,7 +96,7 @@ fn create_pool_successful() {
 		let coin0 = DOT;
 		let coin1 = VDOT;
 		assert_eq!(StableAsset::pool_count(), 0);
-		assert_ok!(StableAsset::create_pool(
+		assert_ok!(StablePool::create_pool(
 			RuntimeOrigin::signed(1),
 			LP_KSM_BNC,
 			vec![coin0, coin1],

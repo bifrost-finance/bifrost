@@ -112,18 +112,10 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
-		NotSupportTokenType,
-		Math,
-		CantScaling,
 		SwapUnderMin,
 		MintUnderMin,
 		CantMint,
 		RedeemOverMax,
-		TokenRateNotCleared,
 		TokenRateNotSet,
 	}
 
@@ -351,7 +343,7 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(Error::<T>::Math)?;
+		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
 		ensure!(mint_amount >= min_mint_amount, Error::<T>::MintUnderMin);
 		for (i, amount) in amounts.iter().enumerate() {
 			if *amount == Zero::zero() {
@@ -488,7 +480,7 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(Error::<T>::Math)?;
+		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
 		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
 			nutsfinance_stable_asset::Event::<T>::RedeemedProportion {
 				redeemer: who.clone(),
@@ -570,7 +562,7 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(Error::<T>::Math)?;
+		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
 		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
 			nutsfinance_stable_asset::Event::<T>::RedeemedMulti {
 				redeemer: who.clone(),
@@ -665,7 +657,7 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(Error::<T>::Math)?;
+		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
 		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
 			nutsfinance_stable_asset::Event::<T>::RedeemedSingle {
 				redeemer: who.clone(),
@@ -749,7 +741,7 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(Error::<T>::Math)?;
+		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
 		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
 			nutsfinance_stable_asset::Event::<T>::TokenSwapped {
 				swapper: who.clone(),
