@@ -284,12 +284,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 			Ok(Origin::Fellowship7Dan | Origin::FellowshipMasters) => Ok(7),
 			Ok(Origin::Fellowship8Dan) => Ok(8),
 			Ok(Origin::Fellowship9Dan) => Ok(9),
-			Ok(Origin::AssetRegistryAdmin) => Ok(6),
-			Ok(Origin::FarmingAdmin) => Ok(6),
-			Ok(Origin::FeeShareAdmin) => Ok(3),
-			Ok(Origin::SystemMakerAdmin) => Ok(3),
-			Ok(Origin::ValidatorElection) => Ok(3),
-			Ok(Origin::VtokenMintingAdmin) => Ok(3),
+			Ok(Origin::CoreAdmin) => Ok(6),
+			Ok(Origin::TechAdmin) => Ok(3),
 			_ => Err(()),
 		}
 	}
