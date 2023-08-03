@@ -73,7 +73,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 				percent(50),
 				percent(100),
 			),
-			min_support: Curve::make_reciprocal(1, 28, percent(20), percent(5), percent(50)),
+			min_support: Curve::make_reciprocal(1, 28, percent(8), percent(2), percent(50)),
 		},
 	),
 	(
