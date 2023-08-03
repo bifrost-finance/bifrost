@@ -1242,9 +1242,9 @@ pub mod pallet {
 						if exit_account_balance < idx_record_amount {
 							match redeem_type {
 								RedeemType::Native => {},
-								RedeemType::Astar |
+								RedeemType::Astar(_) |
 								RedeemType::Moonbeam(_) |
-								RedeemType::Hydradx => break,
+								RedeemType::Hydradx(_) => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
@@ -1258,14 +1258,14 @@ pub mod pallet {
 									deduct_amount,
 								)?;
 							},
-							RedeemType::Astar => {
+							RedeemType::Astar(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_astar_parachain_id()),
 										AccountId32 {
 											network: None,
-											id: user_account.encode().try_into().unwrap(),
+											id: receiver.encode().try_into().unwrap(),
 										},
 									),
 								};
@@ -1277,14 +1277,14 @@ pub mod pallet {
 									Unlimited,
 								)?;
 							},
-							RedeemType::Hydradx => {
+							RedeemType::Hydradx(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
 										AccountId32 {
 											network: None,
-											id: user_account.encode().try_into().unwrap(),
+											id: receiver.encode().try_into().unwrap(),
 										},
 									),
 								};
@@ -1296,14 +1296,14 @@ pub mod pallet {
 									Unlimited,
 								)?;
 							},
-							RedeemType::Moonbeam(evm_caller) => {
+							RedeemType::Moonbeam(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_moonbeam_parachain_id()),
 										AccountKey20 {
 											network: None,
-											key: evm_caller.to_fixed_bytes(),
+											key: receiver.to_fixed_bytes(),
 										},
 									),
 								};

@@ -145,7 +145,7 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit, RedeemType)>;
+	) -> Option<(AccountId, Balance, TimeUnit, RedeemType<AccountId>)>;
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
@@ -318,11 +318,11 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> DispatchResultWithPostInfo;
-	fn xcm_action_redeem(
+	fn slpx_redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
-		redeem: RedeemType,
+		redeem: RedeemType<AccountId>,
 	) -> DispatchResultWithPostInfo;
 	fn token_to_vtoken(
 		token_id: CurrencyId,

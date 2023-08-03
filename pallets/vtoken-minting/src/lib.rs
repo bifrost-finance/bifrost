@@ -275,7 +275,7 @@ pub mod pallet {
 		CurrencyIdOf<T>,
 		Blake2_128Concat,
 		UnlockId,
-		(T::AccountId, BalanceOf<T>, TimeUnit, RedeemType),
+		(T::AccountId, BalanceOf<T>, TimeUnit, RedeemType<AccountIdOf<T>>),
 		OptionQuery,
 	>;
 
@@ -879,7 +879,7 @@ pub mod pallet {
 			mut unlock_amount: BalanceOf<T>,
 			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
-			redeem_type: RedeemType,
+			redeem_type: RedeemType<AccountIdOf<T>>,
 		) -> DispatchResult {
 			let ed = T::MultiCurrency::minimum_balance(token_id);
 			let mut account_to_send = account.clone();
@@ -944,14 +944,14 @@ pub mod pallet {
 				)?;
 				match redeem_type {
 					RedeemType::Native => {},
-					RedeemType::Astar => {
+					RedeemType::Astar(receiver) => {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
 								Parachain(T::AstarParachainId::get()),
 								AccountId32 {
 									network: None,
-									id: account.encode().try_into().unwrap(),
+									id: receiver.encode().try_into().unwrap(),
 								},
 							),
 						};
@@ -963,14 +963,14 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
-					RedeemType::Hydradx => {
+					RedeemType::Hydradx(receiver) => {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
 								Parachain(T::HydradxParachainId::get()),
 								AccountId32 {
 									network: None,
-									id: account.encode().try_into().unwrap(),
+									id: receiver.encode().try_into().unwrap(),
 								},
 							),
 						};
@@ -982,12 +982,12 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
-					RedeemType::Moonbeam(evm_caller) => {
+					RedeemType::Moonbeam(receiver) => {
 						let dest = MultiLocation {
 							parents: 1,
 							interior: X2(
 								Parachain(T::MoonbeamParachainId::get()),
-								AccountKey20 { network: None, key: evm_caller.to_fixed_bytes() },
+								AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 							),
 						};
 						if token_id == FIL {
@@ -1016,7 +1016,7 @@ pub mod pallet {
 				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar | RedeemType::Moonbeam(_) | RedeemType::Hydradx => {
+					RedeemType::Astar(_) | RedeemType::Moonbeam(_) | RedeemType::Hydradx(_) => {
 						return Ok(());
 					},
 					RedeemType::Native => {},
@@ -1231,7 +1231,7 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-			redeem_type: RedeemType,
+			redeem_type: RedeemType<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let token_id = T::CurrencyIdConversion::convert_to_token(vtoken_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
@@ -1566,7 +1566,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType)> {
+	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType<AccountIdOf<T>>)> {
 		Self::token_unlock_ledger(currency_id, index)
 	}
 
@@ -1601,11 +1601,11 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
 	}
 
-	fn xcm_action_redeem(
+	fn slpx_redeem(
 		exchanger: AccountIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
-		redeem_type: RedeemType,
+		redeem_type: RedeemType<AccountIdOf<T>>,
 	) -> DispatchResultWithPostInfo {
 		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, redeem_type)
 	}

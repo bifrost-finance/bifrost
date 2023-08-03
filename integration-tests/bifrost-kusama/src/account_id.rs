@@ -1,6 +1,6 @@
 use crate::kusama_integration_tests::*;
 use frame_support::PalletId;
-use polkadot_parachain::primitives::Id as ParaId;
+use polkadot_parachain::primitives::{Id as ParaId, Sibling};
 use sp_runtime::{app_crypto::Ss58Codec, traits::AccountIdConversion};
 
 pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"bf/trsry");
@@ -36,6 +36,12 @@ fn parachain_account_should_work() {
 				2030
 			)),
 			AccountId::from_ss58check("eGJryu57ZpFQjFRiya9nGcqiGG2RZeGWuXMENq4Na7jFNjs").unwrap()
+		);
+		assert_eq!(
+			<Sibling as AccountIdConversion<AccountId>>::into_account_truncating(&Sibling::from(
+				2034
+			)),
+			AccountId::from_ss58check("eLHN5PtznDscogoZVS9feWwMGaziRRryQ451m1ocUHB1cMe").unwrap()
 		);
 	})
 }

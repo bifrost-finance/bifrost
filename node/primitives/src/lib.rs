@@ -208,18 +208,18 @@ impl PartialOrd for TimeUnit {
 #[derive(
 	PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, scale_info::TypeInfo,
 )]
-pub enum RedeemType {
+pub enum RedeemType<AccountId> {
 	/// Native chain.
 	Native,
 	/// Astar chain.
-	Astar,
+	Astar(AccountId),
 	/// Moonbeam chain.
 	Moonbeam(H160),
 	/// Hydradx chain.
-	Hydradx,
+	Hydradx(AccountId),
 }
 
-impl Default for RedeemType {
+impl<AccountId> Default for RedeemType<AccountId> {
 	fn default() -> Self {
 		Self::Native
 	}
