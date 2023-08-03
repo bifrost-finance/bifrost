@@ -25,7 +25,10 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, inherent::Vec, traits:
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
+use sp_runtime::{
+	traits::{AccountIdConversion, Saturating, Zero},
+	BoundedVec,
+};
 pub use types::*;
 pub use RoundIndex;
 #[cfg(test)]
@@ -539,7 +542,12 @@ impl<T: Config> Pallet<T> {
 			// Deposit mint_amount ksm to pallet_account
 			T::MultiCurrency::deposit(token_id, &account, mint_amount)?;
 			// Change ksm mint to vksm
-			T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount)?;
+			T::VtokenMintingInterface::mint(
+				account.clone(),
+				token_id,
+				mint_amount,
+				BoundedVec::default(),
+			)?;
 
 			//Update system_shadow_amount += mint_amount
 			token_info.system_shadow_amount =

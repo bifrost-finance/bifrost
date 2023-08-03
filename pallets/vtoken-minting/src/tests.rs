@@ -27,7 +27,7 @@ use node_primitives::currency::{BNC, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR};
 #[test]
 fn mint_bnc() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 95000000000, BoundedVec::default()));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			RuntimeOrigin::signed(ALICE),
 			BNC,
@@ -47,7 +47,7 @@ fn redeem_bnc() {
 		// AssetIdMaps::<Runtime>::register_vtoken_metadata(TokenSymbol::BNC)
 		// 	.expect("VToken register");
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), BNC, 0));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), BNC, 100000000000, BoundedVec::default()));
 		assert_ok!(VtokenMinting::set_unlock_duration(
 			RuntimeOrigin::signed(ALICE),
 			BNC,
@@ -67,12 +67,22 @@ fn mint() {
 		pub const FEE: Permill = Permill::from_percent(5);
 		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 		assert_noop!(
-			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
+			VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()),
 			Error::<Runtime>::BelowMinimumMint
 		);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100000000000));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 100000000000000000000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100000000000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(BOB).into(),
+			MOVR,
+			100000000000000000000,
+			BoundedVec::default()
+		));
+		assert_ok!(VtokenMinting::mint(
+			Some(BOB).into(),
+			MOVR,
+			100000000000000000000,
+			BoundedVec::default()
+		));
 		assert_eq!(VtokenMinting::token_pool(MOVR), 190000000000000000000);
 		assert_eq!(VtokenMinting::token_pool(KSM), 95000000000);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 200);
@@ -98,7 +108,7 @@ fn redeem() {
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
 		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), VKSM, 90));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000, BoundedVec::default()));
 		assert_noop!(
 			VtokenMinting::redeem(Some(BOB).into(), VKSM, 80),
 			Error::<Runtime>::BelowMinimumRedeem
@@ -117,7 +127,12 @@ fn redeem() {
 			TimeUnit::Round(1)
 		));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(MOVR, TimeUnit::Round(1)));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 300000000000000000000));
+		assert_ok!(VtokenMinting::mint(
+			Some(BOB).into(),
+			MOVR,
+			300000000000000000000,
+			BoundedVec::default()
+		));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VMOVR, 20000000000000000000));
 		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), MOVR));
 		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), MOVR, 19000000000000000000));
@@ -168,8 +183,8 @@ fn rebond() {
 		assert_ok!(ledger_list_origin.try_push(0));
 		let mut ledger_list_origin2 = BoundedVec::default();
 		assert_ok!(ledger_list_origin2.try_push(0));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
 		assert_eq!(
@@ -220,7 +235,12 @@ fn movr() {
 			TimeUnit::Round(1)
 		));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(MOVR, TimeUnit::Round(1)));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), MOVR, 300000000000000000000));
+		assert_ok!(VtokenMinting::mint(
+			Some(BOB).into(),
+			MOVR,
+			300000000000000000000,
+			BoundedVec::default()
+		));
 		assert_eq!(Tokens::free_balance(MOVR, &entrance_account), 294000000000000000000);
 		assert_eq!(Tokens::free_balance(VMOVR, &BOB), 294000000000000000000);
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VMOVR, 200000000000000000000));
@@ -234,7 +254,12 @@ fn movr() {
 		assert_eq!(VtokenMinting::ongoing_time_unit(MOVR), Some(TimeUnit::Round(1)));
 		assert_eq!(Tokens::free_balance(MOVR, &BOB), 984200000000000000000);
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 0), None);
-		assert_ok!(VtokenMinting::mint(Some(CHARLIE).into(), MOVR, 30000000000000000000000));
+		assert_ok!(VtokenMinting::mint(
+			Some(CHARLIE).into(),
+			MOVR,
+			30000000000000000000000,
+			BoundedVec::default()
+		));
 		assert_ok!(VtokenMinting::redeem(Some(CHARLIE).into(), VMOVR, 20000000000000000000000));
 		assert_ok!(VtokenMinting::add_support_rebond_token(RuntimeOrigin::signed(ALICE), MOVR));
 		assert_eq!(VtokenMinting::token_unlock_ledger(MOVR, 0), None);
@@ -267,8 +292,8 @@ fn hook() {
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(KSM), TimeUnit::Era(4));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 300); // 200 + 100
@@ -295,7 +320,7 @@ fn hook() {
 		VtokenMinting::on_initialize(1);
 		assert_eq!(VtokenMinting::min_time_unit(KSM), TimeUnit::Era(6));
 		assert_eq!(VtokenMinting::unlocking_total(KSM), 0);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 		VtokenMinting::on_initialize(0);
 		assert_eq!(
@@ -331,8 +356,8 @@ fn rebond_by_unlock_id() {
 		assert_ok!(ledger_list_origin.try_push(1));
 		let mut ledger_list_origin2 = BoundedVec::default();
 		assert_ok!(ledger_list_origin2.try_push(1));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
 		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
@@ -392,8 +417,8 @@ fn fast_redeem_for_fil() {
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(FIL), TimeUnit::Kblock(4));
 		assert_ok!(VtokenMinting::increase_token_pool(FIL, 1000));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 200));
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 200, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 100));
 		assert_eq!(VtokenMinting::unlocking_total(FIL), 300); // 200 + 100
@@ -420,7 +445,7 @@ fn fast_redeem_for_fil() {
 		VtokenMinting::on_initialize(1);
 		assert_eq!(VtokenMinting::min_time_unit(FIL), TimeUnit::Kblock(6));
 		assert_eq!(VtokenMinting::unlocking_total(FIL), 0);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 100));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), FIL, 100, BoundedVec::default()));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 200));
 		VtokenMinting::on_initialize(0);
 		assert_eq!(

@@ -27,8 +27,8 @@ use frame_support::{
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
-	DispatchResult,
+	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize},
+	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
@@ -311,6 +311,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		exchanger: AccountId,
 		token_id: CurrencyId,
 		token_amount: Balance,
+		remark: BoundedVec<u8, ConstU32<32>>,
 	) -> DispatchResultWithPostInfo;
 	fn redeem(
 		exchanger: AccountId,

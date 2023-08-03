@@ -253,6 +253,7 @@ pub mod pallet {
 			evm_caller: H160,
 			currency_id: CurrencyIdOf<T>,
 			support_chain: SupportChain,
+			remark: BoundedVec<u8, ConstU32<32>>,
 		) -> DispatchResultWithPostInfo {
 			let evm_contract_account_id = ensure_signed(origin)?;
 			let mut evm_caller_account_id = Self::h160_to_account_id(evm_caller);
@@ -271,6 +272,7 @@ pub mod pallet {
 				evm_caller_account_id.clone(),
 				currency_id,
 				token_amount,
+				remark,
 			) {
 				Ok(_) => {
 					// success

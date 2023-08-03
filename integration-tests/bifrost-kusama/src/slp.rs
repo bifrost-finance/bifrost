@@ -413,7 +413,8 @@ fn vtoken_minting() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 			// alice account should have 99.9 vKSM
 			assert_eq!(
@@ -451,7 +452,8 @@ fn transfer_to() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 
 			assert_ok!(Slp::transfer_to(
@@ -830,7 +832,8 @@ fn delegate_works() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 
 			assert_ok!(Slp::bond(
