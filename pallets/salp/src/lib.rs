@@ -29,6 +29,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{QueryId, Response};
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use node_primitives::{
@@ -177,6 +178,8 @@ pub mod pallet {
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
 		type ParachainId: Get<cumulus_primitives_core::ParaId>;
+
+		type StablePool: StablePoolHandler<Balance = BalanceOf<Self>, AccountId = AccountIdOf<Self>>;
 	}
 
 	#[pallet::pallet]

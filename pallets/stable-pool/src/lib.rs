@@ -28,6 +28,7 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 pub use weights::*;
+pub mod traits;
 
 use frame_support::{
 	pallet_prelude::*,
@@ -58,10 +59,6 @@ pub type AssetIdOf<T> = <T as Config>::CurrencyId;
 
 #[allow(type_alias_bounds)]
 pub type AtLeast64BitUnsignedOf<T> = <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned;
-
-// #[allow(type_alias_bounds)]
-// pub type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -168,7 +165,6 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::add_liquidity())]
-		#[transactional]
 		pub fn add_liquidity(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -181,7 +177,6 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::swap())]
-		#[transactional]
 		pub fn swap(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -209,7 +204,6 @@ pub mod pallet {
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_single())]
-		#[transactional]
 		pub fn redeem_single(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
@@ -315,6 +309,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	#[transactional]
 	fn mint_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
@@ -497,6 +492,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	#[transactional]
 	fn redeem_multi_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
@@ -579,6 +575,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	#[transactional]
 	fn redeem_single_inner(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,
@@ -675,6 +672,7 @@ impl<T: Config> Pallet<T> {
 		Ok((amount, dy))
 	}
 
+	#[transactional]
 	fn on_swap(
 		who: &AccountIdOf<T>,
 		pool_id: StableAssetPoolId,

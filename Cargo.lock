@@ -1182,6 +1182,7 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-stable-pool",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",

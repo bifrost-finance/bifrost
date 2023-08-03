@@ -27,6 +27,7 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branc
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.42" }
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.42" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot",default-features = false , branch = "release-v0.9.42" }
+bifrost-stable-pool = { path = "../stable-pool", default-features = false }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
@@ -61,6 +62,7 @@ std = [
 	"cumulus-primitives-core/std",
 	"pallet-xcm/std",
 	"xcm/std",
+	"bifrost-stable-pool/std",
 ]
 
 runtime-benchmarks = [
