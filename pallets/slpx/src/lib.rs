@@ -95,7 +95,7 @@ pub enum SupportChain {
 	TypeInfo,
 )]
 pub enum TargetChain<AccountId> {
-	Astar(AccountId),
+	Astar(H160),
 	Moonbeam(H160),
 	Hydradx(AccountId),
 }
@@ -392,7 +392,10 @@ pub mod pallet {
 			let vtoken_amount = Self::charge_execution_fee(vtoken_id, &evm_caller_account_id)?;
 
 			let redeem_type = match target_chain.clone() {
-				TargetChain::Astar(receiver) => RedeemType::Astar(receiver),
+				TargetChain::Astar(receiver) => {
+					let receiver = Self::h160_to_account_id(receiver);
+					RedeemType::Astar(receiver)
+				},
 				TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
 				TargetChain::Hydradx(receiver) => RedeemType::Hydradx(receiver),
 			};
@@ -576,6 +579,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		match target_chain {
 			TargetChain::Astar(receiver) => {
+				let receiver = Self::h160_to_account_id(*receiver);
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
