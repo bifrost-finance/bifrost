@@ -471,6 +471,7 @@ impl bifrost_salp::Config for Test {
 	type ParachainId = ParaInfo;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type StablePool = ();
 }
 
 parameter_types! {

@@ -179,7 +179,7 @@ pub mod pallet {
 
 		type ParachainId: Get<cumulus_primitives_core::ParaId>;
 
-		type StablePool: StablePoolHandler<Balance = BalanceOf<Self>, AccountId = AccountIdOf<Self>>;
+		type StablePool: StablePoolHandler;
 	}
 
 	#[pallet::pallet]

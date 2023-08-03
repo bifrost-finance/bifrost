@@ -18,7 +18,6 @@
 
 //! traits for stable-pool
 use crate::*;
-use sp_runtime::AccountId32;
 
 pub trait StablePoolHandler {
 	type Balance;
@@ -119,8 +118,8 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 }
 
 impl StablePoolHandler for () {
-	type Balance = u128;
-	type AccountId = AccountId32;
+	type Balance = ();
+	type AccountId = ();
 
 	fn add_liquidity(
 		_who: Self::AccountId,
@@ -150,7 +149,7 @@ impl StablePoolHandler for () {
 		_min_redeem_amount: Self::Balance,
 		_asset_length: u32,
 	) -> Result<(Self::Balance, Self::Balance), DispatchError> {
-		Ok((0, 0))
+		Ok(((), ()))
 	}
 
 	fn redeem_multi(

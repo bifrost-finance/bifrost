@@ -364,6 +364,7 @@ impl salp::Config for Test {
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type ParachainId = ParaInfo;
+	type StablePool = ();
 }
 
 parameter_types! {
