@@ -16,10 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate};
+use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate, BoundedVec};
 use nutsfinance_stable_asset::{StableAsset as StableAssetInterface, StableAssetPoolInfo};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
+
 pub const BALANCE_OFF: u128 = 0;
 
 fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
@@ -138,7 +139,7 @@ fn create_pool_successful() {
 fn mint_successful_equal_amounts() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		System::set_block_number(2);
 		assert_ok!(StablePool::edit_token_rate(
@@ -201,7 +202,7 @@ fn mint_successful_equal_amounts() {
 fn swap_successful() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		System::set_block_number(2);
 
@@ -241,7 +242,7 @@ fn swap_successful() {
 fn get_swap_output_amount() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		// assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(VDOT, &BRUCE, &CATHI, 50));
 		// assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 
@@ -328,7 +329,7 @@ fn mint_swap_redeem1() {
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 		));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		// assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(VDOT, &BRUCE, &CATHI, 50));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 
@@ -414,7 +415,7 @@ fn mint_swap_redeem2() {
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 		));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool2();
 
@@ -503,7 +504,7 @@ fn mint_swap_redeem2() {
 fn mint_swap_redeem_for_precisions() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
