@@ -21,7 +21,6 @@ use super::types::{
 	MoonbeamXtokensCall,
 };
 use crate::{
-	agents::MoonbeamSystemCall,
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
@@ -53,7 +52,9 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use xcm::{
+	latest::Weight,
 	opaque::v3::{
+		Instruction,
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation, WeightLimit,
@@ -1014,14 +1015,10 @@ impl<T: Config>
 impl<T: Config> MoonbeamAgent<T> {
 	fn get_moonbeam_para_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
-			MOVR => Ok(MultiLocation {
-				parents: 1,
-				interior: Junctions::X1(Parachain(parachains::moonriver::ID)),
-			}),
-			GLMR => Ok(MultiLocation {
-				parents: 1,
-				interior: Junctions::X1(Parachain(parachains::moonbeam::ID)),
-			}),
+			MOVR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
+			GLMR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
@@ -1070,19 +1067,36 @@ impl<T: Config> MoonbeamAgent<T> {
 		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
+		let query_id = match operation {
+			XcmOperation::Bond |
+			XcmOperation::BondExtra |
+			XcmOperation::Unbond |
+			XcmOperation::Chill |
+			XcmOperation::Rebond |
+			XcmOperation::Undelegate |
+			XcmOperation::CancelLeave |
+			XcmOperation::ExecuteLeave |
+			XcmOperation::Liquidize => T::SubstrateResponseManager::create_query_record(
+				&responder,
+				Some(Pallet::<T>::confirm_delegator_ledger_call()),
+				timeout,
+			),
+			_ => {
+				ensure!(false, Error::<T>::Unsupported);
+				0
+			},
+		};
 
 		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_with_query_id(
-				operation,
-				call,
-				who,
-				query_id,
-				currency_id,
-			)?;
+			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
 
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
+		let xcm_message = Self::construct_xcm_message(
+			call_as_subaccount,
+			fee,
+			weight,
+			currency_id,
+			Some(query_id),
+		)?;
 
 		Ok((query_id, timeout, fee, xcm_message))
 	}
@@ -1094,12 +1108,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		currency_id: CurrencyId,
 	) -> Result<BalanceOf<T>, Error<T>> {
 		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_without_query_id(
-				operation,
-				call,
-				who,
-				currency_id,
-			)?;
+			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
 
 		let xcm_message =
 			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
@@ -1110,40 +1119,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		Ok(fee)
 	}
 
-	fn prepare_send_as_subaccount_call_params_with_query_id(
-		operation: XcmOperation,
-		call: MoonbeamCall<T>,
-		who: &MultiLocation,
-		query_id: QueryId,
-		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		// Temporary wrapping remark event in Moonriver/Moonbeam for ease use of backend service.
-		let remark_call =
-			MoonbeamCall::System(MoonbeamSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
-
-		let call_batched_with_remark =
-			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::BatchAll(Box::new(vec![
-				Box::new(call),
-				Box::new(remark_call),
-			]))));
-
-		let call_as_subaccount =
-			MoonbeamCall::Utility(Box::new(MoonbeamUtilityCall::AsDerivative(
-				sub_account_index,
-				Box::new(call_batched_with_remark),
-			)));
-
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
-	fn prepare_send_as_subaccount_call_params_without_query_id(
+	fn prepare_send_as_subaccount_call(
 		operation: XcmOperation,
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
@@ -1666,6 +1642,43 @@ impl<T: Config> MoonbeamAgent<T> {
 
 		Ok(())
 	}
+
+	fn inner_construct_xcm_message(
+		currency_id: CurrencyId,
+		extra_fee: BalanceOf<T>,
+	) -> Result<Vec<Instruction>, Error<T>> {
+		let multi = Self::get_glmr_local_multilocation(currency_id)?;
+
+		let asset =
+			MultiAsset { id: Concrete(multi), fun: Fungible(extra_fee.unique_saturated_into()) };
+
+		let self_sibling_parachain_account: [u8; 20] =
+			Sibling::from(T::ParachainId::get()).into_account_truncating();
+
+		Ok(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			RefundSurplus,
+			DepositAsset {
+				assets: AllCounted(8).into(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(AccountKey20 {
+						network: None,
+						key: self_sibling_parachain_account,
+					}),
+				},
+			},
+		])
+	}
+
+	fn get_report_transact_status_instruct(query_id: QueryId, max_weight: Weight) -> Instruction {
+		ReportTransactStatus(QueryResponseInfo {
+			destination: MultiLocation::from(X1(Parachain(u32::from(T::ParachainId::get())))),
+			query_id,
+			max_weight,
+		})
+	}
 }
 
 /// Trait XcmBuilder implementation for Moonriver/Moonbeam
@@ -1682,37 +1695,20 @@ impl<T: Config>
 		extra_fee: BalanceOf<T>,
 		weight: XcmWeight,
 		currency_id: CurrencyId,
-		_query_id: Option<QueryId>,
+		query_id: Option<QueryId>,
 	) -> Result<Xcm<()>, Error<T>> {
-		let multi = Self::get_glmr_local_multilocation(currency_id)?;
-
-		let asset = MultiAsset {
-			id: Concrete(multi),
-			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
+		let mut xcm_message = Self::inner_construct_xcm_message(currency_id, extra_fee)?;
+		let transact = Transact {
+			origin_kind: OriginKind::SovereignAccount,
+			require_weight_at_most: weight,
+			call: call.encode().into(),
 		};
-
-		let self_sibling_parachain_account: [u8; 20] =
-			Sibling::from(T::ParachainId::get()).into_account_truncating();
-
-		Ok(Xcm(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: call.encode().into(),
-			},
-			RefundSurplus,
-			DepositAsset {
-				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(AccountKey20 {
-						network: None,
-						key: self_sibling_parachain_account,
-					}),
-				},
-			},
-		]))
+		xcm_message.insert(2, transact);
+		if let Some(query_id) = query_id {
+			let report_transact_status_instruct =
+				Self::get_report_transact_status_instruct(query_id, weight);
+			xcm_message.insert(3, report_transact_status_instruct);
+		}
+		Ok(Xcm(xcm_message))
 	}
 }
