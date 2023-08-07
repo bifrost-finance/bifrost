@@ -107,10 +107,7 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 
 // Governance configurations.
 pub mod governance;
-use governance::{
-	custom_origins, AssetRegistryAdmin, FarmingAdmin, FeeShareAdmin, SALPAdmin, SystemMakerAdmin,
-	SystemStakingAdmin, ValidatorElection, VtokenMintingAdmin,
-};
+use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
@@ -1294,7 +1291,7 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<
-		SALPAdmin,
+		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
 	type XcmInterface = XcmInterface;
@@ -1333,14 +1330,17 @@ impl bifrost_token_issuer::Config for Runtime {
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<
+		CoreAdmin,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type WeightInfo = bifrost_call_switchgear::weights::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type RegisterOrigin = EitherOfDiverse<MoreThanHalfCouncil, AssetRegistryAdmin>;
+	type RegisterOrigin = EitherOfDiverse<MoreThanHalfCouncil, TechAdmin>;
 	type WeightInfo = bifrost_asset_registry::weights::BifrostWeight<Runtime>;
 }
 
@@ -1400,7 +1400,7 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<
-		ValidatorElection,
+		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
 	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
@@ -1424,7 +1424,10 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<
+		CoreAdmin,
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+	>;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
@@ -1438,7 +1441,7 @@ impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<
-		FarmingAdmin,
+		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1461,7 +1464,7 @@ impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<
-		SystemStakingAdmin,
+		CoreAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
 	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
@@ -1477,10 +1480,7 @@ impl bifrost_system_staking::Config for Runtime {
 impl bifrost_system_maker::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<
-		SystemMakerAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
@@ -1494,10 +1494,7 @@ impl bifrost_system_maker::Config for Runtime {
 impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<
-		FeeShareAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
@@ -1622,7 +1619,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<
-		VtokenMintingAdmin,
+		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;

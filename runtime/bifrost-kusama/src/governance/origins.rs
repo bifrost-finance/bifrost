@@ -80,16 +80,10 @@ pub mod custom_origins {
 		Fellowship8Dan,
 		/// Origin commanded by rank 9 of the Polkadot Fellowship and with a success of 9.
 		Fellowship9Dan,
-		/// Origin able to manage AssetRegistry.
-		AssetRegistryAdmin,
-		/// Origin able to manage Farming.
-		FarmingAdmin,
-		/// Origin able to manage FeeShare.
-		FeeShareAdmin,
-		/// Origin able to manage SystemMaker.
-		SystemMakerAdmin,
-		/// Origin able to manage VtokenMinting.
-		VtokenMintingAdmin,
+		/// Origin able to manage Pallet with track3.
+		TechAdmin,
+		/// Origin able to manage Pallet with track6.
+		CoreAdmin,
 	}
 
 	macro_rules! decl_unit_ensures {
@@ -134,11 +128,8 @@ pub mod custom_origins {
 		ValidatorElection,
 		SystemStakingAdmin,
 		SALPAdmin,
-		AssetRegistryAdmin,
-		FarmingAdmin,
-		FeeShareAdmin,
-		SystemMakerAdmin,
-		VtokenMintingAdmin,
+		TechAdmin,
+		CoreAdmin,
 	);
 
 	macro_rules! decl_ensure {
