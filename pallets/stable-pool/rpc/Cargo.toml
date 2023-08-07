@@ -15,4 +15,3 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 bifrost-stable-pool-rpc-runtime-api = { path = "./runtime-api" }
-# nutsfinance-stable-asset = { git = "https://github.com/bifrost-finance/stable-asset", branch = "master", default-features = false }

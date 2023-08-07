@@ -1671,7 +1671,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 	type Balance = Balance;
 	type Assets = Tokens;
 	type PalletId = StableAssetPalletId;
-	type AtLeast64BitUnsigned = u128; // AtLeast64BitUnsigned;
+	type AtLeast64BitUnsigned = u128;
 	type FeePrecision = ConstU128<10_000_000_000>;
 	type APrecision = ConstU128<100>;
 	type PoolAssetLimit = ConstU32<5>;
@@ -1682,7 +1682,6 @@ impl nutsfinance_stable_asset::Config for Runtime {
 }
 
 impl bifrost_stable_pool::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type CurrencyId = CurrencyId;
@@ -1875,7 +1874,7 @@ construct_runtime! {
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Call, Storage, Event<T>} = 128,
-		StablePool: bifrost_stable_pool::{Pallet, Call, Storage, Event<T>} = 129,
+		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
 	}
 }
 
