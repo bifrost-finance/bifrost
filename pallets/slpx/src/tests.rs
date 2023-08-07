@@ -27,7 +27,7 @@ use zenlink_protocol::AssetId;
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
 
 #[test]
-fn test_xcm_action_util() {
+fn test_account_convert_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		let address = H160::from_slice(&EVM_ADDR);
 		let account_id: AccountId = Slpx::h160_to_account_id(address);
@@ -42,11 +42,17 @@ fn test_xcm_action_util() {
 			public_key,
 			hex!("b1c2dde9e562a738e264a554e467b30e5cd58e95ab98459946fb8e518cfe71c2")
 		);
+	});
+}
 
+#[test]
+fn test_whitelist_work() {
+	sp_io::TestExternalities::default().execute_with(|| {
 		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE));
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, BOB));
 		assert_eq!(
 			Slpx::whitelist_account_ids(SupportChain::Astar),
-			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE]).unwrap()
+			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE, BOB]).unwrap()
 		);
 		assert_noop!(
 			Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE),
@@ -59,8 +65,48 @@ fn test_xcm_action_util() {
 		));
 		assert_eq!(
 			Slpx::whitelist_account_ids(SupportChain::Astar),
-			BoundedVec::<AccountId, ConstU32<10>>::default()
+			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![BOB]).unwrap()
 		);
+
+		// Astar && Moonbeam
+		let evm_caller = H160::from_slice(&EVM_ADDR);
+		let target_chain = TargetChain::Astar(evm_caller);
+		let (evm_contract_account_id, evm_caller_account_id) =
+			Slpx::ensure_singer_on_whitelist(RuntimeOrigin::signed(BOB), evm_caller, &target_chain)
+				.unwrap();
+		assert_noop!(
+			Slpx::ensure_singer_on_whitelist(
+				RuntimeOrigin::signed(ALICE),
+				evm_caller,
+				&target_chain
+			),
+			Error::<Test>::AccountIdNotInWhitelist
+		);
+		assert_eq!(evm_contract_account_id, BOB);
+		assert_eq!(evm_caller_account_id, Slpx::h160_to_account_id(evm_caller));
+
+		// Hydradx
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Hydradx, ALICE));
+		let target_chain = TargetChain::Hydradx(ALICE);
+		let (evm_contract_account_id, evm_caller_account_id) = Slpx::ensure_singer_on_whitelist(
+			RuntimeOrigin::signed(ALICE),
+			evm_caller,
+			&target_chain,
+		)
+		.unwrap();
+		assert_noop!(
+			Slpx::ensure_singer_on_whitelist(RuntimeOrigin::signed(BOB), evm_caller, &target_chain),
+			Error::<Test>::AccountIdNotInWhitelist
+		);
+		assert_eq!(evm_contract_account_id, ALICE);
+		assert_eq!(evm_caller_account_id, ALICE);
+	});
+}
+
+#[test]
+fn test_execution_fee_work() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Token2(0), &ALICE, 50));
 
 		assert_ok!(Slpx::set_execution_fee(
 			RuntimeOrigin::signed(ALICE),
@@ -68,6 +114,10 @@ fn test_xcm_action_util() {
 			10
 		));
 		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10));
+
+		let balance_exclude_fee =
+			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
+		assert_eq!(balance_exclude_fee, 40);
 
 		assert_ok!(Slpx::set_transfer_to_fee(
 			RuntimeOrigin::signed(ALICE),
