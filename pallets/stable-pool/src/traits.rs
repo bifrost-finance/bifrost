@@ -31,7 +31,7 @@ pub trait StablePoolHandler {
 	) -> DispatchResult;
 
 	fn swap(
-		who: Self::AccountId,
+		who: &Self::AccountId,
 		pool_id: StableAssetPoolId,
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
@@ -61,6 +61,11 @@ pub trait StablePoolHandler {
 		amount: Self::Balance,
 		min_redeem_amounts: Vec<Self::Balance>,
 	) -> DispatchResult;
+
+	fn get_pool_token_index(
+		pool_id: StableAssetPoolId,
+		currency_id: CurrencyId,
+	) -> Option<PoolTokenIndex>;
 }
 
 impl<T: Config> StablePoolHandler for Pallet<T> {
@@ -77,14 +82,14 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 	}
 
 	fn swap(
-		who: Self::AccountId,
+		who: &Self::AccountId,
 		pool_id: StableAssetPoolId,
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: Self::Balance,
 		min_dy: Self::Balance,
 	) -> DispatchResult {
-		Self::on_swap(&who, pool_id, currency_id_in, currency_id_out, amount, min_dy)
+		Self::on_swap(who, pool_id, currency_id_in, currency_id_out, amount, min_dy)
 	}
 
 	fn redeem_single(
@@ -115,11 +120,23 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 	) -> DispatchResult {
 		Self::redeem_proportion_inner(&who, pool_id, amount, min_redeem_amounts)
 	}
+
+	fn get_pool_token_index(
+		pool_id: StableAssetPoolId,
+		currency_id: CurrencyId,
+	) -> Option<PoolTokenIndex> {
+		let pool_info = Pools::<T>::get(pool_id);
+		pool_info?
+			.assets
+			.iter()
+			.position(|&x| x == currency_id.into())
+			.map(|value| value as u32)
+	}
 }
 
 impl StablePoolHandler for () {
-	type Balance = ();
-	type AccountId = ();
+	type Balance = u128;
+	type AccountId = sp_runtime::AccountId32;
 
 	fn add_liquidity(
 		_who: Self::AccountId,
@@ -131,7 +148,7 @@ impl StablePoolHandler for () {
 	}
 
 	fn swap(
-		_who: Self::AccountId,
+		_who: &Self::AccountId,
 		_pool_id: StableAssetPoolId,
 		_currency_id_in: PoolTokenIndex,
 		_currency_id_out: PoolTokenIndex,
@@ -149,7 +166,7 @@ impl StablePoolHandler for () {
 		_min_redeem_amount: Self::Balance,
 		_asset_length: u32,
 	) -> Result<(Self::Balance, Self::Balance), DispatchError> {
-		Ok(((), ()))
+		Ok((0, 0))
 	}
 
 	fn redeem_multi(
@@ -168,5 +185,12 @@ impl StablePoolHandler for () {
 		_min_redeem_amounts: Vec<Self::Balance>,
 	) -> DispatchResult {
 		Ok(())
+	}
+
+	fn get_pool_token_index(
+		_pool_id: StableAssetPoolId,
+		_currency_id: CurrencyId,
+	) -> Option<PoolTokenIndex> {
+		None
 	}
 }

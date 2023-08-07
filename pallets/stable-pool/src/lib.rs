@@ -43,7 +43,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, TimeUnit, VtokenMintingOperator,
 };
-use nutsfinance_stable_asset::{
+pub use nutsfinance_stable_asset::{
 	MintResult, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,
 };

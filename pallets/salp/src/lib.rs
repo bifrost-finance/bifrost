@@ -29,7 +29,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use bifrost_stable_pool::traits::StablePoolHandler;
+use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
 use cumulus_primitives_core::{QueryId, Response};
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use node_primitives::{
@@ -179,7 +179,7 @@ pub mod pallet {
 
 		type ParachainId: Get<cumulus_primitives_core::ParaId>;
 
-		type StablePool: StablePoolHandler;
+		type StablePool: StablePoolHandler<Balance = BalanceOf<Self>, AccountId = Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -273,6 +273,7 @@ pub mod pallet {
 		ResponderNotRelayChain,
 		/// No contribution record found
 		NotFindContributionValue,
+		ArgumentsError,
 	}
 
 	/// Multisig confirm account
@@ -1151,6 +1152,54 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::Buyback(value));
 
+			Ok(())
+		}
+
+		#[pallet::call_index(21)]
+		#[pallet::weight(T::WeightInfo::buyback())]
+		pub fn buyback_vstoken_by_stable_pool(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			currency_id_in: CurrencyId,
+			#[pallet::compact] value: BalanceOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let relay_currency_id = T::RelayChainToken::get();
+			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			match currency_id_in {
+				cid if cid == relay_currency_id => {
+					T::StablePool::swap(
+						&T::BuybackPalletId::get().into_account_truncating(),
+						pool_id,
+						T::StablePool::get_pool_token_index(pool_id, relay_currency_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						T::StablePool::get_pool_token_index(pool_id, relay_vstoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						value.saturated_into(),
+						Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
+					)?;
+				},
+				cid if cid == relay_vtoken_id => {
+					T::StablePool::swap(
+						&T::BuybackPalletId::get().into_account_truncating(),
+						pool_id,
+						T::StablePool::get_pool_token_index(pool_id, relay_vtoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						T::StablePool::get_pool_token_index(pool_id, relay_vstoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						value.saturated_into(),
+						Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
+					)?;
+				},
+				_ => return Err(Error::<T>::ArgumentsError.into()),
+			}
+
+			Self::deposit_event(Event::<T>::Buyback(value));
 			Ok(())
 		}
 
