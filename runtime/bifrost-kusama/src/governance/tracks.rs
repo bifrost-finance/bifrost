@@ -136,7 +136,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		11,
 		pallet_referenda::TrackInfo {
 			name: "system_staking_admin",
-			max_deciding: 2,
+			max_deciding: 10,
 			decision_deposit: 1_000 * BNCS,
 			prepare_period: 2 * HOURS,
 			decision_period: 14 * DAYS,
@@ -150,7 +150,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		12,
 		pallet_referenda::TrackInfo {
 			name: "salp_admin",
-			max_deciding: 2,
+			max_deciding: 10,
 			decision_deposit: 250 * BNCS,
 			prepare_period: 15 * MINUTES,
 			decision_period: 14 * DAYS,
