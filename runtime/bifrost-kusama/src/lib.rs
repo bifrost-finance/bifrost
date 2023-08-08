@@ -1683,7 +1683,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 }
 
 impl bifrost_stable_pool::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = bifrost_stable_pool::weights::BifrostWeight<Runtime>;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Tokens;
@@ -1874,7 +1874,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
-		StableAsset: nutsfinance_stable_asset::{Pallet, Call, Storage, Event<T>} = 128,
+		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
 	}
 }

@@ -91,7 +91,7 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
 # Nuts Finance
-nutsfinance-stable-asset = { git = "https://github.com/bifrost-finance/stable-asset", branch = "master", default-features = false }
+nutsfinance-stable-asset = { version = "*", default-features = false }
 
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }

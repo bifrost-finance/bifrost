@@ -40,7 +40,7 @@ orml-xtokens = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-nutsfinance-stable-asset = { git = "https://github.com/bifrost-finance/stable-asset", branch = "master", default-features = false }
+nutsfinance-stable-asset = { version = "*", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
 
