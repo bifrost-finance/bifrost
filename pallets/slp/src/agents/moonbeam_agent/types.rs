@@ -27,8 +27,6 @@ use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {
-	#[codec(index = 0)]
-	System(MoonbeamSystemCall),
 	#[codec(index = 10)]
 	Balances(MoonbeamBalancesCall<T>),
 	#[codec(index = 20)]
@@ -82,12 +80,6 @@ pub enum MoonbeamParachainStakingCall<T: Config> {
 pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
 	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonbeamSystemCall {
-	#[codec(index = 7)]
-	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
