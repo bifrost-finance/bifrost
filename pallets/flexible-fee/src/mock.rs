@@ -471,6 +471,7 @@ impl bifrost_salp::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type StablePool = ();
+	type VtokenMinting = ();
 }
 
 parameter_types! {

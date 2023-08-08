@@ -27,7 +27,7 @@ use frame_support::{
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize},
+	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
 	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
@@ -340,6 +340,74 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
+}
+
+impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, CurrencyId, Balance>
+	for ()
+{
+	fn mint(
+		_exchanger: AccountId,
+		_token_id: CurrencyId,
+		_token_amount: Balance,
+		_remark: BoundedVec<u8, ConstU32<32>>,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn redeem(
+		_exchanger: AccountId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn slpx_redeem(
+		_exchanger: AccountId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+		_redeem_type: RedeemType<AccountId>,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn token_to_vtoken(
+		_token_id: CurrencyId,
+		_vtoken_id: CurrencyId,
+		_token_amount: Balance,
+	) -> Balance {
+		Zero::zero()
+	}
+
+	fn vtoken_to_token(
+		_token_id: CurrencyId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+	) -> Balance {
+		Zero::zero()
+	}
+
+	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {
+		None
+	}
+
+	fn token_id(_vtoken_id: CurrencyId) -> Option<CurrencyId> {
+		None
+	}
+
+	fn get_minimums_redeem(_vtoken_id: CurrencyId) -> Balance {
+		Zero::zero()
+	}
+
+	fn get_astar_parachain_id() -> u32 {
+		0
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		0
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		0
+	}
 }
 
 pub trait TryConvertFrom<CurrencyId> {

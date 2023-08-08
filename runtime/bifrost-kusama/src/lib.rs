@@ -1302,6 +1302,7 @@ impl bifrost_salp::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type ParachainId = ParachainInfo;
 	type StablePool = StablePool;
+	type VtokenMinting = VtokenMinting;
 }
 
 parameter_types! {
