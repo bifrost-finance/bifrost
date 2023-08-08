@@ -33,7 +33,7 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use node_primitives::{
 	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, ParaId, SlpOperator, SlpxOperator,
-	TokenSymbol, TokenSymbol::*,
+	TokenSymbol, TokenSymbol::*, VKSM,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_arithmetic::Percent;
@@ -373,7 +373,7 @@ impl nutsfinance_stable_asset::Config for Test {
 
 impl bifrost_stable_pool::Config for Test {
 	type WeightInfo = ();
-	type ControlOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type ControlOrigin = EnsureConfirmAsGovernance;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Tokens;
 	type StableAsset = StableAsset;
@@ -434,7 +434,7 @@ impl SlpOperator<CurrencyId> for Slp {
 impl bifrost_vtoken_minting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;
-	type ControlOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type ControlOrigin = EnsureConfirmAsGovernance;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = BifrostEntranceAccount;
@@ -663,6 +663,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
 			(ALICE, RelayCurrencyId::get(), INIT_BALANCE),
 			(ALICE, CurrencyId::VSToken(TokenSymbol::KSM), INIT_BALANCE),
+			(ALICE, VKSM, INIT_BALANCE),
 			(BRUCE, NativeCurrencyId::get(), INIT_BALANCE),
 			(BRUCE, RelayCurrencyId::get(), INIT_BALANCE),
 			(CATHI, NativeCurrencyId::get(), INIT_BALANCE),

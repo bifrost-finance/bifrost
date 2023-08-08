@@ -224,6 +224,11 @@ pub mod pallet {
 		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
 		Buyback(BalanceOf<T>),
 		VstokenUnlocked(AccountIdOf<T>),
+		BuybackByStablePool {
+			pool_id: StableAssetPoolId,
+			currency_id_in: CurrencyId,
+			value: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -1239,7 +1244,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			currency_id_in: CurrencyId,
-			#[pallet::compact] value: BalanceOf<T>,
+			value: BalanceOf<T>,
 		) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -1284,7 +1289,7 @@ pub mod pallet {
 				_ => return Err(Error::<T>::ArgumentsError.into()),
 			}
 
-			Self::deposit_event(Event::<T>::Buyback(value));
+			Self::deposit_event(Event::<T>::BuybackByStablePool { pool_id, currency_id_in, value });
 			Ok(())
 		}
 	}

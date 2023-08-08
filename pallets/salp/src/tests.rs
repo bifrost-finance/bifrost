@@ -21,7 +21,7 @@
 use crate::{mock::*, Error, FundStatus, *};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol};
+use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::traits::AccountIdConversion;
 use zenlink_protocol::AssetId;
@@ -1494,7 +1494,7 @@ fn refund_meanwhile_issue_should_work() {
 		let treasury_account: AccountId = TreasuryAccount::get();
 		assert_eq!(Tokens::accounts(treasury_account, RelayCurrencyId::get()).free, 25);
 		let buyback_account: AccountId = BuybackPalletId::get().into_account_truncating();
-		assert_eq!(Tokens::accounts(buyback_account, RelayCurrencyId::get()).free, 75);
+		assert_eq!(Tokens::accounts(buyback_account.clone(), RelayCurrencyId::get()).free, 75);
 		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 
 		let para_id = 2001u32;
@@ -1528,6 +1528,98 @@ fn refund_meanwhile_issue_should_work() {
 			Salp::buyback(Some(ALICE).into(), 10),
 			zenlink_protocol::Error::<Test>::InsufficientTargetAmount
 		);
+
+		pub const LP_KSM_BNC: CurrencyId =
+			CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
+		let pool_asset = LP_KSM_BNC;
+
+		let amounts = vec![1_000u128, 1_000u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::signed(ALICE),
+			pool_asset.into(),
+			vec![KSM, VKSM],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			ALICE,
+			ALICE,
+			1000000000000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(ALICE),
+			0,
+			vec![(KSM, (1, 1)), (VKSM, (10, 11))]
+		));
+		assert_ok!(StablePool::add_liquidity(
+			RuntimeOrigin::signed(ALICE).into(),
+			0,
+			amounts.clone(),
+			0
+		));
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::signed(ALICE),
+			pool_asset.into(),
+			vec![KSM, VSKSM],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			ALICE,
+			ALICE,
+			1000000000000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(ALICE),
+			1,
+			vec![(VSKSM, (1, 1)), (KSM, (10, 30))]
+		));
+		assert_ok!(StablePool::add_liquidity(
+			RuntimeOrigin::signed(ALICE).into(),
+			1,
+			amounts.clone(),
+			0
+		));
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::signed(ALICE),
+			pool_asset.into(),
+			vec![VSKSM, VKSM],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			ALICE,
+			ALICE,
+			1000000000000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(ALICE),
+			2,
+			vec![(VSKSM, (1, 1)), (VKSM, (10, 11))]
+		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(ALICE).into(), 2, amounts, 0));
+
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 0));
+		assert_ok!(VtokenMinting::mint(Some(ALICE).into(), KSM, 2_000, BoundedVec::default()));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, VKSM, 0, 0));
+		assert_noop!(
+			Salp::buyback_vstoken_by_stable_pool(Some(ALICE).into(), 0, VKSM, 70),
+			Error::<Test>::ArgumentsError
+		);
+		assert_noop!(
+			Salp::buyback_vstoken_by_stable_pool(Some(ALICE).into(), 1, KSM, 100),
+			orml_tokens::Error::<Test>::BalanceTooLow
+		);
+		let token_value = VtokenMinting::token_to_vtoken(KSM, VKSM, 100);
+		assert_eq!(token_value, 100);
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 95000);
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), buyback_account, KSM, 100, 0));
+
+		assert_ok!(Salp::buyback_vstoken_by_stable_pool(Some(BRUCE).into(), 1, KSM, 100));
+		assert_eq!(Tokens::free_balance(VSKSM, &BRUCE), 100);
 	});
 }
 
