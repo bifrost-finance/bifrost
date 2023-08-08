@@ -70,6 +70,7 @@ pub type AccountId = AccountId32;
 
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
+pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
