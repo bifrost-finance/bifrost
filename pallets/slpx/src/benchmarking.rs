@@ -19,7 +19,9 @@
 
 use crate::{Pallet as Slpx, *};
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
-use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, traits::EnsureOrigin};
+use frame_support::{
+	assert_ok, sp_runtime::traits::UniqueSaturatedFrom, traits::EnsureOrigin, BoundedVec,
+};
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
 
@@ -66,7 +68,7 @@ benchmarks! {
 		let receiver = H160::from(addr);
 		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
 		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC), SupportChain::Astar)
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC), TargetChain::Astar(receiver),BoundedVec::default())
 
 	redeem {
 		let contract: T::AccountId = whitelisted_caller();
@@ -84,7 +86,7 @@ benchmarks! {
 		let receiver = H160::from(addr);
 		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
 		T::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::VToken(TokenSymbol::BNC), SupportChain::Astar)
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::VToken(TokenSymbol::BNC), TargetChain::Astar(receiver))
 
 
 	swap {
@@ -103,5 +105,5 @@ benchmarks! {
 		let receiver = H160::from(addr);
 		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
 		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC),CurrencyId::VToken(TokenSymbol::BNC), 0u32.into(),SupportChain::Astar)
+	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC),CurrencyId::VToken(TokenSymbol::BNC), 0u32.into(),TargetChain::Astar(receiver))
 }
