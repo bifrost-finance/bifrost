@@ -19,25 +19,24 @@
 use crate::{Config, QueryIdContributionInfo};
 use frame_support::{log, pallet_prelude::*, traits::OnRuntimeUpgrade};
 use sp_std::marker::PhantomData;
-#[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
 
 pub struct RemoveUnusedQueryIdContributionInfo<T>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for RemoveUnusedQueryIdContributionInfo<T> {
 	fn on_runtime_upgrade() -> Weight {
-		log::info!("RemoveUnusedQueryIdContributionInfo::on_runtime_upgrade execute",);
+		log::info!("RemoveUnusedQueryIdContributionInfo::on_runtime_upgrade execute");
 
-		assert_eq!(QueryIdContributionInfo::<T>::iter().count(), 14usize);
 		for query_id in QueryIdContributionInfo::<T>::iter_keys() {
-			QueryIdContributionInfo::<T>::remove(query_id)
+			let remove_list =
+				[969u64, 949, 937, 938, 966, 954, 948, 968, 973, 956, 974, 950, 932, 962];
+			if remove_list.contains(&query_id) {
+				log::info!(
+					"RemoveUnusedQueryIdContributionInfo::on_runtime_upgrade execute {:?}",
+					query_id
+				);
+				QueryIdContributionInfo::<T>::remove(query_id)
+			}
 		}
 
 		T::DbWeight::get().reads_writes(14u64, 14u64)
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		assert_eq!(QueryIdContributionInfo::<T>::iter().count(), 0usize);
-		Ok(())
 	}
 }
