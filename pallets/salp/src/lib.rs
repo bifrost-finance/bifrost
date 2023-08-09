@@ -23,6 +23,7 @@
 pub mod benchmarking;
 #[cfg(test)]
 pub mod mock;
+pub mod remove_storage;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -648,22 +649,24 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::confirm_contribute())]
 		pub fn confirm_contribute(
 			origin: OriginFor<T>,
-			who: AccountIdOf<T>,
-			#[pallet::compact] index: ParaId,
+			query_id: QueryId,
 			is_success: bool,
-			_message_id: MessageId,
 		) -> DispatchResult {
 			let confirmor = ensure_signed(origin.clone())?;
 			if Some(confirmor) != MultisigConfirmAccount::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
+
+			let (index, contributer, _amount) = QueryIdContributionInfo::<T>::get(query_id)
+				.ok_or(Error::<T>::NotFindContributionValue)?;
+
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||
 				fund.status == FundStatus::Success;
 			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
 
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			let (contributed, status) = Self::contribution(fund.trie_index, &contributer);
 			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
 			let contributing = status.contributing();
 
@@ -679,42 +682,44 @@ pub mod pallet {
 
 			if is_success {
 				// Issue reserved vsToken/vsBond to contributor
-				T::MultiCurrency::deposit(vs_token, &who, contributing)?;
-				T::MultiCurrency::deposit(vs_bond, &who, contributing)?;
+				T::MultiCurrency::deposit(vs_token, &contributer, contributing)?;
+				T::MultiCurrency::deposit(vs_bond, &contributer, contributing)?;
 
 				// Update the raised of fund
 				let fund_new =
 					FundInfo { raised: fund.raised.saturating_add(contributing), ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
 
-				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
+				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &contributer, contributing);
 				T::MultiCurrency::transfer(
 					T::RelayChainToken::get(),
-					&who,
+					&contributer,
 					&Self::fund_account_id(index),
 					contributing,
 				)?;
 
-				// Update the contribution of who
+				// Update the contribution of contributer
 				let contributed_new = contributed.saturating_add(contributing);
 				Self::put_contribution(
 					fund.trie_index,
-					&who,
+					&contributer,
 					contributed_new,
 					ContributionStatus::Idle,
 				);
-				Self::deposit_event(Event::Contributed(who, index, contributing));
+				Self::deposit_event(Event::Contributed(contributer, index, contributing));
 			} else {
-				// Update the contribution of who
+				// Update the contribution of contributer
 				Self::put_contribution(
 					fund.trie_index,
-					&who,
+					&contributer,
 					contributed,
 					ContributionStatus::Idle,
 				);
-				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
-				Self::deposit_event(Event::ContributeFailed(who, index, contributing));
+				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &contributer, contributing);
+				Self::deposit_event(Event::ContributeFailed(contributer, index, contributing));
 			}
+
+			QueryIdContributionInfo::<T>::remove(query_id);
 
 			Ok(())
 		}

@@ -65,7 +65,7 @@ impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_cnt: Vec<u8>) -> Result<(), &'static str> {
 		let new_count = UserFeeChargeOrderList::<T>::iter().count();
 
 		// print out the post-migrate storage count

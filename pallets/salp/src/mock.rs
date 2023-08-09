@@ -573,6 +573,5 @@ pub const WEEKS: BlockNumber = DAYS * 7;
 pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);
-pub(crate) const CONTRIBUTON_INDEX: MessageId = [0; 32];
 
 pub(crate) const INIT_BALANCE: Balance = 100_000;
