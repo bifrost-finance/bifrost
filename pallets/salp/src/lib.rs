@@ -1239,7 +1239,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(21)]
-		#[pallet::weight(T::WeightInfo::buyback())]
+		#[pallet::weight(T::WeightInfo::buyback_vstoken_by_stable_pool())]
 		pub fn buyback_vstoken_by_stable_pool(
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,

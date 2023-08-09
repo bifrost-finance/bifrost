@@ -18,14 +18,17 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller};
+pub use crate::{Pallet as Salp, *};
+use bifrost_stable_pool::AtLeast64BitUnsignedOf;
+use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::ParaId;
-use sp_runtime::{traits::Bounded, SaturatedConversion};
+use node_primitives::{CurrencyId, ParaId, BNC, KSM, VKSM, VSKSM};
+use sp_runtime::{
+	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
+	SaturatedConversion,
+};
 use sp_std::prelude::*;
-
-pub use crate::{Pallet as Salp, *};
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	let events = frame_system::Pallet::<T>::events();
@@ -53,7 +56,27 @@ fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
 	assert_ok!(Salp::<T>::contribute(RawOrigin::Signed(who.clone()).into(), index, value));
 }
 
+fn kusama_setup<
+	T: Config
+		+ bifrost_stable_pool::Config
+		+ nutsfinance_stable_asset::Config
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ bifrost_vtoken_minting::Config,
+>() -> Result<(), BenchmarkError> {
+	Ok(())
+}
+
+pub fn lookup_of_account<T: Config>(
+	who: T::AccountId,
+) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
+	<T as frame_system::Config>::Lookup::unlookup(who)
+}
+
 benchmarks! {
+	where_clause {
+		where
+			T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config
+	}
 	contribute {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
@@ -338,6 +361,66 @@ benchmarks! {
 
 	buyback {
 	}: _(RawOrigin::Root, 100u32.into())
+
+	buyback_vstoken_by_stable_pool {
+		kusama_setup::<T>()?;
+		let caller: T::AccountId = whitelisted_caller();
+		let fee_account: T::AccountId = account("seed",1,1);
+		let buyback_account: T::AccountId = T::BuybackPalletId::get().into_account_truncating();
+		let pool_asset = BNC;
+
+		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
+		let amounts: <T as nutsfinance_stable_asset::pallet::Config>::Balance = amounts1.into();
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
+			RawOrigin::Root.into(),
+			pool_asset.into(),
+			vec![KSM.into(), VSKSM.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			fee_account.clone(),
+			fee_account.clone(),
+			1000000000000u128.into()
+		));
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::edit_token_rate(
+			RawOrigin::Root.into(),
+			0,
+			vec![(VSKSM.into(), (1u128.into(), 1u128.into())), (KSM.into(), (10u128.into(), 30u128.into()))]
+		));
+
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+			RawOrigin::Root.into(),
+			lookup_of_account::<T>(buyback_account.clone()),
+			KSM,
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+		));
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+			RawOrigin::Root.into(),
+			lookup_of_account::<T>(caller.clone()),
+			KSM,
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+		));
+		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
+			RawOrigin::Root.into(),
+			lookup_of_account::<T>(caller.clone()),
+			VSKSM,
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+		));
+		assert_eq!(
+			orml_tokens::Pallet::<T>::total_balance(KSM, &caller.clone()),
+			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+		);
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(RawOrigin::Signed(caller.clone()).into(), 0, vec![amounts, amounts], amounts));
+		let minimum_mint_value = bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128);
+		let token_amount = bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128);
+		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(RawOrigin::Root.into(), KSM, minimum_mint_value));
+		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(RawOrigin::Signed(caller.clone()).into(), KSM, token_amount, BoundedVec::default()));
+	}: _(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
 
 	impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
 }

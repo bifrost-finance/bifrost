@@ -1686,7 +1686,6 @@ mod benches {
 		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_slp, Slp]
-		[bifrost_salp, Salp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
 	);

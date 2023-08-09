@@ -62,11 +62,6 @@ benchmarks! {
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
 		)?;
-		// T::MultiCurrency::mint_into(
-		// 	VDOT.into(),
-		// 	&fee_account,
-		// 	<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
-		// )?;
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
@@ -80,7 +75,7 @@ benchmarks! {
 		fee_account.clone(),
 		fee_account.clone(),
 		1000000000000000000u128.into()));
-		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
+		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into())), (KSM.into(), (1u128.into(), 1u128.into()))]));
 		}: _(RawOrigin::Signed(fee_account), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero())
 
 	swap {

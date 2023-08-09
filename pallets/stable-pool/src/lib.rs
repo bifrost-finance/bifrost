@@ -118,23 +118,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::call_index(10)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
-		pub fn edit_token_rate(
-			origin: OriginFor<T>,
-			pool_id: StableAssetPoolId,
-			token_rate_info: Vec<(
-				AssetIdOf<T>,
-				(AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>),
-			)>,
-		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-			nutsfinance_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
-		}
-
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::create_pool())]
-		#[transactional]
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			pool_asset: AssetIdOf<T>,
@@ -304,6 +289,20 @@ pub mod pallet {
 				);
 				Ok(())
 			})
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
+		pub fn edit_token_rate(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			token_rate_info: Vec<(
+				AssetIdOf<T>,
+				(AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>),
+			)>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			nutsfinance_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
 	}
 }

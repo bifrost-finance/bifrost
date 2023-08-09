@@ -79,7 +79,7 @@ construct_runtime!(
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Config<T>, Event<T>, Storage},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
-		StablePool: bifrost_stable_pool,
+		StablePool: bifrost_stable_pool::{Pallet, Call, Storage},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 	}
 );
