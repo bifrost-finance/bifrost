@@ -626,6 +626,10 @@ impl WeightInfo for SalpWeightInfo {
 	fn buyback() -> Weight {
 		Weight::zero()
 	}
+
+	fn buyback_vstoken_by_stable_pool() -> Weight {
+		Weight::zero()
+	}
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {

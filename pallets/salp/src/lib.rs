@@ -1137,7 +1137,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+			let _who = ensure_signed(origin.clone())?;
 
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
