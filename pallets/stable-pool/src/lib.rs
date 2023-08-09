@@ -169,7 +169,6 @@ pub mod pallet {
 			j: PoolTokenIndex,
 			dx: T::Balance,
 			min_dy: T::Balance,
-			// asset_length: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::on_swap(&who, pool_id, i, j, dx, min_dy)

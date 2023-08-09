@@ -194,6 +194,7 @@ macro_rules! create_currency_id {
 					Self::Token2(tk_id)
 					| Self::VToken2(tk_id)
 					| Self::VSToken2(tk_id)
+					| Self::BLP(tk_id)
 					| Self::VSBond2(tk_id, ..) => tk_id as u64,
 					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) => 0u64
 				};
@@ -209,6 +210,7 @@ macro_rules! create_currency_id {
 					| Self::Token2(..)
 					| Self::VToken2(..)
 					| Self::VSToken2(..)
+					| Self::BLP(..)
 					| Self::StableLpToken(..)
 					=> (0x0000_ffff & discr) as u64,
 					Self::VSBond(_, pid, lp1, lp2) => {
@@ -372,6 +374,7 @@ pub enum CurrencyId {
 	VSToken2(TokenId),
 	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
 	StableLpToken(PoolId),
+	BLP(TokenId),
 }
 
 impl Default for CurrencyId {
@@ -441,6 +444,7 @@ impl CurrencyId {
 			Self::VSToken2(..) => 10,
 			Self::VSBond2(..) => 11,
 			Self::StableLpToken(..) => 13,
+			Self::BLP(..) => 14,
 		}
 	}
 }
