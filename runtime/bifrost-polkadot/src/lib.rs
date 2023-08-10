@@ -28,8 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_cross_in_out::migrations::v2::CrossInOutMigration;
-use bifrost_slp::{migrations::v2::SlpMigration, QueryResponseManager};
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
@@ -72,10 +71,7 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::{
-	migrations::v2::FlexibleFeeMigration,
-	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
-};
+use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -107,7 +103,7 @@ use zenlink_protocol::{
 
 // xcm config
 mod xcm_config;
-use bifrost_runtime_common::remove_pallet::RemovePallet;
+use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
@@ -1668,12 +1664,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		SlpMigration<Runtime>,
-		FlexibleFeeMigration<Runtime>,
-		CrossInOutMigration<Runtime>,
-		RemovePallet<XcmActionStr, RocksDbWeight>,
-	),
+	RemoveUnusedQueryIdContributionInfo<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
