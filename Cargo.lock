@@ -856,6 +856,8 @@ dependencies = [
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
  "bifrost-slpx",
+ "bifrost-stable-pool",
+ "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
@@ -882,6 +884,7 @@ dependencies = [
  "log",
  "merkle-distributor",
  "node-primitives",
+ "nutsfinance-stable-asset",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -1179,15 +1182,19 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-stable-pool",
+ "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "node-primitives",
+ "nutsfinance-stable-asset",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xtokens",
  "pallet-balances",
  "pallet-collective",
  "pallet-multisig",
@@ -1301,6 +1308,63 @@ dependencies = [
  "xcm-interface",
  "xcm-simulator",
  "zenlink-protocol",
+]
+
+[[package]]
+name = "bifrost-stable-pool"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-runtime-common",
+ "bifrost-vtoken-minting",
+ "env_logger 0.10.0",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "nutsfinance-stable-asset",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-stable-pool-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-stable-pool-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-stable-pool-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
 ]
 
 [[package]]
@@ -6444,6 +6508,8 @@ dependencies = [
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-stable-pool-rpc-api",
+ "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-ve-minting-rpc-api",
  "bifrost-ve-minting-rpc-runtime-api",
  "jsonrpsee",
@@ -6645,6 +6711,20 @@ name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+
+[[package]]
+name = "nutsfinance-stable-asset"
+version = "0.1.0"
+source = "git+https://github.com/bifrost-finance/stable-asset?rev=21b69fbd3b8d6a8fb27db8f7d52bf762b03f4bf2#21b69fbd3b8d6a8fb27db8f7d52bf762b03f4bf2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "object"

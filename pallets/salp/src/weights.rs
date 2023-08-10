@@ -73,6 +73,7 @@ pub trait WeightInfo {
 	fn dissolve_refunded() -> Weight;
 	fn dissolve() -> Weight;
 	fn buyback() -> Weight;
+	fn buyback_vstoken_by_stable_pool() -> Weight;
 }
 
 /// Weights for bifrost_salp using the Bifrost node and recommended hardware.
@@ -371,6 +372,26 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		Weight::from_parts(32_722_000, 499)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 	}
+	/// Storage: StableAsset Pools (r:1 w:1)
+	/// Proof Skipped: StableAsset Pools (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:4 w:4)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: StableAsset TokenRateCaches (r:2 w:0)
+	/// Proof Skipped: StableAsset TokenRateCaches (max_values: None, max_size: None, mode: Measured)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:2 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn buyback_vstoken_by_stable_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `2331`
+		//  Estimated: `11362`
+		// Minimum execution time: 89_049_000 picoseconds.
+		Weight::from_parts(89_820_000, 0)
+			.saturating_add(Weight::from_parts(0, 11362))
+			.saturating_add(T::DbWeight::get().reads(10))
+			.saturating_add(T::DbWeight::get().writes(6))
+	}
 }
 
 // For backwards compatibility and tests
@@ -667,5 +688,25 @@ impl WeightInfo for () {
 		// Minimum execution time: 32_127_000 picoseconds.
 		Weight::from_parts(32_722_000, 499)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
+	}
+	/// Storage: StableAsset Pools (r:1 w:1)
+	/// Proof Skipped: StableAsset Pools (max_values: None, max_size: None, mode: Measured)
+	/// Storage: Tokens Accounts (r:4 w:4)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: StableAsset TokenRateCaches (r:2 w:0)
+	/// Proof Skipped: StableAsset TokenRateCaches (max_values: None, max_size: None, mode: Measured)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:2 w:1)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	fn buyback_vstoken_by_stable_pool() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `2331`
+		//  Estimated: `11362`
+		// Minimum execution time: 89_049_000 picoseconds.
+		Weight::from_parts(89_820_000, 0)
+			.saturating_add(Weight::from_parts(0, 11362))
+			.saturating_add(RocksDbWeight::get().reads(10))
+			.saturating_add(RocksDbWeight::get().writes(6))
 	}
 }
