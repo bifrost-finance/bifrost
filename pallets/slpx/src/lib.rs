@@ -241,6 +241,8 @@ pub mod pallet {
 		NotSetExecutionFee,
 		/// Insufficient balance to execute the fee
 		FreeBalanceTooLow,
+		/// ArgumentsError
+		ArgumentsError,
 	}
 
 	/// Contract whitelist
@@ -474,21 +476,19 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			evm_caller: H160,
 			pool_id: StableAssetPoolId,
-			pool_token_index_in: PoolTokenIndex,
-			pool_token_index_out: PoolTokenIndex,
+			currency_id_in: CurrencyIdOf<T>,
+			currency_id_out: CurrencyIdOf<T>,
 			min_dy: BalanceOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 		) -> DispatchResult {
 			let (evm_contract_account_id, evm_caller_account_id) =
 				Self::ensure_singer_on_whitelist(origin, evm_caller, &target_chain)?;
-			let currency_id_in = T::StablePoolHandler::get_currency_by_pool_token_index(
-				pool_id,
-				pool_token_index_in,
-			)?;
-			let currency_id_out = T::StablePoolHandler::get_currency_by_pool_token_index(
-				pool_id,
-				pool_token_index_out,
-			)?;
+			let pool_token_index_in =
+				T::StablePoolHandler::get_pool_token_index(pool_id, currency_id_in)
+					.ok_or(Error::<T>::ArgumentsError)?;
+			let pool_token_index_out =
+				T::StablePoolHandler::get_pool_token_index(pool_id, currency_id_out)
+					.ok_or(Error::<T>::ArgumentsError)?;
 			let currency_id_in_amount =
 				Self::charge_execution_fee(currency_id_in, &evm_caller_account_id)?;
 

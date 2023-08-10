@@ -66,11 +66,6 @@ pub trait StablePoolHandler {
 		pool_id: StableAssetPoolId,
 		currency_id: CurrencyId,
 	) -> Option<PoolTokenIndex>;
-
-	fn get_currency_by_pool_token_index(
-		pool_id: StableAssetPoolId,
-		pool_token_index: PoolTokenIndex,
-	) -> Result<CurrencyId, DispatchError>;
 }
 
 impl<T: Config> StablePoolHandler for Pallet<T> {
@@ -137,19 +132,6 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 			.position(|&x| x == currency_id.into())
 			.map(|value| value as u32)
 	}
-
-	fn get_currency_by_pool_token_index(
-		pool_id: StableAssetPoolId,
-		pool_token_index: PoolTokenIndex,
-	) -> Result<CurrencyId, DispatchError> {
-		let pool_info =
-			Pools::<T>::get(pool_id).ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
-		let currency_id = pool_info
-			.assets
-			.get(pool_token_index as usize)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?;
-		Ok((*currency_id).into())
-	}
 }
 
 impl StablePoolHandler for () {
@@ -210,12 +192,5 @@ impl StablePoolHandler for () {
 		_currency_id: CurrencyId,
 	) -> Option<PoolTokenIndex> {
 		None
-	}
-
-	fn get_currency_by_pool_token_index(
-		_pool_id: StableAssetPoolId,
-		_pool_token_index: PoolTokenIndex,
-	) -> Result<CurrencyId, DispatchError> {
-		Ok(CurrencyId::default())
 	}
 }
