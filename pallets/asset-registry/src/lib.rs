@@ -840,9 +840,9 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 
 	fn register_blp_metadata(pool_id: PoolId) -> DispatchResult {
 		let mut name = "Bifrost Stable Pool Token ".as_bytes().to_vec();
-		name.extend_from_slice(&pool_id.to_string().as_bytes().to_vec());
+		name.extend_from_slice(&pool_id.to_be_bytes());
 		let mut symbol = "BLP".as_bytes().to_vec();
-		symbol.extend_from_slice(&pool_id.to_string().as_bytes().to_vec());
+		symbol.extend_from_slice(&pool_id.to_be_bytes());
 		Pallet::<T>::do_register_metadata(
 			CurrencyId::BLP(pool_id),
 			&AssetMetadata {
