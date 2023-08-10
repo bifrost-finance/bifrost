@@ -1149,6 +1149,8 @@ impl bifrost_salp::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type ParachainId = ParachainInfo;
+	type StablePool = ();
+	type VtokenMinting = VtokenMinting;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1675,7 +1677,6 @@ mod benches {
 		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_slp, Slp]
-		[bifrost_salp, Salp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
 	);

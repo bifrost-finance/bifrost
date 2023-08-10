@@ -34,7 +34,7 @@ use frame_support::{
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{CurrencyId, MessageId, ParaId, TokenSymbol};
+use node_primitives::{Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -63,9 +63,8 @@ pub type Amount = i128;
 
 pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
 
-pub type Balance = u64;
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
-pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, RuntimeCall, ()>;
+pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u128, RuntimeCall, ()>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -99,7 +98,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-	type AccountData = balances::AccountData<u64>;
+	type AccountData = balances::AccountData<u128>;
 	type AccountId = AccountId;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
@@ -112,7 +111,7 @@ impl system::Config for Test {
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = u64;
+	type Index = u128;
 	// needs to be u128 against u64, otherwise the account address will be half cut.
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
@@ -146,7 +145,7 @@ parameter_types! {
 
 impl balances::Config for Test {
 	type AccountStore = System;
-	type Balance = u64;
+	type Balance = u128;
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -471,6 +470,8 @@ impl bifrost_salp::Config for Test {
 	type ParachainId = ParaInfo;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type StablePool = ();
+	type VtokenMinting = ();
 }
 
 parameter_types! {
