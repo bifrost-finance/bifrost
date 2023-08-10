@@ -19,8 +19,8 @@
 
 use crate::{Pallet as StablePool, *};
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
-use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
-use frame_system::{Pallet as System, RawOrigin};
+use frame_support::assert_ok;
+use frame_system::RawOrigin;
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
 	DOT, DOT_TOKEN_ID, GLMR, KSM, VDOT,
@@ -31,9 +31,7 @@ benchmarks! {
 		let fee_account: T::AccountId = whitelisted_caller();
 		let coin0 = DOT;
 		let coin1 = VDOT;
-		let pool_asset = BNC;
 	}: _(RawOrigin::Root,
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		10000000u128.into(),
@@ -51,7 +49,6 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = KSM;
-		let pool_asset = BNC;
 		T::MultiCurrency::mint_into(
 			BNC.into(),
 			&fee_account,
@@ -65,7 +62,6 @@ benchmarks! {
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		10000000u128.into(),
@@ -83,7 +79,6 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		T::MultiCurrency::mint_into(
 			BNC.into(),
 			&fee_account,
@@ -92,7 +87,6 @@ benchmarks! {
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		10000000u128.into(),
@@ -104,7 +98,6 @@ benchmarks! {
 		1000000000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
 		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-		// assert_ok!(StableAsset::swap(RawOrigin::signed(fee_account), 0, 0, 1, <T as nutsfinance_stable_asset::Config>::Balance::from(5000000u128.into()), 0, 2));
 	}: _(RawOrigin::Signed(fee_account), 0, 0, 1, <T as nutsfinance_stable_asset::Config>::Balance::from(50_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::zero())
 
 	redeem_proportion {
@@ -112,7 +105,6 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		T::MultiCurrency::mint_into(
 			BNC.into(),
 			&fee_account,
@@ -121,7 +113,6 @@ benchmarks! {
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		0u128.into(),
@@ -141,7 +132,6 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		T::MultiCurrency::mint_into(
 			BNC.into(),
 			&fee_account,
@@ -150,7 +140,6 @@ benchmarks! {
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		0u128.into(),
@@ -169,7 +158,6 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		T::MultiCurrency::mint_into(
 			BNC.into(),
 			&fee_account,
@@ -178,7 +166,6 @@ benchmarks! {
 		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
-		pool_asset.into(),
 		vec![coin0.into(), coin1.into()],
 		vec![1u128.into(), 1u128.into()],
 		0u128.into(),
@@ -198,10 +185,8 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		assert_ok!(StablePool::<T>::create_pool(
 			RawOrigin::Root.into(),
-			pool_asset.into(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -218,10 +203,8 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		assert_ok!(StablePool::<T>::create_pool(
 			RawOrigin::Root.into(),
-			pool_asset.into(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -238,10 +221,8 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		let pool_asset = BNC;
 		assert_ok!(StablePool::<T>::create_pool(
 			RawOrigin::Root.into(),
-			pool_asset.into(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
