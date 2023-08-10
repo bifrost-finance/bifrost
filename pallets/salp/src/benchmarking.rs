@@ -367,13 +367,11 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let fee_account: T::AccountId = account("seed",1,1);
 		let buyback_account: T::AccountId = T::BuybackPalletId::get().into_account_truncating();
-		let pool_asset = BNC;
 
 		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
 		let amounts: <T as nutsfinance_stable_asset::pallet::Config>::Balance = amounts1.into();
 		assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
 			RawOrigin::Root.into(),
-			pool_asset.into(),
 			vec![KSM.into(), VSKSM.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),

@@ -26,11 +26,10 @@ pub const BALANCE_OFF: u128 = 0;
 fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = VDOT;
-	let pool_asset = LP_KSM_BNC;
+	let pool_asset: CurrencyId = CurrencyId::BLP(0);
 
 	assert_ok!(StablePool::create_pool(
 		RuntimeOrigin::signed(1),
-		pool_asset,
 		vec![coin0, coin1],
 		vec![10000000000u128, 10000000000u128],
 		10000000u128,
@@ -47,11 +46,10 @@ fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let coin0 = DOT;
 	let coin1 = VDOT;
-	let pool_asset = LP_KSM_BNC;
+	let pool_asset = CurrencyId::BLP(0);
 
 	assert_ok!(StablePool::create_pool(
 		RuntimeOrigin::signed(1),
-		pool_asset,
 		vec![coin0, coin1],
 		vec![1u128, 1u128],
 		10000000u128,
@@ -99,7 +97,6 @@ fn create_pool_successful() {
 		assert_eq!(StableAsset::pool_count(), 0);
 		assert_ok!(StablePool::create_pool(
 			RuntimeOrigin::signed(1),
-			LP_KSM_BNC,
 			vec![coin0, coin1],
 			vec![1u128, 1u128],
 			1u128,
@@ -114,7 +111,7 @@ fn create_pool_successful() {
 			StableAsset::pools(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
-				pool_asset: LP_KSM_BNC,
+				pool_asset: CurrencyId::BLP(0),
 				assets: vec![coin0, coin1],
 				precisions: vec![1u128, 1u128],
 				mint_fee: 1u128,
@@ -569,11 +566,9 @@ fn mint_swap_redeem_for_precisions() {
 #[test]
 fn redeem_single() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		pub const LP_KSM_BNC: CurrencyId =
-			CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 		let coin0 = DOT;
 		let coin1 = VDOT;
-		let pool_asset = LP_KSM_BNC;
+		let pool_asset = CurrencyId::BLP(0);
 
 		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
 			coin0.into(),
@@ -590,7 +585,6 @@ fn redeem_single() {
 		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
 		assert_ok!(StablePool::create_pool(
 			RuntimeOrigin::signed(1),
-			pool_asset.into(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -691,11 +685,9 @@ fn redeem_single() {
 #[test]
 fn redeem_multi() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		pub const LP_KSM_BNC: CurrencyId =
-			CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 		let coin0 = DOT;
 		let coin1 = VDOT;
-		let pool_asset = LP_KSM_BNC;
+		let pool_asset = CurrencyId::BLP(0);
 
 		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
 			coin0.into(),
@@ -712,7 +704,6 @@ fn redeem_multi() {
 		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
 		assert_ok!(StablePool::create_pool(
 			RuntimeOrigin::signed(1),
-			pool_asset.into(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),

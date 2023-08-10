@@ -1691,6 +1691,7 @@ impl bifrost_stable_pool::Config for Runtime {
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.

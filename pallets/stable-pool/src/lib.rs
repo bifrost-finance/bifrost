@@ -41,10 +41,11 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, TimeUnit, VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, TimeUnit,
+	VtokenMintingOperator,
 };
 pub use nutsfinance_stable_asset::{
-	MintResult, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
+	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,
 };
 use sp_core::U256;
@@ -105,6 +106,8 @@ pub mod pallet {
 		>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
+
+		type CurrencyIdRegister: CurrencyIdRegister<AssetIdOf<Self>>;
 	}
 
 	#[pallet::error]
@@ -122,7 +125,6 @@ pub mod pallet {
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::create_pool())]
 		pub fn create_pool(
 			origin: OriginFor<T>,
-			pool_asset: AssetIdOf<T>,
 			assets: Vec<AssetIdOf<T>>,
 			precisions: Vec<AtLeast64BitUnsignedOf<T>>,
 			mint_fee: AtLeast64BitUnsignedOf<T>,
@@ -134,8 +136,11 @@ pub mod pallet {
 			precision: AtLeast64BitUnsignedOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+
+			let pool_id = PoolCount::<T>::get();
+			T::CurrencyIdRegister::register_blp_metadata(pool_id)?;
 			T::StableAsset::create_pool(
-				pool_asset,
+				CurrencyId::BLP(pool_id).into(),
 				assets,
 				precisions,
 				mint_fee,

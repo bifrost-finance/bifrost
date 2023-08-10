@@ -194,9 +194,8 @@ macro_rules! create_currency_id {
 					Self::Token2(tk_id)
 					| Self::VToken2(tk_id)
 					| Self::VSToken2(tk_id)
-					| Self::BLP(tk_id)
 					| Self::VSBond2(tk_id, ..) => tk_id as u64,
-					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) => 0u64
+					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) | Self::BLP(..) => 0u64
 				};
 
 		 		let discr = (c_discr << 8) + t_discr;
@@ -374,7 +373,7 @@ pub enum CurrencyId {
 	VSToken2(TokenId),
 	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
 	StableLpToken(PoolId),
-	BLP(TokenId),
+	BLP(PoolId),
 }
 
 impl Default for CurrencyId {

@@ -220,6 +220,7 @@ pub trait CurrencyIdRegister<CurrencyId> {
 		first_slot: crate::LeasePeriod,
 		last_slot: crate::LeasePeriod,
 	) -> DispatchResult;
+	fn register_blp_metadata(pool_id: PoolId) -> DispatchResult;
 }
 
 impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
@@ -296,6 +297,10 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 		_first_slot: LeasePeriod,
 		_last_slot: LeasePeriod,
 	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn register_blp_metadata(_pool_id: PoolId) -> DispatchResult {
 		Ok(())
 	}
 }

@@ -42,8 +42,6 @@ use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const LP_KSM_BNC: CurrencyId =
-	CurrencyId::LPToken(TokenSymbol::KSM, 1u8, TokenSymbol::BNC, 0u8);
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -59,7 +57,6 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens,
 		Balances: pallet_balances,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
-		// Currencies: orml_currencies::{Pallet, Call, Storage},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 		AssetRegistry: bifrost_asset_registry,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
@@ -86,7 +83,6 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	// type AccountData = ();
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -110,7 +106,6 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
 			&DOT => 0,
 			&VDOT => 0,
-			&LP_KSM_BNC => 0,
 			_ => bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
@@ -263,6 +258,7 @@ impl bifrost_stable_pool::Config for Test {
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
 }
 
 parameter_types! {
