@@ -379,6 +379,7 @@ impl bifrost_stable_pool::Config for Test {
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
 }
 
 parameter_types! {
