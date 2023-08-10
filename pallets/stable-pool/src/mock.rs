@@ -106,6 +106,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
 			&DOT => 0,
 			&VDOT => 0,
+			&CurrencyId::BLP(_) => 0,
 			_ => bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}

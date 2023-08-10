@@ -23,7 +23,7 @@ use bifrost_stable_pool::AtLeast64BitUnsignedOf;
 use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, ParaId, BNC, KSM, VKSM, VSKSM};
+use node_primitives::{CurrencyId, ParaId, KSM, VSKSM};
 use sp_runtime::{
 	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
 	SaturatedConversion,
