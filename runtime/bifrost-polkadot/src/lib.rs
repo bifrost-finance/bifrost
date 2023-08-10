@@ -1331,6 +1331,7 @@ impl bifrost_slpx::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
+	type StablePoolHandler = ();
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
