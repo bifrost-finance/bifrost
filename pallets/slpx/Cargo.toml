@@ -29,6 +29,7 @@ zenlink-protocol = { version = "*", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
+bifrost-stable-pool = { path = "../stable-pool", default-features = false }
 
 [dev-dependencies]
 pallet-balances = { version = "4.0.0-dev",  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
@@ -64,6 +65,7 @@ std = [
 	"sp-core/std",
 	"sp-runtime/std",
 	"bifrost-asset-registry/std",
+	"bifrost-stable-pool/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

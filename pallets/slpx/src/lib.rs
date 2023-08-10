@@ -103,6 +103,7 @@ pub enum TargetChain<AccountId> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::pallet_prelude::{ValueQuery, *};
 	use node_primitives::RedeemType;
 	use zenlink_protocol::{AssetId, ExportZenlink};
@@ -123,6 +124,12 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
+		>;
+
+		/// The interface to call StablePool module functions.
+		type StablePoolHandler: StablePoolHandler<
+			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
 		>;
 
 		/// xtokens xcm transfer interface
@@ -168,16 +175,32 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 		},
-		XcmSwap {
+		XcmZenlinkSwap {
 			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
+			currency_id_out_amount: BalanceOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 		},
-		XcmSwapFailed {
+		XcmZenlinkSwapFailed {
 			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
 			currency_id_out: CurrencyIdOf<T>,
+			currency_id_in_amount: BalanceOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+		},
+		XcmStablePoolSwap {
+			evm_caller: H160,
+			pool_token_index_in: PoolTokenIndex,
+			pool_token_index_out: PoolTokenIndex,
+			currency_id_out_amount: BalanceOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+		},
+		XcmStablePoolSwapFailed {
+			evm_caller: H160,
+			pool_token_index_in: PoolTokenIndex,
+			pool_token_index_out: PoolTokenIndex,
+			currency_id_in_amount: BalanceOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 		},
 		XcmRedeem {
@@ -218,6 +241,8 @@ pub mod pallet {
 		NotSetExecutionFee,
 		/// Insufficient balance to execute the fee
 		FreeBalanceTooLow,
+		/// ArgumentsError
+		ArgumentsError,
 	}
 
 	/// Contract whitelist
@@ -310,7 +335,7 @@ pub mod pallet {
 		/// Swap and transfer to target chain
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::swap())]
-		pub fn swap(
+		pub fn zenlink_swap(
 			origin: OriginFor<T>,
 			evm_caller: H160,
 			currency_id_in: CurrencyIdOf<T>,
@@ -351,10 +376,11 @@ pub mod pallet {
 						&target_chain,
 					)?;
 
-					Self::deposit_event(Event::XcmSwap {
+					Self::deposit_event(Event::XcmZenlinkSwap {
 						evm_caller,
 						currency_id_in,
 						currency_id_out,
+						currency_id_out_amount,
 						target_chain,
 					});
 				},
@@ -367,10 +393,11 @@ pub mod pallet {
 						&target_chain,
 					)?;
 
-					Self::deposit_event(Event::XcmSwapFailed {
+					Self::deposit_event(Event::XcmZenlinkSwapFailed {
 						evm_caller,
 						currency_id_in,
 						currency_id_out,
+						currency_id_in_amount,
 						target_chain,
 					});
 				},
@@ -442,7 +469,78 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Stable pool swap
 		#[pallet::call_index(3)]
+		#[pallet::weight(<T as Config>::WeightInfo::swap())]
+		pub fn stable_pool_swap(
+			origin: OriginFor<T>,
+			evm_caller: H160,
+			pool_id: StableAssetPoolId,
+			currency_id_in: CurrencyIdOf<T>,
+			currency_id_out: CurrencyIdOf<T>,
+			min_dy: BalanceOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+		) -> DispatchResult {
+			let (evm_contract_account_id, evm_caller_account_id) =
+				Self::ensure_singer_on_whitelist(origin, evm_caller, &target_chain)?;
+			let pool_token_index_in =
+				T::StablePoolHandler::get_pool_token_index(pool_id, currency_id_in)
+					.ok_or(Error::<T>::ArgumentsError)?;
+			let pool_token_index_out =
+				T::StablePoolHandler::get_pool_token_index(pool_id, currency_id_out)
+					.ok_or(Error::<T>::ArgumentsError)?;
+			let currency_id_in_amount =
+				Self::charge_execution_fee(currency_id_in, &evm_caller_account_id)?;
+
+			match T::StablePoolHandler::swap(
+				&evm_caller_account_id,
+				pool_id,
+				pool_token_index_in,
+				pool_token_index_out,
+				currency_id_in_amount.saturated_into(),
+				min_dy.saturated_into(),
+			) {
+				Ok(_) => {
+					let currency_id_out_amount =
+						T::MultiCurrency::free_balance(currency_id_out, &evm_caller_account_id);
+
+					Self::transfer_to(
+						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
+						currency_id_out,
+						currency_id_out_amount,
+						&target_chain,
+					)?;
+
+					Self::deposit_event(Event::XcmStablePoolSwap {
+						evm_caller,
+						pool_token_index_in,
+						pool_token_index_out,
+						currency_id_out_amount,
+						target_chain,
+					});
+				},
+				Err(_) => {
+					Self::transfer_to(
+						evm_caller_account_id.clone(),
+						&evm_contract_account_id,
+						currency_id_in,
+						currency_id_in_amount,
+						&target_chain,
+					)?;
+					Self::deposit_event(Event::XcmStablePoolSwapFailed {
+						evm_caller,
+						pool_token_index_in,
+						pool_token_index_out,
+						currency_id_in_amount,
+						target_chain,
+					});
+				},
+			};
+			Ok(())
+		}
+
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_whitelist())]
 		pub fn add_whitelist(
 			origin: OriginFor<T>,
@@ -469,7 +567,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_whitelist())]
 		pub fn remove_whitelist(
 			origin: OriginFor<T>,
@@ -494,7 +592,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_execution_fee())]
 		pub fn set_execution_fee(
 			origin: OriginFor<T>,
@@ -508,7 +606,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
 		pub fn set_transfer_to_fee(
 			origin: OriginFor<T>,

@@ -1282,6 +1282,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-runtime-common",
  "bifrost-slp",
+ "bifrost-stable-pool",
  "bifrost-vtoken-minting",
  "cumulus-pallet-xcm",
  "cumulus-primitives-core",
