@@ -347,6 +347,8 @@ try-runtime = [
 	"bifrost-fee-share/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
 	"bifrost-slpx/try-runtime",
+	"nutsfinance-stable-asset/try-runtime",
+	"bifrost-stable-pool/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
