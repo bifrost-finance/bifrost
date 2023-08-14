@@ -69,6 +69,7 @@ pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/parityt
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-whitelist = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42", default-features = false }
@@ -173,6 +174,7 @@ std = [
 	"pallet-elections-phragmen/std",
 	"pallet-tips/std",
 	"pallet-whitelist/std",
+	"pallet-sudo/std",
 	"sp-api/std",
 	"sp-io/std",
 	"sp-arithmetic/std",
