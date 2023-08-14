@@ -279,7 +279,7 @@ fn mint_successful_different_amounts() {
 			299606896309149793u128 - BALANCE_OFF
 		);
 		assert_eq!(TestAssets::balance(pool_asset, &2), 299906803112262u128 - BALANCE_OFF);
-		if let RuntimeEvent::StableAsset(crate::pallet::Event::Minted {
+		if let RuntimeEvent::StableAsset(crate::pallet::Event::LiquidityAdded {
 			minter: _,
 			pool_id: _,
 			output_amount: mint_amount,
@@ -1068,7 +1068,7 @@ fn get_mint_amount_same_as_mint() {
 		);
 
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		if let RuntimeEvent::StableAsset(crate::pallet::Event::Minted {
+		if let RuntimeEvent::StableAsset(crate::pallet::Event::LiquidityAdded {
 			minter: _,
 			pool_id: _,
 			a: _,

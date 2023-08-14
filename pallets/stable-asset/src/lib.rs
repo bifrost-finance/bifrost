@@ -431,7 +431,7 @@ pub mod pallet {
 			swap_id: T::AccountId,
 			pallet_id: T::AccountId,
 		},
-		Minted {
+		LiquidityAdded {
 			minter: T::AccountId,
 			pool_id: StableAssetPoolId,
 			a: T::AtLeast64BitUnsigned,
@@ -1719,7 +1719,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 			pool_info.total_supply = total_supply;
 			pool_info.balances = balances;
 			Self::collect_fee(pool_id, pool_info)?;
-			Self::deposit_event(Event::Minted {
+			Self::deposit_event(Event::LiquidityAdded {
 				minter: who.clone(),
 				pool_id,
 				a,

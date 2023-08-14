@@ -384,11 +384,11 @@ impl<T: Config> Pallet<T> {
 		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
 		T::StableAsset::insert_pool(pool_id, &pool_info);
 		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::Minted {
+			nutsfinance_stable_asset::Event::<T>::LiquidityAdded {
 				minter: who.clone(),
 				pool_id,
 				a,
-				input_amounts: amounts,
+				input_amounts: amounts_old,
 				min_output_amount: min_mint_amount,
 				balances: pool_info.balances.clone(),
 				total_supply: pool_info.total_supply,
