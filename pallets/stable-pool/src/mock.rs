@@ -26,7 +26,7 @@ use frame_support::{
 use frame_system::EnsureSignedBy;
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
-	ASTR, DOT, DOT_TOKEN_ID, GLMR, VDOT,
+	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
@@ -41,8 +41,6 @@ use xcm::{
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -55,6 +53,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Tokens: orml_tokens,
+		Currencies: orml_currencies::{Pallet, Call},
 		Balances: pallet_balances,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
@@ -106,6 +105,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
 			&DOT => 0,
 			&VDOT => 0,
+			&VBNC => 0,
 			&CurrencyId::BLP(_) => 0,
 			_ => bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
 				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
@@ -124,6 +124,22 @@ impl orml_tokens::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type CurrencyHooks = ();
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = BNC;
+}
+
+pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -239,7 +255,7 @@ impl nutsfinance_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;
-	type Assets = Tokens;
+	type Assets = Currencies;
 	type PalletId = StableAssetPalletId;
 	type AtLeast64BitUnsigned = u128;
 	type FeePrecision = ConstU128<10_000_000_000>;
@@ -255,7 +271,7 @@ impl bifrost_stable_pool::Config for Test {
 	type WeightInfo = ();
 	type ControlOrigin = EnsureSignedBy<One, u128>;
 	type CurrencyId = CurrencyId;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
@@ -366,6 +382,7 @@ impl ExtBuilder {
 			// (2, VDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
+			(6, BNC, 100_000_000_000_000),
 		])
 	}
 

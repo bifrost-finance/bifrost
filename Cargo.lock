@@ -6718,6 +6718,10 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",

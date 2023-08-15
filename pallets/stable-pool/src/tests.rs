@@ -570,12 +570,12 @@ fn redeem_single() {
 		let coin1 = VDOT;
 		let pool_asset = CurrencyId::BLP(0);
 
-		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin0.into(),
 			&6,
 			1_000_000_000_000u128
 		));
-		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin1.into(),
 			&6,
 			1_000_000_000_000u128
@@ -689,12 +689,12 @@ fn redeem_multi() {
 		let coin1 = VDOT;
 		let pool_asset = CurrencyId::BLP(0);
 
-		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin0.into(),
 			&6,
 			1_000_000_000_000u128
 		));
-		assert_ok!(<Test as crate::Config>::MultiCurrency::mint_into(
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin1.into(),
 			&6,
 			1_000_000_000_000u128
@@ -775,5 +775,55 @@ fn redeem_multi() {
 		assert_eq!(Tokens::free_balance(coin1, &6), 905_000_000_000);
 		assert_eq!(Tokens::free_balance(coin0, &6), 905_000_000_000);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 199_458_041_709);
+	});
+}
+
+#[test]
+fn bnc_add_liquidity_should_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let coin0 = BNC;
+		let coin1 = VBNC;
+		let pool_asset = CurrencyId::BLP(0);
+
+		// assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+		// 	coin0.into(),
+		// 	&6,
+		// 	1_000_000_000_000u128
+		// ));
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin1.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 1_000_000_000_000u128);
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin1.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 2_000_000_000_000u128);
+		assert_eq!(Balances::free_balance(&6), 100_000_000_000_000);
+
+		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::signed(1),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			5,
+			5,
+			1000000000000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(1),
+			0,
+			vec![(BNC, (1, 1)), (VBNC, (10, 11))]
+		));
+		assert_eq!(Tokens::free_balance(pool_asset, &6), 0);
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
+		assert_eq!(Tokens::free_balance(pool_asset, &6), 209_955_833_377);
 	});
 }

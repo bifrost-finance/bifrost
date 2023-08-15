@@ -43,6 +43,7 @@ use frame_support::{
 	},
 	weights::Weight,
 };
+use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_core::U512;
 use sp_runtime::{
@@ -347,6 +348,7 @@ pub mod pallet {
 		transactional, PalletId,
 	};
 	use frame_system::pallet_prelude::*;
+	use orml_traits::MultiCurrency;
 	use sp_runtime::{
 		traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
 		FixedPointOperand,
@@ -359,8 +361,7 @@ pub mod pallet {
 
 		type AssetId: Parameter + Ord + Copy;
 		type Balance: Parameter + Codec + Copy + Ord + From<Self::AtLeast64BitUnsigned> + Zero;
-		type Assets: fungibles::Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>
-			+ fungibles::Mutate<Self::AccountId, AssetId = Self::AssetId, Balance = Self::Balance>;
+		type Assets: MultiCurrency<Self::AccountId, CurrencyId = Self::AssetId, Balance = Self::Balance>;
 		type AtLeast64BitUnsigned: Parameter
 			+ CheckedAdd
 			+ CheckedSub
@@ -1304,7 +1305,7 @@ impl<T: Config> Pallet<T> {
 		let old_d: T::AtLeast64BitUnsigned = pool_info.total_supply.into();
 		for (i, balance) in balances.iter_mut().enumerate() {
 			let mut balance_of: T::AtLeast64BitUnsigned =
-				T::Assets::balance(pool_info.assets[i], &pool_info.account_id).into();
+				T::Assets::free_balance(pool_info.assets[i], &pool_info.account_id).into();
 			if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, pool_info.assets[i]) {
 				balance_of = balance_of
 					.checked_mul(&numerator)
@@ -1368,7 +1369,7 @@ impl<T: Config> Pallet<T> {
 		let mut updated_balances = pool_info.balances.clone();
 		for (i, balance) in updated_balances.iter_mut().enumerate() {
 			let mut balance_of: T::AtLeast64BitUnsigned =
-				T::Assets::balance(pool_info.assets[i], &pool_info.account_id).into();
+				T::Assets::free_balance(pool_info.assets[i], &pool_info.account_id).into();
 			if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, pool_info.assets[i]) {
 				balance_of = balance_of
 					.checked_mul(&numerator)
@@ -1528,7 +1529,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 			)
 			.ok_or(Error::<T>::Math)?;
 			let yield_amount: T::AtLeast64BitUnsigned = new_d - old_d;
-			T::Assets::mint_into(pool_info.pool_asset, &pool_info.yield_recipient, yield_amount.into())?;
+			T::Assets::deposit(pool_info.pool_asset, &pool_info.yield_recipient, yield_amount.into())?;
 			pool_info.total_supply = new_d.into();
 			Self::deposit_event(Event::YieldCollected {
 				pool_id,
@@ -1571,7 +1572,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 		pool_info.balances = balances;
 		if fee_amount > zero {
 			let fee_recipient = pool_info.fee_recipient.clone();
-			T::Assets::mint_into(pool_info.pool_asset, &fee_recipient, fee_amount)?;
+			T::Assets::deposit(pool_info.pool_asset, &fee_recipient, fee_amount)?;
 			let a: T::AtLeast64BitUnsigned = Self::get_a(
 				pool_info.a,
 				pool_info.a_block,
@@ -1703,19 +1704,13 @@ impl<T: Config> StableAsset for Pallet<T> {
 				if *amount == Zero::zero() {
 					continue;
 				}
-				T::Assets::transfer(
-					pool_info.assets[i],
-					who,
-					&pool_info.account_id,
-					*amount,
-					Preservation::Expendable,
-				)?;
+				T::Assets::transfer(pool_info.assets[i], who, &pool_info.account_id, *amount)?;
 			}
 			let zero: T::Balance = Zero::zero();
 			if fee_amount > zero {
-				T::Assets::mint_into(pool_info.pool_asset, &pool_info.fee_recipient, fee_amount)?;
+				T::Assets::deposit(pool_info.pool_asset, &pool_info.fee_recipient, fee_amount)?;
 			}
-			T::Assets::mint_into(pool_info.pool_asset, who, mint_amount)?;
+			T::Assets::deposit(pool_info.pool_asset, who, mint_amount)?;
 			pool_info.total_supply = total_supply;
 			pool_info.balances = balances;
 			Self::collect_fee(pool_id, pool_info)?;
@@ -1773,20 +1768,8 @@ impl<T: Config> StableAsset for Pallet<T> {
 				let j_usize = j as usize;
 				balances[i_usize] = balance_i;
 				balances[j_usize] = y;
-				T::Assets::transfer(
-					pool_info.assets[i_usize],
-					who,
-					&pool_info.account_id,
-					dx,
-					Preservation::Expendable,
-				)?;
-				T::Assets::transfer(
-					pool_info.assets[j_usize],
-					&pool_info.account_id,
-					who,
-					dy,
-					Preservation::Expendable,
-				)?;
+				T::Assets::transfer(pool_info.assets[i_usize], who, &pool_info.account_id, dx)?;
+				T::Assets::transfer(pool_info.assets[j_usize], &pool_info.account_id, who, dy)?;
 				let asset_i = pool_info.assets[i_usize];
 				let asset_j = pool_info.assets[j_usize];
 
@@ -1848,30 +1831,12 @@ impl<T: Config> StableAsset for Pallet<T> {
 			let zero: T::Balance = Zero::zero();
 			for i in 0..amounts.len() {
 				ensure!(amounts[i] >= min_redeem_amounts[i], Error::<T>::RedeemUnderMin);
-				T::Assets::transfer(
-					pool_info.assets[i],
-					&pool_info.account_id,
-					who,
-					amounts[i],
-					Preservation::Expendable,
-				)?;
+				T::Assets::transfer(pool_info.assets[i], &pool_info.account_id, who, amounts[i])?;
 			}
 			if fee_amount > zero {
-				T::Assets::transfer(
-					pool_info.pool_asset,
-					who,
-					&pool_info.fee_recipient,
-					fee_amount,
-					Preservation::Expendable,
-				)?;
+				T::Assets::transfer(pool_info.pool_asset, who, &pool_info.fee_recipient, fee_amount)?;
 			}
-			T::Assets::burn_from(
-				pool_info.pool_asset,
-				who,
-				redeem_amount,
-				Precision::Exact,
-				Fortitude::Polite,
-			)?;
+			T::Assets::withdraw(pool_info.pool_asset, who, redeem_amount)?;
 
 			pool_info.total_supply = total_supply;
 			pool_info.balances = balances;
@@ -1935,28 +1900,10 @@ impl<T: Config> StableAsset for Pallet<T> {
 				ensure!(asset_length_usize == pool_size, Error::<T>::ArgumentsError);
 				ensure!(dy >= min_redeem_amount, Error::<T>::RedeemUnderMin);
 				if fee_amount > Zero::zero() {
-					T::Assets::transfer(
-						pool_info.pool_asset,
-						who,
-						&pool_info.fee_recipient,
-						fee_amount,
-						Preservation::Expendable,
-					)?;
+					T::Assets::transfer(pool_info.pool_asset, who, &pool_info.fee_recipient, fee_amount)?;
 				}
-				T::Assets::transfer(
-					pool_info.assets[i_usize],
-					&pool_info.account_id,
-					who,
-					dy,
-					Preservation::Expendable,
-				)?;
-				T::Assets::burn_from(
-					pool_info.pool_asset,
-					who,
-					redeem_amount,
-					Precision::Exact,
-					Fortitude::Polite,
-				)?;
+				T::Assets::transfer(pool_info.assets[i_usize], &pool_info.account_id, who, dy)?;
+				T::Assets::withdraw(pool_info.pool_asset, who, redeem_amount)?;
 				let mut amounts: Vec<T::Balance> = Vec::new();
 				for idx in 0..pool_size {
 					if idx == i_usize {
@@ -2021,32 +1968,14 @@ impl<T: Config> StableAsset for Pallet<T> {
 			let zero: T::Balance = Zero::zero();
 			ensure!(redeem_amount <= max_redeem_amount, Error::<T>::RedeemOverMax);
 			if fee_amount > zero {
-				T::Assets::transfer(
-					pool_info.pool_asset,
-					who,
-					&pool_info.fee_recipient,
-					fee_amount,
-					Preservation::Expendable,
-				)?;
+				T::Assets::transfer(pool_info.pool_asset, who, &pool_info.fee_recipient, fee_amount)?;
 			}
 			for (idx, amount) in amounts.iter().enumerate() {
 				if *amount > zero {
-					T::Assets::transfer(
-						pool_info.assets[idx],
-						&pool_info.account_id,
-						who,
-						amounts[idx],
-						Preservation::Expendable,
-					)?;
+					T::Assets::transfer(pool_info.assets[idx], &pool_info.account_id, who, amounts[idx])?;
 				}
 			}
-			T::Assets::burn_from(
-				pool_info.pool_asset,
-				who,
-				burn_amount,
-				Precision::Exact,
-				Fortitude::Polite,
-			)?;
+			T::Assets::withdraw(pool_info.pool_asset, who, burn_amount)?;
 
 			pool_info.total_supply = total_supply;
 			pool_info.balances = balances;
@@ -2173,7 +2102,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 				// calculate swap amount
 				if let Ok(swap_result) = Self::get_swap_amount(&pool_info, input_index, output_index, input_amount) {
 					let mut balance_of: T::AtLeast64BitUnsigned =
-						T::Assets::balance(output_asset, &pool_info.account_id).into();
+						T::Assets::free_balance(output_asset, &pool_info.account_id).into();
 					if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, output_asset) {
 						balance_of = balance_of.checked_mul(&numerator)?.checked_div(&denominator)?;
 					}
