@@ -49,7 +49,7 @@ use node_primitives::{
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
-use sp_core::blake2_256;
+use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, Saturating, StaticLookup, TrailingZeroInput, UniqueSaturatedInto, Zero,
@@ -190,7 +190,9 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// XCM execution Failure
 		XcmFailure,
+		/// The given currency is not supported.
 		VTokenNotSupport,
 		NoData,
 		/// Poll is not ongoing.
@@ -209,8 +211,6 @@ pub mod pallet {
 		MaxVotesReached,
 		/// The class must be supplied since it is not easily determinable from the state.
 		ClassNeeded,
-		/// The class ID supplied is invalid.
-		BadClass,
 	}
 
 	/// Information concerning any given referendum.

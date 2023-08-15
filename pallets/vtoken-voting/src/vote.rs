@@ -19,8 +19,7 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::pallet_prelude::*;
 use pallet_conviction_voting::{AccountVote, Conviction};
-use sp_std::prelude::*;
-use std::fmt::Debug;
+use sp_std::{fmt::Debug, prelude::*};
 
 /// Info regarding a referendum, present or past.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]

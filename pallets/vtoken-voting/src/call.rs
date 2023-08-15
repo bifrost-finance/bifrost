@@ -21,18 +21,19 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use pallet_conviction_voting::AccountVote;
 use sp_runtime::traits::StaticLookup;
+use sp_std::boxed::Box;
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
 	#[codec(index = 20)]
 	ConvictionVoting(ConvictionVotingCall<T>),
 	#[codec(index = 24)]
-	Utility(Box<UtilityCall<Self>>),
+	Utility(UtilityCall<Self>),
 }
 
 impl<T: Config> KusamaCall<T> {
 	pub fn get_derivative_call(derivative_index: u16, call: Self) -> Self {
-		Self::Utility(Box::new(UtilityCall::AsDerivative(derivative_index, Box::new(call))))
+		Self::Utility(UtilityCall::AsDerivative(derivative_index, Box::new(call)))
 	}
 }
 
@@ -41,7 +42,7 @@ pub enum PolkadotCall<T: Config> {
 	#[codec(index = 20)]
 	ConvictionVoting(ConvictionVotingCall<T>),
 	#[codec(index = 26)]
-	Utility(Box<UtilityCall<Self>>),
+	Utility(UtilityCall<Self>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
