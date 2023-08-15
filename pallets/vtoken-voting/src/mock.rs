@@ -27,7 +27,7 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use node_primitives::{
 	currency::{KSM, VBNC, VKSM},
-	CurrencyId, TokenSymbol,
+	CurrencyId, DoNothingRouter, TokenSymbol,
 };
 use pallet_xcm::EnsureResponse;
 use sp_core::H256;
@@ -192,17 +192,6 @@ impl xcm_executor::Config for XcmConfig {
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
 	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
-pub struct DoNothingRouter;
-impl SendXcm for DoNothingRouter {
-	type Ticket = ();
-	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
-		Ok(((), MultiAssets::new()))
-	}
-	fn deliver(_: ()) -> Result<XcmHash, SendError> {
-		Ok([0; 32])
-	}
 }
 
 impl pallet_xcm::Config for Runtime {
