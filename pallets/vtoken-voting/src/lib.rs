@@ -190,15 +190,9 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The given asset ID is unknown.
-		Unknown,
-		InvalidStatus,
-		BelowMinimumMint,
-		BadAccountFormat,
 		XcmFailure,
 		VTokenNotSupport,
 		NoData,
-
 		/// Poll is not ongoing.
 		NotOngoing,
 		/// The given account did not vote on the poll.
@@ -333,7 +327,6 @@ pub mod pallet {
 
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (query_id, xcm_message) = Self::build_xcm(call, notify_call)?;
-			println!("vote xcm_message: {:?}", xcm_message);
 			PendingVotingInfo::<T>::insert(query_id, (vtoken, poll_index, who.clone()));
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
 				.map_err(|_| Error::<T>::XcmFailure)?;
@@ -472,7 +465,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 
-			ensure!(ReferendumInfoFor::<T>::contains_key(vtoken, poll_index), Error::<T>::Unknown);
+			ensure!(ReferendumInfoFor::<T>::contains_key(vtoken, poll_index), Error::<T>::NoData);
 			ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
 
 			Self::deposit_event(Event::<T>::ReferendumInfoSet { vtoken, poll_index, info });
@@ -752,6 +745,7 @@ pub mod pallet {
 			weight: XcmWeight,
 			query_id: Option<QueryId>,
 		) -> Result<Xcm<()>, Error<T>> {
+			let para_id = T::ParachainId::get();
 			let asset = MultiAsset {
 				id: Concrete(MultiLocation::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
@@ -768,7 +762,10 @@ pub mod pallet {
 				RefundSurplus,
 				DepositAsset {
 					assets: All.into(),
-					beneficiary: MultiLocation { parents: 0, interior: X1(Parachain(2001)) },
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(Parachain(para_id.into())),
+					},
 				},
 			];
 
@@ -776,9 +773,7 @@ pub mod pallet {
 				xcm_message.insert(
 					3,
 					ReportTransactStatus(QueryResponseInfo {
-						destination: MultiLocation::from(X1(Parachain(
-							T::ParachainId::get().into(),
-						))),
+						destination: MultiLocation::from(X1(Parachain(para_id.into()))),
 						query_id,
 						max_weight: weight,
 					}),
