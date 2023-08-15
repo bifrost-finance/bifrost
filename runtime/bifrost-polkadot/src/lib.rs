@@ -105,7 +105,7 @@ use zenlink_protocol::{
 mod xcm_config;
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
-use pallet_xcm::QueryStatus;
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -1332,6 +1332,20 @@ impl bifrost_slpx::Config for Runtime {
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type Class = u16;
+	type PollIndex = u32;
+	type MaxVotes = ConstU32<100>;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1610,6 +1624,7 @@ construct_runtime! {
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 128,
 	}
 }
 
@@ -1678,6 +1693,7 @@ mod benches {
 		[bifrost_salp, Salp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 

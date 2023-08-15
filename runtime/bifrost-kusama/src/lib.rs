@@ -112,7 +112,7 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 // xcm config
 mod xcm_config;
 use bifrost_runtime_common::remove_pallet::RemovePallet;
-use pallet_xcm::QueryStatus;
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -1508,6 +1508,20 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type Class = u16;
+	type PollIndex = u32;
+	type MaxVotes = ConstU32<100>;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1835,6 +1849,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 128,
 	}
 }
 
@@ -1918,6 +1933,7 @@ mod benches {
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 
