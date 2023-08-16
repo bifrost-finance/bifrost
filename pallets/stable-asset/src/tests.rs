@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::traits::StableAsset as StableAssetInterface;
 use crate::{
 	mock::*, Error, MintResult, RedeemMultiResult, RedeemProportionResult, RedeemSingleResult, StableAssetPoolInfo,
 	SwapResult,
@@ -23,6 +24,7 @@ use frame_support::assert_noop;
 use frame_support::assert_ok;
 use frame_support::dispatch::DispatchError;
 use frame_support::traits::fungibles::{Inspect, Mutate};
+use orml_traits::MultiCurrency;
 
 pub const BALANCE_OFF: u128 = 1;
 
@@ -38,8 +40,8 @@ fn create_pool() -> (i64, i64, i64, u64) {
 	let coin1 = TestAssets::create_asset().expect("asset should be created");
 	let pool_asset = TestAssets::create_asset().expect("asset should be created");
 	let amount: Balance = 100_000_000;
-	assert_ok!(TestAssets::mint_into(coin0, &1, amount));
-	assert_ok!(TestAssets::mint_into(coin1, &1, amount));
+	assert_ok!(TestAssets::deposit(coin1, &1, amount));
+	assert_ok!(TestAssets::deposit(coin0, &1, amount));
 	assert_ok!(StableAsset::create_pool(
 		RuntimeOrigin::signed(1),
 		pool_asset,
@@ -53,6 +55,7 @@ fn create_pool() -> (i64, i64, i64, u64) {
 		1,
 		1000000000000000000u128,
 	));
+	assert_ok!(StableAsset::set_token_rate(0, vec![(coin0, (1, 1)), (coin1, (1, 1))]));
 	(coin0, coin1, pool_asset, 8319403528785522541u64)
 }
 
@@ -227,15 +230,18 @@ fn mint_successful_equal_amounts() {
 			})
 		);
 
-		assert_eq!(TestAssets::balance(coin0, &1), 90000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &1), 90000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 10000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 90000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 90000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 10000000u128 - BALANCE_OFF);
 		assert_eq!(
-			TestAssets::balance(pool_asset, &1),
+			TestAssets::free_balance(pool_asset, &1),
 			199800000000000000u128 - BALANCE_OFF
 		);
-		assert_eq!(TestAssets::balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF);
+		assert_eq!(
+			TestAssets::free_balance(pool_asset, &2),
+			200000000000000u128 - BALANCE_OFF
+		);
 	});
 }
 
@@ -270,15 +276,18 @@ fn mint_successful_different_amounts() {
 			})
 		);
 
-		assert_eq!(TestAssets::balance(coin0, &1), 90000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &1), 80000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 20000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 90000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 80000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 20000000u128 - BALANCE_OFF);
 		assert_eq!(
-			TestAssets::balance(pool_asset, &1),
+			TestAssets::free_balance(pool_asset, &1),
 			299606896309149793u128 - BALANCE_OFF
 		);
-		assert_eq!(TestAssets::balance(pool_asset, &2), 299906803112262u128 - BALANCE_OFF);
+		assert_eq!(
+			TestAssets::free_balance(pool_asset, &2),
+			299906803112262u128 - BALANCE_OFF
+		);
 		if let RuntimeEvent::StableAsset(crate::pallet::Event::LiquidityAdded {
 			minter: _,
 			pool_id: _,
@@ -361,8 +370,8 @@ fn mint_failed_overflow() {
 		let (coin0, coin1, _pool_asset, _swap_id) = create_pool();
 		System::set_block_number(2);
 
-		assert_ok!(TestAssets::mint_into(coin0, &1, 10000000000u128));
-		assert_ok!(TestAssets::mint_into(coin1, &1, 20000000000u128));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &1, 10000000000u128));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(coin1, &1, 20000000000u128));
 		let amounts = vec![10000000000u128, 20000000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0u128),);
 	});
@@ -399,10 +408,10 @@ fn swap_successful() {
 				precision: 1000000000000000000u128,
 			})
 		);
-		assert_eq!(TestAssets::balance(coin0, &1), 85000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &1), 84999301u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 15000699u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 85000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 84999301u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 15000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 15000699u128 - BALANCE_OFF);
 		if let RuntimeEvent::StableAsset(crate::pallet::Event::TokenSwapped {
 			swapper: _,
 			pool_id: _,
@@ -565,15 +574,18 @@ fn redeem_proportion_successful() {
 				precision: 1000000000000000000u128,
 			})
 		);
-		assert_eq!(TestAssets::balance(coin0, &1), 93317697u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &1), 86635394u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 6682303u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 13364606u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 93317697u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 86635394u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 6682303u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 13364606u128 - BALANCE_OFF);
 		assert_eq!(
-			TestAssets::balance(pool_asset, &1),
+			TestAssets::free_balance(pool_asset, &1),
 			199606896309149793u128 - BALANCE_OFF
 		);
-		assert_eq!(TestAssets::balance(pool_asset, &2), 799916706598014u128 - BALANCE_OFF);
+		assert_eq!(
+			TestAssets::free_balance(pool_asset, &2),
+			799916706598014u128 - BALANCE_OFF
+		);
 		if let RuntimeEvent::StableAsset(crate::pallet::Event::RedeemedProportion {
 			redeemer: _,
 			pool_id: _,
@@ -723,15 +735,15 @@ fn redeem_single_successful() {
 				precision: 1000000000000000000u128,
 			})
 		);
-		assert_eq!(TestAssets::balance(coin0, &1), 99503160u128);
-		assert_eq!(TestAssets::balance(coin1, &1), 80000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 496838u128);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 20000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 99503160u128);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 80000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 496838u128);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 20000000u128 - BALANCE_OFF);
 		assert_eq!(
-			TestAssets::balance(pool_asset, &1),
+			TestAssets::free_balance(pool_asset, &1),
 			199606896309149793u128 - BALANCE_OFF
 		);
-		assert_eq!(TestAssets::balance(pool_asset, &2), 799922619246391u128);
+		assert_eq!(TestAssets::free_balance(pool_asset, &2), 799922619246391u128);
 		if let RuntimeEvent::StableAsset(crate::pallet::Event::RedeemedSingle {
 			redeemer: _,
 			pool_id: _,
@@ -872,12 +884,12 @@ fn redeem_multi_successful() {
 				precision: 1000000000000000000u128,
 			})
 		);
-		assert_eq!(TestAssets::balance(coin0, &1), 95000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &1), 85000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin0, &swap_id), 5000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(coin1, &swap_id), 15000000u128 - BALANCE_OFF);
-		assert_eq!(TestAssets::balance(pool_asset, &1), 199031790317593892u128);
-		assert_eq!(TestAssets::balance(pool_asset, &2), 802782333070040u128);
+		assert_eq!(TestAssets::free_balance(coin0, &1), 95000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &1), 85000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin0, &swap_id), 5000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(coin1, &swap_id), 15000000u128 - BALANCE_OFF);
+		assert_eq!(TestAssets::free_balance(pool_asset, &1), 199031790317593892u128);
+		assert_eq!(TestAssets::free_balance(pool_asset, &2), 802782333070040u128);
 		if let RuntimeEvent::StableAsset(crate::pallet::Event::RedeemedMulti {
 			redeemer: _,
 			pool_id: _,
@@ -974,8 +986,8 @@ fn swap_exact_success_different_precision() {
 		let coin1 = TestAssets::create_asset().expect("asset should be created");
 		let pool_asset = TestAssets::create_asset().expect("asset should be created");
 		let amount: Balance = 100_000_000;
-		assert_ok!(TestAssets::mint_into(coin0, &1, amount));
-		assert_ok!(TestAssets::mint_into(coin1, &1, amount));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &1, amount));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(coin1, &1, amount));
 		assert_ok!(StableAsset::create_pool(
 			RuntimeOrigin::signed(1),
 			pool_asset,
@@ -1048,7 +1060,11 @@ fn get_mint_amount_same_as_mint() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1097,7 +1113,11 @@ fn get_swap_amount_same_as_swap() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1146,7 +1166,11 @@ fn get_swap_amount_exact_same_as_swap() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1195,7 +1219,11 @@ fn get_redeem_proportion_amount_same_as_redeem_proportion() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1250,7 +1278,11 @@ fn get_redeem_single_amount_same_as_redeem_single() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1307,7 +1339,11 @@ fn get_redeem_multi_amount_same_as_redeem_multi() {
 
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		let pool_info = StableAsset::pools(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
@@ -1363,7 +1399,11 @@ fn swap_should_work_with_unbalance_coin0() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
 
 		// increase the balance of coin0
-		assert_ok!(TestAssets::mint_into(coin0, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin0,
+			&swap_id,
+			100_000_000_000
+		));
 
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(1), 0, 0, 1, 5000000u128, 0, 2));
@@ -1410,7 +1450,11 @@ fn swap_should_work_with_unbalance_coin1() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
 
 		// increase the balance of coin1
-		assert_ok!(TestAssets::mint_into(coin1, &swap_id, 100_000_000_000));
+		assert_ok!(<Test as crate::Config>::Assets::deposit(
+			coin1,
+			&swap_id,
+			100_000_000_000
+		));
 
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(1), 0, 0, 1, 5000000u128, 0, 2));

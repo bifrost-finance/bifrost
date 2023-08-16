@@ -20,13 +20,13 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
 	traits::{
-		fungibles::{Dust, Inspect, Mutate, Unbalanced},
-		tokens::{DepositConsequence, Fortitude, Precision, Preservation, Provenance, WithdrawConsequence},
-		ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, OnUnbalanced,
+		ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, GenesisBuild, Nothing,
+		OnUnbalanced,
 	},
 	PalletId,
 };
 use frame_system::RawOrigin;
+use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -44,6 +44,8 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call},
 		StableAsset: stable_asset::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -86,11 +88,45 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type WeightInfo = ();
 	type MaxReserves = ();
-	type ReserveIdentifier = ();
+	type ReserveIdentifier = [u8; 8];
 	type HoldIdentifier = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ();
 	type MaxFreezes = ();
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: i64| -> Balance {
+		0
+	};
+}
+impl orml_tokens::Config for Test {
+	type Amount = i128;
+	type Balance = Balance;
+	type CurrencyId = i64;
+	type DustRemovalWhitelist = Nothing;
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type WeightInfo = ();
+	type CurrencyHooks = ();
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: i64 = 0;
+}
+
+pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type WeightInfo = ();
 }
 
 pub type Balance = u128;
@@ -130,8 +166,50 @@ impl CreateAssets<AssetId> for TestAssets {
 	}
 }
 
-impl Mutate<AccountId> for TestAssets {
-	fn mint_into(asset: AssetId, dest: &AccountId, amount: Balance) -> Result<Balance, DispatchError> {
+impl MultiCurrency<AccountId> for TestAssets {
+	type CurrencyId = AssetId;
+	type Balance = Balance;
+
+	fn minimum_balance(_currency_id: Self::CurrencyId) -> Self::Balance {
+		todo!()
+	}
+
+	fn total_issuance(_currency_id: Self::CurrencyId) -> Self::Balance {
+		todo!()
+	}
+
+	fn total_balance(_currency_id: Self::CurrencyId, _who: &AccountId) -> Self::Balance {
+		todo!()
+	}
+
+	fn free_balance(asset: Self::CurrencyId, who: &AccountId) -> Self::Balance {
+		ASSETS
+			.with(|d| -> Option<Balance> {
+				let i = usize::try_from(asset).ok()?;
+				let d = d.borrow();
+				let a = d.get(i)?;
+				a.balances.get(who).copied()
+			})
+			.map(|x| x - 1)
+			.unwrap_or(0)
+	}
+
+	fn ensure_can_withdraw(_currency_id: Self::CurrencyId, _who: &AccountId, _amount: Self::Balance) -> DispatchResult {
+		todo!()
+	}
+
+	fn transfer(
+		currency_id: Self::CurrencyId,
+		from: &AccountId,
+		to: &AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		Self::deposit(currency_id, to, amount)?;
+		Self::withdraw(currency_id, from, amount)?;
+		Ok(())
+	}
+
+	fn deposit(asset: Self::CurrencyId, dest: &AccountId, amount: Self::Balance) -> DispatchResult {
 		ASSETS.with(|d| -> DispatchResult {
 			let i = usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
 			let mut d = d.borrow_mut();
@@ -146,17 +224,10 @@ impl Mutate<AccountId> for TestAssets {
 			a.total = a.total.checked_add(amount).ok_or(DispatchError::Other("Overflow"))?;
 
 			Ok(())
-		})?;
-		Ok(amount)
+		})
 	}
 
-	fn burn_from(
-		asset: AssetId,
-		dest: &AccountId,
-		amount: Balance,
-		_precision: Precision,
-		_fortitude: Fortitude,
-	) -> Result<Balance, DispatchError> {
+	fn withdraw(asset: Self::CurrencyId, dest: &AccountId, amount: Self::Balance) -> DispatchResult {
 		ASSETS.with(|d| -> DispatchResult {
 			let i = usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
 			let mut d = d.borrow_mut();
@@ -169,82 +240,14 @@ impl Mutate<AccountId> for TestAssets {
 			a.total = a.total.checked_sub(amount).ok_or(DispatchError::Other("Overflow"))?;
 
 			Ok(())
-		})?;
-		Ok(amount)
+		})
 	}
 
-	fn transfer(
-		asset: AssetId,
-		source: &AccountId,
-		dest: &AccountId,
-		amount: Balance,
-		_preservation: Preservation,
-	) -> Result<Balance, DispatchError> {
-		Self::burn_from(asset, source, amount, Precision::Exact, Fortitude::Polite)?;
-		Self::mint_into(asset, dest, amount)?;
-		Ok(amount)
-	}
-}
-
-impl Inspect<AccountId> for TestAssets {
-	type AssetId = AssetId;
-	type Balance = Balance;
-	fn balance(asset: AssetId, who: &AccountId) -> Balance {
-		ASSETS
-			.with(|d| -> Option<Balance> {
-				let i = usize::try_from(asset).ok()?;
-				let d = d.borrow();
-				let a = d.get(i)?;
-				a.balances.get(who).copied()
-			})
-			.map(|x| x - 1)
-			.unwrap_or(0)
-	}
-
-	fn total_issuance(_asset: AssetId) -> Balance {
+	fn can_slash(_currency_id: Self::CurrencyId, _who: &AccountId, _amount: Self::Balance) -> bool {
 		todo!()
 	}
 
-	fn minimum_balance(_asset: AssetId) -> Balance {
-		todo!()
-	}
-
-	fn total_balance(_asset: AssetId, _who: &AccountId) -> Balance {
-		todo!()
-	}
-
-	fn reducible_balance(_asset: AssetId, _who: &AccountId, _preservation: Preservation, _force: Fortitude) -> Balance {
-		todo!()
-	}
-
-	fn can_deposit(
-		_asset: Self::AssetId,
-		_who: &AccountId,
-		_amount: Balance,
-		_provenance: Provenance,
-	) -> DepositConsequence {
-		todo!()
-	}
-
-	fn can_withdraw(_asset: AssetId, _who: &AccountId, _amount: Balance) -> WithdrawConsequence<Balance> {
-		todo!()
-	}
-
-	fn asset_exists(_asset: AssetId) -> bool {
-		todo!()
-	}
-}
-
-impl Unbalanced<AccountId> for TestAssets {
-	fn handle_dust(_dust: Dust<AccountId, Self>) {
-		todo!()
-	}
-
-	fn write_balance(_asset: AssetId, _who: &AccountId, _amount: Balance) -> Result<Option<Balance>, DispatchError> {
-		todo!()
-	}
-
-	fn set_total_issuance(_asset: AssetId, _amount: Balance) {
+	fn slash(_currency_id: Self::CurrencyId, _who: &AccountId, _amount: Self::Balance) -> Self::Balance {
 		todo!()
 	}
 }

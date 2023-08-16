@@ -16,6 +16,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.2.0", default-features = false, features = ["derive"] }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 log = { version = "0.4.17", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
 
 [dependencies.frame-support]
 default-features = false
@@ -71,6 +72,8 @@ std = [
 	"scale-info/std",
 	"sp-std/std",
 	"sp-runtime/std",
+	"node-primitives/std",
+	"orml-traits/std",
 ]
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",

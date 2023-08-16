@@ -6719,6 +6719,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "node-primitives",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
