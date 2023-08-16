@@ -65,8 +65,6 @@ const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
 type DerivativeIndex = u16;
 
-type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 pub type CurrencyIdOf<T> =
@@ -202,6 +200,7 @@ pub mod pallet {
 		XcmFailure,
 		/// The given currency is not supported.
 		VTokenNotSupport,
+		DerivativeIndexOccupied,
 		PendingVote,
 		PendingUpdateReferendumStatus,
 		/// No data available in storage.
@@ -493,14 +492,22 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
 			derivative_index: DerivativeIndex,
-			role: VoteRole,
+			vote_role: VoteRole,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 
-			DelegatorRole::<T>::insert(vtoken, role, derivative_index);
+			ensure!(
+				Self::check_derivative_index_occupied(vtoken, vote_role, derivative_index),
+				Error::<T>::DerivativeIndexOccupied
+			);
+			DelegatorRole::<T>::insert(vtoken, vote_role, derivative_index);
 
-			Self::deposit_event(Event::<T>::DelegatorRoleSet { vtoken, role, derivative_index });
+			Self::deposit_event(Event::<T>::DelegatorRoleSet {
+				vtoken,
+				role: vote_role,
+				derivative_index,
+			});
 
 			Ok(())
 		}
@@ -919,6 +926,28 @@ pub mod pallet {
 			let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
 			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
 				.expect("infinite length input; no invalid inputs for type; qed")
+		}
+
+		fn check_derivative_index_occupied(
+			vtoken: CurrencyIdOf<T>,
+			vote_role: VoteRole,
+			target_index: DerivativeIndex,
+		) -> bool {
+			Self::find_derivative_index_role(vtoken, target_index)
+				.map_or(false, |role| role != vote_role)
+		}
+
+		fn find_derivative_index_role(
+			vtoken: CurrencyIdOf<T>,
+			target_index: DerivativeIndex,
+		) -> Option<VoteRole> {
+			DelegatorRole::<T>::iter_prefix(vtoken).into_iter().find_map(|(role, index)| {
+				if index == target_index {
+					Some(role)
+				} else {
+					None
+				}
+			})
 		}
 
 		fn find_derivative_index_by_role(
