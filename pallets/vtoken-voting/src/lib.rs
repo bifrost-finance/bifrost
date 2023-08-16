@@ -140,38 +140,30 @@ pub mod pallet {
 			poll_index: PollIndexOf<T>,
 			vote: AccountVote<BalanceOf<T>>,
 		},
-		VoteNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
-			success: bool,
-		},
 		Unlocked {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
+		},
+		ReferendumStatusUpdated {
+			who: AccountIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+		},
+		DelegatorTokenUnlocked {
+			who: AccountIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			delegator: AccountIdOf<T>,
 		},
 		DelegatorRoleSet {
 			vtoken: CurrencyIdOf<T>,
 			role: VoteRole,
 			derivative_index: DerivativeIndex,
 		},
-		DelegatorTokenUnlocked {
-			vtoken: CurrencyIdOf<T>,
-			delegator: AccountIdOf<T>,
-		},
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
 			info: ReferendumInfoOf<T>,
-		},
-		ReferendumStatusUpdated {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
-		},
-		ReferendumStatusUpdateNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
-			success: bool,
 		},
 		VoteLockingPeriodSet {
 			vtoken: CurrencyIdOf<T>,
@@ -180,6 +172,21 @@ pub mod pallet {
 		ReferendumKilled {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
+		},
+		VoteNotified {
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+			success: bool,
+		},
+		DelegatorTokenUnlockNotified {
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+			success: bool,
+		},
+		ReferendumStatusUpdateNotified {
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+			success: bool,
 		},
 		ResponseReceived {
 			responder: MultiLocation,
@@ -194,6 +201,7 @@ pub mod pallet {
 		XcmFailure,
 		/// The given currency is not supported.
 		VTokenNotSupport,
+		/// No data available in storage.
 		NoData,
 		/// Poll is not ongoing.
 		NotOngoing,
@@ -361,7 +369,7 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			#[pallet::compact] poll_index: PollIndexOf<T>,
 		) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 
 			let notify_call = Call::<T>::notify_update_referendum_status {
@@ -396,7 +404,7 @@ pub mod pallet {
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
 				.map_err(|_| Error::<T>::XcmFailure)?;
 
-			Self::deposit_event(Event::<T>::ReferendumStatusUpdated { vtoken, poll_index });
+			Self::deposit_event(Event::<T>::ReferendumStatusUpdated { who, vtoken, poll_index });
 
 			Ok(())
 		}
@@ -408,12 +416,12 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			delegator: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 
 			let delegator = T::Lookup::lookup(delegator)?;
 
-			Self::deposit_event(Event::<T>::DelegatorTokenUnlocked { vtoken, delegator });
+			Self::deposit_event(Event::<T>::DelegatorTokenUnlocked { who, vtoken, delegator });
 
 			Ok(())
 		}
@@ -547,7 +555,20 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
-
+			if let Some((vtoken, poll_index, who)) = PendingVotingInfo::<T>::take(query_id) {
+				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
+				if !success {
+					// rollback vote
+					let class =
+						Self::try_remove_vote(&who, vtoken, poll_index, None, UnvoteScope::Any)?;
+					Self::update_lock(&who, vtoken, &class)?;
+				}
+				Self::deposit_event(Event::<T>::DelegatorTokenUnlockNotified {
+					vtoken,
+					poll_index,
+					success,
+				});
+			}
 			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
 
 			Ok(())
