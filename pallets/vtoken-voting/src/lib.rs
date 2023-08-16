@@ -326,16 +326,20 @@ pub mod pallet {
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
 
 			// send XCM message
+			let derivative_index =
+				DelegatorRole::<T>::get(vtoken, VoteRole::from(vote)).ok_or(Error::<T>::NoData)?;
 			let vote_call = KusamaCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(
 				poll_index, vote,
 			));
-			let derivative_index =
-				DelegatorRole::<T>::get(vtoken, VoteRole::from(vote)).ok_or(Error::<T>::NoData)?;
-			let call = KusamaCall::<T>::get_derivative_call(derivative_index, vote_call);
-
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (query_id, xcm_message) = Self::build_xcm(call, notify_call)?;
-			PendingVotingInfo::<T>::insert(query_id, (vtoken, poll_index, who.clone()));
+			let xcm_message = Self::build_xcm_with_notify(
+				derivative_index,
+				vote_call,
+				notify_call,
+				|query_id| {
+					PendingVotingInfo::<T>::insert(query_id, (vtoken, poll_index, who.clone()))
+				},
+			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
 				.map_err(|_| Error::<T>::XcmFailure)?;
 
@@ -377,30 +381,36 @@ pub mod pallet {
 				response: Default::default(),
 			};
 
-			let remove_vote_call = KusamaCall::<T>::ConvictionVoting(
-				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
-			);
 			let derivative_index =
 				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
 					.ok_or(Error::<T>::NoData)?;
-			let call = KusamaCall::<T>::get_derivative_call(derivative_index, remove_vote_call);
-
-			let (query_id, xcm_message) = Self::build_xcm(call, notify_call.clone())?;
-			PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+			let remove_vote_call = KusamaCall::<T>::ConvictionVoting(
+				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
+			);
+			let xcm_message = Self::build_xcm_with_notify(
+				derivative_index,
+				remove_vote_call,
+				notify_call.clone(),
+				|query_id| {
+					PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+				},
+			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
 				.map_err(|_| Error::<T>::XcmFailure)?;
 
-			let bifrost_para_account: AccountIdOf<T> =
-				T::ParachainId::get().into_account_truncating();
-			let bifrost_para_subaccount: AccountIdOf<T> =
-				Self::derivative_account_id(bifrost_para_account.clone(), derivative_index);
+			let bifrost_derivative_account = Self::bifrost_derivative_account_id(derivative_index);
 			let unlock_call = KusamaCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Unlock(
 				Zero::zero(),
-				T::Lookup::unlookup(bifrost_para_subaccount),
+				T::Lookup::unlookup(bifrost_derivative_account),
 			));
-			let call = KusamaCall::<T>::get_derivative_call(derivative_index, unlock_call);
-			let (query_id, xcm_message) = Self::build_xcm(call, notify_call)?;
-			PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+			let xcm_message = Self::build_xcm_with_notify(
+				derivative_index,
+				unlock_call,
+				notify_call,
+				|query_id| {
+					PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+				},
+			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
 				.map_err(|_| Error::<T>::XcmFailure)?;
 
@@ -435,8 +445,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			Self::ensure_ongoing(vtoken, poll_index)?;
 
-			let _status = Self::ensure_ongoing(vtoken, poll_index)?;
 			ReferendumInfoFor::<T>::insert(vtoken, poll_index, ReferendumInfo::Killed);
 
 			Self::deposit_event(Event::<T>::ReferendumKilled { vtoken, poll_index });
@@ -736,10 +746,12 @@ pub mod pallet {
 			T::MultiCurrency::extend_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
 		}
 
-		fn build_xcm(
+		fn build_xcm_with_notify(
+			derivative_index: DerivativeIndex,
 			call: KusamaCall<T>,
 			notify_call: Call<T>,
-		) -> Result<(QueryId, Xcm<()>), Error<T>> {
+			f: impl FnOnce(QueryId) -> (),
+		) -> Result<Xcm<()>, Error<T>> {
 			let responder = MultiLocation::parent();
 			let now = frame_system::Pallet::<T>::block_number();
 			let timeout = now.saturating_add(100u32.into());
@@ -749,30 +761,30 @@ pub mod pallet {
 				timeout,
 				Here,
 			);
+			f(query_id);
 
 			let xcm_message = Self::construct_xcm_message(
-				call.encode(),
+				KusamaCall::<T>::get_derivative_call(derivative_index, call).encode(),
 				4000000000u32.into(),
 				Weight::from_parts(4000000000, 100000),
-				Some(query_id),
+				query_id,
 			)?;
 
-			Ok((query_id, xcm_message))
+			Ok(xcm_message)
 		}
 
 		fn construct_xcm_message(
 			call: Vec<u8>,
 			extra_fee: BalanceOf<T>,
 			weight: XcmWeight,
-			query_id: Option<QueryId>,
+			query_id: QueryId,
 		) -> Result<Xcm<()>, Error<T>> {
-			let para_id = T::ParachainId::get();
+			let para_id = T::ParachainId::get().into();
 			let asset = MultiAsset {
 				id: Concrete(MultiLocation::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
 			};
-
-			let mut xcm_message = vec![
+			let xcm_message = vec![
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
@@ -780,26 +792,17 @@ pub mod pallet {
 					require_weight_at_most: weight,
 					call: call.into(),
 				},
+				ReportTransactStatus(QueryResponseInfo {
+					destination: MultiLocation::from(X1(Parachain(para_id))),
+					query_id,
+					max_weight: weight,
+				}),
 				RefundSurplus,
 				DepositAsset {
 					assets: All.into(),
-					beneficiary: MultiLocation {
-						parents: 0,
-						interior: X1(Parachain(para_id.into())),
-					},
+					beneficiary: MultiLocation { parents: 0, interior: X1(Parachain(para_id)) },
 				},
 			];
-
-			if let Some(query_id) = query_id {
-				xcm_message.insert(
-					3,
-					ReportTransactStatus(QueryResponseInfo {
-						destination: MultiLocation::from(X1(Parachain(para_id.into()))),
-						query_id,
-						max_weight: weight,
-					}),
-				);
-			}
 
 			Ok(Xcm(xcm_message))
 		}
@@ -850,6 +853,12 @@ pub mod pallet {
 				Some(ReferendumInfo::Completed(end)) => f(PollStatus::Completed(end, false)),
 				_ => f(PollStatus::None),
 			}
+		}
+
+		fn bifrost_derivative_account_id(index: DerivativeIndex) -> AccountIdOf<T> {
+			let bifrost_para_account: AccountIdOf<T> =
+				T::ParachainId::get().into_account_truncating();
+			Self::derivative_account_id(bifrost_para_account, index)
 		}
 
 		pub fn derivative_account_id(who: T::AccountId, index: DerivativeIndex) -> T::AccountId {
