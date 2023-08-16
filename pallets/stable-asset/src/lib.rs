@@ -36,11 +36,7 @@ use frame_support::{
 	codec::{Decode, Encode},
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
-	traits::{
-		fungibles::{Inspect, Mutate},
-		tokens::{Fortitude, Precision, Preservation},
-		Get,
-	},
+	traits::Get,
 	weights::Weight,
 };
 use orml_traits::MultiCurrency;
@@ -340,7 +336,6 @@ pub mod pallet {
 	use super::{PoolTokenIndex, StableAssetPoolId, StableAssetPoolInfo};
 	use crate::traits::{StableAsset, ValidateAssetId};
 	use crate::WeightInfo;
-	use frame_support::traits::tokens::fungibles;
 	use frame_support::{
 		dispatch::{Codec, DispatchResult},
 		pallet_prelude::*,

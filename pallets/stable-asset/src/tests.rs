@@ -23,7 +23,6 @@ use crate::{
 use frame_support::assert_noop;
 use frame_support::assert_ok;
 use frame_support::dispatch::DispatchError;
-use frame_support::traits::fungibles::{Inspect, Mutate};
 use orml_traits::MultiCurrency;
 
 pub const BALANCE_OFF: u128 = 1;

@@ -30,15 +30,7 @@ pub mod weights;
 pub use weights::*;
 pub mod traits;
 
-use frame_support::{
-	pallet_prelude::*,
-	sp_runtime::traits::Zero,
-	traits::{
-		fungibles::Mutate,
-		tokens::{fungibles, Fortitude, Precision, Preservation},
-	},
-	transactional,
-};
+use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
 use frame_system::pallet_prelude::*;
 use node_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, TimeUnit,

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate, BoundedVec};
+use frame_support::{assert_noop, assert_ok, BoundedVec};
 use nutsfinance_stable_asset::{StableAsset as StableAssetInterface, StableAssetPoolInfo};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;

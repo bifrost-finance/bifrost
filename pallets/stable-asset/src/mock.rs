@@ -19,10 +19,7 @@ use crate as stable_asset;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	parameter_types,
-	traits::{
-		ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, GenesisBuild, Nothing,
-		OnUnbalanced,
-	},
+	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, Nothing, OnUnbalanced},
 	PalletId,
 };
 use frame_system::RawOrigin;
