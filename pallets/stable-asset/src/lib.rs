@@ -523,6 +523,10 @@ pub mod pallet {
 			fee_recipient: T::AccountId,
 			yield_recipient: T::AccountId,
 		},
+		TokenRateSet {
+			pool_id: StableAssetPoolId,
+			token_rate: Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>,
+		},
 	}
 
 	#[pallet::error]
@@ -1395,32 +1399,23 @@ impl<T: Config> StableAsset for Pallet<T> {
 		pool_id: StableAssetPoolId,
 		token_rate_info: Vec<(Self::AssetId, (Self::AtLeast64BitUnsigned, Self::AtLeast64BitUnsigned))>,
 	) -> DispatchResult {
+		ensure!(pool_id < PoolCount::<T>::get(), Error::<T>::ArgumentsError);
 		if token_rate_info.last().is_none() {
 			let res = TokenRateCaches::<T>::clear_prefix(pool_id, u32::max_value(), None);
 			ensure!(res.maybe_cursor.is_none(), Error::<T>::TokenRateNotCleared);
 		} else {
 			let mut token_rate_info = token_rate_info.into_iter();
 			let mut token_rate = token_rate_info.next();
-			let mut cursor = TokenRateCaches::<T>::iter_prefix(pool_id);
-			while let Some((asset_id, is_token_rate)) = cursor.next() {
-				if let Some((new_asset_id, new_is_token_rate)) = token_rate {
-					if asset_id == new_asset_id {
-						if is_token_rate != new_is_token_rate {
-							TokenRateCaches::<T>::insert(pool_id, asset_id, new_is_token_rate);
-						}
-						token_rate = token_rate_info.next();
-					} else {
-						TokenRateCaches::<T>::remove(pool_id, asset_id);
-					}
-				} else {
-					TokenRateCaches::<T>::remove(pool_id, asset_id);
-				}
-			}
 			while let Some((asset_id, is_token_rate)) = token_rate {
 				TokenRateCaches::<T>::insert(pool_id, asset_id, is_token_rate);
 				token_rate = token_rate_info.next();
 			}
 		}
+		Self::deposit_event(Event::TokenRateSet {
+			pool_id,
+			token_rate: TokenRateCaches::<T>::iter_prefix(pool_id)
+				.collect::<Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>>(),
+		});
 		Ok(())
 	}
 

@@ -15,7 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{mock::*, Error};
+use crate::{mock::*, AssetIdOf, AtLeast64BitUnsignedOf, Error};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use nutsfinance_stable_asset::{StableAsset as StableAssetInterface, StableAssetPoolInfo};
 use orml_traits::MultiCurrency;
@@ -785,11 +785,6 @@ fn bnc_add_liquidity_should_work() {
 		let coin1 = VBNC;
 		let pool_asset = CurrencyId::BLP(0);
 
-		// assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
-		// 	coin0.into(),
-		// 	&6,
-		// 	1_000_000_000_000u128
-		// ));
 		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin1.into(),
 			&6,
@@ -825,5 +820,66 @@ fn bnc_add_liquidity_should_work() {
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 0);
 		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 209_955_833_377);
+	});
+}
+
+#[test]
+fn edit_token_rate() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		assert_noop!(
+			StablePool::edit_token_rate(
+				RuntimeOrigin::signed(1),
+				0,
+				vec![(BNC, (1, 1)), (VBNC, (10, 11))]
+			),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		let (_coin0, _coin1, _pool_asset, _swap_id) = create_pool2();
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(1),
+			0,
+			vec![(BNC, (1, 1)), (VBNC, (10, 11))]
+		));
+		assert_eq!(
+			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(VBNC, (10, 11)), (BNC, (1, 1))]
+		);
+
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(1),
+			0,
+			vec![(VBNC, (10, 12))]
+		));
+		assert_eq!(
+			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(VBNC, (10, 12)), (BNC, (1, 1))]
+		);
+
+		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::signed(1), 0, vec![]));
+		assert_eq!(
+			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![]
+		);
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::signed(1),
+			0,
+			vec![(VBNC, (10, 12))]
+		));
+		assert_eq!(
+			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(VBNC, (10, 12))]
+		);
 	});
 }
