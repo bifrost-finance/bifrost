@@ -52,7 +52,8 @@ use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting}
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, Saturating, StaticLookup, TrailingZeroInput, UniqueSaturatedInto, Zero,
+		AccountIdConversion, SaturatedConversion, Saturating, StaticLookup, TrailingZeroInput,
+		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -201,6 +202,8 @@ pub mod pallet {
 		XcmFailure,
 		/// The given currency is not supported.
 		VTokenNotSupport,
+		PendingVote,
+		PendingUpdateReferendumStatus,
 		/// No data available in storage.
 		NoData,
 		/// Poll is not ongoing.
@@ -258,12 +261,16 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	pub type PendingVotingInfo<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, AccountIdOf<T>)>;
+	pub type PendingVotingInfo<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		QueryId,
+		(CurrencyIdOf<T>, PollIndexOf<T>, AccountIdOf<T>, BlockNumberFor<T>),
+	>;
 
 	#[pallet::storage]
 	pub type PendingReferendumStatus<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
@@ -337,7 +344,16 @@ pub mod pallet {
 				vote_call,
 				notify_call,
 				|query_id| {
-					PendingVotingInfo::<T>::insert(query_id, (vtoken, poll_index, who.clone()))
+					PendingVotingInfo::<T>::insert(
+						query_id,
+						(
+							vtoken,
+							poll_index,
+							who.clone(),
+							frame_system::Pallet::<T>::block_number()
+								.saturating_add(100u32.saturated_into::<T::BlockNumber>()),
+						),
+					)
 				},
 			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
@@ -375,6 +391,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			// Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
 
 			let notify_call = Call::<T>::notify_update_referendum_status {
 				query_id: 0,
@@ -392,7 +409,15 @@ pub mod pallet {
 				remove_vote_call,
 				notify_call.clone(),
 				|query_id| {
-					PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+					PendingReferendumStatus::<T>::insert(
+						query_id,
+						(
+							vtoken,
+							poll_index,
+							frame_system::Pallet::<T>::block_number()
+								.saturating_add(100u32.saturated_into::<T::BlockNumber>()),
+						),
+					);
 				},
 			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
@@ -408,7 +433,15 @@ pub mod pallet {
 				unlock_call,
 				notify_call,
 				|query_id| {
-					PendingReferendumStatus::<T>::insert(query_id, (vtoken, poll_index));
+					PendingReferendumStatus::<T>::insert(
+						query_id,
+						(
+							vtoken,
+							poll_index,
+							frame_system::Pallet::<T>::block_number()
+								.saturating_add(100u32.saturated_into::<T::BlockNumber>()),
+						),
+					);
 				},
 			)?;
 			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
@@ -514,7 +547,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
-			if let Some((vtoken, poll_index, who)) = PendingVotingInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, who, _)) = PendingVotingInfo::<T>::take(query_id) {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if !success {
 					// rollback vote
@@ -537,7 +570,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
-			if let Some((vtoken, poll_index)) = PendingReferendumStatus::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, _)) = PendingReferendumStatus::<T>::take(query_id) {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
 					ReferendumInfoFor::<T>::insert(
@@ -565,7 +598,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
-			if let Some((vtoken, poll_index, who)) = PendingVotingInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, who, _)) = PendingVotingInfo::<T>::take(query_id) {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if !success {
 					// rollback vote
@@ -812,6 +845,27 @@ pub mod pallet {
 			Ok(())
 		}
 
+		fn ensure_no_pending_vote(who: &AccountIdOf<T>) -> DispatchResult {
+			ensure!(
+				PendingVotingInfo::<T>::iter().find(|(_, (_, _, w, _))| w == who).is_none(),
+				Error::<T>::PendingVote
+			);
+			Ok(())
+		}
+
+		fn ensure_no_pending_update_referendum_status(
+			vtoken: &CurrencyIdOf<T>,
+			poll_index: &PollIndexOf<T>,
+		) -> DispatchResult {
+			ensure!(
+				PendingReferendumStatus::<T>::iter()
+					.find(|(_, (v, p, _))| v == vtoken && p == poll_index)
+					.is_none(),
+				Error::<T>::PendingUpdateReferendumStatus
+			);
+			Ok(())
+		}
+
 		/// `Some` if the referendum `index` can be voted on, along with the tally and class of
 		/// referendum.
 		///
@@ -869,10 +923,10 @@ pub mod pallet {
 
 		fn find_derivative_index_by_role(
 			vtoken: CurrencyIdOf<T>,
-			target: VoteRole,
+			target_role: VoteRole,
 		) -> Option<DerivativeIndex> {
 			DelegatorRole::<T>::iter_prefix(vtoken).into_iter().find_map(|(role, index)| {
-				if role == target {
+				if role == target_role {
 					Some(index)
 				} else {
 					None
