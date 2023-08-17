@@ -91,7 +91,7 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
 # Nuts Finance
-nutsfinance-stable-asset = { version = "*", default-features = false }
+nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
 
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
@@ -347,6 +347,8 @@ try-runtime = [
 	"bifrost-fee-share/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
 	"bifrost-slpx/try-runtime",
+	"nutsfinance-stable-asset/try-runtime",
+	"bifrost-stable-pool/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

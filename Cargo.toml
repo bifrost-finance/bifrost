@@ -116,4 +116,3 @@ orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-m
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "4ae0372e2c624e6acc98305564b9d395f70814c0" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "4ae0372e2c624e6acc98305564b9d395f70814c0" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "d011e5ca62b93e8f688c2042c1f92cdbafc5d1d0" }
-nutsfinance-stable-asset = { git = "https://github.com/bifrost-finance/stable-asset", rev = "21b69fbd3b8d6a8fb27db8f7d52bf762b03f4bf2" }
