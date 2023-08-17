@@ -44,6 +44,7 @@ use node_primitives::{
 };
 use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
+use sp_arithmetic::Percent;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero,
@@ -204,9 +205,11 @@ impl<T: Config>
 		let delegation_count: u32 = mins_maxs.validators_back_maximum;
 
 		// Construct xcm message.
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::Delegate(
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::DelegateWithAutoCompound(
 			validator_account_id_20,
 			amount,
+			Percent::from_percent(100),
+			candidate_delegation_count,
 			candidate_delegation_count,
 			delegation_count,
 		));
@@ -413,52 +416,10 @@ impl<T: Config>
 	/// function.
 	fn unbond_all(
 		&self,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		// check if the delegator exists.
-		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
-			// check if the delegator is in the state of leaving.
-			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
-		} else {
-			Err(Error::<T>::DelegatorNotExist)?;
-		}
-
-		// Construct xcm message.
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleLeaveDelegators);
-
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Chill,
-				call,
-				who,
-				currency_id,
-			)?;
-
-		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
-		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
-
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who,
-			None,
-			MoonbeamLedgerUpdateOperation::LeaveDelegator,
-			Zero::zero(),
-			query_id,
-			timeout,
-			currency_id,
-		)?;
-
-		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(query_id)
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Cancel pending request
@@ -553,7 +514,6 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		let validator = targets.first().ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		// First, check if the delegator exists.
@@ -566,18 +526,6 @@ impl<T: Config>
 			// Second, check the validators one by one to see if all exist.
 			ensure!(ledger.delegations.contains_key(validator), Error::<T>::ValidatorNotBonded);
 			ensure!(!ledger.request_briefs.contains_key(validator), Error::<T>::AlreadyRequested);
-			let unbond_amount = ledger.delegations.get(&validator).ok_or(Error::<T>::OverFlow)?;
-
-			// Check after undelegating all these validators, if the delegator still meets the
-			// requirement.
-			let active =
-				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
-			let unbond_after_amount =
-				active.checked_sub(&unbond_amount).ok_or(Error::<T>::UnderFlow)?;
-			ensure!(
-				unbond_after_amount >= mins_maxs.delegator_bonded_minimum,
-				Error::<T>::LowerThanMinimum
-			);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
@@ -624,55 +572,11 @@ impl<T: Config>
 	/// Cancel leave delegator set.
 	fn redelegate(
 		&self,
-		who: &MultiLocation,
+		_who: &MultiLocation,
 		_targets: &Option<Vec<MultiLocation>>,
-		currency_id: CurrencyId,
+		_currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
-		// first check if the delegator exists.
-		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
-			// check if the delegator is in the state of leaving.
-			match ledger.status {
-				OneToManyDelegatorStatus::Leaving(_) => Ok(()),
-				_ => Err(Error::<T>::DelegatorNotLeaving),
-			}?;
-		} else {
-			Err(Error::<T>::DelegatorNotExist)?;
-		}
-		// do the cancellation.
-		// Construct xcm message.
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::CancelLeaveDelegators);
-
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::CancelLeave,
-				call,
-				who,
-				currency_id,
-			)?;
-
-		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
-		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
-
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
-			who,
-			None,
-			MoonbeamLedgerUpdateOperation::CancelLeave,
-			Zero::zero(),
-			query_id,
-			timeout,
-			currency_id,
-		)?;
-
-		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(query_id)
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Initiate payout for a certain delegator.
@@ -700,7 +604,6 @@ impl<T: Config>
 		let mut leaving = false;
 		let now = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		let mut due_amount = Zero::zero();
@@ -725,33 +628,19 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
-		let call;
-		let (query_id, timeout, fee, xcm_message) = if leaving {
-			call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteLeaveDelegators(
-				delegator_h160_account,
-				mins_maxs.validators_back_maximum,
-			));
+		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteDelegationRequest(
+			delegator_h160_account,
+			validator_h160_account,
+		));
 
-			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::ExecuteLeave,
-				call.clone(),
-				who,
-				currency_id,
-			)
-		} else {
-			let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-			call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteDelegationRequest(
-				delegator_h160_account,
-				validator_h160_account,
-			));
-
+		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
 				XcmOperation::Liquidize,
 				call.clone(),
 				who,
 				currency_id,
-			)
-		}?;
+			)?;
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
@@ -788,8 +677,8 @@ impl<T: Config>
 	}
 
 	/// The same as unbondAll, leaving delegator set.
-	fn chill(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
-		Self::unbond_all(&self, who, currency_id)
+	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+		Err(Error::<T>::Unsupported)
 	}
 
 	/// Make token transferred back to Bifrost chain account.
@@ -1071,11 +960,8 @@ impl<T: Config> MoonbeamAgent<T> {
 			XcmOperation::Bond |
 			XcmOperation::BondExtra |
 			XcmOperation::Unbond |
-			XcmOperation::Chill |
 			XcmOperation::Rebond |
 			XcmOperation::Undelegate |
-			XcmOperation::CancelLeave |
-			XcmOperation::ExecuteLeave |
 			XcmOperation::Liquidize => T::SubstrateResponseManager::create_query_record(
 				&responder,
 				Some(Pallet::<T>::confirm_delegator_ledger_call()),
@@ -1674,7 +1560,7 @@ impl<T: Config> MoonbeamAgent<T> {
 
 	fn get_report_transact_status_instruct(query_id: QueryId, max_weight: Weight) -> Instruction {
 		ReportTransactStatus(QueryResponseInfo {
-			destination: MultiLocation::from(X1(Parachain(u32::from(T::ParachainId::get())))),
+			destination: MultiLocation::new(1, X1(Parachain(u32::from(T::ParachainId::get())))),
 			query_id,
 			max_weight,
 		})

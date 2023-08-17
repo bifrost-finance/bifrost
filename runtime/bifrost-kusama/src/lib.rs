@@ -886,11 +886,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-}
-
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
 	RuntimeCall: From<LocalCall>,
@@ -1801,7 +1796,6 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
 
 		// Monetary stuff
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,

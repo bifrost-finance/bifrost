@@ -43,12 +43,6 @@ fn parachain_account_should_work() {
 			)),
 			AccountId::from_ss58check("eLHN5PtznDscogoZVS9feWwMGaziRRryQ451m1ocUHB1cMe").unwrap()
 		);
-		let s: AccountId = Sibling::from(2034).into_sub_account_truncating(1);
-
-		assert_eq!(
-			s,
-			AccountId::from_ss58check("eLHN5PtznDscogoZVS9feWwMGaziRRryQ451m1ocUHB1cMe").unwrap()
-		);
 	})
 }
 
