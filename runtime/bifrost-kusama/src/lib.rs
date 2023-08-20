@@ -1672,7 +1672,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;
-	type Assets = Tokens;
+	type Assets = Currencies;
 	type PalletId = StableAssetPalletId;
 	type AtLeast64BitUnsigned = u128;
 	type FeePrecision = ConstU128<10_000_000_000>;
@@ -1688,7 +1688,7 @@ impl bifrost_stable_pool::Config for Runtime {
 	type WeightInfo = bifrost_stable_pool::weights::BifrostWeight<Runtime>;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type CurrencyId = CurrencyId;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
