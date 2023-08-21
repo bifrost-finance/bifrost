@@ -41,7 +41,9 @@ use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
-use bifrost_runtime_common::currency_adapter::{DepositToAlternative, MultiCurrencyAdapter};
+use bifrost_runtime_common::currency_adapter::{
+	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
+};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
@@ -499,7 +501,7 @@ pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type AssetTransactor = BifrostAssetTransactor;
-	type AssetTrap = PolkadotXcm;
+	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
