@@ -19,8 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SudoConfig,
+	SystemConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -88,6 +88,7 @@ pub fn bifrost_polkadot_genesis(
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 		},
+		sudo: SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: Default::default(),

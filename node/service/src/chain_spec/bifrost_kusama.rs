@@ -25,7 +25,7 @@ use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
 	GenesisConfig, IndicesConfig, InflationInfo, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
+	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig, SudoConfig, SystemConfig,
 	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
@@ -133,6 +133,7 @@ pub fn bifrost_genesis(
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 		},
+		sudo: SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),

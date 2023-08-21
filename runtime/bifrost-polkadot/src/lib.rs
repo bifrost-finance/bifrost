@@ -713,6 +713,11 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+}
+
 parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 28 * DAYS;
 	pub const VotingPeriod: BlockNumber = 28 * DAYS;
@@ -1547,6 +1552,7 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
 
 		// Monetary stuff
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
