@@ -52,8 +52,8 @@ use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting}
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, SaturatedConversion, Saturating, StaticLookup, TrailingZeroInput,
-		UniqueSaturatedInto, Zero,
+		AccountIdConversion, BlockNumberProvider, SaturatedConversion, Saturating, StaticLookup,
+		TrailingZeroInput, UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -115,6 +115,8 @@ pub mod pallet {
 		type Class: Parameter + Member + Ord + Copy + MaxEncodedLen + Zero;
 
 		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
+
+		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
 		/// The maximum number of concurrent votes an account may have.
 		///
@@ -322,6 +324,7 @@ pub mod pallet {
 				let class = Zero::zero();
 				let info = ReferendumInfo::Ongoing(ReferendumStatus {
 					track: class,
+					submitted: T::RelaychainBlockNumberProvider::current_block_number(),
 					tally: TallyOf::<T>::new(class),
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
@@ -583,7 +586,9 @@ pub mod pallet {
 					ReferendumInfoFor::<T>::insert(
 						vtoken,
 						poll_index,
-						ReferendumInfo::Completed(<frame_system::Pallet<T>>::block_number()),
+						ReferendumInfo::Completed(
+							T::RelaychainBlockNumberProvider::current_block_number(),
+						),
 					);
 				}
 				Self::deposit_event(Event::<T>::ReferendumStatusUpdateNotified {
@@ -713,7 +718,7 @@ pub mod pallet {
 										.ok_or(Error::<T>::NoData)?
 										.saturating_mul(lock_periods.into()),
 								);
-								let now = frame_system::Pallet::<T>::block_number();
+								let now = T::RelaychainBlockNumberProvider::current_block_number();
 								if now < unlock_at {
 									ensure!(
 										matches!(scope, UnvoteScope::Any),
@@ -887,7 +892,7 @@ pub mod pallet {
 		fn ensure_ongoing(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
-		) -> Result<ReferendumStatus<ClassOf<T>, TallyOf<T>>, DispatchError> {
+		) -> Result<ReferendumStatus<ClassOf<T>, BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Ongoing(status)) => Ok(status),
 				_ => Err(Error::<T>::NotOngoing.into()),

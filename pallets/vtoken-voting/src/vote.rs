@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::pallet_prelude::*;
 use pallet_conviction_voting::{AccountVote, Conviction};
 use sp_std::{fmt::Debug, prelude::*};
@@ -25,11 +25,11 @@ use sp_std::{fmt::Debug, prelude::*};
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum ReferendumInfo<
 	TrackId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
-	Moment: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+	Moment: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone + EncodeLike,
 	Tally: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 > {
 	/// Referendum has been submitted and is being voted on.
-	Ongoing(ReferendumStatus<TrackId, Tally>),
+	Ongoing(ReferendumStatus<TrackId, Moment, Tally>),
 	/// Referendum finished.
 	Completed(Moment),
 	/// Referendum finished with a kill.
@@ -40,10 +40,14 @@ pub enum ReferendumInfo<
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct ReferendumStatus<
 	TrackId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+	Moment: Parameter + Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone + EncodeLike,
 	Tally: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 > {
 	/// The track of this referendum.
 	pub track: TrackId,
+	/// The time of submission. Once `UndecidingTimeout` passes, it may be closed by anyone if
+	/// `deciding` is `None`.
+	pub submitted: Moment,
 	/// The current tally of votes in this referendum.
 	pub tally: Tally,
 }
