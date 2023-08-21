@@ -1,0 +1,21 @@
+[package]
+authors = { workspace = true }
+edition = '2021'
+name    = 'pallet-lend-market-rpc'
+version = { workspace = true }
+
+[dependencies]
+codec               = { workspace = true, features = ['std'] }
+jsonrpsee           = { version = "0.16.2", features = ["server", "macros"] }
+node_primitives          = { workspace = true }
+serde               = { workspace = true, features = ['derive'] }
+sp-api              = { workspace = true, features = ['std'] }
+sp-blockchain       = { workspace = true }
+sp-core             = { workspace = true, features = ['std'] }
+sp-rpc              = { workspace = true }
+sp-runtime          = { workspace = true, features = ['std'] }
+
+pallet-lend-market-rpc-runtime-api = { path = 'runtime-api', default-features = false }
+
+[lib]
+doctest = false

@@ -118,6 +118,7 @@ bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false }
 bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
+pallet-lend-market = { path = "../../pallets/lend-market", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -230,6 +231,7 @@ std = [
 	"bifrost-slpx/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
+	"pallet-lend-market/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -349,6 +351,7 @@ try-runtime = [
 	"bifrost-slpx/try-runtime",
 	"nutsfinance-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
+	"pallet-lend-market/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
