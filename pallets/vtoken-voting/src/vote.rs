@@ -24,12 +24,11 @@ use sp_std::{fmt::Debug, prelude::*};
 /// Info regarding a referendum, present or past.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum ReferendumInfo<
-	TrackId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 	Moment: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone + EncodeLike,
 	Tally: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 > {
 	/// Referendum has been submitted and is being voted on.
-	Ongoing(ReferendumStatus<TrackId, Moment, Tally>),
+	Ongoing(ReferendumStatus<Moment, Tally>),
 	/// Referendum finished.
 	Completed(Moment),
 	/// Referendum finished with a kill.
@@ -39,17 +38,15 @@ pub enum ReferendumInfo<
 /// Info regarding an ongoing referendum.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct ReferendumStatus<
-	TrackId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 	Moment: Parameter + Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone + EncodeLike,
 	Tally: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
 > {
-	/// The track of this referendum.
-	pub track: TrackId,
 	/// The time of submission. Once `UndecidingTimeout` passes, it may be closed by anyone if
 	/// `deciding` is `None`.
 	pub submitted: Moment,
 	/// The current tally of votes in this referendum.
 	pub tally: Tally,
+	pub confirmed: bool,
 }
 
 /// A vote for a referendum of a particular account.
@@ -81,21 +78,21 @@ impl TryFrom<u8> for VoteRole {
 	type Error = ();
 	fn try_from(i: u8) -> Result<VoteRole, ()> {
 		Ok(match i {
-			0 => VoteRole::Standard { aye: true, conviction: Conviction::None },
+			0 => VoteRole::Standard { aye: true, conviction: Conviction::None }, // TODO remove
 			1 => VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
 			2 => VoteRole::Standard { aye: true, conviction: Conviction::Locked2x },
 			3 => VoteRole::Standard { aye: true, conviction: Conviction::Locked3x },
 			4 => VoteRole::Standard { aye: true, conviction: Conviction::Locked4x },
 			5 => VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
 			6 => VoteRole::Standard { aye: true, conviction: Conviction::Locked6x },
-			10 => VoteRole::Standard { aye: false, conviction: Conviction::None },
+			10 => VoteRole::Standard { aye: false, conviction: Conviction::None }, // TODO remove
 			11 => VoteRole::Standard { aye: false, conviction: Conviction::Locked1x },
 			12 => VoteRole::Standard { aye: false, conviction: Conviction::Locked2x },
 			13 => VoteRole::Standard { aye: false, conviction: Conviction::Locked3x },
 			14 => VoteRole::Standard { aye: false, conviction: Conviction::Locked4x },
 			15 => VoteRole::Standard { aye: false, conviction: Conviction::Locked5x },
 			16 => VoteRole::Standard { aye: false, conviction: Conviction::Locked6x },
-			20 => VoteRole::Split,
+			20 => VoteRole::Split, // TODO remove
 			21 => VoteRole::SplitAbstain,
 			_ => return Err(()),
 		})
