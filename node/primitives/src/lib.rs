@@ -40,8 +40,8 @@ mod tests;
 
 pub use crate::{
 	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, DOT,
-		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID,
+		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
+		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
 	},
 	traits::*,
 };

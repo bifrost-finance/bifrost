@@ -30,10 +30,12 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
 use cumulus_primitives_core::{QueryId, Response};
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use node_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
+	VtokenMintingInterface,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -178,6 +180,10 @@ pub mod pallet {
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
 		type ParachainId: Get<cumulus_primitives_core::ParaId>;
+
+		type StablePool: StablePoolHandler<Balance = BalanceOf<Self>, AccountId = Self::AccountId>;
+
+		type VtokenMinting: VtokenMintingInterface<Self::AccountId, CurrencyId, BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -219,6 +225,11 @@ pub mod pallet {
 		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
 		Buyback(BalanceOf<T>),
 		VstokenUnlocked(AccountIdOf<T>),
+		BuybackByStablePool {
+			pool_id: StableAssetPoolId,
+			currency_id_in: CurrencyId,
+			value: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -271,6 +282,7 @@ pub mod pallet {
 		ResponderNotRelayChain,
 		/// No contribution record found
 		NotFindContributionValue,
+		ArgumentsError,
 	}
 
 	/// Multisig confirm account
@@ -1130,7 +1142,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+			let _who = ensure_signed(origin.clone())?;
 
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
@@ -1228,6 +1240,61 @@ pub mod pallet {
 				Self::deposit_event(Event::ContributeFailed(contributer, index, contributing));
 			}
 			QueryIdContributionInfo::<T>::remove(query_id);
+			Ok(())
+		}
+
+		#[pallet::call_index(21)]
+		#[pallet::weight(T::WeightInfo::buyback_vstoken_by_stable_pool())]
+		pub fn buyback_vstoken_by_stable_pool(
+			origin: OriginFor<T>,
+			pool_id: StableAssetPoolId,
+			currency_id_in: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let relay_currency_id = T::RelayChainToken::get();
+			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			match currency_id_in {
+				cid if cid == relay_currency_id => {
+					T::StablePool::swap(
+						&T::BuybackPalletId::get().into_account_truncating(),
+						pool_id,
+						T::StablePool::get_pool_token_index(pool_id, relay_currency_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						T::StablePool::get_pool_token_index(pool_id, relay_vstoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						value.saturated_into(),
+						Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
+					)?;
+				},
+				cid if cid == relay_vtoken_id => {
+					let token_value = T::VtokenMinting::vtoken_to_token(
+						relay_currency_id,
+						relay_vtoken_id,
+						value,
+					);
+					T::StablePool::swap(
+						&T::BuybackPalletId::get().into_account_truncating(),
+						pool_id,
+						T::StablePool::get_pool_token_index(pool_id, relay_vtoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						T::StablePool::get_pool_token_index(pool_id, relay_vstoken_id)
+							.ok_or(Error::<T>::ArgumentsError)?,
+						value.saturated_into(),
+						Percent::from_percent(50)
+							.saturating_reciprocal_mul(token_value)
+							.saturated_into(),
+					)?;
+				},
+				_ => return Err(Error::<T>::ArgumentsError.into()),
+			}
+
+			Self::deposit_event(Event::<T>::BuybackByStablePool { pool_id, currency_id_in, value });
 			Ok(())
 		}
 	}

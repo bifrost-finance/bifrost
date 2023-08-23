@@ -28,16 +28,13 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_cross_in_out::migrations::v2::CrossInOutMigration;
-use bifrost_flexible_fee::migrations::v2::FlexibleFeeMigration;
-use bifrost_slp::{migrations::v2::SlpMigration, QueryResponseManager};
-use bifrost_token_issuer::migrations::v2::TokenIssuerMigration;
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything, InstanceFilter,
-		IsInVec, NeverEnsureOrigin, Nothing, Randomness,
+		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
+		InstanceFilter, IsInVec, NeverEnsureOrigin, Nothing, Randomness,
 	},
 	weights::{
 		constants::{
@@ -111,7 +108,6 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_runtime_common::remove_pallet::RemovePallet;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -133,7 +129,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 978,
+	spec_version: 980,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1301,6 +1297,8 @@ impl bifrost_salp::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type ParachainId = ParachainInfo;
+	type StablePool = StablePool;
+	type VtokenMinting = VtokenMinting;
 }
 
 parameter_types! {
@@ -1660,11 +1658,50 @@ impl bifrost_slpx::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
+	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
+}
+
+pub struct EnsurePoolAssetId;
+impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+	fn validate(_: CurrencyId) -> bool {
+		true
+	}
+}
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
+
+/// Configure the pallet nutsfinance_stable_asset in pallets/nutsfinance_stable_asset.
+impl nutsfinance_stable_asset::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AssetId = CurrencyId;
+	type Balance = Balance;
+	type Assets = Currencies;
+	type PalletId = StableAssetPalletId;
+	type AtLeast64BitUnsigned = u128;
+	type FeePrecision = ConstU128<10_000_000_000>;
+	type APrecision = ConstU128<100>;
+	type PoolAssetLimit = ConstU32<5>;
+	type SwapExactOverAmount = ConstU128<100>;
+	type WeightInfo = ();
+	type ListingOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type EnsurePoolAssetId = EnsurePoolAssetId;
+}
+
+impl bifrost_stable_pool::Config for Runtime {
+	type WeightInfo = bifrost_stable_pool::weights::BifrostWeight<Runtime>;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type StableAsset = StableAsset;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1849,7 +1886,9 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
-		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 128,
+		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
+		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1901,13 +1940,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		TokenIssuerMigration<Runtime>,
-		SlpMigration<Runtime>,
-		FlexibleFeeMigration<Runtime>,
-		CrossInOutMigration<Runtime>,
-		RemovePallet<XcmActionStr, RocksDbWeight>,
-	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1933,6 +1965,7 @@ mod benches {
 		[bifrost_system_maker, SystemMaker]
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
+		[bifrost_stable_pool, StablePool]
 		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
@@ -2204,6 +2237,16 @@ impl_runtime_apis! {
 
 		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+	}
+
+	impl bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi<Block> for Runtime {
+		fn get_swap_output(
+			pool_id: u32,
+			currency_id_in: u32,
+			currency_id_out: u32,
+			amount: Balance,) -> Balance {
+			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount).unwrap_or(Zero::zero())
 		}
 	}
 

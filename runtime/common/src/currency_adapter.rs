@@ -12,9 +12,10 @@ use sp_std::{
 	prelude::*,
 	result,
 };
-use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
+use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result, Weight};
+use xcm_builder::TakeRevenue;
 use xcm_executor::{
-	traits::{Convert as MoreConvert, MatchesFungible, TransactAsset},
+	traits::{Convert as MoreConvert, DropAssets, MatchesFungible, TransactAsset},
 	Assets,
 };
 
@@ -211,5 +212,20 @@ impl<
 			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 
 		Ok(asset.clone().into())
+	}
+}
+
+pub struct BifrostDropAssets<T>(PhantomData<T>);
+impl<T> DropAssets for BifrostDropAssets<T>
+where
+	T: TakeRevenue,
+{
+	fn drop_assets(_origin: &MultiLocation, assets: Assets, _context: &XcmContext) -> Weight {
+		let multi_assets: Vec<MultiAsset> = assets.into();
+		for asset in multi_assets {
+			T::take_revenue(asset);
+		}
+		// TODO #2492: Put the real weight in there.
+		Weight::zero()
 	}
 }

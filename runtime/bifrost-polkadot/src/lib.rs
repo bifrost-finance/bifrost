@@ -126,7 +126,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 978,
+	spec_version: 980,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1149,6 +1149,8 @@ impl bifrost_salp::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type ParachainId = ParachainInfo;
+	type StablePool = ();
+	type VtokenMinting = VtokenMinting;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1325,6 +1327,7 @@ impl bifrost_slpx::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
+	type StablePoolHandler = ();
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1690,7 +1693,6 @@ mod benches {
 		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_slp, Slp]
-		[bifrost_salp, Salp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
 		[bifrost_vtoken_voting, VtokenVoting]

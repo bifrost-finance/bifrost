@@ -17,8 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Custom origins for governance interventions.
-#![cfg_attr(not(feature = "std"), no_std)]
-
 pub use custom_origins::*;
 
 #[frame_support::pallet]

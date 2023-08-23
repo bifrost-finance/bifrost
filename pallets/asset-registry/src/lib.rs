@@ -35,10 +35,13 @@ use primitives::{
 	AssetIds, CurrencyId,
 	CurrencyId::{Native, Token, Token2},
 	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
-	ParaId, TokenId, TokenInfo, TokenSymbol,
+	ParaId, PoolId, TokenId, TokenInfo, TokenSymbol,
 };
 use scale_info::TypeInfo;
-use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
+use sp_runtime::{
+	traits::{One, UniqueSaturatedFrom},
+	ArithmeticError, FixedPointNumber, FixedU128,
+};
 use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
 // MultiLocation in the future.
@@ -833,6 +836,22 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		} else {
 			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
+	}
+
+	fn register_blp_metadata(pool_id: PoolId) -> DispatchResult {
+		let mut name = "Bifrost Stable Pool Token ".as_bytes().to_vec();
+		name.extend_from_slice(&pool_id.to_be_bytes());
+		let mut symbol = "BLP".as_bytes().to_vec();
+		symbol.extend_from_slice(&pool_id.to_be_bytes());
+		Pallet::<T>::do_register_metadata(
+			CurrencyId::BLP(pool_id),
+			&AssetMetadata {
+				name,
+				symbol,
+				decimals: 12,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(1_000_000u128),
+			},
+		)
 	}
 }
 

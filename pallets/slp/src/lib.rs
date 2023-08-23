@@ -2069,7 +2069,7 @@ pub mod pallet {
 			if let Response::DispatchResult(MaybeErrorCode::Success) = response {
 				Self::get_ledger_update_agent_then_process(query_id, true)?;
 			} else {
-				Self::do_fail_validators_by_delegator_query_response(query_id)?;
+				Self::do_fail_delegator_ledger_query_response(query_id)?;
 			}
 			Ok(())
 		}
