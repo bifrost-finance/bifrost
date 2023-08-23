@@ -39,7 +39,9 @@ use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
-use bifrost_runtime_common::currency_adapter::{DepositToAlternative, MultiCurrencyAdapter};
+use bifrost_runtime_common::currency_adapter::{
+	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
+};
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::{ContainsPair, ProcessMessageError};
 use orml_currencies::BasicCurrencyAdapter;
@@ -647,7 +649,7 @@ pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type AssetTransactor = BifrostAssetTransactor;
-	type AssetTrap = PolkadotXcm;
+	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
