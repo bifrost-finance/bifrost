@@ -105,7 +105,7 @@ bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false
 bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api", default-features = false }
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features=["with-bifrost-polkadot-runtime"] }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "polkadot" ] }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }

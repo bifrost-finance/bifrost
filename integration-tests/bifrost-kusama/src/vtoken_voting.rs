@@ -135,7 +135,5 @@ pub fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 }
 
 fn tally(vtoken: CurrencyId, poll_index: u32) -> TallyOf<Runtime> {
-	bifrost_kusama_runtime::VtokenVoting::as_ongoing(vtoken, poll_index)
-		.expect("No poll")
-		.0
+	bifrost_kusama_runtime::VtokenVoting::as_ongoing(vtoken, poll_index).expect("No poll")
 }

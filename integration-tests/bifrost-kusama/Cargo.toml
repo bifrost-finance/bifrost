@@ -59,11 +59,10 @@ bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 bifrost-slp = { path = "../../pallets/slp" }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction" }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting" }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting" }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting",  features = [ "kusama" ] }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
-bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot" }
 
 # orml
 orml-currencies = { version = "0.4.1-dev" }

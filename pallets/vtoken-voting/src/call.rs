@@ -23,22 +23,25 @@ use pallet_conviction_voting::AccountVote;
 use sp_runtime::traits::StaticLookup;
 use sp_std::boxed::Box;
 
+#[cfg(feature = "kusama")]
 #[derive(Encode, Decode, RuntimeDebug)]
-pub enum KusamaCall<T: Config> {
+pub enum RelayCall<T: Config> {
 	#[codec(index = 20)]
 	ConvictionVoting(ConvictionVotingCall<T>),
 	#[codec(index = 24)]
 	Utility(UtilityCall<Self>),
 }
 
-impl<T: Config> KusamaCall<T> {
+#[cfg(any(feature = "kusama", feature = "polkadot"))]
+impl<T: Config> RelayCall<T> {
 	pub fn get_derivative_call(derivative_index: u16, call: Self) -> Self {
 		Self::Utility(UtilityCall::AsDerivative(derivative_index, Box::new(call)))
 	}
 }
 
+#[cfg(feature = "polkadot")]
 #[derive(Encode, Decode, RuntimeDebug)]
-pub enum PolkadotCall<T: Config> {
+pub enum RelayCall<T: Config> {
 	#[codec(index = 20)]
 	ConvictionVoting(ConvictionVotingCall<T>),
 	#[codec(index = 26)]

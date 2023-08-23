@@ -32,7 +32,7 @@ mod vote;
 pub mod weights;
 
 pub use crate::{
-	call::{ConvictionVotingCall, KusamaCall},
+	call::*,
 	vote::{PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
@@ -331,9 +331,8 @@ pub mod pallet {
 			// send XCM message
 			let derivative_index =
 				DelegatorRole::<T>::get(vtoken, VoteRole::from(vote)).ok_or(Error::<T>::NoData)?;
-			let vote_call = KusamaCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(
-				poll_index, vote,
-			));
+			let vote_call =
+				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let xcm_message = Self::build_xcm_with_notify(
 				derivative_index,
@@ -397,7 +396,7 @@ pub mod pallet {
 			let derivative_index =
 				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
 					.ok_or(Error::<T>::NoData)?;
-			let remove_vote_call = KusamaCall::<T>::ConvictionVoting(
+			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
 			let xcm_message = Self::build_xcm_with_notify(
@@ -782,7 +781,7 @@ pub mod pallet {
 
 		fn build_xcm_with_notify(
 			derivative_index: DerivativeIndex,
-			call: KusamaCall<T>,
+			call: RelayCall<T>,
 			notify_call: Call<T>,
 			f: impl FnOnce(QueryId) -> (),
 		) -> Result<Xcm<()>, Error<T>> {
@@ -798,7 +797,7 @@ pub mod pallet {
 			f(query_id);
 
 			let xcm_message = Self::construct_xcm_message(
-				KusamaCall::<T>::get_derivative_call(derivative_index, call).encode(),
+				RelayCall::<T>::get_derivative_call(derivative_index, call).encode(),
 				4000000000u32.into(),
 				Weight::from_parts(4000000000, 100000),
 				query_id,

@@ -113,7 +113,7 @@ bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-ap
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "kusama" ] }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
