@@ -32,13 +32,6 @@ pub enum RelayCall<T: Config> {
 	Utility(UtilityCall<Self>),
 }
 
-#[cfg(any(feature = "kusama", feature = "polkadot"))]
-impl<T: Config> RelayCall<T> {
-	pub fn get_derivative_call(derivative_index: u16, call: Self) -> Self {
-		Self::Utility(UtilityCall::AsDerivative(derivative_index, Box::new(call)))
-	}
-}
-
 #[cfg(feature = "polkadot")]
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum RelayCall<T: Config> {
@@ -46,6 +39,13 @@ pub enum RelayCall<T: Config> {
 	ConvictionVoting(ConvictionVotingCall<T>),
 	#[codec(index = 26)]
 	Utility(UtilityCall<Self>),
+}
+
+#[cfg(any(feature = "kusama", feature = "polkadot"))]
+impl<T: Config> RelayCall<T> {
+	pub fn get_derivative_call(derivative_index: u16, call: Self) -> Self {
+		Self::Utility(UtilityCall::AsDerivative(derivative_index, Box::new(call)))
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
