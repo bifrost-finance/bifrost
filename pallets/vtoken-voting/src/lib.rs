@@ -577,7 +577,6 @@ pub mod pallet {
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
 			if let Some((vtoken, poll_index, who, _)) = PendingVotingInfo::<T>::take(query_id) {
-				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if !success {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
