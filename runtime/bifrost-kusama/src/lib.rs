@@ -84,7 +84,7 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
@@ -1515,8 +1515,8 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type Class = u16;
 	type PollIndex = u32;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
 	type WeightInfo = ();

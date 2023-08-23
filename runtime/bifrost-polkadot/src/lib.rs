@@ -30,7 +30,7 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
 	construct_runtime,
 	inherent::Vec,
@@ -1339,8 +1339,8 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type Class = u16;
 	type PollIndex = u32;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
 	type WeightInfo = ();
