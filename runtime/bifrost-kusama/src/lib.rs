@@ -28,10 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_cross_in_out::migrations::v2::CrossInOutMigration;
-use bifrost_flexible_fee::migrations::v2::FlexibleFeeMigration;
-use bifrost_slp::{migrations::v2::SlpMigration, QueryResponseManager};
-use bifrost_token_issuer::migrations::v2::TokenIssuerMigration;
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -111,7 +108,6 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_runtime_common::remove_pallet::RemovePallet;
 use pallet_xcm::QueryStatus;
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -133,7 +129,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 978,
+	spec_version: 980,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1648,6 +1644,7 @@ impl bifrost_slpx::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
+	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1670,7 +1667,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;
-	type Assets = Tokens;
+	type Assets = Currencies;
 	type PalletId = StableAssetPalletId;
 	type AtLeast64BitUnsigned = u128;
 	type FeePrecision = ConstU128<10_000_000_000>;
@@ -1686,7 +1683,7 @@ impl bifrost_stable_pool::Config for Runtime {
 	type WeightInfo = bifrost_stable_pool::weights::BifrostWeight<Runtime>;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type CurrencyId = CurrencyId;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type StableAsset = StableAsset;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
@@ -1928,13 +1925,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		TokenIssuerMigration<Runtime>,
-		SlpMigration<Runtime>,
-		FlexibleFeeMigration<Runtime>,
-		CrossInOutMigration<Runtime>,
-		RemovePallet<XcmActionStr, RocksDbWeight>,
-	),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

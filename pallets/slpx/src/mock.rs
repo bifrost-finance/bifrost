@@ -520,6 +520,7 @@ impl slpx::Config for Test {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
+	type StablePoolHandler = ();
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
