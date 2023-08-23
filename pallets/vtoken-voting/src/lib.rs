@@ -33,13 +33,13 @@ pub mod weights;
 
 pub use crate::{
 	call::{ConvictionVotingCall, KusamaCall},
-	vote::{ReferendumInfo, ReferendumStatus, VoteRole},
+	vote::{PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Get, LockIdentifier, PollStatus, VoteTally},
+	traits::{Get, LockIdentifier, VoteTally},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{

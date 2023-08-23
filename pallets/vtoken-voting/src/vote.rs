@@ -101,3 +101,18 @@ impl TryFrom<u8> for VoteRole {
 		})
 	}
 }
+
+pub enum PollStatus<Tally, Moment> {
+	None,
+	Ongoing(Tally),
+	Completed(Moment, bool),
+}
+
+impl<Tally, Moment> PollStatus<Tally, Moment> {
+	pub fn ensure_ongoing(self) -> Option<Tally> {
+		match self {
+			Self::Ongoing(t) => Some(t),
+			_ => None,
+		}
+	}
+}
