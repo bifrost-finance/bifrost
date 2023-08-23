@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{BalanceOf, ClassOf, Config, PollIndexOf};
+use crate::{BalanceOf, Config, PollIndexOf};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use pallet_conviction_voting::AccountVote;
@@ -50,9 +50,9 @@ pub enum ConvictionVotingCall<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndexOf<T>, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
-	Unlock(ClassOf<T>, <T::Lookup as StaticLookup>::Source),
+	Unlock(u16, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<ClassOf<T>>, PollIndexOf<T>),
+	RemoveVote(Option<u16>, PollIndexOf<T>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]

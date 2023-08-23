@@ -52,7 +52,7 @@ use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting}
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, BlockNumberProvider, SaturatedConversion, Saturating, StaticLookup,
+		AccountIdConversion, BlockNumberProvider, SaturatedConversion, Saturating,
 		TrailingZeroInput, UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
@@ -71,8 +71,6 @@ pub type CurrencyIdOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-type ClassOf<T> = <T as Config>::Class;
-
 type PollIndexOf<T> = <T as Config>::PollIndex;
 
 pub type TallyOf<T> = Tally<BalanceOf<T>, ()>;
@@ -85,7 +83,7 @@ type VotingOf<T> = Voting<
 	<T as Config>::MaxVotes,
 >;
 
-pub type ReferendumInfoOf<T> = ReferendumInfo<ClassOf<T>, BlockNumberFor<T>, TallyOf<T>>;
+pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -111,8 +109,6 @@ pub mod pallet {
 			<Self as frame_system::Config>::RuntimeOrigin,
 			Success = MultiLocation,
 		>;
-
-		type Class: Parameter + Member + Ord + Copy + MaxEncodedLen + Zero;
 
 		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
 
@@ -221,8 +217,6 @@ pub mod pallet {
 		InsufficientFunds,
 		/// Maximum number of votes reached.
 		MaxVotesReached,
-		/// The class must be supplied since it is not easily determinable from the state.
-		ClassNeeded,
 	}
 
 	/// Information concerning any given referendum.
@@ -244,7 +238,7 @@ pub mod pallet {
 		Twox64Concat,
 		AccountIdOf<T>,
 		Twox64Concat,
-		ClassOf<T>,
+		PollIndexOf<T>,
 		VotingOf<T>,
 		ValueQuery,
 	>;
@@ -257,7 +251,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(ClassOf<T>, BalanceOf<T>), ConstU32<100>>,
+		BoundedVec<(PollIndexOf<T>, BalanceOf<T>), ConstU32<100>>,
 		ValueQuery,
 	>;
 
@@ -325,7 +319,7 @@ pub mod pallet {
 				let info = ReferendumInfo::Ongoing(ReferendumStatus {
 					track: class,
 					submitted: T::RelaychainBlockNumberProvider::current_block_number(),
-					tally: TallyOf::<T>::new(class),
+					tally: TallyOf::<T>::new(0u16),
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
 				Self::deposit_event(Event::<T>::ReferendumInfoSet { vtoken, poll_index, info });
@@ -376,8 +370,8 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 
-			let class = Self::try_remove_vote(&who, vtoken, poll_index, None, UnvoteScope::Any)?;
-			Self::update_lock(&who, vtoken, &class)?;
+			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+			Self::update_lock(&who, vtoken, &poll_index)?;
 
 			Self::deposit_event(Event::<T>::Unlocked { who, vtoken, poll_index });
 
@@ -561,9 +555,8 @@ pub mod pallet {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if !success {
 					// rollback vote
-					let class =
-						Self::try_remove_vote(&who, vtoken, poll_index, None, UnvoteScope::Any)?;
-					Self::update_lock(&who, vtoken, &class)?;
+					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+					Self::update_lock(&who, vtoken, &poll_index)?;
 				}
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
@@ -642,8 +635,8 @@ pub mod pallet {
 				Error::<T>::InsufficientFunds
 			);
 			Self::try_access_poll(vtoken, poll_index, |poll_status| {
-				let (tally, class) = poll_status.ensure_ongoing().ok_or(Error::<T>::NotOngoing)?;
-				VotingFor::<T>::try_mutate(who, &class, |voting| {
+				let tally = poll_status.ensure_ongoing().ok_or(Error::<T>::NotOngoing)?;
+				VotingFor::<T>::try_mutate(who, poll_index, |voting| {
 					if let Voting::Casting(Casting { ref mut votes, delegations, .. }) = voting {
 						match votes.binary_search_by_key(&poll_index, |i| i.0) {
 							Ok(i) => {
@@ -670,7 +663,7 @@ pub mod pallet {
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
-					Self::extend_lock(&who, vtoken, &class, vote.balance())?;
+					Self::extend_lock(&who, vtoken, &poll_index, vote.balance())?;
 					Ok(())
 				})
 			})
@@ -686,13 +679,9 @@ pub mod pallet {
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
-			class_hint: Option<ClassOf<T>>,
 			scope: UnvoteScope,
-		) -> Result<ClassOf<T>, DispatchError> {
-			let class = class_hint
-				.or_else(|| Some(Self::as_ongoing(vtoken, poll_index)?.1))
-				.ok_or(Error::<T>::ClassNeeded)?;
-			VotingFor::<T>::try_mutate(who, class, |voting| {
+		) -> DispatchResult {
+			VotingFor::<T>::try_mutate(who, poll_index, |voting| {
 				if let Voting::Casting(Casting { ref mut votes, delegations, ref mut prior }) =
 					voting
 				{
@@ -702,14 +691,14 @@ pub mod pallet {
 					let v = votes.remove(i);
 
 					Self::try_access_poll(vtoken, poll_index, |poll_status| match poll_status {
-						PollStatus::Ongoing(tally, _) => {
+						PollStatus::Ongoing(tally) => {
 							ensure!(matches!(scope, UnvoteScope::Any), Error::<T>::NoPermission);
 							// Shouldn't be possible to fail, but we handle it gracefully.
 							tally.remove(v.1).ok_or(ArithmeticError::Underflow)?;
 							if let Some(approve) = v.1.as_standard() {
 								tally.reduce(approve, *delegations);
 							}
-							Ok(class)
+							Ok(())
 						},
 						PollStatus::Completed(end, approved) => {
 							if let Some((lock_periods, balance)) = v.1.locked_if(approved) {
@@ -727,12 +716,12 @@ pub mod pallet {
 									prior.accumulate(unlock_at, balance)
 								}
 							}
-							Ok(class)
+							Ok(())
 						},
-						PollStatus::None => Ok(class), // Poll was cancelled.
+						PollStatus::None => Ok(()), // Poll was cancelled.
 					})
 				} else {
-					Ok(class)
+					Ok(())
 				}
 			})
 		}
@@ -742,16 +731,16 @@ pub mod pallet {
 		pub(crate) fn update_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			class: &ClassOf<T>,
+			poll_index: &PollIndexOf<T>,
 		) -> DispatchResult {
-			let class_lock_needed = VotingFor::<T>::mutate(who, class, |voting| {
+			let class_lock_needed = VotingFor::<T>::mutate(who, poll_index, |voting| {
 				voting.rejig(frame_system::Pallet::<T>::block_number());
 				voting.locked_balance()
 			});
 			let lock_needed = ClassLocksFor::<T>::mutate(who, |locks| {
-				locks.retain(|x| &x.0 != class);
+				locks.retain(|x| &x.0 != poll_index);
 				if !class_lock_needed.is_zero() {
-					let ok = locks.try_push((*class, class_lock_needed)).is_ok();
+					let ok = locks.try_push((*poll_index, class_lock_needed)).is_ok();
 					debug_assert!(
 						ok,
 						"Vec bounded by number of classes; \
@@ -771,14 +760,14 @@ pub mod pallet {
 		fn extend_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			class: &ClassOf<T>,
+			poll_index: &PollIndexOf<T>,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			ClassLocksFor::<T>::mutate(who, |locks| {
-				match locks.iter().position(|x| &x.0 == class) {
+				match locks.iter().position(|x| &x.0 == poll_index) {
 					Some(i) => locks[i].1 = locks[i].1.max(amount),
 					None => {
-						let ok = locks.try_push((*class, amount)).is_ok();
+						let ok = locks.try_push((*poll_index, amount)).is_ok();
 						debug_assert!(
 							ok,
 							"Vec bounded by number of classes; \
@@ -885,14 +874,14 @@ pub mod pallet {
 		pub fn as_ongoing(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
-		) -> Option<(TallyOf<T>, ClassOf<T>)> {
-			Self::ensure_ongoing(vtoken, poll_index).ok().map(|x| (x.tally, x.track))
+		) -> Option<TallyOf<T>> {
+			Self::ensure_ongoing(vtoken, poll_index).ok().map(|x| x.tally)
 		}
 
 		fn ensure_ongoing(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
-		) -> Result<ReferendumStatus<ClassOf<T>, BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
+		) -> Result<ReferendumStatus<BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Ongoing(status)) => Ok(status),
 				_ => Err(Error::<T>::NotOngoing.into()),
@@ -902,13 +891,11 @@ pub mod pallet {
 		fn try_access_poll<R>(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
-			f: impl FnOnce(
-				PollStatus<&mut TallyOf<T>, BlockNumberFor<T>, ClassOf<T>>,
-			) -> Result<R, DispatchError>,
+			f: impl FnOnce(PollStatus<&mut TallyOf<T>, BlockNumberFor<T>>) -> Result<R, DispatchError>,
 		) -> Result<R, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Ongoing(mut status)) => {
-					let result = f(PollStatus::Ongoing(&mut status.tally, status.track))?;
+					let result = f(PollStatus::Ongoing(&mut status.tally))?;
 					ReferendumInfoFor::<T>::insert(
 						vtoken,
 						poll_index,

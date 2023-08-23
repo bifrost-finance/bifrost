@@ -49,11 +49,11 @@ fn split_abstain(aye: Balance, nay: Balance, abstain: Balance) -> AccountVote<Ba
 }
 
 fn tally(vtoken: CurrencyId, poll_index: u32) -> TallyOf<Runtime> {
-	VtokenVoting::as_ongoing(vtoken, poll_index).expect("No poll").0
+	VtokenVoting::as_ongoing(vtoken, poll_index).expect("No poll")
 }
 
-fn class(vtoken: CurrencyId, poll_index: u32) -> u16 {
-	VtokenVoting::as_ongoing(vtoken, poll_index).expect("No poll").1
+fn class(vtoken: CurrencyId, poll_index: u32) -> PollIndexOf<Runtime> {
+	poll_index
 }
 
 fn usable_balance(vtoken: CurrencyId, who: &AccountId) -> Balance {
@@ -106,13 +106,7 @@ fn basic_voting_works() {
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 1, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&ALICE,
-			vtoken,
-			poll_index,
-			None,
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &class(vtoken, poll_index)));
@@ -148,13 +142,7 @@ fn split_voting_works() {
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 5));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&ALICE,
-			vtoken,
-			poll_index,
-			None,
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &class(vtoken, poll_index)));
@@ -204,16 +192,10 @@ fn abstain_voting_works() {
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 		assert_eq!(usable_balance(vtoken, &BOB), 0);
 
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&ALICE,
-			vtoken,
-			poll_index,
-			None,
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(1, 0, 20));
 
-		assert_ok!(VtokenVoting::try_remove_vote(&BOB, vtoken, poll_index, None, UnvoteScope::Any));
+		assert_ok!(VtokenVoting::try_remove_vote(&BOB, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &class(vtoken, poll_index)));
@@ -258,13 +240,7 @@ fn voting_balance_gets_locked() {
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 1, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&ALICE,
-			vtoken,
-			poll_index,
-			None,
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &class(vtoken, poll_index)));
@@ -288,13 +264,7 @@ fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
 			poll_index,
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&BOB,
-			vtoken,
-			poll_index,
-			Some(c),
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&BOB, vtoken, poll_index, UnvoteScope::Any));
 		assert_ok!(VtokenVoting::update_lock(&BOB, vtoken, &c));
 		assert_eq!(usable_balance(vtoken, &BOB), 20);
 	});
@@ -316,13 +286,7 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 			poll_index,
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
-		assert_ok!(VtokenVoting::try_remove_vote(
-			&ALICE,
-			vtoken,
-			poll_index,
-			Some(c),
-			UnvoteScope::Any
-		));
+		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &c));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
@@ -350,13 +314,7 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
 		for i in 1..=5 {
-			assert_ok!(VtokenVoting::try_remove_vote(
-				&i,
-				vtoken,
-				poll_index,
-				Some(c),
-				UnvoteScope::Any
-			));
+			assert_ok!(VtokenVoting::try_remove_vote(&i, vtoken, poll_index, UnvoteScope::Any));
 		}
 		for block in 1..=(3 + 5 * 3) {
 			run_to(block);

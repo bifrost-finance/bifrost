@@ -238,8 +238,8 @@ impl vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<Controller, AccountId>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type Class = u16;
 	type PollIndex = u32;
+	type RelaychainBlockNumberProvider = System;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = ParachainId;
 	type WeightInfo = ();
