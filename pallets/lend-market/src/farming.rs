@@ -201,7 +201,7 @@ impl<T: Config> Pallet<T> {
 		let reward_asset = T::RewardAssetId::get();
 		let total_reward = RewardAccrued::<T>::get(user);
 		if total_reward > 0 {
-			T::Assets::transfer(reward_asset, &pool_account, user, total_reward, true)?;
+			T::Assets::transfer(reward_asset, &pool_account, user, total_reward)?;
 			RewardAccrued::<T>::remove(user);
 		}
 		Self::deposit_event(Event::<T>::RewardPaid(user.clone(), total_reward));

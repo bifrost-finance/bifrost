@@ -16,8 +16,8 @@ use crate::{types::Deposits, AssetIdOf, BalanceOf, *};
 use frame_support::{
 	require_transactional,
 	traits::tokens::{
-		fungibles::{Inspect},
-		DepositConsequence, WithdrawConsequence,
+		fungibles::Inspect, DepositConsequence, Fortitude, Preservation, Provenance,
+		WithdrawConsequence,
 	},
 };
 
@@ -53,7 +53,9 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	fn reducible_balance(
 		ptoken_id: Self::AssetId,
 		who: &T::AccountId,
-		_keep_alive: bool,
+		// _keep_alive: bool,
+		_preservation: Preservation,
+		_force: Fortitude,
 	) -> Self::Balance {
 		Self::reducible_asset(ptoken_id, who).unwrap_or_default()
 	}
@@ -63,7 +65,8 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 		ptoken_id: Self::AssetId,
 		who: &T::AccountId,
 		amount: Self::Balance,
-		_mint: bool,
+		// _mint: bool,
+		_provenance: Provenance,
 	) -> DepositConsequence {
 		let underlying_id = match Self::underlying_id(ptoken_id) {
 			Ok(asset_id) => asset_id,
@@ -87,6 +90,10 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 		DepositConsequence::Success
 	}
 
+	fn total_balance(_asset: Self::AssetId, _who: &T::AccountId) -> Balance {
+		todo!()
+	}
+
 	/// Returns `Failed` if the balance of `who` may not be decreased by `amount`, otherwise
 	/// the consequence.
 	fn can_withdraw(
@@ -107,7 +114,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 
 		let sub_result = Self::balance(ptoken_id, who).checked_sub(amount);
 		if sub_result.is_none() {
-			return WithdrawConsequence::NoFunds;
+			return WithdrawConsequence::WouldDie;
 		}
 
 		let rest = sub_result.expect("Cannot be none; qed");

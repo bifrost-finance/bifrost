@@ -26,7 +26,7 @@ use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
+	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 
 pub mod currency;
@@ -134,6 +134,28 @@ pub type TrieIndex = u32;
 
 /// Distribution Id
 pub type DistributionId = u32;
+
+/// The fixed point number
+pub type Rate = FixedU128;
+
+/// The fixed point number, range from 0 to 1.
+pub type Ratio = Permill;
+
+pub type Liquidity = FixedU128;
+
+pub type Shortfall = FixedU128;
+
+// pub type Price = FixedU128;
+
+// pub type Timestamp = u64;
+
+pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
+
+pub type PriceDetail = (FixedU128, Timestamp);
+
+// pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+pub type DerivativeIndex = u16;
 
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,

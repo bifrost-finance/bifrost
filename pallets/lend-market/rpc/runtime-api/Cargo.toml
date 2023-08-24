@@ -1,7 +1,7 @@
 [package]
 authors = { workspace = true }
 edition = '2021'
-name    = 'pallet-lend-market-rpc-runtime-api'
+name    = 'lend-market-rpc-runtime-api'
 version = { workspace = true }
 
 [dependencies]

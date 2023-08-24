@@ -4,7 +4,7 @@ use crate::{
 		PUSDT, SDOT, USDT,
 	},
 	tests::unit,
-	Error,
+	Error, *,
 };
 use frame_support::{assert_err, assert_noop, assert_ok, traits::tokens::fungibles::Inspect};
 use sp_runtime::{FixedPointNumber, TokenError};
@@ -26,7 +26,10 @@ fn trait_inspect_methods_works() {
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), HKO, unit(100)));
 		assert_eq!(Loans::balance(PHKO, &DAVE), unit(100) * 50);
 
-		assert_eq!(Loans::reducible_balance(PHKO, &DAVE, true), unit(100) * 50);
+		assert_eq!(
+			Loans::reducible_balance(PHKO, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			unit(100) * 50
+		);
 		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(DAVE), HKO, true));
 		// Borrow 25 HKO will reduce 25 HKO liquidity for collateral_factor is 50%
 		assert_ok!(Loans::borrow(RuntimeOrigin::signed(DAVE), HKO, unit(25)));
@@ -40,7 +43,10 @@ fn trait_inspect_methods_works() {
 		// DAVE Deposit 100 HKO, Borrow 25 HKO
 		// Liquidity HKO 25
 		// Formula: ptokens = liquidity / price(1) / collateral(0.5) / exchange_rate(0.02)
-		assert_eq!(Loans::reducible_balance(PHKO, &DAVE, true), unit(25) * 2 * 50);
+		assert_eq!(
+			Loans::reducible_balance(PHKO, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			unit(25) * 2 * 50
+		);
 
 		// Multi-asset case, additional deposit USDT
 		// DAVE Deposit 100 HKO, 50 USDT, Borrow 25 HKO
@@ -48,13 +54,22 @@ fn trait_inspect_methods_works() {
 		// ptokens = dollar(25 + 25) / 1 / 0.5 / 0.02 = dollar(50) * 100
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), USDT, unit(50)));
 		assert_eq!(Loans::balance(PUSDT, &DAVE), unit(50) * 50);
-		assert_eq!(Loans::reducible_balance(PUSDT, &DAVE, true), unit(25) * 2 * 50);
+		assert_eq!(
+			Loans::reducible_balance(PUSDT, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			unit(25) * 2 * 50
+		);
 		// enable USDT collateral
 		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(DAVE), USDT, true));
-		assert_eq!(Loans::reducible_balance(PHKO, &DAVE, true), unit(25 + 25) * 2 * 50);
+		assert_eq!(
+			Loans::reducible_balance(PHKO, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			unit(25 + 25) * 2 * 50
+		);
 
 		assert_ok!(Loans::borrow(RuntimeOrigin::signed(DAVE), HKO, unit(50)));
-		assert_eq!(Loans::reducible_balance(PHKO, &DAVE, true), 0);
+		assert_eq!(
+			Loans::reducible_balance(PHKO, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			0
+		);
 
 		assert_eq!(Loans::total_issuance(PHKO), unit(100) * 50);
 		assert_ok!(Loans::can_deposit(PHKO, &DAVE, 100, true).into_result());
@@ -101,7 +116,7 @@ fn transfer_ptoken_works() {
 		);
 
 		// Transfer ptokens from DAVE to ALICE
-		Loans::transfer(PHKO, &DAVE, &ALICE, unit(50) * 50, true).unwrap();
+		Loans::transfer(PHKO, &DAVE, &ALICE, unit(50) * 50).unwrap();
 		// Loans::transfer_ptokens(RuntimeOrigin::signed(DAVE), ALICE, HKO, dollar(50) *
 		// 50).unwrap();
 
@@ -141,7 +156,7 @@ fn transfer_ptokens_under_collateral_works() {
 		assert_ok!(Loans::repay_borrow(RuntimeOrigin::signed(DAVE), HKO, unit(40)));
 
 		// Transfer 20 ptokens from DAVE to ALICE
-		Loans::transfer(PHKO, &DAVE, &ALICE, unit(20) * 50, true).unwrap();
+		Loans::transfer(PHKO, &DAVE, &ALICE, unit(20) * 50).unwrap();
 
 		// DAVE Deposit HKO = 100 - 20 = 80
 		// DAVE Borrow HKO = 0 + 50 - 40 = 10

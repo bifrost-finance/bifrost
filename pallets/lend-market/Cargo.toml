@@ -1,7 +1,7 @@
 [package]
-authors = ["Parallel Team", "Interlay Ltd"]
-edition = '2021'
-name = 'pallet-lend-market'
+authors = ["Parallel Team", "Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+name = "lend-market"
 version = "0.8.0"
 
 [package.metadata.docs.rs]
@@ -19,9 +19,9 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.42', default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 # pallet-prices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+node-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
-node-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
 scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }

@@ -7,9 +7,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
-use primitives::{
-	CurrencyId, DerivativeIndex, PriceDetail, Rate, Timestamp,
-};
+use primitives::{CurrencyId, DerivativeIndex, PriceDetail, Rate, Timestamp};
 
 pub mod loans;
 pub mod ump;
