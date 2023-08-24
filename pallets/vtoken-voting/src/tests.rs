@@ -29,6 +29,7 @@ use frame_support::{
 };
 use node_primitives::currency::VKSM;
 use pallet_conviction_voting::Vote;
+use pallet_xcm::Origin as XcmOrigin;
 
 fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
@@ -58,6 +59,10 @@ fn class(vtoken: CurrencyId, poll_index: u32) -> PollIndexOf<Runtime> {
 
 fn usable_balance(vtoken: CurrencyId, who: &AccountId) -> Balance {
 	Tokens::reducible_balance(vtoken, who, Expendable, Polite)
+}
+
+fn origin_response(location: MultiLocation) -> RuntimeOrigin {
+	XcmOrigin::Response(location).into()
 }
 
 #[test]
@@ -327,5 +332,63 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 				// );
 			}
 		}
+	});
+}
+
+#[test]
+fn notify_vote_success_works() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let query_id = 0;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
+			who: ALICE,
+			vtoken,
+			poll_index,
+			vote: aye(2, 5),
+		}));
+
+		assert_ok!(VtokenVoting::notify_vote(
+			pallet_xcm::Origin::Response(Parent.into()).into(),
+			query_id,
+			response,
+		));
+	});
+}
+
+#[test]
+fn notify_vote_fail_works() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let query_id = 0;
+		let response = Response::DispatchResult(MaybeErrorCode::Error(
+			BoundedVec::try_from(vec![0u8, 1u8]).unwrap(),
+		));
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
+			who: ALICE,
+			vtoken,
+			poll_index,
+			vote: aye(2, 5),
+		}));
+
+		assert_ok!(VtokenVoting::notify_vote(origin_response(Parent.into()), query_id, response,));
+	});
+}
+
+#[test]
+fn notify_vote_with_no_data_works() {
+	new_test_ext().execute_with(|| {
+		let query_id = 0;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+
+		assert_ok!(VtokenVoting::notify_vote(origin_response(Parent.into()), query_id, response,));
 	});
 }
