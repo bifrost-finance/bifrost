@@ -274,6 +274,10 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
+	pub type PendingUnlockDelegatorToken<T: Config> =
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
+
+	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
@@ -392,13 +396,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			// Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
+			Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
 
 			let notify_call = Call::<T>::notify_update_referendum_status {
 				query_id: 0,
 				response: Default::default(),
 			};
-
 			let derivative_index =
 				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
 					.ok_or(Error::<T>::NoData)?;
@@ -408,7 +411,7 @@ pub mod pallet {
 			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
-				notify_call.clone(),
+				notify_call,
 				|query_id| {
 					PendingReferendumStatus::<T>::insert(
 						query_id,
@@ -457,7 +460,7 @@ pub mod pallet {
 				remove_vote_call,
 				notify_call,
 				|query_id| {
-					PendingReferendumStatus::<T>::insert(
+					PendingUnlockDelegatorToken::<T>::insert(
 						query_id,
 						(
 							vtoken,
@@ -639,7 +642,8 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
-			if let Some((vtoken, poll_index, who, _)) = PendingVotingInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, _)) = PendingUnlockDelegatorToken::<T>::take(query_id)
+			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if !success {
 					// rollback vote
