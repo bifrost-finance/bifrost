@@ -49,11 +49,10 @@ use node_primitives::{
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
-use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, BlockNumberProvider, SaturatedConversion, Saturating,
-		TrailingZeroInput, UniqueSaturatedInto, Zero,
+		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -340,7 +339,8 @@ pub mod pallet {
 
 			// send XCM message
 			let derivative_index =
-				DelegatorRole::<T>::get(vtoken, VoteRole::from(vote)).ok_or(Error::<T>::NoData)?;
+				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())
+					.ok_or(Error::<T>::NoData)?;
 			let vote_call =
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
@@ -960,38 +960,12 @@ pub mod pallet {
 			}
 		}
 
-		fn bifrost_derivative_account_id(index: DerivativeIndex) -> AccountIdOf<T> {
-			let bifrost_para_account: AccountIdOf<T> =
-				T::ParachainId::get().into_account_truncating();
-			Self::derivative_account_id(bifrost_para_account, index)
-		}
-
-		pub fn derivative_account_id(who: T::AccountId, index: DerivativeIndex) -> T::AccountId {
-			let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-				.expect("infinite length input; no invalid inputs for type; qed")
-		}
-
-		fn check_derivative_index_occupied(
+		fn select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
-			vote_role: VoteRole,
-			target_index: DerivativeIndex,
-		) -> bool {
-			Self::find_role_by_derivative_index(vtoken, target_index)
-				.map_or(false, |role| role != vote_role)
-		}
-
-		fn find_role_by_derivative_index(
-			vtoken: CurrencyIdOf<T>,
-			target_index: DerivativeIndex,
-		) -> Option<VoteRole> {
-			DelegatorRole::<T>::iter_prefix(vtoken).into_iter().find_map(|(role, index)| {
-				if index == target_index {
-					Some(role)
-				} else {
-					None
-				}
-			})
+			target_role: VoteRole,
+			amount: BalanceOf<T>,
+		) -> Option<DerivativeIndex> {
+			Some(0)
 		}
 
 		fn find_derivative_index_by_role(
