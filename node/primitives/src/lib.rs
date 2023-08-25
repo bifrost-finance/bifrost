@@ -68,7 +68,7 @@ pub type VtokenMintPrice = u128;
 pub type Balance = u128;
 
 /// Price of an asset.
-pub type Price = u64;
+pub type Price = FixedU128;
 
 /// Precision of symbol.
 pub type Precision = u32;
@@ -145,13 +145,9 @@ pub type Liquidity = FixedU128;
 
 pub type Shortfall = FixedU128;
 
-// pub type Price = FixedU128;
-
 // pub type Timestamp = u64;
 
 pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
-
-pub type PriceDetail = (FixedU128, Timestamp);
 
 // pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
@@ -246,3 +242,11 @@ impl<AccountId> Default for RedeemType<AccountId> {
 		Self::Native
 	}
 }
+
+// #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug, TypeInfo, MaxEncodedLen)]
+// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+// #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+// pub enum OracleKey {
+// 	ExchangeRate(CurrencyId),
+// 	FeeEstimation,
+// }

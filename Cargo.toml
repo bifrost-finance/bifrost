@@ -26,6 +26,7 @@ members = [
 	"pallets/ve-minting",
 	"pallets/stable-pool",
 	"pallets/lend-market",
+	"pallets/oracle",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]

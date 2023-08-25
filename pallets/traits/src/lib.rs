@@ -7,7 +7,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
-use primitives::{CurrencyId, DerivativeIndex, PriceDetail, Rate, Timestamp};
+use primitives::{CurrencyId, DerivativeIndex, Price, Rate, Timestamp};
 
 pub mod loans;
 pub mod ump;
@@ -19,7 +19,7 @@ pub trait EmergencyCallFilter<Call> {
 }
 
 pub trait PriceFeeder {
-	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
+	fn get_price(asset_id: &CurrencyId) -> Result<Price, DispatchError>;
 }
 
 pub trait DecimalProvider<CurrencyId> {
@@ -244,3 +244,16 @@ impl<AccountId, CurrencyId, Balance> Streaming<AccountId, CurrencyId, Balance> f
 		Ok(())
 	}
 }
+
+pub trait OnExchangeRateChange<CurrencyId> {
+	fn on_exchange_rate_change(currency_id: &CurrencyId);
+}
+
+// #[impl_trait_for_tuples::impl_for_tuples(3)]
+// impl<CurrencyId> OnExchangeRateChange<CurrencyId> for Tuple {
+// 	fn on_exchange_rate_change(currency_id: &CurrencyId) {
+// 		for_tuples!( #(
+//             Tuple::on_exchange_rate_change(currency_id);
+//         )* );
+// 	}
+// }
