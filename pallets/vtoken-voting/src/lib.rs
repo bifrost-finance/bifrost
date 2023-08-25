@@ -50,7 +50,7 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
 use sp_runtime::{
-	traits::{BlockNumberProvider, SaturatedConversion, Saturating, UniqueSaturatedInto, Zero},
+	traits::{BlockNumberProvider, Saturating, UniqueSaturatedInto, Zero},
 	ArithmeticError,
 };
 use sp_std::prelude::*;
@@ -119,6 +119,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
+
+		#[pallet::constant]
+		type QueryTimeout: Get<BlockNumberFor<Self>>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -349,8 +352,8 @@ pub mod pallet {
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			Self::send_xcm_with_notify(derivative_index, vote_call, notify_call, |query_id| {
-				let expired_block_number =
-					frame_system::Pallet::<T>::block_number().saturating_add(100u32.into());
+				let expired_block_number = frame_system::Pallet::<T>::block_number()
+					.saturating_add(T::QueryTimeout::get());
 				if !confirmed {
 					PendingReferendumInfo::<T>::insert(
 						query_id,
@@ -419,7 +422,7 @@ pub mod pallet {
 							vtoken,
 							poll_index,
 							frame_system::Pallet::<T>::block_number()
-								.saturating_add(100u32.saturated_into::<T::BlockNumber>()),
+								.saturating_add(T::QueryTimeout::get()),
 						),
 					);
 				},
@@ -466,7 +469,7 @@ pub mod pallet {
 							vtoken,
 							poll_index,
 							frame_system::Pallet::<T>::block_number()
-								.saturating_add(100u32.saturated_into::<T::BlockNumber>()),
+								.saturating_add(T::QueryTimeout::get()),
 						),
 					);
 				},
@@ -828,7 +831,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let responder = MultiLocation::parent();
 			let now = frame_system::Pallet::<T>::block_number();
-			let timeout = now.saturating_add(100u32.into());
+			let timeout = now.saturating_add(T::QueryTimeout::get());
 			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
 				responder,
 				<T as Config>::RuntimeCall::from(notify_call),

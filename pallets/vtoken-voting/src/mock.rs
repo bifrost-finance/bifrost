@@ -222,6 +222,7 @@ impl pallet_xcm::Config for Runtime {
 
 ord_parameter_types! {
 	pub const Controller: u64 = CONTROLLER;
+	pub const QueryTimeout: BlockNumber = 100;
 }
 
 pub struct ParachainId;
@@ -242,6 +243,7 @@ impl vtoken_voting::Config for Runtime {
 	type RelaychainBlockNumberProvider = System;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = ParachainId;
+	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();
 }
 
