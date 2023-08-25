@@ -344,27 +344,20 @@ pub mod pallet {
 			let vote_call =
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let xcm_message = Self::build_xcm_with_notify(
-				derivative_index,
-				vote_call,
-				notify_call,
-				|query_id| {
-					let expired_block_number =
-						frame_system::Pallet::<T>::block_number().saturating_add(100u32.into());
-					if !confirmed {
-						PendingReferendumInfo::<T>::insert(
-							query_id,
-							(vtoken, poll_index, expired_block_number),
-						);
-					}
-					PendingVotingInfo::<T>::insert(
+			Self::send_xcm_with_notify(derivative_index, vote_call, notify_call, |query_id| {
+				let expired_block_number =
+					frame_system::Pallet::<T>::block_number().saturating_add(100u32.into());
+				if !confirmed {
+					PendingReferendumInfo::<T>::insert(
 						query_id,
-						(vtoken, poll_index, who.clone(), expired_block_number),
-					)
-				},
-			)?;
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_| Error::<T>::XcmFailure)?;
+						(vtoken, poll_index, expired_block_number),
+					);
+				}
+				PendingVotingInfo::<T>::insert(
+					query_id,
+					(vtoken, poll_index, who.clone(), expired_block_number),
+				)
+			})?;
 
 			Self::deposit_event(Event::<T>::Voted { who, vtoken, poll_index, vote });
 
@@ -411,7 +404,7 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
-			let xcm_message = Self::build_xcm_with_notify(
+			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
 				notify_call.clone(),
@@ -427,8 +420,6 @@ pub mod pallet {
 					);
 				},
 			)?;
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_| Error::<T>::XcmFailure)?;
 
 			Self::deposit_event(Event::<T>::ReferendumStatusUpdated { who, vtoken, poll_index });
 
@@ -460,7 +451,7 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
-			let xcm_message = Self::build_xcm_with_notify(
+			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
 				notify_call,
@@ -476,8 +467,6 @@ pub mod pallet {
 					);
 				},
 			)?;
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_| Error::<T>::XcmFailure)?;
 
 			Self::deposit_event(Event::<T>::DelegatorTokenUnlocked {
 				who,
@@ -822,12 +811,12 @@ pub mod pallet {
 			T::MultiCurrency::extend_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
 		}
 
-		fn build_xcm_with_notify(
+		fn send_xcm_with_notify(
 			derivative_index: DerivativeIndex,
 			call: RelayCall<T>,
 			notify_call: Call<T>,
 			f: impl FnOnce(QueryId) -> (),
-		) -> Result<Xcm<()>, Error<T>> {
+		) -> DispatchResult {
 			let responder = MultiLocation::parent();
 			let now = frame_system::Pallet::<T>::block_number();
 			let timeout = now.saturating_add(100u32.into());
@@ -846,7 +835,10 @@ pub mod pallet {
 				query_id,
 			)?;
 
-			Ok(xcm_message)
+			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_| Error::<T>::XcmFailure)?;
+
+			Ok(())
 		}
 
 		fn construct_xcm_message(
