@@ -35,7 +35,7 @@ pub use crate::{
 	call::*,
 	vote::{PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
-use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
+use codec::{Encode, HasCompact, MaxEncodedLen};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	pallet_prelude::*,
@@ -50,10 +50,7 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, BlockNumberProvider, SaturatedConversion, Saturating,
-		UniqueSaturatedInto, Zero,
-	},
+	traits::{BlockNumberProvider, SaturatedConversion, Saturating, UniqueSaturatedInto, Zero},
 	ArithmeticError,
 };
 use sp_std::prelude::*;
@@ -206,6 +203,8 @@ pub mod pallet {
 		NotOngoing,
 		/// Poll is not completed.
 		NotCompleted,
+		/// Poll is not killed.
+		NotKilled,
 		/// Poll is not expired.
 		NotExpired,
 		/// The given account did not vote on the poll.
@@ -267,7 +266,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		QueryId,
-		(CurrencyIdOf<T>, PollIndexOf<T>, AccountIdOf<T>, BlockNumberFor<T>),
+		(CurrencyIdOf<T>, PollIndexOf<T>, DerivativeIndex, AccountIdOf<T>, BlockNumberFor<T>),
 	>;
 
 	#[pallet::storage]
@@ -319,6 +318,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			let derivative_index =
+				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())
+					.ok_or(Error::<T>::NoData)?;
+			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
 
 			// create referendum if not exist
 			let mut confirmed = false;
@@ -338,9 +341,6 @@ pub mod pallet {
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
 
 			// send XCM message
-			let derivative_index =
-				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())
-					.ok_or(Error::<T>::NoData)?;
 			let vote_call =
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
@@ -355,7 +355,7 @@ pub mod pallet {
 				}
 				PendingVotingInfo::<T>::insert(
 					query_id,
-					(vtoken, poll_index, who.clone(), expired_block_number),
+					(vtoken, poll_index, derivative_index, who.clone(), expired_block_number),
 				)
 			})?;
 
@@ -373,6 +373,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			Self::ensure_referendum_killed(vtoken, poll_index)?;
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
@@ -437,7 +438,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			// check if poll is expired
-			let moment = Self::ensure_completed(vtoken, poll_index)?;
+			let moment = Self::ensure_referendum_completed(vtoken, poll_index)?;
 			let locking_period = VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
 			ensure!(
 				moment + locking_period >= T::RelaychainBlockNumberProvider::current_block_number(),
@@ -486,9 +487,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_completed(vtoken, poll_index)?;
+			Self::ensure_referendum_completed(vtoken, poll_index)?;
 
-			ReferendumInfoFor::<T>::insert(vtoken, poll_index, ReferendumInfo::Killed);
+			ReferendumInfoFor::<T>::insert(
+				vtoken,
+				poll_index,
+				ReferendumInfo::Killed(T::RelaychainBlockNumberProvider::current_block_number()),
+			);
 
 			Self::deposit_event(Event::<T>::ReferendumKilled { vtoken, poll_index });
 
@@ -565,7 +570,7 @@ pub mod pallet {
 			let responder = T::ResponseOrigin::ensure_origin(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
-			if let Some((vtoken, poll_index, who, _)) = PendingVotingInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, _, who, _)) = PendingVotingInfo::<T>::take(query_id) {
 				if !success {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
@@ -587,7 +592,7 @@ pub mod pallet {
 							}
 							Ok(())
 						},
-					);
+					)?;
 				}
 			}
 
@@ -880,9 +885,16 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn ensure_no_pending_vote(who: &AccountIdOf<T>) -> DispatchResult {
+		fn ensure_no_pending_vote(
+			vtoken: &CurrencyIdOf<T>,
+			poll_index: &PollIndexOf<T>,
+			derivative_index: &DerivativeIndex,
+		) -> DispatchResult {
 			ensure!(
-				PendingVotingInfo::<T>::iter().find(|(_, (_, _, w, _))| w == who).is_none(),
+				PendingVotingInfo::<T>::iter()
+					.find(|(_, (v, p, d, _, _))| v == vtoken &&
+						p == poll_index && d == derivative_index)
+					.is_none(),
 				Error::<T>::PendingVote
 			);
 			Ok(())
@@ -912,7 +924,7 @@ pub mod pallet {
 			Self::ensure_ongoing(vtoken, poll_index).ok().map(|x| x.tally)
 		}
 
-		fn ensure_ongoing(
+		pub fn ensure_referendum_ongoing(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
 		) -> Result<ReferendumStatus<BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
@@ -922,13 +934,23 @@ pub mod pallet {
 			}
 		}
 
-		fn ensure_completed(
+		fn ensure_referendum_completed(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
 		) -> Result<BlockNumberFor<T>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Completed(moment)) => Ok(moment),
 				_ => Err(Error::<T>::NotCompleted.into()),
+			}
+		}
+
+		fn ensure_referendum_killed(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+		) -> Result<BlockNumberFor<T>, DispatchError> {
+			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
+				Some(ReferendumInfo::Killed(moment)) => Ok(moment),
+				_ => Err(Error::<T>::NotKilled.into()),
 			}
 		}
 
@@ -953,9 +975,9 @@ pub mod pallet {
 		}
 
 		fn select_derivative_index(
-			vtoken: CurrencyIdOf<T>,
-			target_role: VoteRole,
-			amount: BalanceOf<T>,
+			_vtoken: CurrencyIdOf<T>,
+			_target_role: VoteRole,
+			_amount: BalanceOf<T>,
 		) -> Option<DerivativeIndex> {
 			Some(0)
 		}

@@ -32,7 +32,7 @@ pub enum ReferendumInfo<
 	/// Referendum finished.
 	Completed(Moment),
 	/// Referendum finished with a kill.
-	Killed,
+	Killed(Moment),
 }
 
 /// Info regarding an ongoing referendum.

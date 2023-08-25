@@ -50,7 +50,10 @@ fn split_abstain(aye: Balance, nay: Balance, abstain: Balance) -> AccountVote<Ba
 }
 
 fn tally(vtoken: CurrencyId, poll_index: u32) -> TallyOf<Runtime> {
-	VtokenVoting::as_ongoing(vtoken, poll_index).expect("No poll")
+	VtokenVoting::ensure_referendum_ongoing(vtoken, poll_index)
+		.ok()
+		.expect("No poll")
+		.tally
 }
 
 fn class(vtoken: CurrencyId, poll_index: u32) -> PollIndexOf<Runtime> {
