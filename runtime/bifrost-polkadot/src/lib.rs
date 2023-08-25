@@ -1627,7 +1627,7 @@ construct_runtime! {
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
 		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
-		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 128,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
