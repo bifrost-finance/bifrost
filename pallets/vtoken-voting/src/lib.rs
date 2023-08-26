@@ -174,12 +174,12 @@ pub mod pallet {
 			poll_index: PollIndexOf<T>,
 			success: bool,
 		},
-		DelegatorTokenUnlockNotified {
+		ReferendumStatusUpdateNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
 			success: bool,
 		},
-		ReferendumStatusUpdateNotified {
+		DelegatorTokenUnlockNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
 			success: bool,
@@ -238,15 +238,8 @@ pub mod pallet {
 	/// All voting for a particular voter in a particular voting class. We store the balance for the
 	/// number of votes that we have recorded.
 	#[pallet::storage]
-	pub type VotingFor<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		AccountIdOf<T>,
-		Twox64Concat,
-		PollIndexOf<T>,
-		VotingOf<T>,
-		ValueQuery,
-	>;
+	pub type VotingFor<T: Config> =
+		StorageMap<_, Twox64Concat, AccountIdOf<T>, VotingOf<T>, ValueQuery>;
 
 	/// The voting classes which have a non-zero lock requirement and the lock amounts which they
 	/// require. The actual amount locked on behalf of this pallet should always be the maximum of
@@ -685,7 +678,7 @@ pub mod pallet {
 			);
 			Self::try_access_poll(vtoken, poll_index, |poll_status| {
 				let tally = poll_status.ensure_ongoing().ok_or(Error::<T>::NotOngoing)?;
-				VotingFor::<T>::try_mutate(who, poll_index, |voting| {
+				VotingFor::<T>::try_mutate(who, |voting| {
 					if let Voting::Casting(Casting { ref mut votes, delegations, .. }) = voting {
 						match votes.binary_search_by_key(&poll_index, |i| i.0) {
 							Ok(i) => {
@@ -730,7 +723,7 @@ pub mod pallet {
 			poll_index: PollIndexOf<T>,
 			scope: UnvoteScope,
 		) -> DispatchResult {
-			VotingFor::<T>::try_mutate(who, poll_index, |voting| {
+			VotingFor::<T>::try_mutate(who, |voting| {
 				if let Voting::Casting(Casting { ref mut votes, delegations, ref mut prior }) =
 					voting
 				{
@@ -782,7 +775,7 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: &PollIndexOf<T>,
 		) -> DispatchResult {
-			let class_lock_needed = VotingFor::<T>::mutate(who, poll_index, |voting| {
+			let class_lock_needed = VotingFor::<T>::mutate(who, |voting| {
 				voting.rejig(frame_system::Pallet::<T>::block_number());
 				voting.locked_balance()
 			});
