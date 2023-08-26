@@ -145,6 +145,12 @@ fn update_referendum_status_works() {
 			assert_ok!(VtokenVoting::set_delegator_role(
 				RuntimeOrigin::root(),
 				VKSM,
+				5,
+				VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
+			));
+			assert_ok!(VtokenVoting::set_delegator_role(
+				RuntimeOrigin::root(),
+				VKSM,
 				21,
 				VoteRole::SplitAbstain,
 			));
@@ -156,6 +162,13 @@ fn update_referendum_status_works() {
 				split_abstain(0, 0, 10)
 			));
 			assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 10));
+			assert_ok!(VtokenVoting::vote(
+				RuntimeOrigin::signed(BOB.into()),
+				vtoken,
+				poll_index,
+				aye(2, 5)
+			));
+			assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 12));
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::Voted {
@@ -169,7 +182,7 @@ fn update_referendum_status_works() {
 		});
 
 		KusamaNet::execute_with(|| {
-			use kusama_runtime::{ConvictionVoting, System};
+			use kusama_runtime::System;
 
 			System::events().iter().for_each(|r| println!("KusamaNet >>> {:?}", r.event));
 			assert!(System::events().iter().any(|r| matches!(
@@ -198,6 +211,66 @@ fn update_referendum_status_works() {
 				vtoken,
 				poll_index,
 			));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::ReferendumStatusUpdated {
+					who: _,
+					vtoken,
+					poll_index,
+				})
+			)));
+			System::reset_events();
+		});
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+
+			System::events().iter().for_each(|r| println!("KusamaNet >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				kusama_runtime::RuntimeEvent::Ump(
+					polkadot_runtime_parachains::ump::Event::ExecutedUpward(..)
+				)
+			)));
+			System::reset_events();
+		});
+
+		Bifrost::execute_with(|| {
+			use bifrost_kusama_runtime::{RuntimeEvent, System, VtokenVoting};
+
+			System::events().iter().for_each(|r| println!("Bifrost >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(
+					bifrost_vtoken_voting::Event::ReferendumStatusUpdateNotified {
+						vtoken,
+						poll_index,
+						success: true,
+					}
+				)
+			)));
+			assert_ok!(VtokenVoting::set_vote_locking_period(RuntimeOrigin::root(), vtoken, 3));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::VoteLockingPeriodSet {
+					vtoken,
+					locking_period: 3,
+				})
+			)));
+			assert_ok!(VtokenVoting::unlock_delegator_token(
+				RuntimeOrigin::signed(ALICE.into()),
+				vtoken,
+				poll_index,
+				5
+			));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::DelegatorTokenUnlocked {
+					who: _,
+					vtoken,
+					derivative_index: 5,
+				})
+			)));
 			System::reset_events();
 		});
 
@@ -221,7 +294,7 @@ fn update_referendum_status_works() {
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::VtokenVoting(
-					bifrost_vtoken_voting::Event::ReferendumStatusUpdateNotified {
+					bifrost_vtoken_voting::Event::DelegatorTokenUnlockNotified {
 						vtoken,
 						poll_index,
 						success: true,
