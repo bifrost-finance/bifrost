@@ -118,7 +118,8 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 			(AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
 			(AccountId::from(KUSAMA_BOB_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
 			(bifrost_para_account.clone(), 2 * KSM_DECIMALS),
-			(Utility::derivative_account_id(bifrost_para_account, 5), 10 * KSM_DECIMALS),
+			(Utility::derivative_account_id(bifrost_para_account.clone(), 5), 10 * KSM_DECIMALS),
+			(Utility::derivative_account_id(bifrost_para_account, 21), 10 * KSM_DECIMALS),
 		],
 	}
 	.assimilate_storage(&mut t)
