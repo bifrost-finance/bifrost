@@ -400,6 +400,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
+			Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 
 			let notify_call = Call::<T>::notify_update_referendum_status {
 				query_id: 0,
@@ -618,13 +619,18 @@ pub mod pallet {
 			if let Some((vtoken, poll_index, _)) = PendingReferendumStatus::<T>::take(query_id) {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
-					ReferendumInfoFor::<T>::insert(
+					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
 						poll_index,
-						ReferendumInfo::Completed(
-							T::RelaychainBlockNumberProvider::current_block_number(),
-						),
-					);
+						|maybe_info| -> DispatchResult {
+							if let Some(info) = maybe_info {
+								*info = ReferendumInfo::Completed(
+									T::RelaychainBlockNumberProvider::current_block_number(),
+								);
+							}
+							Ok(())
+						},
+					)?;
 				}
 				Self::deposit_event(Event::<T>::ReferendumStatusUpdateNotified {
 					vtoken,
@@ -918,17 +924,6 @@ pub mod pallet {
 				Error::<T>::PendingUpdateReferendumStatus
 			);
 			Ok(())
-		}
-
-		/// `Some` if the referendum `index` can be voted on, along with the tally and class of
-		/// referendum.
-		///
-		/// Don't use this if you might mutate - use `try_access_poll` instead.
-		pub fn as_ongoing(
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
-		) -> Option<TallyOf<T>> {
-			Self::ensure_ongoing(vtoken, poll_index).ok().map(|x| x.tally)
 		}
 
 		pub fn ensure_referendum_ongoing(
