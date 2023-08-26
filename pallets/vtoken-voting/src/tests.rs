@@ -21,13 +21,13 @@
 use super::*;
 use crate::mock::*;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	traits::{
 		fungibles::Inspect,
 		tokens::{Fortitude::Polite, Preservation::Expendable},
 	},
 };
-use node_primitives::currency::VKSM;
+use node_primitives::currency::{VBNC, VKSM};
 use pallet_conviction_voting::Vote;
 use pallet_xcm::Origin as XcmOrigin;
 
@@ -358,6 +358,65 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 }
 
 #[test]
+fn lock_amalgamation_valid_with_multiple_removed_votes() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(5, 2)));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			0,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			1,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			2,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::signed(CONTROLLER), vtoken, 0));
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::signed(CONTROLLER), vtoken, 1));
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::signed(CONTROLLER), vtoken, 2));
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
+		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
+		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+	});
+}
+
+#[test]
+fn errors_with_vote_work() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		assert_noop!(
+			VtokenVoting::vote(RuntimeOrigin::signed(1), VBNC, 0, aye(10, 0)),
+			Error::<Runtime>::VTokenNotSupport
+		);
+		assert_noop!(
+			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 3, aye(11, 0)),
+			Error::<Runtime>::InsufficientFunds
+		);
+	});
+}
+
+#[test]
 fn notify_vote_success_works() {
 	new_test_ext().execute_with(|| {
 		let poll_index = 3;
@@ -397,7 +456,7 @@ fn notify_vote_fail_works() {
 			vote: aye(2, 5),
 		}));
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response,));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
 	});
 }
 
@@ -407,6 +466,6 @@ fn notify_vote_with_no_data_works() {
 		let query_id = 0;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response,));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
 	});
 }

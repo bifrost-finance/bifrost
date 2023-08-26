@@ -241,7 +241,7 @@ impl vtoken_voting::Config for Runtime {
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type PollIndex = u32;
 	type RelaychainBlockNumberProvider = System;
-	type MaxVotes = ConstU32<100>;
+	type MaxVotes = ConstU32<3>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();
