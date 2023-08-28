@@ -438,12 +438,8 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			// check if poll is expired
-			let moment = Self::ensure_referendum_completed(vtoken, poll_index)?;
-			let locking_period = VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
-			ensure!(
-				moment + locking_period > T::RelaychainBlockNumberProvider::current_block_number(),
-				Error::<T>::NotExpired
-			);
+
+			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
@@ -935,6 +931,20 @@ pub mod pallet {
 		) -> Result<BlockNumberFor<T>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Completed(moment)) => Ok(moment),
+				_ => Err(Error::<T>::NotCompleted.into()),
+			}
+		}
+
+		fn ensure_referendum_expired(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+		) -> Result<BlockNumberFor<T>, DispatchError> {
+			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
+				Some(ReferendumInfo::Completed(moment)) => {
+					let locking_period =
+						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
+					Ok(moment.saturating_add(locking_period))
+				},
 				_ => Err(Error::<T>::NotCompleted.into()),
 			}
 		}
