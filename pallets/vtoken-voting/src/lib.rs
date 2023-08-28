@@ -926,8 +926,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure!(
 				PendingVotingInfo::<T>::iter()
-					.find(|(_, (v, p, d, _, _))| v == vtoken &&
-						p == poll_index && d == derivative_index)
+					.find(|(_, (v, p, _, _, _))| v == vtoken && p == poll_index)
 					.is_none(),
 				Error::<T>::PendingVote
 			);
