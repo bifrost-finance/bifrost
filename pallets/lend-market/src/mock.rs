@@ -42,6 +42,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const PDOT: CurrencyId = CurrencyId::Token2(10);
 pub const PKSM: CurrencyId = CurrencyId::Token2(11);
+pub const PUSDT: CurrencyId = CurrencyId::Token2(12);
 
 construct_runtime!(
 	pub enum Test where
@@ -51,8 +52,9 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call},
+		AssetRegistry: bifrost_asset_registry,
 		Loans: crate::{Pallet, Storage, Call, Event<T>},
 		// Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
@@ -119,17 +121,6 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
-// impl pallet_balances::Config for Test {
-// 	type Balance = Balance;
-// 	type DustRemoval = ();
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type ExistentialDeposit = ExistentialDeposit;
-// 	type AccountStore = System;
-// 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
-// 	type MaxLocks = MaxLocks;
-// 	type MaxReserves = ();
-// 	type ReserveIdentifier = [u8; 8];
-// }
 parameter_types! {
 	// pub const ExistentialDeposit: Balance = 1;
 	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
@@ -155,6 +146,16 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ConstU32<0>;
 }
 
+// ord_parameter_types! {
+// 	pub const One: u128 = 1;
+// }
+impl bifrost_asset_registry::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<AliceCreatePoolOrigin, AccountId>;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
@@ -162,7 +163,7 @@ parameter_types! {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10,
+			&CurrencyId::Native(TokenSymbol::BNC) => 0,
 			&CurrencyId::Token(TokenSymbol::KSM) => 0,
 			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
 			&DOT => 0,
@@ -243,8 +244,8 @@ impl DecimalProvider<CurrencyId> for Decimal {
 		match *asset_id {
 			KSM | VKSM => Some(12),
 			BNC => Some(12),
-			DOT_U => Some(6),
-			_ => None,
+			DOT_U => Some(12),
+			_ => Some(12),
 		}
 	}
 }
@@ -439,7 +440,7 @@ impl Config for Test {
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
 	type UnixTime = TimestampPallet;
-	type Assets = Tokens; // CurrencyAdapter;  Currencies
+	type Assets = Currencies; //Tokens; // CurrencyAdapter;  Currencies
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
 }
@@ -456,7 +457,58 @@ impl Config for Test {
 // }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	bifrost_asset_registry::GenesisConfig::<Test> {
+		currency: vec![
+			// (CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
+			(CurrencyId::Token(TokenSymbol::KSM), 1, None),
+			(CurrencyId::Native(TokenSymbol::BNC), 1, None),
+			(DOT, 1, None),
+			(ASTR, 1, None),
+			(GLMR, 1, None),
+			(DOT_U, 1, None),
+			(CDOT_6_13, 1, None),
+			(PCDOT_6_13, 1, None),
+		],
+		vcurrency: vec![VDOT],
+		vsbond: vec![],
+		phantom: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	let endowed_accounts: Vec<(AccountId, CurrencyId, Balance)> = vec![
+		// (ALICE, BNC, 1_000_000_000_000_000),
+		(ALICE, KSM, 1_000_000_000_000_000),
+		(ALICE, DOT, 1_000_000_000_000_000),
+		(ALICE, CDOT_6_13, 1_000_000_000_000_000),
+		(ALICE, DOT_U, 1_000_000_000_000_000),
+		(BOB, KSM, 1_000_000_000_000_000),
+		(BOB, DOT, 1_000_000_000_000_000),
+		(DAVE, DOT, 1_000_000_000_000_000),
+		(DAVE, DOT_U, 1_000_000_000_000_000),
+	];
+	pallet_balances::GenesisConfig::<Test> {
+		balances: endowed_accounts
+			.clone()
+			.into_iter()
+			.filter(|(_, currency_id, _)| *currency_id == BNC)
+			.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+			.collect::<Vec<_>>(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	orml_tokens::GenesisConfig::<Test> {
+		balances: endowed_accounts
+			.clone()
+			.into_iter()
+			.filter(|(_, currency_id, _)| *currency_id != BNC)
+			.collect::<Vec<_>>(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
@@ -484,7 +536,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		Loans::activate_market(RuntimeOrigin::root(), KSM).unwrap();
 		Loans::add_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), DOT).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(DOT_U)).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(PUSDT)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), DOT_U).unwrap();
 		Loans::add_market(RuntimeOrigin::root(), CDOT_6_13, market_mock(PCDOT_6_13)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), CDOT_6_13).unwrap();
@@ -561,7 +613,7 @@ pub const fn market_mock(ptoken_id: CurrencyId) -> Market<Balance> {
 	}
 }
 
-pub const MARKET_MOCK: Market<Balance> = market_mock(PDOT);
+pub const MARKET_MOCK: Market<Balance> = market_mock(CurrencyId::Token2(9));
 
 pub const ACTIVE_MARKET_MOCK: Market<Balance> = {
 	let mut market = MARKET_MOCK;

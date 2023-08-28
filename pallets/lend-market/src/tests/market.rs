@@ -1,7 +1,7 @@
 use crate::{
 	mock::{
 		market_mock, new_test_ext, Loans, RuntimeOrigin, Test, ACTIVE_MARKET_MOCK, ALICE, DOT,
-		MARKET_MOCK, PDOT, DOT_U, VDOT,
+		DOT_U, MARKET_MOCK, PDOT, PUSDT, VDOT,
 	},
 	Error, InterestRateModel, MarketState,
 };
@@ -168,7 +168,7 @@ fn force_update_market_works() {
 
 		// New ptoken_id must not be in use
 		assert_noop!(
-			Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(DOT_U)),
+			Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PUSDT)),
 			Error::<Test>::InvalidPtokenId
 		);
 		assert_ok!(Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)));
@@ -180,7 +180,7 @@ fn force_update_market_works() {
 fn force_update_market_ensures_that_it_is_not_possible_to_modify_unknown_market_currencies() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Loans::force_update_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK),
+			Loans::force_update_market(RuntimeOrigin::root(), PDOT, MARKET_MOCK),
 			Error::<Test>::MarketDoesNotExist
 		);
 	})

@@ -44,7 +44,7 @@ use sp_runtime::{traits::*, FixedPointNumber};
 use sp_std::{convert::TryInto, vec::Vec};
 
 pub use pallet::*;
-pub use primitives::{CurrencyId, Price};
+pub use primitives::{CurrencyId, Price, PriceDetail};
 // pub use traits::OnExchangeRateChange;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -463,7 +463,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> PriceFeeder for Pallet<T> {
-	fn get_price(asset_id: &CurrencyId) -> Result<Price, DispatchError> {
-		Self::get_price(OracleKey::ExchangeRate(*asset_id)).map(|a| a.into())
+	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
+		Self::get_price(OracleKey::ExchangeRate(*asset_id)).map(|a| (a.into(), 0)).ok()
 	}
 }

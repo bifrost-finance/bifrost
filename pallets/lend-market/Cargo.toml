@@ -37,6 +37,7 @@ orml-currencies = "0.4.1-dev"
 # pallet-amm = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 # pallet-currency-adapter = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [features]
 default = ['std']
@@ -59,6 +60,7 @@ std = [
 	'scale-info/std',
 	'num-traits/std',
 	'pallet-traits/std',
+	"bifrost-asset-registry/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 

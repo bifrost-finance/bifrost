@@ -59,7 +59,7 @@ fn init_markets_ok() {
 #[test]
 fn lend_market_native_token_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(1000));
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(1000));
 		assert_eq!(Loans::market(BNC).unwrap().state, MarketState::Active);
 		assert_eq!(BorrowIndex::<Test>::get(BNC), Rate::one());
 		assert_eq!(ExchangeRate::<Test>::get(BNC), Rate::saturating_from_rational(2, 100));
@@ -91,7 +91,7 @@ fn lend_market_native_token_works() {
 		let borrow_snapshot = Loans::account_borrows(BNC, DAVE);
 		assert_eq!(borrow_snapshot.principal, unit(100));
 		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(BNC));
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(100),);
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(100),);
 	})
 }
 
@@ -108,8 +108,8 @@ fn mint_works() {
 				.saturating_mul_int(Loans::account_deposits(DOT, ALICE).voucher_balance),
 			unit(100)
 		);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(900),);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &Loans::account_id()), unit(100),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(900),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &Loans::account_id()), unit(100),);
 	})
 }
 
@@ -232,7 +232,7 @@ fn redeem_works() {
 				.saturating_mul_int(Loans::account_deposits(DOT, ALICE).voucher_balance),
 			unit(80)
 		);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(920),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(920),);
 	})
 }
 
@@ -319,7 +319,7 @@ fn redeem_all_works() {
 				.saturating_mul_int(Loans::account_deposits(DOT, ALICE).voucher_balance),
 			0,
 		);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(1000),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(1000),);
 		assert!(!AccountDeposits::<Test>::contains_key(DOT, &ALICE))
 	})
 }
@@ -446,7 +446,7 @@ fn borrow_works() {
 		let borrow_snapshot = Loans::account_borrows(DOT, ALICE);
 		assert_eq!(borrow_snapshot.principal, unit(100));
 		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(DOT));
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(900),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(900),);
 	})
 }
 
@@ -472,7 +472,7 @@ fn lf_borrow_works() {
 		let borrow_snapshot = Loans::account_borrows(DOT, ALICE);
 		assert_eq!(borrow_snapshot.principal, unit(100));
 		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(DOT));
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(1100),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(1100),);
 	})
 }
 
@@ -498,7 +498,7 @@ fn repay_borrow_works() {
 		let borrow_snapshot = Loans::account_borrows(DOT, ALICE);
 		assert_eq!(borrow_snapshot.principal, unit(70));
 		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(DOT));
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(870),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(870),);
 	})
 }
 
@@ -520,7 +520,7 @@ fn repay_borrow_all_works() {
 		// DOT collateral: deposit = 200
 		// KSM: cash + borrow - repay = 1000 + 50 - 50 = 1000
 		// KSM borrow balance: borrow - repay = 50 - 50 = 0
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(800),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(800),);
 		assert_eq!(
 			Loans::exchange_rate(DOT)
 				.saturating_mul_int(Loans::account_deposits(DOT, ALICE).voucher_balance),
@@ -589,8 +589,8 @@ fn add_reserves_works() {
 		assert_ok!(Loans::add_reserves(RuntimeOrigin::root(), ALICE, DOT, unit(100)));
 
 		assert_eq!(Loans::total_reserves(DOT), unit(100));
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &Loans::account_id()), unit(100),);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(900),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &Loans::account_id()), unit(100),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(900),);
 	})
 }
 
@@ -604,8 +604,8 @@ fn reduce_reserves_works() {
 		assert_ok!(Loans::reduce_reserves(RuntimeOrigin::root(), ALICE, DOT, unit(20)));
 
 		assert_eq!(Loans::total_reserves(DOT), unit(80));
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &Loans::account_id()), unit(80),);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), unit(920),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &Loans::account_id()), unit(80),);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), unit(920),);
 	})
 }
 
@@ -798,11 +798,18 @@ fn get_price_works() {
 #[test]
 fn ensure_enough_cash_works() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ALICE),
-			KSM.into(),
+		// assert_ok!(Assets::mint(
+		// 	RuntimeOrigin::signed(ALICE),
+		// 	KSM.into(),
+		// 	Loans::account_id(),
+		// 	unit(1000)
+		// ));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
 			Loans::account_id(),
-			unit(1000)
+			KSM,
+			unit(1000),
+			0
 		));
 		assert_ok!(Loans::ensure_enough_cash(KSM, unit(1000)));
 		TotalReserves::<Test>::insert(KSM, unit(10));
@@ -835,18 +842,18 @@ fn ensure_valid_exchange_rate_works() {
 #[test]
 fn withdraw_missing_reward_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(1000));
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(1000));
 
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(100)));
 
 		assert_ok!(Loans::withdraw_missing_reward(RuntimeOrigin::root(), ALICE, unit(40),));
 
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(900));
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(900));
 
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &ALICE), unit(40));
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &ALICE), unit(40));
 
 		assert_eq!(
-			<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
+			<Test as Config>::Assets::free_balance(BNC, &Loans::reward_account_id().unwrap()),
 			unit(60)
 		);
 	})
@@ -1030,11 +1037,14 @@ fn reward_calculation_one_palyer_in_multi_markets_works() {
 		_run_to_block(80);
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(200)));
 		assert_ok!(Loans::claim_reward(RuntimeOrigin::signed(ALICE)));
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(800));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(130)), true);
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(800));
+		assert_eq!(
+			almost_equal(<Test as Config>::Assets::free_balance(BNC, &ALICE), unit(130)),
+			true
+		);
 		assert_eq!(
 			almost_equal(
-				<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
+				<Test as Config>::Assets::free_balance(BNC, &Loans::reward_account_id().unwrap()),
 				unit(70)
 			),
 			true
@@ -1052,7 +1062,10 @@ fn reward_calculation_one_palyer_in_multi_markets_works() {
 		// KSM borrow:0     KSM borrow reward: 20
 		_run_to_block(90);
 		assert_ok!(Loans::claim_reward(RuntimeOrigin::signed(ALICE)));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(140)), true);
+		assert_eq!(
+			almost_equal(<Test as Config>::Assets::free_balance(BNC, &ALICE), unit(140)),
+			true
+		);
 	})
 }
 
@@ -1140,12 +1153,15 @@ fn reward_calculation_multi_player_in_one_market_works() {
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(200)));
 		assert_ok!(Loans::claim_reward_for_market(RuntimeOrigin::signed(ALICE), DOT));
 		assert_ok!(Loans::claim_reward_for_market(RuntimeOrigin::signed(BOB), DOT));
-		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(800));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(58)), true);
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &BOB), unit(22)), true);
+		assert_eq!(<Test as Config>::Assets::free_balance(BNC, &DAVE), unit(800));
+		assert_eq!(
+			almost_equal(<Test as Config>::Assets::free_balance(BNC, &ALICE), unit(58)),
+			true
+		);
+		assert_eq!(almost_equal(<Test as Config>::Assets::free_balance(BNC, &BOB), unit(22)), true);
 		assert_eq!(
 			almost_equal(
-				<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
+				<Test as Config>::Assets::free_balance(BNC, &Loans::reward_account_id().unwrap()),
 				unit(120)
 			),
 			true

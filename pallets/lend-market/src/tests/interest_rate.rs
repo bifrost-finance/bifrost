@@ -21,13 +21,13 @@ fn utilization_rate_works() {
 fn interest_rate_model_works() {
 	new_test_ext().execute_with(|| {
 		let rate_decimal: u128 = 1_000_000_000_000_000_000;
-		Assets::mint(
-			RuntimeOrigin::signed(ALICE),
-			DOT.into(),
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
 			ALICE,
+			DOT,
 			million_unit(1000) - unit(1000),
-		)
-		.unwrap();
+			0,
+		));
 		// Deposit 200 DOT and borrow 100 DOT
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), DOT, million_unit(200)));
 		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
@@ -165,7 +165,7 @@ fn accrue_interest_works_after_redeem() {
 				.saturating_mul_int(Loans::account_deposits(DOT, BOB).voucher_balance),
 			0,
 		);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), 819999999999999);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &ALICE), 819999999999999);
 	})
 }
 
@@ -185,7 +185,7 @@ fn accrue_interest_works_after_redeem_all() {
 				.saturating_mul_int(Loans::account_deposits(DOT, BOB).voucher_balance),
 			0,
 		);
-		assert_eq!(<Test as Config>::Assets::balance(DOT, &BOB), 1000000000003608);
+		assert_eq!(<Test as Config>::Assets::free_balance(DOT, &BOB), 1000000000003608);
 		assert!(!AccountDeposits::<Test>::contains_key(DOT, &BOB))
 	})
 }
@@ -214,7 +214,7 @@ fn accrue_interest_works_after_repay_all() {
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(Loans::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
 		assert_eq!(Loans::borrow_index(KSM), Rate::from_inner(1000000008561643835),);
-		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), 999999999571918);
+		assert_eq!(<Test as Config>::Assets::free_balance(KSM, &ALICE), 999999999571918);
 		let borrow_snapshot = Loans::account_borrows(KSM, ALICE);
 		assert_eq!(borrow_snapshot.principal, 0);
 		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(KSM));
