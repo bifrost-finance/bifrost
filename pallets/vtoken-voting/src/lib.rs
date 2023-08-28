@@ -429,7 +429,7 @@ pub mod pallet {
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::unlock_delegator_token())]
-		pub fn unlock_delegator_token(
+		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
 			#[pallet::compact] poll_index: PollIndexOf<T>,
@@ -441,11 +441,11 @@ pub mod pallet {
 			let moment = Self::ensure_referendum_completed(vtoken, poll_index)?;
 			let locking_period = VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
 			ensure!(
-				moment + locking_period >= T::RelaychainBlockNumberProvider::current_block_number(),
+				moment + locking_period > T::RelaychainBlockNumberProvider::current_block_number(),
 				Error::<T>::NotExpired
 			);
 
-			let notify_call = Call::<T>::notify_unlock_delegator_token {
+			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
 				response: Default::default(),
 			};
@@ -637,8 +637,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(102)]
-		#[pallet::weight(<T as Config>::WeightInfo::notify_unlock_delegator_token())]
-		pub fn notify_unlock_delegator_token(
+		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
+		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
 			query_id: QueryId,
 			response: Response,

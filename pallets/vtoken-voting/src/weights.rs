@@ -65,7 +65,7 @@ pub trait WeightInfo {
 	fn kill_referendum() -> Weight;
 	fn notify_vote() -> Weight;
 	fn notify_update_referendum_status() -> Weight;
-	fn notify_unlock_delegator_token() -> Weight;
+	fn notify_remove_delegator_vote() -> Weight;
 }
 
 /// Weights for bifrost_vtoken_voting using the Bifrost node and recommended hardware.
@@ -144,7 +144,7 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		// Minimum execution time: 2_000_000 picoseconds.
 		Weight::from_parts(3_000_000, 0)
 	}
-	fn notify_unlock_delegator_token() -> Weight {
+	fn notify_remove_delegator_vote() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -228,7 +228,7 @@ impl WeightInfo for () {
 		// Minimum execution time: 2_000_000 picoseconds.
 		Weight::from_parts(3_000_000, 0)
 	}
-	fn notify_unlock_delegator_token() -> Weight {
+	fn notify_remove_delegator_vote() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
