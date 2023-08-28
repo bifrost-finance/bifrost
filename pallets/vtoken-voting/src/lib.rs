@@ -389,7 +389,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_referendum_killed(vtoken, poll_index)?;
+			ensure!(
+				Self::ensure_referendum_expired(vtoken, poll_index).is_ok() ||
+					Self::ensure_referendum_killed(vtoken, poll_index).is_ok(),
+				Error::<T>::NotExpired
+			);
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
