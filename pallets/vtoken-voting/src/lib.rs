@@ -44,7 +44,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
-	currency::{KSM, VDOT, VKSM},
+	currency::{VDOT, VKSM},
 	CurrencyId,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
@@ -55,6 +55,7 @@ use sp_runtime::{
 	ArithmeticError,
 };
 use sp_std::prelude::*;
+use traits::XcmDestWeightAndFeeHandler;
 use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
@@ -348,8 +349,10 @@ pub mod pallet {
 			let vote_call =
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (weight, extra_fee) =
-				T::XcmDestWeightAndFee::get_vote(KSM).ok_or(Error::<T>::NoData)?;
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_vote(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+			)
+			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				vote_call,
@@ -418,8 +421,10 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
-			let (weight, extra_fee) =
-				T::XcmDestWeightAndFee::get_remove_vote(KSM).ok_or(Error::<T>::NoData)?;
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+			)
+			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
@@ -463,8 +468,10 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
-			let (weight, extra_fee) =
-				T::XcmDestWeightAndFee::get_remove_vote(KSM).ok_or(Error::<T>::NoData)?;
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+			)
+			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,

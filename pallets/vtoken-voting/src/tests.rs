@@ -432,7 +432,7 @@ fn notify_vote_success_works() {
 			vote: aye(2, 5),
 		}));
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response,));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
 	});
 }
 
