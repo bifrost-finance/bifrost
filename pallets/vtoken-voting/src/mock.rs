@@ -19,9 +19,12 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate as vtoken_voting;
+use crate::{traits::XcmDestWeightAndFeeHandler, BalanceOf};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	ord_parameter_types,
+	pallet_prelude::Weight,
+	parameter_types,
 	traits::{Everything, GenesisBuild, Get, Nothing},
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -35,7 +38,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, ConstU32, IdentityLookup},
 };
-use xcm::{prelude::*, v3::Weight};
+use xcm::{prelude::*, v3::Weight as XcmWeight};
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
@@ -232,6 +235,17 @@ impl Get<ParaId> for ParachainId {
 	}
 }
 
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
+	fn get_vote(_token: CurrencyId) -> Option<(XcmWeight, BalanceOf<Runtime>)> {
+		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into()))
+	}
+
+	fn get_remove_vote(_token: CurrencyId) -> Option<(XcmWeight, BalanceOf<Runtime>)> {
+		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into()))
+	}
+}
+
 impl vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -240,6 +254,7 @@ impl vtoken_voting::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<Controller, AccountId>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type PollIndex = u32;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type RelaychainBlockNumberProvider = System;
 	type MaxVotes = ConstU32<3>;
 	type ParachainId = ParachainId;

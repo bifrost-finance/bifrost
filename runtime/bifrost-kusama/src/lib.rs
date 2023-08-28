@@ -108,6 +108,7 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
+use bifrost_vtoken_voting::traits::XcmDestWeightAndFeeHandler;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1506,6 +1507,21 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
+parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
+	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
+	}
+
+	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
+	}
+}
+
 impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1514,9 +1530,11 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type PollIndex = u32;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
+	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();
 }
 

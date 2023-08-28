@@ -22,8 +22,9 @@ use frame_support::{
 	assert_ok,
 	dispatch::RawOrigin,
 	traits::{schedule::DispatchTime, StorePreimage},
+	weights::Weight,
 };
-use node_primitives::currency::VKSM;
+use node_primitives::currency::{KSM, VKSM};
 use pallet_conviction_voting::{AccountVote, Conviction, Tally, Vote};
 use xcm_emulator::TestExt;
 
@@ -55,6 +56,13 @@ fn vote_works() {
 
 		Bifrost::execute_with(|| {
 			use bifrost_kusama_runtime::{RuntimeEvent, RuntimeOrigin, System, VtokenVoting};
+
+			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+				RuntimeOrigin::root(),
+				KSM,
+				bifrost_slp::XcmOperation::Vote,
+				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			));
 
 			assert_ok!(VtokenVoting::set_delegator_role(
 				RuntimeOrigin::root(),
@@ -142,6 +150,18 @@ fn update_referendum_status_works() {
 		Bifrost::execute_with(|| {
 			use bifrost_kusama_runtime::{RuntimeEvent, RuntimeOrigin, System, VtokenVoting};
 
+			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+				RuntimeOrigin::root(),
+				KSM,
+				bifrost_slp::XcmOperation::Vote,
+				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			));
+			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+				RuntimeOrigin::root(),
+				KSM,
+				bifrost_slp::XcmOperation::RemoveVote,
+				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			));
 			assert_ok!(VtokenVoting::set_delegator_role(
 				RuntimeOrigin::root(),
 				VKSM,
@@ -257,7 +277,7 @@ fn update_referendum_status_works() {
 					locking_period: 3,
 				})
 			)));
-			assert_ok!(VtokenVoting::unlock_delegator_token(
+			assert_ok!(VtokenVoting::remove_delegator_vote(
 				RuntimeOrigin::signed(ALICE.into()),
 				vtoken,
 				poll_index,

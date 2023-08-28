@@ -28,6 +28,7 @@ mod mock;
 mod tests;
 
 mod call;
+pub mod traits;
 mod vote;
 pub mod weights;
 
@@ -43,7 +44,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
-	currency::{VDOT, VKSM},
+	currency::{KSM, VDOT, VKSM},
 	CurrencyId,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
@@ -65,7 +66,8 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 pub type CurrencyIdOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 type PollIndexOf<T> = <T as Config>::PollIndex;
 
@@ -107,6 +109,8 @@ pub mod pallet {
 		>;
 
 		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
+
+		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
@@ -344,20 +348,29 @@ pub mod pallet {
 			let vote_call =
 				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			Self::send_xcm_with_notify(derivative_index, vote_call, notify_call, |query_id| {
-				let expired_block_number = frame_system::Pallet::<T>::block_number()
-					.saturating_add(T::QueryTimeout::get());
-				if !confirmed {
-					PendingReferendumInfo::<T>::insert(
+			let (weight, extra_fee) =
+				T::XcmDestWeightAndFee::get_vote(KSM).ok_or(Error::<T>::NoData)?;
+			Self::send_xcm_with_notify(
+				derivative_index,
+				vote_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					let expired_block_number = frame_system::Pallet::<T>::block_number()
+						.saturating_add(T::QueryTimeout::get());
+					if !confirmed {
+						PendingReferendumInfo::<T>::insert(
+							query_id,
+							(vtoken, poll_index, expired_block_number),
+						);
+					}
+					PendingVotingInfo::<T>::insert(
 						query_id,
-						(vtoken, poll_index, expired_block_number),
-					);
-				}
-				PendingVotingInfo::<T>::insert(
-					query_id,
-					(vtoken, poll_index, derivative_index, who.clone(), expired_block_number),
-				)
-			})?;
+						(vtoken, poll_index, derivative_index, who.clone(), expired_block_number),
+					)
+				},
+			)?;
 
 			Self::deposit_event(Event::<T>::Voted { who, vtoken, poll_index, vote });
 
@@ -405,10 +418,14 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
+			let (weight, extra_fee) =
+				T::XcmDestWeightAndFee::get_remove_vote(KSM).ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
 				notify_call,
+				weight,
+				extra_fee,
 				|query_id| {
 					PendingReferendumStatus::<T>::insert(
 						query_id,
@@ -446,10 +463,14 @@ pub mod pallet {
 			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
 				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
 			);
+			let (weight, extra_fee) =
+				T::XcmDestWeightAndFee::get_remove_vote(KSM).ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				remove_vote_call,
 				notify_call,
+				weight,
+				extra_fee,
 				|query_id| {
 					PendingUnlockDelegatorToken::<T>::insert(
 						query_id,
@@ -820,6 +841,8 @@ pub mod pallet {
 			derivative_index: DerivativeIndex,
 			call: RelayCall<T>,
 			notify_call: Call<T>,
+			weight: XcmWeight,
+			extra_fee: BalanceOf<T>,
 			f: impl FnOnce(QueryId) -> (),
 		) -> DispatchResult {
 			let responder = MultiLocation::parent();
@@ -835,8 +858,8 @@ pub mod pallet {
 
 			let xcm_message = Self::construct_xcm_message(
 				RelayCall::<T>::get_derivative_call(derivative_index, call).encode(),
-				4000000000u32.into(),
-				Weight::from_parts(4000000000, 100000),
+				extra_fee,
+				weight,
 				query_id,
 			)?;
 
