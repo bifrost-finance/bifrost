@@ -8,8 +8,8 @@ use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whiteli
 use frame_support::assert_ok;
 use frame_system::{self, RawOrigin as SystemOrigin};
 use node_primitives::{
-	tokens::{CDOT_6_13, DOT, KSM, PKSM, PSKSM, PUSDT, SKSM, USDT},
-	Balance, CurrencyId,
+	tokens::{CDOT_6_13, DOT, KSM, PKSM, PSKSM, SKSM, USDT},
+	Balance, CurrencyId, PUSDT,
 };
 use rate_model::{InterestRateModel, JumpModel};
 use sp_std::prelude::*;

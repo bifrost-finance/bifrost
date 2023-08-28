@@ -1,7 +1,7 @@
 use crate::{
 	mock::{
 		market_mock, new_test_ext, Loans, RuntimeOrigin, Test, ACTIVE_MARKET_MOCK, ALICE, DOT,
-		MARKET_MOCK, PDOT, PUSDT, SDOT,
+		MARKET_MOCK, PDOT, DOT_U, VDOT,
 	},
 	Error, InterestRateModel, MarketState,
 };
@@ -14,7 +14,7 @@ macro_rules! rate_model_sanity_check {
 		new_test_ext().execute_with(|| {
 			// Invalid base_rate
 			assert_noop!(
-				Loans::$call(RuntimeOrigin::root(), SDOT, {
+				Loans::$call(RuntimeOrigin::root(), VDOT, {
 					let mut market = MARKET_MOCK;
 					market.rate_model = InterestRateModel::new_jump_model(
 						Rate::saturating_from_rational(36, 100),
@@ -28,7 +28,7 @@ macro_rules! rate_model_sanity_check {
 			);
 			// Invalid jump_rate
 			assert_noop!(
-				Loans::$call(RuntimeOrigin::root(), SDOT, {
+				Loans::$call(RuntimeOrigin::root(), VDOT, {
 					let mut market = MARKET_MOCK;
 					market.rate_model = InterestRateModel::new_jump_model(
 						Rate::saturating_from_rational(5, 100),
@@ -42,7 +42,7 @@ macro_rules! rate_model_sanity_check {
 			);
 			// Invalid full_rate
 			assert_noop!(
-				Loans::$call(RuntimeOrigin::root(), SDOT, {
+				Loans::$call(RuntimeOrigin::root(), VDOT, {
 					let mut market = MARKET_MOCK;
 					market.rate_model = InterestRateModel::new_jump_model(
 						Rate::saturating_from_rational(5, 100),
@@ -56,7 +56,7 @@ macro_rules! rate_model_sanity_check {
 			);
 			// base_rate greater than jump_rate
 			assert_noop!(
-				Loans::$call(RuntimeOrigin::root(), SDOT, {
+				Loans::$call(RuntimeOrigin::root(), VDOT, {
 					let mut market = MARKET_MOCK;
 					market.rate_model = InterestRateModel::new_jump_model(
 						Rate::saturating_from_rational(10, 100),
@@ -70,7 +70,7 @@ macro_rules! rate_model_sanity_check {
 			);
 			// jump_rate greater than full_rate
 			assert_noop!(
-				Loans::$call(RuntimeOrigin::root(), SDOT, {
+				Loans::$call(RuntimeOrigin::root(), VDOT, {
 					let mut market = MARKET_MOCK;
 					market.rate_model = InterestRateModel::new_jump_model(
 						Rate::saturating_from_rational(5, 100),
@@ -89,10 +89,10 @@ macro_rules! rate_model_sanity_check {
 #[test]
 fn active_market_sets_state_to_active() {
 	new_test_ext().execute_with(|| {
-		Loans::add_market(RuntimeOrigin::root(), SDOT, MARKET_MOCK).unwrap();
-		assert_eq!(Loans::market(SDOT).unwrap().state, MarketState::Pending);
-		Loans::activate_market(RuntimeOrigin::root(), SDOT).unwrap();
-		assert_eq!(Loans::market(SDOT).unwrap().state, MarketState::Active);
+		Loans::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK).unwrap();
+		assert_eq!(Loans::market(VDOT).unwrap().state, MarketState::Pending);
+		Loans::activate_market(RuntimeOrigin::root(), VDOT).unwrap();
+		assert_eq!(Loans::market(VDOT).unwrap().state, MarketState::Active);
 	})
 }
 
@@ -100,7 +100,7 @@ fn active_market_sets_state_to_active() {
 fn active_market_does_not_modify_unknown_market_currencies() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Loans::activate_market(RuntimeOrigin::root(), SDOT),
+			Loans::activate_market(RuntimeOrigin::root(), VDOT),
 			Error::<Test>::MarketDoesNotExist
 		);
 	})
@@ -117,7 +117,7 @@ fn add_market_can_only_be_used_by_root() {
 fn add_market_ensures_that_market_state_must_be_pending() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Loans::add_market(RuntimeOrigin::root(), SDOT, ACTIVE_MARKET_MOCK),
+			Loans::add_market(RuntimeOrigin::root(), VDOT, ACTIVE_MARKET_MOCK),
 			Error::<Test>::NewMarketMustHavePendingState
 		);
 	})
@@ -131,17 +131,17 @@ fn add_market_has_sanity_checks_for_rate_models() {
 #[test]
 fn add_market_successfully_stores_a_new_market() {
 	new_test_ext().execute_with(|| {
-		Loans::add_market(RuntimeOrigin::root(), SDOT, MARKET_MOCK).unwrap();
-		assert_eq!(Loans::market(SDOT).unwrap(), MARKET_MOCK);
+		Loans::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK).unwrap();
+		assert_eq!(Loans::market(VDOT).unwrap(), MARKET_MOCK);
 	})
 }
 
 #[test]
 fn add_market_ensures_that_market_does_not_exist() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Loans::add_market(RuntimeOrigin::root(), SDOT, MARKET_MOCK));
+		assert_ok!(Loans::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK));
 		assert_noop!(
-			Loans::add_market(RuntimeOrigin::root(), SDOT, MARKET_MOCK),
+			Loans::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK),
 			Error::<Test>::MarketAlreadyExists
 		);
 	})
@@ -168,11 +168,11 @@ fn force_update_market_works() {
 
 		// New ptoken_id must not be in use
 		assert_noop!(
-			Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PUSDT)),
+			Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(DOT_U)),
 			Error::<Test>::InvalidPtokenId
 		);
-		assert_ok!(Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(1234)));
-		assert_eq!(Loans::market(DOT).unwrap().ptoken_id, 1234);
+		assert_ok!(Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)));
+		assert_eq!(Loans::market(DOT).unwrap().ptoken_id, PDOT);
 	})
 }
 
@@ -180,7 +180,7 @@ fn force_update_market_works() {
 fn force_update_market_ensures_that_it_is_not_possible_to_modify_unknown_market_currencies() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Loans::force_update_market(RuntimeOrigin::root(), SDOT, MARKET_MOCK),
+			Loans::force_update_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK),
 			Error::<Test>::MarketDoesNotExist
 		);
 	})
@@ -197,7 +197,7 @@ fn update_market_ensures_that_it_is_not_possible_to_modify_unknown_market_curren
 		assert_noop!(
 			Loans::update_market(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				None,
 				None,
 				None,
@@ -335,7 +335,7 @@ fn update_rate_model_works() {
 		assert_noop!(
 			Loans::update_rate_model(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				InterestRateModel::new_jump_model(
 					Rate::saturating_from_rational(36, 100),
 					Rate::saturating_from_rational(15, 100),
@@ -349,7 +349,7 @@ fn update_rate_model_works() {
 		assert_noop!(
 			Loans::update_rate_model(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				InterestRateModel::new_jump_model(
 					Rate::saturating_from_rational(5, 100),
 					Rate::saturating_from_rational(36, 100),
@@ -363,7 +363,7 @@ fn update_rate_model_works() {
 		assert_noop!(
 			Loans::update_rate_model(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				InterestRateModel::new_jump_model(
 					Rate::saturating_from_rational(5, 100),
 					Rate::saturating_from_rational(15, 100),
@@ -377,7 +377,7 @@ fn update_rate_model_works() {
 		assert_noop!(
 			Loans::update_rate_model(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				InterestRateModel::new_jump_model(
 					Rate::saturating_from_rational(10, 100),
 					Rate::saturating_from_rational(9, 100),
@@ -391,7 +391,7 @@ fn update_rate_model_works() {
 		assert_noop!(
 			Loans::update_rate_model(
 				RuntimeOrigin::root(),
-				SDOT,
+				VDOT,
 				InterestRateModel::new_jump_model(
 					Rate::saturating_from_rational(5, 100),
 					Rate::saturating_from_rational(15, 100),

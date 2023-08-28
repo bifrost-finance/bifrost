@@ -7,7 +7,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{traits::Zero, RuntimeDebug};
 use sp_std::prelude::*;
 
-use primitives::{CurrencyId, DerivativeIndex, Price, Rate, Timestamp};
+use primitives::{CurrencyId, DerivativeIndex, Price, PriceDetail, Rate, Timestamp};
 
 pub mod loans;
 pub mod ump;
@@ -19,7 +19,7 @@ pub trait EmergencyCallFilter<Call> {
 }
 
 pub trait PriceFeeder {
-	fn get_price(asset_id: &CurrencyId) -> Result<Price, DispatchError>;
+	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
 }
 
 pub trait DecimalProvider<CurrencyId> {

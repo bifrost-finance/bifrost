@@ -16,14 +16,11 @@ pub use super::*;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{AsEnsureOriginWithArg, Everything, SortedMembers},
+	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-use node_primitives::{
-	tokens::{CDOT_6_13, PCDOT_6_13},
-	*,
-};
+use node_primitives::{CDOT_6_13, PCDOT_6_13, *};
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
 use pallet_traits::{
 	DecimalProvider, ExchangeRateProvider, LiquidStakingCurrenciesProvider,
@@ -32,12 +29,19 @@ use pallet_traits::{
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
 use sp_std::vec::Vec;
-use std::{cell::RefCell, collections::HashMap};
+use std::{
+	cell::RefCell,
+	collections::HashMap,
+	hash::{Hash, Hasher},
+};
 
-pub use node_primitives::tokens::{DOT, HKO, KSM, PDOT, PHKO, PKSM, PUSDT, SDOT, SKSM, USDT};
+pub use node_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+pub const PDOT: CurrencyId = CurrencyId::Token2(10);
+pub const PKSM: CurrencyId = CurrencyId::Token2(11);
 
 construct_runtime!(
 	pub enum Test where
@@ -47,6 +51,8 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		Tokens: orml_tokens,
+		Currencies: orml_currencies::{Pallet, Call},
 		Loans: crate::{Pallet, Storage, Call, Event<T>},
 		// Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
@@ -113,16 +119,90 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
+// impl pallet_balances::Config for Test {
+// 	type Balance = Balance;
+// 	type DustRemoval = ();
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type ExistentialDeposit = ExistentialDeposit;
+// 	type AccountStore = System;
+// 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+// 	type MaxLocks = MaxLocks;
+// 	type MaxReserves = ();
+// 	type ReserveIdentifier = [u8; 8];
+// }
+parameter_types! {
+	// pub const ExistentialDeposit: Balance = 1;
+	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+}
+
 impl pallet_balances::Config for Test {
+	type AccountStore = frame_system::Pallet<Test>;
 	type Balance = Balance;
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
-	type MaxLocks = MaxLocks;
+	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
+	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
+}
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Native(TokenSymbol::BNC) => 10,
+			&CurrencyId::Token(TokenSymbol::KSM) => 0,
+			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
+			&DOT => 0,
+			&VDOT => 0,
+			&VBNC => 0,
+			&CurrencyId::BLP(_) => 0,
+			_ => 0
+			// bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
+			// 	.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
+		}
+	};
+}
+impl orml_tokens::Config for Test {
+	type Amount = i128;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = Nothing;
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type WeightInfo = ();
+	type CurrencyHooks = ();
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = BNC;
+}
+
+// pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type WeightInfo = ();
 }
 
 // pallet-price is using for benchmark compilation
@@ -161,9 +241,9 @@ pub struct Decimal;
 impl DecimalProvider<CurrencyId> for Decimal {
 	fn get_decimal(asset_id: &CurrencyId) -> Option<u8> {
 		match *asset_id {
-			KSM | SKSM => Some(12),
-			HKO => Some(12),
-			USDT => Some(6),
+			KSM | VKSM => Some(12),
+			BNC => Some(12),
+			DOT_U => Some(6),
 			_ => None,
 		}
 	}
@@ -175,7 +255,7 @@ impl LiquidStakingCurrenciesProvider<CurrencyId> for LiquidStaking {
 		Some(KSM)
 	}
 	fn get_liquid_currency() -> Option<CurrencyId> {
-		Some(SKSM)
+		Some(VKSM)
 	}
 }
 
@@ -270,14 +350,23 @@ impl SortedMembers<AccountId> for AliceCreatePoolOrigin {
 // }
 
 pub struct MockPriceFeeder;
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+pub struct CurrencyIdWrap(CurrencyId);
+
+impl Hash for CurrencyIdWrap {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		// self.hash(state);
+		state.write_u8(1);
+	}
+}
 
 impl MockPriceFeeder {
 	thread_local! {
-		pub static PRICES: RefCell<HashMap<CurrencyId, Option<PriceDetail>>> = {
+		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
-				vec![HKO, DOT, KSM, USDT, SKSM, SDOT, CDOT_6_13]
+				vec![BNC, DOT, KSM, DOT_U, VKSM, VDOT, CDOT_6_13]
 					.iter()
-					.map(|&x| (x, Some((Price::saturating_from_integer(1), 1))))
+					.map(|&x| (CurrencyIdWrap(x), Some((Price::saturating_from_integer(1), 1))))
 					.collect()
 			)
 		};
@@ -285,7 +374,7 @@ impl MockPriceFeeder {
 
 	pub fn set_price(asset_id: CurrencyId, price: Price) {
 		Self::PRICES.with(|prices| {
-			prices.borrow_mut().insert(asset_id, Some((price, 1u64)));
+			prices.borrow_mut().insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
 		});
 	}
 
@@ -300,7 +389,7 @@ impl MockPriceFeeder {
 
 impl PriceFeeder for MockPriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
-		Self::PRICES.with(|prices| *prices.borrow().get(asset_id).unwrap())
+		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
 	}
 }
 
@@ -317,7 +406,7 @@ impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = CurrencyId;
-	type AssetIdParameter = codec::Compact<CurrencyId>;
+	type AssetIdParameter = CurrencyId; // codec::Compact<CurrencyId>;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
@@ -338,7 +427,7 @@ impl pallet_assets::Config for Test {
 
 parameter_types! {
 	pub const LoansPalletId: PalletId = PalletId(*b"par/loan");
-	pub const RewardAssetId: CurrencyId = HKO;
+	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }
 
@@ -350,13 +439,13 @@ impl Config for Test {
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
 	type UnixTime = TimestampPallet;
-	type Assets = CurrencyAdapter;
+	type Assets = Tokens; // CurrencyAdapter;  Currencies
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
 }
 
 // parameter_types! {
-// 	pub const NativeCurrencyId: CurrencyId = HKO;
+// 	pub const NativeCurrencyId: CurrencyId = BNC;
 // }
 
 // impl pallet_currency_adapter::Config for Test {
@@ -372,31 +461,31 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
 		// Init assets
-		Balances::set_balance(RuntimeOrigin::root(), DAVE, unit(1000), unit(0)).unwrap();
+		Balances::force_set_balance(RuntimeOrigin::root(), DAVE, unit(1000)).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), DOT.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), KSM.into(), ALICE, true, 1).unwrap();
-		Assets::force_create(RuntimeOrigin::root(), USDT.into(), ALICE, true, 1).unwrap();
-		Assets::force_create(RuntimeOrigin::root(), SDOT.into(), ALICE, true, 1).unwrap();
+		Assets::force_create(RuntimeOrigin::root(), DOT_U.into(), ALICE, true, 1).unwrap();
+		Assets::force_create(RuntimeOrigin::root(), VDOT.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), CDOT_6_13.into(), ALICE, true, 1).unwrap();
 
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, unit(1000)).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), USDT.into(), ALICE, unit(1000)).unwrap();
+		Assets::mint(RuntimeOrigin::signed(ALICE), DOT_U.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), BOB, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), BOB, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), DAVE, unit(1000)).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), USDT.into(), DAVE, unit(1000)).unwrap();
+		Assets::mint(RuntimeOrigin::signed(ALICE), DOT_U.into(), DAVE, unit(1000)).unwrap();
 
 		// Init Markets
-		Loans::add_market(RuntimeOrigin::root(), HKO, market_mock(PHKO)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), HKO).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), BNC, market_mock(VBNC)).unwrap();
+		Loans::activate_market(RuntimeOrigin::root(), BNC).unwrap();
 		Loans::add_market(RuntimeOrigin::root(), KSM, market_mock(PKSM)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), KSM).unwrap();
 		Loans::add_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), DOT).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), USDT, market_mock(PUSDT)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), USDT).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(DOT_U)).unwrap();
+		Loans::activate_market(RuntimeOrigin::root(), DOT_U).unwrap();
 		Loans::add_market(RuntimeOrigin::root(), CDOT_6_13, market_mock(PCDOT_6_13)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), CDOT_6_13).unwrap();
 
@@ -451,7 +540,7 @@ pub fn million_unit(d: u128) -> u128 {
 	unit(d) * 10_u128.pow(6)
 }
 
-pub const fn market_mock(ptoken_id: u32) -> Market<Balance> {
+pub const fn market_mock(ptoken_id: CurrencyId) -> Market<Balance> {
 	Market {
 		close_factor: Ratio::from_percent(50),
 		collateral_factor: Ratio::from_percent(50),
@@ -472,7 +561,7 @@ pub const fn market_mock(ptoken_id: u32) -> Market<Balance> {
 	}
 }
 
-pub const MARKET_MOCK: Market<Balance> = market_mock(1200);
+pub const MARKET_MOCK: Market<Balance> = market_mock(PDOT);
 
 pub const ACTIVE_MARKET_MOCK: Market<Balance> = {
 	let mut market = MARKET_MOCK;

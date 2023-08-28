@@ -37,7 +37,9 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{Balance, CurrencyId, Liquidity, Rate, Ratio, Shortfall, Timestamp};
+use node_primitives::{
+	Balance, CurrencyId, Liquidity, Price, PriceDetail, Rate, Ratio, Shortfall, Timestamp,
+};
 use num_traits::cast::ToPrimitive;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -74,7 +76,6 @@ mod types;
 pub mod migrations;
 pub mod weights;
 
-pub type Price = FixedU128;
 pub const MAX_INTEREST_CALCULATING_INTERVAL: u64 = 5 * 24 * 3600; // 5 days
 pub const MIN_INTEREST_CALCULATING_INTERVAL: u64 = 100; // 100 seconds
 
@@ -133,8 +134,9 @@ pub mod pallet {
 
 		/// Assets for deposit/withdraw collateral assets to/from lend-market module
 		type Assets: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>;
-		// Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>
+		//  Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>
 		// 	+ Mutate<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
+		//MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>;
 
 		/// Reward asset id.
 		#[pallet::constant]
@@ -170,6 +172,8 @@ pub mod pallet {
 		InvalidRateModelParam,
 		/// Market not activated
 		MarketNotActivated,
+		/// Oracle price not ready
+		PriceOracleNotReady,
 		/// Oracle price is zero
 		PriceIsZero,
 		/// Invalid asset id
@@ -1874,7 +1878,8 @@ impl<T: Config> Pallet<T> {
 	//
 	// Returns `Err` if the oracle price not ready
 	pub fn get_price(asset_id: AssetIdOf<T>) -> Result<Price, DispatchError> {
-		let price = T::PriceFeeder::get_price(&asset_id)?;
+		let (price, _) =
+			T::PriceFeeder::get_price(&asset_id).ok_or(Error::<T>::PriceOracleNotReady)?;
 		if price.is_zero() {
 			return Err(Error::<T>::PriceIsZero.into());
 		}

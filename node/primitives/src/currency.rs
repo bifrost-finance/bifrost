@@ -52,11 +52,15 @@ pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
 pub const VGLMR: CurrencyId = CurrencyId::VToken2(GLMR_TOKEN_ID);
+pub const DOT_U_TOKEN_ID: u8 = 2u8;
+pub const DOT_U: CurrencyId = CurrencyId::Token2(DOT_U_TOKEN_ID);
 pub const ASTR_TOKEN_ID: u8 = 3u8;
 pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
+pub const CDOT_6_13: CurrencyId = CurrencyId::VToken2(5);
+pub const PCDOT_6_13: CurrencyId = CurrencyId::VToken2(6);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

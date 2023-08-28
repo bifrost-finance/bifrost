@@ -20,7 +20,7 @@ mod ptokens;
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 
-use node_primitives::tokens::CDOT_6_13;
+use node_primitives::CDOT_6_13;
 use sp_runtime::{
 	traits::{CheckedDiv, One, Saturating},
 	FixedU128, Permill,
@@ -33,7 +33,7 @@ fn init_minting_ok() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Assets::balance(KSM, ALICE), unit(1000));
 		assert_eq!(Assets::balance(DOT, ALICE), unit(1000));
-		assert_eq!(Assets::balance(USDT, ALICE), unit(1000));
+		assert_eq!(Assets::balance(DOT_U, ALICE), unit(1000));
 		assert_eq!(Assets::balance(KSM, BOB), unit(1000));
 		assert_eq!(Assets::balance(DOT, BOB), unit(1000));
 	});
@@ -44,54 +44,54 @@ fn init_markets_ok() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Loans::market(KSM).unwrap().state, MarketState::Active);
 		assert_eq!(Loans::market(DOT).unwrap().state, MarketState::Active);
-		assert_eq!(Loans::market(USDT).unwrap().state, MarketState::Active);
-		assert_eq!(BorrowIndex::<Test>::get(HKO), Rate::one());
+		assert_eq!(Loans::market(DOT_U).unwrap().state, MarketState::Active);
+		assert_eq!(BorrowIndex::<Test>::get(BNC), Rate::one());
 		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::one());
 		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
-		assert_eq!(BorrowIndex::<Test>::get(USDT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT_U), Rate::one());
 
 		assert_eq!(ExchangeRate::<Test>::get(KSM), Rate::saturating_from_rational(2, 100));
 		assert_eq!(ExchangeRate::<Test>::get(DOT), Rate::saturating_from_rational(2, 100));
-		assert_eq!(ExchangeRate::<Test>::get(USDT), Rate::saturating_from_rational(2, 100));
+		assert_eq!(ExchangeRate::<Test>::get(DOT_U), Rate::saturating_from_rational(2, 100));
 	});
 }
 
 #[test]
 fn lend_market_native_token_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(1000));
-		assert_eq!(Loans::market(HKO).unwrap().state, MarketState::Active);
-		assert_eq!(BorrowIndex::<Test>::get(HKO), Rate::one());
-		assert_eq!(ExchangeRate::<Test>::get(HKO), Rate::saturating_from_rational(2, 100));
-		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), HKO, unit(1000)));
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(1000));
+		assert_eq!(Loans::market(BNC).unwrap().state, MarketState::Active);
+		assert_eq!(BorrowIndex::<Test>::get(BNC), Rate::one());
+		assert_eq!(ExchangeRate::<Test>::get(BNC), Rate::saturating_from_rational(2, 100));
+		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), BNC, unit(1000)));
 
-		// Redeem 1001 HKO should cause InsufficientDeposit
+		// Redeem 1001 BNC should cause InsufficientDeposit
 		assert_noop!(
-			Loans::redeem_allowed(HKO, &DAVE, unit(50050)),
+			Loans::redeem_allowed(BNC, &DAVE, unit(50050)),
 			Error::<Test>::InsufficientDeposit
 		);
-		// Redeem 1000 HKO is ok
-		assert_ok!(Loans::redeem_allowed(HKO, &DAVE, unit(50000),));
+		// Redeem 1000 BNC is ok
+		assert_ok!(Loans::redeem_allowed(BNC, &DAVE, unit(50000),));
 
-		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(DAVE), HKO, true));
+		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(DAVE), BNC, true));
 
-		// Borrow 500 HKO will reduce 500 HKO liquidity for collateral_factor is 50%
-		assert_ok!(Loans::borrow(RuntimeOrigin::signed(DAVE), HKO, unit(500)));
-		// Repay 400 HKO
-		assert_ok!(Loans::repay_borrow(RuntimeOrigin::signed(DAVE), HKO, unit(400)));
+		// Borrow 500 BNC will reduce 500 BNC liquidity for collateral_factor is 50%
+		assert_ok!(Loans::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(500)));
+		// Repay 400 BNC
+		assert_ok!(Loans::repay_borrow(RuntimeOrigin::signed(DAVE), BNC, unit(400)));
 
-		// HKO collateral: deposit = 1000
-		// HKO borrow balance: borrow - repay = 500 - 400 = 100
-		// HKO: cash - deposit + borrow - repay = 1000 - 1000 + 500 - 400 = 100
+		// BNC collateral: deposit = 1000
+		// BNC borrow balance: borrow - repay = 500 - 400 = 100
+		// BNC: cash - deposit + borrow - repay = 1000 - 1000 + 500 - 400 = 100
 		assert_eq!(
-			Loans::exchange_rate(HKO)
-				.saturating_mul_int(Loans::account_deposits(HKO, DAVE).voucher_balance),
+			Loans::exchange_rate(BNC)
+				.saturating_mul_int(Loans::account_deposits(BNC, DAVE).voucher_balance),
 			unit(1000)
 		);
-		let borrow_snapshot = Loans::account_borrows(HKO, DAVE);
+		let borrow_snapshot = Loans::account_borrows(BNC, DAVE);
 		assert_eq!(borrow_snapshot.principal, unit(100));
-		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(HKO));
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(100),);
+		assert_eq!(borrow_snapshot.borrow_index, Loans::borrow_index(BNC));
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(100),);
 	})
 }
 
@@ -190,7 +190,7 @@ fn lf_redeem_allowed_works() {
 		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
 		Loans::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13, unit(200)).unwrap();
 
-		Loans::mint(RuntimeOrigin::signed(DAVE), USDT, unit(200)).unwrap();
+		Loans::mint(RuntimeOrigin::signed(DAVE), DOT_U, unit(200)).unwrap();
 		Loans::mint(RuntimeOrigin::signed(DAVE), DOT, unit(200)).unwrap();
 		// Lend $200 CDOT
 		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), CDOT_6_13, true).unwrap();
@@ -200,10 +200,10 @@ fn lf_redeem_allowed_works() {
 		// (200 - 100) * 50% >= 50
 		assert_ok!(Loans::redeem_allowed(CDOT_6_13, &ALICE, unit(100)));
 
-		// Set KSM as collateral, and borrow USDT
+		// Set KSM as collateral, and borrow DOT_U
 		Loans::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)).unwrap();
 		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true).unwrap();
-		Loans::borrow(RuntimeOrigin::signed(ALICE), USDT, unit(100)).unwrap();
+		Loans::borrow(RuntimeOrigin::signed(ALICE), DOT_U, unit(100)).unwrap();
 
 		assert_err!(
 			Loans::redeem_allowed(KSM, &ALICE, unit(100)),
@@ -382,8 +382,8 @@ fn get_account_liquidation_threshold_liquidity_works() {
 		Loans::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13, unit(200)).unwrap();
 		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), CDOT_6_13, true).unwrap();
 
-		Loans::mint(RuntimeOrigin::signed(ALICE), USDT, unit(200)).unwrap();
-		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), USDT, true).unwrap();
+		Loans::mint(RuntimeOrigin::signed(ALICE), DOT_U, unit(200)).unwrap();
+		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), DOT_U, true).unwrap();
 
 		Loans::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(100)).unwrap();
 		Loans::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)).unwrap();
@@ -408,18 +408,18 @@ fn get_account_liquidation_threshold_liquidity_works() {
 fn lf_borrow_allowed_works() {
 	new_test_ext().execute_with(|| {
 		Loans::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13, unit(200)).unwrap();
-		Loans::mint(RuntimeOrigin::signed(DAVE), USDT, unit(200)).unwrap();
+		Loans::mint(RuntimeOrigin::signed(DAVE), DOT_U, unit(200)).unwrap();
 		Loans::mint(RuntimeOrigin::signed(DAVE), DOT, unit(200)).unwrap();
 		// Lend $200 CDOT
 		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), CDOT_6_13, true).unwrap();
 
 		assert_eq!(
 			Loans::get_asset_value(DOT, unit(100)).unwrap(),
-			Loans::get_asset_value(USDT, unit(100)).unwrap()
+			Loans::get_asset_value(DOT_U, unit(100)).unwrap()
 		);
 
 		assert_noop!(
-			Loans::borrow_allowed(USDT, &ALICE, unit(100)),
+			Loans::borrow_allowed(DOT_U, &ALICE, unit(100)),
 			Error::<Test>::InsufficientLiquidity
 		);
 		assert_ok!(Loans::borrow_allowed(DOT, &ALICE, unit(100)));
@@ -572,7 +572,7 @@ fn total_collateral_value_works() {
 		let collateral_factor = Rate::saturating_from_rational(50, 100);
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
-		assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), USDT, unit(300)));
+		assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), DOT_U, unit(300)));
 		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
 		assert_eq!(
@@ -835,18 +835,18 @@ fn ensure_valid_exchange_rate_works() {
 #[test]
 fn withdraw_missing_reward_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(1000));
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(1000));
 
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(100)));
 
 		assert_ok!(Loans::withdraw_missing_reward(RuntimeOrigin::root(), ALICE, unit(40),));
 
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(900));
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(900));
 
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &ALICE), unit(40));
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &ALICE), unit(40));
 
 		assert_eq!(
-			<Test as Config>::Assets::balance(HKO, &Loans::reward_account_id().unwrap()),
+			<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
 			unit(60)
 		);
 	})
@@ -1030,11 +1030,11 @@ fn reward_calculation_one_palyer_in_multi_markets_works() {
 		_run_to_block(80);
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(200)));
 		assert_ok!(Loans::claim_reward(RuntimeOrigin::signed(ALICE)));
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(800));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(HKO, &ALICE), unit(130)), true);
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(800));
+		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(130)), true);
 		assert_eq!(
 			almost_equal(
-				<Test as Config>::Assets::balance(HKO, &Loans::reward_account_id().unwrap()),
+				<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
 				unit(70)
 			),
 			true
@@ -1052,7 +1052,7 @@ fn reward_calculation_one_palyer_in_multi_markets_works() {
 		// KSM borrow:0     KSM borrow reward: 20
 		_run_to_block(90);
 		assert_ok!(Loans::claim_reward(RuntimeOrigin::signed(ALICE)));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(HKO, &ALICE), unit(140)), true);
+		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(140)), true);
 	})
 }
 
@@ -1140,12 +1140,12 @@ fn reward_calculation_multi_player_in_one_market_works() {
 		assert_ok!(Loans::add_reward(RuntimeOrigin::signed(DAVE), unit(200)));
 		assert_ok!(Loans::claim_reward_for_market(RuntimeOrigin::signed(ALICE), DOT));
 		assert_ok!(Loans::claim_reward_for_market(RuntimeOrigin::signed(BOB), DOT));
-		assert_eq!(<Test as Config>::Assets::balance(HKO, &DAVE), unit(800));
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(HKO, &ALICE), unit(58)), true);
-		assert_eq!(almost_equal(<Test as Config>::Assets::balance(HKO, &BOB), unit(22)), true);
+		assert_eq!(<Test as Config>::Assets::balance(BNC, &DAVE), unit(800));
+		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &ALICE), unit(58)), true);
+		assert_eq!(almost_equal(<Test as Config>::Assets::balance(BNC, &BOB), unit(22)), true);
 		assert_eq!(
 			almost_equal(
-				<Test as Config>::Assets::balance(HKO, &Loans::reward_account_id().unwrap()),
+				<Test as Config>::Assets::balance(BNC, &Loans::reward_account_id().unwrap()),
 				unit(120)
 			),
 			true

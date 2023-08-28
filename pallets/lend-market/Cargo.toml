@@ -32,6 +32,8 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 [dev-dependencies]
 orml-oracle = "0.4.1-dev"
+orml-tokens = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
 # pallet-amm = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 # pallet-currency-adapter = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }

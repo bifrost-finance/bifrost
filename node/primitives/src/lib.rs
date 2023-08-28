@@ -39,8 +39,9 @@ mod tests;
 
 pub use crate::{
 	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
+		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC,
+		CDOT_6_13, DOT, DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, PCDOT_6_13, VBNC, VDOT,
+		VKSM, VSKSM,
 	},
 	traits::*,
 };
@@ -69,6 +70,8 @@ pub type Balance = u128;
 
 /// Price of an asset.
 pub type Price = FixedU128;
+
+pub type PriceDetail = (Price, Timestamp);
 
 /// Precision of symbol.
 pub type Precision = u32;
