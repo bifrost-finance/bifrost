@@ -437,8 +437,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			// check if poll is expired
-
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
@@ -563,7 +561,7 @@ pub mod pallet {
 			query_id: QueryId,
 			response: Response,
 		) -> DispatchResult {
-			let responder = T::ResponseOrigin::ensure_origin(origin)?;
+			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
 			if let Some((vtoken, poll_index, _, who, _)) = PendingVotingInfo::<T>::take(query_id) {
@@ -604,7 +602,7 @@ pub mod pallet {
 			query_id: QueryId,
 			response: Response,
 		) -> DispatchResult {
-			let responder = T::ResponseOrigin::ensure_origin(origin)?;
+			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			if let Some((vtoken, poll_index, _)) = PendingReferendumStatus::<T>::take(query_id) {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
@@ -639,7 +637,7 @@ pub mod pallet {
 			query_id: QueryId,
 			response: Response,
 		) -> DispatchResult {
-			let responder = T::ResponseOrigin::ensure_origin(origin)?;
+			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			if let Some((vtoken, poll_index, _)) = PendingUnlockDelegatorToken::<T>::take(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
@@ -957,6 +955,14 @@ pub mod pallet {
 				Some(ReferendumInfo::Killed(moment)) => Ok(moment),
 				_ => Err(Error::<T>::NotKilled.into()),
 			}
+		}
+
+		fn ensure_xcm_response_or_governance(
+			origin: OriginFor<T>,
+		) -> Result<MultiLocation, DispatchError> {
+			let responder = T::ResponseOrigin::ensure_origin(origin.clone())
+				.or_else(|_| T::ControlOrigin::ensure_origin(origin).map(|_| Here.into()))?;
+			Ok(responder)
 		}
 
 		fn try_access_poll<R>(
