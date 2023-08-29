@@ -318,37 +318,6 @@ impl SortedMembers<AccountId> for AliceCreatePoolOrigin {
 	}
 }
 
-// impl pallet_amm::Config for Test {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type Assets = CurrencyAdapter;
-// 	type PalletId = AMMPalletId;
-// 	type LockAccountId = LockAccountId;
-// 	type AMMWeightInfo = ();
-// 	type CreatePoolOrigin = EnsureSignedBy<AliceCreatePoolOrigin, AccountId>;
-// 	type ProtocolFeeUpdateOrigin = EnsureSignedBy<AliceCreatePoolOrigin, AccountId>;
-// 	type LpFee = DefaultLpFee;
-// 	type MinimumLiquidity = MinimumLiquidity;
-// 	type MaxLengthRoute = MaxLengthRoute;
-// 	type GetNativeCurrencyId = NativeCurrencyId;
-// }
-
-// impl pallet_prices::Config for Test {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type Source = MockDataProvider;
-// 	type FeederOrigin = EnsureRoot<AccountId>;
-// 	type UpdateOrigin = EnsureRoot<AccountId>;
-// 	type LiquidStakingExchangeRateProvider = LiquidStaking;
-// 	type LiquidStakingCurrenciesProvider = LiquidStaking;
-// 	type VaultTokenCurrenciesFilter = TokenCurrenciesFilter;
-// 	type VaultTokenExchangeRateProvider = TokenExchangeRateProvider;
-// 	type VaultLoansRateProvider = VaultLoansRateProvider;
-// 	type RelayCurrency = RelayCurrency;
-// 	type Decimal = Decimal;
-// 	type AMM = DefaultAMM;
-// 	type Assets = CurrencyAdapter;
-// 	type WeightInfo = ();
-// }
-
 pub struct MockPriceFeeder;
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
@@ -360,8 +329,8 @@ impl Hash for CurrencyIdWrap {
 }
 
 impl PartialEq for CurrencyIdWrap {
-	fn eq(&self, _other: &Self) -> bool {
-		true
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
 	}
 }
 
