@@ -129,4 +129,6 @@ pub enum XcmOperation {
 	XtokensTransferBack,
 	ExecuteLeave,
 	ConvertAsset,
+	Vote,
+	RemoveVote,
 }

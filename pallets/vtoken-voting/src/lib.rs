@@ -51,17 +51,17 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
 use sp_runtime::{
-	traits::{BlockNumberProvider, Saturating, UniqueSaturatedInto, Zero},
+	traits::{BlockNumberProvider, CheckedSub, Saturating, UniqueSaturatedInto, Zero},
 	ArithmeticError,
 };
 use sp_std::prelude::*;
-use traits::XcmDestWeightAndFeeHandler;
+use traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler};
 use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
-type DerivativeIndex = u16;
+pub type DerivativeIndex = u16;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -112,6 +112,8 @@ pub mod pallet {
 		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
 
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
+
+		type DerivativeAccount: DerivativeAccountHandler<Self>;
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
@@ -283,8 +285,15 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
-	pub type DelegatorRole<T: Config> =
-		StorageDoubleMap<_, Twox64Concat, CurrencyIdOf<T>, Twox64Concat, VoteRole, DerivativeIndex>;
+	pub type DelegatorRole<T: Config> = StorageNMap<
+		_,
+		(
+			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
+			NMapKey<Twox64Concat, VoteRole>,
+			NMapKey<Twox64Concat, DerivativeIndex>,
+		),
+		BalanceOf<T>,
+	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -303,9 +312,8 @@ pub mod pallet {
 		fn build(&self) {
 			self.roles.iter().for_each(|(vtoken, role, derivative_index)| {
 				DelegatorRole::<T>::insert(
-					vtoken,
-					VoteRole::try_from(*role).unwrap(),
-					derivative_index,
+					(vtoken, VoteRole::try_from(*role).unwrap(), derivative_index),
+					BalanceOf::<T>::zero(),
 				);
 			});
 		}
@@ -324,8 +332,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			let derivative_index =
-				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())
-					.ok_or(Error::<T>::NoData)?;
+				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
 
 			// create referendum if not exist
@@ -389,11 +396,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			ensure!(
-				Self::ensure_referendum_expired(vtoken, poll_index).is_ok() ||
-					Self::ensure_referendum_killed(vtoken, poll_index).is_ok(),
-				Error::<T>::NotExpired
-			);
+			Self::ensure_referendum_expired(vtoken, poll_index)
+				.or(Self::ensure_referendum_killed(vtoken, poll_index))
+				.map_err(|_| Error::<T>::NotExpired)?;
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
@@ -536,12 +541,27 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 			ensure!(
-				Self::check_derivative_index_occupied(vtoken, vote_role, derivative_index),
+				T::DerivativeAccount::check_derivative_index_exists(token, derivative_index),
+				Error::<T>::NoData
+			);
+			ensure!(
+				!DelegatorRole::<T>::contains_key((vtoken, vote_role, derivative_index)),
 				Error::<T>::DerivativeIndexOccupied
 			);
-			DelegatorRole::<T>::insert(vtoken, vote_role, derivative_index);
+
+			if let Some(((role, index), vote)) = DelegatorRole::<T>::iter_prefix((vtoken,))
+				.find(|((_, i), _)| i == &derivative_index)
+			{
+				DelegatorRole::<T>::remove((vtoken, role, index));
+				DelegatorRole::<T>::insert((vtoken, vote_role, derivative_index), vote);
+			} else {
+				DelegatorRole::<T>::insert(
+					(vtoken, vote_role, derivative_index),
+					BalanceOf::<T>::zero(),
+				);
+			}
 
 			Self::deposit_event(Event::<T>::DelegatorRoleSet {
 				vtoken,
@@ -1019,24 +1039,38 @@ pub mod pallet {
 		}
 
 		fn select_derivative_index(
-			_vtoken: CurrencyIdOf<T>,
-			_target_role: VoteRole,
-			_amount: BalanceOf<T>,
-		) -> Option<DerivativeIndex> {
-			Some(0)
+			vtoken: CurrencyIdOf<T>,
+			role: VoteRole,
+			vote_amount: BalanceOf<T>,
+		) -> Result<DerivativeIndex, DispatchError> {
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+
+			let mut data = DelegatorRole::<T>::iter_prefix((vtoken, role))
+				.map(|(index, vote)| {
+					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
+						.unwrap_or(Default::default());
+					(active, vote, index)
+				})
+				.collect::<Vec<_>>();
+			data.sort_by(|a, b| (b.0.saturating_sub(b.1)).cmp(&(a.0.saturating_sub(a.1))));
+
+			let (active, vote, index) = data.first().ok_or(Error::<T>::NoData)?;
+			active
+				.checked_sub(&vote)
+				.ok_or(ArithmeticError::Underflow)?
+				.checked_sub(&vote_amount)
+				.ok_or(ArithmeticError::Underflow)?;
+
+			Ok(*index)
 		}
 
 		fn find_derivative_index_by_role(
 			vtoken: CurrencyIdOf<T>,
 			target_role: VoteRole,
 		) -> Option<DerivativeIndex> {
-			DelegatorRole::<T>::iter_prefix(vtoken).into_iter().find_map(|(role, index)| {
-				if role == target_role {
-					Some(index)
-				} else {
-					None
-				}
-			})
+			DelegatorRole::<T>::iter_prefix((vtoken,)).into_iter().find_map(
+				|((role, index), vote)| if role == target_role { Some(index) } else { None },
+			)
 		}
 	}
 }

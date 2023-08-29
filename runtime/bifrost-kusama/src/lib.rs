@@ -28,7 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_slp::QueryResponseManager;
+use bifrost_slp::{Ledger, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -1522,6 +1522,33 @@ impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
 	}
 }
 
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
+					Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+}
+
 impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1531,6 +1558,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type PollIndex = u32;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
