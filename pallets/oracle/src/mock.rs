@@ -7,8 +7,8 @@ use frame_support::{
 };
 use mocktopus::mocking::clear_mocks;
 use orml_traits::parameter_type_with_key;
-pub use primitives::{CurrencyId::Token, TokenSymbol::*};
-use sp_arithmetic::{FixedI128, FixedU128};
+pub use primitives::{CurrencyId::Token, TokenSymbol::*, BNC};
+use sp_arithmetic::FixedU128;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -31,10 +31,10 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 
 		// Operational
-		Security: security::{Pallet, Call, Storage, Event<T>},
+		// Security: security::{Pallet, Call, Storage, Event<T>},
 		Oracle: oracle::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Staking: staking::{Pallet, Storage, Event<T>},
-		Currency: currency::{Pallet},
+		// Staking: staking::{Pallet, Storage, Event<T>},
+		// Currency: currency::{Pallet},
 	}
 );
 
@@ -42,8 +42,8 @@ pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type UnsignedFixedPoint = FixedU128;
-pub type SignedFixedPoint = FixedI128;
-pub type SignedInner = i128;
+// pub type SignedFixedPoint = FixedI128;
+// pub type SignedInner = i128;
 pub type CurrencyId = primitives::CurrencyId;
 pub type Moment = u64;
 pub type Index = u64;
@@ -81,13 +81,13 @@ impl frame_system::Config for Test {
 }
 
 pub const DEFAULT_COLLATERAL_CURRENCY: CurrencyId = Token(DOT);
-pub const DEFAULT_NATIVE_CURRENCY: CurrencyId = Token(INTR);
-pub const DEFAULT_WRAPPED_CURRENCY: CurrencyId = Token(IBTC);
+pub const DEFAULT_NATIVE_CURRENCY: CurrencyId = BNC;
+// pub const DEFAULT_WRAPPED_CURRENCY: CurrencyId = Token(IBTC);
 
 parameter_types! {
 	pub const GetCollateralCurrencyId: CurrencyId = DEFAULT_COLLATERAL_CURRENCY;
 	pub const GetNativeCurrencyId: CurrencyId = DEFAULT_NATIVE_CURRENCY;
-	pub const GetWrappedCurrencyId: CurrencyId = DEFAULT_WRAPPED_CURRENCY;
+	// pub const GetWrappedCurrencyId: CurrencyId = DEFAULT_WRAPPED_CURRENCY;
 	pub const MaxLocks: u32 = 50;
 }
 
@@ -100,7 +100,7 @@ parameter_type_with_key! {
 impl orml_tokens::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type Amount = primitives::SignedBalance;
+	type Amount = i128;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
@@ -111,32 +111,40 @@ impl orml_tokens::Config for Test {
 	type ReserveIdentifier = (); // we don't use named reserves
 }
 
-pub struct CurrencyConvert;
-impl currency::CurrencyConversion<currency::Amount<Test>, CurrencyId> for CurrencyConvert {
-	fn convert(
-		_amount: &currency::Amount<Test>,
-		_to: CurrencyId,
-	) -> Result<currency::Amount<Test>, sp_runtime::DispatchError> {
-		unimplemented!()
-	}
-}
+// pub struct CurrencyConvert;
+// impl currency::CurrencyConversion<currency::Amount<Test>, CurrencyId> for CurrencyConvert {
+// 	fn convert(
+// 		_amount: &currency::Amount<Test>,
+// 		_to: CurrencyId,
+// 	) -> Result<currency::Amount<Test>, sp_runtime::DispatchError> {
+// 		unimplemented!()
+// 	}
+// }
 
-impl currency::Config for Test {
-	type SignedInner = SignedInner;
-	type SignedFixedPoint = SignedFixedPoint;
-	type UnsignedFixedPoint = UnsignedFixedPoint;
-	type Balance = Balance;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type GetRelayChainCurrencyId = GetCollateralCurrencyId;
-	type GetWrappedCurrencyId = GetWrappedCurrencyId;
-	type CurrencyConversion = CurrencyConvert;
-}
+// impl currency::Config for Test {
+// 	type SignedInner = SignedInner;
+// 	type SignedFixedPoint = SignedFixedPoint;
+// 	type UnsignedFixedPoint = UnsignedFixedPoint;
+// 	type Balance = Balance;
+// 	type GetNativeCurrencyId = GetNativeCurrencyId;
+// 	type GetRelayChainCurrencyId = GetCollateralCurrencyId;
+// 	type GetWrappedCurrencyId = GetWrappedCurrencyId;
+// 	type CurrencyConversion = CurrencyConvert;
+// }
+
+// impl OnExchangeRateChange<CurrencyId> for () {
+// 	fn on_exchange_rate_change(currency_id: &CurrencyId) {
+// 		// todo: propagate error
+// 		let _ = currency_id;
+// 	}
+// }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type OnExchangeRateChange = ();
 	type WeightInfo = ();
 	type MaxNameLength = ConstU32<255>;
+	type UnsignedFixedPoint = UnsignedFixedPoint;
 }
 
 parameter_types! {
@@ -150,18 +158,18 @@ impl pallet_timestamp::Config for Test {
 	type WeightInfo = ();
 }
 
-impl security::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
-}
+// impl security::Config for Test {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type WeightInfo = ();
+// }
 
-impl staking::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type SignedFixedPoint = SignedFixedPoint;
-	type SignedInner = SignedInner;
-	type CurrencyId = CurrencyId;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-}
+// impl staking::Config for Test {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type SignedFixedPoint = SignedFixedPoint;
+// 	type SignedInner = SignedInner;
+// 	type CurrencyId = CurrencyId;
+// 	type GetNativeCurrencyId = GetNativeCurrencyId;
+// }
 
 pub type TestEvent = RuntimeEvent;
 pub type TestError = Error<Test>;
@@ -192,7 +200,7 @@ where
 {
 	clear_mocks();
 	ExtBuilder::build().execute_with(|| {
-		Security::set_active_block_number(1);
+		// Security::set_active_block_number(1);
 		System::set_block_number(1);
 		test();
 	});

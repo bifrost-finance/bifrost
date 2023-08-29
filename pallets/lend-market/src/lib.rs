@@ -27,19 +27,10 @@ use core::cmp::max;
 pub use crate::rate_model::*;
 
 use frame_support::{
-	log,
-	pallet_prelude::*,
-	require_transactional,
-	traits::{
-		tokens::fungibles::{Inspect, Mutate},
-		UnixTime,
-	},
-	transactional, PalletId,
+	log, pallet_prelude::*, require_transactional, traits::UnixTime, transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{
-	Balance, CurrencyId, Liquidity, Price, PriceDetail, Rate, Ratio, Shortfall, Timestamp,
-};
+use node_primitives::{Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp};
 use num_traits::cast::ToPrimitive;
 use orml_traits::MultiCurrency;
 pub use pallet::*;

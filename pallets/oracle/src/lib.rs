@@ -19,13 +19,13 @@ mod mock;
 
 pub mod types;
 
-#[cfg(test)]
-extern crate mocktopus;
+// #[cfg(test)]
+// extern crate mocktopus;
 
-#[cfg(test)]
-use mocktopus::macros::mockable;
+// #[cfg(test)]
+// use mocktopus::macros::mockable;
 
-use crate::types::{BalanceOf, UnsignedFixedPoint, Version};
+use crate::types::{UnsignedFixedPoint, Version};
 use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 // use currency::Amount;
 use frame_support::{
@@ -37,14 +37,14 @@ use frame_support::{
 	BoundedVec,
 };
 use frame_system::{ensure_root, ensure_signed};
-pub use orml_traits::MultiCurrency;
+// pub use orml_traits::MultiCurrency;
 use pallet_traits::*;
 use scale_info::TypeInfo;
 use sp_runtime::{traits::*, FixedPointNumber};
 use sp_std::{convert::TryInto, vec::Vec};
 
 pub use pallet::*;
-pub use primitives::{CurrencyId, Price, PriceDetail};
+pub use primitives::{Balance, CurrencyId, Price, PriceDetail};
 // pub use traits::OnExchangeRateChange;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -91,24 +91,24 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxNameLength: Get<u32>;
 
-		type MultiCurrency: MultiCurrency<
-			Self::AccountId,
-			CurrencyId = CurrencyId,
-			// Balance = BalanceOf<Self>,
-			// Balance = Self::Balance,
-		>;
+		// type MultiCurrency: MultiCurrency<
+		// 	Self::AccountId,
+		// 	CurrencyId = CurrencyId,
+		// 	// Balance = BalanceOf<Self>,
+		// 	// Balance = Self::Balance,
+		// >;
 
 		// #[pallet::constant]
 		// type UnsignedFixedPoint: Get<Price>;
 
-		type UnsignedFixedPoint: FixedPointNumber<Inner = BalanceOf<Self>>
+		type UnsignedFixedPoint: FixedPointNumber<Inner = Balance>
 			// + TruncateFixedPointToInt
 			+ Encode
 			+ EncodeLike
 			+ Decode
 			+ MaybeSerializeDeserialize
 			+ TypeInfo
-			+ From<BalanceOf<Self>>
+			+ From<Balance>
 			+ Into<Price>
 			+ MaxEncodedLen;
 	}
@@ -287,7 +287,7 @@ pub mod pallet {
 	}
 }
 
-#[cfg_attr(test, mockable)]
+// #[cfg_attr(test)]
 impl<T: Config> Pallet<T> {
 	// public only for testing purposes
 	pub fn begin_block(_height: T::BlockNumber) -> u32 {
@@ -315,7 +315,7 @@ impl<T: Config> Pallet<T> {
 	pub fn _feed_values(oracle: T::AccountId, values: Vec<(OracleKey, T::UnsignedFixedPoint)>) {
 		for (key, value) in values.iter() {
 			let timestamped =
-				TimestampedValue { timestamp: Self::get_current_time(), value: value.clone() };
+				TimestampedValue { timestamp: Self::get_current_time(), value: *value };
 			RawValues::<T>::insert(key, &oracle, timestamped);
 			RawValuesUpdated::<T>::insert(key, true);
 		}

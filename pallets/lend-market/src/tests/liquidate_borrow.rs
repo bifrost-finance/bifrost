@@ -1,7 +1,5 @@
 use crate::{
-	mock::{
-		new_test_ext, Assets, Loans, MockPriceFeeder, RuntimeOrigin, ALICE, BOB, DOT, DOT_U, KSM, *,
-	},
+	mock::{new_test_ext, Loans, MockPriceFeeder, RuntimeOrigin, ALICE, BOB, DOT, DOT_U, KSM, *},
 	tests::unit,
 	Error, MarketState,
 };

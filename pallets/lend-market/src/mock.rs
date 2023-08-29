@@ -103,7 +103,6 @@ pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
-pub const EVE: AccountId = AccountId32::new([5u8; 32]);
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = 5;
@@ -351,15 +350,22 @@ impl SortedMembers<AccountId> for AliceCreatePoolOrigin {
 // }
 
 pub struct MockPriceFeeder;
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
 
 impl Hash for CurrencyIdWrap {
 	fn hash<H: Hasher>(&self, state: &mut H) {
-		// self.hash(state);
 		state.write_u8(1);
 	}
 }
+
+impl PartialEq for CurrencyIdWrap {
+	fn eq(&self, _other: &Self) -> bool {
+		true
+	}
+}
+
+impl Eq for CurrencyIdWrap {}
 
 impl MockPriceFeeder {
 	thread_local! {
