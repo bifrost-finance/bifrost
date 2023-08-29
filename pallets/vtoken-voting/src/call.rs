@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{BalanceOf, Config, PollIndexOf};
+use crate::{AccountVote, BalanceOf, Config, PollIndexOf};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use pallet_conviction_voting::AccountVote;
 use sp_runtime::traits::StaticLookup;
 use sp_std::boxed::Box;
 

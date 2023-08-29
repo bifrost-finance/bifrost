@@ -34,7 +34,11 @@ pub mod weights;
 
 pub use crate::{
 	call::*,
-	vote::{PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
+	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
+};
+use crate::{
+	traits::Tally,
+	vote::{Casting, Voting},
 };
 use codec::{Encode, HasCompact, MaxEncodedLen};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
@@ -49,7 +53,7 @@ use node_primitives::{
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
-use pallet_conviction_voting::{AccountVote, Casting, Tally, UnvoteScope, Voting};
+use pallet_conviction_voting::UnvoteScope;
 use sp_runtime::{
 	traits::{BlockNumberProvider, CheckedSub, Saturating, UniqueSaturatedInto, Zero},
 	ArithmeticError,
@@ -292,7 +296,7 @@ pub mod pallet {
 			NMapKey<Twox64Concat, VoteRole>,
 			NMapKey<Twox64Concat, DerivativeIndex>,
 		),
-		BalanceOf<T>,
+		AccountVote<BalanceOf<T>>,
 	>;
 
 	#[pallet::genesis_config]
@@ -311,9 +315,10 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.roles.iter().for_each(|(vtoken, role, derivative_index)| {
+				let vote_role = VoteRole::try_from(*role).unwrap();
 				DelegatorRole::<T>::insert(
-					(vtoken, VoteRole::try_from(*role).unwrap(), derivative_index),
-					BalanceOf::<T>::zero(),
+					(vtoken, vote_role.clone(), derivative_index),
+					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
 			});
 		}
@@ -331,8 +336,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			let vote_role = VoteRole::from(vote);
 			let derivative_index =
-				Self::select_derivative_index(vtoken, VoteRole::from(vote), vote.balance())?;
+				Self::select_derivative_index(vtoken, vote_role, vote.balance())?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
 
 			// create referendum if not exist
@@ -352,9 +358,22 @@ pub mod pallet {
 			// record vote info
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
 
+			let new_vote = DelegatorRole::<T>::try_mutate_exists(
+				(vtoken, VoteRole::from(vote), derivative_index),
+				|maybe_vote| {
+					if let Some(inner_vote) = maybe_vote {
+						inner_vote.checked_add(vote).map_err(|_| Error::<T>::NoData)?;
+						Ok(inner_vote.clone())
+					} else {
+						Err(Error::<T>::NoData)
+					}
+				},
+			)?;
+
 			// send XCM message
-			let vote_call =
-				RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(poll_index, vote));
+			let vote_call = RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(
+				poll_index, new_vote,
+			));
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_vote(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
@@ -559,7 +578,7 @@ pub mod pallet {
 			} else {
 				DelegatorRole::<T>::insert(
 					(vtoken, vote_role, derivative_index),
-					BalanceOf::<T>::zero(),
+					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
 			}
 
@@ -1052,11 +1071,13 @@ pub mod pallet {
 					(active, vote, index)
 				})
 				.collect::<Vec<_>>();
-			data.sort_by(|a, b| (b.0.saturating_sub(b.1)).cmp(&(a.0.saturating_sub(a.1))));
+			data.sort_by(|a, b| {
+				(b.0.saturating_sub(b.1.balance())).cmp(&(a.0.saturating_sub(a.1.balance())))
+			});
 
 			let (active, vote, index) = data.first().ok_or(Error::<T>::NoData)?;
 			active
-				.checked_sub(&vote)
+				.checked_sub(&vote.balance())
 				.ok_or(ArithmeticError::Underflow)?
 				.checked_sub(&vote_amount)
 				.ok_or(ArithmeticError::Underflow)?;
