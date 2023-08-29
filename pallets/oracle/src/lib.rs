@@ -19,11 +19,11 @@ mod mock;
 
 pub mod types;
 
-// #[cfg(test)]
-// extern crate mocktopus;
+#[cfg(test)]
+extern crate mocktopus;
 
-// #[cfg(test)]
-// use mocktopus::macros::mockable;
+#[cfg(test)]
+use mocktopus::macros::mockable;
 
 use crate::types::{UnsignedFixedPoint, Version};
 use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
@@ -287,7 +287,8 @@ pub mod pallet {
 	}
 }
 
-// #[cfg_attr(test)]
+#[allow(clippy::forget_copy, clippy::forget_ref)]
+#[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// public only for testing purposes
 	pub fn begin_block(_height: T::BlockNumber) -> u32 {
