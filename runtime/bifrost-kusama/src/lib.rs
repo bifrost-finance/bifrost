@@ -108,7 +108,10 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::traits::XcmDestWeightAndFeeHandler;
+use bifrost_vtoken_voting::{
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	DerivativeIndex,
+};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1554,7 +1557,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type PollIndex = u32;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;

@@ -273,7 +273,14 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		QueryId,
-		(CurrencyIdOf<T>, PollIndexOf<T>, DerivativeIndex, AccountIdOf<T>, BlockNumberFor<T>),
+		(
+			CurrencyIdOf<T>,
+			PollIndexOf<T>,
+			DerivativeIndex,
+			AccountIdOf<T>,
+			AccountVote<BalanceOf<T>>,
+			BlockNumberFor<T>,
+		),
 	>;
 
 	#[pallet::storage]
@@ -338,7 +345,7 @@ pub mod pallet {
 			Self::ensure_vtoken(&vtoken)?;
 			let vote_role = VoteRole::from(vote);
 			let derivative_index =
-				Self::select_derivative_index(vtoken, vote_role, vote.balance())?;
+				Self::try_select_derivative_index(vtoken, vote_role, vote.balance())?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
 
 			// create referendum if not exist
@@ -396,7 +403,14 @@ pub mod pallet {
 					}
 					PendingVotingInfo::<T>::insert(
 						query_id,
-						(vtoken, poll_index, derivative_index, who.clone(), expired_block_number),
+						(
+							vtoken,
+							poll_index,
+							derivative_index,
+							who.clone(),
+							vote,
+							expired_block_number,
+						),
 					)
 				},
 			)?;
@@ -635,11 +649,24 @@ pub mod pallet {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
-			if let Some((vtoken, poll_index, _, who, _)) = PendingVotingInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index, derivative_index, who, vote, _)) =
+				PendingVotingInfo::<T>::take(query_id)
+			{
 				if !success {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
+					DelegatorRole::<T>::try_mutate_exists(
+						(vtoken, VoteRole::from(vote), derivative_index),
+						|maybe_vote| {
+							if let Some(inner_vote) = maybe_vote {
+								inner_vote.checked_sub(vote).map_err(|_| Error::<T>::NoData)?;
+								Ok(())
+							} else {
+								Err(Error::<T>::NoData)
+							}
+						},
+					)?;
 				}
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
@@ -965,7 +992,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure!(
 				PendingVotingInfo::<T>::iter()
-					.find(|(_, (v, p, _, _, _))| v == vtoken && p == poll_index)
+					.find(|(_, (v, p, _, _, _, _))| v == vtoken && p == poll_index)
 					.is_none(),
 				Error::<T>::PendingVote
 			);
@@ -1057,7 +1084,7 @@ pub mod pallet {
 			}
 		}
 
-		fn select_derivative_index(
+		fn try_select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
 			role: VoteRole,
 			vote_amount: BalanceOf<T>,
