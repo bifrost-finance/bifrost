@@ -1562,8 +1562,8 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
-	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
+	type MaxVotes = ConstU32<512>;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
 }

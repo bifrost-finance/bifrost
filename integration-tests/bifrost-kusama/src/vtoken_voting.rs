@@ -68,7 +68,7 @@ fn vote_works() {
 			));
 			assert_ok!(Slp::set_minimums_and_maximums(
 				RuntimeOrigin::root(),
-				KSM,
+				token,
 				Some(MinimumsMaximums {
 					delegator_bonded_minimum: 0u32.into(),
 					bond_extra_minimum: 0u32.into(),

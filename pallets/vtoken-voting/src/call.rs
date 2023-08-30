@@ -23,21 +23,35 @@ use sp_runtime::traits::StaticLookup;
 use sp_std::boxed::Box;
 
 #[cfg(feature = "kusama")]
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum RelayCall<T: Config> {
-	#[codec(index = 20)]
-	ConvictionVoting(ConvictionVotingCall<T>),
-	#[codec(index = 24)]
-	Utility(UtilityCall<Self>),
+pub use kusama::*;
+
+#[cfg(feature = "polkadot")]
+pub use polkadot::*;
+
+#[cfg(feature = "kusama")]
+mod kusama {
+	use crate::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelayCall<T: Config> {
+		#[codec(index = 20)]
+		ConvictionVoting(ConvictionVotingCall<T>),
+		#[codec(index = 24)]
+		Utility(UtilityCall<Self>),
+	}
 }
 
 #[cfg(feature = "polkadot")]
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum RelayCall<T: Config> {
-	#[codec(index = 20)]
-	ConvictionVoting(ConvictionVotingCall<T>),
-	#[codec(index = 26)]
-	Utility(UtilityCall<Self>),
+mod polkadot {
+	use crate::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelayCall<T: Config> {
+		#[codec(index = 20)]
+		ConvictionVoting(ConvictionVotingCall<T>),
+		#[codec(index = 26)]
+		Utility(UtilityCall<Self>),
+	}
 }
 
 #[cfg(any(feature = "kusama", feature = "polkadot"))]

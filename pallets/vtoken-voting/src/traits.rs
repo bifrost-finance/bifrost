@@ -10,7 +10,7 @@ use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Zero},
 	Perbill,
 };
-use std::{fmt::Debug, marker::PhantomData};
+use sp_std::{fmt::Debug, marker::PhantomData};
 use xcm::v3::{MultiLocation, Weight as XcmWeight};
 
 pub trait XcmDestWeightAndFeeHandler<T: Config> {
