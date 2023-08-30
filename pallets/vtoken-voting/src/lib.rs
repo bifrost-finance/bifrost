@@ -156,6 +156,11 @@ pub mod pallet {
 			role: VoteRole,
 			derivative_index: DerivativeIndex,
 		},
+		ReferendumInfoCreated {
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+			info: ReferendumInfoOf<T>,
+		},
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
@@ -343,17 +348,15 @@ pub mod pallet {
 			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
 
 			// create referendum if not exist
-			let mut confirmed = false;
+			let mut submitted = false;
 			if !ReferendumInfoFor::<T>::contains_key(vtoken, poll_index) {
 				let info = ReferendumInfo::Ongoing(ReferendumStatus {
-					submitted: T::RelaychainBlockNumberProvider::current_block_number(),
+					submitted: None,
 					tally: TallyOf::<T>::new(0u16),
-					confirmed,
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
-				Self::deposit_event(Event::<T>::ReferendumInfoSet { vtoken, poll_index, info });
 			} else {
-				confirmed = true;
+				submitted = true;
 			}
 
 			// record vote info
@@ -387,7 +390,7 @@ pub mod pallet {
 				|query_id| {
 					let expired_block_number = frame_system::Pallet::<T>::block_number()
 						.saturating_add(T::QueryTimeout::get());
-					if !confirmed {
+					if !submitted {
 						PendingReferendumInfo::<T>::insert(
 							query_id,
 							(vtoken, poll_index, expired_block_number),
@@ -657,19 +660,28 @@ pub mod pallet {
 			}
 
 			if let Some((vtoken, poll_index, _)) = PendingReferendumInfo::<T>::take(query_id) {
-				if !success {
-					ReferendumInfoFor::<T>::remove(vtoken, poll_index);
-				} else {
+				if success {
 					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
 						poll_index,
-						|info| -> DispatchResult {
-							if let Some(ReferendumInfo::Ongoing(status)) = info {
-								status.confirmed = true;
+						|maybe_info| -> DispatchResult {
+							if let Some(info) = maybe_info {
+								if let ReferendumInfo::Ongoing(status) = info {
+									status.submitted = Some(
+										T::RelaychainBlockNumberProvider::current_block_number(),
+									);
+									Self::deposit_event(Event::<T>::ReferendumInfoCreated {
+										vtoken,
+										poll_index,
+										info: info.clone(),
+									});
+								}
 							}
 							Ok(())
 						},
 					)?;
+				} else {
+					ReferendumInfoFor::<T>::remove(vtoken, poll_index);
 				}
 			}
 

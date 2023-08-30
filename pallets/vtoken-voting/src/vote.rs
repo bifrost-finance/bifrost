@@ -47,10 +47,9 @@ pub struct ReferendumStatus<
 > {
 	/// The time of submission. Once `UndecidingTimeout` passes, it may be closed by anyone if
 	/// `deciding` is `None`.
-	pub submitted: Moment,
+	pub submitted: Option<Moment>,
 	/// The current tally of votes in this referendum.
 	pub tally: Tally,
-	pub confirmed: bool,
 }
 
 /// A vote for a referendum of a particular account.
