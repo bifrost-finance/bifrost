@@ -241,7 +241,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		CurrencyIdOf<T>,
-		Blake2_128Concat,
+		Twox64Concat,
 		PollIndexOf<T>,
 		ReferendumInfoOf<T>,
 	>;
