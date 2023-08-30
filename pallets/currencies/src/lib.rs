@@ -42,7 +42,10 @@ use codec::Codec;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		tokens::{fungible, fungibles},
+		tokens::{
+			fungible, fungibles, DepositConsequence, Fortitude, Precision, Preservation,
+			Provenance, WithdrawConsequence,
+		},
 		Currency as PalletCurrency, ExistenceRequirement, Get, Imbalance,
 		LockableCurrency as PalletLockableCurrency,
 		NamedReservableCurrency as PalletNamedReservableCurrency,
@@ -522,6 +525,207 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
 	}
 }
 
+/// impl fungiles for Pallet<T>
+impl<T: Config> fungibles::Inspect<T::AccountId> for Pallet<T> {
+	type AssetId = CurrencyIdOf<T>;
+	type Balance = BalanceOf<T>;
+
+	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::total_issuance(),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::total_issuance(asset_id),
+		}
+	}
+
+	fn minimum_balance(asset_id: Self::AssetId) -> Self::Balance {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::minimum_balance(),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::minimum_balance(asset_id),
+		}
+	}
+
+	fn balance(asset_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::balance(who),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::balance(asset_id, who),
+		}
+	}
+
+	fn total_balance(asset_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::total_balance(who),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::total_balance(asset_id, who),
+		}
+	}
+
+	fn reducible_balance(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		preservation: Preservation,
+		force: Fortitude,
+	) -> Self::Balance {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() => <T::NativeCurrency as fungible::Inspect<
+				_,
+			>>::reducible_balance(
+				who, preservation, force
+			),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::reducible_balance(
+				asset_id,
+				who,
+				preservation,
+				force,
+			),
+		}
+	}
+
+	fn can_deposit(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+		provenance: Provenance,
+	) -> DepositConsequence {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::can_deposit(who, amount, provenance),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::can_deposit(
+				asset_id, who, amount, provenance,
+			),
+		}
+	}
+
+	fn can_withdraw(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> WithdrawConsequence<Self::Balance> {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::can_withdraw(who, amount),
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::can_withdraw(asset_id, who, amount),
+		}
+	}
+
+	fn asset_exists(asset_id: Self::AssetId) -> bool {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() => true,
+			_ => <T::MultiCurrency as fungibles::Inspect<_>>::asset_exists(asset_id),
+		}
+	}
+}
+
+impl<T: Config> fungibles::Unbalanced<T::AccountId> for Pallet<T> {
+	fn handle_dust(_dust: fungibles::Dust<T::AccountId, Self>) {
+		// https://github.com/paritytech/substrate/blob/569aae5341ea0c1d10426fa1ec13a36c0b64393b/frame/support/src/traits/tokens/fungibles/regular.rs#L124
+		// Note: currently the field of Dust type is private and there is no constructor for it, so
+		// we can't construct a Dust value and pass it. Do nothing here.
+		// `Pallet<T>` overwrites these functions which can be called as user-level operation of
+		// fungibles traits when calling these functions, it will not actually reach
+		// `Unbalanced::handle_dust`.
+	}
+
+	fn write_balance(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> Result<Option<Self::Balance>, DispatchError> {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Unbalanced<_>>::write_balance(who, amount),
+			_ =>
+				<T::MultiCurrency as fungibles::Unbalanced<_>>::write_balance(asset_id, who, amount),
+		}
+	}
+
+	fn set_total_issuance(asset_id: Self::AssetId, amount: Self::Balance) {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Unbalanced<_>>::set_total_issuance(amount),
+			_ =>
+				<T::MultiCurrency as fungibles::Unbalanced<_>>::set_total_issuance(asset_id, amount),
+		}
+	}
+}
+
+impl<T: Config> fungibles::Mutate<T::AccountId> for Pallet<T> {
+	fn mint_into(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Mutate<_>>::mint_into(who, amount),
+			_ => <T::MultiCurrency as fungibles::Mutate<_>>::mint_into(asset_id, who, amount),
+		}
+	}
+
+	fn burn_from(
+		asset_id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+		precision: Precision,
+		fortitude: Fortitude,
+	) -> Result<Self::Balance, DispatchError> {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Mutate<_>>::burn_from(
+					who, amount, precision, fortitude,
+				),
+			_ => <T::MultiCurrency as fungibles::Mutate<_>>::burn_from(
+				asset_id, who, amount, precision, fortitude,
+			),
+		}
+	}
+
+	fn transfer(
+		asset_id: Self::AssetId,
+		source: &T::AccountId,
+		dest: &T::AccountId,
+		amount: Self::Balance,
+		preservation: Preservation,
+	) -> Result<Self::Balance, DispatchError> {
+		match asset_id {
+			id if id == T::GetNativeCurrencyId::get() => <T::NativeCurrency as fungible::Mutate<
+				_,
+			>>::transfer(
+				source, dest, amount, preservation
+			)
+			// .map(|actual| {
+			// 	Self::deposit_event(Event::Transferred {
+			// 		currency_id: asset_id,
+			// 		from: source.clone(),
+			// 		to: dest.clone(),
+			// 		amount: actual,
+			// 	});
+			// 	actual
+			// })
+			,
+			_ => <T::MultiCurrency as fungibles::Mutate<_>>::transfer(
+				asset_id,
+				source,
+				dest,
+				amount,
+				preservation,
+			)
+			// .map(|actual| {
+			// 	Self::deposit_event(Event::Transferred {
+			// 		currency_id: asset_id,
+			// 		from: source.clone(),
+			// 		to: dest.clone(),
+			// 		amount: actual,
+			// 	});
+			// 	actual
+			// })
+			,
+		}
+	}
+}
+
 pub struct Currency<T, GetCurrencyId>(marker::PhantomData<T>, marker::PhantomData<GetCurrencyId>);
 
 impl<T, GetCurrencyId> BasicCurrency<T::AccountId> for Currency<T, GetCurrencyId>
@@ -972,6 +1176,109 @@ where
 		status: BalanceStatus,
 	) -> result::Result<Self::Balance, DispatchError> {
 		Currency::repatriate_reserved_named(id, slashed, beneficiary, value, status)
+	}
+}
+
+/// impl fungile for Currency<T, GetCurrencyId>
+type FungibleBalanceOf<A, Currency> = <Currency as fungible::Inspect<A>>::Balance;
+impl<T, Currency, Amount, Moment> fungible::Inspect<T::AccountId>
+	for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+	Currency: fungible::Inspect<T::AccountId>,
+	T: Config,
+{
+	type Balance = FungibleBalanceOf<T::AccountId, Currency>;
+
+	fn total_issuance() -> Self::Balance {
+		<Currency as fungible::Inspect<_>>::total_issuance()
+	}
+	fn minimum_balance() -> Self::Balance {
+		<Currency as fungible::Inspect<_>>::minimum_balance()
+	}
+	fn balance(who: &T::AccountId) -> Self::Balance {
+		<Currency as fungible::Inspect<_>>::balance(who)
+	}
+	fn total_balance(who: &T::AccountId) -> Self::Balance {
+		<Currency as fungible::Inspect<_>>::total_balance(who)
+	}
+	fn reducible_balance(
+		who: &T::AccountId,
+		preservation: Preservation,
+		force: Fortitude,
+	) -> Self::Balance {
+		<Currency as fungible::Inspect<_>>::reducible_balance(who, preservation, force)
+	}
+	fn can_deposit(
+		who: &T::AccountId,
+		amount: Self::Balance,
+		provenance: Provenance,
+	) -> DepositConsequence {
+		<Currency as fungible::Inspect<_>>::can_deposit(who, amount, provenance)
+	}
+	fn can_withdraw(
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> WithdrawConsequence<Self::Balance> {
+		<Currency as fungible::Inspect<_>>::can_withdraw(who, amount)
+	}
+}
+
+impl<T, Currency, Amount, Moment> fungible::Unbalanced<T::AccountId>
+	for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+	Currency: fungible::Unbalanced<T::AccountId>,
+	T: Config,
+{
+	fn handle_dust(_dust: fungible::Dust<T::AccountId, Self>) {
+		// https://github.com/paritytech/substrate/blob/569aae5341ea0c1d10426fa1ec13a36c0b64393b/frame/support/src/traits/tokens/fungibles/regular.rs#L124
+		// Note: currently the field of Dust type is private and there is no constructor for it, so
+		// we can't construct a Dust value and pass it.
+		// `BasicCurrencyAdapter` overwrites these functions which can be called as user-level
+		// operation of fungible traits when calling these functions, it will not actually reach
+		// `Unbalanced::handle_dust`.
+	}
+
+	fn write_balance(
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> Result<Option<Self::Balance>, DispatchError> {
+		<Currency as fungible::Unbalanced<_>>::write_balance(who, amount)
+	}
+
+	fn set_total_issuance(amount: Self::Balance) {
+		<Currency as fungible::Unbalanced<_>>::set_total_issuance(amount)
+	}
+}
+
+impl<T, Currency, Amount, Moment> fungible::Mutate<T::AccountId>
+	for BasicCurrencyAdapter<T, Currency, Amount, Moment>
+where
+	Currency: fungible::Mutate<T::AccountId>,
+	T: Config,
+{
+	fn mint_into(
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		<Currency as fungible::Mutate<_>>::mint_into(who, amount)
+	}
+
+	fn burn_from(
+		who: &T::AccountId,
+		amount: Self::Balance,
+		precision: Precision,
+		fortitude: Fortitude,
+	) -> Result<Self::Balance, DispatchError> {
+		<Currency as fungible::Mutate<_>>::burn_from(who, amount, precision, fortitude)
+	}
+
+	fn transfer(
+		source: &T::AccountId,
+		dest: &T::AccountId,
+		amount: Self::Balance,
+		preservation: Preservation,
+	) -> Result<Self::Balance, DispatchError> {
+		<Currency as fungible::Mutate<_>>::transfer(source, dest, amount, preservation)
 	}
 }
 
