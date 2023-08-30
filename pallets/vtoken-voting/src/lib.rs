@@ -288,8 +288,12 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
-	pub type PendingUnlockDelegatorToken<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
+	pub type PendingUnlockDelegatorToken<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		QueryId,
+		(CurrencyIdOf<T>, PollIndexOf<T>, DerivativeIndex, BlockNumberFor<T>),
+	>;
 
 	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
@@ -522,6 +526,7 @@ pub mod pallet {
 						(
 							vtoken,
 							poll_index,
+							derivative_index,
 							frame_system::Pallet::<T>::block_number()
 								.saturating_add(T::QueryTimeout::get()),
 						),
@@ -727,14 +732,25 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, _)) = PendingUnlockDelegatorToken::<T>::take(query_id)
+			if let Some((vtoken, poll_index, derivative_index, _)) =
+				PendingUnlockDelegatorToken::<T>::take(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
-				if !success {
-					// rollback vote
-					let class =
-						Self::try_remove_vote(&who, vtoken, poll_index, None, UnvoteScope::Any)?;
-					Self::update_lock(&who, vtoken, &class)?;
+				if success {
+					DelegatorRole::<T>::try_mutate_exists(
+						vtoken,
+						derivative_index,
+						|maybe_vote| {
+							if let Some(inner_vote) = maybe_vote {
+								inner_vote
+									.checked_sub(inner_vote.clone())
+									.map_err(|_| Error::<T>::NoData)?;
+								Ok(())
+							} else {
+								Err(Error::<T>::NoData)
+							}
+						},
+					)?;
 				}
 				Self::deposit_event(Event::<T>::DelegatorTokenUnlockNotified {
 					vtoken,
