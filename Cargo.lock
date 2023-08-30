@@ -629,6 +629,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-currencies"
+version = "0.4.1-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "orml-utilities",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
@@ -5306,12 +5325,12 @@ name = "lend-market"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",
  "num-traits",
- "orml-currencies",
  "orml-oracle",
  "orml-tokens",
  "orml-traits",

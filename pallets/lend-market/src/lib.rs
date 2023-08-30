@@ -27,12 +27,19 @@ use core::cmp::max;
 pub use crate::rate_model::*;
 
 use frame_support::{
-	log, pallet_prelude::*, require_transactional, traits::UnixTime, transactional, PalletId,
+	log,
+	pallet_prelude::*,
+	require_transactional,
+	traits::{
+		fungibles::{Inspect, Mutate},
+		tokens::{Fortitude, Preservation},
+		UnixTime,
+	},
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp};
 use num_traits::cast::ToPrimitive;
-use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_traits::{
 	ConvertToBigUint, Loans as LoansTrait, LoansMarketDataProvider, LoansPositionDataProvider,
@@ -74,14 +81,10 @@ pub const MAX_EXCHANGE_RATE: u128 = 1_000_000_000_000_000_000; // 1
 pub const MIN_EXCHANGE_RATE: u128 = 20_000_000_000_000_000; // 0.02
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::Assets as MultiCurrency<AccountIdOf<T>>>::Balance;
-pub type AssetIdOf<T> =
-	<<T as Config>::Assets as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
-
-// type AssetIdOf<T> =
-// 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
-// type BalanceOf<T> =
-// 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+type AssetIdOf<T> =
+	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
+type BalanceOf<T> =
+	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
@@ -124,9 +127,8 @@ pub mod pallet {
 		type UnixTime: UnixTime;
 
 		/// Assets for deposit/withdraw collateral assets to/from lend-market module
-		type Assets: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>;
-		//  Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>
-		// 	+ Mutate<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
+		type Assets: Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>
+			+ Mutate<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
 		//MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>;
 
 		/// Reward asset id.
@@ -697,7 +699,7 @@ pub mod pallet {
 			let reward_asset = T::RewardAssetId::get();
 			let pool_account = Self::reward_account_id()?;
 
-			T::Assets::transfer(reward_asset, &who, &pool_account, amount)?;
+			T::Assets::transfer(reward_asset, &who, &pool_account, amount, Preservation::Preserve)?;
 
 			Self::deposit_event(Event::<T>::RewardAdded(who, amount));
 
@@ -725,7 +727,13 @@ pub mod pallet {
 			let pool_account = Self::reward_account_id()?;
 			let target_account = T::Lookup::lookup(target_account)?;
 
-			T::Assets::transfer(reward_asset, &pool_account, &target_account, amount)?;
+			T::Assets::transfer(
+				reward_asset,
+				&pool_account,
+				&target_account,
+				amount,
+				Preservation::Preserve,
+			)?;
 			Self::deposit_event(Event::<T>::RewardWithdrawn(target_account, amount));
 
 			Ok(().into())
@@ -1009,7 +1017,13 @@ pub mod pallet {
 			let payer = T::Lookup::lookup(payer)?;
 			Self::ensure_active_market(asset_id)?;
 
-			T::Assets::transfer(asset_id, &payer, &Self::account_id(), add_amount)?;
+			T::Assets::transfer(
+				asset_id,
+				&payer,
+				&Self::account_id(),
+				add_amount,
+				Preservation::Expendable,
+			)?;
 			let total_reserves = Self::total_reserves(asset_id);
 			let total_reserves_new =
 				total_reserves.checked_add(add_amount).ok_or(ArithmeticError::Overflow)?;
@@ -1052,7 +1066,13 @@ pub mod pallet {
 			let total_reserves_new =
 				total_reserves.checked_sub(reduce_amount).ok_or(ArithmeticError::Underflow)?;
 			TotalReserves::<T>::insert(asset_id, total_reserves_new);
-			T::Assets::transfer(asset_id, &Self::account_id(), &receiver, reduce_amount)?;
+			T::Assets::transfer(
+				asset_id,
+				&Self::account_id(),
+				&receiver,
+				reduce_amount,
+				Preservation::Expendable,
+			)?;
 
 			Self::deposit_event(Event::<T>::ReservesReduced(
 				receiver,
@@ -1085,7 +1105,13 @@ pub mod pallet {
 			let exchange_rate = Self::exchange_rate_stored(asset_id)?;
 			let voucher_amount = Self::calc_collateral_amount(redeem_amount, exchange_rate)?;
 			let redeem_amount = Self::do_redeem_voucher(&from, asset_id, voucher_amount)?;
-			T::Assets::transfer(asset_id, &from, &receiver, redeem_amount)?;
+			T::Assets::transfer(
+				asset_id,
+				&from,
+				&receiver,
+				redeem_amount,
+				Preservation::Expendable,
+			)?;
 			Self::deposit_event(Event::<T>::IncentiveReservesReduced(
 				receiver,
 				asset_id,
@@ -1416,8 +1442,14 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		T::Assets::transfer(asset_id, &Self::account_id(), who, redeem_amount)
-			.map_err(|_| Error::<T>::InsufficientCash)?;
+		T::Assets::transfer(
+			asset_id,
+			&Self::account_id(),
+			who,
+			redeem_amount,
+			Preservation::Expendable,
+		)
+		.map_err(|_| Error::<T>::InsufficientCash)?;
 		Ok(redeem_amount)
 	}
 
@@ -1452,7 +1484,13 @@ impl<T: Config> Pallet<T> {
 		Self::update_reward_borrow_index(asset_id)?;
 		Self::distribute_borrower_reward(asset_id, borrower)?;
 
-		T::Assets::transfer(asset_id, borrower, &Self::account_id(), repay_amount)?;
+		T::Assets::transfer(
+			asset_id,
+			borrower,
+			&Self::account_id(),
+			repay_amount,
+			Preservation::Expendable,
+		)?;
 		let account_borrows_new =
 			account_borrows.checked_sub(repay_amount).ok_or(ArithmeticError::Underflow)?;
 		let total_borrows = Self::total_borrows(asset_id);
@@ -1678,7 +1716,13 @@ impl<T: Config> Pallet<T> {
 
 		// 1.liquidator repay borrower's debt,
 		// transfer from liquidator to module account
-		T::Assets::transfer(liquidation_asset_id, liquidator, &Self::account_id(), repay_amount)?;
+		T::Assets::transfer(
+			liquidation_asset_id,
+			liquidator,
+			&Self::account_id(),
+			repay_amount,
+			Preservation::Expendable,
+		)?;
 
 		// 2.the system reduce borrower's debt
 		let account_borrows = Self::current_borrow_balance(borrower, liquidation_asset_id)?;
@@ -1776,7 +1820,7 @@ impl<T: Config> Pallet<T> {
 	fn ensure_under_supply_cap(asset_id: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
 		let market = Self::market(asset_id)?;
 		// Assets holded by market currently.
-		let current_cash = T::Assets::free_balance(asset_id, &Self::account_id());
+		let current_cash = T::Assets::balance(asset_id, &Self::account_id());
 		let total_cash = current_cash.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
 		ensure!(total_cash <= market.supply_cap, Error::<T>::SupplyCapacityExceeded);
 
@@ -1858,8 +1902,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_total_cash(asset_id: AssetIdOf<T>) -> BalanceOf<T> {
-		// T::Assets::reducible_balance(asset_id, &Self::account_id(), false)
-		T::Assets::free_balance(asset_id, &Self::account_id())
+		T::Assets::reducible_balance(
+			asset_id,
+			&Self::account_id(),
+			Preservation::Expendable,
+			Fortitude::Force,
+		)
+		// T::Assets::balance(asset_id, &Self::account_id())
 	}
 
 	// Returns the uniform format price.
@@ -1977,7 +2026,13 @@ impl<T: Config> LoansTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Palle
 		let voucher_amount = Self::calc_collateral_amount(amount, exchange_rate)?;
 		ensure!(!voucher_amount.is_zero(), Error::<T>::InvalidExchangeRate);
 
-		T::Assets::transfer(asset_id, supplier, &Self::account_id(), amount)?;
+		T::Assets::transfer(
+			asset_id,
+			supplier,
+			&Self::account_id(),
+			amount,
+			Preservation::Expendable,
+		)?;
 		AccountDeposits::<T>::try_mutate(asset_id, supplier, |deposits| -> DispatchResult {
 			deposits.voucher_balance = deposits
 				.voucher_balance
@@ -2024,7 +2079,13 @@ impl<T: Config> LoansTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Palle
 			},
 		);
 		TotalBorrows::<T>::insert(asset_id, total_borrows_new);
-		T::Assets::transfer(asset_id, &Self::account_id(), borrower, amount)?;
+		T::Assets::transfer(
+			asset_id,
+			&Self::account_id(),
+			borrower,
+			amount,
+			Preservation::Expendable,
+		)?;
 		Self::deposit_event(Event::<T>::Borrowed(borrower.clone(), asset_id, amount));
 		Ok(())
 	}

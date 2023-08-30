@@ -53,7 +53,7 @@ construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
+		Currencies: bifrost_currencies::{Pallet, Call},
 		AssetRegistry: bifrost_asset_registry,
 		Loans: crate::{Pallet, Storage, Call, Event<T>},
 		// Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
@@ -196,9 +196,9 @@ parameter_types! {
 // pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Test {
+impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
@@ -415,7 +415,7 @@ impl Config for Test {
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
 	type UnixTime = TimestampPallet;
-	type Assets = Currencies; //Tokens; // CurrencyAdapter;  Currencies
+	type Assets = Currencies;
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
 }
