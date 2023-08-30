@@ -497,7 +497,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
 			#[pallet::compact] poll_index: PollIndexOf<T>,
-			derivative_index: DerivativeIndex,
+			#[pallet::compact] derivative_index: DerivativeIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -571,7 +571,7 @@ pub mod pallet {
 		pub fn set_delegator_role(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			derivative_index: DerivativeIndex,
+			#[pallet::compact] derivative_index: DerivativeIndex,
 			vote_role: VoteRole,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
