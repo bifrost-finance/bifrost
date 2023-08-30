@@ -635,7 +635,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(100)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_vote())]
 		pub fn notify_vote(
 			origin: OriginFor<T>,
@@ -690,7 +690,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(101)]
+		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_update_referendum_status())]
 		pub fn notify_update_referendum_status(
 			origin: OriginFor<T>,
@@ -725,7 +725,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(102)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
 		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
