@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountVote, BalanceOf, Config, PollIndexOf};
+use crate::{AccountVote, BalanceOf, Config, PollIndex};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use sp_runtime::traits::StaticLookup;
@@ -50,11 +50,11 @@ impl<T: Config> RelayCall<T> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum ConvictionVotingCall<T: Config> {
 	#[codec(index = 0)]
-	Vote(#[codec(compact)] PollIndexOf<T>, AccountVote<BalanceOf<T>>),
+	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
 	Unlock(u16, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<u16>, PollIndexOf<T>),
+	RemoveVote(Option<u16>, PollIndex),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]

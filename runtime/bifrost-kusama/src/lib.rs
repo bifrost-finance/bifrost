@@ -1559,14 +1559,13 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type PollIndex = u32;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MaxVotes = ConstU32<100>;
 	type ParachainId = SelfParaChainId;
 	type QueryTimeout = QueryTimeout;
-	type WeightInfo = ();
+	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
 }
 
 // Bifrost modules end

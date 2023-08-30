@@ -67,6 +67,8 @@ const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
 pub type DerivativeIndex = u16;
 
+type PollIndex = u32;
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 pub type CurrencyIdOf<T> =
@@ -78,13 +80,8 @@ type PollIndexOf<T> = <T as Config>::PollIndex;
 
 pub type TallyOf<T> = Tally<BalanceOf<T>, ()>;
 
-type VotingOf<T> = Voting<
-	BalanceOf<T>,
-	AccountIdOf<T>,
-	BlockNumberFor<T>,
-	PollIndexOf<T>,
-	<T as Config>::MaxVotes,
->;
+type VotingOf<T> =
+	Voting<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>, PollIndex, <T as Config>::MaxVotes>;
 
 pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 
@@ -112,8 +109,6 @@ pub mod pallet {
 			<Self as frame_system::Config>::RuntimeOrigin,
 			Success = MultiLocation,
 		>;
-
-		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
 
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
 
@@ -144,18 +139,18 @@ pub mod pallet {
 		Voted {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			vote: AccountVote<BalanceOf<T>>,
 		},
 		Unlocked {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		},
 		ReferendumStatusUpdated {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		},
 		DelegatorTokenUnlocked {
 			who: AccountIdOf<T>,
@@ -169,7 +164,7 @@ pub mod pallet {
 		},
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
 		VoteLockingPeriodSet {
@@ -178,21 +173,21 @@ pub mod pallet {
 		},
 		ReferendumKilled {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		},
 		VoteNotified {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			success: bool,
 		},
 		ReferendumStatusUpdateNotified {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			success: bool,
 		},
 		DelegatorTokenUnlockNotified {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			success: bool,
 		},
 		ResponseReceived {
@@ -242,7 +237,7 @@ pub mod pallet {
 		Twox64Concat,
 		CurrencyIdOf<T>,
 		Twox64Concat,
-		PollIndexOf<T>,
+		PollIndex,
 		ReferendumInfoOf<T>,
 	>;
 
@@ -260,13 +255,13 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(PollIndexOf<T>, BalanceOf<T>), ConstU32<100>>,
+		BoundedVec<(PollIndex, BalanceOf<T>), ConstU32<100>>,
 		ValueQuery,
 	>;
 
 	#[pallet::storage]
 	pub type PendingReferendumInfo<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
 	pub type PendingVotingInfo<T: Config> = StorageMap<
@@ -275,7 +270,7 @@ pub mod pallet {
 		QueryId,
 		(
 			CurrencyIdOf<T>,
-			PollIndexOf<T>,
+			PollIndex,
 			DerivativeIndex,
 			AccountIdOf<T>,
 			AccountVote<BalanceOf<T>>,
@@ -285,14 +280,14 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type PendingReferendumStatus<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, BlockNumberFor<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
 	pub type PendingUnlockDelegatorToken<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
 		QueryId,
-		(CurrencyIdOf<T>, PollIndexOf<T>, DerivativeIndex, BlockNumberFor<T>),
+		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, BlockNumberFor<T>),
 	>;
 
 	#[pallet::storage]
@@ -342,7 +337,7 @@ pub mod pallet {
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 			vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -446,7 +441,7 @@ pub mod pallet {
 		pub fn update_referendum_status(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -496,7 +491,7 @@ pub mod pallet {
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -549,7 +544,7 @@ pub mod pallet {
 		pub fn kill_referendum(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -606,7 +601,7 @@ pub mod pallet {
 		pub fn set_referendum_status(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -769,7 +764,7 @@ pub mod pallet {
 		fn try_vote(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			ensure!(
@@ -820,7 +815,7 @@ pub mod pallet {
 		pub(crate) fn try_remove_vote(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			scope: UnvoteScope,
 		) -> DispatchResult {
 			VotingFor::<T>::try_mutate(who, |voting| {
@@ -873,7 +868,7 @@ pub mod pallet {
 		pub(crate) fn update_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: &PollIndexOf<T>,
+			poll_index: &PollIndex,
 		) -> DispatchResult {
 			let class_lock_needed = VotingFor::<T>::mutate(who, |voting| {
 				voting.rejig(frame_system::Pallet::<T>::block_number());
@@ -902,7 +897,7 @@ pub mod pallet {
 		fn extend_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: &PollIndexOf<T>,
+			poll_index: &PollIndex,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			ClassLocksFor::<T>::mutate(who, |locks| {
@@ -995,7 +990,7 @@ pub mod pallet {
 
 		fn ensure_no_pending_vote(
 			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndexOf<T>,
+			poll_index: &PollIndex,
 		) -> DispatchResult {
 			ensure!(
 				PendingVotingInfo::<T>::iter()
@@ -1008,7 +1003,7 @@ pub mod pallet {
 
 		fn ensure_no_pending_update_referendum_status(
 			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndexOf<T>,
+			poll_index: &PollIndex,
 		) -> DispatchResult {
 			ensure!(
 				PendingReferendumStatus::<T>::iter()
@@ -1031,7 +1026,7 @@ pub mod pallet {
 
 		fn ensure_referendum_completed(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> Result<BlockNumberFor<T>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Completed(moment)) => Ok(moment),
@@ -1041,7 +1036,7 @@ pub mod pallet {
 
 		fn ensure_referendum_expired(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> Result<BlockNumberFor<T>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Completed(moment)) => {
@@ -1055,7 +1050,7 @@ pub mod pallet {
 
 		fn ensure_referendum_killed(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> Result<BlockNumberFor<T>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Killed(moment)) => Ok(moment),
@@ -1073,7 +1068,7 @@ pub mod pallet {
 
 		fn try_access_poll<R>(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			f: impl FnOnce(PollStatus<&mut TallyOf<T>, BlockNumberFor<T>>) -> Result<R, DispatchError>,
 		) -> Result<R, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {

@@ -281,7 +281,6 @@ impl vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<Controller, AccountId>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type PollIndex = u32;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = System;
