@@ -40,7 +40,6 @@ use crate::{
 	traits::Tally,
 	vote::{Casting, Voting},
 };
-use codec::{Encode, HasCompact, MaxEncodedLen};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	pallet_prelude::*,
@@ -75,8 +74,6 @@ pub type CurrencyIdOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
 
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-type PollIndexOf<T> = <T as Config>::PollIndex;
 
 pub type TallyOf<T> = Tally<BalanceOf<T>, ()>;
 
@@ -116,15 +113,15 @@ pub mod pallet {
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
+		#[pallet::constant]
+		type ParachainId: Get<ParaId>;
+
 		/// The maximum number of concurrent votes an account may have.
 		///
 		/// Also used to compute weight, an overly large value can lead to extrinsics with large
 		/// weight estimation: see `delegate` for instance.
 		#[pallet::constant]
 		type MaxVotes: Get<u32>;
-
-		#[pallet::constant]
-		type ParachainId: Get<ParaId>;
 
 		#[pallet::constant]
 		type QueryTimeout: Get<BlockNumberFor<Self>>;
@@ -203,8 +200,11 @@ pub mod pallet {
 		XcmFailure,
 		/// The given currency is not supported.
 		VTokenNotSupport,
+		/// Derivative index occupied.
 		DerivativeIndexOccupied,
+		/// Another vote is pending.
 		PendingVote,
+		/// Another update referendum status is pending.
 		PendingUpdateReferendumStatus,
 		/// No data available in storage.
 		NoData,
@@ -420,7 +420,7 @@ pub mod pallet {
 		pub fn unlock(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -1016,7 +1016,7 @@ pub mod pallet {
 
 		pub fn ensure_referendum_ongoing(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> Result<ReferendumStatus<BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Ongoing(status)) => Ok(status),
