@@ -348,7 +348,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
-			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
+			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
 
 			// create referendum if not exist
 			let mut confirmed = false;
@@ -502,6 +502,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
+			ensure!(DelegatorRole::<T>::contains_key(vtoken, derivative_index), Error::<T>::NoData);
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
@@ -995,7 +996,6 @@ pub mod pallet {
 		fn ensure_no_pending_vote(
 			vtoken: &CurrencyIdOf<T>,
 			poll_index: &PollIndexOf<T>,
-			derivative_index: &DerivativeIndex,
 		) -> DispatchResult {
 			ensure!(
 				PendingVotingInfo::<T>::iter()
@@ -1103,7 +1103,7 @@ pub mod pallet {
 						.unwrap_or(Default::default());
 					(active, vote, index)
 				})
-				.filter(|(_, vote, index)| VoteRole::from(*vote) == VoteRole::from(my_vote))
+				.filter(|(_, vote, _)| VoteRole::from(*vote) == VoteRole::from(my_vote))
 				.collect::<Vec<_>>();
 			data.sort_by(|a, b| {
 				(b.0.saturating_sub(b.1.balance())).cmp(&(a.0.saturating_sub(a.1.balance())))
