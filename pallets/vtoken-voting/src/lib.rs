@@ -296,13 +296,12 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
-	pub type DelegatorRole<T: Config> = StorageNMap<
+	pub type DelegatorRole<T: Config> = StorageDoubleMap<
 		_,
-		(
-			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
-			NMapKey<Twox64Concat, VoteRole>,
-			NMapKey<Twox64Concat, DerivativeIndex>,
-		),
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		Twox64Concat,
+		DerivativeIndex,
 		AccountVote<BalanceOf<T>>,
 	>;
 
@@ -324,7 +323,8 @@ pub mod pallet {
 			self.roles.iter().for_each(|(vtoken, role, derivative_index)| {
 				let vote_role = VoteRole::try_from(*role).unwrap();
 				DelegatorRole::<T>::insert(
-					(vtoken, vote_role.clone(), derivative_index),
+					vtoken,
+					derivative_index,
 					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
 			});
@@ -343,9 +343,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			let vote_role = VoteRole::from(vote);
-			let derivative_index =
-				Self::try_select_derivative_index(vtoken, vote_role, vote.balance())?;
+			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index, &derivative_index)?;
 
 			// create referendum if not exist
@@ -365,17 +363,15 @@ pub mod pallet {
 			// record vote info
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
 
-			let new_vote = DelegatorRole::<T>::try_mutate_exists(
-				(vtoken, VoteRole::from(vote), derivative_index),
-				|maybe_vote| {
+			let new_vote =
+				DelegatorRole::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
 					if let Some(inner_vote) = maybe_vote {
 						inner_vote.checked_add(vote).map_err(|_| Error::<T>::NoData)?;
 						Ok(inner_vote.clone())
 					} else {
 						Err(Error::<T>::NoData)
 					}
-				},
-			)?;
+				})?;
 
 			// send XCM message
 			let vote_call = RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(
@@ -580,21 +576,15 @@ pub mod pallet {
 				Error::<T>::NoData
 			);
 			ensure!(
-				!DelegatorRole::<T>::contains_key((vtoken, vote_role, derivative_index)),
+				!DelegatorRole::<T>::contains_key(vtoken, derivative_index),
 				Error::<T>::DerivativeIndexOccupied
 			);
 
-			if let Some(((role, index), vote)) = DelegatorRole::<T>::iter_prefix((vtoken,))
-				.find(|((_, i), _)| i == &derivative_index)
-			{
-				DelegatorRole::<T>::remove((vtoken, role, index));
-				DelegatorRole::<T>::insert((vtoken, vote_role, derivative_index), vote);
-			} else {
-				DelegatorRole::<T>::insert(
-					(vtoken, vote_role, derivative_index),
-					AccountVote::<BalanceOf<T>>::from(vote_role),
-				);
-			}
+			DelegatorRole::<T>::insert(
+				vtoken,
+				derivative_index,
+				AccountVote::<BalanceOf<T>>::from(vote_role),
+			);
 
 			Self::deposit_event(Event::<T>::DelegatorRoleSet {
 				vtoken,
@@ -657,7 +647,8 @@ pub mod pallet {
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
 					DelegatorRole::<T>::try_mutate_exists(
-						(vtoken, VoteRole::from(vote), derivative_index),
+						vtoken,
+						derivative_index,
 						|maybe_vote| {
 							if let Some(inner_vote) = maybe_vote {
 								inner_vote.checked_sub(vote).map_err(|_| Error::<T>::NoData)?;
@@ -1086,17 +1077,17 @@ pub mod pallet {
 
 		fn try_select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
-			role: VoteRole,
-			vote_amount: BalanceOf<T>,
+			my_vote: AccountVote<BalanceOf<T>>,
 		) -> Result<DerivativeIndex, DispatchError> {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 
-			let mut data = DelegatorRole::<T>::iter_prefix((vtoken, role))
+			let mut data = DelegatorRole::<T>::iter_prefix(vtoken)
 				.map(|(index, vote)| {
 					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
 						.unwrap_or(Default::default());
 					(active, vote, index)
 				})
+				.filter(|(_, vote, index)| VoteRole::from(*vote) == VoteRole::from(my_vote))
 				.collect::<Vec<_>>();
 			data.sort_by(|a, b| {
 				(b.0.saturating_sub(b.1.balance())).cmp(&(a.0.saturating_sub(a.1.balance())))
@@ -1106,7 +1097,7 @@ pub mod pallet {
 			active
 				.checked_sub(&vote.balance())
 				.ok_or(ArithmeticError::Underflow)?
-				.checked_sub(&vote_amount)
+				.checked_sub(&my_vote.balance())
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
@@ -1116,9 +1107,13 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			target_role: VoteRole,
 		) -> Option<DerivativeIndex> {
-			DelegatorRole::<T>::iter_prefix((vtoken,)).into_iter().find_map(
-				|((role, index), vote)| if role == target_role { Some(index) } else { None },
-			)
+			DelegatorRole::<T>::iter_prefix(vtoken).into_iter().find_map(|(index, vote)| {
+				if target_role == vote.into() {
+					Some(index)
+				} else {
+					None
+				}
+			})
 		}
 	}
 }
