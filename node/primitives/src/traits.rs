@@ -20,19 +20,19 @@
 
 #![allow(clippy::unnecessary_cast)]
 
+use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
-	pallet_prelude::DispatchResultWithPostInfo,
+	pallet_prelude::{DispatchResultWithPostInfo, TypeInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
+	RuntimeDebug,
 };
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
 	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
-
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -420,4 +420,40 @@ pub trait TryConvertFrom<CurrencyId> {
 	fn try_convert_from(currency_id: CurrencyId, para_id: u32) -> Result<Self, Self::Error>
 	where
 		Self: Sized;
+}
+
+pub trait XcmDestWeightAndFeeHandler<CurrencyId, Balance> {
+	fn get_operation_weight_and_fee(
+		token: CurrencyId,
+		operation: XcmInterfaceOperation,
+	) -> Result<(Weight, Balance), DispatchError>;
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+pub enum XcmInterfaceOperation {
+	// SALP operations
+	UmpContributeTransact,
+	// Statemine operations
+	StatemineTransfer,
+	// SLP operations
+	Bond,
+	WithdrawUnbonded,
+	BondExtra,
+	Unbond,
+	Rebond,
+	Delegate,
+	Payout,
+	Liquidize,
+	TransferBack,
+	TransferTo,
+	Chill,
+	Undelegate,
+	CancelLeave,
+	XtokensTransferBack,
+	ExecuteLeave,
+	ConvertAsset,
+	// VtokenVoting operations
+	VoteVtoken,
+	VoteUpdateReferendum,
+	VoteRemoveDelegatorVote,
 }
