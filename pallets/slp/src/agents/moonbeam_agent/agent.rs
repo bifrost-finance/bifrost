@@ -25,13 +25,13 @@ use crate::{
 	primitives::{
 		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
 		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, XcmOperation, TIMEOUT_BLOCKS,
+		OneToManyScheduledRequest, QueryId, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, FeeSources,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee,
+	ValidatorsByDelegatorUpdateEntry, XcmOperation,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
@@ -40,7 +40,7 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{
 	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
-	CurrencyId, TokenSymbol, VtokenMintingOperator,
+	CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
 };
 use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
@@ -1019,8 +1019,9 @@ impl<T: Config> MoonbeamAgent<T> {
 			MoonbeamUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
 		));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}
@@ -1101,9 +1102,11 @@ impl<T: Config> MoonbeamAgent<T> {
 		// not succeed.
 		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
 
-		let (weight, fee_amount) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperation::TransferTo,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter dest and beneficiary.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;

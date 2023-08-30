@@ -327,10 +327,22 @@ pub mod pallet {
 		fn get_operation_weight_and_fee(
 			token: CurrencyIdOf<T>,
 			operation: XcmInterfaceOperation,
-		) -> Result<(Weight, BalanceOf<T>), DispatchError> {
-			let (weight, fee) = Self::xcm_dest_weight_and_fee(token, operation)
-				.ok_or_else(|| DispatchError::from("Xcm dest weight and fee not set"))?;
-			Ok((weight, fee))
+		) -> Option<(Weight, BalanceOf<T>)> {
+			Self::xcm_dest_weight_and_fee(token, operation)
+		}
+
+		fn set_xcm_dest_weight_and_fee(
+			currency_id: CurrencyIdOf<T>,
+			operation: XcmInterfaceOperation,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+		) -> DispatchResult {
+			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
+			// storage to the new value if exists, or insert a new record if not exists before.
+			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
+				*wt_n_f = weight_and_fee;
+			});
+
+			Ok(())
 		}
 	}
 

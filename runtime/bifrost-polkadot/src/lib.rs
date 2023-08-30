@@ -1245,6 +1245,7 @@ impl bifrost_slp::Config for Runtime {
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 parameter_types! {
