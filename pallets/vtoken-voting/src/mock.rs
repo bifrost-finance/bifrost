@@ -270,7 +270,7 @@ impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
 		derivative_index: DerivativeIndex,
 	) -> Option<(Balance, Balance)> {
 		Self::get_multilocation(token, derivative_index)
-			.and_then(|location| Some((100u32.into(), 100u32.into())))
+			.and_then(|_location| Some((100u32.into(), 100u32.into())))
 	}
 }
 

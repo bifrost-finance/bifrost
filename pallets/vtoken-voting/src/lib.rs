@@ -117,9 +117,6 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		/// The maximum number of concurrent votes an account may have.
-		///
-		/// Also used to compute weight, an overly large value can lead to extrinsics with large
-		/// weight estimation: see `delegate` for instance.
 		#[pallet::constant]
 		type MaxVotes: Get<u32>;
 
@@ -149,7 +146,7 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 		},
-		DelegatorTokenUnlocked {
+		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			derivative_index: DerivativeIndex,
@@ -283,7 +280,7 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
 
 	#[pallet::storage]
-	pub type PendingUnlockDelegatorToken<T: Config> = StorageMap<
+	pub type PendingRemoveDelegatorVote<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
 		QueryId,
@@ -517,7 +514,7 @@ pub mod pallet {
 				weight,
 				extra_fee,
 				|query_id| {
-					PendingUnlockDelegatorToken::<T>::insert(
+					PendingRemoveDelegatorVote::<T>::insert(
 						query_id,
 						(
 							vtoken,
@@ -530,11 +527,7 @@ pub mod pallet {
 				},
 			)?;
 
-			Self::deposit_event(Event::<T>::DelegatorTokenUnlocked {
-				who,
-				vtoken,
-				derivative_index,
-			});
+			Self::deposit_event(Event::<T>::DelegatorVoteRemoved { who, vtoken, derivative_index });
 
 			Ok(())
 		}
@@ -729,7 +722,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			if let Some((vtoken, poll_index, derivative_index, _)) =
-				PendingUnlockDelegatorToken::<T>::take(query_id)
+				PendingRemoveDelegatorVote::<T>::take(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
