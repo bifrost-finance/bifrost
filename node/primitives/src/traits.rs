@@ -20,13 +20,14 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
+use crate::{
+	AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol, XcmInterfaceOperation,
+};
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
-	pallet_prelude::{DispatchResultWithPostInfo, TypeInfo, Weight},
+	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
-	RuntimeDebug,
 };
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
@@ -456,33 +457,4 @@ where
 	) -> DispatchResult {
 		Ok(())
 	}
-}
-
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmInterfaceOperation {
-	// SALP operations
-	UmpContributeTransact,
-	// Statemine operations
-	StatemineTransfer,
-	// SLP operations
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
-	Undelegate,
-	CancelLeave,
-	XtokensTransferBack,
-	ExecuteLeave,
-	ConvertAsset,
-	// VtokenVoting operations
-	VoteVtoken,
-	VoteUpdateReferendum,
-	VoteRemoveDelegatorVote,
 }

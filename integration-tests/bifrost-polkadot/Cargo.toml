@@ -58,7 +58,6 @@ bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction" }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting" }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting" }
 bifrost-runtime-common = { path = "../../runtime/common" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot" }
 
 # orml

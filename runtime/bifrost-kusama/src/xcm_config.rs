@@ -698,6 +698,9 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmRouter = node_primitives::DoNothingRouter;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;

@@ -81,7 +81,7 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
@@ -108,7 +108,7 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use pallet_xcm::QueryStatus;
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -1507,6 +1507,26 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
+parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type PollIndex = u32;
+	type XcmDestWeightAndFee = XcmInterface;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type MaxVotes = ConstU32<100>;
+	type ParachainId = SelfParaChainId;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1875,6 +1895,7 @@ construct_runtime! {
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1952,6 +1973,7 @@ mod benches {
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 

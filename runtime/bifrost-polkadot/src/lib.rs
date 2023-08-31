@@ -30,7 +30,7 @@ use core::convert::TryInto;
 
 use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
 	construct_runtime,
 	inherent::Vec,
@@ -105,7 +105,7 @@ use zenlink_protocol::{
 mod xcm_config;
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
-use pallet_xcm::QueryStatus;
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -1355,6 +1355,20 @@ impl bifrost_slpx::Config for Runtime {
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type PollIndex = u32;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type MaxVotes = ConstU32<100>;
+	type ParachainId = SelfParaChainId;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1642,6 +1656,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1709,6 +1724,7 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 
