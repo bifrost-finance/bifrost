@@ -48,7 +48,7 @@ mod polkadot {
 	#[derive(Encode, Decode, RuntimeDebug)]
 	pub enum RelayCall<T: Config> {
 		#[codec(index = 20)]
-		ConvictionVoting(ConvictionVoting<BalanceOf<T>>),
+		ConvictionVoting(ConvictionVoting<T>),
 		#[codec(index = 26)]
 		Utility(Utility<Self>),
 	}
