@@ -53,7 +53,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::{OpaqueMetadata, U256};
+use sp_core::{H256, OpaqueMetadata, U256};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
@@ -129,7 +129,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 980,
+	spec_version: 981,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1554,6 +1554,30 @@ where
 	}
 }
 
+parameter_types! {
+    pub const PureMessage: H256 = pallet_bcmp::PURE_MESSAGE;
+    pub const DefaultAdmin: Option<AccountId> = None;
+}
+
+impl pallet_bcmp::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PureMessage = PureMessage;
+	type DefaultAdmin = DefaultAdmin;
+	type Consumers = BcmpConsumer;
+	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
+}
+
+parameter_types! {
+    pub AnchorAddress: H256 = H256::from([1; 32]);
+}
+
+impl bcmp_consumer::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type AnchorAddress = AnchorAddress;
+}
+
 // zenlink runtime end
 
 construct_runtime! {
@@ -1641,6 +1665,10 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+
+		// bool
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>} = 128,
+		BcmpConsumer: bcmp_consumer:: {Pallet, Call, Event<T> } = 129,
 	}
 }
 

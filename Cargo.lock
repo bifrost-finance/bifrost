@@ -558,6 +558,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
+name = "bcmp-consumer"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "pallet-balances",
+ "pallet-bcmp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1023,6 +1041,7 @@ dependencies = [
 name = "bifrost-polkadot-runtime"
 version = "0.8.0"
 dependencies = [
+ "bcmp-consumer",
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
  "bifrost-cross-in-out",
@@ -1072,6 +1091,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-bcmp",
  "pallet-bounties",
  "pallet-collator-selection",
  "pallet-collective",
@@ -7141,6 +7161,21 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-bcmp"
+version = "0.0.0"
+source = "git+https://github.com/bifrost-finance/pallet-bcmp?rev=ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9#ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-std",
 ]
 
