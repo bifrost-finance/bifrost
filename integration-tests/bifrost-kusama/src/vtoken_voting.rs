@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
-use bifrost_vtoken_voting::{TallyOf, VoteRole};
+use bifrost_slp::{Ledger, MinimumsMaximums, SubstrateLedger};
+use bifrost_vtoken_voting::{AccountVote, TallyOf, VoteRole};
 use frame_support::{
 	assert_ok,
 	dispatch::RawOrigin,
@@ -25,7 +26,8 @@ use frame_support::{
 	weights::Weight,
 };
 use node_primitives::currency::VKSM;
-use pallet_conviction_voting::{AccountVote, Conviction, Tally, Vote};
+use pallet_conviction_voting::{Conviction, Vote};
+use xcm::v3::Parent;
 use xcm_emulator::TestExt;
 
 #[test]
@@ -57,11 +59,46 @@ fn vote_works() {
 		Bifrost::execute_with(|| {
 			use bifrost_kusama_runtime::{RuntimeEvent, RuntimeOrigin, System, VtokenVoting};
 
+			let token = CurrencyId::to_token(&vtoken).unwrap();
 			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 				RuntimeOrigin::root(),
-				CurrencyId::to_token(&vtoken).unwrap(),
+				token,
 				bifrost_slp::XcmOperation::Vote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			));
+			assert_ok!(Slp::set_minimums_and_maximums(
+				RuntimeOrigin::root(),
+				token,
+				Some(MinimumsMaximums {
+					delegator_bonded_minimum: 0u32.into(),
+					bond_extra_minimum: 0u32.into(),
+					unbond_minimum: 0u32.into(),
+					rebond_minimum: 0u32.into(),
+					unbond_record_maximum: 0u32,
+					validators_back_maximum: 0u32,
+					delegator_active_staking_maximum: 0u32.into(),
+					validators_reward_maximum: 0u32,
+					delegation_amount_minimum: 0u32.into(),
+					delegators_maximum: 10u16,
+					validators_maximum: 0u16,
+				})
+			));
+			assert_ok!(Slp::add_delegator(
+				RuntimeOrigin::root(),
+				token,
+				5,
+				Box::new(Parent.into())
+			));
+			assert_ok!(Slp::set_delegator_ledger(
+				RuntimeOrigin::root(),
+				token,
+				Box::new(Parent.into()),
+				Box::new(Some(Ledger::Substrate(SubstrateLedger {
+					account: Parent.into(),
+					total: 100u32.into(),
+					active: 100u32.into(),
+					unlocking: vec![],
+				})))
 			));
 
 			assert_ok!(VtokenVoting::set_delegator_role(
@@ -77,7 +114,7 @@ fn vote_works() {
 				poll_index,
 				aye(2, 5)
 			));
-			assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
+			assert_eq!(tally(vtoken, poll_index), TallyOf::<Runtime>::from_parts(10, 0, 2));
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -181,14 +218,14 @@ fn update_referendum_status_works() {
 				poll_index,
 				split_abstain(0, 0, 10)
 			));
-			assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 10));
+			assert_eq!(tally(vtoken, poll_index), TallyOf::<Runtime>::from_parts(0, 0, 10));
 			assert_ok!(VtokenVoting::vote(
 				RuntimeOrigin::signed(BOB.into()),
 				vtoken,
 				poll_index,
 				aye(2, 5)
 			));
-			assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 12));
+			assert_eq!(tally(vtoken, poll_index), TallyOf::<Runtime>::from_parts(10, 0, 12));
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::Voted {

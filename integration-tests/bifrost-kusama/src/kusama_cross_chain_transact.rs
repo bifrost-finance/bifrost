@@ -17,14 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	kusama_integration_tests::*,
-	kusama_test_net::*,
-	vtoken_voting::{aye, set_balance_proposal_bounded},
+	kusama_integration_tests::*, kusama_test_net::*, vtoken_voting::set_balance_proposal_bounded,
 };
 use frame_support::{
 	assert_ok,
 	dispatch::{GetDispatchInfo, RawOrigin},
 };
+use pallet_conviction_voting::{AccountVote, Vote};
 use xcm::v3::{prelude::*, Weight};
 use xcm_emulator::TestExt;
 
@@ -132,4 +131,9 @@ fn relaychain_transact_works() {
 			)));
 		});
 	})
+}
+
+pub fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
+	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
+	AccountVote::Standard { vote, balance: amount }
 }

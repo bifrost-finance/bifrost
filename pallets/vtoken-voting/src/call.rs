@@ -16,50 +16,82 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{BalanceOf, Config, PollIndexOf};
+use crate::{AccountVote, BalanceOf, Config, DerivativeIndex, PollIndex};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use pallet_conviction_voting::AccountVote;
 use sp_runtime::traits::StaticLookup;
 use sp_std::boxed::Box;
 
 #[cfg(feature = "kusama")]
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum RelayCall<T: Config> {
-	#[codec(index = 20)]
-	ConvictionVoting(ConvictionVotingCall<T>),
-	#[codec(index = 24)]
-	Utility(UtilityCall<Self>),
+pub use kusama::*;
+
+#[cfg(feature = "polkadot")]
+pub use polkadot::*;
+
+#[cfg(feature = "kusama")]
+mod kusama {
+	use crate::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelayCall<T: Config> {
+		#[codec(index = 20)]
+		ConvictionVoting(ConvictionVoting<T>),
+		#[codec(index = 24)]
+		Utility(Utility<Self>),
+	}
 }
 
 #[cfg(feature = "polkadot")]
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum RelayCall<T: Config> {
-	#[codec(index = 20)]
-	ConvictionVoting(ConvictionVotingCall<T>),
-	#[codec(index = 26)]
-	Utility(UtilityCall<Self>),
-}
+mod polkadot {
+	use crate::*;
 
-#[cfg(any(feature = "kusama", feature = "polkadot"))]
-impl<T: Config> RelayCall<T> {
-	pub fn get_derivative_call(derivative_index: u16, call: Self) -> Self {
-		Self::Utility(UtilityCall::AsDerivative(derivative_index, Box::new(call)))
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelayCall<T: Config> {
+		#[codec(index = 20)]
+		ConvictionVoting(ConvictionVoting<T>),
+		#[codec(index = 26)]
+		Utility(Utility<Self>),
 	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum ConvictionVotingCall<T: Config> {
+pub enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
-	Vote(#[codec(compact)] PollIndexOf<T>, AccountVote<BalanceOf<T>>),
+	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
 	Unlock(u16, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<u16>, PollIndexOf<T>),
+	RemoveVote(Option<u16>, PollIndex),
+}
+
+pub trait ConvictionVotingCall<T: Config> {
+	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self;
+
+	fn remove_vote(class: Option<u16>, poll_index: PollIndex) -> Self;
+}
+
+impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
+	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self {
+		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
+	}
+
+	fn remove_vote(class: Option<u16>, poll_index: PollIndex) -> Self {
+		Self::ConvictionVoting(ConvictionVoting::RemoveVote(class, poll_index))
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum UtilityCall<Call> {
+pub enum Utility<Call> {
 	#[codec(index = 1)]
-	AsDerivative(u16, Box<Call>),
+	AsDerivative(DerivativeIndex, Box<Call>),
+}
+
+pub trait UtilityCall<Call> {
+	fn as_derivative(derivative_index: DerivativeIndex, call: Call) -> Call;
+}
+
+impl<T: Config> UtilityCall<RelayCall<T>> for RelayCall<T> {
+	fn as_derivative(derivative_index: DerivativeIndex, call: Self) -> Self {
+		Self::Utility(Utility::AsDerivative(derivative_index, Box::new(call)))
+	}
 }

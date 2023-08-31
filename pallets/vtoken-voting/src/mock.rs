@@ -19,7 +19,10 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate as vtoken_voting;
-use crate::{traits::XcmDestWeightAndFeeHandler, BalanceOf};
+use crate::{
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	BalanceOf, DerivativeIndex,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -245,6 +248,31 @@ impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
 	}
 }
 
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+	fn check_derivative_index_exists(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> bool {
+		true
+	}
+
+	fn get_multilocation(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Some(Parent.into())
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index)
+			.and_then(|_location| Some((100u32.into(), 100u32.into())))
+	}
+}
+
 impl vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -252,8 +280,8 @@ impl vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<Controller, AccountId>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type PollIndex = u32;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = System;
 	type MaxVotes = ConstU32<3>;
 	type ParachainId = ParachainId;

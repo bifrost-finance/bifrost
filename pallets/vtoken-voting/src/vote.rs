@@ -18,7 +18,11 @@
 
 use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::pallet_prelude::*;
-use pallet_conviction_voting::{AccountVote, Conviction};
+use pallet_conviction_voting::{Conviction, Delegations, Vote};
+use sp_runtime::{
+	traits::{One, Zero},
+	Saturating,
+};
 use sp_std::{fmt::Debug, prelude::*};
 
 /// Info regarding a referendum, present or past.
@@ -43,10 +47,9 @@ pub struct ReferendumStatus<
 > {
 	/// The time of submission. Once `UndecidingTimeout` passes, it may be closed by anyone if
 	/// `deciding` is `None`.
-	pub submitted: Moment,
+	pub submitted: Option<Moment>,
 	/// The current tally of votes in this referendum.
 	pub tally: Tally,
-	pub confirmed: bool,
 }
 
 /// A vote for a referendum of a particular account.
@@ -70,6 +73,21 @@ impl<Balance> From<AccountVote<Balance>> for VoteRole {
 				VoteRole::Standard { aye: vote.aye, conviction: vote.conviction },
 			AccountVote::Split { .. } => VoteRole::Split,
 			AccountVote::SplitAbstain { .. } => VoteRole::SplitAbstain,
+		}
+	}
+}
+
+impl<Balance: Zero> From<VoteRole> for AccountVote<Balance> {
+	fn from(v: VoteRole) -> AccountVote<Balance> {
+		match v {
+			VoteRole::Standard { aye, conviction } =>
+				AccountVote::Standard { vote: Vote { aye, conviction }, balance: Zero::zero() },
+			VoteRole::Split => AccountVote::Split { aye: Zero::zero(), nay: Zero::zero() },
+			VoteRole::SplitAbstain => AccountVote::SplitAbstain {
+				aye: Zero::zero(),
+				nay: Zero::zero(),
+				abstain: Zero::zero(),
+			},
 		}
 	}
 }
@@ -111,5 +129,255 @@ impl<Tally, Moment> PollStatus<Tally, Moment> {
 			Self::Ongoing(t) => Some(t),
 			_ => None,
 		}
+	}
+}
+
+/// A vote for a referendum of a particular account.
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub enum AccountVote<Balance> {
+	/// A standard vote, one-way (approve or reject) with a given amount of conviction.
+	Standard { vote: Vote, balance: Balance },
+	/// A split vote with balances given for both ways, and with no conviction, useful for
+	/// parachains when voting.
+	Split { aye: Balance, nay: Balance },
+	/// A split vote with balances given for both ways as well as abstentions, and with no
+	/// conviction, useful for parachains when voting, other off-chain aggregate accounts and
+	/// individuals who wish to abstain.
+	SplitAbstain { aye: Balance, nay: Balance, abstain: Balance },
+}
+
+impl<Balance: Saturating> AccountVote<Balance> {
+	/// Returns `Some` of the lock periods that the account is locked for, assuming that the
+	/// referendum passed iff `approved` is `true`.
+	pub fn locked_if(self, approved: bool) -> Option<(u32, Balance)> {
+		// winning side: can only be removed after the lock period ends.
+		match self {
+			AccountVote::Standard { vote: Vote { conviction: Conviction::None, .. }, .. } => None,
+			AccountVote::Standard { vote, balance } if vote.aye == approved =>
+				Some((vote.conviction.lock_periods(), balance)),
+			_ => None,
+		}
+	}
+
+	/// The total balance involved in this vote.
+	pub fn balance(self) -> Balance {
+		match self {
+			AccountVote::Standard { balance, .. } => balance,
+			AccountVote::Split { aye, nay } => aye.saturating_add(nay),
+			AccountVote::SplitAbstain { aye, nay, abstain } =>
+				aye.saturating_add(nay).saturating_add(abstain),
+		}
+	}
+
+	/// Returns `Some` with whether the vote is an aye vote if it is standard, otherwise `None` if
+	/// it is split.
+	pub fn as_standard(self) -> Option<bool> {
+		match self {
+			AccountVote::Standard { vote, .. } => Some(vote.aye),
+			_ => None,
+		}
+	}
+
+	pub fn checked_add(&mut self, vote: AccountVote<Balance>) -> Result<(), ()>
+	where
+		Balance: One,
+	{
+		match (self, vote) {
+			(
+				AccountVote::Standard { vote: v1, balance: b1 },
+				AccountVote::Standard { vote: v2, balance: b2 },
+			) if *v1 == v2 => b1.saturating_accrue(b2),
+			(AccountVote::Split { aye: a1, nay: n1 }, AccountVote::Split { aye: a2, nay: n2 }) => {
+				a1.saturating_accrue(a2);
+				n1.saturating_accrue(n2);
+			},
+			(
+				AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 },
+				AccountVote::SplitAbstain { aye: a2, nay: n2, abstain: ab2 },
+			) => {
+				a1.saturating_accrue(a2);
+				n1.saturating_accrue(n2);
+				ab1.saturating_accrue(ab2);
+			},
+			_ => return Err(()),
+		}
+		Ok(())
+	}
+
+	pub fn checked_sub(&mut self, vote: AccountVote<Balance>) -> Result<(), ()>
+	where
+		Balance: One,
+	{
+		match (self, vote) {
+			(
+				AccountVote::Standard { vote: v1, balance: b1 },
+				AccountVote::Standard { vote: v2, balance: b2 },
+			) if *v1 == v2 => b1.saturating_reduce(b2),
+			(AccountVote::Split { aye: a1, nay: n1 }, AccountVote::Split { aye: a2, nay: n2 }) => {
+				a1.saturating_reduce(a2);
+				n1.saturating_reduce(n2);
+			},
+			(
+				AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 },
+				AccountVote::SplitAbstain { aye: a2, nay: n2, abstain: ab2 },
+			) => {
+				a1.saturating_reduce(a2);
+				n1.saturating_reduce(n2);
+				ab1.saturating_reduce(ab2);
+			},
+			_ => return Err(()),
+		}
+		Ok(())
+	}
+}
+
+/// A "prior" lock, i.e. a lock for some now-forgotten reason.
+#[derive(
+	Encode,
+	Decode,
+	Default,
+	Copy,
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	RuntimeDebug,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub struct PriorLock<BlockNumber, Balance>(BlockNumber, Balance);
+
+impl<BlockNumber: Ord + Copy + Zero, Balance: Ord + Copy + Zero> PriorLock<BlockNumber, Balance> {
+	/// Accumulates an additional lock.
+	pub fn accumulate(&mut self, until: BlockNumber, amount: Balance) {
+		self.0 = self.0.max(until);
+		self.1 = self.1.max(amount);
+	}
+
+	pub fn locked(&self) -> Balance {
+		self.1
+	}
+
+	pub fn rejig(&mut self, now: BlockNumber) {
+		if now >= self.0 {
+			self.0 = Zero::zero();
+			self.1 = Zero::zero();
+		}
+	}
+}
+
+/// Information concerning the delegation of some voting power.
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub struct Delegating<Balance, AccountId, BlockNumber> {
+	/// The amount of balance delegated.
+	pub balance: Balance,
+	/// The account to which the voting power is delegated.
+	pub target: AccountId,
+	/// The conviction with which the voting power is delegated. When this gets undelegated, the
+	/// relevant lock begins.
+	pub conviction: Conviction,
+	/// The total amount of delegations that this account has received, post-conviction-weighting.
+	pub delegations: Delegations<Balance>,
+	/// Any pre-existing locks from past voting/delegating activity.
+	pub prior: PriorLock<BlockNumber, Balance>,
+}
+
+/// Information concerning the direct vote-casting of some voting power.
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(MaxVotes))]
+#[codec(mel_bound(Balance: MaxEncodedLen, BlockNumber: MaxEncodedLen, PollIndex: MaxEncodedLen))]
+pub struct Casting<Balance, BlockNumber, PollIndex, MaxVotes>
+where
+	MaxVotes: Get<u32>,
+{
+	/// The current votes of the account.
+	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>), MaxVotes>,
+	/// The total amount of delegations that this account has received, post-conviction-weighting.
+	pub delegations: Delegations<Balance>,
+	/// Any pre-existing locks from past voting/delegating activity.
+	pub prior: PriorLock<BlockNumber, Balance>,
+}
+
+/// An indicator for what an account is doing; it can either be delegating or voting.
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(MaxVotes))]
+#[codec(mel_bound(
+Balance: MaxEncodedLen, AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen,
+PollIndex: MaxEncodedLen,
+))]
+pub enum Voting<Balance, AccountId, BlockNumber, PollIndex, MaxVotes>
+where
+	MaxVotes: Get<u32>,
+{
+	/// The account is voting directly.
+	Casting(Casting<Balance, BlockNumber, PollIndex, MaxVotes>),
+	/// The account is delegating `balance` of its balance to a `target` account with `conviction`.
+	Delegating(Delegating<Balance, AccountId, BlockNumber>),
+}
+
+impl<Balance: Default, AccountId, BlockNumber: Zero, PollIndex, MaxVotes> Default
+	for Voting<Balance, AccountId, BlockNumber, PollIndex, MaxVotes>
+where
+	MaxVotes: Get<u32>,
+{
+	fn default() -> Self {
+		Voting::Casting(Casting {
+			votes: Default::default(),
+			delegations: Default::default(),
+			prior: PriorLock(Zero::zero(), Default::default()),
+		})
+	}
+}
+
+impl<Balance, AccountId, BlockNumber, PollIndex, MaxVotes> AsMut<PriorLock<BlockNumber, Balance>>
+	for Voting<Balance, AccountId, BlockNumber, PollIndex, MaxVotes>
+where
+	MaxVotes: Get<u32>,
+{
+	fn as_mut(&mut self) -> &mut PriorLock<BlockNumber, Balance> {
+		match self {
+			Voting::Casting(Casting { prior, .. }) => prior,
+			Voting::Delegating(Delegating { prior, .. }) => prior,
+		}
+	}
+}
+
+impl<
+		Balance: Saturating + Ord + Zero + Copy,
+		BlockNumber: Ord + Copy + Zero,
+		AccountId,
+		PollIndex,
+		MaxVotes,
+	> Voting<Balance, AccountId, BlockNumber, PollIndex, MaxVotes>
+where
+	MaxVotes: Get<u32>,
+{
+	pub fn rejig(&mut self, now: BlockNumber) {
+		AsMut::<PriorLock<BlockNumber, Balance>>::as_mut(self).rejig(now);
+	}
+
+	/// The amount of this account's balance that must currently be locked due to voting.
+	pub fn locked_balance(&self) -> Balance {
+		match self {
+			Voting::Casting(Casting { votes, prior, .. }) =>
+				votes.iter().map(|i| i.1.balance()).fold(prior.locked(), |a, i| a.max(i)),
+			Voting::Delegating(Delegating { balance, prior, .. }) => *balance.max(&prior.locked()),
+		}
+	}
+
+	pub fn set_common(
+		&mut self,
+		delegations: Delegations<Balance>,
+		prior: PriorLock<BlockNumber, Balance>,
+	) {
+		let (d, p) = match self {
+			Voting::Casting(Casting { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
+			Voting::Delegating(Delegating { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
+		};
+		*d = delegations;
+		*p = prior;
 	}
 }
