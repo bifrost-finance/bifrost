@@ -49,12 +49,12 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = KSM;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
 		)?;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			KSM.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
@@ -79,7 +79,7 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
@@ -105,7 +105,7 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
@@ -132,7 +132,7 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
@@ -158,7 +158,7 @@ benchmarks! {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = BNC;
-		T::MultiCurrency::mint_into(
+		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
 			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
