@@ -373,9 +373,7 @@ pub mod pallet {
 				})?;
 
 			// send XCM message
-			let vote_call = RelayCall::<T>::ConvictionVoting(ConvictionVotingCall::<T>::Vote(
-				poll_index, new_vote,
-			));
+			let vote_call = <RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, new_vote);
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_vote(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
@@ -455,9 +453,8 @@ pub mod pallet {
 			let derivative_index =
 				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
 					.ok_or(Error::<T>::NoData)?;
-			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
-				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
-			);
+			let remove_vote_call =
+				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
 			)
@@ -503,9 +500,8 @@ pub mod pallet {
 				query_id: 0,
 				response: Default::default(),
 			};
-			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
-				ConvictionVotingCall::<T>::RemoveVote(None, poll_index),
-			);
+			let remove_vote_call =
+				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
 			)
@@ -942,7 +938,8 @@ pub mod pallet {
 			f(query_id);
 
 			let xcm_message = Self::construct_xcm_message(
-				RelayCall::<T>::get_derivative_call(derivative_index, call).encode(),
+				<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
+					.encode(),
 				extra_fee,
 				weight,
 				query_id,
