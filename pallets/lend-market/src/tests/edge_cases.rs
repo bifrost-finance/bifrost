@@ -42,7 +42,7 @@ fn repay_borrow_all_no_underflow() {
 		// 0.
 		assert_ok!(Loans::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
 
-		assert_eq!(<Test as Config>::Assets::free_balance(KSM, &ALICE), unit(800) - 5);
+		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), unit(800) - 5);
 
 		assert_eq!(
 			Loans::exchange_rate(DOT)
@@ -98,8 +98,8 @@ fn redeem_all_should_be_accurate() {
 // 			unit(100),
 // 			false
 // 		));
-// 		assert_eq!(<Test as Config>::<Test as Config>::Assets::free_balance(DOT, &EVE), 99999999999999);
-// 		assert_eq!(<Test as Config>::<Test as Config>::Assets::free_balance(DOT, &Loans::account_id()),
+// 		assert_eq!(<Test as Config>::<Test as Config>::Assets::balance(DOT, &EVE), 99999999999999);
+// 		assert_eq!(<Test as Config>::<Test as Config>::Assets::balance(DOT, &Loans::account_id()),
 // 100000000000001); 		assert_eq!(
 // 			Loans::total_supply(DOT),
 // 			1 * 50, // 1 / 0.02

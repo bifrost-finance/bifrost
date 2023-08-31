@@ -151,15 +151,15 @@ fn full_workflow_works_as_expected() {
 		// Alice KSM borrow balance: origin borrow balance - liquidate amount = 100 - 50 = 50
 		// Bob KSM: cash - deposit - repay = 1000 - 200 - 50 = 750
 		// Bob DOT collateral: incentive = 110-(110/1.1*0.03)=107
-		assert_eq!(<Test as Config>::Assets::free_balance(DOT_U, &ALICE), unit(800),);
+		assert_eq!(<Test as Config>::Assets::balance(DOT_U, &ALICE), unit(800),);
 		assert_eq!(
 			Loans::exchange_rate(DOT_U)
 				.saturating_mul_int(Loans::account_deposits(DOT_U, ALICE).voucher_balance),
 			unit(90),
 		);
-		assert_eq!(<Test as Config>::Assets::free_balance(KSM, &ALICE), unit(1100),);
+		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), unit(1100),);
 		assert_eq!(Loans::account_borrows(KSM, ALICE).principal, unit(50));
-		assert_eq!(<Test as Config>::Assets::free_balance(KSM, &BOB), unit(750));
+		assert_eq!(<Test as Config>::Assets::balance(KSM, &BOB), unit(750));
 		assert_eq!(
 			Loans::exchange_rate(DOT_U)
 				.saturating_mul_int(Loans::account_deposits(DOT_U, BOB).voucher_balance),
@@ -174,7 +174,7 @@ fn full_workflow_works_as_expected() {
 			),
 			unit(3),
 		);
-		assert_eq!(<Test as Config>::Assets::free_balance(DOT_U, &ALICE), unit(800),);
+		assert_eq!(<Test as Config>::Assets::balance(DOT_U, &ALICE), unit(800),);
 		// reduce 2 dollar from incentive reserve to alice account
 		assert_ok!(Loans::reduce_incentive_reserves(RuntimeOrigin::root(), ALICE, DOT_U, unit(2),));
 		// still 1 dollar left in reserve account
@@ -185,7 +185,7 @@ fn full_workflow_works_as_expected() {
 			unit(1),
 		);
 		// 2 dollar transfer to alice
-		assert_eq!(<Test as Config>::Assets::free_balance(DOT_U, &ALICE), unit(800) + unit(2),);
+		assert_eq!(<Test as Config>::Assets::balance(DOT_U, &ALICE), unit(800) + unit(2),);
 	})
 }
 
