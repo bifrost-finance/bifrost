@@ -610,12 +610,12 @@ dependencies = [
 name = "bifrost-cross-in-out"
 version = "0.8.0"
 dependencies = [
+ "bifrost-currencies",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -652,6 +652,7 @@ name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-runtime-common",
  "bifrost-ve-minting",
  "env_logger 0.10.0",
@@ -661,7 +662,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -705,6 +705,7 @@ name = "bifrost-fee-share"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-slp",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
@@ -714,7 +715,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -738,6 +738,7 @@ name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-salp",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -746,7 +747,6 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -1207,6 +1207,7 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-stable-pool",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
@@ -1216,7 +1217,6 @@ dependencies = [
  "log",
  "node-primitives",
  "nutsfinance-stable-asset",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1268,6 +1268,7 @@ name = "bifrost-slp"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "env_logger 0.10.0",
@@ -1277,7 +1278,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1305,6 +1305,7 @@ name = "bifrost-slpx"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-stable-pool",
@@ -1316,7 +1317,6 @@ dependencies = [
  "frame-system",
  "hex-literal 0.3.4",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1341,6 +1341,7 @@ name = "bifrost-stable-pool"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-runtime-common",
  "bifrost-vtoken-minting",
  "env_logger 0.10.0",
@@ -1350,7 +1351,6 @@ dependencies = [
  "log",
  "node-primitives",
  "nutsfinance-stable-asset",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1398,6 +1398,7 @@ name = "bifrost-system-maker"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-slp",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
@@ -1407,7 +1408,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1431,6 +1431,7 @@ name = "bifrost-system-staking"
 version = "4.0.0-dev"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-farming",
  "bifrost-runtime-common",
  "bifrost-slp",
@@ -1442,7 +1443,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1464,12 +1464,12 @@ dependencies = [
 name = "bifrost-token-issuer"
 version = "0.8.0"
 dependencies = [
+ "bifrost-currencies",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -1487,6 +1487,7 @@ name = "bifrost-ve-minting"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-vtoken-minting",
@@ -1498,7 +1499,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1584,12 +1584,12 @@ name = "bifrost-vstoken-conversion"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal 0.3.4",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -1608,6 +1608,7 @@ name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-runtime-common",
  "bifrost-slp",
  "cumulus-primitives-core",
@@ -1618,7 +1619,6 @@ dependencies = [
  "hex-literal 0.3.4",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -6742,11 +6742,11 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 name = "nutsfinance-stable-asset"
 version = "0.1.0"
 dependencies = [
+ "bifrost-currencies",
  "frame-support",
  "frame-system",
  "log",
  "node-primitives",
- "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
