@@ -20,6 +20,6 @@
 
 //! A list of the different weight modules for our runtime.
 
-pub mod orml_currencies;
+pub mod bifrost_currencies;
 pub mod orml_tokens;
 pub mod pallet_xcm;
