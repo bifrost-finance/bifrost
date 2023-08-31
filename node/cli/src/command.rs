@@ -453,14 +453,11 @@ pub fn run() -> Result<()> {
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
 			use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-			use try_runtime_cli::block_building_info::timestamp_with_aura_info;
 
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
 
 			set_default_ss58_version(chain_spec);
-
-			let info_provider = timestamp_with_aura_info(6000);
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
@@ -470,13 +467,12 @@ pub fn run() -> Result<()> {
 							.map_err(|e| {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
-					type HostFunctionsOf<E> = ExtendedHostFunctions<
-						sp_io::SubstrateHostFunctions,
-						<E as NativeExecutionDispatch>::ExtendHostFunctions,
-					>;
-
+					let info_provider = try_runtime_cli::block_building_info::substrate_info(12000);
 					Ok((
-						cmd.run::<Block, HostFunctionsOf<Executor>, _>(Some(info_provider)),
+						cmd.run::<Block, ExtendedHostFunctions<
+							sp_io::SubstrateHostFunctions,
+							<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
+						>, _>(Some(info_provider)),
 						task_manager,
 					))
 				});
