@@ -694,34 +694,14 @@ impl<T: Config> fungibles::Mutate<T::AccountId> for Pallet<T> {
 				_,
 			>>::transfer(
 				source, dest, amount, preservation
-			)
-			// .map(|actual| {
-			// 	Self::deposit_event(Event::Transferred {
-			// 		currency_id: asset_id,
-			// 		from: source.clone(),
-			// 		to: dest.clone(),
-			// 		amount: actual,
-			// 	});
-			// 	actual
-			// })
-			,
+			),
 			_ => <T::MultiCurrency as fungibles::Mutate<_>>::transfer(
 				asset_id,
 				source,
 				dest,
 				amount,
 				preservation,
-			)
-			// .map(|actual| {
-			// 	Self::deposit_event(Event::Transferred {
-			// 		currency_id: asset_id,
-			// 		from: source.clone(),
-			// 		to: dest.clone(),
-			// 		amount: actual,
-			// 	});
-			// 	actual
-			// })
-			,
+			),
 		}
 	}
 }

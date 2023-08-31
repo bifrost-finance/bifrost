@@ -4,13 +4,13 @@ description = "Provide `MultiCurrency` implementation using `pallet-balances` an
 repository = "https://github.com/open-web3-stack/open-runtime-module-library/tree/master/currencies"
 license = "Apache-2.0"
 version = "0.4.1-dev"
-authors = ["Laminar Developers <hello@laminar.one>"]
+authors = ["Laminar Developers <hello@laminar.one>", "Sora Yu <ymlll0508@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
-serde = { version = "1.0.136", optional = true }
+scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
+serde = { version = "1.0.160", optional = true }
 
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.42" }
 frame-system = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.42" }
