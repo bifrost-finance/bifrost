@@ -98,10 +98,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
@@ -124,10 +122,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 	}: _(RawOrigin::Signed(caller.clone()), caller.clone(),fund_index)
@@ -148,10 +144,8 @@ benchmarks! {
 			contribute_fund::<T>(&caller,fund_index);
 			let _ = Salp::<T>::confirm_contribute(
 				confirmer.clone(),
-				caller.clone(),
-				fund_index,
-				true,
-				[0; 32]
+			0,
+			true
 			);
 		}
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
@@ -172,10 +166,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::unlock(caller_origin.clone(), caller.clone(), fund_index));
@@ -201,10 +193,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 	}: _(RawOrigin::Root,fund_index)
 
@@ -217,10 +207,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 	}: _(RawOrigin::Root,fund_index)
 
@@ -233,10 +221,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
@@ -251,10 +237,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::unlock(caller_origin.clone(), caller.clone(), fund_index));
@@ -269,10 +253,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
@@ -300,7 +282,7 @@ benchmarks! {
 		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-	}: _(RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()), caller,fund_index,true,[0;32])
+	}: _(RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()), 0, true)
 
 	withdraw {
 		let fund_index = create_fund::<T>(1);
@@ -311,10 +293,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 	}: _(RawOrigin::Root, fund_index)
@@ -329,10 +309,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer.clone(),
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
@@ -348,10 +326,8 @@ benchmarks! {
 		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
-			caller.clone(),
-			fund_index,
-			true,
-			[0; 32]
+			0,
+			true
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));

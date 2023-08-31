@@ -32,7 +32,7 @@ build-bifrost-rococo-fast-release:
 
 .PHONY: check-all # cargo check all runtime
 check-all: format
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: test-all # cargo test all runtime
 test-all:
