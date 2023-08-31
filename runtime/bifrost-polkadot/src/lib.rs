@@ -217,7 +217,7 @@ impl Contains<RuntimeCall> for CallFilter {
 		);
 		if is_transfer {
 			let is_disabled = match *call {
-				// orml-currencies module
+				// bifrost-currencies module
 				RuntimeCall::Currencies(bifrost_currencies::Call::transfer {
 					dest: _,
 					currency_id,

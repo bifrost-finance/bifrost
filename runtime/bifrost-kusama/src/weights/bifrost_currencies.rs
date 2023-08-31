@@ -28,7 +28,7 @@
 // --chain=asgard-local
 // --steps=50
 // --repeat=20
-// --pallet=orml-currencies
+// --pallet=bifrost-currencies
 // --extrinsic=*
 // --execution=wasm
 // --wasm-execution=compiled
