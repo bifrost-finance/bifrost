@@ -257,7 +257,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(PollIndex, BalanceOf<T>), ConstU32<100>>,
+		BoundedVec<(PollIndex, BalanceOf<T>), T::MaxVotes>,
 		ValueQuery,
 	>;
 
