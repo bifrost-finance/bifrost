@@ -62,6 +62,7 @@ pub trait WeightInfo {
 	fn set_delegator_role() -> Weight;
 	fn set_referendum_status() -> Weight;
 	fn set_vote_locking_period() -> Weight;
+	fn set_undeciding_timeout() -> Weight;
 	fn kill_referendum() -> Weight;
 	fn notify_vote() -> Weight;
 	fn notify_update_referendum_status() -> Weight;
@@ -114,6 +115,13 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		Weight::from_parts(7_000_000, 0)
 	}
 	fn set_vote_locking_period() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 6_000_000 picoseconds.
+		Weight::from_parts(7_000_000, 0)
+	}
+	fn set_undeciding_timeout() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -198,6 +206,13 @@ impl WeightInfo for () {
 		Weight::from_parts(7_000_000, 0)
 	}
 	fn set_vote_locking_period() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 6_000_000 picoseconds.
+		Weight::from_parts(7_000_000, 0)
+	}
+	fn set_undeciding_timeout() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
