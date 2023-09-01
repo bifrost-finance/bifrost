@@ -27,6 +27,6 @@ decl_runtime_apis! {
 		AccountId: Codec,
 	{
 		/// get flexible fee token and amount to be deducted
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance);
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Block::Extrinsic) -> (CurrencyId, Balance);
 	}
 }

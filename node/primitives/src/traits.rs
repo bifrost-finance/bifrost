@@ -20,7 +20,10 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
+use crate::{
+	AssetIds, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol,
+	XcmInterfaceOperation,
+};
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
@@ -458,31 +461,6 @@ where
 	}
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmInterfaceOperation {
-	// SALP operations
-	UmpContributeTransact,
-	// Statemine operations
-	StatemineTransfer,
-	// SLP operations
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
-	Undelegate,
-	CancelLeave,
-	XtokensTransferBack,
-	ExecuteLeave,
-	ConvertAsset,
-	// VtokenVoting operations
-	VoteVtoken,
-	VoteUpdateReferendum,
-	VoteRemoveDelegatorVote,
+pub trait FeeGetter<RuntimeCall> {
+	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
 }

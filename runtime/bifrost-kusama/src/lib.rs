@@ -71,8 +71,7 @@ use static_assertions::const_assert;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
-#[allow(unused_imports)]
-use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+
 pub use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -92,8 +91,8 @@ use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
-	TokenSymbol,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
+	RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // zenlink imports
 use zenlink_protocol::{
@@ -1092,70 +1091,39 @@ impl pallet_vesting::Config for Runtime {
 
 // Bifrost modules start
 
-// Aggregate name getter to get fee names if the call needs to pay extra fees.
-// If any call need to pay extra fees, it should be added as an item here.
-// Used together with AggregateExtraFeeFilter below.
-pub struct FeeNameGetter;
-impl NameGetter<RuntimeCall> for FeeNameGetter {
-	fn get_name(c: &RuntimeCall) -> ExtraFeeName {
+pub struct ExtraFeeMatcher;
+impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
+	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
 		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) =>
-				ExtraFeeName::SalpContribute,
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::SalpContribute,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
 			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
 				..
-			}) => ExtraFeeName::StatemineTransfer,
-			_ => ExtraFeeName::NoExtraFee,
-		}
-	}
-}
-
-// Aggregate filter to filter if the call needs to pay extra fees
-// If any call need to pay extra fees, it should be added as an item here.
-pub struct AggregateExtraFeeFilter;
-impl Contains<RuntimeCall> for AggregateExtraFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::StatemineTransfer,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
+			RuntimeCall::VtokenVoting(vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::VoteVtoken,
+				extra_fee_currency: vtoken,
+			},
+			RuntimeCall::VtokenVoting(vtoken_voting::Call::remove_delegator_vote {
+				vtoken,
 				..
-			}) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct ContributeFeeFilter;
-impl Contains<RuntimeCall> for ContributeFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct StatemineTransferFeeFilter;
-impl Contains<RuntimeCall> for StatemineTransferFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
-				..
-			}) => true,
-			_ => false,
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
+				extra_fee_currency: vtoken,
+			},
+			_ => ExtraFeeInfo::default(),
 		}
 	}
 }
 
 parameter_types! {
-	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub UmpContributeFee: Balance = UmpTransactFee::get();
 	pub MaxFeeCurrencyOrderListLen: u32 = 50;
 }
-
-pub type MiscFeeHandlers = (
-	MiscFeeHandler<Runtime, RelayCurrencyId, UmpContributeFee, ContributeFeeFilter>,
-	MiscFeeHandler<Runtime, RelayCurrencyId, StatemineTransferFee, StatemineTransferFeeFilter>,
-);
 
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
@@ -1163,14 +1131,10 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = RelayCurrencyId;
-	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler = MiscFeeHandlers;
+	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime>;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
@@ -2141,8 +2105,10 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Block::Extrinsic) -> (CurrencyId, Balance) {
+
+
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &uxt);
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
