@@ -28,11 +28,14 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, ExtraFeeName, TryConvertFrom};
+use node_primitives::{
+	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
+	CurrencyId, ExtraFeeName, TryConvertFrom, XcmInterfaceOperation, BNC,
+};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
-use sp_arithmetic::traits::SaturatedConversion;
+use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion};
 use sp_runtime::{
 	traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
@@ -42,18 +45,17 @@ use sp_std::{vec, vec::Vec};
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
-use crate::misc_fees::{FeeDeductor, FeeGetter};
-
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod migrations;
-pub mod misc_fees;
 mod mock;
 mod tests;
 pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use node_primitives::XcmDestWeightAndFeeHandler;
+
 	use super::*;
 
 	#[pallet::config]
@@ -76,26 +78,9 @@ pub mod pallet {
 		/// Filter if this transaction needs to be deducted extra fee besides basic transaction fee,
 		/// and get the name of the fee
 		type ExtraFeeMatcher: FeeGetter<CallOf<Self>>;
-		/// In charge of deducting extra fees
-		type MiscFeeHandler: FeeDeductor<
-			Self::AccountId,
-			CurrencyIdOf<Self>,
-			PalletBalanceOf<Self>,
-			CallOf<Self>,
-		>;
 
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
-
-		#[pallet::constant]
-		type NativeCurrencyId: Get<CurrencyIdOf<Self>>;
-
-		#[pallet::constant]
-		type AlternativeFeeCurrencyId: Get<CurrencyIdOf<Self>>;
-
-		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
-		#[pallet::constant]
-		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
 
 		#[pallet::constant]
 		type MaxFeeCurrencyOrderListLen: Get<u32>;
@@ -104,6 +89,8 @@ pub mod pallet {
 
 		/// The only origin that can set universal fee currency order list
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, PalletBalanceOf<Self>>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -125,7 +112,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		FlexibleFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>), // token and amount
 		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
-		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
+		// [extra_fee_name, currency_id, amount_in, BNC_amount_out]
+		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>),
 	}
 
 	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
@@ -156,6 +144,8 @@ pub mod pallet {
 		Overflow,
 		ConversionError,
 		WrongListLength,
+		WeightAndFeeNotExist,
+		DexFailedToGetAmountInByPath,
 	}
 
 	#[pallet::call]
@@ -226,15 +216,9 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| DispatchError::Other("Fee calculation Error."))?;
 
 		if let Some((currency_id, amount_in, amount_out)) = result_option {
-			if currency_id != T::NativeCurrencyId::get() {
-				let native_asset_id: AssetId = AssetId::try_convert_from(
-					T::NativeCurrencyId::get(),
-					T::ParachainId::get().into(),
-				)
-				.map_err(|_| DispatchError::Other("Conversion Error."))?;
-				let asset_id: AssetId =
-					AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
-						.map_err(|_| DispatchError::Other("Conversion Error."))?;
+			if currency_id != BNC {
+				let native_asset_id = Self::get_currency_asset_id(BNC)?;
+				let asset_id = Self::get_currency_asset_id(currency_id)?;
 				let path = vec![asset_id, native_asset_id];
 
 				T::DexOperator::inner_swap_assets_for_exact_assets(
@@ -259,14 +243,80 @@ impl<T: Config> Pallet<T> {
 	pub fn cal_fee_token_and_amount(
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
-	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
-		let result_option = Self::find_out_fee_currency_and_amount(who, fee)
-			.map_err(|_| DispatchError::Other("Fee calculation Error."))?;
-
+		utx: &CallOf<T>,
+	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), Error<T>> {
+		let total_fee_info = Self::get_extrinsic_and_extra_fee_total(utx, fee)?;
 		let (currency_id, amount_in, _amount_out) =
-			result_option.ok_or(DispatchError::Other("Not enough balance for fee."))?;
+			Self::find_out_fee_currency_and_amount(who, total_fee_info.0)
+				.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?
+				.ok_or(Error::<T>::DexFailedToGetAmountInByPath)?;
 
 		Ok((currency_id, amount_in))
+	}
+
+	pub fn get_extrinsic_and_extra_fee_total(
+		call: &CallOf<T>,
+		fee: PalletBalanceOf<T>,
+	) -> Result<(PalletBalanceOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>, Vec<AssetId>), Error<T>>
+	{
+		let mut total_fee = fee;
+
+		let native_asset_id = Self::get_currency_asset_id(BNC)?;
+		// 确定path只有两个元素
+		let mut path = vec![native_asset_id, native_asset_id];
+
+		// See if the this RuntimeCall needs to pay extra fee
+		let fee_info = T::ExtraFeeMatcher::get_fee_info(call);
+		if fee_info.extra_fee_name != ExtraFeeName::NoExtraFee {
+			// if the fee_info.extra_fee_name is not NoExtraFee, it means this RuntimeCall needs to
+			// pay extra fee
+			let (currency_id, operation) = match fee_info.extra_fee_name {
+				ExtraFeeName::SalpContribute =>
+					(fee_info.extra_fee_currency, XcmInterfaceOperation::UmpContributeTransact),
+				ExtraFeeName::StatemineTransfer =>
+					(fee_info.extra_fee_currency, XcmInterfaceOperation::StatemineTransfer),
+				ExtraFeeName::VoteVtoken => {
+					// We define error code 77 for conversion failure error
+					let fee_currency = fee_info
+						.extra_fee_currency
+						.to_token()
+						.map_err(|_| Error::<T>::ConversionError)?;
+					(fee_currency, XcmInterfaceOperation::VoteVtoken)
+				},
+				ExtraFeeName::VoteRemoveDelegatorVote => {
+					// We define error code 77 for conversion failure error
+					let fee_currency = fee_info
+						.extra_fee_currency
+						.to_token()
+						.map_err(|_| Error::<T>::ConversionError)?;
+					(fee_currency, XcmInterfaceOperation::VoteRemoveDelegatorVote)
+				},
+				ExtraFeeName::NoExtraFee =>
+					(fee_info.extra_fee_currency, XcmInterfaceOperation::Any),
+			};
+
+			// We define error code 55 for WeightAndFeeNotSet error
+			let (_, fee_value) =
+				T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+					.ok_or(Error::<T>::WeightAndFeeNotExist)?;
+
+			// We define error code 77 for conversion failure error
+			let asset_id = Self::get_currency_asset_id(currency_id)?;
+			path = vec![native_asset_id, asset_id];
+
+			// get the fee currency value in BNC
+			// we define error code 44 for DexOperator error
+			let extra_fee_vec =
+				T::DexOperator::get_amount_in_by_path(fee_value.saturated_into(), &path)
+					.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?;
+
+			let extra_bnc_fee = PalletBalanceOf::<T>::saturated_from(extra_fee_vec[0]);
+			total_fee = total_fee.checked_add(&extra_bnc_fee).ok_or(Error::<T>::Overflow)?;
+
+			return Ok((total_fee, extra_bnc_fee, fee_value, path));
+		} else {
+			return Ok((total_fee, Zero::zero(), Zero::zero(), path));
+		}
 	}
 }
 
@@ -301,11 +351,42 @@ where
 			WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
 		};
 
-		// Make sure there are enough BNC to be deducted if the user has assets in other form of
-		// tokens rather than BNC.
-		Self::ensure_can_charge_fee(who, fee, withdraw_reason)
+		// See if the this RuntimeCall needs to pay extra fee
+		let fee_info = T::ExtraFeeMatcher::get_fee_info(&call);
+		let (total_fee, extra_bnc_fee, fee_value, path) =
+			Self::get_extrinsic_and_extra_fee_total(call, fee)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(55)))?;
+
+		// Make sure there are enough BNC(extrinsic fee + extra fee) to be deducted if the user has
+		// assets in other form of tokens rather than BNC.
+		Self::ensure_can_charge_fee(who, total_fee, withdraw_reason)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
+		if fee_info.extra_fee_name != ExtraFeeName::NoExtraFee {
+			// swap BNC for fee_currency
+			T::DexOperator::inner_swap_assets_for_exact_assets(
+				who,
+				fee_value.saturated_into(),
+				extra_bnc_fee.saturated_into(),
+				&path,
+				who,
+			)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(44)))?;
+
+			// burn fee_currency
+			T::MultiCurrency::withdraw(fee_info.extra_fee_currency, who, fee_value)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+			// deposit extra fee deducted event
+			Self::deposit_event(Event::ExtraFeeDeducted(
+				fee_info.extra_fee_name,
+				fee_info.extra_fee_currency,
+				fee_value,
+				extra_bnc_fee,
+			));
+		}
+
+		// withdraw normal extrinsic fee
 		let rs = match T::Currency::withdraw(
 			who,
 			fee,
@@ -315,21 +396,6 @@ where
 			Ok(imbalance) => Ok(Some(imbalance)),
 			Err(_msg) => Err(InvalidTransaction::Payment.into()),
 		};
-
-		// See if the this RuntimeCall needs to pay extra fee
-		let (fee_name, if_extra_fee) = T::ExtraFeeMatcher::get_fee_info(&call);
-		if if_extra_fee {
-			// We define 77 as the error of extra fee deduction failure.
-			let (extra_fee_currency, extra_fee_amount) =
-				T::MiscFeeHandler::deduct_fee(who, &T::TreasuryAccount::get(), call).map_err(
-					|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(77u8)),
-				)?;
-			Self::deposit_event(Event::ExtraFeeDeducted(
-				fee_name,
-				extra_fee_currency,
-				extra_fee_amount,
-			));
-		}
 
 		rs
 	}
@@ -384,7 +450,7 @@ impl<T: Config> Pallet<T> {
 		// transaction in the DEX in exchange for BNC
 		for currency_id in user_fee_charge_order_list {
 			// If it is mainnet currency
-			if currency_id == T::NativeCurrencyId::get() {
+			if currency_id == BNC {
 				// check native balance if is enough
 				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee).is_ok() {
 					// currency, amount_in, amount_out
@@ -392,17 +458,13 @@ impl<T: Config> Pallet<T> {
 				}
 			} else {
 				// If it is other assets, go to exchange fee amount.
-				let native_asset_id: AssetId = AssetId::try_convert_from(
-					T::NativeCurrencyId::get(),
-					T::ParachainId::get().into(),
-				)
-				.map_err(|_| Error::<T>::ConversionError)?;
+				let native_asset_id =
+					Self::get_currency_asset_id(BNC).map_err(|_| Error::<T>::ConversionError)?;
 
 				let amount_out: AssetBalance = fee.saturated_into();
 
-				let asset_id: AssetId =
-					AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
-						.map_err(|_| Error::<T>::ConversionError)?;
+				let asset_id = Self::get_currency_asset_id(currency_id)
+					.map_err(|_| Error::<T>::ConversionError)?;
 
 				let path = vec![asset_id, native_asset_id];
 				// see if path exists, if not, continue.
@@ -422,5 +484,12 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 		Ok(None)
+	}
+
+	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
+		let asset_id: AssetId =
+			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
+				.map_err(|_| Error::<T>::ConversionError)?;
+		Ok(asset_id)
 	}
 }

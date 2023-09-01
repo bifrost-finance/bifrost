@@ -21,7 +21,8 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::{
-	AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol, XcmInterfaceOperation,
+	AssetIds, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol,
+	XcmInterfaceOperation,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -457,4 +458,8 @@ where
 	) -> DispatchResult {
 		Ok(())
 	}
+}
+
+pub trait FeeGetter<RuntimeCall> {
+	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
 }

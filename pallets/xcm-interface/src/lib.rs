@@ -106,18 +106,6 @@ pub mod pallet {
 		type RelayNetwork: Get<NetworkId>;
 
 		#[pallet::constant]
-		type StatemineTransferFee: Get<BalanceOf<Self>>;
-
-		#[pallet::constant]
-		type StatemineTransferWeight: Get<Weight>;
-
-		#[pallet::constant]
-		type ContributionFee: Get<BalanceOf<Self>>;
-
-		#[pallet::constant]
-		type ContributionWeight: Get<Weight>;
-
-		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
 
 		#[pallet::constant]
@@ -129,6 +117,7 @@ pub mod pallet {
 		FeeConvertFailed,
 		XcmExecutionFailed,
 		XcmSendFailed,
+		OperationWeightAndFeeNotExist,
 	}
 
 	#[pallet::event]
@@ -221,7 +210,8 @@ pub mod pallet {
 				T::RelaychainCurrencyId::get(),
 				XcmInterfaceOperation::StatemineTransfer,
 			)
-			.unwrap_or((T::StatemineTransferWeight::get(), T::StatemineTransferFee::get()));
+			.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
+
 			let xcm_fee_u128 =
 				TryInto::<u128>::try_into(xcm_fee).map_err(|_| Error::<T>::FeeConvertFailed)?;
 
@@ -283,7 +273,7 @@ pub mod pallet {
 				T::RelaychainCurrencyId::get(),
 				XcmInterfaceOperation::UmpContributeTransact,
 			)
-			.unwrap_or((T::ContributionWeight::get(), T::ContributionFee::get()));
+			.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
 
 			// Construct confirm_contribute_call
 			let confirm_contribute_call = T::SalpHelper::confirm_contribute_call();

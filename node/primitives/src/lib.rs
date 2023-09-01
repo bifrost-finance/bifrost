@@ -142,6 +142,8 @@ pub type DistributionId = u32;
 pub enum ExtraFeeName {
 	SalpContribute,
 	StatemineTransfer,
+	VoteVtoken,
+	VoteRemoveDelegatorVote,
 	NoExtraFee,
 }
 
@@ -262,6 +264,20 @@ pub enum XcmInterfaceOperation {
 	ConvertAsset,
 	// VtokenVoting operations
 	VoteVtoken,
-	VoteUpdateReferendum,
 	VoteRemoveDelegatorVote,
+	Any,
+}
+
+pub struct ExtraFeeInfo {
+	pub extra_fee_name: ExtraFeeName,
+	pub extra_fee_currency: CurrencyId,
+}
+
+impl Default for ExtraFeeInfo {
+	fn default() -> Self {
+		Self {
+			extra_fee_name: ExtraFeeName::NoExtraFee,
+			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
+		}
+	}
 }
