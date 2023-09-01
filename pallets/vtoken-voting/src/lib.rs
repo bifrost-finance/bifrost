@@ -170,6 +170,10 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			locking_period: BlockNumberFor<T>,
 		},
+		UndecidingTimeoutSet {
+			vtoken: CurrencyIdOf<T>,
+			undeciding_timeout: BlockNumberFor<T>,
+		},
 		ReferendumKilled {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
@@ -230,6 +234,8 @@ pub mod pallet {
 		InsufficientFunds,
 		/// Maximum number of votes reached.
 		MaxVotesReached,
+		/// Maximum number of items reached.
+		TooMany,
 	}
 
 	/// Information concerning any given referendum.
@@ -297,6 +303,10 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
+	pub type UndecidingTimeout<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
+
+	#[pallet::storage]
 	pub type DelegatorVote<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
@@ -304,6 +314,15 @@ pub mod pallet {
 		Twox64Concat,
 		DerivativeIndex,
 		AccountVote<BalanceOf<T>>,
+	>;
+
+	#[pallet::storage]
+	pub type ReferendumTimeout<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		BlockNumberFor<T>,
+		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<50>>,
+		ValueQuery,
 	>;
 
 	#[pallet::genesis_config]
@@ -329,6 +348,30 @@ pub mod pallet {
 					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
 			});
+		}
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
+			let relay_current_block_number =
+				T::RelaychainBlockNumberProvider::current_block_number();
+			ReferendumTimeout::<T>::get(relay_current_block_number).iter().for_each(
+				|(vtoken, poll_index)| {
+					ReferendumInfoFor::<T>::mutate(
+						vtoken,
+						poll_index,
+						|maybe_info| match maybe_info {
+							Some(info) =>
+								if let ReferendumInfo::Ongoing(_) = info {
+									*info = ReferendumInfo::Completed(relay_current_block_number);
+								},
+							None => {},
+						},
+					);
+				},
+			);
+			Zero::zero()
 		}
 	}
 
@@ -623,6 +666,21 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_undeciding_timeout())]
+		pub fn set_undeciding_timeout(
+			origin: OriginFor<T>,
+			vtoken: CurrencyIdOf<T>,
+			undeciding_timeout: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_vtoken(&vtoken)?;
+			UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
+			Self::deposit_event(Event::<T>::UndecidingTimeoutSet { vtoken, undeciding_timeout });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_vote())]
 		pub fn notify_vote(
 			origin: OriginFor<T>,
@@ -663,9 +721,20 @@ pub mod pallet {
 						|maybe_info| -> DispatchResult {
 							if let Some(info) = maybe_info {
 								if let ReferendumInfo::Ongoing(status) = info {
-									status.submitted = Some(
-										T::RelaychainBlockNumberProvider::current_block_number(),
-									);
+									let relay_current_block_number =
+										T::RelaychainBlockNumberProvider::current_block_number();
+									status.submitted = Some(relay_current_block_number);
+									ReferendumTimeout::<T>::mutate(
+										relay_current_block_number.saturating_add(
+											UndecidingTimeout::<T>::get(vtoken)
+												.ok_or(Error::<T>::NoData)?,
+										),
+										|ref_vec| {
+											ref_vec
+												.try_push((vtoken, poll_index))
+												.map_err(|_| Error::<T>::TooMany)
+										},
+									)?;
 									Self::deposit_event(Event::<T>::ReferendumInfoCreated {
 										vtoken,
 										poll_index,
@@ -686,7 +755,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_update_referendum_status())]
 		pub fn notify_update_referendum_status(
 			origin: OriginFor<T>,
@@ -721,7 +790,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(10)]
+		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
 		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
