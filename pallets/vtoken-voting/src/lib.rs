@@ -385,11 +385,14 @@ pub mod pallet {
 			// create referendum if not exist
 			let mut submitted = false;
 			if !ReferendumInfoFor::<T>::contains_key(vtoken, poll_index) {
-				let info = ReferendumInfo::Ongoing(ReferendumStatus {
-					submitted: None,
-					tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
-				});
-				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
+				ReferendumInfoFor::<T>::insert(
+					vtoken,
+					poll_index,
+					ReferendumInfo::Ongoing(ReferendumStatus {
+						submitted: None,
+						tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
+					}),
+				);
 			} else {
 				Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 				submitted = true;
