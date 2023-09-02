@@ -141,11 +141,6 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 		},
-		ReferendumStatusUpdated {
-			who: AccountIdOf<T>,
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
 		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -179,11 +174,6 @@ pub mod pallet {
 			poll_index: PollIndex,
 		},
 		VoteNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-			success: bool,
-		},
-		ReferendumStatusUpdateNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
@@ -482,55 +472,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::update_referendum_status())]
-		pub fn update_referendum_status(
-			origin: OriginFor<T>,
-			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndex,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_no_pending_update_referendum_status(vtoken, poll_index)?;
-			Self::ensure_referendum_ongoing(vtoken, poll_index)?;
-
-			let notify_call = Call::<T>::notify_update_referendum_status {
-				query_id: 0,
-				response: Default::default(),
-			};
-			let derivative_index =
-				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
-					.ok_or(Error::<T>::NoData)?;
-			let remove_vote_call =
-				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-			)
-			.ok_or(Error::<T>::NoData)?;
-			Self::send_xcm_with_notify(
-				derivative_index,
-				remove_vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					PendingReferendumStatus::<T>::insert(
-						query_id,
-						(
-							vtoken,
-							poll_index,
-							frame_system::Pallet::<T>::block_number()
-								.saturating_add(T::QueryTimeout::get()),
-						),
-					);
-				},
-			)?;
-
-			Self::deposit_event(Event::<T>::ReferendumStatusUpdated { who, vtoken, poll_index });
-
-			Ok(())
-		}
-
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
 		pub fn remove_delegator_vote(
@@ -755,41 +696,6 @@ pub mod pallet {
 				}
 			}
 
-			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
-
-			Ok(())
-		}
-
-		#[pallet::call_index(10)]
-		#[pallet::weight(<T as Config>::WeightInfo::notify_update_referendum_status())]
-		pub fn notify_update_referendum_status(
-			origin: OriginFor<T>,
-			query_id: QueryId,
-			response: Response,
-		) -> DispatchResult {
-			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, _)) = PendingReferendumStatus::<T>::take(query_id) {
-				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
-				if success {
-					ReferendumInfoFor::<T>::try_mutate_exists(
-						vtoken,
-						poll_index,
-						|maybe_info| -> DispatchResult {
-							if let Some(info) = maybe_info {
-								*info = ReferendumInfo::Completed(
-									T::RelaychainBlockNumberProvider::current_block_number(),
-								);
-							}
-							Ok(())
-						},
-					)?;
-				}
-				Self::deposit_event(Event::<T>::ReferendumStatusUpdateNotified {
-					vtoken,
-					poll_index,
-					success,
-				});
-			}
 			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
 
 			Ok(())
@@ -1076,18 +982,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn ensure_no_pending_update_referendum_status(
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		) -> DispatchResult {
-			ensure!(
-				!PendingReferendumStatus::<T>::iter()
-					.any(|(_, (v, p, _))| v == vtoken && p == poll_index),
-				Error::<T>::PendingUpdateReferendumStatus
-			);
-			Ok(())
-		}
-
 		pub fn ensure_referendum_ongoing(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
@@ -1186,19 +1080,6 @@ pub mod pallet {
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
-		}
-
-		fn find_derivative_index_by_role(
-			vtoken: CurrencyIdOf<T>,
-			target_role: VoteRole,
-		) -> Option<DerivativeIndex> {
-			DelegatorVote::<T>::iter_prefix(vtoken).into_iter().find_map(|(index, vote)| {
-				if target_role == vote.into() {
-					Some(index)
-				} else {
-					None
-				}
-			})
 		}
 	}
 }
