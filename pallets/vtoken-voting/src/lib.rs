@@ -393,7 +393,7 @@ pub mod pallet {
 			Self::ensure_vtoken(&vtoken)?;
 			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
-			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
+			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
 			// create referendum if not exist
 			let mut submitted = false;
@@ -414,7 +414,7 @@ pub mod pallet {
 				DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
 					if let Some(inner_vote) = maybe_vote {
 						inner_vote.checked_add(vote).map_err(|_| Error::<T>::NoData)?;
-						Ok(inner_vote.clone())
+						Ok(*inner_vote)
 					} else {
 						Err(Error::<T>::NoData)
 					}
@@ -491,7 +491,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
+			Self::ensure_no_pending_update_referendum_status(vtoken, poll_index)?;
 			Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 
 			let notify_call = Call::<T>::notify_update_referendum_status {
@@ -814,7 +814,7 @@ pub mod pallet {
 						|maybe_vote| {
 							if let Some(inner_vote) = maybe_vote {
 								inner_vote
-									.checked_sub(inner_vote.clone())
+									.checked_sub(*inner_vote)
 									.map_err(|_| Error::<T>::NoData)?;
 								Ok(())
 							} else {
@@ -1065,26 +1065,24 @@ pub mod pallet {
 		}
 
 		fn ensure_no_pending_vote(
-			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndex,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			ensure!(
-				PendingVotingInfo::<T>::iter()
-					.find(|(_, (v, p, _, _, _, _))| v == vtoken && p == poll_index)
-					.is_none(),
+				!PendingVotingInfo::<T>::iter()
+					.any(|(_, (v, p, _, _, _, _))| v == vtoken && p == poll_index),
 				Error::<T>::PendingVote
 			);
 			Ok(())
 		}
 
 		fn ensure_no_pending_update_referendum_status(
-			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndex,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			ensure!(
-				PendingReferendumStatus::<T>::iter()
-					.find(|(_, (v, p, _))| v == vtoken && p == poll_index)
-					.is_none(),
+				!PendingReferendumStatus::<T>::iter()
+					.any(|(_, (v, p, _))| v == vtoken && p == poll_index),
 				Error::<T>::PendingUpdateReferendumStatus
 			);
 			Ok(())
