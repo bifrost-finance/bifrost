@@ -409,24 +409,12 @@ pub mod pallet {
 				weight,
 				extra_fee,
 				|query_id| {
-					let expired_block_number = frame_system::Pallet::<T>::block_number()
-						.saturating_add(T::QueryTimeout::get());
 					if !submitted {
-						PendingReferendumInfo::<T>::insert(
-							query_id,
-							(vtoken, poll_index, expired_block_number),
-						);
+						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
 					}
 					PendingVotingInfo::<T>::insert(
 						query_id,
-						(
-							vtoken,
-							poll_index,
-							derivative_index,
-							who.clone(),
-							vote,
-							expired_block_number,
-						),
+						(vtoken, poll_index, derivative_index, who.clone(), vote),
 					)
 				},
 			)?;
@@ -489,13 +477,7 @@ pub mod pallet {
 				|query_id| {
 					PendingRemoveDelegatorVote::<T>::insert(
 						query_id,
-						(
-							vtoken,
-							poll_index,
-							derivative_index,
-							frame_system::Pallet::<T>::block_number()
-								.saturating_add(T::QueryTimeout::get()),
-						),
+						(vtoken, poll_index, derivative_index),
 					);
 				},
 			)?;
@@ -621,7 +603,7 @@ pub mod pallet {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
-			if let Some((vtoken, poll_index, derivative_index, who, vote, _)) =
+			if let Some((vtoken, poll_index, derivative_index, who, vote)) =
 				PendingVotingInfo::<T>::take(query_id)
 			{
 				if !success {
@@ -644,7 +626,7 @@ pub mod pallet {
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
 
-			if let Some((vtoken, poll_index, _)) = PendingReferendumInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::take(query_id) {
 				if success {
 					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
@@ -694,7 +676,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, derivative_index, _)) =
+			if let Some((vtoken, poll_index, derivative_index)) =
 				PendingRemoveDelegatorVote::<T>::take(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
@@ -961,7 +943,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure!(
 				!PendingVotingInfo::<T>::iter()
-					.any(|(_, (v, p, _, _, _, _))| v == vtoken && p == poll_index),
+					.any(|(_, (v, p, _, _, _))| v == vtoken && p == poll_index),
 				Error::<T>::PendingVote
 			);
 			Ok(())
