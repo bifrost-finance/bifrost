@@ -327,26 +327,30 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub delegator_votes: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			GenesisConfig { roles: vec![] }
+			GenesisConfig { delegator_votes: vec![], undeciding_timeouts: vec![] }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.roles.iter().for_each(|(vtoken, role, derivative_index)| {
+			self.delegator_votes.iter().for_each(|(vtoken, role, derivative_index)| {
 				let vote_role = VoteRole::try_from(*role).unwrap();
 				DelegatorVote::<T>::insert(
 					vtoken,
 					derivative_index,
 					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
+			});
+			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
+				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
 		}
 	}
@@ -387,6 +391,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
 
@@ -399,12 +404,12 @@ pub mod pallet {
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
 			} else {
+				Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 				submitted = true;
 			}
 
 			// record vote info
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
-
 			let new_vote =
 				DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
 					if let Some(inner_vote) = maybe_vote {
