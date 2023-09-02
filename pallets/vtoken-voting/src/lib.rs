@@ -472,7 +472,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
@@ -520,7 +520,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::kill_referendum())]
 		pub fn kill_referendum(
 			origin: OriginFor<T>,
@@ -542,7 +542,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_delegator_role())]
 		pub fn set_delegator_role(
 			origin: OriginFor<T>,
@@ -577,7 +577,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_referendum_status())]
 		pub fn set_referendum_status(
 			origin: OriginFor<T>,
@@ -596,7 +596,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_vote_locking_period())]
 		pub fn set_vote_locking_period(
 			origin: OriginFor<T>,
@@ -611,7 +611,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_undeciding_timeout())]
 		pub fn set_undeciding_timeout(
 			origin: OriginFor<T>,
@@ -626,7 +626,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_vote())]
 		pub fn notify_vote(
 			origin: OriginFor<T>,
@@ -701,7 +701,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(11)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
 		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
