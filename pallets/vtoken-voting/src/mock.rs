@@ -304,7 +304,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	vtoken_voting::GenesisConfig::<Runtime> {
-		roles: vec![
+		delegator_votes: vec![
 			(VKSM, 0, 0),
 			(VKSM, 1, 1),
 			(VKSM, 2, 2),
@@ -317,6 +317,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(VKSM, 20, 20),
 			(VKSM, 21, 21),
 		],
+		undeciding_timeouts: vec![(VKSM, 100)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

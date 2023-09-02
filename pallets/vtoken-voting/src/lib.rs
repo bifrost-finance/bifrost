@@ -174,6 +174,10 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			locking_period: BlockNumberFor<T>,
 		},
+		UndecidingTimeoutSet {
+			vtoken: CurrencyIdOf<T>,
+			undeciding_timeout: BlockNumberFor<T>,
+		},
 		ReferendumKilled {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
@@ -234,6 +238,8 @@ pub mod pallet {
 		InsufficientFunds,
 		/// Maximum number of votes reached.
 		MaxVotesReached,
+		/// Maximum number of items reached.
+		TooMany,
 	}
 
 	/// Information concerning any given referendum.
@@ -261,7 +267,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(PollIndex, BalanceOf<T>), ConstU32<100>>,
+		BoundedVec<(PollIndex, BalanceOf<T>), T::MaxVotes>,
 		ValueQuery,
 	>;
 
@@ -301,6 +307,10 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
+	pub type UndecidingTimeout<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
+
+	#[pallet::storage]
 	pub type DelegatorVote<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
@@ -310,22 +320,32 @@ pub mod pallet {
 		AccountVote<BalanceOf<T>>,
 	>;
 
+	#[pallet::storage]
+	pub type ReferendumTimeout<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		BlockNumberFor<T>,
+		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<50>>,
+		ValueQuery,
+	>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub delegator_votes: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			GenesisConfig { roles: vec![] }
+			GenesisConfig { delegator_votes: vec![], undeciding_timeouts: vec![] }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.roles.iter().for_each(|(vtoken, role, derivative_index)| {
+			self.delegator_votes.iter().for_each(|(vtoken, role, derivative_index)| {
 				let vote_role = VoteRole::try_from(*role).unwrap();
 				DelegatorVote::<T>::insert(
 					vtoken,
@@ -333,6 +353,33 @@ pub mod pallet {
 					AccountVote::<BalanceOf<T>>::from(vote_role),
 				);
 			});
+			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
+				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
+			});
+		}
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
+			let relay_current_block_number =
+				T::RelaychainBlockNumberProvider::current_block_number();
+			ReferendumTimeout::<T>::get(relay_current_block_number).iter().for_each(
+				|(vtoken, poll_index)| {
+					ReferendumInfoFor::<T>::mutate(
+						vtoken,
+						poll_index,
+						|maybe_info| match maybe_info {
+							Some(info) =>
+								if let ReferendumInfo::Ongoing(_) = info {
+									*info = ReferendumInfo::Completed(relay_current_block_number);
+								},
+							None => {},
+						},
+					);
+				},
+			);
+			Zero::zero()
 		}
 	}
 
@@ -348,6 +395,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
+			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
 			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
 
@@ -360,12 +408,12 @@ pub mod pallet {
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
 			} else {
+				Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 				submitted = true;
 			}
 
 			// record vote info
 			Self::try_vote(&who, vtoken, poll_index, vote)?;
-
 			let new_vote =
 				DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
 					if let Some(inner_vote) = maybe_vote {
@@ -491,7 +539,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(<T as Config>::WeightInfo::unlock_delegator_token())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -631,6 +679,21 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_undeciding_timeout())]
+		pub fn set_undeciding_timeout(
+			origin: OriginFor<T>,
+			vtoken: CurrencyIdOf<T>,
+			undeciding_timeout: BlockNumberFor<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_vtoken(&vtoken)?;
+			UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
+			Self::deposit_event(Event::<T>::UndecidingTimeoutSet { vtoken, undeciding_timeout });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_vote())]
 		pub fn notify_vote(
 			origin: OriginFor<T>,
@@ -671,9 +734,20 @@ pub mod pallet {
 						|maybe_info| -> DispatchResult {
 							if let Some(info) = maybe_info {
 								if let ReferendumInfo::Ongoing(status) = info {
-									status.submitted = Some(
-										T::RelaychainBlockNumberProvider::current_block_number(),
-									);
+									let relay_current_block_number =
+										T::RelaychainBlockNumberProvider::current_block_number();
+									status.submitted = Some(relay_current_block_number);
+									ReferendumTimeout::<T>::mutate(
+										relay_current_block_number.saturating_add(
+											UndecidingTimeout::<T>::get(vtoken)
+												.ok_or(Error::<T>::NoData)?,
+										),
+										|ref_vec| {
+											ref_vec
+												.try_push((vtoken, poll_index))
+												.map_err(|_| Error::<T>::TooMany)
+										},
+									)?;
 									Self::deposit_event(Event::<T>::ReferendumInfoCreated {
 										vtoken,
 										poll_index,
@@ -694,7 +768,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_update_referendum_status())]
 		pub fn notify_update_referendum_status(
 			origin: OriginFor<T>,
@@ -729,7 +803,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(10)]
+		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
 		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
