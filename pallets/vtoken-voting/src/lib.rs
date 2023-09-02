@@ -32,18 +32,15 @@ pub mod traits;
 mod vote;
 pub mod weights;
 
+use crate::vote::{Casting, Tally, Voting};
 pub use crate::{
 	call::*,
 	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
-use crate::{
-	traits::Tally,
-	vote::{Casting, Voting},
-};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Get, LockIdentifier, VoteTally},
+	traits::{Get, LockIdentifier},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
@@ -390,7 +387,7 @@ pub mod pallet {
 			if !ReferendumInfoFor::<T>::contains_key(vtoken, poll_index) {
 				let info = ReferendumInfo::Ongoing(ReferendumStatus {
 					submitted: None,
-					tally: TallyOf::<T>::new(0u16),
+					tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
 				});
 				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
 			} else {
