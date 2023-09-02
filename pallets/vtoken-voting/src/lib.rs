@@ -527,7 +527,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(<T as Config>::WeightInfo::unlock_delegator_token())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
