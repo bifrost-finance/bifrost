@@ -256,34 +256,19 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type PendingReferendumInfo<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex)>;
 
 	#[pallet::storage]
 	pub type PendingVotingInfo<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
 		QueryId,
-		(
-			CurrencyIdOf<T>,
-			PollIndex,
-			DerivativeIndex,
-			AccountIdOf<T>,
-			AccountVote<BalanceOf<T>>,
-			BlockNumberFor<T>,
-		),
+		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, AccountIdOf<T>, AccountVote<BalanceOf<T>>),
 	>;
 
 	#[pallet::storage]
-	pub type PendingReferendumStatus<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
-
-	#[pallet::storage]
-	pub type PendingRemoveDelegatorVote<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		QueryId,
-		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, BlockNumberFor<T>),
-	>;
+	pub type PendingRemoveDelegatorVote<T: Config> =
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, DerivativeIndex)>;
 
 	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
