@@ -392,9 +392,21 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
-		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		// run_to(3);
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &0));
+		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+
+		// run_to(6);
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &1));
+		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+
+		// run_to(7);
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
 }
@@ -411,6 +423,14 @@ fn errors_with_vote_work() {
 		assert_noop!(
 			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 3, aye(11, 0)),
 			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 0, aye(10, 0)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 1, aye(10, 0)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 2, aye(10, 0)));
+		assert_noop!(
+			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 3, aye(10, 0)),
+			Error::<Runtime>::MaxVotesReached
 		);
 	});
 }

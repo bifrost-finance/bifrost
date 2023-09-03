@@ -31,18 +31,15 @@ mod traits;
 mod vote;
 pub mod weights;
 
+use crate::vote::{Casting, Tally, Voting};
 pub use crate::{
 	call::*,
 	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
-use crate::{
-	traits::Tally,
-	vote::{Casting, Voting},
-};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Get, LockIdentifier, VoteTally},
+	traits::{Get, LockIdentifier},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
@@ -145,11 +142,6 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 		},
-		ReferendumStatusUpdated {
-			who: AccountIdOf<T>,
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
 		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -183,11 +175,6 @@ pub mod pallet {
 			poll_index: PollIndex,
 		},
 		VoteNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-			success: bool,
-		},
-		ReferendumStatusUpdateNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
@@ -273,34 +260,19 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type PendingReferendumInfo<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex)>;
 
 	#[pallet::storage]
 	pub type PendingVotingInfo<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
 		QueryId,
-		(
-			CurrencyIdOf<T>,
-			PollIndex,
-			DerivativeIndex,
-			AccountIdOf<T>,
-			AccountVote<BalanceOf<T>>,
-			BlockNumberFor<T>,
-		),
+		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, AccountIdOf<T>, AccountVote<BalanceOf<T>>),
 	>;
 
 	#[pallet::storage]
-	pub type PendingReferendumStatus<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, BlockNumberFor<T>)>;
-
-	#[pallet::storage]
-	pub type PendingRemoveDelegatorVote<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		QueryId,
-		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, BlockNumberFor<T>),
-	>;
+	pub type PendingRemoveDelegatorVote<T: Config> =
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, DerivativeIndex)>;
 
 	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
@@ -397,16 +369,19 @@ pub mod pallet {
 			Self::ensure_vtoken(&vtoken)?;
 			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
-			Self::ensure_no_pending_vote(&vtoken, &poll_index)?;
+			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
 			// create referendum if not exist
 			let mut submitted = false;
 			if !ReferendumInfoFor::<T>::contains_key(vtoken, poll_index) {
-				let info = ReferendumInfo::Ongoing(ReferendumStatus {
-					submitted: None,
-					tally: TallyOf::<T>::new(0u16),
-				});
-				ReferendumInfoFor::<T>::insert(vtoken, poll_index, info.clone());
+				ReferendumInfoFor::<T>::insert(
+					vtoken,
+					poll_index,
+					ReferendumInfo::Ongoing(ReferendumStatus {
+						submitted: None,
+						tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
+					}),
+				);
 			} else {
 				Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 				submitted = true;
@@ -418,7 +393,7 @@ pub mod pallet {
 				DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
 					if let Some(inner_vote) = maybe_vote {
 						inner_vote.checked_add(vote).map_err(|_| Error::<T>::NoData)?;
-						Ok(inner_vote.clone())
+						Ok(*inner_vote)
 					} else {
 						Err(Error::<T>::NoData)
 					}
@@ -439,24 +414,12 @@ pub mod pallet {
 				weight,
 				extra_fee,
 				|query_id| {
-					let expired_block_number = frame_system::Pallet::<T>::block_number()
-						.saturating_add(T::QueryTimeout::get());
 					if !submitted {
-						PendingReferendumInfo::<T>::insert(
-							query_id,
-							(vtoken, poll_index, expired_block_number),
-						);
+						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
 					}
 					PendingVotingInfo::<T>::insert(
 						query_id,
-						(
-							vtoken,
-							poll_index,
-							derivative_index,
-							who.clone(),
-							vote,
-							expired_block_number,
-						),
+						(vtoken, poll_index, derivative_index, who.clone(), vote),
 					)
 				},
 			)?;
@@ -488,57 +451,6 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::update_referendum_status())]
-		pub fn update_referendum_status(
-			origin: OriginFor<T>,
-			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndex,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_no_pending_update_referendum_status(&vtoken, &poll_index)?;
-			Self::ensure_referendum_ongoing(vtoken, poll_index)?;
-
-			let notify_call = Call::<T>::notify_update_referendum_status {
-				query_id: 0,
-				response: Default::default(),
-			};
-			let derivative_index =
-				Self::find_derivative_index_by_role(vtoken, VoteRole::SplitAbstain)
-					.ok_or(Error::<T>::NoData)?;
-			let remove_vote_call = RelayCall::<T>::ConvictionVoting(
-				ConvictionVotingCall::<T>::remove_vote(None, poll_index),
-			);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmInterfaceOperation::VoteRemoveDelegatorVote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-			Self::send_xcm_with_notify(
-				derivative_index,
-				remove_vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					PendingReferendumStatus::<T>::insert(
-						query_id,
-						(
-							vtoken,
-							poll_index,
-							frame_system::Pallet::<T>::block_number()
-								.saturating_add(T::QueryTimeout::get()),
-						),
-					);
-				},
-			)?;
-
-			Self::deposit_event(Event::<T>::ReferendumStatusUpdated { who, vtoken, poll_index });
-
-			Ok(())
-		}
-
-		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
@@ -571,13 +483,7 @@ pub mod pallet {
 				|query_id| {
 					PendingRemoveDelegatorVote::<T>::insert(
 						query_id,
-						(
-							vtoken,
-							poll_index,
-							derivative_index,
-							frame_system::Pallet::<T>::block_number()
-								.saturating_add(T::QueryTimeout::get()),
-						),
+						(vtoken, poll_index, derivative_index),
 					);
 				},
 			)?;
@@ -587,7 +493,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::kill_referendum())]
 		pub fn kill_referendum(
 			origin: OriginFor<T>,
@@ -609,7 +515,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_delegator_role())]
 		pub fn set_delegator_role(
 			origin: OriginFor<T>,
@@ -644,7 +550,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_referendum_status())]
 		pub fn set_referendum_status(
 			origin: OriginFor<T>,
@@ -663,7 +569,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_vote_locking_period())]
 		pub fn set_vote_locking_period(
 			origin: OriginFor<T>,
@@ -678,7 +584,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_undeciding_timeout())]
 		pub fn set_undeciding_timeout(
 			origin: OriginFor<T>,
@@ -693,7 +599,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_vote())]
 		pub fn notify_vote(
 			origin: OriginFor<T>,
@@ -703,7 +609,7 @@ pub mod pallet {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
-			if let Some((vtoken, poll_index, derivative_index, who, vote, _)) =
+			if let Some((vtoken, poll_index, derivative_index, who, vote)) =
 				PendingVotingInfo::<T>::take(query_id)
 			{
 				if !success {
@@ -726,7 +632,7 @@ pub mod pallet {
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
 
-			if let Some((vtoken, poll_index, _)) = PendingReferendumInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::take(query_id) {
 				if success {
 					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
@@ -769,41 +675,6 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(<T as Config>::WeightInfo::notify_update_referendum_status())]
-		pub fn notify_update_referendum_status(
-			origin: OriginFor<T>,
-			query_id: QueryId,
-			response: Response,
-		) -> DispatchResult {
-			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, _)) = PendingReferendumStatus::<T>::take(query_id) {
-				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
-				if success {
-					ReferendumInfoFor::<T>::try_mutate_exists(
-						vtoken,
-						poll_index,
-						|maybe_info| -> DispatchResult {
-							if let Some(info) = maybe_info {
-								*info = ReferendumInfo::Completed(
-									T::RelaychainBlockNumberProvider::current_block_number(),
-								);
-							}
-							Ok(())
-						},
-					)?;
-				}
-				Self::deposit_event(Event::<T>::ReferendumStatusUpdateNotified {
-					vtoken,
-					poll_index,
-					success,
-				});
-			}
-			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
-
-			Ok(())
-		}
-
-		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_remove_delegator_vote())]
 		pub fn notify_remove_delegator_vote(
 			origin: OriginFor<T>,
@@ -811,7 +682,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, derivative_index, _)) =
+			if let Some((vtoken, poll_index, derivative_index)) =
 				PendingRemoveDelegatorVote::<T>::take(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
@@ -822,7 +693,7 @@ pub mod pallet {
 						|maybe_vote| {
 							if let Some(inner_vote) = maybe_vote {
 								inner_vote
-									.checked_sub(inner_vote.clone())
+									.checked_sub(*inner_vote)
 									.map_err(|_| Error::<T>::NoData)?;
 								Ok(())
 							} else {
@@ -1073,27 +944,13 @@ pub mod pallet {
 		}
 
 		fn ensure_no_pending_vote(
-			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndex,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			ensure!(
-				PendingVotingInfo::<T>::iter()
-					.find(|(_, (v, p, _, _, _, _))| v == vtoken && p == poll_index)
-					.is_none(),
+				!PendingVotingInfo::<T>::iter()
+					.any(|(_, (v, p, _, _, _))| v == vtoken && p == poll_index),
 				Error::<T>::PendingVote
-			);
-			Ok(())
-		}
-
-		fn ensure_no_pending_update_referendum_status(
-			vtoken: &CurrencyIdOf<T>,
-			poll_index: &PollIndex,
-		) -> DispatchResult {
-			ensure!(
-				PendingReferendumStatus::<T>::iter()
-					.find(|(_, (v, p, _))| v == vtoken && p == poll_index)
-					.is_none(),
-				Error::<T>::PendingUpdateReferendumStatus
 			);
 			Ok(())
 		}
@@ -1196,19 +1053,6 @@ pub mod pallet {
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
-		}
-
-		fn find_derivative_index_by_role(
-			vtoken: CurrencyIdOf<T>,
-			target_role: VoteRole,
-		) -> Option<DerivativeIndex> {
-			DelegatorVote::<T>::iter_prefix(vtoken).into_iter().find_map(|(index, vote)| {
-				if target_role == vote.into() {
-					Some(index)
-				} else {
-					None
-				}
-			})
 		}
 	}
 }
