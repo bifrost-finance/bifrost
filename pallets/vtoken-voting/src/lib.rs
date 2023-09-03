@@ -106,8 +106,6 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type PollIndex: Parameter + Member + Ord + Copy + MaxEncodedLen + HasCompact;
-
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
 		type DerivativeAccount: DerivativeAccountHandler<Self>;
