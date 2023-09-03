@@ -1524,7 +1524,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type XcmDestWeightAndFee = XcmInterface;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type ParachainId = SelfParaChainId;

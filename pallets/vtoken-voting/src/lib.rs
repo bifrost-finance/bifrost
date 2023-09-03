@@ -104,7 +104,7 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
+		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
 		type DerivativeAccount: DerivativeAccountHandler<Self>;
 
