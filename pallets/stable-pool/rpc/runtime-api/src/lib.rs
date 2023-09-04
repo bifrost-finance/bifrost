@@ -20,6 +20,7 @@
 
 use node_primitives::Balance;
 use sp_api::decl_runtime_apis;
+use sp_std::vec::Vec;
 
 decl_runtime_apis! {
 	pub trait StablePoolRuntimeApi
