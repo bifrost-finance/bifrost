@@ -14,9 +14,9 @@
 
 mod edge_cases;
 mod interest_rate;
+mod lend_tokens;
 mod liquidate_borrow;
 mod market;
-mod ptokens;
 
 use frame_support::{assert_err, assert_noop, assert_ok};
 

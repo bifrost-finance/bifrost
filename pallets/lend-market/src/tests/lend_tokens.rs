@@ -42,7 +42,7 @@
 
 // 		// DAVE Deposit 100 BNC, Borrow 25 BNC
 // 		// Liquidity BNC 25
-// 		// Formula: ptokens = liquidity / price(1) / collateral(0.5) / exchange_rate(0.02)
+// 		// Formula: lend tokens = liquidity / price(1) / collateral(0.5) / exchange_rate(0.02)
 // 		assert_eq!(
 // 			Loans::reducible_balance(VBNC, &DAVE, Preservation::Expendable, Fortitude::Polite),
 // 			unit(25) * 2 * 50
@@ -51,7 +51,7 @@
 // 		// Multi-asset case, additional deposit DOT_U
 // 		// DAVE Deposit 100 BNC, 50 DOT_U, Borrow 25 BNC
 // 		// Liquidity BNC = 25, DOT_U = 25
-// 		// ptokens = dollar(25 + 25) / 1 / 0.5 / 0.02 = dollar(50) * 100
+// 		// lend tokens = dollar(25 + 25) / 1 / 0.5 / 0.02 = dollar(50) * 100
 // 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), DOT_U, unit(50)));
 // 		assert_eq!(Loans::balance(DOT_U, &DAVE), unit(50) * 50);
 // 		assert_eq!(
@@ -78,15 +78,15 @@
 // }
 
 // #[test]
-// fn ptoken_unique_works() {
+// fn lend token_unique_works() {
 // 	new_test_ext().execute_with(|| {
-// 		// ptoken_id already exists in `UnderlyingAssetId`
+// 		// lend_token_id already exists in `UnderlyingAssetId`
 // 		assert_noop!(
 // 			Loans::add_market(RuntimeOrigin::root(), SDOT, market_mock(VBNC)),
 // 			Error::<Test>::InvalidPtokenId
 // 		);
 
-// 		// ptoken_id cannot as the same as the asset id in `Markets`
+// 		// lend_token_id cannot as the same as the asset id in `Markets`
 // 		assert_noop!(
 // 			Loans::add_market(RuntimeOrigin::root(), SDOT, market_mock(KSM)),
 // 			Error::<Test>::InvalidPtokenId
@@ -95,7 +95,7 @@
 // }
 
 // #[test]
-// fn transfer_ptoken_works() {
+// fn transfer_lend_token_works() {
 // 	new_test_ext().execute_with(|| {
 // 		// DAVE Deposit 100 BNC
 // 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
@@ -115,9 +115,9 @@
 // 			unit(0)
 // 		);
 
-// 		// Transfer ptokens from DAVE to ALICE
+// 		// Transfer lend tokens from DAVE to ALICE
 // 		Loans::transfer(VBNC, &DAVE, &ALICE, unit(50) * 50).unwrap();
-// 		// Loans::transfer_ptokens(RuntimeOrigin::signed(DAVE), ALICE, BNC, dollar(50) *
+// 		// Loans::transfer_lend_tokens(RuntimeOrigin::signed(DAVE), ALICE, BNC, dollar(50) *
 // 		// 50).unwrap();
 
 // 		// DAVE BNC collateral: deposit = 50
@@ -144,7 +144,7 @@
 // }
 
 // #[test]
-// fn transfer_ptokens_under_collateral_works() {
+// fn transfer_lend_tokens_under_collateral_works() {
 // 	new_test_ext().execute_with(|| {
 // 		// DAVE Deposit 100 BNC
 // 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
@@ -155,7 +155,7 @@
 // 		// Repay 40 BNC
 // 		assert_ok!(Loans::repay_borrow(RuntimeOrigin::signed(DAVE), BNC, unit(40)));
 
-// 		// Transfer 20 ptokens from DAVE to ALICE
+// 		// Transfer 20 lend tokens from DAVE to ALICE
 // 		Loans::transfer(VBNC, &DAVE, &ALICE, unit(20) * 50).unwrap();
 
 // 		// DAVE Deposit BNC = 100 - 20 = 80
@@ -180,7 +180,7 @@
 // 			unit(20)
 // 		);
 // 		// ALICE Redeem 20 BNC should be succeeded
-// 		// Also means that transfer ptoken succeed
+// 		// Also means that transfer lend token succeed
 // 		assert_ok!(Loans::redeem_allowed(BNC, &ALICE, unit(20) * 50,));
 // 	})
 // }

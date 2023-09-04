@@ -40,14 +40,14 @@ fn market_mock<T: Config>() -> Market<BalanceOf<T>> {
 		liquidate_incentive_reserved_factor: Ratio::from_percent(3),
 		supply_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
 		borrow_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
-		ptoken_id: 1200,
+		lend_token_id: 1200,
 	}
 }
 
-fn pending_market_mock<T: Config>(ptoken_id: CurrencyId) -> Market<BalanceOf<T>> {
+fn pending_market_mock<T: Config>(lend_token_id: CurrencyId) -> Market<BalanceOf<T>> {
 	let mut market = market_mock::<T>();
 	market.state = MarketState::Pending;
-	market.ptoken_id = ptoken_id;
+	market.lend_token_id = lend_token_id;
 	market
 }
 

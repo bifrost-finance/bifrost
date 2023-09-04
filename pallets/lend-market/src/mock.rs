@@ -567,7 +567,7 @@ pub fn million_unit(d: u128) -> u128 {
 	unit(d) * 10_u128.pow(6)
 }
 
-pub const fn market_mock(ptoken_id: CurrencyId) -> Market<Balance> {
+pub const fn market_mock(lend_token_id: CurrencyId) -> Market<Balance> {
 	Market {
 		close_factor: Ratio::from_percent(50),
 		collateral_factor: Ratio::from_percent(50),
@@ -584,7 +584,7 @@ pub const fn market_mock(ptoken_id: CurrencyId) -> Market<Balance> {
 		reserve_factor: Ratio::from_percent(15),
 		supply_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
 		borrow_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
-		ptoken_id,
+		lend_token_id,
 	}
 }
 

@@ -43,7 +43,7 @@ pub mod v3 {
 		/// Upper bound of borrowing
 		pub borrow_cap: Balance,
 		/// Ptoken asset id
-		pub ptoken_id: CurrencyId,
+		pub lend_token_id: CurrencyId,
 	}
 	#[frame_support::storage_alias]
 	type MarketRewardSpeed<T: Config> =
@@ -110,7 +110,7 @@ pub mod v3 {
 					liquidate_incentive: market.liquidate_incentive,
 					rate_model: market.rate_model,
 					state: market.state,
-					ptoken_id: market.ptoken_id,
+					lend_token_id: market.lend_token_id,
 				})
 			});
 

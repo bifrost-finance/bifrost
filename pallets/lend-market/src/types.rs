@@ -69,7 +69,7 @@ pub struct Market<Balance> {
 	/// Upper bound of borrowing
 	pub borrow_cap: Balance,
 	/// Ptoken asset id
-	pub ptoken_id: CurrencyId,
+	pub lend_token_id: CurrencyId,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Default)]

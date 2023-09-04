@@ -164,15 +164,15 @@ fn force_update_market_works() {
 		new_market.state = MarketState::Active;
 		Loans::force_update_market(RuntimeOrigin::root(), DOT, new_market).unwrap();
 		assert_eq!(Loans::market(DOT).unwrap().state, MarketState::Active);
-		assert_eq!(Loans::market(DOT).unwrap().ptoken_id, PDOT);
+		assert_eq!(Loans::market(DOT).unwrap().lend_token_id, PDOT);
 
-		// New ptoken_id must not be in use
+		// New lend_token_id must not be in use
 		assert_noop!(
 			Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PUSDT)),
 			Error::<Test>::InvalidPtokenId
 		);
 		assert_ok!(Loans::force_update_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)));
-		assert_eq!(Loans::market(DOT).unwrap().ptoken_id, PDOT);
+		assert_eq!(Loans::market(DOT).unwrap().lend_token_id, PDOT);
 	})
 }
 

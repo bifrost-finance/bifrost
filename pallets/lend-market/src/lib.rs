@@ -67,7 +67,7 @@ mod tests;
 
 mod farming;
 mod interest;
-mod ptoken;
+mod lend_token;
 mod rate_model;
 mod types;
 
@@ -171,7 +171,7 @@ pub mod pallet {
 		PriceIsZero,
 		/// Invalid asset id
 		InvalidCurrencyId,
-		/// Invalid ptoken id
+		/// Invalid lend token id
 		InvalidPtokenId,
 		/// Market does not exist
 		MarketDoesNotExist,
@@ -377,8 +377,8 @@ pub mod pallet {
 	pub type Markets<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Market<BalanceOf<T>>>;
 
-	/// Mapping of ptoken id to asset id
-	/// `ptoken id`: voucher token id
+	/// Mapping of lend token id to asset id
+	/// `lend token id`: voucher token id
 	/// `asset id`: underlying token id
 	#[pallet::storage]
 	pub type UnderlyingAssetId<T: Config> =
@@ -476,8 +476,8 @@ pub mod pallet {
 		/// If a currency is already attached to a market, then the market will be replaced
 		/// by the new provided value.
 		///
-		/// The ptoken id and asset id are bound, the ptoken id of new provided market cannot
-		/// be duplicated with the existing one, otherwise it will return `InvalidPtokenId`.
+		/// The lend token id and asset id are bound, the lend token id of new provided market
+		/// cannot be duplicated with the existing one, otherwise it will return `InvalidPtokenId`.
 		///
 		/// - `asset_id`: Market related currency
 		/// - `market`: The market that is going to be stored
@@ -517,11 +517,11 @@ pub mod pallet {
 			);
 			ensure!(market.supply_cap > Zero::zero(), Error::<T>::InvalidSupplyCap,);
 
-			// Ensures a given `ptoken_id` not exists on the `Market` and `UnderlyingAssetId`.
-			Self::ensure_ptoken(market.ptoken_id)?;
+			// Ensures a given `lend_token_id` not exists on the `Market` and `UnderlyingAssetId`.
+			Self::ensure_lend_token(market.lend_token_id)?;
 			// Update storage of `Market` and `UnderlyingAssetId`
 			Markets::<T>::insert(asset_id, market.clone());
-			UnderlyingAssetId::<T>::insert(market.ptoken_id, asset_id);
+			UnderlyingAssetId::<T>::insert(market.lend_token_id, asset_id);
 
 			// Init the ExchangeRate and BorrowIndex for asset
 			ExchangeRate::<T>::insert(asset_id, Rate::from_inner(MIN_EXCHANGE_RATE));
@@ -634,7 +634,7 @@ pub mod pallet {
 			let market = Self::mutate_market(asset_id, |stored_market| {
 				*stored_market = Market {
 					state: stored_market.state,
-					ptoken_id: stored_market.ptoken_id,
+					lend_token_id: stored_market.lend_token_id,
 					rate_model: stored_market.rate_model,
 					collateral_factor,
 					liquidation_threshold,
@@ -667,13 +667,13 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(market.rate_model.check_model(), Error::<T>::InvalidRateModelParam);
-			if UnderlyingAssetId::<T>::contains_key(market.ptoken_id) {
+			if UnderlyingAssetId::<T>::contains_key(market.lend_token_id) {
 				ensure!(
-					Self::underlying_id(market.ptoken_id)? == asset_id,
+					Self::underlying_id(market.lend_token_id)? == asset_id,
 					Error::<T>::InvalidPtokenId
 				);
 			}
-			UnderlyingAssetId::<T>::insert(market.ptoken_id, asset_id);
+			UnderlyingAssetId::<T>::insert(market.lend_token_id, asset_id);
 			let updated_market = Self::mutate_market(asset_id, |stored_market| {
 				*stored_market = market;
 				stored_market.clone()
@@ -1850,13 +1850,13 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// Ensures a given `ptoken_id` is unique in `Markets` and `UnderlyingAssetId`.
-	fn ensure_ptoken(ptoken_id: CurrencyId) -> DispatchResult {
-		// The ptoken id is unique, cannot be repeated
-		ensure!(!UnderlyingAssetId::<T>::contains_key(ptoken_id), Error::<T>::InvalidPtokenId);
+	// Ensures a given `lend_token_id` is unique in `Markets` and `UnderlyingAssetId`.
+	fn ensure_lend_token(lend_token_id: CurrencyId) -> DispatchResult {
+		// The lend token id is unique, cannot be repeated
+		ensure!(!UnderlyingAssetId::<T>::contains_key(lend_token_id), Error::<T>::InvalidPtokenId);
 
-		// The ptoken id should not be the same as the id of any asset in markets
-		ensure!(!Markets::<T>::contains_key(ptoken_id), Error::<T>::InvalidPtokenId);
+		// The lend token id should not be the same as the id of any asset in markets
+		ensure!(!Markets::<T>::contains_key(lend_token_id), Error::<T>::InvalidPtokenId);
 
 		Ok(())
 	}
@@ -1980,18 +1980,18 @@ impl<T: Config> Pallet<T> {
 
 	// Returns a stored asset_id
 	//
-	// Returns `Err` if asset_id does not exist, it also means that ptoken_id is invalid.
-	pub fn underlying_id(ptoken_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
-		UnderlyingAssetId::<T>::try_get(ptoken_id)
+	// Returns `Err` if asset_id does not exist, it also means that lend_token_id is invalid.
+	pub fn underlying_id(lend_token_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
+		UnderlyingAssetId::<T>::try_get(lend_token_id)
 			.map_err(|_err| Error::<T>::InvalidPtokenId.into())
 	}
 
-	// Returns the ptoken_id of the related asset
+	// Returns the lend_token_id of the related asset
 	//
 	// Returns `Err` if market does not exist.
-	pub fn ptoken_id(asset_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
+	pub fn lend_token_id(asset_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
 		if let Ok(market) = Self::market(asset_id) {
-			Ok(market.ptoken_id)
+			Ok(market.lend_token_id)
 		} else {
 			Err(Error::<T>::MarketDoesNotExist.into())
 		}

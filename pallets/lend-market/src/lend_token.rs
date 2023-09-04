@@ -26,8 +26,8 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	type Balance = BalanceOf<T>;
 
 	/// The total amount of issuance in the system.
-	fn total_issuance(ptoken_id: Self::AssetId) -> Self::Balance {
-		if let Ok(underlying_id) = Self::underlying_id(ptoken_id) {
+	fn total_issuance(lend_token_id: Self::AssetId) -> Self::Balance {
+		if let Ok(underlying_id) = Self::underlying_id(lend_token_id) {
 			Self::total_supply(underlying_id)
 		} else {
 			Balance::default()
@@ -35,13 +35,13 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	}
 
 	/// The minimum balance any single account may have.
-	fn minimum_balance(_ptoken_id: Self::AssetId) -> Self::Balance {
+	fn minimum_balance(_lend_token_id: Self::AssetId) -> Self::Balance {
 		Zero::zero()
 	}
 
-	/// Get the ptoken balance of `who`.
-	fn balance(ptoken_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-		if let Ok(underlying_id) = Self::underlying_id(ptoken_id) {
+	/// Get the lend token balance of `who`.
+	fn balance(lend_token_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+		if let Ok(underlying_id) = Self::underlying_id(lend_token_id) {
 			Self::account_deposits(underlying_id, who).voucher_balance
 		} else {
 			Balance::default()
@@ -49,26 +49,26 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	}
 
 	/// Get the maximum amount that `who` can withdraw/transfer successfully.
-	/// For ptoken, We don't care if keep_alive is enabled
+	/// For lend token, We don't care if keep_alive is enabled
 	fn reducible_balance(
-		ptoken_id: Self::AssetId,
+		lend_token_id: Self::AssetId,
 		who: &T::AccountId,
 		// _keep_alive: bool,
 		_preservation: Preservation,
 		_force: Fortitude,
 	) -> Self::Balance {
-		Self::reducible_asset(ptoken_id, who).unwrap_or_default()
+		Self::reducible_asset(lend_token_id, who).unwrap_or_default()
 	}
 
 	/// Returns `true` if the balance of `who` may be increased by `amount`.
 	fn can_deposit(
-		ptoken_id: Self::AssetId,
+		lend_token_id: Self::AssetId,
 		who: &T::AccountId,
 		amount: Self::Balance,
 		// _mint: bool,
 		_provenance: Provenance,
 	) -> DepositConsequence {
-		let underlying_id = match Self::underlying_id(ptoken_id) {
+		let underlying_id = match Self::underlying_id(lend_token_id) {
 			Ok(asset_id) => asset_id,
 			Err(_) => return DepositConsequence::UnknownAsset,
 		};
@@ -83,7 +83,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 			return DepositConsequence::Overflow;
 		}
 
-		if Self::balance(ptoken_id, who) + amount < Self::minimum_balance(ptoken_id) {
+		if Self::balance(lend_token_id, who) + amount < Self::minimum_balance(lend_token_id) {
 			return DepositConsequence::BelowMinimum;
 		}
 
@@ -97,11 +97,11 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	/// Returns `Failed` if the balance of `who` may not be decreased by `amount`, otherwise
 	/// the consequence.
 	fn can_withdraw(
-		ptoken_id: Self::AssetId,
+		lend_token_id: Self::AssetId,
 		who: &T::AccountId,
 		amount: Self::Balance,
 	) -> WithdrawConsequence<Self::Balance> {
-		let underlying_id = match Self::underlying_id(ptoken_id) {
+		let underlying_id = match Self::underlying_id(lend_token_id) {
 			Ok(asset_id) => asset_id,
 			Err(_) => return WithdrawConsequence::UnknownAsset,
 		};
@@ -112,60 +112,60 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 			return res;
 		}
 
-		let sub_result = Self::balance(ptoken_id, who).checked_sub(amount);
+		let sub_result = Self::balance(lend_token_id, who).checked_sub(amount);
 		if sub_result.is_none() {
 			return WithdrawConsequence::WouldDie;
 		}
 
 		let rest = sub_result.expect("Cannot be none; qed");
-		if rest < Self::minimum_balance(ptoken_id) {
+		if rest < Self::minimum_balance(lend_token_id) {
 			return WithdrawConsequence::ReducedToZero(rest);
 		}
 
 		WithdrawConsequence::Success
 	}
 
-	fn asset_exists(ptoken_id: Self::AssetId) -> bool {
-		Self::underlying_id(ptoken_id).is_ok()
+	fn asset_exists(lend_token_id: Self::AssetId) -> bool {
+		Self::underlying_id(lend_token_id).is_ok()
 	}
 }
 
 // impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
-// 	/// Returns `Err` if the reducible ptoken of `who` is insufficient
+// 	/// Returns `Err` if the reducible lend token of `who` is insufficient
 // 	///
-// 	/// For ptoken, We don't care if keep_alive is enabled
+// 	/// For lend token, We don't care if keep_alive is enabled
 // 	#[transactional]
 // 	fn transfer(
-// 		ptoken_id: Self::AssetId,
+// 		lend_token_id: Self::AssetId,
 // 		source: &T::AccountId,
 // 		dest: &T::AccountId,
 // 		amount: Self::Balance,
 // 		_keep_alive: bool,
 // 	) -> Result<BalanceOf<T>, DispatchError> {
 // 		ensure!(
-// 			amount <= Self::reducible_balance(ptoken_id, source, false),
+// 			amount <= Self::reducible_balance(lend_token_id, source, false),
 // 			Error::<T>::InsufficientCollateral
 // 		);
 
-// 		Self::do_transfer_ptokens(ptoken_id, source, dest, amount)?;
+// 		Self::do_transfer_lend_tokens(lend_token_id, source, dest, amount)?;
 // 		Ok(amount)
 // 	}
 // }
 
 impl<T: Config> Pallet<T> {
 	#[require_transactional]
-	fn do_transfer_ptokens(
-		ptoken_id: AssetIdOf<T>,
+	fn do_transfer_lend_tokens(
+		lend_token_id: AssetIdOf<T>,
 		source: &T::AccountId,
 		dest: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
 		// update supply index before modify supply balance.
-		Self::update_reward_supply_index(ptoken_id)?;
-		Self::distribute_supplier_reward(ptoken_id, source)?;
-		Self::distribute_supplier_reward(ptoken_id, dest)?;
+		Self::update_reward_supply_index(lend_token_id)?;
+		Self::distribute_supplier_reward(lend_token_id, source)?;
+		Self::distribute_supplier_reward(lend_token_id, dest)?;
 
-		let underlying_id = Self::underlying_id(ptoken_id)?;
+		let underlying_id = Self::underlying_id(lend_token_id)?;
 		AccountDeposits::<T>::try_mutate_exists(
 			underlying_id,
 			source,
@@ -193,10 +193,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn reducible_asset(
-		ptoken_id: AssetIdOf<T>,
+		lend_token_id: AssetIdOf<T>,
 		who: &T::AccountId,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let underlying_id = Self::underlying_id(ptoken_id)?;
+		let underlying_id = Self::underlying_id(lend_token_id)?;
 		let Deposits { is_collateral, voucher_balance } =
 			Self::account_deposits(underlying_id, who);
 
