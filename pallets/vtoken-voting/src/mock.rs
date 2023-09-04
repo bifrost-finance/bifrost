@@ -108,9 +108,9 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
