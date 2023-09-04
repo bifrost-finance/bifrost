@@ -67,7 +67,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage},
+		Currencies: bifrost_currencies::{Pallet, Call, Storage},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 		VtokenVoting: vtoken_voting::{Pallet, Call, Storage, Event<T>},
 	}
