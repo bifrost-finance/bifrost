@@ -821,4 +821,27 @@ impl<T: Config> Pallet<T> {
 
 		Ok(downscale_out)
 	}
+
+	pub fn add_liquidity_amount(
+		pool_id: StableAssetPoolId,
+		mut amounts: Vec<T::Balance>,
+	) -> Result<T::Balance, DispatchError> {
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		for (i, amount) in amounts.iter_mut().enumerate() {
+			*amount = Self::upscale(
+				*amount,
+				pool_id,
+				*pool_info
+					.assets
+					.get(i as usize)
+					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+			)?;
+		}
+		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
+		let MintResult { mint_amount, .. } =
+			nutsfinance_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
+
+		Ok(mint_amount)
+	}
 }
