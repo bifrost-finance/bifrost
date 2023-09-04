@@ -19,7 +19,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
-use core::str::Bytes;
 use node_primitives::{Balance, CurrencyId};
 use sp_api::decl_runtime_apis;
 
@@ -28,6 +27,6 @@ decl_runtime_apis! {
 		AccountId: Codec,
 	{
 		/// get flexible fee token and amount to be deducted
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Bytes) -> (CurrencyId, Balance);
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, utx: Block::Extrinsic) -> (CurrencyId, Balance);
 	}
 }

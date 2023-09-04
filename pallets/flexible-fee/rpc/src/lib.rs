@@ -127,7 +127,7 @@ where
 			}
 		};
 
-		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, encoded_xt);
+		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, uxt);
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {

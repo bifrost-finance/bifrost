@@ -26,9 +26,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// pub mod migration;
+pub mod migration;
 use bifrost_slp::QueryResponseManager;
 use core::convert::TryInto;
+use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
@@ -97,14 +98,13 @@ pub use node_primitives::{
 	RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 // zenlink imports
+use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	PairLpGenerate, ZenlinkMultiAssets,
 };
-
 // xcm config
 mod xcm_config;
-use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
@@ -1660,7 +1660,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	// (RemoveUnusedQueryIdContributionInfo<Runtime>, migration::XcmInterfaceMigration),
+	(RemoveUnusedQueryIdContributionInfo<Runtime>, migration::XcmInterfaceMigration),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1800,19 +1800,15 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId, RuntimeCall> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, encoded_xt: Bytes) -> (CurrencyId, Balance) {
-			if let Ok(call) =
-				<T as Config>::RuntimeCall::decode(&encoded_xt) {
-					let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
+			let call = utx.function;
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
-					match rs {
-						Ok(val) => val,
-						_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-					}
-				} else {
-					(CurrencyId::Native(TokenSymbol::BNC), Zero::zero())
-				}
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+			}
 		}
 	}
 

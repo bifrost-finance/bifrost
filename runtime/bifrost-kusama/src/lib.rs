@@ -26,9 +26,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// pub mod migration;
+pub mod migration;
 use bifrost_slp::QueryResponseManager;
 use core::convert::TryInto;
+use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -1891,7 +1892,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	// migration::XcmInterfaceMigration,
+	migration::XcmInterfaceMigration,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -2042,20 +2043,16 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId, RuntimeCall> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance,encoded_xt: Bytes) -> (CurrencyId, Balance) {
-			if let Ok(call) =
-				<T as Config>::RuntimeCall::decode(&encoded_xt) {
-					let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance,utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
+			let call = utx.function;
 
-					match rs {
-						Ok(val) => val,
-						_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-					}
-				} else {
-					(CurrencyId::Native(TokenSymbol::BNC), Zero::zero())
-				}
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+			}
 		}
 	}
 
