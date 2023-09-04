@@ -838,7 +838,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		}
 	}
 
-	fn register_blp_metadata(pool_id: PoolId) -> DispatchResult {
+	fn register_blp_metadata(pool_id: PoolId, decimals: u8) -> DispatchResult {
 		let mut name = "Bifrost Stable Pool Token ".as_bytes().to_vec();
 		name.extend_from_slice(&pool_id.to_be_bytes());
 		let mut symbol = "BLP".as_bytes().to_vec();
@@ -848,7 +848,7 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 			&AssetMetadata {
 				name,
 				symbol,
-				decimals: 12,
+				decimals,
 				minimal_balance: BalanceOf::<T>::unique_saturated_from(1_000_000u128),
 			},
 		)
