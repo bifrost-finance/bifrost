@@ -59,6 +59,13 @@ fn vote_works() {
 		Bifrost::execute_with(|| {
 			use bifrost_kusama_runtime::{RuntimeEvent, RuntimeOrigin, System, VtokenVoting};
 
+			assert_ok!(Tokens::set_balance(
+				RuntimeOrigin::root(),
+				MultiAddress::Id(ALICE.into()),
+				VKSM,
+				10_000_000_000_000u64.into(),
+				Zero::zero(),
+			));
 			let token = CurrencyId::to_token(&vtoken).unwrap();
 			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 				RuntimeOrigin::root(),

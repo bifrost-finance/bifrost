@@ -20,7 +20,6 @@
 
 use bifrost_runtime_common::dollar;
 use frame_support::{traits::GenesisBuild, weights::Weight};
-use node_primitives::currency::VKSM;
 use pallet_staking::Forcing;
 use polkadot_primitives::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
@@ -182,8 +181,6 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 				RelayCurrencyId::get(),
 				10 * dollar::<Runtime>(RelayCurrencyId::get()),
 			),
-			(AccountId::from(ALICE), VKSM, 10 * dollar::<Runtime>(RelayCurrencyId::get())),
-			(AccountId::from(BOB), VKSM, 10 * dollar::<Runtime>(RelayCurrencyId::get())),
 		])
 		.parachain_id(parachain_id)
 		.build()
