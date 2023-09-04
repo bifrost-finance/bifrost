@@ -84,7 +84,7 @@ construct_runtime!(
 	System: frame_system,
 	Balances: pallet_balances,
 	Tokens: orml_tokens,
-	Currencies: orml_currencies,
+	Currencies: bifrost_currencies,
 	AssetRegistry: bifrost_asset_registry,
 	Slp: bifrost_slp,
 	VtokenMinting: bifrost_vtoken_minting,
@@ -153,9 +153,9 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Test {
+impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;

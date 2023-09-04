@@ -58,7 +58,6 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
 # orml
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
@@ -110,7 +109,6 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"sp-consensus-aura/std",
-	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xcm-support/std",

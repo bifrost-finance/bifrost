@@ -30,7 +30,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 orml-xtokens = "0.4.1-dev"
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
