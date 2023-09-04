@@ -26,9 +26,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use core::convert::TryInto;
-
+pub mod migration;
 use bifrost_slp::{Ledger, QueryResponseManager};
+use core::convert::TryInto;
+use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
@@ -96,11 +97,11 @@ pub use node_primitives::{
 	TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 // zenlink imports
+use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	PairLpGenerate, ZenlinkMultiAssets,
 };
-
 // xcm config
 mod xcm_config;
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
@@ -1853,10 +1854,10 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Block::Extrinsic) -> (CurrencyId, Balance) {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
+			let call = utx.function;
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
-
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &uxt);
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
