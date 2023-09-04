@@ -131,7 +131,14 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool_id = PoolCount::<T>::get();
-			T::CurrencyIdRegister::register_blp_metadata(pool_id)?;
+			T::CurrencyIdRegister::register_blp_metadata(
+				pool_id,
+				precision
+					.saturated_into::<u128>()
+					.checked_ilog10()
+					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?
+					.saturated_into::<u8>(),
+			)?;
 			T::StableAsset::create_pool(
 				CurrencyId::BLP(pool_id).into(),
 				assets,
