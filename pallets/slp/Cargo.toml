@@ -17,7 +17,6 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 ] }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -42,7 +41,7 @@ parachain-staking = { path = "../../pallets/parachain-staking", default-features
 orml-tokens = "0.4.1-dev"
 orml-xtokens = "0.4.1-dev"
 orml-traits = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 bifrost-asset-registry = { path = "../asset-registry"}
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
@@ -62,7 +61,6 @@ std = [
     "sp-arithmetic/std",
     "orml-traits/std",
     "orml-tokens/std",
-    "orml-currencies/std",
     "node-primitives/std",
     "sp-core/std",
     "sp-io/std",

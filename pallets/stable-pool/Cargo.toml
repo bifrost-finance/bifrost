@@ -27,7 +27,7 @@ bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-featur
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 orml-xtokens = "0.4.1-dev"
 env_logger = "0.10.0"
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }

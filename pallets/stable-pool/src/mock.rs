@@ -53,7 +53,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Tokens: orml_tokens,
-		Currencies: orml_currencies::{Pallet, Call},
+		Currencies: bifrost_currencies::{Pallet, Call},
 		Balances: pallet_balances,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
@@ -133,9 +133,9 @@ parameter_types! {
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Test {
+impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;

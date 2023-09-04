@@ -221,15 +221,15 @@ impl Contains<RuntimeCall> for CallFilter {
 		);
 		if is_transfer {
 			let is_disabled = match *call {
-				// orml-currencies module
-				RuntimeCall::Currencies(orml_currencies::Call::transfer {
+				// bifrost-currencies module
+				RuntimeCall::Currencies(bifrost_currencies::Call::transfer {
 					dest: _,
 					currency_id,
 					amount: _,
 				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&currency_id,
 				),
-				RuntimeCall::Currencies(orml_currencies::Call::transfer_native_currency {
+				RuntimeCall::Currencies(bifrost_currencies::Call::transfer_native_currency {
 					dest: _,
 					amount: _,
 				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
@@ -1907,7 +1907,7 @@ construct_runtime! {
 		// Third party modules
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
-		Currencies: orml_currencies::{Pallet, Call} = 72,
+		Currencies: bifrost_currencies::{Pallet, Call} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
