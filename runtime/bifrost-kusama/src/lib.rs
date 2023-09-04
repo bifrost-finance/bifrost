@@ -2293,8 +2293,16 @@ impl_runtime_apis! {
 			pool_id: u32,
 			currency_id_in: u32,
 			currency_id_out: u32,
-			amount: Balance,) -> Balance {
-			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount).unwrap_or(Zero::zero())
+			amount: Balance,
+		) -> Balance {
+			StablePool::get_swap_output(pool_id, currency_id_in, currency_id_out, amount).unwrap_or(Zero::zero())
+		}
+
+		fn add_liquidity_amount(
+			pool_id: u32,
+			amounts: Vec<Balance>,
+		) -> Balance {
+			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
 		}
 	}
 
