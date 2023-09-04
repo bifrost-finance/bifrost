@@ -55,7 +55,7 @@ use sp_runtime::{
 	ArithmeticError,
 };
 use sp_std::prelude::*;
-use traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler};
+pub use traits::*;
 use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
