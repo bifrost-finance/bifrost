@@ -327,13 +327,3 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
-
-fn next_block() {
-	System::set_block_number(System::block_number() + 1);
-}
-
-pub fn run_to(n: u64) {
-	while System::block_number() < n {
-		next_block();
-	}
-}

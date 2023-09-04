@@ -55,7 +55,7 @@ fn tally(vtoken: CurrencyId, poll_index: u32) -> TallyOf<Runtime> {
 		.tally
 }
 
-fn class(vtoken: CurrencyId, poll_index: u32) -> PollIndex {
+fn class(_vtoken: CurrencyId, poll_index: u32) -> PollIndex {
 	poll_index
 }
 

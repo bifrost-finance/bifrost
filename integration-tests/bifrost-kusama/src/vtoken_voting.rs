@@ -48,7 +48,7 @@ fn vote_works() {
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::Referenda(pallet_referenda::Event::Submitted {
-					index: poll_index,
+					index: 0,
 					track: 0,
 					proposal: _,
 				})
@@ -121,8 +121,8 @@ fn vote_works() {
 				r.event,
 				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::Voted {
 					who: _,
-					vtoken,
-					poll_index,
+					vtoken: VKSM,
+					poll_index: 0,
 					vote: _,
 				})
 			)));
@@ -149,8 +149,8 @@ fn vote_works() {
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::VoteNotified {
-					vtoken,
-					poll_index,
+					vtoken: VKSM,
+					poll_index: 0,
 					success: true,
 				})
 			)));
