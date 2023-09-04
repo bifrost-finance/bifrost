@@ -28,6 +28,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	MultiSignature, OpaqueExtrinsic,
 };
+use xcm::v3::prelude::*;
 
 pub mod currency;
 mod salp;
@@ -222,5 +223,16 @@ pub enum RedeemType<AccountId> {
 impl<AccountId> Default for RedeemType<AccountId> {
 	fn default() -> Self {
 		Self::Native
+	}
+}
+
+pub struct DoNothingRouter;
+impl SendXcm for DoNothingRouter {
+	type Ticket = ();
+	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
+		Ok(((), MultiAssets::new()))
+	}
+	fn deliver(_: ()) -> Result<XcmHash, SendError> {
+		Ok([0; 32])
 	}
 }

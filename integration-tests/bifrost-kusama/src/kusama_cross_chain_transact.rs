@@ -16,38 +16,66 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::assert_ok;
+use crate::{
+	kusama_integration_tests::*, kusama_test_net::*, vtoken_voting::set_balance_proposal_bounded,
+};
+use frame_support::{
+	assert_ok,
+	dispatch::{GetDispatchInfo, RawOrigin},
+};
+use pallet_conviction_voting::{AccountVote, Vote};
 use xcm::v3::{prelude::*, Weight};
-use xcm_emulator::{ParaId, TestExt};
-
-use crate::{kusama_integration_tests::*, kusama_test_net::*};
+use xcm_emulator::TestExt;
 
 #[test]
 fn relaychain_transact_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		let transfer = kusama_runtime::RuntimeCall::Balances(pallet_balances::Call::<
-			kusama_runtime::Runtime,
-		>::transfer {
-			dest: MultiAddress::Id(AccountId::from(BOB)),
-			value: 1 * KSM_DECIMALS,
-		});
+		let vote_call =
+			kusama_runtime::RuntimeCall::ConvictionVoting(pallet_conviction_voting::Call::<
+				kusama_runtime::Runtime,
+			>::vote {
+				poll_index: 0,
+				vote: aye(2, 1),
+			});
 
-		// let notification_received = RuntimeCall::Salp(bifrost_salp::Call::<
-		// 	Runtime,
-		// >::notification_received {
-		// 	query_id: 0,
-		// 	response: Default::default(),
-		// });
+		let notify_vote_call =
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::<Runtime>::notify_vote {
+				query_id: 0,
+				response: Default::default(),
+			});
+
+		KusamaNet::execute_with(|| {
+			use frame_support::traits::schedule::DispatchTime;
+			use kusama_runtime::{Referenda, RuntimeEvent, RuntimeOrigin, System};
+
+			println!("KusamaNet vote_call weight: {:?}", vote_call.get_dispatch_info().weight);
+
+			assert_ok!(Referenda::submit(
+				RuntimeOrigin::signed(ALICE.into()),
+				Box::new(RawOrigin::Root.into()),
+				set_balance_proposal_bounded(1),
+				DispatchTime::At(1),
+			));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::Referenda(pallet_referenda::Event::Submitted {
+					index: 0,
+					track: _,
+					proposal: _,
+				})
+			)));
+		});
 
 		Bifrost::execute_with(|| {
 			// QueryStatus::Pending { responder: V3(MultiLocation { parents: 1, interior: Here }),
 			// maybe_match_querier: Some(V3(MultiLocation { parents: 0, interior: Here })),
 			// maybe_notify: Some((0, 7)), timeout: 100 } let query_id =
-			// pallet_xcm::Pallet::<Runtime>::new_notify_query( 	MultiLocation::parent(),
-			// 	notification_received.clone(),
-			// 	100u32.into(),
-			// 	Here,
-			// );
+			let query_id = pallet_xcm::Pallet::<Runtime>::new_notify_query(
+				MultiLocation::parent(),
+				notify_vote_call,
+				100u32.into(),
+				Here,
+			);
 
 			// QueryResponse { query_id: 0, response: DispatchResult(Success), max_weight: Weight {
 			// ref_time: 4000000000, proof_size: 0 }, querier: Some(MultiLocation { parents: 0,
@@ -59,18 +87,18 @@ fn relaychain_transact_works() {
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: Weight::from_parts(4000000000, 0),
-					call: transfer.encode().into(),
+					require_weight_at_most: Weight::from_parts(4000000000, 100000),
+					call: vote_call.encode().into(),
 				},
-				// ReportTransactStatus(QueryResponseInfo {
-				// 	destination: MultiLocation::from(X1(Parachain(2001))),
-				// 	query_id,
-				// 	max_weight: Weight::from_parts(4000000000, 0),
-				// }),
+				ReportTransactStatus(QueryResponseInfo {
+					destination: MultiLocation::from(X1(Parachain(2001))),
+					query_id,
+					max_weight: Weight::from_parts(3000000, 0),
+				}),
 				RefundSurplus,
 				DepositAsset {
 					assets: All.into(),
-					beneficiary: MultiLocation::from(AccountId32 { network: None, id: ALICE }),
+					beneficiary: MultiLocation { parents: 0, interior: X1(Parachain(2001)) },
 				},
 			]);
 			assert_ok!(pallet_xcm::Pallet::<Runtime>::send_xcm(Here, MultiLocation::parent(), msg));
@@ -78,17 +106,34 @@ fn relaychain_transact_works() {
 
 		KusamaNet::execute_with(|| {
 			use kusama_runtime::{RuntimeEvent, System};
-			// Expect to transfer 1 KSM from parachain_account to bob_account
-			let _parachain_account: AccountId = ParaId::from(2001).into_account_truncating();
-			let _bob_account: AccountId = AccountId::from(BOB);
+
+			System::events().iter().for_each(|r| println!("KusamaNet >>> {:?}", r.event));
 			assert!(System::events().iter().any(|r| matches!(
 				&r.event,
-				RuntimeEvent::Balances(pallet_balances::Event::Transfer {
-					from: _parachain_account,
-					to: _bob_account,
-					amount: KSM_DECIMALS
+				RuntimeEvent::Ump(polkadot_runtime_parachains::ump::Event::ExecutedUpward(
+					_,
+					crate::kusama_cross_chain_transact::Outcome::Complete(_)
+				))
+			)));
+		});
+
+		Bifrost::execute_with(|| {
+			System::events().iter().for_each(|r| println!("Bifrost >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::ResponseReceived {
+					responder: MultiLocation { parents: 1, interior: Here },
+					query_id: 0,
+					response: crate::kusama_cross_chain_transact::Response::DispatchResult(
+						MaybeErrorCode::Success
+					)
 				})
 			)));
 		});
 	})
+}
+
+pub fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
+	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
+	AccountVote::Standard { vote, balance: amount }
 }
