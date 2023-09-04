@@ -118,11 +118,11 @@ bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false }
 bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
+bifrost-currencies = { workspace = true }
 lend-market = { path = "../../pallets/lend-market", default-features = false }
 oracle = { path = "../../pallets/oracle", default-features = false }
 
 # orml
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
@@ -205,7 +205,7 @@ std = [
 	"pallet-session/std",
 	"pallet-vesting/std",
 	"oracle/std",
-	"orml-currencies/std",
+	"bifrost-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xtokens/std",
@@ -328,7 +328,7 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"orml-xtokens/try-runtime",
 	"orml-tokens/try-runtime",
-	"orml-currencies/try-runtime",
+	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
 	"zenlink-protocol/try-runtime",

@@ -71,7 +71,7 @@ construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 2,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		Currencies: orml_currencies::{Pallet, Call} = 72,
+		Currencies: bifrost_currencies::{Pallet, Call} = 72,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
@@ -182,9 +182,9 @@ impl orml_tokens::Config for Runtime {
 	type CurrencyHooks = ();
 }
 
-pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, u64>;
+pub type BifrostToken = bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, u64>;
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;

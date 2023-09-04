@@ -41,10 +41,10 @@ use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
+use bifrost_currencies::BasicCurrencyAdapter;
 use bifrost_runtime_common::currency_adapter::{
 	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
 };
-use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
@@ -592,11 +592,11 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 
 // orml runtime start
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
+	type WeightInfo = weights::bifrost_currencies::WeightInfo<Runtime>;
 }
 
 parameter_type_with_key! {

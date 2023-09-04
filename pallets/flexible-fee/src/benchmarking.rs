@@ -18,14 +18,14 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
-use frame_support::{assert_ok, traits::EnsureOrigin, BoundedVec};
+use frame_benchmarking::v1::{benchmarks, whitelisted_caller};
+use frame_support::BoundedVec;
 
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_std::vec;
 
-use crate::{Call, Config, Pallet as FlexibleFee, Pallet};
+use crate::{Call, Config, Pallet};
 
 benchmarks! {
 	set_user_default_fee_currency {

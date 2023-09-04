@@ -88,8 +88,7 @@ benchmarks! {
 		T::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
 	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::VToken(TokenSymbol::BNC), TargetChain::Astar(receiver))
 
-
-	swap {
+	zenlink_swap {
 		let contract: T::AccountId = whitelisted_caller();
 		assert_ok!(Slpx::<T>::add_whitelist(
 				RawOrigin::Root.into(),

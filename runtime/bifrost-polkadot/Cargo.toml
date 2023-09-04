@@ -111,9 +111,9 @@ bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runt
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features=["with-bifrost-polkadot-runtime"] }
 pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+bifrost-currencies = { workspace = true }
 
 # orml
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
@@ -191,7 +191,7 @@ std = [
 	"pallet-session/std",
 	"pallet-vesting/std",
 	"pallet-whitelist/std",
-	"orml-currencies/std",
+	"bifrost-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xtokens/std",
@@ -228,6 +228,9 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
+	"pallet-conviction-voting/runtime-benchmarks",
+	"pallet-ranked-collective/runtime-benchmarks",
+	"pallet-referenda/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
@@ -289,7 +292,7 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"orml-xtokens/try-runtime",
 	"orml-tokens/try-runtime",
-	"orml-currencies/try-runtime",
+	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
 	"zenlink-protocol/try-runtime",

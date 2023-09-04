@@ -63,7 +63,6 @@ bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot" }
 
 # orml
-orml-currencies = { version = "0.4.1-dev" }
 orml-tokens = { version = "0.4.1-dev" }
 orml-traits = { version = "0.4.1-dev" }
 orml-xtokens = { version = "0.4.1-dev" }
