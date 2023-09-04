@@ -26,11 +26,11 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+// pub mod migration;
+use bifrost_slp::QueryResponseManager;
 use core::convert::TryInto;
-
-use bifrost_slp::{Ledger, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
-use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
 	construct_runtime,
 	inherent::Vec,
@@ -71,7 +71,6 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -90,10 +89,12 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
-	TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
+	RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 // zenlink imports
 use zenlink_protocol::{
@@ -104,17 +105,13 @@ use zenlink_protocol::{
 // xcm config
 mod xcm_config;
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
-use bifrost_vtoken_voting::{
-	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
-	DerivativeIndex,
-};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
-use pallet_xcm::{EnsureResponse, QueryStatus};
+use pallet_xcm::QueryStatus;
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-	StatemineTransferFee, UmpTransactFee, XcmConfig, XcmRouter,
+	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
@@ -964,17 +961,17 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteVtoken,
-				extra_fee_currency: vtoken,
-			},
-			RuntimeCall::VtokenVoting(vtoken_voting::Call::remove_delegator_vote {
-				vtoken,
-				..
-			}) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-				extra_fee_currency: vtoken,
-			},
+			// RuntimeCall::VtokenVoting(vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
+			// 	extra_fee_name: ExtraFeeName::VoteVtoken,
+			// 	extra_fee_currency: vtoken,
+			// },
+			// RuntimeCall::VtokenVoting(vtoken_voting::Call::remove_delegator_vote {
+			// 	vtoken,
+			// 	..
+			// }) => ExtraFeeInfo {
+			// 	extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
+			// 	extra_fee_currency: vtoken,
+			// },
 			_ => ExtraFeeInfo::default(),
 		}
 	}
@@ -993,9 +990,10 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 parameter_types! {
@@ -1324,64 +1322,6 @@ impl bifrost_slpx::Config for Runtime {
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
-parameter_types! {
-	pub const QueryTimeout: BlockNumber = 100;
-}
-
-pub struct XcmDestWeightAndFee;
-impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
-	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
-	}
-
-	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
-	}
-}
-
-pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
-	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
-	}
-
-	fn get_multilocation(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<MultiLocation> {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index)
-	}
-
-	fn get_stake_info(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<(Balance, Balance)> {
-		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
-				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
-					Some((l.total, l.active)),
-				_ => None,
-			})
-		})
-	}
-}
-
-impl bifrost_vtoken_voting::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type ResponseOrigin = EnsureResponse<Everything>;
-	type XcmDestWeightAndFee = XcmInterface;
-	type DerivativeAccount = DerivativeAccount;
-	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
-	type ParachainId = SelfParaChainId;
-	type MaxVotes = ConstU32<512>;
-	type QueryTimeout = QueryTimeout;
-	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
-}
-
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1669,7 +1609,6 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
-		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1721,7 +1660,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	RemoveUnusedQueryIdContributionInfo<Runtime>,
+	// (RemoveUnusedQueryIdContributionInfo<Runtime>, migration::XcmInterfaceMigration),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1737,7 +1676,6 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
-		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 
@@ -1862,15 +1800,19 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Block::Extrinsic) -> (CurrencyId, Balance) {
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId, RuntimeCall> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance, encoded_xt: Bytes) -> (CurrencyId, Balance) {
+			if let Ok(call) =
+				<T as Config>::RuntimeCall::decode(&encoded_xt) {
+					let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
-
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &uxt);
-			match rs {
-				Ok(val) => val,
-				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-			}
+					match rs {
+						Ok(val) => val,
+						_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+					}
+				} else {
+					(CurrencyId::Native(TokenSymbol::BNC), Zero::zero())
+				}
 		}
 	}
 

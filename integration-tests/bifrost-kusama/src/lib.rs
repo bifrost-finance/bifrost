@@ -29,4 +29,3 @@ mod statemine;
 mod total_issuance;
 mod treasury;
 mod vtoken_minting;
-mod vtoken_voting;

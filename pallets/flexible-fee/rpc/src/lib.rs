@@ -127,10 +127,7 @@ where
 			}
 		};
 
-		// 这里的费用要增加，除了正常的交易费用，还要加上跨链费用
-		// 再
-
-		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, uxt);
+		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, encoded_xt);
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {

@@ -128,13 +128,23 @@ pub mod pallet {
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
+	/// The current storage version, we set to 2 our new version(after migrate stroage
+	/// XcmWeightAndFee from SLP module).
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
+	// DEPRECATED: This storage is deprecated, we use XcmWeightAndFee instead.
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_weight_and_fee)]
+	pub type XcmDestWeightAndFee<T: Config> =
+		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
+
 	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
 	///
-	/// XcmDestWeightAndFee: map: XcmInterfaceOperation => (Weight, Balance)
+	/// XcmWeightAndFee: map: XcmInterfaceOperation => (Weight, Balance)
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
+	pub type XcmWeightAndFee<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
@@ -312,7 +322,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
+			XcmWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
 				*wt_n_f = weight_and_fee;
 			});
 

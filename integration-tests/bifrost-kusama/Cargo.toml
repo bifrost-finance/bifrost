@@ -6,7 +6,9 @@ edition = "2021"
 
 [dependencies]
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = [
+    "derive",
+] }
 log = { version = "0.4.17" }
 serde = { version = "1.0.160", optional = true }
 static_assertions = "1.1.0"
@@ -59,7 +61,6 @@ bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 bifrost-slp = { path = "../../pallets/slp" }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction" }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting" }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting",  features = [ "kusama" ] }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }

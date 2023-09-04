@@ -115,9 +115,6 @@ bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features
 ] }
 pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [
-	"polkadot",
-] }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -220,7 +217,6 @@ std = [
 	"bifrost-fee-share/std",
 	"bifrost-ve-minting/std",
 	"bifrost-ve-minting-rpc-runtime-api/std",
-	"bifrost-vtoken-voting/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
@@ -257,7 +253,6 @@ runtime-benchmarks = [
 	"bifrost-ve-minting/runtime-benchmarks",
 	"bifrost-cross-in-out/runtime-benchmarks",
 	"bifrost-slpx/runtime-benchmarks",
-	"bifrost-vtoken-voting/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 
@@ -321,7 +316,6 @@ try-runtime = [
 	"bifrost-ve-minting/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
 	"bifrost-slpx/try-runtime",
-	"bifrost-vtoken-voting/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
