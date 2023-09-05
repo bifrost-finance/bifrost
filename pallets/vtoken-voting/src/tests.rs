@@ -585,7 +585,25 @@ fn notify_vote_success_works() {
 			vote: aye(2, 5),
 		}));
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
+		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::VoteNotified {
+			vtoken,
+			poll_index,
+			success: true,
+		}));
+		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::ReferendumInfoCreated {
+			vtoken,
+			poll_index,
+			info: ReferendumInfo::Ongoing(ReferendumStatus {
+				submitted: Some(1),
+				tally: TallyOf::<Runtime>::from_parts(10, 0, 2),
+			}),
+		}));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
 	});
 }
 
@@ -608,7 +626,17 @@ fn notify_vote_fail_works() {
 			vote: aye(2, 5),
 		}));
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
+		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::VoteNotified {
+			vtoken,
+			poll_index,
+			success: false,
+		}));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
 	});
 }
 
@@ -618,6 +646,11 @@ fn notify_vote_with_no_data_works() {
 		let query_id = 0;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
 	});
 }
