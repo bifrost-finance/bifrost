@@ -909,6 +909,7 @@ dependencies = [
  "node-primitives",
  "nutsfinance-stable-asset",
  "oracle",
+ "orml-oracle",
  "orml-tokens",
  "orml-traits",
  "orml-unknown-tokens",
@@ -929,6 +930,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-prices",
  "pallet-proxy",
  "pallet-ranked-collective",
  "pallet-referenda",
@@ -5364,6 +5366,7 @@ dependencies = [
  "orml-traits",
  "pallet-assets",
  "pallet-balances",
+ "pallet-prices",
  "pallet-timestamp",
  "pallet-traits",
  "parity-scale-codec",
@@ -6592,6 +6595,7 @@ dependencies = [
  "bstringify",
  "frame-support",
  "frame-system",
+ "orml-oracle",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -7763,6 +7767,31 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-prices"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "num-traits",
+ "orml-oracle",
+ "orml-traits",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
 ]
 
 [[package]]

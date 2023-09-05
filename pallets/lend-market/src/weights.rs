@@ -72,8 +72,8 @@ pub trait WeightInfo {
 }
 
 /// Weights for loans using the Substrate node and recommended hardware.
-pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+pub struct BifrostWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	/// Storage: Loans Markets (r:2 w:1)
 	/// Proof Skipped: Loans Markets (max_values: None, max_size: None, mode: Measured)
 	/// Storage: Loans UnderlyingAssetId (r:1 w:1)

@@ -153,7 +153,7 @@ pub type Shortfall = FixedU128;
 
 pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 
-// pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
 pub type DerivativeIndex = u16;
 

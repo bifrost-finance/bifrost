@@ -121,6 +121,7 @@ bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/ru
 bifrost-currencies = { workspace = true }
 lend-market = { path = "../../pallets/lend-market", default-features = false }
 oracle = { path = "../../pallets/oracle", default-features = false }
+pallet-prices = { path = "../../pallets/prices", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "kusama" ] }
 
 # orml
@@ -130,6 +131,7 @@ orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-oracle = { version = "0.4.1-dev", default-features = false }
 
 merkle-distributor = { version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
@@ -213,6 +215,7 @@ std = [
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
 	"orml-xcm-support/std",
+	"orml-oracle/std",
 	"nutsfinance-stable-asset/std",
 	"bifrost-runtime-common/std",
 	"bifrost-farming/std",
@@ -235,7 +238,8 @@ std = [
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
 	"lend-market/std",
-  "bifrost-vtoken-voting/std",
+	"pallet-prices/std",
+	"bifrost-vtoken-voting/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -334,6 +338,7 @@ try-runtime = [
 	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
+	"orml-oracle/try-runtime",
 	"zenlink-protocol/try-runtime",
 	"merkle-distributor/try-runtime",
 	"zenlink-stable-amm/try-runtime",
@@ -358,6 +363,7 @@ try-runtime = [
 	"bifrost-stable-pool/try-runtime",
 	"lend-market/try-runtime",
 	"oracle/try-runtime",
+	"pallet-prices/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
 ]
 

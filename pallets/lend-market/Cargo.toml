@@ -18,7 +18,7 @@ num-traits = { version = '0.2.15', default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.42', default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-# pallet-prices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-prices = { path = "../prices", default-features = false }
 node-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
@@ -33,9 +33,6 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 [dev-dependencies]
 orml-oracle = "0.4.1-dev"
 orml-tokens = "0.4.1-dev"
-# orml-currencies = "0.4.1-dev"
-# pallet-amm = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-# pallet-currency-adapter = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-currencies = { path = "../currencies", default-features = false }
@@ -54,7 +51,7 @@ std = [
 	'sp-std/std',
 	'sp-io/std',
 	'pallet-assets/std',
-	# 'pallet-prices/std',
+	'pallet-prices/std',
 	'pallet-balances/std',
 	'pallet-timestamp/std',
 	'serde',
