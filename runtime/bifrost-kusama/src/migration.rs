@@ -20,8 +20,6 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 
 			let count1 = bifrost_slp::XcmDestWeightAndFee::<Runtime>::iter().count();
 
-			// 先将Xcm_interface的XcmDestWeightAndFee的值从旧的存储中取出来，
-			// 然后设置到新的XcmWeightAndFee存储中,新增一个currency_id作为主key
 			xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().for_each(|(key, value)| {
 				log::info!(
 					target: LOG_TARGET,
@@ -49,6 +47,12 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 				XcmInterface::set_xcm_dest_weight_and_fee(key1, key2, Some(value));
 			});
 
+			// delete the old SLP XcmDestWeightAndFee storage
+			bifrost_slp::XcmDestWeightAndFee::<Runtime>::remove_all(Some(100));
+
+			// delete the old Xcm_interface XcmDestWeightAndFee storage
+			xcm_interface::XcmDestWeightAndFee::<Runtime>::remove_all(Some(100));
+
 			// Update the storage version
 			StorageVersion::new(2).put::<xcm_interface::Pallet<Runtime>>();
 
@@ -56,7 +60,7 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 			// Return the consumed weight
 			Weight::from(
 				<Runtime as frame_system::Config>::DbWeight::get()
-					.reads_writes(count as u64 + 1, count as u64 + 1),
+					.reads_writes(count as u64 * 2 + 1, count as u64 + 1),
 			)
 		} else {
 			// We don't do anything here.
