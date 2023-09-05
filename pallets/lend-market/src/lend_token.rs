@@ -114,7 +114,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 
 		let sub_result = Self::balance(lend_token_id, who).checked_sub(amount);
 		if sub_result.is_none() {
-			return WithdrawConsequence::WouldDie;
+			return WithdrawConsequence::BalanceLow;
 		}
 
 		let rest = sub_result.expect("Cannot be none; qed");
@@ -153,6 +153,32 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 // }
 
 impl<T: Config> Pallet<T> {
+	/// Returns `Err` if the reducible lend token of `who` is insufficient
+	///
+	/// For lend token, We don't care if keep_alive is enabled
+	#[transactional]
+	pub fn transfer(
+		lend_token_id: AssetIdOf<T>,
+		source: &T::AccountId,
+		dest: &T::AccountId,
+		amount: BalanceOf<T>,
+		_keep_alive: bool,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		ensure!(
+			amount <=
+				Self::reducible_balance(
+					lend_token_id,
+					source,
+					Preservation::Expendable,
+					Fortitude::Polite
+				),
+			Error::<T>::InsufficientCollateral
+		);
+
+		Self::do_transfer_lend_tokens(lend_token_id, source, dest, amount)?;
+		Ok(amount)
+	}
+
 	#[require_transactional]
 	fn do_transfer_lend_tokens(
 		lend_token_id: AssetIdOf<T>,
