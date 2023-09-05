@@ -20,9 +20,11 @@ node-primitives = { default-features = false, path = "../../node/primitives" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+pallet-conviction-voting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
@@ -57,10 +59,10 @@ bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 bifrost-slp = { path = "../../pallets/slp" }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction" }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting" }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting",  features = [ "kusama" ] }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
-bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot" }
 
 # orml
 orml-tokens = { version = "0.4.1-dev" }

@@ -28,7 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_slp::QueryResponseManager;
+use bifrost_slp::{Ledger, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -81,7 +81,7 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
@@ -108,7 +108,11 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use pallet_xcm::QueryStatus;
+use bifrost_vtoken_voting::{
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	DerivativeIndex,
+};
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -1506,6 +1510,64 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
+parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
+	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
+	}
+
+	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
+	}
+}
+
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
+					Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+}
+
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type ParachainId = SelfParaChainId;
+	type MaxVotes = ConstU32<512>;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1874,6 +1936,7 @@ construct_runtime! {
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1951,6 +2014,7 @@ mod benches {
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 
@@ -2229,8 +2293,16 @@ impl_runtime_apis! {
 			pool_id: u32,
 			currency_id_in: u32,
 			currency_id_out: u32,
-			amount: Balance,) -> Balance {
-			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount).unwrap_or(Zero::zero())
+			amount: Balance,
+		) -> Balance {
+			StablePool::get_swap_output(pool_id, currency_id_in, currency_id_out, amount).unwrap_or(Zero::zero())
+		}
+
+		fn add_liquidity_amount(
+			pool_id: u32,
+			amounts: Vec<Balance>,
+		) -> Balance {
+			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
 		}
 	}
 

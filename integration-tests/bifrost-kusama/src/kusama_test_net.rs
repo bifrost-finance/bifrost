@@ -107,6 +107,8 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 pub fn kusama_ext() -> sp_io::TestExternalities {
 	use kusama_runtime::{Runtime, System};
 
+	let bifrost_para_account: AccountId = ParaId::from(2001u32).into_account_truncating();
+
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 	pallet_balances::GenesisConfig::<Runtime> {
@@ -114,7 +116,9 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 			(AccountId::from(ALICE), 100 * KSM_DECIMALS),
 			(AccountId::from(KUSAMA_ALICE_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
 			(AccountId::from(KUSAMA_BOB_STASH_ACCOUNT), 10000 * KSM_DECIMALS),
-			(ParaId::from(2001u32).into_account_truncating(), 2 * KSM_DECIMALS),
+			(bifrost_para_account.clone(), 2 * KSM_DECIMALS),
+			(Utility::derivative_account_id(bifrost_para_account.clone(), 5), 10 * KSM_DECIMALS),
+			(Utility::derivative_account_id(bifrost_para_account, 21), 10 * KSM_DECIMALS),
 		],
 	}
 	.assimilate_storage(&mut t)

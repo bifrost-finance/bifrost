@@ -28,9 +28,9 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-use bifrost_slp::QueryResponseManager;
+use bifrost_slp::{Ledger, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
 	construct_runtime,
 	inherent::Vec,
@@ -104,8 +104,12 @@ use zenlink_protocol::{
 // xcm config
 mod xcm_config;
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
+use bifrost_vtoken_voting::{
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	DerivativeIndex,
+};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
-use pallet_xcm::QueryStatus;
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -1354,6 +1358,64 @@ impl bifrost_slpx::Config for Runtime {
 	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
+	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
+	}
+
+	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
+		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
+	}
+}
+
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
+					Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+}
+
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type ParachainId = SelfParaChainId;
+	type MaxVotes = ConstU32<512>;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1641,6 +1703,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1708,6 +1771,7 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_slpx, Slpx]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 

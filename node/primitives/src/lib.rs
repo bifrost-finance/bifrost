@@ -28,6 +28,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
+use xcm::v3::prelude::*;
 
 pub mod currency;
 mod salp;
@@ -246,10 +247,13 @@ impl<AccountId> Default for RedeemType<AccountId> {
 	}
 }
 
-// #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug, TypeInfo, MaxEncodedLen)]
-// #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-// pub enum OracleKey {
-// 	ExchangeRate(CurrencyId),
-// 	FeeEstimation,
-// }
+pub struct DoNothingRouter;
+impl SendXcm for DoNothingRouter {
+	type Ticket = ();
+	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
+		Ok(((), MultiAssets::new()))
+	}
+	fn deliver(_: ()) -> Result<XcmHash, SendError> {
+		Ok([0; 32])
+	}
+}
