@@ -1,6 +1,6 @@
 use super::*;
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{ensure, traits::OnRuntimeUpgrade};
 use node_primitives::traits::XcmDestWeightAndFeeHandler;
 
 const LOG_TARGET: &str = "XCM-INTERFACE::migration";
