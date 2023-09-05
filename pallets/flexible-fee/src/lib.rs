@@ -116,8 +116,7 @@ pub mod pallet {
 		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>),
 	}
 
-	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
-	/// boundedVec).
+	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	/// Universal fee currency order list for all users
