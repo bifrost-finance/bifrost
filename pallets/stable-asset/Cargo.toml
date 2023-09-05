@@ -36,7 +36,7 @@ branch = "polkadot-v0.9.42"
 [dev-dependencies]
 serde = { version = "1.0.101" }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
+bifrost-currencies = { workspace = true }
 
 [dev-dependencies.sp-core]
 default-features = false

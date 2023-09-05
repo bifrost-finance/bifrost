@@ -120,9 +120,12 @@ bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false
 bifrost-slpx = { path = "../../pallets/slpx", default-features = false }
 bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
+bifrost-currencies = { workspace = true }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [
+	"kusama",
+] }
 
 # orml
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
@@ -204,7 +207,7 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
-	"orml-currencies/std",
+	"bifrost-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xtokens/std",
@@ -232,6 +235,7 @@ std = [
 	"bifrost-slpx/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
+	"bifrost-vtoken-voting/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -284,6 +288,7 @@ runtime-benchmarks = [
 	"bifrost-fee-share/runtime-benchmarks",
 	"bifrost-slpx/runtime-benchmarks",
 	"bifrost-stable-pool/runtime-benchmarks",
+	"bifrost-vtoken-voting/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -326,7 +331,7 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"orml-xtokens/try-runtime",
 	"orml-tokens/try-runtime",
-	"orml-currencies/try-runtime",
+	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
 	"zenlink-protocol/try-runtime",
@@ -351,6 +356,7 @@ try-runtime = [
 	"bifrost-slpx/try-runtime",
 	"nutsfinance-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
+	"bifrost-vtoken-voting/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

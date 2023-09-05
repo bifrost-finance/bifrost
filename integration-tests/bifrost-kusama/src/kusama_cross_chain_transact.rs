@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{kusama_integration_tests::*, kusama_test_net::*};
+use crate::{
+	kusama_integration_tests::*, kusama_test_net::*, vtoken_voting::set_balance_proposal_bounded,
+};
 use frame_support::{
 	assert_ok,
 	dispatch::{GetDispatchInfo, RawOrigin},
@@ -35,6 +37,17 @@ fn relaychain_transact_works() {
 				poll_index: 0,
 				vote: aye(2, 1),
 			});
+
+		KusamaNet::execute_with(|| {
+			use frame_support::traits::schedule::DispatchTime;
+			use kusama_runtime::{Referenda, RuntimeEvent, RuntimeOrigin, System};
+
+			let notify_vote_call =
+				RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::<Runtime>::notify_vote {
+					query_id: 0,
+					response: Default::default(),
+				});
+		});
 
 		KusamaNet::execute_with(|| {
 			use frame_support::traits::schedule::DispatchTime;
@@ -108,7 +121,21 @@ fn relaychain_transact_works() {
 				))
 			)));
 		});
-	})
+
+		Bifrost::execute_with(|| {
+			System::events().iter().for_each(|r| println!("Bifrost >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::ResponseReceived {
+					responder: MultiLocation { parents: 1, interior: Here },
+					query_id: 0,
+					response: crate::kusama_cross_chain_transact::Response::DispatchResult(
+						MaybeErrorCode::Success
+					)
+				})
+			)));
+		});
+	});
 }
 
 pub fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {

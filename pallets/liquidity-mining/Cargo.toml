@@ -23,7 +23,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 
 [features]
 default = ["std"]

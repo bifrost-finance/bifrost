@@ -37,7 +37,7 @@ pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 orml-xtokens = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }

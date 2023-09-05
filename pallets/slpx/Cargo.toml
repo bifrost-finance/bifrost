@@ -37,7 +37,7 @@ bifrost-vtoken-minting = { path = "../vtoken-minting" }
 bifrost-slp = { path = "../slp" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { workspace = true }
 xcm-executor  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 pallet-xcm  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-builder  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }

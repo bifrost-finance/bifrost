@@ -75,7 +75,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage},
+		Currencies: bifrost_currencies::{Pallet, Call, Storage},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
@@ -123,9 +123,9 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;

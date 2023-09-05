@@ -27,8 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod migration;
-use bifrost_slp::QueryResponseManager;
-use core::convert::TryInto;
+use bifrost_slp::{Ledger, QueryResponseManager};
 use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -81,7 +80,7 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
@@ -92,6 +91,7 @@ use hex_literal::hex;
 pub use node_primitives::{
 	traits::{
 		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
 	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
 	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
@@ -108,7 +108,8 @@ pub mod governance;
 use governance::{custom_origins, CoreAdmin, TechAdmin};
 // xcm config
 mod xcm_config;
-use pallet_xcm::QueryStatus;
+use bifrost_vtoken_voting::{traits::DerivativeAccountHandler, DerivativeIndex};
+use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -217,15 +218,15 @@ impl Contains<RuntimeCall> for CallFilter {
 		);
 		if is_transfer {
 			let is_disabled = match *call {
-				// orml-currencies module
-				RuntimeCall::Currencies(orml_currencies::Call::transfer {
+				// bifrost-currencies module
+				RuntimeCall::Currencies(bifrost_currencies::Call::transfer {
 					dest: _,
 					currency_id,
 					amount: _,
 				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&currency_id,
 				),
-				RuntimeCall::Currencies(orml_currencies::Call::transfer_native_currency {
+				RuntimeCall::Currencies(bifrost_currencies::Call::transfer_native_currency {
 					dest: _,
 					amount: _,
 				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
@@ -1102,17 +1103,18 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			// RuntimeCall::VtokenVoting(vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
-			// 	extra_fee_name: ExtraFeeName::VoteVtoken,
-			// 	extra_fee_currency: vtoken,
-			// },
-			// RuntimeCall::VtokenVoting(vtoken_voting::Call::remove_delegator_vote {
-			// 	vtoken,
-			// 	..
-			// }) => ExtraFeeInfo {
-			// 	extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-			// 	extra_fee_currency: vtoken,
-			// },
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken,
+				},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
+				vtoken,
+				..
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
+				extra_fee_currency: vtoken,
+			},
 			_ => ExtraFeeInfo::default(),
 		}
 	}
@@ -1473,6 +1475,53 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
+parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Slp::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
+					Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+}
+
+impl bifrost_vtoken_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type XcmDestWeightAndFee = XcmInterface;
+	type DerivativeAccount = DerivativeAccount;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type ParachainId = SelfParaChainId;
+	type MaxVotes = ConstU32<512>;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1812,7 +1861,7 @@ construct_runtime! {
 		// Third party modules
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
-		Currencies: orml_currencies::{Pallet, Call} = 72,
+		Currencies: bifrost_currencies::{Pallet, Call} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
@@ -1841,6 +1890,7 @@ construct_runtime! {
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
 
@@ -1919,6 +1969,7 @@ mod benches {
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
+		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
 
@@ -2200,8 +2251,16 @@ impl_runtime_apis! {
 			pool_id: u32,
 			currency_id_in: u32,
 			currency_id_out: u32,
-			amount: Balance,) -> Balance {
-			StablePool::get_swap_output(pool_id,currency_id_in,currency_id_out,amount).unwrap_or(Zero::zero())
+			amount: Balance,
+		) -> Balance {
+			StablePool::get_swap_output(pool_id, currency_id_in, currency_id_out, amount).unwrap_or(Zero::zero())
+		}
+
+		fn add_liquidity_amount(
+			pool_id: u32,
+			amounts: Vec<Balance>,
+		) -> Balance {
+			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
 		}
 	}
 
