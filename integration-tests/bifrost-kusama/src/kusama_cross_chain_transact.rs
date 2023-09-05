@@ -38,16 +38,11 @@ fn relaychain_transact_works() {
 				vote: aye(2, 1),
 			});
 
-		KusamaNet::execute_with(|| {
-			use frame_support::traits::schedule::DispatchTime;
-			use kusama_runtime::{Referenda, RuntimeEvent, RuntimeOrigin, System};
-
-			let notify_vote_call =
-				RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::<Runtime>::notify_vote {
-					query_id: 0,
-					response: Default::default(),
-				});
-		});
+		let notify_vote_call =
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::<Runtime>::notify_vote {
+				query_id: 0,
+				response: Default::default(),
+			});
 
 		KusamaNet::execute_with(|| {
 			use frame_support::traits::schedule::DispatchTime;

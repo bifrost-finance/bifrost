@@ -1,6 +1,6 @@
 use super::*;
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
-use frame_support::{ensure, traits::OnRuntimeUpgrade};
+use frame_support::traits::OnRuntimeUpgrade;
 use node_primitives::traits::XcmDestWeightAndFeeHandler;
 
 const LOG_TARGET: &str = "XCM-INTERFACE::migration";
@@ -27,7 +27,11 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 					key,
 					value
 				);
-				XcmInterface::set_xcm_dest_weight_and_fee(RelayCurrencyId::get(), key, Some(value));
+				let _ = XcmInterface::set_xcm_dest_weight_and_fee(
+					RelayCurrencyId::get(),
+					key,
+					Some(value),
+				);
 			});
 
 			// get value from the old SLP XcmDestWeightAndFee storage and set it to the XcmInterface
@@ -44,14 +48,16 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 					value
 				);
 				// set the value to the new XcmInterface storage
-				XcmInterface::set_xcm_dest_weight_and_fee(key1, key2, Some(value));
+				let _ = XcmInterface::set_xcm_dest_weight_and_fee(key1, key2, Some(value));
+
+				// delete the old SLP XcmDestWeightAndFee storage
+				bifrost_slp::XcmDestWeightAndFee::<Runtime>::remove(key1, key2);
 			});
 
-			// delete the old SLP XcmDestWeightAndFee storage
-			bifrost_slp::XcmDestWeightAndFee::<Runtime>::remove_all(Some(100));
-
 			// delete the old Xcm_interface XcmDestWeightAndFee storage
-			xcm_interface::XcmDestWeightAndFee::<Runtime>::remove_all(Some(100));
+			xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().for_each(|(key, _value)| {
+				xcm_interface::XcmDestWeightAndFee::<Runtime>::remove(key);
+			});
 
 			// Update the storage version
 			StorageVersion::new(2).put::<xcm_interface::Pallet<Runtime>>();
