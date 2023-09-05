@@ -175,7 +175,7 @@ pub mod pallet {
 			poll_index: PollIndex,
 			success: bool,
 		},
-		DelegatorTokenUnlockNotified {
+		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
@@ -696,7 +696,7 @@ pub mod pallet {
 						},
 					)?;
 				}
-				Self::deposit_event(Event::<T>::DelegatorTokenUnlockNotified {
+				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
 					poll_index,
 					success,
