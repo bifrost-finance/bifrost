@@ -412,7 +412,7 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 }
 
 #[test]
-fn errors_with_vote_work() {
+fn errors_with_vote_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
 
@@ -431,6 +431,139 @@ fn errors_with_vote_work() {
 		assert_noop!(
 			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 3, aye(10, 0)),
 			Error::<Runtime>::MaxVotesReached
+		);
+	});
+}
+
+#[test]
+fn set_referendum_status_works() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let info = ReferendumInfo::Completed(3);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index,
+			info.clone(),
+		));
+
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ReferendumInfoSet {
+			vtoken,
+			poll_index,
+			info,
+		}));
+	});
+}
+
+#[test]
+fn set_referendum_status_without_vote_should_fail() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let info = ReferendumInfo::Completed(3);
+
+		assert_noop!(
+			VtokenVoting::set_referendum_status(
+				RuntimeOrigin::signed(CONTROLLER),
+				vtoken,
+				poll_index,
+				info.clone(),
+			),
+			Error::<Runtime>::NoData
+		);
+	});
+}
+
+#[test]
+fn set_referendum_status_with_origin_signed_should_fail() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let info = ReferendumInfo::Completed(3);
+
+		assert_noop!(
+			VtokenVoting::set_referendum_status(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				poll_index,
+				info.clone(),
+			),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+#[test]
+fn set_vote_locking_period_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let locking_period = 100;
+
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			locking_period,
+		));
+
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::VoteLockingPeriodSet {
+			vtoken,
+			locking_period,
+		}));
+	});
+}
+
+#[test]
+fn set_vote_locking_period_with_origin_signed_should_fail() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let locking_period = 100;
+
+		assert_noop!(
+			VtokenVoting::set_vote_locking_period(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				locking_period,
+			),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+#[test]
+fn set_undeciding_timeout_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let undeciding_timeout = 100;
+
+		assert_ok!(VtokenVoting::set_undeciding_timeout(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			undeciding_timeout,
+		));
+
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::UndecidingTimeoutSet {
+			vtoken,
+			undeciding_timeout,
+		}));
+	});
+}
+
+#[test]
+fn set_undeciding_timeout_with_origin_signed_should_fail() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let undeciding_timeout = 100;
+
+		assert_noop!(
+			VtokenVoting::set_undeciding_timeout(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				undeciding_timeout,
+			),
+			DispatchError::BadOrigin
 		);
 	});
 }
