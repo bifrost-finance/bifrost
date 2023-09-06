@@ -39,7 +39,7 @@ use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, ConstU32, IdentityLookup},
+	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
 };
 use xcm::{prelude::*, v3::Weight as XcmWeight};
 use xcm_builder::FixedWeightBounds;
@@ -274,6 +274,26 @@ impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
 	}
 }
 
+parameter_types! {
+	pub static RelaychainBlockNumber: BlockNumber = 1;
+}
+
+pub struct RelaychainDataProvider;
+
+impl RelaychainDataProvider {
+	pub fn set_block_number(block: BlockNumber) {
+		RelaychainBlockNumber::set(block);
+	}
+}
+
+impl BlockNumberProvider for RelaychainDataProvider {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		RelaychainBlockNumber::get()
+	}
+}
+
 impl vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -283,7 +303,7 @@ impl vtoken_voting::Config for Runtime {
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
-	type RelaychainBlockNumberProvider = System;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider;
 	type MaxVotes = ConstU32<3>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;

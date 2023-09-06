@@ -71,6 +71,10 @@ fn response_success() -> Response {
 	Response::DispatchResult(MaybeErrorCode::Success)
 }
 
+fn response_fail() -> Response {
+	Response::DispatchResult(MaybeErrorCode::Error(BoundedVec::try_from(vec![0u8, 1u8]).unwrap()))
+}
+
 #[test]
 fn basic_voting_works() {
 	new_test_ext().execute_with(|| {
@@ -436,6 +440,28 @@ fn errors_with_vote_works() {
 }
 
 #[test]
+fn set_delegator_role_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let derivative_index: DerivativeIndex = 100;
+		let role = aye(10, 3).into();
+
+		assert_ok!(VtokenVoting::set_delegator_role(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			derivative_index,
+			role,
+		));
+
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::DelegatorRoleSet {
+			vtoken,
+			role,
+			derivative_index,
+		}));
+	});
+}
+
+#[test]
 fn set_referendum_status_works() {
 	new_test_ext().execute_with(|| {
 		let poll_index = 3;
@@ -574,7 +600,7 @@ fn notify_vote_success_works() {
 		let poll_index = 3;
 		let vtoken = VKSM;
 		let query_id = 0;
-		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		let response = response_success();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
@@ -613,9 +639,7 @@ fn notify_vote_fail_works() {
 		let poll_index = 3;
 		let vtoken = VKSM;
 		let query_id = 0;
-		let response = Response::DispatchResult(MaybeErrorCode::Error(
-			BoundedVec::try_from(vec![0u8, 1u8]).unwrap(),
-		));
+		let response = response_fail();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
@@ -644,9 +668,139 @@ fn notify_vote_fail_works() {
 fn notify_vote_with_no_data_works() {
 	new_test_ext().execute_with(|| {
 		let query_id = 0;
-		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		let response = response_success();
 
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
+	});
+}
+
+#[test]
+fn notify_remove_delegator_vote_success_works() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let mut query_id = 0;
+		let derivative_index = 3;
+		let response = response_success();
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
+			who: ALICE,
+			vtoken,
+			poll_index,
+			vote: aye(2, 5),
+		}));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(3),
+		));
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			10,
+		));
+
+		RelaychainDataProvider::set_block_number(15);
+		assert_ok!(VtokenVoting::remove_delegator_vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index,
+			derivative_index,
+		));
+
+		query_id = 1;
+		assert_ok!(VtokenVoting::notify_remove_delegator_vote(
+			origin_response(),
+			query_id,
+			response.clone()
+		));
+		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::DelegatorVoteRemovedNotified {
+			vtoken,
+			poll_index,
+			success: true,
+		}));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
+	});
+}
+
+#[test]
+fn notify_remove_delegator_vote_fail_works() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let vtoken = VKSM;
+		let mut query_id = 0;
+		let derivative_index = 3;
+		let response = response_fail();
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
+			who: ALICE,
+			vtoken,
+			poll_index,
+			vote: aye(2, 5),
+		}));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response_success()));
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(3),
+		));
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			10,
+		));
+
+		RelaychainDataProvider::set_block_number(15);
+		assert_ok!(VtokenVoting::remove_delegator_vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index,
+			derivative_index,
+		));
+
+		query_id = 1;
+		assert_ok!(VtokenVoting::notify_remove_delegator_vote(
+			origin_response(),
+			query_id,
+			response.clone()
+		));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
+			responder: Parent.into(),
+			query_id,
+			response,
+		}));
+	});
+}
+
+#[test]
+fn notify_remove_delegator_vote_with_no_data_works() {
+	new_test_ext().execute_with(|| {
+		let query_id = 0;
+		let response = response_success();
+
+		assert_ok!(VtokenVoting::notify_remove_delegator_vote(
+			origin_response(),
+			query_id,
+			response.clone(),
+		));
 		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
 			responder: Parent.into(),
 			query_id,
