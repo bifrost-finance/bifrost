@@ -21,6 +21,8 @@
 use cumulus_primitives_core::ParaId as Pid;
 use std::convert::TryInto;
 
+use super::*;
+use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
@@ -51,8 +53,6 @@ use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
-use super::*;
-use crate::{self as flexible_fee, tests::CHARLIE};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -180,7 +180,6 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 	type CurrencyHooks = ();
 }
-
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;

@@ -129,6 +129,7 @@ pub mod pallet {
 
 		/// The current storage version, we set to 2 our new version(after migrate stroage
 	/// XcmWeightAndFee from SLP module).
+	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	// DEPRECATED: This storage is deprecated, we use XcmWeightAndFee instead.
