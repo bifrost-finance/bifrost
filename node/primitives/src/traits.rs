@@ -422,11 +422,40 @@ pub trait TryConvertFrom<CurrencyId> {
 		Self: Sized;
 }
 
-pub trait XcmDestWeightAndFeeHandler<CurrencyId, Balance> {
+pub trait XcmDestWeightAndFeeHandler<CurrencyId, Balance>
+where
+	Balance: AtLeast32BitUnsigned,
+{
 	fn get_operation_weight_and_fee(
 		token: CurrencyId,
 		operation: XcmInterfaceOperation,
-	) -> Result<(Weight, Balance), DispatchError>;
+	) -> Option<(Weight, Balance)>;
+
+	fn set_xcm_dest_weight_and_fee(
+		currency_id: CurrencyId,
+		operation: XcmInterfaceOperation,
+		weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult;
+}
+
+impl<CurrencyId, Balance> XcmDestWeightAndFeeHandler<CurrencyId, Balance> for ()
+where
+	Balance: AtLeast32BitUnsigned,
+{
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
+		Some((Zero::zero(), Zero::zero()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]

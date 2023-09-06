@@ -21,20 +21,21 @@ use crate::{
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation, TIMEOUT_BLOCKS,
+		ValidatorsByDelegatorUpdateEntry, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, BoundedVec, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
-	XcmDestWeightAndFee, XcmWeight,
+	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmOperation,
+	XcmWeight,
 };
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{
-	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, DOT, DOT_TOKEN_ID,
+	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, DOT,
+	DOT_TOKEN_ID,
 };
 use sp_runtime::{
 	traits::{
@@ -684,9 +685,11 @@ impl<T: Config>
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;
 
-		let (weight_limit, _) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferBack)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight_limit, _) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperation::TransferBack,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Construct xcm message.
 		let call = SubstrateCall::<T>::get_reserve_transfer_assets_call(
@@ -956,8 +959,9 @@ impl<T: Config> PolkadotAgent<T> {
 
 		let call_as_subaccount = call.get_call_as_subaccount_from_call(sub_account_index)?;
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}
