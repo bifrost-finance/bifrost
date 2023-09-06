@@ -35,17 +35,17 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn set_price() -> Weight {
-		Weight::from_ref_time(22_361_000 as u64)
+		Weight::from_parts(22_361_000 as u64, 3979)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	fn reset_price() -> Weight {
-		Weight::from_ref_time(21_361_000 as u64)
+		Weight::from_parts(21_361_000 as u64, 3979)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	fn set_foreign_asset() -> Weight {
-		Weight::from_ref_time(23_361_000 as u64)
+		Weight::from_parts(23_361_000 as u64, 3979)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
@@ -54,17 +54,17 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn set_price() -> Weight {
-		Weight::from_ref_time(22_361_000 as u64)
+		Weight::from_parts(22_361_000 as u64, 3979)
 			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	fn reset_price() -> Weight {
-		Weight::from_ref_time(21_361_000 as u64)
+		Weight::from_parts(21_361_000 as u64, 3979)
 			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	fn set_foreign_asset() -> Weight {
-		Weight::from_ref_time(23_361_000 as u64)
+		Weight::from_parts(23_361_000 as u64, 3979)
 			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}

@@ -17,8 +17,7 @@
 use super::*;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
-	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
-	PalletId,
+	traits::{AsEnsureOriginWithArg, Everything, Nothing},
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use sp_core::H256;

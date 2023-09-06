@@ -23,22 +23,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
-use frame_support::{
-	dispatch::DispatchClass, log, pallet_prelude::*, traits::fungibles::Inspect, transactional,
-};
+use frame_support::{dispatch::DispatchClass, log, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
-use sp_runtime::{
-	traits::{CheckedDiv, CheckedMul},
-	FixedPointNumber, FixedU128,
-};
+use sp_runtime::{traits::CheckedDiv, FixedU128};
 use sp_std::vec::Vec;
-use xcm::{latest::prelude::*, v3::MultiLocation};
+use xcm::v3::MultiLocation;
 
 pub use pallet::*;
 use pallet_traits::*;
-use sp_core::U256;
 
 #[cfg(test)]
 mod mock;
@@ -54,9 +48,6 @@ pub mod pallet {
 	use frame_support::traits::fungibles::{Inspect, Mutate};
 	use weights::WeightInfo;
 
-	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub(crate) type AssetIdOf<T> =
-		<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -195,8 +186,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_special_asset_price(
-		asset_id: CurrencyId,
-		base_price: TimeStampedPrice,
+		_asset_id: CurrencyId,
+		_base_price: TimeStampedPrice,
 	) -> Option<TimeStampedPrice> {
 		None
 	}
@@ -206,16 +197,6 @@ impl<T: Config> Pallet<T> {
 			.value
 			.checked_div(&FixedU128::from_inner(mantissa))
 			.map(|value| (value, price.timestamp))
-	}
-
-	fn scale_timestamped_price(
-		base_price: TimeStampedPrice,
-		rate: Rate,
-	) -> Option<TimeStampedPrice> {
-		base_price
-			.value
-			.checked_mul(&rate)
-			.map(|price| TimeStampedPrice { value: price, timestamp: base_price.timestamp })
 	}
 }
 

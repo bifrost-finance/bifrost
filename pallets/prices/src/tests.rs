@@ -17,11 +17,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::{RuntimeEvent, *};
-use node_primitives::TimeStampedPrice;
-use sp_runtime::{
-	traits::{BadOrigin, Saturating},
-	FixedPointNumber,
-};
+use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 #[test]
 fn get_price_from_oracle() {
