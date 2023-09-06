@@ -7780,6 +7780,7 @@ dependencies = [
  "node-primitives",
  "num-traits",
  "orml-oracle",
+ "orml-tokens",
  "orml-traits",
  "pallet-assets",
  "pallet-balances",

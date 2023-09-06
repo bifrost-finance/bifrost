@@ -59,8 +59,6 @@ construct_runtime!(
 		// Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
-		// DefaultAMM: pallet_amm::{Pallet, Call, Storage, Event<T>},
-		// CurrencyAdapter: pallet_currency_adapter::{Pallet, Call},
 	}
 );
 
@@ -170,11 +168,10 @@ orml_traits::parameter_type_with_key! {
 			&VBNC => 0,
 			&CurrencyId::BLP(_) => 0,
 			_ => 0
-			// bifrost_asset_registry::AssetIdMaps::<Test>::get_currency_metadata(*currency_id)
-			// 	.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
 		}
 	};
 }
+
 impl orml_tokens::Config for Test {
 	type Amount = i128;
 	type Balance = Balance;
@@ -419,17 +416,6 @@ impl Config for Test {
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
 }
-
-// parameter_types! {
-// 	pub const NativeCurrencyId: CurrencyId = BNC;
-// }
-
-// impl pallet_currency_adapter::Config for Test {
-// 	type Assets = Assets;
-// 	type Balances = Balances;
-// 	type GetNativeCurrencyId = NativeCurrencyId;
-// 	type LockOrigin = EnsureRoot<AccountId>;
-// }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();

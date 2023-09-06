@@ -11,11 +11,10 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 num-traits = { version = '0.2.15', default-features = false }
 orml-oracle = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-# pallet-amm = { workspace = true }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.42', default-features = false }
 pallet-traits = { path = '../traits', default-features = false }
-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+node_primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
 scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }
@@ -29,6 +28,7 @@ bifrost-asset-registry = { path = "../asset-registry", default-features = false 
 bifrost-currencies = { path = "../currencies", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
 
 [features]
 default = ['std']
@@ -42,11 +42,12 @@ std = [
 	'sp-core/std',
 	'orml-traits/std',
 	'orml-oracle/std',
-	'primitives/std',
+	'node_primitives/std',
 	'scale-info/std',
 	'num-traits/std',
 	'pallet-traits/std',
 	'pallet-assets/std',
+	'bifrost-asset-registry/std',
 ]
 try-runtime = ['frame-support/try-runtime']
 

@@ -27,8 +27,8 @@ use frame_support::{
 	dispatch::DispatchClass, log, pallet_prelude::*, traits::fungibles::Inspect, transactional,
 };
 use frame_system::pallet_prelude::*;
+use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
-use primitives::*;
 use sp_runtime::{
 	traits::{CheckedDiv, CheckedMul},
 	FixedPointNumber, FixedU128,
@@ -74,19 +74,6 @@ pub mod pallet {
 
 		/// The origin which can update prices link.
 		type UpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
-		// /// VaultTokenCurrenciesFilter
-		// type VaultTokenCurrenciesFilter: VaultTokenCurrenciesFilter<CurrencyId>;
-
-		// /// The provider of the exchange rate between vault_token currency and
-		// /// relay currency.
-		// type VaultTokenExchangeRateProvider: VaultTokenExchangeRateProvider<CurrencyId>;
-
-		// /// The provider of Loans rate for vault_token
-		// type VaultLoansRateProvider: LoansMarketDataProvider<CurrencyId, BalanceOf<Self>>;
-
-		/// Specify all the AMMs we are routing between
-		// type AMM: AMM<AccountIdOf<Self>, AssetIdOf<Self>, BalanceOf<Self>, Self::BlockNumber>;
 
 		/// Currency type for deposit/withdraw assets to/from amm route
 		/// module
@@ -196,13 +183,6 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_asset_mantissa(asset_id: &CurrencyId) -> Option<u128> {
-		// asset_id
-		// 	.decimals()
-		// 	.unwrap_or(
-		// 		T::CurrencyIdConvert::get_currency_metadata(currency_id)
-		// 			.map_or(12, |metatata| metatata.decimals.into()),
-		// 	)
-		// 	.into();
 		10u128.checked_pow(
 			asset_id
 				.decimals()
@@ -219,7 +199,6 @@ impl<T: Config> Pallet<T> {
 		base_price: TimeStampedPrice,
 	) -> Option<TimeStampedPrice> {
 		None
-		// Self::get_vault_asset_price(asset_id, base_price)
 	}
 
 	fn normalize_detail_price(price: TimeStampedPrice, mantissa: u128) -> Option<PriceDetail> {
@@ -238,18 +217,6 @@ impl<T: Config> Pallet<T> {
 			.checked_mul(&rate)
 			.map(|price| TimeStampedPrice { value: price, timestamp: base_price.timestamp })
 	}
-
-	// fn get_vault_asset_price(
-	// 	asset_id: CurrencyId,
-	// 	base_price: TimeStampedPrice,
-	// ) -> Option<TimeStampedPrice> {
-	// 	T::VaultLoansRateProvider::get_full_interest_rate(asset_id)
-	// 		.filter(|_implied_yield_rate| T::VaultTokenCurrenciesFilter::contains(&asset_id))
-	// 		.and_then(|implied_yield_rate| {
-	// 			T::VaultTokenExchangeRateProvider::get_exchange_rate(&asset_id, implied_yield_rate)
-	// 		})
-	// 		.and_then(|rate| Self::scale_timestamped_price(base_price, rate))
-	// }
 }
 
 impl<T: Config> PriceFeeder for Pallet<T> {
