@@ -90,10 +90,13 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator, FeeGetter,XcmDestWeightAndFeeHandler},
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
+	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, ExtraFeeInfo, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
-	TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
+	RpcContributionStatus, TimeUnit, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 // zenlink imports
 use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
@@ -103,10 +106,7 @@ use zenlink_protocol::{
 };
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::{
-	traits::{DerivativeAccountHandler},
-	DerivativeIndex,
-};
+use bifrost_vtoken_voting::{traits::DerivativeAccountHandler, DerivativeIndex};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
@@ -963,10 +963,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteVtoken,
-				extra_fee_currency: vtoken,
-			},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken,
+				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..

@@ -89,7 +89,10 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator, FeeGetter,XcmDestWeightAndFeeHandler},
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
+	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
 	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
 	RpcContributionStatus, TimeUnit, TokenSymbol,
@@ -107,10 +110,7 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::{
-	traits::{DerivativeAccountHandler},
-	DerivativeIndex,
-};
+use bifrost_vtoken_voting::{traits::DerivativeAccountHandler, DerivativeIndex};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1105,10 +1105,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteVtoken,
-				extra_fee_currency: vtoken,
-			},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken,
+				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
