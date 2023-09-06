@@ -45,7 +45,8 @@ use frame_support::{
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
 	currency::{VDOT, VKSM},
-	CurrencyId,
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, XcmInterfaceOperation,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
@@ -104,7 +105,7 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
+		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
 		type DerivativeAccount: DerivativeAccountHandler<Self>;
 
@@ -398,8 +399,9 @@ pub mod pallet {
 			// send XCM message
 			let vote_call = <RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, new_vote);
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_vote(
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmInterfaceOperation::VoteVtoken,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
@@ -464,8 +466,9 @@ pub mod pallet {
 			};
 			let remove_vote_call =
 				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmInterfaceOperation::VoteRemoveDelegatorVote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(

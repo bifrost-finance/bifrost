@@ -25,7 +25,7 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation,
+		ValidatorsByDelegatorUpdateEntry,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -39,7 +39,9 @@ use frame_system::{
 };
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator,
+	XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -151,12 +153,8 @@ pub mod pallet {
 		/// If you don't need it, you can specify the type `()`.
 		type OnRefund: OnRefund<AccountIdOf<Self>, CurrencyId, BalanceOf<Self>>;
 
-		//【For xcm v3】
-		// /// This chain's Universal Location. Enabled only for xcm v3 version.
-		// type UniversalLocation: Get<InteriorMultiLocation>;
+		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
-		/// The maximum number of entries to be confirmed in a block for update queue in the
-		/// on_initialize queue.
 		#[pallet::constant]
 		type MaxTypeEntryPerBlock: Get<u32>;
 
@@ -512,10 +510,7 @@ pub mod pallet {
 	/// boundedVec).
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-	/// The dest weight limit and fee for execution XCM msg sended out. Must be
-	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
-	///
-	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (XcmWeight, Balance)
+	/// DEPRECATED
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
@@ -1546,8 +1541,6 @@ pub mod pallet {
 		/// *****************************
 		/// ****** Storage Setters ******
 		/// *****************************
-		///
-		/// Update storage XcmDestWeightAndFee<T>.
 		#[pallet::call_index(21)]
 		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
 		pub fn set_xcm_dest_weight_and_fee(
@@ -1561,9 +1554,11 @@ pub mod pallet {
 
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
-				*wt_n_f = weight_and_fee;
-			});
+			T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				currency_id,
+				operation,
+				weight_and_fee,
+			)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::XcmDestWeightAndFeeSet {

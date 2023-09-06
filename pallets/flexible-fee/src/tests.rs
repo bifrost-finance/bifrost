@@ -42,7 +42,7 @@ pub const CHARLIE: AccountId32 = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
 pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
@@ -380,9 +380,7 @@ fn correct_and_deposit_fee_should_work() {
 #[test]
 fn deduct_salp_fee_should_work() {
 	new_test_ext().execute_with(|| {
-		// deposit some money for Charlie
-		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &CHARLIE, 200)); // Native token
-		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &CHARLIE, 200_000_000)); // Token KSM
+		basic_setup();
 
 		// prepare call variable
 		let para_id = 2001;
@@ -396,21 +394,26 @@ fn deduct_salp_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// 99 inclusion fee and a tip of 8
-		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 80, 8));
 
-		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
-		// fee is: 133780717
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 8);
+
+		// Other currencies should not be affected
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_1, &CHARLIE),
+			20
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_2, &CHARLIE),
+			30
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_3, &CHARLIE),
+			40
+		);
 		assert_eq!(
 			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_4, &CHARLIE),
-			100000000
-		);
-		// treasury account has the fee
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(
-				CURRENCY_ID_4,
-				&<Test as crate::Config>::TreasuryAccount::get()
-			),
-			100000000
+			50
 		);
 	});
 }

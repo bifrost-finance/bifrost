@@ -22,19 +22,19 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		XcmOperation, TIMEOUT_BLOCKS,
+		TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee, XcmWeight,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmOperation, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{TokenSymbol, VtokenMintingOperator};
+use node_primitives::{TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
@@ -839,8 +839,9 @@ impl<T: Config> PhalaAgent<T> {
 			)))
 		};
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}
@@ -883,8 +884,9 @@ impl<T: Config> PhalaAgent<T> {
 			Box::new(call),
 		)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}

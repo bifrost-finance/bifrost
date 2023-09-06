@@ -107,7 +107,7 @@ where
 			))
 		})?;
 
-		let fee_details = api.query_fee_details(at, uxt, encoded_len).map_err(|e| {
+		let fee_details = api.query_fee_details(at, uxt.clone(), encoded_len).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to query fee details.",
@@ -127,7 +127,7 @@ where
 			}
 		};
 
-		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee);
+		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, uxt);
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {

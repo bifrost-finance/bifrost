@@ -476,6 +476,7 @@ impl bifrost_slp::Config for Test {
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
