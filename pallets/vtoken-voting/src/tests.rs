@@ -440,6 +440,51 @@ fn errors_with_vote_works() {
 }
 
 #[test]
+fn kill_referendum_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let poll_index = 3;
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(5, 1)));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::kill_referendum(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index
+		));
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ReferendumKilled {
+			vtoken,
+			poll_index,
+		}));
+	});
+}
+
+#[test]
+fn kill_referendum_with_origin_signed_fails() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let poll_index = 3;
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(5, 1)));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::signed(CONTROLLER),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_noop!(
+			VtokenVoting::kill_referendum(RuntimeOrigin::signed(ALICE), vtoken, poll_index),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+#[test]
 fn set_delegator_role_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
