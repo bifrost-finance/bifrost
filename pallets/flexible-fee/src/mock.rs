@@ -202,7 +202,25 @@ impl crate::Config for Test {
 	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParaInfo;
 	type ControlOrigin = EnsureRoot<AccountId>;
-	type XcmWeightAndFeeHandler = ();
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
+		Some((Weight::from_parts(100, 100), 100u32.into()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 pub struct ExtraFeeMatcher;
@@ -226,7 +244,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
