@@ -175,7 +175,7 @@ pub mod pallet {
 			poll_index: PollIndex,
 			success: bool,
 		},
-		DelegatorTokenUnlockNotified {
+		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
@@ -696,7 +696,7 @@ pub mod pallet {
 						},
 					)?;
 				}
-				Self::deposit_event(Event::<T>::DelegatorTokenUnlockNotified {
+				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
 					poll_index,
 					success,
@@ -977,9 +977,14 @@ pub mod pallet {
 				Some(ReferendumInfo::Completed(moment)) => {
 					let locking_period =
 						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
+					ensure!(
+						T::RelaychainBlockNumberProvider::current_block_number() >=
+							moment.saturating_add(locking_period),
+						Error::<T>::NotExpired
+					);
 					Ok(moment.saturating_add(locking_period))
 				},
-				_ => Err(Error::<T>::NotCompleted.into()),
+				_ => Err(Error::<T>::NotExpired.into()),
 			}
 		}
 
