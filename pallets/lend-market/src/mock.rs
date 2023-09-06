@@ -56,7 +56,6 @@ construct_runtime!(
 		Currencies: bifrost_currencies::{Pallet, Call},
 		AssetRegistry: bifrost_asset_registry,
 		Loans: crate::{Pallet, Storage, Call, Event<T>},
-		// Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 	}
@@ -101,6 +100,7 @@ pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
+pub const EVE: AccountId = AccountId32::new([5u8; 32]);
 
 parameter_types! {
 	pub const MinimumPeriod: u64 = 5;
@@ -119,11 +119,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	// pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
@@ -143,9 +139,6 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ConstU32<0>;
 }
 
-// ord_parameter_types! {
-// 	pub const One: u128 = 1;
-// }
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -297,17 +290,6 @@ parameter_types! {
 	pub const RelayCurrency: CurrencyId = KSM;
 }
 
-// AMM instance initialization
-parameter_types! {
-	pub const AMMPalletId: PalletId = PalletId(*b"par/ammp");
-	// pub const DefaultLpFee: Ratio = Ratio::from_rational(25u32, 10000u32);        // 0.25%
-	// pub const DefaultProtocolFee: Ratio = Ratio::from_rational(5u32, 10000u32);
-	pub  DefaultLpFee: Ratio = Ratio::from_rational(25u32, 10000u32);         // 0.3%
-	pub const MinimumLiquidity: u128 = 1_000u128;
-	pub const LockAccountId: AccountId = ALICE;
-	pub const MaxLengthRoute: u8 = 10;
-}
-
 pub struct AliceCreatePoolOrigin;
 impl SortedMembers<AccountId> for AliceCreatePoolOrigin {
 	fn sorted_members() -> Vec<AccountId> {
@@ -379,7 +361,7 @@ impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = CurrencyId;
-	type AssetIdParameter = CurrencyId; // codec::Compact<CurrencyId>;
+	type AssetIdParameter = CurrencyId;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;

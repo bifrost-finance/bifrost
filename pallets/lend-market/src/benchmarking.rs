@@ -56,7 +56,7 @@ const INITIAL_AMOUNT: u32 = 500_000_000;
 fn transfer_initial_balance<
 	T: Config
 		+ pallet_assets::Config<AssetId = CurrencyId, Balance = Balance>
-		// + pallet_prices::Config
+		+ pallet_prices::Config
 		+ pallet_balances::Config<Balance = Balance>,
 >(
 	caller: T::AccountId,
@@ -159,12 +159,11 @@ fn transfer_initial_balance<
 	<T as pallet::Config>::Assets::mint_into(SKSM, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(DOT, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(CDOT_6_13, &caller, INITIAL_AMOUNT.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), USDT, 1.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), SKSM, 1.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT, 1.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), CDOT_6_13,
-	// 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), USDT, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), SKSM, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), CDOT_6_13, 1.into()).unwrap();
 }
 
 fn set_account_borrows<T: Config>(

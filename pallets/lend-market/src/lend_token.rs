@@ -130,28 +130,6 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	}
 }
 
-// impl<T: Config> Transfer<T::AccountId> for Pallet<T> {
-// 	/// Returns `Err` if the reducible lend token of `who` is insufficient
-// 	///
-// 	/// For lend token, We don't care if keep_alive is enabled
-// 	#[transactional]
-// 	fn transfer(
-// 		lend_token_id: Self::AssetId,
-// 		source: &T::AccountId,
-// 		dest: &T::AccountId,
-// 		amount: Self::Balance,
-// 		_keep_alive: bool,
-// 	) -> Result<BalanceOf<T>, DispatchError> {
-// 		ensure!(
-// 			amount <= Self::reducible_balance(lend_token_id, source, false),
-// 			Error::<T>::InsufficientCollateral
-// 		);
-
-// 		Self::do_transfer_lend_tokens(lend_token_id, source, dest, amount)?;
-// 		Ok(amount)
-// 	}
-// }
-
 impl<T: Config> Pallet<T> {
 	/// Returns `Err` if the reducible lend token of `who` is insufficient
 	///

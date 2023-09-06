@@ -33,21 +33,21 @@ fn liquidate_borrow_allowed_works() {
 	})
 }
 
-// #[test]
-// fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
-// 	new_test_ext().execute_with(|| {
-// 		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
+#[test]
+fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
+	new_test_ext().execute_with(|| {
+		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
 
-// 		assert_err!(
-// 			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), CDOT_6_13),
-// 			Error::<Test>::CollateralReserved
-// 		);
-// 		assert_err!(
-// 			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), DOT_U),
-// 			Error::<Test>::CollateralReserved
-// 		);
-// 	})
-// }
+		assert_err!(
+			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), CDOT_6_13),
+			Error::<Test>::CollateralReserved
+		);
+		assert_err!(
+			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), DOT_U),
+			Error::<Test>::InsufficientShortfall
+		);
+	})
+}
 
 #[test]
 fn lf_liquidate_borrow_allowed_works() {

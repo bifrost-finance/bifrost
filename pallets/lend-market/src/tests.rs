@@ -296,13 +296,6 @@ fn redeem_must_return_err_when_overflows_occur() {
 			Loans::redeem(RuntimeOrigin::signed(ALICE), DOT, u128::MAX),
 			ArithmeticError::Underflow,
 		);
-
-		// Exchange rate must ge greater than zero
-		// ExchangeRate::<Test>::insert(DOT, Rate::zero());
-		// assert_noop!(
-		//     Loans::redeem(RuntimeOrigin::signed(ALICE), DOT, 100),
-		//     ArithmeticError::Underflow
-		// );
 	})
 }
 
