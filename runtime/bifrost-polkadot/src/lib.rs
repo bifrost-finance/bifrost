@@ -993,9 +993,10 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 parameter_types! {
@@ -1326,17 +1327,6 @@ impl bifrost_slpx::Config for Runtime {
 
 parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
-}
-
-pub struct XcmDestWeightAndFee;
-impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
-	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
-	}
-
-	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
-	}
 }
 
 pub struct DerivativeAccount;
@@ -1721,7 +1711,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	RemoveUnusedQueryIdContributionInfo<Runtime>,
+	(RemoveUnusedQueryIdContributionInfo<Runtime>, migration::XcmInterfaceMigration),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

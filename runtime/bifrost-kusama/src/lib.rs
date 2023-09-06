@@ -1134,9 +1134,10 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 parameter_types! {
@@ -1477,17 +1478,6 @@ impl bifrost_cross_in_out::Config for Runtime {
 
 parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
-}
-
-pub struct XcmDestWeightAndFee;
-impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
-	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
-	}
-
-	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
-	}
 }
 
 pub struct DerivativeAccount;
@@ -2104,15 +2094,19 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, uxt: Block::Extrinsic) -> (CurrencyId, Balance) {
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId, RuntimeCall> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance,encoded_xt: Bytes) -> (CurrencyId, Balance) {
+			if let Ok(call) =
+				<T as Config>::RuntimeCall::decode(&encoded_xt) {
+					let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
-
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &uxt);
-			match rs {
-				Ok(val) => val,
-				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-			}
+					match rs {
+						Ok(val) => val,
+						_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+					}
+				} else {
+					(CurrencyId::Native(TokenSymbol::BNC), Zero::zero())
+				}
 		}
 	}
 
