@@ -27,9 +27,8 @@ use crate::{
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
-	pallet_prelude::{DispatchResultWithPostInfo, TypeInfo, Weight},
+	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
-	RuntimeDebug,
 };
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},

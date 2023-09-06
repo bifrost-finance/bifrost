@@ -20,7 +20,7 @@
 
 use cumulus_primitives_core::ParaId as Pid;
 use std::convert::TryInto;
-
+use node_primitives::ExtraFeeInfo;
 use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
@@ -30,7 +30,7 @@ use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, Everything, Get, Nothing},
+	traits::{Everything, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
