@@ -28,7 +28,6 @@ members = [
 	"pallets/ve-minting",
 	"pallets/stable-pool",
 	"pallets/lend-market",
-	"pallets/oracle",
 	"pallets/prices",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",

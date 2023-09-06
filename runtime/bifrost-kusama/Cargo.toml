@@ -120,7 +120,6 @@ bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = f
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
 bifrost-currencies = { workspace = true }
 lend-market = { path = "../../pallets/lend-market", default-features = false }
-oracle = { path = "../../pallets/oracle", default-features = false }
 pallet-prices = { path = "../../pallets/prices", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "kusama" ] }
 
@@ -207,7 +206,6 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
-	"oracle/std",
 	"bifrost-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
@@ -362,7 +360,6 @@ try-runtime = [
 	"nutsfinance-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
 	"lend-market/try-runtime",
-	"oracle/try-runtime",
 	"pallet-prices/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
 ]

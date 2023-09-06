@@ -908,7 +908,6 @@ dependencies = [
  "merkle-distributor",
  "node-primitives",
  "nutsfinance-stable-asset",
- "oracle",
  "orml-oracle",
  "orml-tokens",
  "orml-traits",
@@ -6290,26 +6289,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mocktopus"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e4f0d5a1621fea252541cf67533c4b9c32ee892d790768f4ad48f1063059537"
-dependencies = [
- "mocktopus_macros",
-]
-
-[[package]]
-name = "mocktopus_macros"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3048ef3680533a27f9f8e7d6a0bce44dc61e4895ea0f42709337fa1c8616fefe"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "multiaddr"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6903,29 +6882,6 @@ name = "openssl-probe"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
-
-[[package]]
-name = "oracle"
-version = "1.2.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "mocktopus",
- "node-primitives",
- "orml-tokens",
- "orml-traits",
- "pallet-timestamp",
- "pallet-traits",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "orchestra"
