@@ -26,6 +26,7 @@ use xcm::{
 	VersionedMultiAssets, VersionedMultiLocation,
 };
 use xcm_emulator::TestExt;
+use node_primitives::{XcmInterfaceOperation as XcmOperation};
 
 const USDT: u128 = 1_000_000;
 
@@ -130,6 +131,15 @@ fn cross_usdt() {
 				&sp_runtime::AccountId32::from(ALICE),
 				10 * USDT
 			));
+
+			assert_ok!(
+				XcmInterface::set_xcm_dest_weight_and_fee(
+					RelayCurrencyId::get(),
+					XcmOperation::StatemineTransfer,
+					Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			));
+
+
 			assert_ok!(XcmInterface::transfer_statemine_assets(
 				RuntimeOrigin::signed(ALICE.into()),
 				5 * USDT,

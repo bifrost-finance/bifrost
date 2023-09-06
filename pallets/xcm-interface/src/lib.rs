@@ -127,7 +127,7 @@ pub mod pallet {
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
-		/// The current storage version, we set to 2 our new version(after migrate stroage
+	/// The current storage version, we set to 2 our new version(after migrate stroage
 	/// XcmWeightAndFee from SLP module).
 	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);

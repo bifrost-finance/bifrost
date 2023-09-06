@@ -18,12 +18,10 @@
 
 #![cfg(test)]
 
-use cumulus_primitives_core::ParaId as Pid;
-use std::convert::TryInto;
-use node_primitives::ExtraFeeInfo;
 use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
+use cumulus_primitives_core::ParaId as Pid;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
@@ -36,7 +34,7 @@ use frame_support::{
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
+use node_primitives::{Balance, CurrencyId, ExtraFeeInfo, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -46,6 +44,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, SaturatedConversion,
 };
+use std::convert::TryInto;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;

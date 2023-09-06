@@ -72,7 +72,6 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -91,9 +90,9 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
+	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator, FeeGetter,XcmDestWeightAndFeeHandler},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
+	DistributionId, ExtraFeeName, ExtraFeeInfo, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
 	TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 // zenlink imports
@@ -104,9 +103,8 @@ use zenlink_protocol::{
 };
 // xcm config
 mod xcm_config;
-use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use bifrost_vtoken_voting::{
-	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	traits::{DerivativeAccountHandler},
 	DerivativeIndex,
 };
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
@@ -115,7 +113,7 @@ use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-	StatemineTransferFee, UmpTransactFee, XcmConfig, XcmRouter,
+	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
@@ -965,11 +963,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => ExtraFeeInfo {
 				extra_fee_name: ExtraFeeName::VoteVtoken,
 				extra_fee_currency: vtoken,
 			},
-			RuntimeCall::VtokenVoting(vtoken_voting::Call::remove_delegator_vote {
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
 			}) => ExtraFeeInfo {
