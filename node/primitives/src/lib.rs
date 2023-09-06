@@ -236,3 +236,32 @@ impl SendXcm for DoNothingRouter {
 		Ok([0; 32])
 	}
 }
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+pub enum XcmInterfaceOperation {
+	// SALP operations
+	UmpContributeTransact,
+	// Statemine operations
+	StatemineTransfer,
+	// SLP operations
+	Bond,
+	WithdrawUnbonded,
+	BondExtra,
+	Unbond,
+	Rebond,
+	Delegate,
+	Payout,
+	Liquidize,
+	TransferBack,
+	TransferTo,
+	Chill,
+	Undelegate,
+	CancelLeave,
+	XtokensTransferBack,
+	ExecuteLeave,
+	ConvertAsset,
+	// VtokenVoting operations
+	VoteVtoken,
+	VoteUpdateReferendum,
+	VoteRemoveDelegatorVote,
+}

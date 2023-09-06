@@ -60,10 +60,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
-	use sp_runtime::{
-		traits::{Convert, Zero},
-		DispatchError,
-	};
+	use sp_runtime::{traits::Convert, DispatchError};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{
 		v3::{prelude::*, ExecuteXcm, Parent},
@@ -137,10 +134,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmDestWeightUpdated(XcmInterfaceOperation, Weight),
-		/// Xcm dest weight has been updated. \[xcm_operation, new_xcm_dest_weight\]
-		XcmFeeUpdated(XcmInterfaceOperation, BalanceOf<T>),
+		XcmDestWeightAndFeeUpdated(XcmInterfaceOperation, CurrencyIdOf<T>, Weight, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
@@ -183,34 +177,23 @@ pub mod pallet {
 		#[pallet::weight({16_690_000})]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(
-				CurrencyIdOf<T>,
-				XcmInterfaceOperation,
-				Option<Weight>,
-				Option<BalanceOf<T>>,
-			)>,
+			updates: Vec<(CurrencyIdOf<T>, XcmInterfaceOperation, Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			for (currency_id, operation, weight_change, fee_change) in updates {
-				XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation, |info| {
-					if let Some(new_weight) = weight_change {
-						match info.as_mut() {
-							Some(info) => info.0 = new_weight,
-							None => *info = Some((new_weight, Zero::zero())),
-						}
-						Self::deposit_event(Event::<T>::XcmDestWeightUpdated(
-							operation, new_weight,
-						));
-					}
-					if let Some(new_fee) = fee_change {
-						match info.as_mut() {
-							Some(info) => info.1 = new_fee,
-							None => *info = Some((Zero::zero(), new_fee)),
-						}
-						Self::deposit_event(Event::<T>::XcmFeeUpdated(operation, new_fee));
-					}
-				});
+				Self::set_xcm_dest_weight_and_fee(
+					currency_id,
+					operation,
+					Some((weight_change, fee_change)),
+				)?;
+
+				Self::deposit_event(Event::<T>::XcmDestWeightAndFeeUpdated(
+					operation,
+					currency_id,
+					weight_change,
+					fee_change,
+				));
 			}
 
 			Ok(())
