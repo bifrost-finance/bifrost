@@ -15384,6 +15384,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "node-primitives",
  "orml-traits",
  "pallet-balances",
  "pallet-xcm",

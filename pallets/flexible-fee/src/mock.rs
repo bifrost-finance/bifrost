@@ -18,23 +18,23 @@
 
 #![cfg(test)]
 
-use cumulus_primitives_core::ParaId as Pid;
-use std::convert::TryInto;
-
+use super::*;
+use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
+use cumulus_primitives_core::ParaId as Pid;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, Everything, Get, Nothing},
+	traits::{Everything, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
+use node_primitives::{Balance, CurrencyId, ExtraFeeInfo, MessageId, ParaId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -44,6 +44,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, SaturatedConversion,
 };
+use std::convert::TryInto;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
@@ -51,11 +52,6 @@ use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
-
-use super::*;
-#[allow(unused_imports)]
-use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
-use crate::{self as flexible_fee, tests::CHARLIE};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -184,48 +180,8 @@ impl orml_tokens::Config for Test {
 	type CurrencyHooks = ();
 }
 
-// Aggregate name getter to get fee names if the call needs to pay extra fees.
-// If any call need to pay extra fees, it should be added as an item here.
-// Used together with AggregateExtraFeeFilter below.
-pub struct FeeNameGetter;
-impl NameGetter<RuntimeCall> for FeeNameGetter {
-	fn get_name(c: &RuntimeCall) -> ExtraFeeName {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) =>
-				ExtraFeeName::SalpContribute,
-			_ => ExtraFeeName::NoExtraFee,
-		}
-	}
-}
-
-// Aggregate filter to filter if the call needs to pay extra fees
-// If any call need to pay extra fees, it should be added as an item here.
-pub struct AggregateExtraFeeFilter;
-impl Contains<RuntimeCall> for AggregateExtraFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct ContributeFeeFilter;
-impl Contains<RuntimeCall> for ContributeFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const SalpContributeFee: Balance = 100_000_000;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
@@ -239,17 +195,44 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
-	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
-	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler =
-		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParaInfo;
 	type ControlOrigin = EnsureRoot<AccountId>;
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
+		Some((Weight::from_parts(100, 100), 100u32.into()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
+pub struct ExtraFeeMatcher;
+impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
+	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
+		match *c {
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::SalpContribute,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
+			_ => ExtraFeeInfo::default(),
+		}
+	}
 }
 
 pub struct ParaInfo;
@@ -260,7 +243,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =

@@ -25,7 +25,7 @@ use frame_support::{
 	traits::{schedule::DispatchTime, StorePreimage},
 	weights::Weight,
 };
-use node_primitives::currency::VKSM;
+use node_primitives::{currency::VKSM, XcmInterfaceOperation as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
 use xcm::v3::Parent;
 use xcm_emulator::TestExt;
@@ -70,7 +70,7 @@ fn vote_works() {
 			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
 				RuntimeOrigin::root(),
 				token,
-				bifrost_slp::XcmOperation::Vote,
+				XcmOperation::VoteVtoken,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 			));
 			assert_ok!(Slp::set_minimums_and_maximums(

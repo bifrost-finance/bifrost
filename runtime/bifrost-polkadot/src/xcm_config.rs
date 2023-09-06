@@ -714,10 +714,6 @@ impl orml_xcm::Config for Runtime {
 
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
-	pub ContributionWeight: Weight = Weight::from_parts(100 * milli::<Runtime>(RelayCurrencyId::get()) as u64,1000_000u64);
-	pub UmpTransactFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 100;
-	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 400;
-	pub StatemineTransferWeight:Weight = Weight::from_parts(400 * milli::<Runtime>(RelayCurrencyId::get()) as u64, 0);
 }
 
 impl xcm_interface::Config for Runtime {
@@ -729,10 +725,6 @@ impl xcm_interface::Config for Runtime {
 	type ParachainSovereignAccount = ParachainAccount;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
-	type StatemineTransferWeight = StatemineTransferWeight;
-	type StatemineTransferFee = StatemineTransferFee;
-	type ContributionWeight = ContributionWeight;
-	type ContributionFee = UmpTransactFee;
 	type SalpHelper = Salp;
 	type ParachainId = SelfParaChainId;
 	type CallBackTimeOut = ConstU32<10>;
