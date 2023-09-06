@@ -189,7 +189,7 @@ fn get_ctoken_price_work() {
 		);
 
 		assert_eq!(
-			Prices::get_price(&CDOT_6_13),
+			Prices::get_price(&FIL),
 			Some((Price::from_inner(6666666666_666666660000000000), 0))
 		);
 	});
@@ -204,10 +204,10 @@ fn get_foreign_ctoken_price_work() {
 		);
 
 		assert_eq!(
-			Prices::get_price(&CDOT_6_13),
+			Prices::get_price(&FIL),
 			Some((Price::from_inner(6666666666_666666660000000000), 0))
 		);
 
-		assert_eq!(Prices::get_price(&CDOT_6_13), Prices::get_price(&PCDOT_6_13));
+		assert_eq!(Prices::get_price(&FIL), Prices::get_price(&VFIL));
 	});
 }

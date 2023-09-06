@@ -20,7 +20,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-use node_primitives::{CDOT_6_13, PCDOT_6_13, *};
+pub use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
 use pallet_traits::{
 	DecimalProvider, ExchangeRateProvider, LiquidStakingCurrenciesProvider,
@@ -35,14 +35,16 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
-pub use node_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM};
+pub use node_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM, VSKSM};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub const PDOT: CurrencyId = CurrencyId::Token2(10);
-pub const PKSM: CurrencyId = CurrencyId::Token2(11);
-pub const PUSDT: CurrencyId = CurrencyId::Token2(12);
+pub const LDOT: CurrencyId = CurrencyId::Token2(10);
+pub const LKSM: CurrencyId = CurrencyId::Token2(11);
+pub const LUSDT: CurrencyId = CurrencyId::Token2(12);
+pub const PHA: CurrencyId = CurrencyId::Token2(5);
+pub const VPHA: CurrencyId = CurrencyId::VToken2(5);
 
 construct_runtime!(
 	pub enum Test where
@@ -319,7 +321,7 @@ impl MockPriceFeeder {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
-				vec![BNC, DOT, KSM, DOT_U, VKSM, VDOT, CDOT_6_13]
+				vec![BNC, DOT, KSM, DOT_U, VKSM, VDOT, PHA]
 					.iter()
 					.map(|&x| (CurrencyIdWrap(x), Some((Price::saturating_from_integer(1), 1))))
 					.collect()
@@ -411,8 +413,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ASTR, 1, None),
 			(GLMR, 1, None),
 			(DOT_U, 1, None),
-			(CDOT_6_13, 1, None),
-			(PCDOT_6_13, 1, None),
+			(PHA, 1, None),
+			(VPHA, 1, None),
 		],
 		vcurrency: vec![VDOT],
 		vsbond: vec![],
@@ -425,7 +427,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		// (ALICE, BNC, 1_000_000_000_000_000),
 		(ALICE, KSM, 1_000_000_000_000_000),
 		(ALICE, DOT, 1_000_000_000_000_000),
-		(ALICE, CDOT_6_13, 1_000_000_000_000_000),
+		(ALICE, PHA, 1_000_000_000_000_000),
 		(ALICE, DOT_U, 1_000_000_000_000_000),
 		(BOB, KSM, 1_000_000_000_000_000),
 		(BOB, DOT, 1_000_000_000_000_000),
@@ -461,12 +463,12 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		Assets::force_create(RuntimeOrigin::root(), KSM.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), DOT_U.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), VDOT.into(), ALICE, true, 1).unwrap();
-		Assets::force_create(RuntimeOrigin::root(), CDOT_6_13.into(), ALICE, true, 1).unwrap();
+		Assets::force_create(RuntimeOrigin::root(), PHA.into(), ALICE, true, 1).unwrap();
 
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT_U.into(), ALICE, unit(1000)).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13.into(), ALICE, unit(1000)).unwrap();
+		Assets::mint(RuntimeOrigin::signed(ALICE), PHA.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), BOB, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), BOB, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), DAVE, unit(1000)).unwrap();
@@ -475,16 +477,16 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		// Init Markets
 		Loans::add_market(RuntimeOrigin::root(), BNC, market_mock(VBNC)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), BNC).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), KSM, market_mock(PKSM)).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), KSM, market_mock(LKSM)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), KSM).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), DOT, market_mock(PDOT)).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), DOT, market_mock(LDOT)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), DOT).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(PUSDT)).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(LUSDT)).unwrap();
 		Loans::activate_market(RuntimeOrigin::root(), DOT_U).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), CDOT_6_13, market_mock(PCDOT_6_13)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), CDOT_6_13).unwrap();
+		Loans::add_market(RuntimeOrigin::root(), PHA, market_mock(VPHA)).unwrap();
+		Loans::activate_market(RuntimeOrigin::root(), PHA).unwrap();
 
-		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
+		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 
 		System::set_block_number(0);
 		TimestampPallet::set_timestamp(6000);

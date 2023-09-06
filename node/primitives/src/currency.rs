@@ -59,8 +59,6 @@ pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
-pub const CDOT_6_13: CurrencyId = CurrencyId::VToken2(5);
-pub const PCDOT_6_13: CurrencyId = CurrencyId::VToken2(6);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

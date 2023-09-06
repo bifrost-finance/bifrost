@@ -24,7 +24,10 @@ use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber};
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use node_primitives::{CDOT_6_13, DOT, KSM, VDOT, VKSM};
+pub use node_primitives::{
+	currency::{FIL, VFIL},
+	DOT, KSM, VDOT, VKSM,
+};
 
 pub type AccountId = u128;
 pub type BlockNumber = u64;
@@ -77,11 +80,11 @@ impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 				value: Price::from_inner(15000000000_0000000000),
 				timestamp: 0,
 			}),
-			CDOT_6_13 => Some(TimeStampedPrice {
+			FIL => Some(TimeStampedPrice {
 				value: Price::from_inner(6666666666_6666666600),
 				timestamp: 0,
 			}),
-			PCDOT_6_13 => Some(TimeStampedPrice {
+			VFIL => Some(TimeStampedPrice {
 				value: Price::from_inner(6666666666_6666666600),
 				timestamp: 0,
 			}),
@@ -278,8 +281,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(ASTR, 1, None),
 			(GLMR, 1, None),
 			(DOT_U, 1, None),
-			(CDOT_6_13, 1, Some(("_".to_string(), "_".to_string(), 10))),
-			(PCDOT_6_13, 1, Some(("_".to_string(), "_".to_string(), 10))),
+			(FIL, 1, Some(("_".to_string(), "_".to_string(), 10))),
+			(VFIL, 1, Some(("_".to_string(), "_".to_string(), 10))),
 		],
 		vcurrency: vec![VDOT],
 		vsbond: vec![],
@@ -290,7 +293,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	let endowed_accounts: Vec<(AccountId, CurrencyId, Balance)> = vec![
 		(ALICE, DOT, 1000 * PRICE_ONE),
-		(ALICE, CDOT_6_13, 1000 * PRICE_ONE),
+		(ALICE, FIL, 1000 * PRICE_ONE),
 		(ALICE, VDOT, 1000 * PRICE_ONE),
 	];
 
@@ -314,14 +317,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	ext.execute_with(|| {
 		Assets::force_create(RuntimeOrigin::root(), DOT.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), VDOT.into(), ALICE, true, 1).unwrap();
-		Assets::force_create(RuntimeOrigin::root(), CDOT_6_13.into(), ALICE, true, 1).unwrap();
+		Assets::force_create(RuntimeOrigin::root(), FIL.into(), ALICE, true, 1).unwrap();
 
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), VDOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13.into(), ALICE, 1000 * PRICE_ONE)
-			.unwrap();
+		Assets::mint(RuntimeOrigin::signed(ALICE), FIL.into(), ALICE, 1000 * PRICE_ONE).unwrap();
 
-		Prices::set_foreign_asset(RuntimeOrigin::signed(ALICE), PCDOT_6_13, CDOT_6_13).unwrap();
+		Prices::set_foreign_asset(RuntimeOrigin::signed(ALICE), VFIL, FIL).unwrap();
 	});
 
 	ext

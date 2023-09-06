@@ -1,7 +1,7 @@
 use crate::{
 	mock::{
-		market_mock, new_test_ext, Loans, RuntimeOrigin, Test, ALICE, BNC, DAVE, DOT_U, KSM, PKSM,
-		PUSDT, VBNC,
+		market_mock, new_test_ext, Loans, RuntimeOrigin, Test, ALICE, BNC, DAVE, DOT_U, KSM, LKSM,
+		LUSDT, VBNC,
 	},
 	tests::unit,
 	Error, *,
@@ -21,7 +21,7 @@ fn trait_inspect_methods_works() {
 			TokenError::FundsUnavailable
 		);
 		assert_eq!(Loans::total_issuance(VBNC), 0);
-		assert_eq!(Loans::total_issuance(PKSM), 0);
+		assert_eq!(Loans::total_issuance(LKSM), 0);
 
 		let minimum_balance = Loans::minimum_balance(VBNC);
 		assert_eq!(minimum_balance, 0);
@@ -59,9 +59,9 @@ fn trait_inspect_methods_works() {
 		// Liquidity BNC = 25, DOT_U = 25
 		// lend tokens = dollar(25 + 25) / 1 / 0.5 / 0.02 = dollar(50) * 100
 		assert_ok!(Loans::mint(RuntimeOrigin::signed(DAVE), DOT_U, unit(50)));
-		assert_eq!(Loans::balance(PUSDT, &DAVE), unit(50) * 50);
+		assert_eq!(Loans::balance(LUSDT, &DAVE), unit(50) * 50);
 		assert_eq!(
-			Loans::reducible_balance(PUSDT, &DAVE, Preservation::Expendable, Fortitude::Polite),
+			Loans::reducible_balance(LUSDT, &DAVE, Preservation::Expendable, Fortitude::Polite),
 			unit(25) * 2 * 50
 		);
 		// enable DOT_U collateral
@@ -88,13 +88,13 @@ fn lend_token_unique_works() {
 	new_test_ext().execute_with(|| {
 		// lend_token_id already exists in `UnderlyingAssetId`
 		assert_noop!(
-			Loans::add_market(RuntimeOrigin::root(), PKSM, market_mock(VBNC)),
+			Loans::add_market(RuntimeOrigin::root(), LKSM, market_mock(VBNC)),
 			Error::<Test>::InvalidPtokenId
 		);
 
 		// lend_token_id cannot as the same as the asset id in `Markets`
 		assert_noop!(
-			Loans::add_market(RuntimeOrigin::root(), PKSM, market_mock(KSM)),
+			Loans::add_market(RuntimeOrigin::root(), LKSM, market_mock(KSM)),
 			Error::<Test>::InvalidPtokenId
 		);
 	})

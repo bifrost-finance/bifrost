@@ -4,7 +4,7 @@ use crate::{
 	Error, MarketState,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
-use node_primitives::{Rate, CDOT_6_13};
+use node_primitives::Rate;
 use sp_runtime::FixedPointNumber;
 
 #[test]
@@ -36,10 +36,10 @@ fn liquidate_borrow_allowed_works() {
 #[test]
 fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
 	new_test_ext().execute_with(|| {
-		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
+		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 
 		assert_err!(
-			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), CDOT_6_13),
+			Loans::liquidate_borrow(RuntimeOrigin::signed(ALICE), BOB, DOT, unit(100), PHA),
 			Error::<Test>::CollateralReserved
 		);
 		assert_err!(
@@ -52,13 +52,13 @@ fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
 #[test]
 fn lf_liquidate_borrow_allowed_works() {
 	new_test_ext().execute_with(|| {
-		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]).unwrap();
+		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 		// Bob deposits $200 DOT
 		Loans::mint(RuntimeOrigin::signed(BOB), DOT, unit(200)).unwrap();
 		Loans::mint(RuntimeOrigin::signed(ALICE), DOT_U, unit(200)).unwrap();
-		Loans::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13, unit(200)).unwrap();
+		Loans::mint(RuntimeOrigin::signed(ALICE), PHA, unit(200)).unwrap();
 		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), DOT_U, true).unwrap();
-		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), CDOT_6_13, true).unwrap();
+		Loans::collateral_asset(RuntimeOrigin::signed(ALICE), PHA, true).unwrap();
 
 		// ALICE
 		// Collateral                 Borrowed
@@ -69,7 +69,7 @@ fn lf_liquidate_borrow_allowed_works() {
 		// CDOT's price is highly relative to DOT's price in real runtime. Thus we must update them
 		// at the same time.
 		MockPriceFeeder::set_price(DOT, 2.into());
-		MockPriceFeeder::set_price(CDOT_6_13, 2.into());
+		MockPriceFeeder::set_price(PHA, 2.into());
 		// ALICE
 		// Collateral                 Borrowed
 		// DOT_U  $100                 DOT $400
@@ -241,7 +241,7 @@ fn initial_setup() {
 	// Alice deposits 200 DOT as collateral
 	assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), DOT_U, unit(200)));
 	assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), DOT_U, true));
-	assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), CDOT_6_13, unit(200)));
-	assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), CDOT_6_13, true));
-	assert_ok!(Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![CDOT_6_13]));
+	assert_ok!(Loans::mint(RuntimeOrigin::signed(ALICE), PHA, unit(200)));
+	assert_ok!(Loans::collateral_asset(RuntimeOrigin::signed(ALICE), PHA, true));
+	assert_ok!(Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]));
 }
