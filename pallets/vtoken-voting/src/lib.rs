@@ -977,9 +977,14 @@ pub mod pallet {
 				Some(ReferendumInfo::Completed(moment)) => {
 					let locking_period =
 						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
+					ensure!(
+						T::RelaychainBlockNumberProvider::current_block_number() >=
+							moment.saturating_add(locking_period),
+						Error::<T>::NotExpired
+					);
 					Ok(moment.saturating_add(locking_period))
 				},
-				_ => Err(Error::<T>::NotCompleted.into()),
+				_ => Err(Error::<T>::NotExpired.into()),
 			}
 		}
 
