@@ -71,7 +71,6 @@ mod lend_token;
 mod rate_model;
 mod types;
 
-pub mod migrations;
 pub mod weights;
 
 pub const MAX_INTEREST_CALCULATING_INTERVAL: u64 = 5 * 24 * 3600; // 5 days
@@ -89,12 +88,7 @@ type BalanceOf<T> =
 /// Utility type for managing upgrades/migrations.
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum Versions {
-	V1,
-	V2,
-	V3,
-	V4,
-	V5,
-	V6,
+	V0,
 }
 
 #[frame_support::pallet]
@@ -454,7 +448,7 @@ pub mod pallet {
 	/// DefaultVersion is using for initialize the StorageVersion
 	#[pallet::type_value]
 	pub(super) fn DefaultVersion<T: Config>() -> Versions {
-		Versions::V2
+		Versions::V0
 	}
 
 	/// Storage version of the pallet.
