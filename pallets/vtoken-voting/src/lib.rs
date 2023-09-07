@@ -327,9 +327,12 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
+			let mut weight = T::DbWeight::get().reads(1);
 			let relay_current_block_number =
 				T::RelaychainBlockNumberProvider::current_block_number();
-			ReferendumTimeout::<T>::get(relay_current_block_number).iter().for_each(
+
+			weight += T::DbWeight::get().reads(1);
+			ReferendumTimeout::<T>::take(relay_current_block_number).iter().for_each(
 				|(vtoken, poll_index)| {
 					ReferendumInfoFor::<T>::mutate(
 						vtoken,
@@ -337,14 +340,18 @@ pub mod pallet {
 						|maybe_info| match maybe_info {
 							Some(info) =>
 								if let ReferendumInfo::Ongoing(_) = info {
-									*info = ReferendumInfo::Completed(relay_current_block_number);
+									*info = ReferendumInfo::Completed(
+										relay_current_block_number.into(),
+									);
 								},
 							None => {},
 						},
 					);
+					weight += T::DbWeight::get().reads_writes(1, 1);
 				},
 			);
-			Zero::zero()
+
+			weight
 		}
 	}
 
