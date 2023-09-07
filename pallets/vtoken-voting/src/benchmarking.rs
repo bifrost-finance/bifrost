@@ -68,26 +68,74 @@ mod benchmarks {
 	fn vote_new() -> Result<(), BenchmarkError> {
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
-		let origin = RawOrigin::Signed(caller.clone());
 		let vtoken = VKSM;
 		let poll_index = 0u32;
 		let vote = account_vote::<T>(100u32.into());
+		let control_origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		init_vote::<T>(vtoken)?;
+		let r = T::MaxVotes::get() - 1;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
+			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
+			Pallet::<T>::notify_vote(
+				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+				i as QueryId,
+				response.clone(),
+			)?;
+		}
+		let votes = match VotingFor::<T>::get(&caller) {
+			Voting::Casting(Casting { votes, .. }) => votes,
+			_ => return Err("Votes are not direct".into()),
+		};
+		assert_eq!(votes.len(), r as usize, "Votes were not recorded.");
 
 		#[extrinsic_call]
-		Pallet::<T>::vote(origin, vtoken, poll_index, vote);
+		Pallet::<T>::vote(RawOrigin::Signed(caller.clone()), vtoken, poll_index, vote);
 
-		// assert_eq!(
-		// 	ReferendumInfoFor::<T>::get(vtoken, poll_index),
-		// 	Some(ReferendumInfo::Ongoing(ReferendumStatus {
-		// 		submitted: None,
-		// 		tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
-		// 	})),
-		// );
 		assert_matches!(
 			VotingFor::<T>::get(&caller),
-			Voting::Casting(Casting { votes, .. }) if votes.len() == 1 as usize
+			Voting::Casting(Casting { votes, .. }) if votes.len() == (r + 1) as usize
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn vote_existing() -> Result<(), BenchmarkError> {
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let vtoken = VKSM;
+		let old_vote = account_vote::<T>(100u32.into());
+		let control_origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		init_vote::<T>(vtoken)?;
+		let r = T::MaxVotes::get();
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		for index in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter() {
+			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, old_vote)?;
+			Pallet::<T>::notify_vote(
+				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+				*index as QueryId,
+				response.clone(),
+			)?;
+		}
+		let votes = match VotingFor::<T>::get(&caller) {
+			Voting::Casting(Casting { votes, .. }) => votes,
+			_ => return Err("Votes are not direct".into()),
+		};
+		assert_eq!(votes.len(), r as usize, "Votes were not recorded.");
+
+		let poll_index = 1u32;
+		let new_vote = account_vote::<T>(200u32.into());
+		#[extrinsic_call]
+		Pallet::<T>::vote(RawOrigin::Signed(caller.clone()), vtoken, poll_index, new_vote);
+
+		assert_matches!(
+			VotingFor::<T>::get(&caller),
+			Voting::Casting(Casting { votes, .. }) if votes.len() == r as usize
 		);
 
 		Ok(())
