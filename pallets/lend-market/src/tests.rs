@@ -343,10 +343,7 @@ fn borrow_allowed_works() {
 #[test]
 fn update_liquidation_free_collateral_works() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Loans::update_liquidation_free_collateral(
-			RuntimeOrigin::root(),
-			vec![PHA]
-		));
+		assert_ok!(Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]));
 		assert_eq!(Loans::liquidation_free_collaterals(), vec![PHA]);
 	})
 }

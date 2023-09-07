@@ -1,7 +1,7 @@
 use crate::{
 	mock::{
 		market_mock, new_test_ext, Loans, RuntimeOrigin, Test, ACTIVE_MARKET_MOCK, ALICE, DOT,
-		MARKET_MOCK, LDOT, LUSDT, VDOT,
+		LDOT, LUSDT, MARKET_MOCK, VDOT,
 	},
 	Error, InterestRateModel, MarketState,
 };
