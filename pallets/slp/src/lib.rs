@@ -32,7 +32,7 @@ pub use crate::{
 	Junctions::X1,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -41,8 +41,7 @@ use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	TokenSymbol, VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL,
-	GLMR,
+	VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -2385,19 +2384,23 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
+pub struct DerivativeAccountProvider<T, F>(PhantomData<(T, F)>);
+
+impl<T: Config, F: Contains<CurrencyIdOf<T>>>
+	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for DerivativeAccountProvider<T, F>
+{
 	fn check_derivative_index_exists(
 		token: CurrencyIdOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> bool {
-		Self::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index).is_some()
 	}
 
 	fn get_multilocation(
 		token: CurrencyIdOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
-		Self::get_delegator_multilocation_by_index(token, derivative_index)
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index)
 	}
 
 	fn get_stake_info(
@@ -2405,16 +2408,15 @@ impl<T: Config> DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pall
 		derivative_index: DerivativeIndex,
 	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
 		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Self::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
-				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
-					Some((l.total, l.active)),
+			Pallet::<T>::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if F::contains(&token) => Some((l.total, l.active)),
 				_ => None,
 			})
 		})
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn init_minimums_and_maximums(currency_id: CurrencyId) {
+	fn init_minimums_and_maximums(currency_id: CurrencyIdOf<T>) {
 		MinimumsAndMaximums::<T>::insert(
 			currency_id,
 			MinimumsMaximums {
@@ -2434,7 +2436,7 @@ impl<T: Config> DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pall
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn new_delegator_ledger(currency_id: CurrencyId, who: MultiLocation) {
+	fn new_delegator_ledger(currency_id: CurrencyIdOf<T>, who: MultiLocation) {
 		DelegatorLedgers::<T>::insert(
 			currency_id,
 			&who,
@@ -2448,7 +2450,7 @@ impl<T: Config> DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pall
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn add_delegator(currency_id: CurrencyId, index: DerivativeIndex, who: MultiLocation) {
-		Self::inner_add_delegator(index, &who, currency_id).unwrap();
+	fn add_delegator(currency_id: CurrencyIdOf<T>, index: DerivativeIndex, who: MultiLocation) {
+		Pallet::<T>::inner_add_delegator(index, &who, currency_id).unwrap();
 	}
 }

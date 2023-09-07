@@ -27,7 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod migration;
-use bifrost_slp::QueryResponseManager;
+use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
 use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
@@ -1480,6 +1480,13 @@ parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
 }
 
+pub struct DerivativeAccountTokenFilter;
+impl Contains<CurrencyId> for DerivativeAccountTokenFilter {
+	fn contains(token: &CurrencyId) -> bool {
+		*token == RelayCurrencyId::get()
+	}
+}
+
 impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1488,7 +1495,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmInterface;
-	type DerivativeAccount = Slp;
+	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type ParachainId = SelfParaChainId;
 	type MaxVotes = ConstU32<512>;
