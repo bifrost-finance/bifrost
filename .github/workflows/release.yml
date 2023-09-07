@@ -93,7 +93,7 @@ jobs:
             ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm
 
       - uses: 8398a7/action-slack@v3
-        if: failure()
+        if: always()
         with:
           status: ${{ job.status }}
           fields: repo,author,eventName,workflow,ref,commit
