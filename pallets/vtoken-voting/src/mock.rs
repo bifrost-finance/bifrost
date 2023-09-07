@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate as vtoken_voting;
-use crate::{traits::DerivativeAccountHandler, BalanceOf, DerivativeIndex, DispatchResult};
+use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -255,7 +255,7 @@ impl XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Runtime>> for XcmDestWeigh
 }
 
 pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 	fn check_derivative_index_exists(
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,

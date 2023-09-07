@@ -27,7 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod migration;
-use bifrost_slp::{Ledger, QueryResponseManager};
+use bifrost_slp::QueryResponseManager;
 use core::convert::TryInto;
 use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
@@ -110,7 +110,6 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::{traits::DerivativeAccountHandler, DerivativeIndex};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -1481,33 +1480,6 @@ parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
 }
 
-pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
-	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
-	}
-
-	fn get_multilocation(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<MultiLocation> {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index)
-	}
-
-	fn get_stake_info(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<(Balance, Balance)> {
-		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
-				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
-					Some((l.total, l.active)),
-				_ => None,
-			})
-		})
-	}
-}
-
 impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1516,7 +1488,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmInterface;
-	type DerivativeAccount = DerivativeAccount;
+	type DerivativeAccount = Slp;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type ParachainId = SelfParaChainId;
 	type MaxVotes = ConstU32<512>;

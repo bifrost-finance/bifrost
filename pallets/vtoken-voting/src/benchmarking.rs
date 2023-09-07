@@ -17,10 +17,20 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
+use assert_matches::assert_matches;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use node_primitives::currency::VKSM;
+use node_primitives::{currency::VKSM, XcmInterfaceOperation as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
+use sp_runtime::traits::Bounded;
+
+const SEED: u32 = 0;
+
+fn funded_account<T: Config>(name: &'static str, index: u32) -> AccountIdOf<T> {
+	let caller = account(name, index, SEED);
+	T::MultiCurrency::deposit(VKSM, &caller, BalanceOf::<T>::max_value()).unwrap();
+	caller
+}
 
 fn account_vote<T: Config>(b: BalanceOf<T>) -> AccountVote<BalanceOf<T>> {
 	let v = Vote { aye: true, conviction: Conviction::Locked1x };
@@ -28,33 +38,257 @@ fn account_vote<T: Config>(b: BalanceOf<T>) -> AccountVote<BalanceOf<T>> {
 	AccountVote::Standard { vote: v, balance: b }
 }
 
-#[benchmarks]
+fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
+	let derivative_index = 0;
+	let token = CurrencyId::to_token(&vtoken).unwrap();
+	T::XcmDestWeightAndFee::set_xcm_dest_weight_and_fee(
+		token,
+		XcmOperation::VoteVtoken,
+		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+	)?;
+	T::DerivativeAccount::init_minimums_and_maximums(token);
+	T::DerivativeAccount::add_delegator(token, derivative_index, Parent.into());
+	T::DerivativeAccount::new_delegator_ledger(token, Parent.into());
+	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, 10u32.into())?;
+	Pallet::<T>::set_delegator_role(
+		RawOrigin::Root.into(),
+		vtoken,
+		derivative_index,
+		VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
+	)?;
+
+	Ok(())
+}
+
+#[benchmarks(where T::MaxVotes: core::fmt::Debug)]
 mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn vote() -> Result<(), BenchmarkError> {
-		let caller = whitelisted_caller();
-		let origin = RawOrigin::Signed(caller);
+	fn vote_new() -> Result<(), BenchmarkError> {
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin = RawOrigin::Signed(caller.clone());
 		let vtoken = VKSM;
 		let poll_index = 0u32;
-		let account_vote = account_vote::<T>(100u32.into());
+		let vote = account_vote::<T>(100u32.into());
+
+		init_vote::<T>(vtoken)?;
 
 		#[extrinsic_call]
-		vote(origin, vtoken, poll_index, account_vote);
+		Pallet::<T>::vote(origin, vtoken, poll_index, vote);
+
+		// assert_eq!(
+		// 	ReferendumInfoFor::<T>::get(vtoken, poll_index),
+		// 	Some(ReferendumInfo::Ongoing(ReferendumStatus {
+		// 		submitted: None,
+		// 		tally: TallyOf::<T>::from_parts(Zero::zero(), Zero::zero(), Zero::zero()),
+		// 	})),
+		// );
+		assert_matches!(
+			VotingFor::<T>::get(&caller),
+			Voting::Casting(Casting { votes, .. }) if votes.len() == 1 as usize
+		);
 
 		Ok(())
 	}
 
 	#[benchmark]
 	pub fn unlock() -> Result<(), BenchmarkError> {
-		let caller = whitelisted_caller();
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
 		let origin = RawOrigin::Signed(caller);
 		let vtoken = VKSM;
 		let poll_index = 0u32;
+		let vote = account_vote::<T>(100u32.into());
+
+		init_vote::<T>(vtoken)?;
+		Pallet::<T>::vote(origin.clone().into(), vtoken, poll_index, vote)?;
+		Pallet::<T>::set_referendum_status(
+			RawOrigin::Root.into(),
+			vtoken,
+			poll_index,
+			ReferendumInfo::Completed(0u32.into()),
+		)?;
+		Pallet::<T>::set_vote_locking_period(RawOrigin::Root.into(), vtoken, 0u32.into())?;
 
 		#[extrinsic_call]
 		_(origin, vtoken, poll_index);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn remove_delegator_vote() -> Result<(), BenchmarkError> {
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin = RawOrigin::Signed(caller);
+		let vtoken = VKSM;
+		let poll_index = 0u32;
+		let vote = account_vote::<T>(100u32.into());
+		let derivative_index = 0u16;
+
+		init_vote::<T>(vtoken)?;
+		Pallet::<T>::vote(origin.clone().into(), vtoken, poll_index, vote)?;
+		Pallet::<T>::set_referendum_status(
+			RawOrigin::Root.into(),
+			vtoken,
+			poll_index,
+			ReferendumInfo::Completed(0u32.into()),
+		)?;
+		Pallet::<T>::set_vote_locking_period(RawOrigin::Root.into(), vtoken, 0u32.into())?;
+		let token = CurrencyId::to_token(&vtoken).unwrap();
+		T::XcmDestWeightAndFee::set_xcm_dest_weight_and_fee(
+			token,
+			XcmOperation::VoteRemoveDelegatorVote,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(origin, vtoken, poll_index, derivative_index);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn kill_referendum() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let poll_index = 0u32;
+		let vote = account_vote::<T>(100u32.into());
+
+		init_vote::<T>(vtoken)?;
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin_caller = RawOrigin::Signed(caller);
+		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
+		Pallet::<T>::set_referendum_status(
+			RawOrigin::Root.into(),
+			vtoken,
+			poll_index,
+			ReferendumInfo::Completed(0u32.into()),
+		)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, poll_index);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn set_delegator_role() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let derivative_index = 10;
+		let vote_role = VoteRole::SplitAbstain;
+
+		init_vote::<T>(vtoken)?;
+		T::DerivativeAccount::add_delegator(
+			CurrencyId::to_token(&vtoken).unwrap(),
+			derivative_index,
+			Parent.into(),
+		);
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			vtoken,
+			derivative_index,
+			vote_role,
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn set_referendum_status() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let poll_index = 0u32;
+		let info = ReferendumInfo::Completed(<frame_system::Pallet<T>>::block_number());
+
+		init_vote::<T>(vtoken)?;
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin_caller = RawOrigin::Signed(caller);
+		let vote = account_vote::<T>(100u32.into());
+		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, poll_index, info);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn set_undeciding_timeout() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let vote_locking_period = 100u32.into();
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, vote_locking_period);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn set_vote_locking_period() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let undeciding_timeout = 100u32.into();
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, undeciding_timeout);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn notify_vote() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let poll_index = 0u32;
+		let query_id = 1u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+
+		init_vote::<T>(vtoken)?;
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin_caller = RawOrigin::Signed(caller);
+		let vote = account_vote::<T>(100u32.into());
+		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, query_id, response);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	pub fn notify_remove_delegator_vote() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let poll_index = 0u32;
+		let query_id = 1u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+
+		init_vote::<T>(vtoken)?;
+		let caller = funded_account::<T>("caller", 0);
+		whitelist_account!(caller);
+		let origin_caller = RawOrigin::Signed(caller);
+		let vote = account_vote::<T>(100u32.into());
+		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, query_id, response);
 
 		Ok(())
 	}

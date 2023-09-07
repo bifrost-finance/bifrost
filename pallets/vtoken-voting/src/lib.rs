@@ -28,7 +28,6 @@ mod mock;
 mod tests;
 
 mod call;
-pub mod traits;
 mod vote;
 pub mod weights;
 
@@ -45,8 +44,8 @@ use frame_support::{
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
 	currency::{VDOT, VKSM},
-	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, XcmInterfaceOperation,
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	CurrencyId, DerivativeIndex, XcmInterfaceOperation,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
@@ -56,13 +55,10 @@ use sp_runtime::{
 	ArithmeticError,
 };
 use sp_std::prelude::*;
-pub use traits::*;
 use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
-
-pub type DerivativeIndex = u16;
 
 type PollIndex = u32;
 
@@ -105,9 +101,9 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
+		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
-		type DerivativeAccount: DerivativeAccountHandler<Self>;
+		type DerivativeAccount: DerivativeAccountHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
@@ -355,7 +351,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::vote())]
+		#[pallet::weight(<T as Config>::WeightInfo::vote_new())]
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
