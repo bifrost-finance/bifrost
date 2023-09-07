@@ -22,10 +22,6 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 pub use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
-use pallet_traits::{
-	DecimalProvider, ExchangeRateProvider, LiquidStakingCurrenciesProvider,
-	VaultTokenCurrenciesFilter, VaultTokenExchangeRateProvider,
-};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
 use sp_std::vec::Vec;
@@ -219,55 +215,6 @@ impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
 impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
 	fn feed_value(_: AccountId, _: CurrencyId, _: TimeStampedPrice) -> sp_runtime::DispatchResult {
 		Ok(())
-	}
-}
-
-pub struct LiquidStakingExchangeRateProvider;
-impl ExchangeRateProvider<CurrencyId> for LiquidStakingExchangeRateProvider {
-	fn get_exchange_rate(_: &CurrencyId) -> Option<Rate> {
-		Some(Rate::saturating_from_rational(150, 100))
-	}
-}
-
-pub struct Decimal;
-impl DecimalProvider<CurrencyId> for Decimal {
-	fn get_decimal(asset_id: &CurrencyId) -> Option<u8> {
-		match *asset_id {
-			KSM | VKSM => Some(12),
-			BNC => Some(12),
-			DOT_U => Some(12),
-			_ => Some(12),
-		}
-	}
-}
-
-pub struct LiquidStaking;
-impl LiquidStakingCurrenciesProvider<CurrencyId> for LiquidStaking {
-	fn get_staking_currency() -> Option<CurrencyId> {
-		Some(KSM)
-	}
-	fn get_liquid_currency() -> Option<CurrencyId> {
-		Some(VKSM)
-	}
-}
-
-impl ExchangeRateProvider<CurrencyId> for LiquidStaking {
-	fn get_exchange_rate(_: &CurrencyId) -> Option<Rate> {
-		Some(Rate::saturating_from_rational(150, 100))
-	}
-}
-
-pub struct TokenExchangeRateProvider;
-impl VaultTokenExchangeRateProvider<CurrencyId> for TokenExchangeRateProvider {
-	fn get_exchange_rate(_: &CurrencyId, _: Rate) -> Option<Rate> {
-		Some(Rate::saturating_from_rational(100, 150))
-	}
-}
-
-pub struct TokenCurrenciesFilter;
-impl VaultTokenCurrenciesFilter<CurrencyId> for TokenCurrenciesFilter {
-	fn contains(_asset_id: &CurrencyId) -> bool {
-		return false;
 	}
 }
 

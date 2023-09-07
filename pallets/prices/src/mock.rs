@@ -115,20 +115,6 @@ impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
 	}
 }
 
-pub struct LiquidStakingExchangeRateProvider;
-impl ExchangeRateProvider<CurrencyId> for LiquidStakingExchangeRateProvider {
-	fn get_exchange_rate(_: &CurrencyId) -> Option<Rate> {
-		Some(Rate::saturating_from_rational(150, 100))
-	}
-}
-
-pub struct TokenExchangeRateProvider;
-impl VaultTokenExchangeRateProvider<CurrencyId> for TokenExchangeRateProvider {
-	fn get_exchange_rate(_: &CurrencyId, _: Rate) -> Option<Rate> {
-		Some(Rate::saturating_from_rational(100, 150))
-	}
-}
-
 ord_parameter_types! {
 	pub const One: AccountId = 1;
 }

@@ -163,25 +163,7 @@ fn reset_price_call_work() {
 }
 
 #[test]
-fn get_liquid_price_work() {
-	new_test_ext().execute_with(|| {
-		assert_eq!(
-			Prices::get_price(&DOT),
-			Some((Price::from_inner(10_000_000_000 * PRICE_ONE), 0))
-		);
-
-		assert_eq!(
-			Prices::get_price(&VDOT),
-			LiquidStakingExchangeRateProvider::get_exchange_rate(&VDOT)
-				.unwrap()
-				.checked_mul_int(10_000_000_000 * PRICE_ONE)
-				.map(|i| (Price::from_inner(i), 0))
-		);
-	});
-}
-
-#[test]
-fn get_ctoken_price_work() {
+fn get_token_price_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(
 			Prices::get_price(&DOT),
@@ -196,7 +178,7 @@ fn get_ctoken_price_work() {
 }
 
 #[test]
-fn get_foreign_ctoken_price_work() {
+fn get_foreign_token_price_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(
 			Prices::get_price(&DOT),
