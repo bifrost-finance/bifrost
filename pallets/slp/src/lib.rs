@@ -40,8 +40,9 @@ use frame_system::{
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator,
-	XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
+	TokenSymbol, VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL,
+	GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -2381,5 +2382,73 @@ pub mod pallet {
 		fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
 			DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
 		}
+	}
+}
+
+impl<T: Config> DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
+	fn check_derivative_index_exists(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> bool {
+		Self::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Self::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Self::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
+					Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(currency_id: CurrencyId) {
+		MinimumsAndMaximums::<T>::insert(
+			currency_id,
+			MinimumsMaximums {
+				delegator_bonded_minimum: 0u32.into(),
+				bond_extra_minimum: 0u32.into(),
+				unbond_minimum: 0u32.into(),
+				rebond_minimum: 0u32.into(),
+				unbond_record_maximum: 0u32,
+				validators_back_maximum: 0u32,
+				delegator_active_staking_maximum: 0u32.into(),
+				validators_reward_maximum: 0u32,
+				delegation_amount_minimum: 0u32.into(),
+				delegators_maximum: 10u16,
+				validators_maximum: 0u16,
+			},
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(currency_id: CurrencyId, who: MultiLocation) {
+		DelegatorLedgers::<T>::insert(
+			currency_id,
+			&who,
+			Ledger::Substrate(SubstrateLedger {
+				account: Parent.into(),
+				total: 100u32.into(),
+				active: 100u32.into(),
+				unlocking: vec![],
+			}),
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(currency_id: CurrencyId, index: DerivativeIndex, who: MultiLocation) {
+		Self::inner_add_delegator(index, &who, currency_id).unwrap();
 	}
 }
