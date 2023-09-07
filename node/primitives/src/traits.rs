@@ -21,8 +21,8 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::{
-	AssetIds, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol,
-	XcmInterfaceOperation,
+	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
+	TokenSymbol, XcmInterfaceOperation,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -462,4 +462,27 @@ where
 
 pub trait FeeGetter<RuntimeCall> {
 	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
+}
+
+pub trait DerivativeAccountHandler<CurrencyId, Balance> {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<xcm::v3::MultiLocation>;
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(token: CurrencyId);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(token: CurrencyId, who: xcm::v3::MultiLocation);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(token: CurrencyId, index: DerivativeIndex, who: xcm::v3::MultiLocation);
 }
