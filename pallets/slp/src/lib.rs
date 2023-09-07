@@ -2429,7 +2429,7 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 				delegator_active_staking_maximum: 0u32.into(),
 				validators_reward_maximum: 0u32,
 				delegation_amount_minimum: 0u32.into(),
-				delegators_maximum: 10u16,
+				delegators_maximum: u16::MAX,
 				validators_maximum: 0u16,
 			},
 		);
@@ -2442,8 +2442,8 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 			&who,
 			Ledger::Substrate(SubstrateLedger {
 				account: Parent.into(),
-				total: 100u32.into(),
-				active: 100u32.into(),
+				total: u32::MAX.into(),
+				active: u32::MAX.into(),
 				unlocking: vec![],
 			}),
 		);
