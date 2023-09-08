@@ -49,7 +49,7 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 	T::DerivativeAccount::init_minimums_and_maximums(token);
 	T::DerivativeAccount::add_delegator(token, derivative_index, Parent.into());
 	T::DerivativeAccount::new_delegator_ledger(token, Parent.into());
-	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, 10u32.into())?;
+	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, Zero::zero())?;
 	Pallet::<T>::set_delegator_role(
 		RawOrigin::Root.into(),
 		vtoken,
@@ -78,6 +78,7 @@ mod benchmarks {
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
+			Pallet::<T>::on_initialize(Zero::zero());
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
@@ -112,9 +113,9 @@ mod benchmarks {
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		init_vote::<T>(vtoken)?;
-		let r = T::MaxVotes::get();
+		let r = 50;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
-		for index in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter() {
+		for index in (0..r).collect::<Vec<_>>().iter() {
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, old_vote)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,

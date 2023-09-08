@@ -293,7 +293,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		BlockNumberFor<T>,
-		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<256>>,
+		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<50>>,
 		ValueQuery,
 	>;
 
