@@ -63,7 +63,7 @@ fn vote_works() {
 				RuntimeOrigin::root(),
 				MultiAddress::Id(ALICE.into()),
 				VKSM,
-				10_000_000_000_000u64.into(),
+				u64::MAX.into(),
 				Zero::zero(),
 			));
 			let token = CurrencyId::to_token(&vtoken).unwrap();
@@ -86,7 +86,7 @@ fn vote_works() {
 					delegator_active_staking_maximum: 0u32.into(),
 					validators_reward_maximum: 0u32,
 					delegation_amount_minimum: 0u32.into(),
-					delegators_maximum: 10u16,
+					delegators_maximum: u16::MAX,
 					validators_maximum: 0u16,
 				})
 			));
