@@ -92,8 +92,8 @@ use hex_literal::hex;
 pub use node_primitives::{
 	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, Price, RpcContributionStatus,
-	TimeUnit, TokenSymbol,
+	DistributionId, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price, Rate, Ratio,
+	RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 
@@ -2380,6 +2380,20 @@ impl_runtime_apis! {
 			amounts: Vec<Balance>,
 		) -> Balance {
 			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
+		}
+	}
+
+	impl lend_market_rpc_runtime_api::LoansApi<Block, AccountId, Balance> for Runtime {
+		fn get_account_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidity(&account)
+		}
+
+		fn get_market_status(asset_id: CurrencyId) -> Result<(Rate, Rate, Rate, Ratio, Balance, Balance, sp_runtime::FixedU128), DispatchError> {
+			LendMarket::get_market_status(asset_id)
+		}
+
+		fn get_liquidation_threshold_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidation_threshold_liquidity(&account)
 		}
 	}
 

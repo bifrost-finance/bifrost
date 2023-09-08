@@ -5,7 +5,7 @@ name = 'lend-market-rpc-runtime-api'
 version = "0.8.0"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", features = [
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
 ] }
 node-primitives = { path = "../../../../node/primitives", default-features = false }

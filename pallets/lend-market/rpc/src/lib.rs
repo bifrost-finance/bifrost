@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-pub use pallet_lend_market_rpc_runtime_api::LoansApi as LoansRuntimeApi;
+pub use lend_market_rpc_runtime_api::LoansApi as LoansRuntimeApi;
 
 use codec::Codec;
 use jsonrpsee::{
@@ -26,7 +26,7 @@ use node_primitives::{CurrencyId, Liquidity, Rate, Ratio, Shortfall};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT, FixedU128};
+use sp_runtime::{traits::Block as BlockT, FixedU128};
 
 #[rpc(client, server)]
 pub trait LoansApi<BlockHash, AccountId, Balance>
@@ -103,11 +103,11 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<(Liquidity, Shortfall, Liquidity, Shortfall)> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or(
+        let at = at.unwrap_or(
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash,
-        ));
-        api.get_account_liquidity(&at, account)
+        );
+        api.get_account_liquidity(at, account)
             .map_err(runtime_error_into_rpc_error)?
             .map_err(account_liquidity_error_into_rpc_error)
     }
@@ -118,10 +118,10 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<(Rate, Rate, Rate, Ratio, NumberOrHex, NumberOrHex, FixedU128)> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or(
+        let at:<Block as BlockT>::Hash = at.unwrap_or(
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash,
-        ));
+        );
         let (
             borrow_rate,
             supply_rate,
@@ -131,7 +131,7 @@ where
             total_reserves,
             borrow_index,
         ) = api
-            .get_market_status(&at, asset_id)
+            .get_market_status(at, asset_id)
             .map_err(runtime_error_into_rpc_error)?
             .map_err(market_status_error_into_rpc_error)?;
         Ok((
@@ -151,11 +151,11 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<(Liquidity, Shortfall, Liquidity, Shortfall)> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or(
+        let at = at.unwrap_or(
             // If the block hash is not supplied assume the best block.
             self.client.info().best_hash,
-        ));
-        api.get_liquidation_threshold_liquidity(&at, account)
+        );
+        api.get_liquidation_threshold_liquidity(at, account)
             .map_err(runtime_error_into_rpc_error)?
             .map_err(account_liquidity_error_into_rpc_error)
     }

@@ -120,6 +120,7 @@ bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = f
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
 bifrost-currencies = { workspace = true }
 lend-market = { path = "../../pallets/lend-market", default-features = false }
+lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
 pallet-prices = { path = "../../pallets/prices", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "kusama" ] }
 
@@ -236,6 +237,7 @@ std = [
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
 	"lend-market/std",
+	"lend-market-rpc-runtime-api/std",
 	"pallet-prices/std",
 	"bifrost-vtoken-voting/std",
 	"zenlink-protocol/std",

@@ -5,10 +5,12 @@ name = 'lend-market-rpc'
 version = "0.8.0"
 
 [dependencies]
-codec = { workspace = true, features = ['std'] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
 jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
 node-primitives = { path = "../../../node/primitives", default-features = false }
-serde = { workspace = true, features = ['derive'] }
+serde = { version = "1.0.160", features = ["derive"] }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", features = [
 	'std',
 ] }

@@ -904,6 +904,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal 0.3.4",
  "lend-market",
+ "lend-market-rpc-runtime-api",
  "log",
  "merkle-distributor",
  "node-primitives",
@@ -5378,6 +5379,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "lend-market-rpc"
+version = "0.8.0"
+dependencies = [
+ "jsonrpsee",
+ "lend-market-rpc-runtime-api",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "lend-market-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6600,6 +6627,8 @@ dependencies = [
  "bifrost-ve-minting-rpc-api",
  "bifrost-ve-minting-rpc-runtime-api",
  "jsonrpsee",
+ "lend-market-rpc",
+ "lend-market-rpc-runtime-api",
  "node-primitives",
  "pallet-transaction-payment-rpc",
  "sc-client-api",
