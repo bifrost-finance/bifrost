@@ -21,7 +21,7 @@ primitives = { package = "node-primitives", path = "../../node/primitives", defa
 scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }
-serde = { version = "1.0.136", features = ['derive'], optional = true }
+serde = { version = "1.0.160", features = ['derive'], optional = true }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }

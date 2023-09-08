@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-pub use pallet_lend-market_rpc_runtime_api::LoansApi as LoansRuntimeApi;
+pub use pallet_lend_market_rpc_runtime_api::LoansApi as LoansRuntimeApi;
 
 use codec::Codec;
 use jsonrpsee::{
@@ -33,19 +33,19 @@ pub trait LoansApi<BlockHash, AccountId, Balance>
 where
     Balance: Codec + Copy + TryFrom<NumberOrHex>,
 {
-    #[method(name = "lend-market_getCollateralLiquidity")]
+    #[method(name = "lend_market_getCollateralLiquidity")]
     fn get_account_liquidity(
         &self,
         account: AccountId,
         at: Option<BlockHash>,
     ) -> RpcResult<(Liquidity, Shortfall, Liquidity, Shortfall)>;
-    #[method(name = "lend-market_getMarketStatus")]
+    #[method(name = "lend_market_getMarketStatus")]
     fn get_market_status(
         &self,
         asset_id: CurrencyId,
         at: Option<BlockHash>,
     ) -> RpcResult<(Rate, Rate, Rate, Ratio, NumberOrHex, NumberOrHex, FixedU128)>;
-    #[method(name = "lend-market_getLiquidationThresholdLiquidity")]
+    #[method(name = "lend_market_getLiquidationThresholdLiquidity")]
     fn get_liquidation_threshold_liquidity(
         &self,
         account: AccountId,

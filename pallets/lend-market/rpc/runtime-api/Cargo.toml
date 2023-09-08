@@ -1,18 +1,20 @@
 [package]
-authors = { workspace = true }
-edition = '2021'
-name    = 'lend-market-rpc-runtime-api'
-version = { workspace = true }
+authors = ["Parallel Team", "Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+name = 'lend-market-rpc-runtime-api'
+version = "0.8.0"
 
 [dependencies]
-codec      = { workspace = true, features = ['derive'] }
-node_primitives = { workspace = true }
-sp-api     = { workspace = true }
-sp-runtime = { workspace = true }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = [
+	"derive",
+] }
+node-primitives = { path = "../../../../node/primitives", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 
 [features]
 default = ['std']
-std     = ['codec/std', 'sp-api/std', 'sp-runtime/std']
+std = ['codec/std', 'sp-api/std', 'sp-runtime/std']
 
 [lib]
 doctest = false
