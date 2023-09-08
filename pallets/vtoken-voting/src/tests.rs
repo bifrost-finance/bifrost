@@ -422,11 +422,16 @@ fn errors_with_vote_works() {
 			Error::<Runtime>::InsufficientFunds
 		);
 
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 0, aye(10, 0)));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 1, aye(10, 0)));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 2, aye(10, 0)));
+		for poll_index in 0..256 {
+			assert_ok!(VtokenVoting::vote(
+				RuntimeOrigin::signed(1),
+				vtoken,
+				poll_index,
+				aye(10, 0)
+			));
+		}
 		assert_noop!(
-			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 3, aye(10, 0)),
+			VtokenVoting::vote(RuntimeOrigin::signed(1), vtoken, 256, aye(10, 0)),
 			Error::<Runtime>::MaxVotesReached
 		);
 	});
@@ -668,6 +673,61 @@ fn notify_vote_success_works() {
 			query_id,
 			response,
 		}));
+	});
+}
+
+#[test]
+fn notify_vote_success_max_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		for poll_index in 0..256 {
+			RelaychainDataProvider::set_block_number(1);
+
+			assert_ok!(VtokenVoting::vote(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				poll_index,
+				aye(2, 5)
+			));
+			assert_ok!(VtokenVoting::notify_vote(
+				origin_response(),
+				poll_index as QueryId,
+				response_success()
+			));
+
+			RelaychainDataProvider::set_block_number(
+				1 + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
+			);
+			VtokenVoting::on_initialize(Zero::zero());
+		}
+	});
+}
+
+#[test]
+fn notify_vote_success_exceed_max_fail() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		for poll_index in 0..50 {
+			assert_ok!(VtokenVoting::vote(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				poll_index,
+				aye(2, 5)
+			));
+			assert_ok!(VtokenVoting::notify_vote(
+				origin_response(),
+				poll_index as QueryId,
+				response_success()
+			),);
+		}
+		let poll_index = 50;
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
+		assert_noop!(
+			VtokenVoting::notify_vote(origin_response(), poll_index as QueryId, response_success()),
+			Error::<Runtime>::TooMany
+		);
 	});
 }
 

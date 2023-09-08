@@ -275,7 +275,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		derivative_index: DerivativeIndex,
 	) -> Option<(Balance, Balance)> {
 		Self::get_multilocation(token, derivative_index)
-			.and_then(|_location| Some((100u32.into(), 100u32.into())))
+			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
 	}
 }
 
@@ -309,7 +309,7 @@ impl vtoken_voting::Config for Runtime {
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
-	type MaxVotes = ConstU32<3>;
+	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();
