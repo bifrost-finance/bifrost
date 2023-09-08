@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate as vtoken_voting;
-use crate::{traits::DerivativeAccountHandler, BalanceOf, DerivativeIndex, DispatchResult};
+use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -255,7 +255,7 @@ impl XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Runtime>> for XcmDestWeigh
 }
 
 pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 	fn check_derivative_index_exists(
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,
@@ -275,7 +275,7 @@ impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
 		derivative_index: DerivativeIndex,
 	) -> Option<(Balance, Balance)> {
 		Self::get_multilocation(token, derivative_index)
-			.and_then(|_location| Some((100u32.into(), 100u32.into())))
+			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
 	}
 }
 
@@ -309,7 +309,7 @@ impl vtoken_voting::Config for Runtime {
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
-	type MaxVotes = ConstU32<3>;
+	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();

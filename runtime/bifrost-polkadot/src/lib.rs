@@ -27,7 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod migration;
-use bifrost_slp::{Ledger, QueryResponseManager};
+use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
 use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
@@ -106,7 +106,6 @@ use zenlink_protocol::{
 };
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::{traits::DerivativeAccountHandler, DerivativeIndex};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
@@ -1329,30 +1328,10 @@ parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
 }
 
-pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
-	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
-	}
-
-	fn get_multilocation(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<MultiLocation> {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index)
-	}
-
-	fn get_stake_info(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<(Balance, Balance)> {
-		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
-				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
-					Some((l.total, l.active)),
-				_ => None,
-			})
-		})
+pub struct DerivativeAccountTokenFilter;
+impl Contains<CurrencyId> for DerivativeAccountTokenFilter {
+	fn contains(token: &CurrencyId) -> bool {
+		*token == RelayCurrencyId::get()
 	}
 }
 
@@ -1364,10 +1343,10 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmInterface;
-	type DerivativeAccount = DerivativeAccount;
+	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type ParachainId = SelfParaChainId;
-	type MaxVotes = ConstU32<512>;
+	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
 }
