@@ -319,6 +319,13 @@ impl<T: Config> Pallet<T> {
 			return Ok((total_fee, Zero::zero(), Zero::zero(), path));
 		}
 	}
+
+	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
+		let asset_id: AssetId =
+			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
+				.map_err(|_| Error::<T>::ConversionError)?;
+		Ok(asset_id)
+	}
 }
 
 /// Default implementation for a Currency and an OnUnbalanced handler.
@@ -485,12 +492,5 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 		Ok(None)
-	}
-
-	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
-		let asset_id: AssetId =
-			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
-				.map_err(|_| Error::<T>::ConversionError)?;
-		Ok(asset_id)
 	}
 }
