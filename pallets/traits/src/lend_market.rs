@@ -19,7 +19,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{FixedU128, RuntimeDebug};
 use sp_std::prelude::*;
 
-pub trait Loans<CurrencyId, AccountId, Balance> {
+pub trait LendMarket<CurrencyId, AccountId, Balance> {
 	fn do_mint(
 		supplier: &AccountId,
 		asset_id: CurrencyId,
@@ -47,7 +47,7 @@ pub trait Loans<CurrencyId, AccountId, Balance> {
 	) -> Result<(), DispatchError>;
 }
 
-pub trait LoansPositionDataProvider<CurrencyId, AccountId, Balance> {
+pub trait LendMarketPositionDataProvider<CurrencyId, AccountId, Balance> {
 	fn get_current_borrow_balance(
 		borrower: &AccountId,
 		asset_id: CurrencyId,
@@ -59,14 +59,14 @@ pub trait LoansPositionDataProvider<CurrencyId, AccountId, Balance> {
 	) -> Result<Balance, DispatchError>;
 }
 
-pub trait LoansMarketDataProvider<CurrencyId, Balance> {
+pub trait LendMarketMarketDataProvider<CurrencyId, Balance> {
 	fn get_market_info(asset_id: CurrencyId) -> Result<MarketInfo, DispatchError>;
 	fn get_market_status(asset_id: CurrencyId) -> Result<MarketStatus<Balance>, DispatchError>;
 	// for compatibility we keep this func
 	fn get_full_interest_rate(asset_id: CurrencyId) -> Option<Rate>;
 }
 
-/// MarketInfo contains some static attrs as a subset of Market struct in Loans
+/// MarketInfo contains some static attrs as a subset of Market struct in LendMarket
 #[derive(Default, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MarketInfo {
 	pub collateral_factor: Ratio,

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Loans pallet
+//! # LendMarket pallet
 //!
 //! ## Overview
 //!
-//! Loans pallet implement the lending protocol by using a pool-based strategy
+//! LendMarket pallet implement the lending protocol by using a pool-based strategy
 //! that aggregates each user's supplied assets. The interest rate is dynamically
 //! determined by the supply and demand.
 
@@ -42,8 +42,8 @@ use node_primitives::{Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortf
 use num_traits::cast::ToPrimitive;
 pub use pallet::*;
 use pallet_traits::{
-	ConvertToBigUint, Loans as LoansTrait, LoansMarketDataProvider, LoansPositionDataProvider,
-	MarketInfo, MarketStatus, PriceFeeder,
+	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
+	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
 };
 use sp_runtime::{
 	traits::{
@@ -123,7 +123,6 @@ pub mod pallet {
 		/// Assets for deposit/withdraw collateral assets to/from lend-market module
 		type Assets: Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>
 			+ Mutate<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
-		//MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>;
 
 		/// Reward asset id.
 		#[pallet::constant]
@@ -1998,7 +1997,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> LoansTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
+impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Pallet<T> {
 	fn do_mint(
 		supplier: &AccountIdOf<T>,
 		asset_id: AssetIdOf<T>,
@@ -2153,7 +2152,7 @@ impl<T: Config> LoansTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Palle
 	}
 }
 
-impl<T: Config> LoansMarketDataProvider<AssetIdOf<T>, BalanceOf<T>> for Pallet<T> {
+impl<T: Config> LendMarketMarketDataProvider<AssetIdOf<T>, BalanceOf<T>> for Pallet<T> {
 	fn get_market_info(asset_id: AssetIdOf<T>) -> Result<MarketInfo, DispatchError> {
 		let market = Self::market(asset_id)?;
 		let full_rate =
@@ -2200,7 +2199,7 @@ impl<T: Config> LoansMarketDataProvider<AssetIdOf<T>, BalanceOf<T>> for Pallet<T
 	}
 }
 
-impl<T: Config> LoansPositionDataProvider<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>>
+impl<T: Config> LendMarketPositionDataProvider<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>>
 	for Pallet<T>
 {
 	fn get_current_borrow_balance(

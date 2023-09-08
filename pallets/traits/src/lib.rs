@@ -3,8 +3,8 @@
 use num_bigint::{BigUint, ToBigUint};
 use primitives::{CurrencyId, PriceDetail};
 
-pub mod loans;
-pub use loans::*;
+pub mod lend_market;
+pub use lend_market::*;
 
 pub trait EmergencyCallFilter<Call> {
 	fn contains(call: &Call) -> bool;

@@ -41,10 +41,10 @@ use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use bifrost_stable_pool_rpc_api::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
-use lend_market_rpc::{Loans, LoansApiServer};
-use lend_market_rpc_runtime_api::LoansApi;
 use bifrost_ve_minting_rpc_api::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use lend_market_rpc::{LendMarket, LendMarketApiServer};
+use lend_market_rpc_runtime_api::LendMarketApi;
 use node_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use sc_rpc_api::DenyUnsafe;
@@ -88,7 +88,7 @@ where
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: StablePoolRuntimeApi<Block>,
-	C::Api: LoansApi<Block, AccountId, Balance>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -107,7 +107,7 @@ where
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
-	module.merge(Loans::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client.clone()).into_rpc())?;
 
 	Ok(module)
 }

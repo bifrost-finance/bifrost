@@ -53,7 +53,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Currencies: bifrost_currencies::{Pallet, Call},
 		AssetRegistry: bifrost_asset_registry,
-		Loans: crate::{Pallet, Storage, Call, Event<T>},
+		LendMarket: crate::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
 	}
@@ -313,7 +313,7 @@ impl pallet_assets::Config for Test {
 }
 
 parameter_types! {
-	pub const LoansPalletId: PalletId = PalletId(*b"par/loan");
+	pub const LendMarketPalletId: PalletId = PalletId(*b"par/loan");
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }
@@ -321,7 +321,7 @@ parameter_types! {
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type PriceFeeder = MockPriceFeeder;
-	type PalletId = LoansPalletId;
+	type PalletId = LendMarketPalletId;
 	type ReserveOrigin = EnsureRoot<AccountId>;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
@@ -336,7 +336,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![
-			// (CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
 			(CurrencyId::Token(TokenSymbol::KSM), 1, None),
 			(CurrencyId::Native(TokenSymbol::BNC), 1, None),
 			(DOT, 1, None),
@@ -354,7 +353,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	let endowed_accounts: Vec<(AccountId, CurrencyId, Balance)> = vec![
-		// (ALICE, BNC, 1_000_000_000_000_000),
 		(ALICE, KSM, 1_000_000_000_000_000),
 		(ALICE, DOT, 1_000_000_000_000_000),
 		(ALICE, PHA, 1_000_000_000_000_000),
@@ -405,18 +403,18 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT_U.into(), DAVE, unit(1000)).unwrap();
 
 		// Init Markets
-		Loans::add_market(RuntimeOrigin::root(), BNC, market_mock(VBNC)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), BNC).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), KSM, market_mock(LKSM)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), KSM).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), DOT, market_mock(LDOT)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), DOT).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), DOT_U, market_mock(LUSDT)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), DOT_U).unwrap();
-		Loans::add_market(RuntimeOrigin::root(), PHA, market_mock(VPHA)).unwrap();
-		Loans::activate_market(RuntimeOrigin::root(), PHA).unwrap();
+		LendMarket::add_market(RuntimeOrigin::root(), BNC, market_mock(VBNC)).unwrap();
+		LendMarket::activate_market(RuntimeOrigin::root(), BNC).unwrap();
+		LendMarket::add_market(RuntimeOrigin::root(), KSM, market_mock(LKSM)).unwrap();
+		LendMarket::activate_market(RuntimeOrigin::root(), KSM).unwrap();
+		LendMarket::add_market(RuntimeOrigin::root(), DOT, market_mock(LDOT)).unwrap();
+		LendMarket::activate_market(RuntimeOrigin::root(), DOT).unwrap();
+		LendMarket::add_market(RuntimeOrigin::root(), DOT_U, market_mock(LUSDT)).unwrap();
+		LendMarket::activate_market(RuntimeOrigin::root(), DOT_U).unwrap();
+		LendMarket::add_market(RuntimeOrigin::root(), PHA, market_mock(VPHA)).unwrap();
+		LendMarket::activate_market(RuntimeOrigin::root(), PHA).unwrap();
 
-		Loans::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
+		LendMarket::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 
 		System::set_block_number(0);
 		TimestampPallet::set_timestamp(6000);
@@ -426,13 +424,13 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 /// Progress to the given block, and then finalize the block.
 pub(crate) fn _run_to_block(n: BlockNumber) {
-	Loans::on_finalize(System::block_number());
+	LendMarket::on_finalize(System::block_number());
 	for b in (System::block_number() + 1)..=n {
 		System::set_block_number(b);
-		Loans::on_initialize(b);
+		LendMarket::on_initialize(b);
 		TimestampPallet::set_timestamp(6000 * b);
 		if b != n {
-			Loans::on_finalize(b);
+			LendMarket::on_finalize(b);
 		}
 	}
 }
@@ -447,7 +445,7 @@ pub fn almost_equal(target: u128, value: u128) -> bool {
 pub fn accrue_interest_per_block(asset_id: CurrencyId, block_delta_secs: u64, run_to_block: u64) {
 	for i in 1..run_to_block {
 		TimestampPallet::set_timestamp(6000 + (block_delta_secs * 1000 * i));
-		Loans::accrue_interest(asset_id).unwrap();
+		LendMarket::accrue_interest(asset_id).unwrap();
 	}
 }
 

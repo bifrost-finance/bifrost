@@ -2383,7 +2383,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl lend_market_rpc_runtime_api::LoansApi<Block, AccountId, Balance> for Runtime {
+	impl lend_market_rpc_runtime_api::LendMarketApi<Block, AccountId, Balance> for Runtime {
 		fn get_account_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
 			LendMarket::get_account_liquidity(&account)
 		}
