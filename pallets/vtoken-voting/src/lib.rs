@@ -38,6 +38,7 @@ pub use crate::{
 };
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
+	dispatch::GetDispatchInfo,
 	pallet_prelude::*,
 	traits::{Get, LockIdentifier},
 };
@@ -90,7 +91,9 @@ pub mod pallet {
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
 
-		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall> + From<Call<Self>>;
+		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall>
+			+ From<Call<Self>>
+			+ GetDispatchInfo;
 
 		type MultiCurrency: MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -875,16 +878,18 @@ pub mod pallet {
 			derivative_index: DerivativeIndex,
 			call: RelayCall<T>,
 			notify_call: Call<T>,
-			weight: XcmWeight,
+			transact_weight: XcmWeight,
 			extra_fee: BalanceOf<T>,
 			f: impl FnOnce(QueryId) -> (),
 		) -> DispatchResult {
 			let responder = MultiLocation::parent();
 			let now = frame_system::Pallet::<T>::block_number();
 			let timeout = now.saturating_add(T::QueryTimeout::get());
+			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
+			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
 			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
 				responder,
-				<T as Config>::RuntimeCall::from(notify_call),
+				notify_runtime_call,
 				timeout,
 				Here,
 			);
@@ -894,7 +899,8 @@ pub mod pallet {
 				<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
 					.encode(),
 				extra_fee,
-				weight,
+				transact_weight,
+				notify_call_weight,
 				query_id,
 			)?;
 
@@ -907,7 +913,8 @@ pub mod pallet {
 		fn construct_xcm_message(
 			call: Vec<u8>,
 			extra_fee: BalanceOf<T>,
-			weight: XcmWeight,
+			transact_weight: XcmWeight,
+			notify_call_weight: XcmWeight,
 			query_id: QueryId,
 		) -> Result<Xcm<()>, Error<T>> {
 			let para_id = T::ParachainId::get().into();
@@ -920,13 +927,13 @@ pub mod pallet {
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: weight,
+					require_weight_at_most: transact_weight,
 					call: call.into(),
 				},
 				ReportTransactStatus(QueryResponseInfo {
 					destination: MultiLocation::from(X1(Parachain(para_id))),
 					query_id,
-					max_weight: weight,
+					max_weight: notify_call_weight,
 				}),
 				RefundSurplus,
 				DepositAsset {
