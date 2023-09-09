@@ -720,7 +720,7 @@ fn notify_vote_success_exceed_max_fail() {
 				origin_response(),
 				poll_index as QueryId,
 				response_success()
-			),);
+			));
 		}
 		let poll_index = 50;
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
@@ -904,5 +904,38 @@ fn notify_remove_delegator_vote_with_no_data_works() {
 			query_id,
 			response,
 		}));
+	});
+}
+
+#[test]
+fn on_initialize_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		RelaychainDataProvider::set_block_number(1);
+		for (query_id, poll_index) in (0..50).collect::<Vec<_>>().iter().enumerate() {
+			assert_ok!(VtokenVoting::vote(
+				RuntimeOrigin::signed(ALICE),
+				vtoken,
+				*poll_index,
+				aye(2, 5)
+			));
+			assert_ok!(VtokenVoting::notify_vote(
+				origin_response(),
+				query_id as QueryId,
+				response_success()
+			));
+		}
+
+		RelaychainDataProvider::set_block_number(
+			1 + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
+		);
+		VtokenVoting::on_initialize(Zero::zero());
+
+		for poll_index in 0..50 {
+			assert_eq!(
+				ReferendumInfoFor::<Runtime>::get(vtoken, poll_index),
+				Some(ReferendumInfo::Completed(101))
+			);
+		}
 	});
 }
