@@ -74,8 +74,7 @@ fn vote_works() {
 				XcmOperation::Vote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 			));
-			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-				RuntimeOrigin::root(),
+			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
 				XcmOperation::RemoveVote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
