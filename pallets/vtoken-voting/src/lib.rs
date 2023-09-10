@@ -361,7 +361,10 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::vote_new().max(<T as Config>::WeightInfo::vote_existing()))]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::vote_new().max(<T as Config>::WeightInfo::vote_existing())
+			+ <T as Config>::WeightInfo::notify_vote()
+		)]
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -454,7 +457,10 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::remove_delegator_vote()
+			+ <T as Config>::WeightInfo::notify_remove_delegator_vote()
+		)]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
