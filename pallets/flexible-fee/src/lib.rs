@@ -282,7 +282,7 @@ impl<T: Config> Pallet<T> {
 						.extra_fee_currency
 						.to_token()
 						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmInterfaceOperation::VoteVtoken)
+					(fee_currency, XcmInterfaceOperation::Vote)
 				},
 				ExtraFeeName::VoteRemoveDelegatorVote => {
 					// We define error code 77 for conversion failure error
@@ -290,7 +290,7 @@ impl<T: Config> Pallet<T> {
 						.extra_fee_currency
 						.to_token()
 						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmInterfaceOperation::VoteRemoveDelegatorVote)
+					(fee_currency, XcmInterfaceOperation::RemoveVote)
 				},
 				ExtraFeeName::NoExtraFee =>
 					(fee_info.extra_fee_currency, XcmInterfaceOperation::Any),

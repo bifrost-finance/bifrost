@@ -263,8 +263,8 @@ pub enum XcmInterfaceOperation {
 	ExecuteLeave,
 	ConvertAsset,
 	// VtokenVoting operations
-	VoteVtoken,
-	VoteRemoveDelegatorVote,
+	Vote,
+	RemoveVote,
 	Any,
 }
 

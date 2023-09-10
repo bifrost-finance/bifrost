@@ -401,7 +401,7 @@ pub mod pallet {
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmInterfaceOperation::VoteVtoken,
+				XcmInterfaceOperation::Vote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
@@ -468,7 +468,7 @@ pub mod pallet {
 				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmInterfaceOperation::VoteRemoveDelegatorVote,
+				XcmInterfaceOperation::RemoveVote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
