@@ -188,85 +188,73 @@ fn moonriver_setup() {
 		Some((treasury_location, 1_000_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Bond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::BondExtra,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Unbond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Chill,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Rebond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Undelegate,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::CancelLeave,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::Liquidize,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::ExecuteLeave,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::TransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::XtokensTransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		MOVR,
 		XcmOperation::TransferTo,
 		Some((20_000_000_000.into(), 10_000_000_000)),

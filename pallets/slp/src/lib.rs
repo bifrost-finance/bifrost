@@ -200,6 +200,7 @@ pub mod pallet {
 		ValidatorStillInUse,
 		TimeUnitNotExist,
 		FeeSourceNotExist,
+		WeightAndFeeNotExists,
 		MinimumsAndMaximumsNotExist,
 		QueryNotExist,
 		DelaysNotExist,

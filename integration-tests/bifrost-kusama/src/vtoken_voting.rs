@@ -67,8 +67,7 @@ fn vote_works() {
 				Zero::zero(),
 			));
 			let token = CurrencyId::to_token(&vtoken).unwrap();
-			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-				RuntimeOrigin::root(),
+			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
 				XcmOperation::VoteVtoken,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),

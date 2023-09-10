@@ -329,36 +329,31 @@ fn phala_xcm_setup() {
 		Some((treasury_location, 1_000_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
 		XcmOperation::Bond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
 		XcmOperation::Unbond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
 		XcmOperation::TransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
 		XcmOperation::TransferTo,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
 		XcmOperation::ConvertAsset,
 		Some((20_000_000_000.into(), 10_000_000_000)),
