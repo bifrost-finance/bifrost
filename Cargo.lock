@@ -1640,9 +1640,9 @@ dependencies = [
 name = "bifrost-vtoken-voting"
 version = "0.8.0"
 dependencies = [
+ "assert_matches",
  "bifrost-currencies",
  "cumulus-primitives-core",
- "env_logger 0.10.0",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

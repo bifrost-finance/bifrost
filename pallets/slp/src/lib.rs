@@ -32,7 +32,7 @@ pub use crate::{
 	Junctions::X1,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -40,8 +40,8 @@ use frame_system::{
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator,
-	XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
+	VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -2347,5 +2347,76 @@ pub mod pallet {
 		fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
 			DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
 		}
+	}
+}
+
+pub struct DerivativeAccountProvider<T, F>(PhantomData<(T, F)>);
+
+impl<T: Config, F: Contains<CurrencyIdOf<T>>>
+	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for DerivativeAccountProvider<T, F>
+{
+	fn check_derivative_index_exists(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> bool {
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Pallet::<T>::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if F::contains(&token) => Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(currency_id: CurrencyIdOf<T>) {
+		MinimumsAndMaximums::<T>::insert(
+			currency_id,
+			MinimumsMaximums {
+				delegator_bonded_minimum: 0u32.into(),
+				bond_extra_minimum: 0u32.into(),
+				unbond_minimum: 0u32.into(),
+				rebond_minimum: 0u32.into(),
+				unbond_record_maximum: 0u32,
+				validators_back_maximum: 0u32,
+				delegator_active_staking_maximum: 0u32.into(),
+				validators_reward_maximum: 0u32,
+				delegation_amount_minimum: 0u32.into(),
+				delegators_maximum: u16::MAX,
+				validators_maximum: 0u16,
+			},
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(currency_id: CurrencyIdOf<T>, who: MultiLocation) {
+		DelegatorLedgers::<T>::insert(
+			currency_id,
+			&who,
+			Ledger::Substrate(SubstrateLedger {
+				account: Parent.into(),
+				total: u32::MAX.into(),
+				active: u32::MAX.into(),
+				unlocking: vec![],
+			}),
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(currency_id: CurrencyIdOf<T>, index: DerivativeIndex, who: MultiLocation) {
+		Pallet::<T>::inner_add_delegator(index, &who, currency_id).unwrap();
 	}
 }

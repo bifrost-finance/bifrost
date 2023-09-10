@@ -32,6 +32,8 @@ use xcm_emulator::TestExt;
 
 #[test]
 fn vote_works() {
+	env_logger::init();
+
 	sp_io::TestExternalities::default().execute_with(|| {
 		let vtoken = VKSM;
 		let poll_index = 0;
@@ -63,13 +65,19 @@ fn vote_works() {
 				RuntimeOrigin::root(),
 				MultiAddress::Id(ALICE.into()),
 				VKSM,
-				10_000_000_000_000u64.into(),
+				u64::MAX.into(),
 				Zero::zero(),
 			));
 			let token = CurrencyId::to_token(&vtoken).unwrap();
 			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
 				XcmOperation::Vote,
+				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			));
+			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+				RuntimeOrigin::root(),
+				token,
+				XcmOperation::VoteRemoveDelegatorVote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 			));
 			assert_ok!(Slp::set_minimums_and_maximums(
@@ -85,7 +93,7 @@ fn vote_works() {
 					delegator_active_staking_maximum: 0u32.into(),
 					validators_reward_maximum: 0u32,
 					delegation_amount_minimum: 0u32.into(),
-					delegators_maximum: 10u16,
+					delegators_maximum: u16::MAX,
 					validators_maximum: 0u16,
 				})
 			));
@@ -113,6 +121,7 @@ fn vote_works() {
 				5,
 				VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
 			));
+			assert_ok!(VtokenVoting::set_vote_locking_period(RuntimeOrigin::root(), vtoken, 0));
 			assert_ok!(VtokenVoting::set_undeciding_timeout(RuntimeOrigin::root(), vtoken, 100));
 
 			assert_ok!(VtokenVoting::vote(
@@ -138,7 +147,47 @@ fn vote_works() {
 		KusamaNet::execute_with(|| {
 			use kusama_runtime::System;
 
-			System::events().iter().for_each(|r| println!("KusamaNet >>> {:?}", r.event));
+			System::events().iter().for_each(|r| log::debug!("KusamaNet >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				kusama_runtime::RuntimeEvent::Ump(
+					polkadot_runtime_parachains::ump::Event::ExecutedUpward(..)
+				)
+			)));
+			System::reset_events();
+		});
+
+		Bifrost::execute_with(|| {
+			use bifrost_kusama_runtime::{RuntimeEvent, System, VtokenVoting};
+
+			System::events().iter().for_each(|r| log::debug!("Bifrost >>> {:?}", r.event));
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::VoteNotified {
+					vtoken: VKSM,
+					poll_index: 0,
+					success: true,
+				})
+			)));
+			assert_ok!(VtokenVoting::set_referendum_status(
+				RuntimeOrigin::root(),
+				VKSM,
+				0,
+				bifrost_vtoken_voting::ReferendumInfoOf::<Runtime>::Completed(1),
+			));
+			assert_ok!(VtokenVoting::remove_delegator_vote(
+				RuntimeOrigin::signed(ALICE.into()),
+				VKSM,
+				0,
+				5,
+			));
+			System::reset_events();
+		});
+
+		KusamaNet::execute_with(|| {
+			use kusama_runtime::System;
+
+			System::events().iter().for_each(|r| log::debug!("KusamaNet >>> {:?}", r.event));
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				kusama_runtime::RuntimeEvent::Ump(
@@ -151,14 +200,16 @@ fn vote_works() {
 		Bifrost::execute_with(|| {
 			use bifrost_kusama_runtime::{RuntimeEvent, System};
 
-			System::events().iter().for_each(|r| println!("Bifrost >>> {:?}", r.event));
+			System::events().iter().for_each(|r| log::debug!("Bifrost >>> {:?}", r.event));
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
-				RuntimeEvent::VtokenVoting(bifrost_vtoken_voting::Event::VoteNotified {
-					vtoken: VKSM,
-					poll_index: 0,
-					success: true,
-				})
+				RuntimeEvent::VtokenVoting(
+					bifrost_vtoken_voting::Event::DelegatorVoteRemovedNotified {
+						vtoken: VKSM,
+						poll_index: 0,
+						success: true,
+					}
+				)
 			)));
 			System::reset_events();
 		});

@@ -136,6 +136,8 @@ pub type TrieIndex = u32;
 /// Distribution Id
 pub type DistributionId = u32;
 
+pub type DerivativeIndex = u16;
+
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
 )]

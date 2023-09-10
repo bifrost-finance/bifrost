@@ -8,6 +8,7 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+assert_matches = "1.3.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
 ] }
@@ -29,11 +30,9 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
 [dev-dependencies]
-env_logger = "0.10.0"
 orml-tokens = "0.4.1-dev"
 bifrost-currencies = { workspace = true }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
@@ -59,7 +58,9 @@ kusama = []
 polkadot = []
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
+	"node-primitives/runtime-benchmarks",
 	"pallet-conviction-voting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
