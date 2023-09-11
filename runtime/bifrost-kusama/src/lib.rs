@@ -1923,7 +1923,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	migration::XcmInterfaceMigration,
+	(migration::XcmInterfaceMigration, BLPOnRuntimeUpgrade<Runtime>),
 >;
 
 use frame_support::traits::OnRuntimeUpgrade;
