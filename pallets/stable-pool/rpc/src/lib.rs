@@ -42,6 +42,14 @@ pub trait StablePoolRpcApi<BlockHash> {
 		amount: Balance,
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
+
+	#[method(name = "stable_pool_addLiquidityAmount")]
+	fn add_liquidity_amount(
+		&self,
+		pool_id: u32,
+		amounts: Vec<Balance>,
+		at: Option<BlockHash>,
+	) -> RpcResult<NumberOrHex>;
 }
 
 #[derive(Clone, Debug)]
@@ -81,7 +89,29 @@ where
 			Ok(amount) => Ok(NumberOrHex::Hex(amount.into())),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
-				"Failed to get stable_pool rewards.",
+				"Failed to get stable_pool swap output amount.",
+				Some(format!("{:?}", e)),
+			))),
+		}
+		.map_err(|e| jsonrpsee::core::Error::Call(e))
+	}
+
+	fn add_liquidity_amount(
+		&self,
+		pool_id: u32,
+		amounts: Vec<Balance>,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> RpcResult<NumberOrHex> {
+		let lm_rpc_api = self.client.runtime_api();
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
+
+		let rs: Result<Balance, _> = lm_rpc_api.add_liquidity_amount(at, pool_id, amounts);
+
+		match rs {
+			Ok(amount) => Ok(NumberOrHex::Hex(amount.into())),
+			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get stable_pool add liquidity amount.",
 				Some(format!("{:?}", e)),
 			))),
 		}
