@@ -903,6 +903,7 @@ dependencies = [
  "pallet-elections-phragmen",
  "pallet-identity",
  "pallet-indices",
+ "pallet-lend-market",
  "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
@@ -6862,6 +6863,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-oracle"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=4ae0372e2c624e6acc98305564b9d395f70814c0#4ae0372e2c624e6acc98305564b9d395f70814c0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-application-crypto",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=4ae0372e2c624e6acc98305564b9d395f70814c0#4ae0372e2c624e6acc98305564b9d395f70814c0"
@@ -7444,6 +7463,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-lend-market"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "num-traits",
+ "orml-oracle",
+ "orml-traits",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-timestamp",
+ "pallet-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-membership"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
@@ -7897,6 +7940,28 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-traits"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "num-bigint",
+ "num-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
