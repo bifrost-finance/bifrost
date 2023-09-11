@@ -420,11 +420,6 @@ pub mod pallet {
 			validators_list: Vec<MultiLocation>,
 			delegator_id: MultiLocation,
 		},
-		XcmDestWeightAndFeeSet {
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
-		},
 		OperateOriginSet {
 			currency_id: CurrencyId,
 			operator: Option<AccountIdOf<T>>,
@@ -1541,35 +1536,6 @@ pub mod pallet {
 		/// *****************************
 		/// ****** Storage Setters ******
 		/// *****************************
-		#[pallet::call_index(21)]
-		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
-		pub fn set_xcm_dest_weight_and_fee(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
-			// storage to the new value if exists, or insert a new record if not exists before.
-			T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-				currency_id,
-				operation,
-				weight_and_fee,
-			)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::XcmDestWeightAndFeeSet {
-				currency_id,
-				operation,
-				weight_and_fee,
-			});
-
-			Ok(())
-		}
-
 		/// Update storage OperateOrigins<T>.
 		#[pallet::call_index(22)]
 		#[pallet::weight(T::WeightInfo::set_operate_origin())]

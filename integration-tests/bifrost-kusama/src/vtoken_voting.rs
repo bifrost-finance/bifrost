@@ -69,16 +69,14 @@ fn vote_works() {
 				Zero::zero(),
 			));
 			let token = CurrencyId::to_token(&vtoken).unwrap();
-			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-				RuntimeOrigin::root(),
+			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
-				XcmOperation::VoteVtoken,
+				XcmOperation::Vote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 			));
-			assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-				RuntimeOrigin::root(),
+			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
-				XcmOperation::VoteRemoveDelegatorVote,
+				XcmOperation::RemoveVote,
 				Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 			));
 			assert_ok!(Slp::set_minimums_and_maximums(

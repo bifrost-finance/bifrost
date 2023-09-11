@@ -22,6 +22,8 @@
 
 use bifrost_asset_registry::AssetIdMaps;
 // use parachain_staking::ParachainStakingInterface;
+use crate as bifrost_slp;
+use crate::{Config, DispatchResult, QueryResponseManager};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -35,7 +37,8 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use node_primitives::{
 	currency::{BNC, KSM, VKSM},
-	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol,
+	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmDestWeightAndFeeHandler,
+	XcmInterfaceOperation,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
@@ -48,9 +51,6 @@ use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
-
-use crate as bifrost_slp;
-use crate::{Config, QueryResponseManager};
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -484,7 +484,26 @@ impl Config for Runtime {
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
-	type XcmWeightAndFeeHandler = ();
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
+		// Some((Weight::from_parts(100, 100), 100u32.into()))
+		Some((20_000_000_000.into(), 10_000_000_000))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 parameter_types! {
