@@ -22,19 +22,21 @@ use crate::{
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
-		XcmOperation, TIMEOUT_BLOCKS,
+		TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, XcmDestWeightAndFee, XcmWeight,
+	Pallet, TimeUnit, Validators, XcmOperation, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{CurrencyId, VtokenMintingOperator, ASTR_TOKEN_ID};
+use node_primitives::{
+	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, ASTR_TOKEN_ID,
+};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{
 	traits::{
@@ -408,9 +410,11 @@ impl<T: Config>
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;
 
-		let (weight_limit, _) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferBack)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight_limit, _) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperation::TransferBack,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Construct xcm message.
 		let call = AstarCall::Xcm(Box::new(XcmCall::LimitedReserveTransferAssets(
@@ -654,8 +658,9 @@ impl<T: Config> AstarAgent<T> {
 			Box::new(call),
 		)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}

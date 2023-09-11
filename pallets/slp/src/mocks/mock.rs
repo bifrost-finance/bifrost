@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use crate as bifrost_slp;
-use crate::{Config, QueryResponseManager};
+use crate::{Config, DispatchResult, QueryResponseManager, XcmDestWeightAndFeeHandler};
 use bifrost_asset_registry::AssetIdMaps;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
@@ -38,7 +38,7 @@ use hex_literal::hex;
 use node_primitives::currency::VKSM;
 use node_primitives::{
 	currency::{BNC, KSM},
-	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol,
+	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmInterfaceOperation,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
@@ -469,6 +469,26 @@ impl Config for Runtime {
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
+		// Some((Weight::from_parts(100, 100), 100u32.into()))
+		Some((20_000_000_000.into(), 10_000_000_000))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 parameter_types! {

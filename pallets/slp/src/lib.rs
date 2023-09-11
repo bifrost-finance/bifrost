@@ -25,21 +25,23 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation,
+		ValidatorsByDelegatorUpdateEntry,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
-	CurrencyId, CurrencyIdExt, SlpOperator, TimeUnit, VtokenMintingOperator, ASTR, DOT, FIL, GLMR,
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
+	VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -151,12 +153,8 @@ pub mod pallet {
 		/// If you don't need it, you can specify the type `()`.
 		type OnRefund: OnRefund<AccountIdOf<Self>, CurrencyId, BalanceOf<Self>>;
 
-		//【For xcm v3】
-		// /// This chain's Universal Location. Enabled only for xcm v3 version.
-		// type UniversalLocation: Get<InteriorMultiLocation>;
+		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
-		/// The maximum number of entries to be confirmed in a block for update queue in the
-		/// on_initialize queue.
 		#[pallet::constant]
 		type MaxTypeEntryPerBlock: Get<u32>;
 
@@ -422,11 +420,6 @@ pub mod pallet {
 			validators_list: Vec<MultiLocation>,
 			delegator_id: MultiLocation,
 		},
-		XcmDestWeightAndFeeSet {
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
-		},
 		OperateOriginSet {
 			currency_id: CurrencyId,
 			operator: Option<AccountIdOf<T>>,
@@ -512,10 +505,7 @@ pub mod pallet {
 	/// boundedVec).
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-	/// The dest weight limit and fee for execution XCM msg sended out. Must be
-	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
-	///
-	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (XcmWeight, Balance)
+	/// DEPRECATED
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
@@ -1546,35 +1536,6 @@ pub mod pallet {
 		/// *****************************
 		/// ****** Storage Setters ******
 		/// *****************************
-		///
-		/// Update storage XcmDestWeightAndFee<T>.
-		#[pallet::call_index(21)]
-		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
-		pub fn set_xcm_dest_weight_and_fee(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
-			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
-				*wt_n_f = weight_and_fee;
-			});
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::XcmDestWeightAndFeeSet {
-				currency_id,
-				operation,
-				weight_and_fee,
-			});
-
-			Ok(())
-		}
-
 		/// Update storage OperateOrigins<T>.
 		#[pallet::call_index(22)]
 		#[pallet::weight(T::WeightInfo::set_operate_origin())]
@@ -2386,5 +2347,76 @@ pub mod pallet {
 		fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool {
 			DelegationsOccupied::<T>::get(currency_id).unwrap_or_default()
 		}
+	}
+}
+
+pub struct DerivativeAccountProvider<T, F>(PhantomData<(T, F)>);
+
+impl<T: Config, F: Contains<CurrencyIdOf<T>>>
+	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for DerivativeAccountProvider<T, F>
+{
+	fn check_derivative_index_exists(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> bool {
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+	}
+
+	fn get_multilocation(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index)
+	}
+
+	fn get_stake_info(
+		token: CurrencyIdOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
+		Self::get_multilocation(token, derivative_index).and_then(|location| {
+			Pallet::<T>::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+				Ledger::Substrate(l) if F::contains(&token) => Some((l.total, l.active)),
+				_ => None,
+			})
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(currency_id: CurrencyIdOf<T>) {
+		MinimumsAndMaximums::<T>::insert(
+			currency_id,
+			MinimumsMaximums {
+				delegator_bonded_minimum: 0u32.into(),
+				bond_extra_minimum: 0u32.into(),
+				unbond_minimum: 0u32.into(),
+				rebond_minimum: 0u32.into(),
+				unbond_record_maximum: 0u32,
+				validators_back_maximum: 0u32,
+				delegator_active_staking_maximum: 0u32.into(),
+				validators_reward_maximum: 0u32,
+				delegation_amount_minimum: 0u32.into(),
+				delegators_maximum: u16::MAX,
+				validators_maximum: 0u16,
+			},
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(currency_id: CurrencyIdOf<T>, who: MultiLocation) {
+		DelegatorLedgers::<T>::insert(
+			currency_id,
+			&who,
+			Ledger::Substrate(SubstrateLedger {
+				account: Parent.into(),
+				total: u32::MAX.into(),
+				active: u32::MAX.into(),
+				unlocking: vec![],
+			}),
+		);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(currency_id: CurrencyIdOf<T>, index: DerivativeIndex, who: MultiLocation) {
+		Pallet::<T>::inner_add_delegator(index, &who, currency_id).unwrap();
 	}
 }

@@ -19,10 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate as vtoken_voting;
-use crate::{
-	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
-	BalanceOf, DerivativeIndex,
-};
+use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -33,15 +30,16 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use node_primitives::{
 	currency::{KSM, VBNC, VKSM},
-	CurrencyId, DoNothingRouter, TokenSymbol,
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, DoNothingRouter, TokenSymbol, XcmInterfaceOperation,
 };
 use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, ConstU32, IdentityLookup},
+	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
 };
-use xcm::{prelude::*, v3::Weight as XcmWeight};
+use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
@@ -239,18 +237,25 @@ impl Get<ParaId> for ParachainId {
 }
 
 pub struct XcmDestWeightAndFee;
-impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
-	fn get_vote(_token: CurrencyId) -> Option<(XcmWeight, BalanceOf<Runtime>)> {
+impl XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Runtime>> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmInterfaceOperation,
+	) -> Option<(Weight, Balance)> {
 		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into()))
 	}
 
-	fn get_remove_vote(_token: CurrencyId) -> Option<(XcmWeight, BalanceOf<Runtime>)> {
-		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into()))
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmInterfaceOperation,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
 	}
 }
 
 pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
+impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 	fn check_derivative_index_exists(
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,
@@ -270,7 +275,27 @@ impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
 		derivative_index: DerivativeIndex,
 	) -> Option<(Balance, Balance)> {
 		Self::get_multilocation(token, derivative_index)
-			.and_then(|_location| Some((100u32.into(), 100u32.into())))
+			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
+	}
+}
+
+parameter_types! {
+	pub static RelaychainBlockNumber: BlockNumber = 1;
+}
+
+pub struct RelaychainDataProvider;
+
+impl RelaychainDataProvider {
+	pub fn set_block_number(block: BlockNumber) {
+		RelaychainBlockNumber::set(block);
+	}
+}
+
+impl BlockNumberProvider for RelaychainDataProvider {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		RelaychainBlockNumber::get()
 	}
 }
 
@@ -283,8 +308,8 @@ impl vtoken_voting::Config for Runtime {
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
-	type RelaychainBlockNumberProvider = System;
-	type MaxVotes = ConstU32<3>;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
 	type WeightInfo = ();

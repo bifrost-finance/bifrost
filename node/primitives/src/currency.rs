@@ -412,6 +412,7 @@ impl CurrencyId {
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
 			Self::VToken(symbol) => Ok(Self::Token(*symbol)),
+			Self::VToken2(id) => Ok(Self::Token2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -419,6 +420,7 @@ impl CurrencyId {
 	pub fn to_vtoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VToken2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -426,6 +428,7 @@ impl CurrencyId {
 	pub fn to_vstoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VSToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VSToken2(*id)),
 			_ => Err(()),
 		}
 	}

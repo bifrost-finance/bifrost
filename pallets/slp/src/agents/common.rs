@@ -22,11 +22,10 @@ use crate::{
 	Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
-	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
-	Zero,
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperation, Zero,
 };
 use frame_support::{ensure, traits::Len};
-use node_primitives::{CurrencyId, VtokenMintingOperator};
+use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
 use sp_runtime::{
@@ -245,9 +244,11 @@ impl<T: Config> Pallet<T> {
 		// not succeed.
 		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
 
-		let (weight, fee_amount) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperation::TransferTo,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;

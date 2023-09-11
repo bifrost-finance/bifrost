@@ -1644,9 +1644,9 @@ dependencies = [
 name = "bifrost-vtoken-voting"
 version = "0.8.0"
 dependencies = [
+ "assert_matches",
  "bifrost-currencies",
  "cumulus-primitives-core",
- "env_logger 0.10.0",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -6547,7 +6547,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.80"
+version = "0.9.82"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -15512,6 +15512,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "node-primitives",
  "orml-traits",
  "pallet-balances",
  "pallet-xcm",

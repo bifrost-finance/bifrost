@@ -28,7 +28,6 @@ mod mock;
 mod tests;
 
 mod call;
-pub mod traits;
 mod vote;
 pub mod weights;
 
@@ -39,13 +38,15 @@ pub use crate::{
 };
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
+	dispatch::GetDispatchInfo,
 	pallet_prelude::*,
 	traits::{Get, LockIdentifier},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
 	currency::{VDOT, VKSM},
-	CurrencyId,
+	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	CurrencyId, DerivativeIndex, XcmInterfaceOperation,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
@@ -55,13 +56,10 @@ use sp_runtime::{
 	ArithmeticError,
 };
 use sp_std::prelude::*;
-pub use traits::*;
 use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
-
-pub type DerivativeIndex = u16;
 
 type PollIndex = u32;
 
@@ -93,7 +91,9 @@ pub mod pallet {
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
 
-		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall> + From<Call<Self>>;
+		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall>
+			+ From<Call<Self>>
+			+ GetDispatchInfo;
 
 		type MultiCurrency: MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -104,9 +104,9 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<Self>;
+		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
-		type DerivativeAccount: DerivativeAccountHandler<Self>;
+		type DerivativeAccount: DerivativeAccountHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
@@ -175,7 +175,7 @@ pub mod pallet {
 			poll_index: PollIndex,
 			success: bool,
 		},
-		DelegatorTokenUnlockNotified {
+		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
@@ -330,9 +330,12 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_: BlockNumberFor<T>) -> Weight {
+			let mut weight = T::DbWeight::get().reads(1);
 			let relay_current_block_number =
 				T::RelaychainBlockNumberProvider::current_block_number();
-			ReferendumTimeout::<T>::get(relay_current_block_number).iter().for_each(
+
+			weight += T::DbWeight::get().reads(1);
+			ReferendumTimeout::<T>::take(relay_current_block_number).iter().for_each(
 				|(vtoken, poll_index)| {
 					ReferendumInfoFor::<T>::mutate(
 						vtoken,
@@ -340,21 +343,28 @@ pub mod pallet {
 						|maybe_info| match maybe_info {
 							Some(info) =>
 								if let ReferendumInfo::Ongoing(_) = info {
-									*info = ReferendumInfo::Completed(relay_current_block_number);
+									*info = ReferendumInfo::Completed(
+										relay_current_block_number.into(),
+									);
 								},
 							None => {},
 						},
 					);
+					weight += T::DbWeight::get().reads_writes(1, 1);
 				},
 			);
-			Zero::zero()
+
+			weight
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::vote())]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::vote_new().max(<T as Config>::WeightInfo::vote_existing())
+			+ <T as Config>::WeightInfo::notify_vote()
+		)]
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -398,8 +408,9 @@ pub mod pallet {
 			// send XCM message
 			let vote_call = <RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, new_vote);
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_vote(
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmInterfaceOperation::Vote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
@@ -446,7 +457,10 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::remove_delegator_vote()
+			+ <T as Config>::WeightInfo::notify_remove_delegator_vote()
+		)]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -464,8 +478,9 @@ pub mod pallet {
 			};
 			let remove_vote_call =
 				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_remove_vote(
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmInterfaceOperation::RemoveVote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
@@ -696,7 +711,7 @@ pub mod pallet {
 						},
 					)?;
 				}
-				Self::deposit_event(Event::<T>::DelegatorTokenUnlockNotified {
+				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
 					poll_index,
 					success,
@@ -869,16 +884,18 @@ pub mod pallet {
 			derivative_index: DerivativeIndex,
 			call: RelayCall<T>,
 			notify_call: Call<T>,
-			weight: XcmWeight,
+			transact_weight: XcmWeight,
 			extra_fee: BalanceOf<T>,
 			f: impl FnOnce(QueryId) -> (),
 		) -> DispatchResult {
 			let responder = MultiLocation::parent();
 			let now = frame_system::Pallet::<T>::block_number();
 			let timeout = now.saturating_add(T::QueryTimeout::get());
+			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
+			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
 			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
 				responder,
-				<T as Config>::RuntimeCall::from(notify_call),
+				notify_runtime_call,
 				timeout,
 				Here,
 			);
@@ -888,7 +905,8 @@ pub mod pallet {
 				<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
 					.encode(),
 				extra_fee,
-				weight,
+				transact_weight,
+				notify_call_weight,
 				query_id,
 			)?;
 
@@ -901,7 +919,8 @@ pub mod pallet {
 		fn construct_xcm_message(
 			call: Vec<u8>,
 			extra_fee: BalanceOf<T>,
-			weight: XcmWeight,
+			transact_weight: XcmWeight,
+			notify_call_weight: XcmWeight,
 			query_id: QueryId,
 		) -> Result<Xcm<()>, Error<T>> {
 			let para_id = T::ParachainId::get().into();
@@ -914,13 +933,13 @@ pub mod pallet {
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: weight,
+					require_weight_at_most: transact_weight,
 					call: call.into(),
 				},
 				ReportTransactStatus(QueryResponseInfo {
 					destination: MultiLocation::from(X1(Parachain(para_id))),
 					query_id,
-					max_weight: weight,
+					max_weight: notify_call_weight,
 				}),
 				RefundSurplus,
 				DepositAsset {
@@ -977,9 +996,14 @@ pub mod pallet {
 				Some(ReferendumInfo::Completed(moment)) => {
 					let locking_period =
 						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
+					ensure!(
+						T::RelaychainBlockNumberProvider::current_block_number() >=
+							moment.saturating_add(locking_period),
+						Error::<T>::NotExpired
+					);
 					Ok(moment.saturating_add(locking_period))
 				},
-				_ => Err(Error::<T>::NotCompleted.into()),
+				_ => Err(Error::<T>::NotExpired.into()),
 			}
 		}
 

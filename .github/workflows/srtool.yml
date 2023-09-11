@@ -31,7 +31,6 @@ jobs:
         with:
           chain: ${{ matrix.chain }}
           runtime_dir: runtime/${{ matrix.chain }}
-          tag: 1.66.1
       - name: Summary
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json

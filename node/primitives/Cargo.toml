@@ -45,3 +45,4 @@ with-bifrost-runtime = [
 with-bifrost-kusama-runtime = []
 with-bifrost-polkadot-runtime = []
 with-all-runtime = ["with-bifrost-runtime"]
+runtime-benchmarks = []
