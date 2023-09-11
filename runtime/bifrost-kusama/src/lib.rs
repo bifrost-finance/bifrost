@@ -94,8 +94,8 @@ pub use node_primitives::{
 		XcmDestWeightAndFeeHandler,
 	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price, Rate, Ratio,
-	RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
+	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 
