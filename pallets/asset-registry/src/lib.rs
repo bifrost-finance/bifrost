@@ -53,6 +53,7 @@ use xcm::{
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, Assets};
 
+pub mod migration;
 mod mock;
 mod tests;
 pub mod weights;
