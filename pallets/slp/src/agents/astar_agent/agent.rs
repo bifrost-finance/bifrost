@@ -27,7 +27,7 @@ use crate::{
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, XcmOperation, XcmWeight,
+	Pallet, TimeUnit, Validators, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -35,7 +35,7 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{
-	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, ASTR_TOKEN_ID,
+	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType, ASTR_TOKEN_ID,
 };
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{
@@ -139,7 +139,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Bond,
+			XcmOperationType::Bond,
 			call,
 			who,
 			currency_id,
@@ -214,7 +214,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Unbond,
+			XcmOperationType::Unbond,
 			call,
 			who,
 			currency_id,
@@ -305,7 +305,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount_without_query_id(
-			XcmOperation::Payout,
+			XcmOperationType::Payout,
 			call,
 			who,
 			currency_id,
@@ -335,7 +335,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Liquidize,
+			XcmOperationType::Liquidize,
 			call,
 			who,
 			currency_id,
@@ -412,7 +412,7 @@ impl<T: Config>
 
 		let (weight_limit, _) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
 			currency_id,
-			XcmOperation::TransferBack,
+			XcmOperationType::TransferBack,
 		)
 		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
@@ -428,7 +428,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount_without_query_id(
-			XcmOperation::TransferBack,
+			XcmOperationType::TransferBack,
 			call,
 			from,
 			currency_id,
@@ -644,7 +644,7 @@ impl<T: Config> AstarAgent<T> {
 	}
 
 	fn prepare_send_as_subaccount_call(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: AstarCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -666,7 +666,7 @@ impl<T: Config> AstarAgent<T> {
 	}
 
 	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: AstarCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -678,7 +678,7 @@ impl<T: Config> AstarAgent<T> {
 
 		// Generate query_id need( responder,callback, timeout)
 		let query_id = match operation {
-			XcmOperation::Bond | XcmOperation::Unbond | XcmOperation::Liquidize =>
+			XcmOperationType::Bond | XcmOperationType::Unbond | XcmOperationType::Liquidize =>
 				T::SubstrateResponseManager::create_query_record(
 					&responder,
 					Some(Pallet::<T>::confirm_delegator_ledger_call()),
@@ -705,7 +705,7 @@ impl<T: Config> AstarAgent<T> {
 	}
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: AstarCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,

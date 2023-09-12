@@ -20,6 +20,7 @@
 
 use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
+use balances::Call as BalancesCall;
 use bifrost_asset_registry::AssetIdMaps;
 use cumulus_primitives_core::ParaId as Pid;
 #[cfg(feature = "runtime-benchmarks")]
@@ -81,6 +82,12 @@ frame_support::construct_runtime!(
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 	}
 );
+
+pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::Balances(BalancesCall::transfer_allow_death { dest: ALICE, value: 69 });
+
+pub(crate) const SALP_CONTRIBUTE_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::Salp(bifrost_salp::Call::contribute { index: 2001, value: 1_000_000_000_000 });
 
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -208,14 +215,14 @@ pub struct XcmDestWeightAndFee;
 impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
 	fn get_operation_weight_and_fee(
 		_token: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 	) -> Option<(Weight, Balance)> {
 		Some((Weight::from_parts(100, 100), 100u32.into()))
 	}
 
 	fn set_xcm_dest_weight_and_fee(
 		_currency_id: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 		_weight_and_fee: Option<(Weight, Balance)>,
 	) -> DispatchResult {
 		Ok(())

@@ -28,7 +28,6 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
-bifrost-slp = { path = "../slp", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -54,15 +53,14 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"xcm/std",
-	"bifrost-slp/std",
 ]
 kusama = []
 polkadot = []
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
+	"node-primitives/runtime-benchmarks",
 	"pallet-conviction-voting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"bifrost-slp/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]

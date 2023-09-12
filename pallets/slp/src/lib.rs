@@ -25,7 +25,7 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -41,7 +41,7 @@ use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	VtokenMintingOperator, XcmInterfaceOperation as XcmOperation, ASTR, DOT, FIL, GLMR,
+	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -413,11 +413,6 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			validators_list: Vec<MultiLocation>,
 			delegator_id: MultiLocation,
-		},
-		XcmDestWeightAndFeeSet {
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
 		},
 		OperateOriginSet {
 			currency_id: CurrencyId,
@@ -1535,34 +1530,6 @@ pub mod pallet {
 		/// *****************************
 		/// ****** Storage Setters ******
 		/// *****************************
-		#[pallet::call_index(21)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_xcm_dest_weight_and_fee())]
-		pub fn set_xcm_dest_weight_and_fee(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			operation: XcmOperation,
-			weight_and_fee: Option<(XcmWeight, BalanceOf<T>)>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
-			// storage to the new value if exists, or insert a new record if not exists before.
-			T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-				currency_id,
-				operation,
-				weight_and_fee,
-			)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::XcmDestWeightAndFeeSet {
-				currency_id,
-				operation,
-				weight_and_fee,
-			});
-
-			Ok(())
-		}
 
 		/// Update storage OperateOrigins<T>.
 		#[pallet::call_index(22)]

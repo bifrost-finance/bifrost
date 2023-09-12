@@ -20,7 +20,7 @@ use crate::*;
 use assert_matches::assert_matches;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use node_primitives::{currency::VKSM, XcmInterfaceOperation as XcmOperation};
+use node_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
 use sp_runtime::traits::Bounded;
 
@@ -43,7 +43,7 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 	let token = CurrencyId::to_token(&vtoken).unwrap();
 	T::XcmDestWeightAndFee::set_xcm_dest_weight_and_fee(
 		token,
-		XcmOperation::VoteVtoken,
+		XcmOperation::Vote,
 		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 	)?;
 	T::DerivativeAccount::init_minimums_and_maximums(token);
@@ -189,7 +189,7 @@ mod benchmarks {
 		let token = CurrencyId::to_token(&vtoken).unwrap();
 		T::XcmDestWeightAndFee::set_xcm_dest_weight_and_fee(
 			token,
-			XcmOperation::VoteRemoveDelegatorVote,
+			XcmOperation::RemoveVote,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 

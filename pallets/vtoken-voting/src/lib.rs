@@ -46,7 +46,7 @@ use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
 	currency::{VDOT, VKSM},
 	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
-	CurrencyId, DerivativeIndex, XcmInterfaceOperation,
+	CurrencyId, DerivativeIndex, XcmOperationType,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
@@ -361,7 +361,10 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::vote_new().max(<T as Config>::WeightInfo::vote_existing()))]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::vote_new().max(<T as Config>::WeightInfo::vote_existing())
+			+ <T as Config>::WeightInfo::notify_vote()
+		)]
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -407,7 +410,7 @@ pub mod pallet {
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmInterfaceOperation::VoteVtoken,
+				XcmOperationType::Vote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(
@@ -454,7 +457,10 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator_vote())]
+		#[pallet::weight(
+			<T as Config>::WeightInfo::remove_delegator_vote()
+			+ <T as Config>::WeightInfo::notify_remove_delegator_vote()
+		)]
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -474,7 +480,7 @@ pub mod pallet {
 				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmInterfaceOperation::VoteRemoveDelegatorVote,
+				XcmOperationType::RemoveVote,
 			)
 			.ok_or(Error::<T>::NoData)?;
 			Self::send_xcm_with_notify(

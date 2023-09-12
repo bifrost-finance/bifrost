@@ -1107,14 +1107,14 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
-					extra_fee_currency: vtoken,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
 				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
 			}) => ExtraFeeInfo {
 				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-				extra_fee_currency: vtoken,
+				extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
 			},
 			_ => ExtraFeeInfo::default(),
 		}
@@ -1921,8 +1921,59 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	migration::XcmInterfaceMigration,
+	(migration::XcmInterfaceMigration, BLPOnRuntimeUpgrade<Runtime>),
 >;
+
+use frame_support::traits::OnRuntimeUpgrade;
+pub struct BLPOnRuntimeUpgrade<T>(PhantomData<T>);
+impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade<T> {
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `pre_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		for pool_id in 0..pool_count {
+			if let Some(old_metadata) =
+				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
+			{
+				log::info!("Old currency_metadatas is {:?}", old_metadata);
+			}
+		}
+
+		Ok(vec![])
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Bifrost `on_runtime_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		let weight = bifrost_asset_registry::migration::update_blp_metadata::<Runtime>(pool_count);
+
+		log::info!("Bifrost `on_runtime_upgrade finished`");
+
+		weight
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `post_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		for pool_id in 0..pool_count {
+			if let Some(new_metadata) =
+				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
+			{
+				log::info!("New currency_metadatas is {:?}", new_metadata);
+			}
+		}
+
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

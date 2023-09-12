@@ -54,7 +54,7 @@ pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) 
 
 	T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Bond,
+		XcmOperationType::Bond,
 		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 	)
 	.unwrap();
@@ -106,7 +106,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Bond,
+			XcmOperationType::Bond,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -130,7 +130,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::BondExtra,
+			XcmOperationType::BondExtra,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -155,7 +155,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Unbond,
+			XcmOperationType::Unbond,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -180,7 +180,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Unbond,
+			XcmOperationType::Unbond,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -199,7 +199,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Rebond,
+			XcmOperationType::Rebond,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -224,7 +224,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Delegate,
+			XcmOperationType::Delegate,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -252,7 +252,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Delegate,
+			XcmOperationType::Delegate,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -276,7 +276,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Delegate,
+			XcmOperationType::Delegate,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -299,7 +299,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Payout,
+			XcmOperationType::Payout,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -324,7 +324,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Liquidize,
+			XcmOperationType::Liquidize,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -350,7 +350,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Chill,
+			XcmOperationType::Chill,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -369,7 +369,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::TransferBack,
+			XcmOperationType::TransferBack,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -398,7 +398,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::TransferTo,
+			XcmOperationType::TransferTo,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -426,7 +426,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			PHA,
-			XcmOperation::ConvertAsset,
+			XcmOperationType::ConvertAsset,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -533,7 +533,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::TransferTo,
+			XcmOperationType::TransferTo,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -846,7 +846,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Delegate,
+			XcmOperationType::Delegate,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 
@@ -871,7 +871,7 @@ mod benchmarks {
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
-			XcmOperation::Delegate,
+			XcmOperationType::Delegate,
 			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 		)?;
 

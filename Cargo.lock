@@ -1644,7 +1644,6 @@ version = "0.8.0"
 dependencies = [
  "assert_matches",
  "bifrost-currencies",
- "bifrost-slp",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",

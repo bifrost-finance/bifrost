@@ -600,73 +600,63 @@ fn register_subaccount_index_0() {
 	));
 
 	// Register Operation weight and fee
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Bond,
+		XcmOperationType::Bond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::BondExtra,
+		XcmOperationType::BondExtra,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Unbond,
+		XcmOperationType::Unbond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Rebond,
+		XcmOperationType::Rebond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Delegate,
+		XcmOperationType::Delegate,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Payout,
+		XcmOperationType::Payout,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Liquidize,
+		XcmOperationType::Liquidize,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Chill,
+		XcmOperationType::Chill,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::TransferBack,
+		XcmOperationType::TransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }

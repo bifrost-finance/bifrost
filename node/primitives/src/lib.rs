@@ -291,7 +291,7 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmInterfaceOperation {
+pub enum XcmOperationType {
 	// SALP operations
 	UmpContributeTransact,
 	// Statemine operations
@@ -314,8 +314,8 @@ pub enum XcmInterfaceOperation {
 	ExecuteLeave,
 	ConvertAsset,
 	// VtokenVoting operations
-	VoteVtoken,
-	VoteRemoveDelegatorVote,
+	Vote,
+	RemoveVote,
 	Any,
 }
 

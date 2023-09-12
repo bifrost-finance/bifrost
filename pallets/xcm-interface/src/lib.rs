@@ -21,7 +21,7 @@
 pub mod calls;
 pub mod traits;
 pub use calls::*;
-use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmInterfaceOperation};
+use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
@@ -69,6 +69,13 @@ pub mod pallet {
 
 	use super::*;
 	use crate::traits::*;
+
+	// DEPRECATED
+	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+	pub enum XcmInterfaceOperation {
+		UmpContributeTransact,
+		StatemineTransfer,
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
@@ -123,7 +130,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		XcmDestWeightAndFeeUpdated(XcmInterfaceOperation, CurrencyIdOf<T>, Weight, BalanceOf<T>),
+		XcmDestWeightAndFeeUpdated(XcmOperationType, CurrencyIdOf<T>, Weight, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
@@ -141,7 +148,7 @@ pub mod pallet {
 	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
 	///
-	/// XcmWeightAndFee: map: XcmInterfaceOperation => (Weight, Balance)
+	/// XcmWeightAndFee: map: XcmOperationType => (Weight, Balance)
 	#[pallet::storage]
 	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmWeightAndFee<T> = StorageDoubleMap<
@@ -149,7 +156,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		Blake2_128Concat,
-		XcmInterfaceOperation,
+		XcmOperationType,
 		(Weight, BalanceOf<T>),
 		OptionQuery,
 	>;
@@ -172,12 +179,12 @@ pub mod pallet {
 		/// Sets the xcm_dest_weight and fee for XCM operation of XcmInterface.
 		///
 		/// Parameters:
-		/// - `updates`: vec of tuple: (XcmInterfaceOperation, WeightChange, FeeChange).
+		/// - `updates`: vec of tuple: (XcmOperationType, WeightChange, FeeChange).
 		#[pallet::call_index(0)]
 		#[pallet::weight({16_690_000})]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
-			updates: Vec<(CurrencyIdOf<T>, XcmInterfaceOperation, Weight, BalanceOf<T>)>,
+			updates: Vec<(CurrencyIdOf<T>, XcmOperationType, Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
@@ -218,7 +225,7 @@ pub mod pallet {
 
 			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
 				T::RelaychainCurrencyId::get(),
-				XcmInterfaceOperation::StatemineTransfer,
+				XcmOperationType::StatemineTransfer,
 			)
 			.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
 
@@ -281,7 +288,7 @@ pub mod pallet {
 			let contribute_call = Self::build_ump_crowdloan_contribute(index, amount);
 			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
 				T::RelaychainCurrencyId::get(),
-				XcmInterfaceOperation::UmpContributeTransact,
+				XcmOperationType::UmpContributeTransact,
 			)
 			.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
 
@@ -310,14 +317,14 @@ pub mod pallet {
 	impl<T: Config> XcmDestWeightAndFeeHandler<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
 		fn get_operation_weight_and_fee(
 			token: CurrencyIdOf<T>,
-			operation: XcmInterfaceOperation,
+			operation: XcmOperationType,
 		) -> Option<(Weight, BalanceOf<T>)> {
 			Self::xcm_dest_weight_and_fee(token, operation)
 		}
 
 		fn set_xcm_dest_weight_and_fee(
 			currency_id: CurrencyIdOf<T>,
-			operation: XcmInterfaceOperation,
+			operation: XcmOperationType,
 			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the

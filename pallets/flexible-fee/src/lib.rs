@@ -30,7 +30,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use node_primitives::{
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	CurrencyId, ExtraFeeName, TryConvertFrom, XcmInterfaceOperation, BNC,
+	CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -273,16 +273,16 @@ impl<T: Config> Pallet<T> {
 			// pay extra fee
 			let (currency_id, operation) = match fee_info.extra_fee_name {
 				ExtraFeeName::SalpContribute =>
-					(fee_info.extra_fee_currency, XcmInterfaceOperation::UmpContributeTransact),
+					(fee_info.extra_fee_currency, XcmOperationType::UmpContributeTransact),
 				ExtraFeeName::StatemineTransfer =>
-					(fee_info.extra_fee_currency, XcmInterfaceOperation::StatemineTransfer),
+					(fee_info.extra_fee_currency, XcmOperationType::StatemineTransfer),
 				ExtraFeeName::VoteVtoken => {
 					// We define error code 77 for conversion failure error
 					let fee_currency = fee_info
 						.extra_fee_currency
 						.to_token()
 						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmInterfaceOperation::VoteVtoken)
+					(fee_currency, XcmOperationType::Vote)
 				},
 				ExtraFeeName::VoteRemoveDelegatorVote => {
 					// We define error code 77 for conversion failure error
@@ -290,10 +290,9 @@ impl<T: Config> Pallet<T> {
 						.extra_fee_currency
 						.to_token()
 						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmInterfaceOperation::VoteRemoveDelegatorVote)
+					(fee_currency, XcmOperationType::RemoveVote)
 				},
-				ExtraFeeName::NoExtraFee =>
-					(fee_info.extra_fee_currency, XcmInterfaceOperation::Any),
+				ExtraFeeName::NoExtraFee => (fee_info.extra_fee_currency, XcmOperationType::Any),
 			};
 
 			// We define error code 55 for WeightAndFeeNotSet error
@@ -318,6 +317,13 @@ impl<T: Config> Pallet<T> {
 		} else {
 			return Ok((total_fee, Zero::zero(), Zero::zero(), path));
 		}
+	}
+
+	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
+		let asset_id: AssetId =
+			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
+				.map_err(|_| Error::<T>::ConversionError)?;
+		Ok(asset_id)
 	}
 }
 
@@ -485,12 +491,5 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 		Ok(None)
-	}
-
-	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
-		let asset_id: AssetId =
-			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
-				.map_err(|_| Error::<T>::ConversionError)?;
-		Ok(asset_id)
 	}
 }

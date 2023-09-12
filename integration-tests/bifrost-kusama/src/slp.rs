@@ -83,7 +83,7 @@ delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
 use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
 use bifrost_slp::{primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger};
 use frame_support::{assert_ok, BoundedVec};
-use node_primitives::{TimeUnit, XcmInterfaceOperation as XcmOperation};
+use node_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use sp_runtime::Permill;
@@ -251,75 +251,85 @@ fn slp_setup() {
 		));
 
 		// Register Operation weight and fee
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::TransferTo,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::TransferTo,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Bond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Bond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::BondExtra,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::BondExtra,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Unbond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Unbond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Rebond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Rebond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Delegate,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Delegate,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Payout,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Payout,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Liquidize,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Liquidize,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Chill,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Chill,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::TransferBack,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::TransferBack,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
 		// initialize two delegators
 		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::root(), RelayCurrencyId::get(), None));
