@@ -22,7 +22,7 @@ use crate::{
 	Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
-	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperation, Zero,
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
@@ -246,7 +246,7 @@ impl<T: Config> Pallet<T> {
 
 		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
 			currency_id,
-			XcmOperation::TransferTo,
+			XcmOperationType::TransferTo,
 		)
 		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 

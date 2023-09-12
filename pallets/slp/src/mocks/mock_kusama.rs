@@ -38,7 +38,7 @@ use hex_literal::hex;
 use node_primitives::{
 	currency::{BNC, KSM, VKSM},
 	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmDestWeightAndFeeHandler,
-	XcmInterfaceOperation,
+	XcmOperationType,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
@@ -491,7 +491,7 @@ pub struct XcmDestWeightAndFee;
 impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
 	fn get_operation_weight_and_fee(
 		_token: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 	) -> Option<(Weight, Balance)> {
 		// Some((Weight::from_parts(100, 100), 100u32.into()))
 		Some((20_000_000_000.into(), 10_000_000_000))
@@ -499,7 +499,7 @@ impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
 
 	fn set_xcm_dest_weight_and_fee(
 		_currency_id: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 		_weight_and_fee: Option<(Weight, Balance)>,
 	) -> DispatchResult {
 		Ok(())

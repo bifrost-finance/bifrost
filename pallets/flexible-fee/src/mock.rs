@@ -215,14 +215,14 @@ pub struct XcmDestWeightAndFee;
 impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
 	fn get_operation_weight_and_fee(
 		_token: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 	) -> Option<(Weight, Balance)> {
 		Some((Weight::from_parts(100, 100), 100u32.into()))
 	}
 
 	fn set_xcm_dest_weight_and_fee(
 		_currency_id: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 		_weight_and_fee: Option<(Weight, Balance)>,
 	) -> DispatchResult {
 		Ok(())

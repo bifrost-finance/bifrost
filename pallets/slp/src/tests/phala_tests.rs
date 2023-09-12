@@ -331,31 +331,31 @@ fn phala_xcm_setup() {
 
 	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
-		XcmOperation::Bond,
+		XcmOperationType::Bond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
-		XcmOperation::Unbond,
+		XcmOperationType::Unbond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
-		XcmOperation::TransferBack,
+		XcmOperationType::TransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
 	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		PHA,
-		XcmOperation::ConvertAsset,
+		XcmOperationType::ConvertAsset,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }

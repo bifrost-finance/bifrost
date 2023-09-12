@@ -19,7 +19,7 @@
 use crate::{kusama_integration_tests::*, kusama_test_net::*};
 use bifrost_asset_registry::AssetMetadata;
 use frame_support::assert_ok;
-use node_primitives::XcmInterfaceOperation as XcmOperation;
+use node_primitives::XcmOperationType as XcmOperation;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::{

@@ -133,13 +133,13 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Bond,
+		XcmOperationType::Bond,
 		Some((Weight::from_parts(0, u64::MAX), BalanceOf::<T>::unique_saturated_from(0u128))),
 	));
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::BondExtra,
+		XcmOperationType::BondExtra,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -148,7 +148,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Unbond,
+		XcmOperationType::Unbond,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -157,7 +157,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Chill,
+		XcmOperationType::Chill,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -166,7 +166,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Rebond,
+		XcmOperationType::Rebond,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -175,7 +175,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Undelegate,
+		XcmOperationType::Undelegate,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -184,7 +184,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Delegate,
+		XcmOperationType::Delegate,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -193,7 +193,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Payout,
+		XcmOperationType::Payout,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -202,7 +202,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::CancelLeave,
+		XcmOperationType::CancelLeave,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -211,7 +211,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Liquidize,
+		XcmOperationType::Liquidize,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -220,7 +220,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::ExecuteLeave,
+		XcmOperationType::ExecuteLeave,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -229,7 +229,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferBack,
+		XcmOperationType::TransferBack,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -238,7 +238,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::XtokensTransferBack,
+		XcmOperationType::XtokensTransferBack,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -247,7 +247,7 @@ fn kusama_setup<
 
 	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((
 			Weight::from_parts(20_000_000_000, u64::MAX),
 			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
@@ -496,7 +496,7 @@ benchmarks! {
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
 		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferBack,
+		XcmOperationType::TransferBack,
 		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
 		let call = Call::<T>::transfer_back {
@@ -674,7 +674,7 @@ benchmarks! {
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
 		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::Chill,
+		XcmOperationType::Chill,
 		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
 		let sb_ledger = SubstrateLedger {
@@ -737,7 +737,7 @@ benchmarks! {
 		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
 		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
 		let sb_ledger = SubstrateLedger {
@@ -813,7 +813,7 @@ benchmarks! {
 		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
 		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
 		let sb_ledger = SubstrateLedger {
@@ -894,7 +894,7 @@ benchmarks! {
 		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
 		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
 	));
 		let sb_ledger = SubstrateLedger {

@@ -25,7 +25,7 @@ use frame_support::{
 	traits::{schedule::DispatchTime, StorePreimage},
 	weights::Weight,
 };
-use node_primitives::{currency::VKSM, XcmInterfaceOperation as XcmOperation};
+use node_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
 use xcm::v3::Parent;
 use xcm_emulator::TestExt;
