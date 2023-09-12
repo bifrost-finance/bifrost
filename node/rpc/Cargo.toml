@@ -30,6 +30,8 @@ bifrost-ve-minting-rpc-api = { path = "../../pallets/ve-minting/rpc" }
 bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api" }
 bifrost-stable-pool-rpc-api = { path = "../../pallets/stable-pool/rpc" }
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api" }
+lend-market-rpc = { path = "../../pallets/lend-market/rpc" }
+lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api" }
 zenlink-protocol = "*"
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"

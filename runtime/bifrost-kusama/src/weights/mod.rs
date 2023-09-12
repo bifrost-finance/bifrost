@@ -21,5 +21,6 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod bifrost_currencies;
+pub mod orml_oracle;
 pub mod orml_tokens;
 pub mod pallet_xcm;

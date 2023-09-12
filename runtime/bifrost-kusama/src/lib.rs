@@ -94,9 +94,11 @@ pub use node_primitives::{
 		XcmDestWeightAndFeeHandler,
 	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeInfo, ExtraFeeName, Moment, Nonce, ParaId, PoolId,
-	RpcContributionStatus, TimeUnit, TokenSymbol,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
+	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
+use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
+
 // zenlink imports
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -322,6 +324,8 @@ parameter_types! {
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
+	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
+	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 }
 
 impl frame_system::Config for Runtime {
@@ -1687,6 +1691,76 @@ impl bifrost_stable_pool::Config for Runtime {
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 }
 
+parameter_types! {
+	pub const MinimumCount: u32 = 3;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
+	pub const MaxHasDispatchedSize: u32 = 100;
+	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
+}
+
+type BifrostDataProvider = orml_oracle::Instance1;
+impl orml_oracle::Config<BifrostDataProvider> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OnNewData = ();
+	type CombineData =
+		orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BifrostDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = OracleRootOperatorAccountId;
+	type MaxHasDispatchedSize = MaxHasDispatchedSize;
+	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
+	type Members = CouncilMembership;
+}
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+pub struct AggregatedDataProvider;
+impl DataProvider<CurrencyId, TimeStampedPrice> for AggregatedDataProvider {
+	fn get(key: &CurrencyId) -> Option<TimeStampedPrice> {
+		Oracle::get(key)
+	}
+}
+
+impl DataProviderExtended<CurrencyId, TimeStampedPrice> for AggregatedDataProvider {
+	fn get_no_op(key: &CurrencyId) -> Option<TimeStampedPrice> {
+		Oracle::get_no_op(key)
+	}
+
+	fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+		Oracle::get_all_values()
+	}
+}
+
+impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: AccountId, _: CurrencyId, _: TimeStampedPrice) -> DispatchResult {
+		Err("Not supported".into())
+	}
+}
+
+impl pallet_prices::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Source = AggregatedDataProvider;
+	type FeederOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type RelayCurrency = RelayCurrencyId;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type Assets = Currencies;
+	type WeightInfo = pallet_prices::weights::SubstrateWeight<Runtime>;
+}
+
+impl lend_market::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type PalletId = LendMarketPalletId;
+	type PriceFeeder = Prices;
+	type ReserveOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
+	type UnixTime = Timestamp;
+	type Assets = Currencies;
+	type RewardAssetId = NativeCurrencyId;
+	type LiquidationFreeAssetId = RelayCurrencyId;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1872,6 +1946,9 @@ construct_runtime! {
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
 		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
+		LendMarket: lend_market::{Pallet, Call, Storage, Event<T>} = 131,
+		Prices: pallet_prices::{Pallet, Call, Storage, Event<T>} = 132,
+		Oracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>} = 133,
 	}
 }
 
@@ -2293,6 +2370,20 @@ impl_runtime_apis! {
 			amounts: Vec<Balance>,
 		) -> Balance {
 			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
+		}
+	}
+
+	impl lend_market_rpc_runtime_api::LendMarketApi<Block, AccountId, Balance> for Runtime {
+		fn get_account_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidity(&account)
+		}
+
+		fn get_market_status(asset_id: CurrencyId) -> Result<(Rate, Rate, Rate, Ratio, Balance, Balance, sp_runtime::FixedU128), DispatchError> {
+			LendMarket::get_market_status(asset_id)
+		}
+
+		fn get_liquidation_threshold_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidation_threshold_liquidity(&account)
 		}
 	}
 
