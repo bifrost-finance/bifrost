@@ -107,3 +107,28 @@ pub struct Delays {
 	/// Leave from delegator set delay.
 	pub leave_delegators_delay: TimeUnit,
 }
+
+/// DEPRECATED
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+pub enum XcmOperation {
+	// XTokens
+	XtokensTransfer,
+	Bond,
+	WithdrawUnbonded,
+	BondExtra,
+	Unbond,
+	Rebond,
+	Delegate,
+	Payout,
+	Liquidize,
+	TransferBack,
+	TransferTo,
+	Chill,
+	Undelegate,
+	CancelLeave,
+	XtokensTransferBack,
+	ExecuteLeave,
+	ConvertAsset,
+	Vote,
+	RemoveVote,
+}

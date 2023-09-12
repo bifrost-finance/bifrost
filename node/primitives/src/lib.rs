@@ -242,7 +242,7 @@ impl SendXcm for DoNothingRouter {
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmInterfaceOperation {
+pub enum XcmOperationType {
 	// SALP operations
 	UmpContributeTransact,
 	// Statemine operations

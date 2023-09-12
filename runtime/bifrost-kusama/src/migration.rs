@@ -3,7 +3,7 @@ use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::G
 #[allow(unused_imports)]
 use frame_support::ensure;
 use frame_support::traits::OnRuntimeUpgrade;
-use node_primitives::traits::XcmDestWeightAndFeeHandler;
+use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
 
 const LOG_TARGET: &str = "XCM-INTERFACE::migration";
 
@@ -20,7 +20,7 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 				"Start to migrate XcmInterface storage XcmDestWeightAndFee..."
 			);
 
-			let count1 = bifrost_slp::XcmDestWeightAndFee::<Runtime>::iter().count();
+			let count1 = xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().count();
 
 			// 先将Xcm_interface的XcmDestWeightAndFee的值从旧的存储中取出来，
 			// 然后设置到新的XcmWeightAndFee存储中,新增一个currency_id作为主key
@@ -31,9 +31,17 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 					key,
 					value
 				);
+
+				let new_operation_key = match key {
+					xcm_interface::XcmInterfaceOperation::UmpContributeTransact =>
+						XcmOperationType::UmpContributeTransact,
+					xcm_interface::XcmInterfaceOperation::StatemineTransfer =>
+						XcmOperationType::StatemineTransfer,
+				};
+
 				let _ = XcmInterface::set_xcm_dest_weight_and_fee(
 					RelayCurrencyId::get(),
-					key,
+					new_operation_key,
 					Some(value),
 				);
 			});
@@ -51,8 +59,34 @@ impl OnRuntimeUpgrade for XcmInterfaceMigration {
 					key2,
 					value
 				);
+
+				let new_operation_key = match key2 {
+					bifrost_slp::XcmOperation::Bond => XcmOperationType::Bond,
+					bifrost_slp::XcmOperation::WithdrawUnbonded =>
+						XcmOperationType::WithdrawUnbonded,
+					bifrost_slp::XcmOperation::BondExtra => XcmOperationType::BondExtra,
+					bifrost_slp::XcmOperation::Unbond => XcmOperationType::Unbond,
+					bifrost_slp::XcmOperation::Rebond => XcmOperationType::Rebond,
+					bifrost_slp::XcmOperation::Delegate => XcmOperationType::Delegate,
+					bifrost_slp::XcmOperation::Payout => XcmOperationType::Payout,
+					bifrost_slp::XcmOperation::Liquidize => XcmOperationType::Liquidize,
+					bifrost_slp::XcmOperation::TransferBack => XcmOperationType::TransferBack,
+					bifrost_slp::XcmOperation::TransferTo => XcmOperationType::TransferTo,
+					bifrost_slp::XcmOperation::Chill => XcmOperationType::Chill,
+					bifrost_slp::XcmOperation::Undelegate => XcmOperationType::Undelegate,
+					bifrost_slp::XcmOperation::CancelLeave => XcmOperationType::CancelLeave,
+					bifrost_slp::XcmOperation::XtokensTransferBack =>
+						XcmOperationType::XtokensTransferBack,
+					bifrost_slp::XcmOperation::ExecuteLeave => XcmOperationType::ExecuteLeave,
+					bifrost_slp::XcmOperation::ConvertAsset => XcmOperationType::ConvertAsset,
+					bifrost_slp::XcmOperation::Vote => XcmOperationType::Vote,
+					bifrost_slp::XcmOperation::RemoveVote => XcmOperationType::RemoveVote,
+					_default => XcmOperationType::Any,
+				};
+
 				// set the value to the new XcmInterface storage
-				let _ = XcmInterface::set_xcm_dest_weight_and_fee(key1, key2, Some(value));
+				let _ =
+					XcmInterface::set_xcm_dest_weight_and_fee(key1, new_operation_key, Some(value));
 				// delete the old SLP XcmDestWeightAndFee storage
 				bifrost_slp::XcmDestWeightAndFee::<Runtime>::remove(key1, key2);
 			});

@@ -22,7 +22,7 @@
 
 use crate::{
 	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
-	TokenSymbol, XcmInterfaceOperation,
+	TokenSymbol, XcmOperationType,
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
@@ -430,12 +430,12 @@ where
 {
 	fn get_operation_weight_and_fee(
 		token: CurrencyId,
-		operation: XcmInterfaceOperation,
+		operation: XcmOperationType,
 	) -> Option<(Weight, Balance)>;
 
 	fn set_xcm_dest_weight_and_fee(
 		currency_id: CurrencyId,
-		operation: XcmInterfaceOperation,
+		operation: XcmOperationType,
 		weight_and_fee: Option<(Weight, Balance)>,
 	) -> DispatchResult;
 }
@@ -446,14 +446,14 @@ where
 {
 	fn get_operation_weight_and_fee(
 		_token: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 	) -> Option<(Weight, Balance)> {
 		Some((Zero::zero(), Zero::zero()))
 	}
 
 	fn set_xcm_dest_weight_and_fee(
 		_currency_id: CurrencyId,
-		_operation: XcmInterfaceOperation,
+		_operation: XcmOperationType,
 		_weight_and_fee: Option<(Weight, Balance)>,
 	) -> DispatchResult {
 		Ok(())
