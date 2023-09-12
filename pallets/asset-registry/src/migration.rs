@@ -36,5 +36,5 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 		}
 	}
 
-	T::DbWeight::get().reads(pool_count) + T::DbWeight::get().writes(pool_count)
+	T::DbWeight::get().reads(pool_count.into()) + T::DbWeight::get().writes(pool_count.into())
 }
