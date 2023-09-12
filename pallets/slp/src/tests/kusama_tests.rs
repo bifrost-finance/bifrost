@@ -540,16 +540,13 @@ fn bond_works() {
 		register_subaccount_index_0();
 
 		// Bond 1 ksm for sub-account index 0
-		assert_noop!(
-			Slp::bond(
-				RuntimeOrigin::signed(ALICE),
-				DOT,
-				Box::new(SUBACCOUNT_0_LOCATION),
-				1_000_000_000_000,
-				None
-			),
-			Error::<Runtime>::XcmFailure
-		);
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(ALICE),
+			DOT,
+			Box::new(SUBACCOUNT_0_LOCATION),
+			1_000_000_000_000,
+			None
+		));
 	});
 }
 

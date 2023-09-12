@@ -24,15 +24,17 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::*,
-	parameter_types,
+	parameter_types, sp_io,
 	traits::{Everything, Nothing},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
+use node_primitives::{
+	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol,
+};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
-use sp_core::{blake2_256, H256};
+use sp_core::{blake2_256, ConstU128, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{
@@ -91,7 +93,8 @@ construct_runtime!(
 	ZenlinkProtocol: zenlink_protocol,
 	XTokens: orml_xtokens,
 	Slpx: slpx,
-	  PolkadotXcm: pallet_xcm
+	  PolkadotXcm: pallet_xcm,
+	  ParachainInfo: parachain_info,
   }
 );
 
@@ -357,15 +360,36 @@ parameter_types! {
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
+pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
+impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		use CurrencyId::*;
+		use TokenSymbol::*;
+
+		AssetIdMaps::<Test>::get_multi_location(id)
+	}
+}
+
+impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
+	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+		use CurrencyId::*;
+		use TokenSymbol::*;
+
+		AssetIdMaps::<Test>::get_currency_id(location)
+	}
+}
+
+impl parachain_info::Config for Test {}
+
 impl orml_xtokens::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = ();
+	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
 	type AccountIdToMultiLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -467,8 +491,6 @@ impl bifrost_slp::Config for Test {
 	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -491,7 +513,7 @@ impl pallet_xcm::Config for Test {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = ();
 	type XcmTeleportFilter = Nothing;
@@ -517,7 +539,7 @@ parameter_types! {
 
 impl slpx::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
@@ -527,4 +549,21 @@ impl slpx::Config for Test {
 	type TreasuryAccount = BifrostFeeAccount;
 	type ParachainId = ParachainId;
 	type WeightInfo = ();
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(ALICE, 10), (BOB, 20)] }
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+	// orml_tokens::GenesisConfig::<Runtime> {
+	// 	balances: vec![(1, VKSM, 10), (2, VKSM, 20), (3, VKSM, 30), (4, VKSM, 40), (5, VKSM, 50)],
+	// }
+	// 	.assimilate_storage(&mut t)
+	// 	.unwrap();
+
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

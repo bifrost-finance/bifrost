@@ -21,6 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::MaxEncodedLen;
+use frame_support::dispatch::Weight;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
@@ -238,6 +239,54 @@ impl SendXcm for DoNothingRouter {
 	}
 	fn deliver(_: ()) -> Result<XcmHash, SendError> {
 		Ok([0; 32])
+	}
+}
+
+pub struct Weightless;
+impl PreparedMessage for Weightless {
+	fn weight_of(&self) -> Weight {
+		Weight::default()
+	}
+}
+
+pub struct DoNothingExecuteXcm;
+impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
+	type Prepared = Weightless;
+
+	fn prepare(_message: Xcm<Call>) -> Result<Self::Prepared, Xcm<Call>> {
+		Ok(Weightless)
+	}
+
+	fn execute(
+		_origin: impl Into<MultiLocation>,
+		_pre: Self::Prepared,
+		_hash: XcmHash,
+		_weight_credit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn execute_xcm(
+		_origin: impl Into<MultiLocation>,
+		_message: Xcm<Call>,
+		_hash: XcmHash,
+		_weight_limit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn execute_xcm_in_credit(
+		_origin: impl Into<MultiLocation>,
+		_message: Xcm<Call>,
+		_hash: XcmHash,
+		_weight_limit: Weight,
+		_weight_credit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn charge_fees(_location: impl Into<MultiLocation>, _fees: MultiAssets) -> XcmResult {
+		Ok(())
 	}
 }
 

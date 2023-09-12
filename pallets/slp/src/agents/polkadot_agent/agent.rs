@@ -1170,10 +1170,7 @@ impl<T: Config> PolkadotAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Delete the query in pallet_xcm.
-		ensure!(
-			T::SubstrateResponseManager::remove_query_record(query_id),
-			Error::<T>::QueryResponseRemoveError
-		);
+		T::SubstrateResponseManager::remove_query_record(query_id);
 
 		Ok(())
 	}

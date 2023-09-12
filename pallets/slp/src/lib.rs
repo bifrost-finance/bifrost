@@ -54,7 +54,7 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
 	prelude::*,
-	v3::{ExecuteXcm, Junction, Junctions, MultiLocation, SendXcm, Weight as XcmWeight, Xcm},
+	v3::{Junction, Junctions, MultiLocation, Weight as XcmWeight, Xcm},
 };
 
 mod agents;
@@ -100,7 +100,7 @@ pub mod pallet {
 	use xcm::v3::{MaybeErrorCode, Response};
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
@@ -134,12 +134,6 @@ pub mod pallet {
 
 		/// Parachain Id which is gotten from the runtime.
 		type ParachainId: Get<ParaId>;
-
-		/// Routes the XCM message outbound.
-		type XcmRouter: SendXcm;
-
-		/// XCM executor.
-		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::RuntimeCall>;
 
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
@@ -710,7 +704,7 @@ pub mod pallet {
 		///
 		/// Delegator initialization work. Generate a new delegator and return its ID.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::initialize_delegator())]
+		#[pallet::weight(<T as Config>::WeightInfo::initialize_delegator())]
 		pub fn initialize_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -730,7 +724,7 @@ pub mod pallet {
 
 		/// First time bonding some amount to a delegator.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::bond())]
+		#[pallet::weight(<T as Config>::WeightInfo::bond())]
 		pub fn bond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -759,7 +753,7 @@ pub mod pallet {
 
 		/// Bond extra amount to a delegator.
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::bond_extra())]
+		#[pallet::weight(<T as Config>::WeightInfo::bond_extra())]
 		pub fn bond_extra(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -789,7 +783,7 @@ pub mod pallet {
 		/// Decrease some amount to a delegator. Leave no less than the minimum delegator
 		/// requirement.
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::unbond())]
+		#[pallet::weight(<T as Config>::WeightInfo::unbond())]
 		pub fn unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -818,7 +812,7 @@ pub mod pallet {
 
 		/// Unbond all the active amount of a delegator.
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::unbond_all())]
+		#[pallet::weight(<T as Config>::WeightInfo::unbond_all())]
 		pub fn unbond_all(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -843,7 +837,7 @@ pub mod pallet {
 
 		/// Rebond some unlocking amount to a delegator.
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::rebond())]
+		#[pallet::weight(<T as Config>::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -872,7 +866,7 @@ pub mod pallet {
 
 		/// Delegate to some validator set.
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::delegate())]
+		#[pallet::weight(<T as Config>::WeightInfo::delegate())]
 		pub fn delegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -899,7 +893,7 @@ pub mod pallet {
 
 		/// Re-delegate existing delegation to a new validator set.
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::undelegate())]
+		#[pallet::weight(<T as Config>::WeightInfo::undelegate())]
 		pub fn undelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -926,7 +920,7 @@ pub mod pallet {
 
 		/// Re-delegate existing delegation to a new validator set.
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::redelegate())]
+		#[pallet::weight(<T as Config>::WeightInfo::redelegate())]
 		pub fn redelegate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -953,7 +947,7 @@ pub mod pallet {
 
 		/// Initiate payout for a certain delegator.
 		#[pallet::call_index(9)]
-		#[pallet::weight(T::WeightInfo::payout())]
+		#[pallet::weight(<T as Config>::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -978,7 +972,7 @@ pub mod pallet {
 
 		/// Withdraw the due payout into free balance.
 		#[pallet::call_index(10)]
-		#[pallet::weight(T::WeightInfo::liquidize())]
+		#[pallet::weight(<T as Config>::WeightInfo::liquidize())]
 		pub fn liquidize(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1008,7 +1002,7 @@ pub mod pallet {
 
 		/// Initiate payout for a certain delegator.
 		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::chill())]
+		#[pallet::weight(<T as Config>::WeightInfo::chill())]
 		pub fn chill(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1032,7 +1026,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(12)]
-		#[pallet::weight(T::WeightInfo::transfer_back())]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_back())]
 		pub fn transfer_back(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1058,7 +1052,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(13)]
-		#[pallet::weight(T::WeightInfo::transfer_to())]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_to())]
 		pub fn transfer_to(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1088,7 +1082,7 @@ pub mod pallet {
 		// true. if we convert from some other currency to currency_id, then if_from_currency should
 		// be false.
 		#[pallet::call_index(14)]
-		#[pallet::weight(T::WeightInfo::convert_asset())]
+		#[pallet::weight(<T as Config>::WeightInfo::convert_asset())]
 		pub fn convert_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1109,7 +1103,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(15)]
-		#[pallet::weight(T::WeightInfo::increase_token_pool())]
+		#[pallet::weight(<T as Config>::WeightInfo::increase_token_pool())]
 		pub fn increase_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1129,7 +1123,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(16)]
-		#[pallet::weight(T::WeightInfo::decrease_token_pool())]
+		#[pallet::weight(<T as Config>::WeightInfo::decrease_token_pool())]
 		pub fn decrease_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1149,7 +1143,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(17)]
-		#[pallet::weight(T::WeightInfo::update_ongoing_time_unit())]
+		#[pallet::weight(<T as Config>::WeightInfo::update_ongoing_time_unit())]
 		pub fn update_ongoing_time_unit(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1193,7 +1187,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(18)]
-		#[pallet::weight(T::WeightInfo::refund_currency_due_unbond())]
+		#[pallet::weight(<T as Config>::WeightInfo::refund_currency_due_unbond())]
 		pub fn refund_currency_due_unbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1362,7 +1356,7 @@ pub mod pallet {
 
 			if extra_weight != 0 {
 				Ok(Some(
-					T::WeightInfo::refund_currency_due_unbond() +
+					<T as Config>::WeightInfo::refund_currency_due_unbond() +
 						Weight::from_parts(extra_weight, 0),
 				)
 				.into())
@@ -1372,7 +1366,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(19)]
-		#[pallet::weight(T::WeightInfo::supplement_fee_reserve())]
+		#[pallet::weight(<T as Config>::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1452,7 +1446,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(20)]
-		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
+		#[pallet::weight(<T as Config>::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
 		/// Charge staking host fee, tune vtoken/token exchange rate, and update delegator ledger
 		/// for single delegator.
 		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
@@ -1542,7 +1536,7 @@ pub mod pallet {
 		/// ****** Storage Setters ******
 		/// *****************************
 		#[pallet::call_index(21)]
-		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_xcm_dest_weight_and_fee())]
 		pub fn set_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1572,7 +1566,7 @@ pub mod pallet {
 
 		/// Update storage OperateOrigins<T>.
 		#[pallet::call_index(22)]
-		#[pallet::weight(T::WeightInfo::set_operate_origin())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_operate_origin())]
 		pub fn set_operate_origin(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1593,7 +1587,7 @@ pub mod pallet {
 
 		/// Update storage FeeSources<T>.
 		#[pallet::call_index(23)]
-		#[pallet::weight(T::WeightInfo::set_fee_source())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_fee_source())]
 		pub fn set_fee_source(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1614,7 +1608,7 @@ pub mod pallet {
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
 		#[pallet::call_index(24)]
-		#[pallet::weight(T::WeightInfo::add_delegator())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_delegator())]
 		pub fn add_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1637,7 +1631,7 @@ pub mod pallet {
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
 		#[pallet::call_index(25)]
-		#[pallet::weight(T::WeightInfo::remove_delegator())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator())]
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1656,7 +1650,7 @@ pub mod pallet {
 
 		/// Update storage Validators<T>.
 		#[pallet::call_index(26)]
-		#[pallet::weight(T::WeightInfo::add_validator())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_validator())]
 		pub fn add_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1684,7 +1678,7 @@ pub mod pallet {
 
 		/// Update storage Validators<T>.
 		#[pallet::call_index(27)]
-		#[pallet::weight(T::WeightInfo::remove_validator())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_validator())]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1700,7 +1694,7 @@ pub mod pallet {
 
 		/// Update storage ValidatorsByDelegator<T>.
 		#[pallet::call_index(28)]
-		#[pallet::weight(T::WeightInfo::set_validators_by_delegator())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_validators_by_delegator())]
 		pub fn set_validators_by_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1755,7 +1749,7 @@ pub mod pallet {
 
 		/// Update storage DelegatorLedgers<T>.
 		#[pallet::call_index(29)]
-		#[pallet::weight(T::WeightInfo::set_delegator_ledger())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_delegator_ledger())]
 		pub fn set_delegator_ledger(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1782,7 +1776,7 @@ pub mod pallet {
 
 		/// Update storage MinimumsAndMaximums<T>.
 		#[pallet::call_index(30)]
-		#[pallet::weight(T::WeightInfo::set_minimums_and_maximums())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_minimums_and_maximums())]
 		pub fn set_minimums_and_maximums(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1806,7 +1800,7 @@ pub mod pallet {
 
 		/// Update storage Delays<T>.
 		#[pallet::call_index(31)]
-		#[pallet::weight(T::WeightInfo::set_currency_delays())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_currency_delays())]
 		pub fn set_currency_delays(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1830,7 +1824,7 @@ pub mod pallet {
 
 		/// Set HostingFees storage.
 		#[pallet::call_index(32)]
-		#[pallet::weight(T::WeightInfo::set_hosting_fees())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_hosting_fees())]
 		pub fn set_hosting_fees(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1850,7 +1844,7 @@ pub mod pallet {
 
 		/// Set  CurrencyTuneExchangeRateLimit<T> storage.
 		#[pallet::call_index(33)]
-		#[pallet::weight(T::WeightInfo::set_currency_tune_exchange_rate_limit())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_currency_tune_exchange_rate_limit())]
 		pub fn set_currency_tune_exchange_rate_limit(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1873,7 +1867,7 @@ pub mod pallet {
 
 		/// Set  OngoingTimeUnitUpdateInterval<T> storage.
 		#[pallet::call_index(34)]
-		#[pallet::weight(T::WeightInfo::set_ongoing_time_unit_update_interval())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_ongoing_time_unit_update_interval())]
 		pub fn set_ongoing_time_unit_update_interval(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1907,7 +1901,7 @@ pub mod pallet {
 
 		// Add an account to SupplementFeeAccountWhitelist
 		#[pallet::call_index(35)]
-		#[pallet::weight(T::WeightInfo::add_supplement_fee_account_to_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_supplement_fee_account_to_whitelist())]
 		pub fn add_supplement_fee_account_to_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1953,7 +1947,7 @@ pub mod pallet {
 
 		// Add an account to SupplementFeeAccountWhitelist
 		#[pallet::call_index(36)]
-		#[pallet::weight(T::WeightInfo::remove_supplement_fee_account_from_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_supplement_fee_account_from_whitelist())]
 		pub fn remove_supplement_fee_account_from_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -1998,7 +1992,7 @@ pub mod pallet {
 		/// *************Outer Confirming Xcm queries functions ****************
 		/// ********************************************************************
 		#[pallet::call_index(37)]
-		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2011,7 +2005,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(38)]
-		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::fail_delegator_ledger_query_response())]
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2025,7 +2019,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(39)]
-		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2039,7 +2033,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(40)]
-		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::fail_validators_by_delegator_query_response())]
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2053,7 +2047,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(41)]
-		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger(
 			origin: OriginFor<T>,
 			query_id: QueryId,
@@ -2070,7 +2064,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(42)]
-		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
+		#[pallet::weight(<T as Config>::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator(
 			origin: OriginFor<T>,
 			query_id: QueryId,
@@ -2088,7 +2082,7 @@ pub mod pallet {
 
 		/// Reset the whole storage Validators<T>.
 		#[pallet::call_index(43)]
-		#[pallet::weight(T::WeightInfo::reset_validators())]
+		#[pallet::weight(<T as Config>::WeightInfo::reset_validators())]
 		pub fn reset_validators(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2117,7 +2111,7 @@ pub mod pallet {
 
 		/// Reset the whole storage Validator_boost_list<T>.
 		#[pallet::call_index(44)]
-		#[pallet::weight(T::WeightInfo::set_validator_boost_list())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_validator_boost_list())]
 		pub fn set_validator_boost_list(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2192,7 +2186,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(45)]
-		#[pallet::weight(T::WeightInfo::add_to_validator_boost_list())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_to_validator_boost_list())]
 		pub fn add_to_validator_boost_list(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -2292,7 +2286,7 @@ pub mod pallet {
 
 		/// Update storage Validator_boost_list<T>.
 		#[pallet::call_index(46)]
-		#[pallet::weight(T::WeightInfo::remove_from_validator_boot_list())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_from_validator_boot_list())]
 		pub fn remove_from_validator_boot_list(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,

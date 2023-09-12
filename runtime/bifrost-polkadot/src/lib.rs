@@ -112,7 +112,6 @@ use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
@@ -1205,8 +1204,6 @@ impl bifrost_slp::Config for Runtime {
 	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
-	type XcmRouter = XcmRouter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;

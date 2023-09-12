@@ -48,21 +48,17 @@ fn test_account_convert_work() {
 #[test]
 fn test_whitelist_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE));
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, BOB));
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, BOB));
 		assert_eq!(
 			Slpx::whitelist_account_ids(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE, BOB]).unwrap()
 		);
 		assert_noop!(
-			Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Astar, ALICE),
+			Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE),
 			Error::<Test>::AccountIdAlreadyInWhitelist
 		);
-		assert_ok!(Slpx::remove_whitelist(
-			RuntimeOrigin::signed(ALICE),
-			SupportChain::Astar,
-			ALICE
-		));
+		assert_ok!(Slpx::remove_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
 		assert_eq!(
 			Slpx::whitelist_account_ids(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![BOB]).unwrap()
@@ -86,7 +82,7 @@ fn test_whitelist_work() {
 		assert_eq!(evm_caller_account_id, Slpx::h160_to_account_id(evm_caller));
 
 		// Hydradx
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::signed(ALICE), SupportChain::Hydradx, ALICE));
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Hydradx, ALICE));
 		let target_chain = TargetChain::Hydradx(ALICE);
 		let (evm_contract_account_id, evm_caller_account_id) = Slpx::ensure_singer_on_whitelist(
 			RuntimeOrigin::signed(ALICE),
@@ -108,22 +104,14 @@ fn test_execution_fee_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		assert_ok!(Currencies::deposit(CurrencyId::Token2(0), &ALICE, 50));
 
-		assert_ok!(Slpx::set_execution_fee(
-			RuntimeOrigin::signed(ALICE),
-			CurrencyId::Token2(0),
-			10
-		));
+		assert_ok!(Slpx::set_execution_fee(RuntimeOrigin::root(), CurrencyId::Token2(0), 10));
 		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10));
 
 		let balance_exclude_fee =
 			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
 		assert_eq!(balance_exclude_fee, 40);
 
-		assert_ok!(Slpx::set_transfer_to_fee(
-			RuntimeOrigin::signed(ALICE),
-			SupportChain::Moonbeam,
-			10
-		));
+		assert_ok!(Slpx::set_transfer_to_fee(RuntimeOrigin::root(), SupportChain::Moonbeam, 10));
 		assert_eq!(Slpx::transfer_to_fee(SupportChain::Moonbeam), Some(10));
 	});
 }

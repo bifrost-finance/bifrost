@@ -1375,8 +1375,6 @@ impl bifrost_slp::Config for Runtime {
 	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
-	type XcmRouter = XcmRouter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -1933,23 +1931,22 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_salp, Salp]
-		[bifrost_vsbond_auction, VSBondAuction]
-		[bifrost_token_issuer, TokenIssuer]
-		[bifrost_call_switchgear, CallSwitchgear]
-		[parachain_staking, ParachainStaking]
-		[bifrost_vtoken_minting, VtokenMinting]
-		[bifrost_farming, Farming]
-		[bifrost_system_staking, SystemStaking]
-		[bifrost_slp, Slp]
 		[bifrost_asset_registry, AssetRegistry]
-		[bifrost_fee_share, FeeShare]
+		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_cross_in_out, CrossInOut]
+		[bifrost_farming, Farming]
+		[bifrost_fee_share, FeeShare]
 		[bifrost_flexible_fee, FlexibleFee]
-		[bifrost_system_maker, SystemMaker]
-		[bifrost_vstoken_conversion, VstokenConversion]
+		[bifrost_salp, Salp]
+		[bifrost_slp, Slp]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
+		[bifrost_system_maker, SystemMaker]
+		[bifrost_system_staking, SystemStaking]
+		[bifrost_token_issuer, TokenIssuer]
+		[bifrost_vsbond_auction, VSBondAuction]
+		[bifrost_vstoken_conversion, VstokenConversion]
+		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }

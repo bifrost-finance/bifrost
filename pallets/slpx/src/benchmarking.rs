@@ -17,92 +17,145 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::{Pallet as Slpx, *};
-use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
-use frame_support::{
-	assert_ok, sp_runtime::traits::UniqueSaturatedFrom, traits::EnsureOrigin, BoundedVec,
-};
+use crate::*;
+use frame_benchmarking::v2::*;
+use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::CurrencyId;
 
-benchmarks! {
-	add_whitelist {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-	let contract: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Root,SupportChain::Astar, contract)
+#[benchmarks(where T: bifrost_asset_registry::Config)]
+mod benchmarks {
+	use super::*;
+	use bifrost_asset_registry::CurrencyIdToLocations;
+	use frame_benchmarking::impl_benchmark_test_suite;
+	use node_primitives::KSM;
 
-	remove_whitelist {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+	#[benchmark]
+	fn add_whitelist() {
 		let contract: T::AccountId = whitelisted_caller();
-		assert_ok!(Slpx::<T>::add_whitelist(
-			origin,
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
+
+		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), Some(&contract));
+	}
+
+	#[benchmark]
+	fn remove_whitelist() {
+		let contract: T::AccountId = whitelisted_caller();
+		let whitelist = BoundedVec::try_from(vec![contract.clone()]).unwrap();
+
+		WhitelistAccountId::<T>::insert(SupportChain::Astar, whitelist);
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
+
+		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), None);
+	}
+
+	#[benchmark]
+	fn set_execution_fee() {
+		#[extrinsic_call]
+		_(RawOrigin::Root, CurrencyId::Token2(0), 10u32.into());
+
+		assert_eq!(ExecutionFee::<T>::get(CurrencyId::Token2(0)), Some(10u32.into()));
+	}
+
+	#[benchmark]
+	fn set_transfer_to_fee() {
+		#[extrinsic_call]
+		_(RawOrigin::Root, SupportChain::Moonbeam, 10u32.into());
+
+		assert_eq!(TransferToFee::<T>::get(SupportChain::Moonbeam), Some(10u32.into()));
+	}
+
+	#[benchmark]
+	fn mint() {
+		let caller: T::AccountId = whitelisted_caller();
+		assert_ok!(Pallet::<T>::add_whitelist(
+			RawOrigin::Root.into(),
 			SupportChain::Astar,
-			contract.clone()
-		));
-	}: _(RawOrigin::Root,SupportChain::Astar, contract)
-
-	set_execution_fee {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let contract: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Root,CurrencyId::Token2(0), 10u32.into())
-
-	set_transfer_to_fee {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let contract: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Root,SupportChain::Astar, 10u32.into())
-
-
-	mint {
-		let contract: T::AccountId = whitelisted_caller();
-		assert_ok!(Slpx::<T>::add_whitelist(
-				RawOrigin::Root.into(),
-				SupportChain::Astar,
-				contract.clone()
-		));
-		assert_ok!(Slpx::<T>::set_execution_fee(
-				RawOrigin::Root.into(),
-				CurrencyId::Native(TokenSymbol::BNC),
-				0u32.into()
+			caller.clone()
 		));
 		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
 		let receiver = H160::from(addr);
-		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
-		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC), TargetChain::Astar(receiver),BoundedVec::default())
+		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
+		<T as pallet::Config>::MultiCurrency::deposit(
+			KSM,
+			&evm_caller_account_id,
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		)
+		.unwrap();
 
-	redeem {
-		let contract: T::AccountId = whitelisted_caller();
-		assert_ok!(Slpx::<T>::add_whitelist(
-				RawOrigin::Root.into(),
-				SupportChain::Astar,
-				contract.clone()
-		));
-		assert_ok!(Slpx::<T>::set_execution_fee(
-				RawOrigin::Root.into(),
-				CurrencyId::VToken(TokenSymbol::BNC),
-				0u32.into()
+		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+
+		#[extrinsic_call]
+		_(
+			RawOrigin::Signed(caller),
+			receiver,
+			KSM,
+			TargetChain::Astar(receiver),
+			BoundedVec::default(),
+		);
+	}
+
+	#[benchmark]
+	fn zenlink_swap() {
+		let caller: T::AccountId = whitelisted_caller();
+		assert_ok!(Pallet::<T>::add_whitelist(
+			RawOrigin::Root.into(),
+			SupportChain::Astar,
+			caller.clone()
 		));
 		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
 		let receiver = H160::from(addr);
-		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
-		T::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::VToken(TokenSymbol::BNC), TargetChain::Astar(receiver))
+		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
+		<T as pallet::Config>::MultiCurrency::deposit(
+			KSM,
+			&evm_caller_account_id,
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		)
+		.unwrap();
 
-	zenlink_swap {
-		let contract: T::AccountId = whitelisted_caller();
-		assert_ok!(Slpx::<T>::add_whitelist(
-				RawOrigin::Root.into(),
-				SupportChain::Astar,
-				contract.clone()
-		));
-		assert_ok!(Slpx::<T>::set_execution_fee(
-				RawOrigin::Root.into(),
-				CurrencyId::Native(TokenSymbol::BNC),
-				0u32.into()
+		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+		CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), receiver, KSM, VKSM, 0u128, TargetChain::Astar(receiver));
+	}
+
+	#[benchmark]
+	fn stable_pool_swap() {
+		let caller: T::AccountId = whitelisted_caller();
+		assert_ok!(Pallet::<T>::add_whitelist(
+			RawOrigin::Root.into(),
+			SupportChain::Astar,
+			caller.clone()
 		));
 		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
 		let receiver = H160::from(addr);
-		let evm_caller_account_id = Slpx::<T>::h160_to_account_id(receiver);
-		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &evm_caller_account_id, BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(contract), receiver, CurrencyId::Native(TokenSymbol::BNC),CurrencyId::VToken(TokenSymbol::BNC), 0u32.into(),TargetChain::Astar(receiver))
+		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
+		<T as pallet::Config>::MultiCurrency::deposit(
+			KSM,
+			&evm_caller_account_id,
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		)
+		.unwrap();
+
+		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+		CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
+
+		#[extrinsic_call]
+		Pallet::<T>::zenlink_swap(
+			RawOrigin::Signed(caller),
+			receiver,
+			KSM,
+			VKSM,
+			0u128,
+			TargetChain::Astar(receiver),
+		);
+	}
+
+	//   `cargo test -p pallet-example-basic --all-features`, you will see one line per case:
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 }

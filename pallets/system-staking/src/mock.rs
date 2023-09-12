@@ -331,8 +331,6 @@ impl bifrost_slp::Config for Runtime {
 	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;

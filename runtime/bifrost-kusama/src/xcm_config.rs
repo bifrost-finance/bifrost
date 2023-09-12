@@ -25,7 +25,7 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
+use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
@@ -696,6 +696,9 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -874,6 +877,9 @@ impl orml_xtokens::Config for Runtime {
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
