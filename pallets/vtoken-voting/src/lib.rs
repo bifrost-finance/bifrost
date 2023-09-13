@@ -619,7 +619,7 @@ pub mod pallet {
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
 			if let Some((vtoken, poll_index, derivative_index, who, vote)) =
-				PendingVotingInfo::<T>::take(query_id)
+				PendingVotingInfo::<T>::get(query_id)
 			{
 				if !success {
 					// rollback vote
@@ -638,10 +638,11 @@ pub mod pallet {
 						},
 					)?;
 				}
+				PendingVotingInfo::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
 
-			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::get(query_id) {
 				if success {
 					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
@@ -676,6 +677,7 @@ pub mod pallet {
 				} else {
 					ReferendumInfoFor::<T>::remove(vtoken, poll_index);
 				}
+				PendingReferendumInfo::<T>::remove(query_id);
 			}
 
 			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
@@ -692,7 +694,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			if let Some((vtoken, poll_index, derivative_index)) =
-				PendingRemoveDelegatorVote::<T>::take(query_id)
+				PendingRemoveDelegatorVote::<T>::get(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
@@ -710,6 +712,7 @@ pub mod pallet {
 							}
 						},
 					)?;
+					PendingRemoveDelegatorVote::<T>::remove(query_id);
 				}
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
