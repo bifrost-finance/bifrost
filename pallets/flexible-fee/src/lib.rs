@@ -263,7 +263,6 @@ impl<T: Config> Pallet<T> {
 		let mut total_fee = fee;
 
 		let native_asset_id = Self::get_currency_asset_id(BNC)?;
-		// 确定path只有两个元素
 		let mut path = vec![native_asset_id, native_asset_id];
 
 		// See if the this RuntimeCall needs to pay extra fee
@@ -271,41 +270,24 @@ impl<T: Config> Pallet<T> {
 		if fee_info.extra_fee_name != ExtraFeeName::NoExtraFee {
 			// if the fee_info.extra_fee_name is not NoExtraFee, it means this RuntimeCall needs to
 			// pay extra fee
-			let (currency_id, operation) = match fee_info.extra_fee_name {
-				ExtraFeeName::SalpContribute =>
-					(fee_info.extra_fee_currency, XcmOperationType::UmpContributeTransact),
-				ExtraFeeName::StatemineTransfer =>
-					(fee_info.extra_fee_currency, XcmOperationType::StatemineTransfer),
-				ExtraFeeName::VoteVtoken => {
-					// We define error code 77 for conversion failure error
-					let fee_currency = fee_info
-						.extra_fee_currency
-						.to_token()
-						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmOperationType::Vote)
-				},
-				ExtraFeeName::VoteRemoveDelegatorVote => {
-					// We define error code 77 for conversion failure error
-					let fee_currency = fee_info
-						.extra_fee_currency
-						.to_token()
-						.map_err(|_| Error::<T>::ConversionError)?;
-					(fee_currency, XcmOperationType::RemoveVote)
-				},
-				ExtraFeeName::NoExtraFee => (fee_info.extra_fee_currency, XcmOperationType::Any),
+			let operation = match fee_info.extra_fee_name {
+				ExtraFeeName::SalpContribute => XcmOperationType::UmpContributeTransact,
+				ExtraFeeName::StatemineTransfer => XcmOperationType::StatemineTransfer,
+				ExtraFeeName::VoteVtoken => XcmOperationType::Vote,
+				ExtraFeeName::VoteRemoveDelegatorVote => XcmOperationType::RemoveVote,
+				ExtraFeeName::NoExtraFee => XcmOperationType::Any,
 			};
 
-			// We define error code 55 for WeightAndFeeNotSet error
-			let (_, fee_value) =
-				T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-					.ok_or(Error::<T>::WeightAndFeeNotExist)?;
+			let (_, fee_value) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+				fee_info.extra_fee_currency,
+				operation,
+			)
+			.ok_or(Error::<T>::WeightAndFeeNotExist)?;
 
-			// We define error code 77 for conversion failure error
-			let asset_id = Self::get_currency_asset_id(currency_id)?;
+			let asset_id = Self::get_currency_asset_id(fee_info.extra_fee_currency)?;
 			path = vec![native_asset_id, asset_id];
 
 			// get the fee currency value in BNC
-			// we define error code 44 for DexOperator error
 			let extra_fee_vec =
 				T::DexOperator::get_amount_in_by_path(fee_value.saturated_into(), &path)
 					.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?;

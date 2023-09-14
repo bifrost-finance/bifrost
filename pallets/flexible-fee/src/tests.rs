@@ -372,10 +372,19 @@ fn get_extrinsic_and_extra_fee_total_should_work() {
 		assert_eq!(fee_value, 0);
 		assert_eq!(path, path_vec);
 
-		// call with extra fee
+		//  salp contribuite call with extra fee
 		let path_vec = vec![native_asset_id, asset_id];
 		let (total_fee, extra_bnc_fee, fee_value, path) =
 			FlexibleFee::get_extrinsic_and_extra_fee_total(&SALP_CONTRIBUTE_CALL, 88).unwrap();
+		assert_eq!(total_fee, 200);
+		assert_eq!(extra_bnc_fee, 112);
+		assert_eq!(fee_value, 100);
+		assert_eq!(path, path_vec);
+
+		// vtoken-voting vote call with extra fee
+		let path_vec = vec![native_asset_id, asset_id];
+		let (total_fee, extra_bnc_fee, fee_value, path) =
+			FlexibleFee::get_extrinsic_and_extra_fee_total(&VTOKENVOTING_VOTE_CALL, 88).unwrap();
 		assert_eq!(total_fee, 200);
 		assert_eq!(extra_bnc_fee, 112);
 		assert_eq!(fee_value, 100);

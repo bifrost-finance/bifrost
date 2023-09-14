@@ -14,6 +14,7 @@
 
 pub use super::*;
 
+use bifrost_asset_registry::AssetIdMaps;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
@@ -56,6 +57,7 @@ construct_runtime!(
 		LendMarket: crate::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+		Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -308,8 +310,19 @@ impl pallet_assets::Config for Test {
 	type WeightInfo = ();
 	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
 	type CallbackHandle = ();
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
+	// #[cfg(feature = "runtime-benchmarks")]
+	// type BenchmarkHelper = ();
+}
+
+impl pallet_prices::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Source = MockDataProvider;
+	type FeederOrigin = EnsureRoot<AccountId>;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type RelayCurrency = RelayCurrency;
+	type Assets = Currencies;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
+	type WeightInfo = ();
 }
 
 parameter_types! {

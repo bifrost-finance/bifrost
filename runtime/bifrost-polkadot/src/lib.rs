@@ -964,14 +964,14 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
-					extra_fee_currency: vtoken,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
 				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
 			}) => ExtraFeeInfo {
 				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-				extra_fee_currency: vtoken,
+				extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
 			},
 			_ => ExtraFeeInfo::default(),
 		}

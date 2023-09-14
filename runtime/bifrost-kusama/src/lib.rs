@@ -2076,6 +2076,7 @@ mod benches {
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_vtoken_voting, VtokenVoting]
+		[lend_market, LendMarket]
 	);
 }
 
