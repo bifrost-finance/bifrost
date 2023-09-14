@@ -40,6 +40,7 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
+bifrost-vtoken-voting = { path = "../vtoken-voting", features = ["kusama"] }
 
 [features]
 default = ["std"]

@@ -740,6 +740,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-salp",
+ "bifrost-vtoken-voting",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
