@@ -354,7 +354,7 @@ pub mod pallet {
 					weight += T::DbWeight::get().reads_writes(1, 1);
 				});
 				weight += T::DbWeight::get().reads_writes(1, 1);
-				ReferendumTimeout::<T>::remove(relay_current_block_number.clone());
+				ReferendumTimeout::<T>::remove(relay_current_block_number);
 			}
 
 			weight
