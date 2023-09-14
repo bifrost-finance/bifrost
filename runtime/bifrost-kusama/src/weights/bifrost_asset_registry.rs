@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -64,8 +64,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `118`
 		//  Estimated: `3583`
-		// Minimum execution time: 19_000 nanoseconds.
-		Weight::from_parts(20_000_000, 3583)
+		// Minimum execution time: 49_553 nanoseconds.
+		Weight::from_parts(50_599_000, 3583)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -79,8 +79,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `250`
 		//  Estimated: `3715`
-		// Minimum execution time: 22_000 nanoseconds.
-		Weight::from_parts(23_000_000, 3715)
+		// Minimum execution time: 56_917 nanoseconds.
+		Weight::from_parts(57_419_000, 3715)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -92,8 +92,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `607`
 		//  Estimated: `4072`
-		// Minimum execution time: 16_000 nanoseconds.
-		Weight::from_parts(17_000_000, 4072)
+		// Minimum execution time: 44_741 nanoseconds.
+		Weight::from_parts(46_339_000, 4072)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -103,8 +103,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `779`
 		//  Estimated: `6719`
-		// Minimum execution time: 20_000 nanoseconds.
-		Weight::from_parts(20_000_000, 6719)
+		// Minimum execution time: 51_173 nanoseconds.
+		Weight::from_parts(52_854_000, 6719)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -114,8 +114,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `705`
 		//  Estimated: `6645`
-		// Minimum execution time: 19_000 nanoseconds.
-		Weight::from_parts(20_000_000, 6645)
+		// Minimum execution time: 49_492 nanoseconds.
+		Weight::from_parts(50_943_000, 6645)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -125,8 +125,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `763`
 		//  Estimated: `6703`
-		// Minimum execution time: 21_000 nanoseconds.
-		Weight::from_parts(21_000_000, 6703)
+		// Minimum execution time: 52_709 nanoseconds.
+		Weight::from_parts(54_285_000, 6703)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -142,8 +142,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `683`
 		//  Estimated: `4148`
-		// Minimum execution time: 18_000 nanoseconds.
-		Weight::from_parts(19_000_000, 4148)
+		// Minimum execution time: 45_385 nanoseconds.
+		Weight::from_parts(46_739_000, 4148)
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -159,8 +159,8 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `683`
 		//  Estimated: `4148`
-		// Minimum execution time: 19_000 nanoseconds.
-		Weight::from_parts(20_000_000, 4148)
+		// Minimum execution time: 50_743 nanoseconds.
+		Weight::from_parts(52_775_000, 4148)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}

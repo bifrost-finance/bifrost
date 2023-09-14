@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -72,8 +72,8 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `1789`
 		//  Estimated: `6176`
-		// Minimum execution time: 74_000 nanoseconds.
-		Weight::from_parts(76_000_000, 6176)
+		// Minimum execution time: 175_259 nanoseconds.
+		Weight::from_parts(177_403_000, 6176)
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(6))
 	}
@@ -91,8 +91,8 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `2023`
 		//  Estimated: `6176`
-		// Minimum execution time: 66_000 nanoseconds.
-		Weight::from_parts(67_000_000, 6176)
+		// Minimum execution time: 161_381 nanoseconds.
+		Weight::from_parts(162_871_000, 6176)
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(5))
 	}
@@ -112,8 +112,8 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `2383`
 		//  Estimated: `11362`
-		// Minimum execution time: 102_000 nanoseconds.
-		Weight::from_parts(104_000_000, 11362)
+		// Minimum execution time: 236_772 nanoseconds.
+		Weight::from_parts(238_487_000, 11362)
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(7))
 	}
@@ -131,8 +131,8 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `2291`
 		//  Estimated: `11362`
-		// Minimum execution time: 91_000 nanoseconds.
-		Weight::from_parts(92_000_000, 11362)
+		// Minimum execution time: 206_572 nanoseconds.
+		Weight::from_parts(214_687_000, 11362)
 			.saturating_add(T::DbWeight::get().reads(8))
 			.saturating_add(T::DbWeight::get().writes(5))
 	}
@@ -142,8 +142,8 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `4`
 		//  Estimated: `1489`
-		// Minimum execution time: 9_000 nanoseconds.
-		Weight::from_parts(10_000_000, 1489)
+		// Minimum execution time: 26_870 nanoseconds.
+		Weight::from_parts(27_527_000, 1489)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

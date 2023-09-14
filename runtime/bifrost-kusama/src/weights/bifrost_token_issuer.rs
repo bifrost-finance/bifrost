@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -60,8 +60,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `142`
 		//  Estimated: `3607`
-		// Minimum execution time: 13_000 nanoseconds.
-		Weight::from_parts(14_000_000, 3607)
+		// Minimum execution time: 34_320 nanoseconds.
+		Weight::from_parts(35_020_000, 3607)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -71,8 +71,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `220`
 		//  Estimated: `3685`
-		// Minimum execution time: 14_000 nanoseconds.
-		Weight::from_parts(42_000_000, 3685)
+		// Minimum execution time: 34_889 nanoseconds.
+		Weight::from_parts(36_249_000, 3685)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -82,8 +82,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `142`
 		//  Estimated: `3607`
-		// Minimum execution time: 13_000 nanoseconds.
-		Weight::from_parts(13_000_000, 3607)
+		// Minimum execution time: 33_724 nanoseconds.
+		Weight::from_parts(34_537_000, 3607)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -93,8 +93,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `220`
 		//  Estimated: `3685`
-		// Minimum execution time: 13_000 nanoseconds.
-		Weight::from_parts(13_000_000, 3685)
+		// Minimum execution time: 35_235 nanoseconds.
+		Weight::from_parts(35_823_000, 3685)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -110,8 +110,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `1870`
 		//  Estimated: `5335`
-		// Minimum execution time: 44_000 nanoseconds.
-		Weight::from_parts(46_000_000, 5335)
+		// Minimum execution time: 104_659 nanoseconds.
+		Weight::from_parts(106_259_000, 5335)
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -125,8 +125,8 @@ impl<T: frame_system::Config> bifrost_token_issuer::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `1989`
 		//  Estimated: `6176`
-		// Minimum execution time: 53_000 nanoseconds.
-		Weight::from_parts(55_000_000, 6176)
+		// Minimum execution time: 118_862 nanoseconds.
+		Weight::from_parts(121_698_000, 6176)
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}

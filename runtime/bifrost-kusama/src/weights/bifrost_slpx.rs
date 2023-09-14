@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -60,8 +60,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `4`
 		//  Estimated: `3803`
-		// Minimum execution time: 11_000 nanoseconds.
-		Weight::from_parts(12_000_000, 3803)
+		// Minimum execution time: 33_664 nanoseconds.
+		Weight::from_parts(34_525_000, 3803)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -71,8 +71,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `81`
 		//  Estimated: `3803`
-		// Minimum execution time: 13_000 nanoseconds.
-		Weight::from_parts(13_000_000, 3803)
+		// Minimum execution time: 37_038 nanoseconds.
+		Weight::from_parts(38_028_000, 3803)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -82,8 +82,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 8_000 nanoseconds.
-		Weight::from_parts(9_000_000, 0)
+		// Minimum execution time: 24_630 nanoseconds.
+		Weight::from_parts(25_469_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// Storage: Slpx TransferToFee (r:0 w:1)
@@ -92,8 +92,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 8_000 nanoseconds.
-		Weight::from_parts(8_000_000, 0)
+		// Minimum execution time: 24_544 nanoseconds.
+		Weight::from_parts(25_336_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// Storage: Slpx WhitelistAccountId (r:1 w:0)
@@ -122,8 +122,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `2442`
 		//  Estimated: `11362`
-		// Minimum execution time: 152_000 nanoseconds.
-		Weight::from_parts(154_000_000, 11362)
+		// Minimum execution time: 355_230 nanoseconds.
+		Weight::from_parts(360_766_000, 11362)
 			.saturating_add(T::DbWeight::get().reads(16))
 			.saturating_add(T::DbWeight::get().writes(8))
 	}
@@ -157,8 +157,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `2194`
 		//  Estimated: `8134`
-		// Minimum execution time: 99_000 nanoseconds.
-		Weight::from_parts(101_000_000, 8134)
+		// Minimum execution time: 243_971 nanoseconds.
+		Weight::from_parts(250_684_000, 8134)
 			.saturating_add(T::DbWeight::get().reads(16))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -180,8 +180,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1819`
 		//  Estimated: `11362`
-		// Minimum execution time: 90_000 nanoseconds.
-		Weight::from_parts(92_000_000, 11362)
+		// Minimum execution time: 220_866 nanoseconds.
+		Weight::from_parts(223_033_000, 11362)
 			.saturating_add(T::DbWeight::get().reads(11))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -207,8 +207,8 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `2782`
 		//  Estimated: `16548`
-		// Minimum execution time: 240_000 nanoseconds.
-		Weight::from_parts(242_000_000, 16548)
+		// Minimum execution time: 552_131 nanoseconds.
+		Weight::from_parts(564_804_000, 16548)
 			.saturating_add(T::DbWeight::get().reads(17))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}

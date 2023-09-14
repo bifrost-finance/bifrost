@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -65,8 +65,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 3_000_000 picoseconds.
-		Weight::from_parts(4_000_000, 0)
+		// Minimum execution time: 11_322_000 picoseconds.
+		Weight::from_parts(11_925_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: FlexibleFee UniversalFeeCurrencyOrderList (r:0 w:1)
@@ -75,8 +75,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 3_000_000 picoseconds.
-		Weight::from_parts(3_000_000, 0)
+		// Minimum execution time: 10_424_000 picoseconds.
+		Weight::from_parts(10_846_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }

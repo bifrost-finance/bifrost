@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -60,8 +60,8 @@ impl<T: frame_system::Config> bifrost_flexible_fee::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 3_000 nanoseconds.
-		Weight::from_parts(4_000_000, 0)
+		// Minimum execution time: 10_741 nanoseconds.
+		Weight::from_parts(11_257_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// Storage: FlexibleFee UniversalFeeCurrencyOrderList (r:0 w:1)
@@ -70,8 +70,8 @@ impl<T: frame_system::Config> bifrost_flexible_fee::WeightInfo for BifrostWeight
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 3_000 nanoseconds.
-		Weight::from_parts(4_000_000, 0)
+		// Minimum execution time: 9_810 nanoseconds.
+		Weight::from_parts(10_160_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }
