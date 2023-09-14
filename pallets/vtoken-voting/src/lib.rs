@@ -341,8 +341,9 @@ pub mod pallet {
 				T::RelaychainBlockNumberProvider::current_block_number();
 
 			weight += T::DbWeight::get().reads(1);
-			ReferendumTimeout::<T>::take(relay_current_block_number).iter().for_each(
-				|(vtoken, poll_index)| {
+			let timeout = ReferendumTimeout::<T>::get(relay_current_block_number);
+			if !timeout.is_empty() {
+				timeout.iter().for_each(|(vtoken, poll_index)| {
 					ReferendumInfoFor::<T>::mutate(
 						vtoken,
 						poll_index,
@@ -357,8 +358,10 @@ pub mod pallet {
 						},
 					);
 					weight += T::DbWeight::get().reads_writes(1, 1);
-				},
-			);
+				});
+				weight += T::DbWeight::get().reads_writes(1, 1);
+				ReferendumTimeout::<T>::remove(relay_current_block_number);
+			}
 
 			weight
 		}
@@ -619,7 +622,7 @@ pub mod pallet {
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
 			if let Some((vtoken, poll_index, derivative_index, who, maybe_old_vote)) =
-				PendingVotingInfo::<T>::take(query_id)
+				PendingVotingInfo::<T>::get(query_id)
 			{
 				if !success {
 					// rollback vote
@@ -629,10 +632,11 @@ pub mod pallet {
 						Self::try_vote(&who, vtoken, poll_index, derivative_index, old_vote)?;
 					}
 				}
+				PendingVotingInfo::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
 
-			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::take(query_id) {
+			if let Some((vtoken, poll_index)) = PendingReferendumInfo::<T>::get(query_id) {
 				if success {
 					ReferendumInfoFor::<T>::try_mutate_exists(
 						vtoken,
@@ -667,6 +671,7 @@ pub mod pallet {
 				} else {
 					ReferendumInfoFor::<T>::remove(vtoken, poll_index);
 				}
+				PendingReferendumInfo::<T>::remove(query_id);
 			}
 
 			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
@@ -683,7 +688,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			if let Some((vtoken, poll_index, derivative_index)) =
-				PendingRemoveDelegatorVote::<T>::take(query_id)
+				PendingRemoveDelegatorVote::<T>::get(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
@@ -702,6 +707,7 @@ pub mod pallet {
 						},
 					)?;
 				}
+				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
 					poll_index,
