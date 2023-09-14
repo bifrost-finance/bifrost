@@ -86,42 +86,6 @@ fn basic_voting_works() {
 			vote: aye(2, 5),
 		}));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, nay(2, 5)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 10, 0));
-		assert_eq!(usable_balance(vtoken, &ALICE), 8);
-		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
-			who: ALICE,
-			vtoken,
-			poll_index,
-			vote: nay(2, 5),
-		}));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
-
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(5, 1)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(5, 0, 5));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response_success()));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, nay(5, 1)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 5, 0));
-		assert_eq!(usable_balance(vtoken, &ALICE), 5);
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 3, response_success()));
-
-		assert_ok!(VtokenVoting::vote(
-			RuntimeOrigin::signed(ALICE),
-			vtoken,
-			poll_index,
-			aye(10, 0),
-		));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(1, 0, 10));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 4, response_success()));
-		assert_ok!(VtokenVoting::vote(
-			RuntimeOrigin::signed(ALICE),
-			vtoken,
-			poll_index,
-			nay(10, 0)
-		));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 1, 0));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 5, response_success()));
 
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
@@ -234,30 +198,6 @@ fn voting_balance_gets_locked() {
 		let poll_index = 3;
 		let vtoken = VKSM;
 
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, nay(2, 5)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 10, 0));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
-		assert_eq!(usable_balance(vtoken, &ALICE), 8);
-
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(5, 1)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(5, 0, 5));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response_success()));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, nay(5, 1)));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 5, 0));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 3, response_success()));
-		assert_eq!(usable_balance(vtoken, &ALICE), 5);
-
-		assert_ok!(VtokenVoting::vote(
-			RuntimeOrigin::signed(ALICE),
-			vtoken,
-			poll_index,
-			aye(10, 0)
-		));
-		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(1, 0, 10));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 4, response_success()));
 		assert_ok!(VtokenVoting::vote(
 			RuntimeOrigin::signed(ALICE),
 			vtoken,
@@ -265,7 +205,7 @@ fn voting_balance_gets_locked() {
 			nay(10, 0)
 		));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 1, 0));
-		assert_ok!(VtokenVoting::notify_vote(origin_response(), 5, response_success()));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));

@@ -223,6 +223,8 @@ pub mod pallet {
 		MaxVotesReached,
 		/// Maximum number of items reached.
 		TooMany,
+		/// Change delegator is not allowed.
+		ChangeDelegator,
 	}
 
 	/// Information concerning any given referendum.
@@ -301,6 +303,17 @@ pub mod pallet {
 		BlockNumberFor<T>,
 		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<50>>,
 		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	pub type VoteDelegatorFor<T: Config> = StorageNMap<
+		_,
+		(
+			NMapKey<Twox64Concat, AccountIdOf<T>>,
+			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
+			NMapKey<Twox64Concat, PollIndex>,
+		),
+		DerivativeIndex,
 	>;
 
 	#[pallet::genesis_config]
@@ -385,6 +398,9 @@ pub mod pallet {
 			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
+			if let Some(d) = VoteDelegatorFor::<T>::get((&who, vtoken, poll_index)) {
+				ensure!(d == derivative_index, Error::<T>::ChangeDelegator)
+			}
 
 			// create referendum if not exist
 			let mut submitted = false;
@@ -630,6 +646,10 @@ pub mod pallet {
 					Self::update_lock(&who, vtoken, &poll_index)?;
 					if let Some(old_vote) = maybe_old_vote {
 						Self::try_vote(&who, vtoken, poll_index, derivative_index, old_vote)?;
+					}
+				} else {
+					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
+						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
 					}
 				}
 				PendingVotingInfo::<T>::remove(query_id);
