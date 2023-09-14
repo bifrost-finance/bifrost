@@ -54,9 +54,7 @@ fn pending_market_mock<T: Config>(lend_token_id: CurrencyId) -> Market<BalanceOf
 const INITIAL_AMOUNT: u32 = 500_000_000;
 
 fn transfer_initial_balance<
-	T: Config
-		+ pallet_prices::Config
-		+ pallet_balances::Config<Balance = Balance>,
+	T: Config + pallet_prices::Config + pallet_balances::Config<Balance = Balance>,
 >(
 	caller: T::AccountId,
 ) {
