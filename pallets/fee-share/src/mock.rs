@@ -204,7 +204,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
+	type WeightInfo = ();
 	type FeeSharePalletId = FeeSharePalletId;
 }
 

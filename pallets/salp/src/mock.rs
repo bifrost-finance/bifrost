@@ -52,7 +52,6 @@ use zenlink_protocol::{
 };
 
 use crate as salp;
-use crate::WeightInfo;
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -472,7 +471,7 @@ impl salp::Config for Test {
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
-	type WeightInfo = SalpWeightInfo;
+	type WeightInfo = ();
 	type XcmInterface = MockXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -575,85 +574,6 @@ pub struct ParaInfo;
 impl Get<Pid> for ParaInfo {
 	fn get() -> Pid {
 		Pid::from(2001)
-	}
-}
-
-pub struct SalpWeightInfo;
-impl WeightInfo for SalpWeightInfo {
-	fn contribute() -> Weight {
-		Weight::zero()
-	}
-
-	fn unlock() -> Weight {
-		Weight::zero()
-	}
-
-	fn redeem() -> Weight {
-		Weight::zero()
-	}
-
-	fn refund() -> Weight {
-		Weight::zero()
-	}
-
-	fn batch_unlock(_k: u32) -> Weight {
-		Weight::zero()
-	}
-
-	fn set_multisig_confirm_account() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_success() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_fail() -> Weight {
-		Weight::zero()
-	}
-
-	fn continue_fund() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_retire() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_end() -> Weight {
-		Weight::zero()
-	}
-
-	fn create() -> Weight {
-		Weight::zero()
-	}
-
-	fn edit() -> Weight {
-		Weight::zero()
-	}
-
-	fn confirm_contribute() -> Weight {
-		Weight::zero()
-	}
-
-	fn withdraw() -> Weight {
-		Weight::zero()
-	}
-
-	fn dissolve_refunded() -> Weight {
-		Weight::zero()
-	}
-
-	fn dissolve() -> Weight {
-		Weight::zero()
-	}
-
-	fn buyback() -> Weight {
-		Weight::zero()
-	}
-
-	fn buyback_vstoken_by_stable_pool() -> Weight {
-		Weight::zero()
 	}
 }
 

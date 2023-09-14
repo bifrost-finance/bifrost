@@ -56,7 +56,7 @@ use sp_runtime::{
 	ArithmeticError,
 };
 use sp_std::prelude::*;
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 use xcm::v3::{prelude::*, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";

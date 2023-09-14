@@ -863,7 +863,7 @@ pub mod pallet {
 
 		/// Unlock the reserved vsToken/vsBond after fund success
 		#[pallet::call_index(13)]
-		#[pallet::weight(T::WeightInfo::batch_unlock(T::RemoveKeysLimit::get()))]
+		#[pallet::weight(T::WeightInfo::batch_unlock())]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,

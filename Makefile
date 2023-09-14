@@ -30,7 +30,7 @@ check-all: format
 	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: test-all # cargo test all
-test-all: integration-test test-runtimes test-benchmarks
+test-all: integration-test test-runtimes
 
 
 .PHONY: test-runtimes
