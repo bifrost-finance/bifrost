@@ -263,7 +263,13 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		QueryId,
-		(CurrencyIdOf<T>, PollIndex, DerivativeIndex, AccountIdOf<T>, AccountVote<BalanceOf<T>>),
+		(
+			CurrencyIdOf<T>,
+			PollIndex,
+			DerivativeIndex,
+			AccountIdOf<T>,
+			Option<AccountVote<BalanceOf<T>>>,
+		),
 	>;
 
 	#[pallet::storage]
@@ -394,19 +400,13 @@ pub mod pallet {
 			}
 
 			// record vote info
-			Self::try_vote(&who, vtoken, poll_index, vote)?;
-			let new_vote =
-				DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
-					if let Some(inner_vote) = maybe_vote {
-						inner_vote.checked_add(vote).map_err(|_| Error::<T>::NoData)?;
-						Ok(*inner_vote)
-					} else {
-						Err(Error::<T>::NoData)
-					}
-				})?;
+			let maybe_old_vote = Self::try_vote(&who, vtoken, poll_index, derivative_index, vote)?;
 
 			// send XCM message
-			let vote_call = <RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, new_vote);
+			let delegator_vote =
+				DelegatorVote::<T>::get(vtoken, derivative_index).ok_or(Error::<T>::NoData)?;
+			let vote_call =
+				<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, delegator_vote);
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
@@ -425,7 +425,7 @@ pub mod pallet {
 					}
 					PendingVotingInfo::<T>::insert(
 						query_id,
-						(vtoken, poll_index, derivative_index, who.clone(), vote),
+						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
 					)
 				},
 			)?;
@@ -618,25 +618,16 @@ pub mod pallet {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
 			let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 
-			if let Some((vtoken, poll_index, derivative_index, who, vote)) =
+			if let Some((vtoken, poll_index, derivative_index, who, maybe_old_vote)) =
 				PendingVotingInfo::<T>::take(query_id)
 			{
 				if !success {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
-					DelegatorVote::<T>::try_mutate_exists(
-						vtoken,
-						derivative_index,
-						|maybe_vote| {
-							if let Some(inner_vote) = maybe_vote {
-								inner_vote.checked_sub(vote).map_err(|_| Error::<T>::NoData)?;
-								Ok(())
-							} else {
-								Err(Error::<T>::NoData)
-							}
-						},
-					)?;
+					if let Some(old_vote) = maybe_old_vote {
+						Self::try_vote(&who, vtoken, poll_index, derivative_index, old_vote)?;
+					}
 				}
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
@@ -728,12 +719,14 @@ pub mod pallet {
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
+			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
-		) -> DispatchResult {
+		) -> Result<Option<AccountVote<BalanceOf<T>>>, DispatchError> {
 			ensure!(
 				vote.balance() <= T::MultiCurrency::total_balance(vtoken, who),
 				Error::<T>::InsufficientFunds
 			);
+			let mut old_vote = None;
 			Self::try_access_poll(vtoken, poll_index, |poll_status| {
 				let tally = poll_status.ensure_ongoing().ok_or(Error::<T>::NotOngoing)?;
 				VotingFor::<T>::try_mutate(who, |voting| {
@@ -742,19 +735,23 @@ pub mod pallet {
 							Ok(i) => {
 								// Shouldn't be possible to fail, but we handle it gracefully.
 								tally.remove(votes[i].1).ok_or(ArithmeticError::Underflow)?;
+								Self::try_sub_delegator_vote(vtoken, votes[i].2, votes[i].1)?;
+								old_vote = Some(votes[i].1);
 								if let Some(approve) = votes[i].1.as_standard() {
 									tally.reduce(approve, *delegations);
 								}
 								votes[i].1 = vote;
+								votes[i].2 = derivative_index;
 							},
 							Err(i) => {
 								votes
-									.try_insert(i, (poll_index, vote))
+									.try_insert(i, (poll_index, vote, derivative_index))
 									.map_err(|_| Error::<T>::MaxVotesReached)?;
 							},
 						}
 						// Shouldn't be possible to fail, but we handle it gracefully.
 						tally.add(vote).ok_or(ArithmeticError::Overflow)?;
+						Self::try_add_delegator_vote(vtoken, derivative_index, vote)?;
 						if let Some(approve) = vote.as_standard() {
 							tally.increase(approve, *delegations);
 						}
@@ -764,7 +761,7 @@ pub mod pallet {
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
 					Self::extend_lock(&who, vtoken, &poll_index, vote.balance())?;
-					Ok(())
+					Ok(old_vote)
 				})
 			})
 		}
@@ -795,6 +792,7 @@ pub mod pallet {
 							ensure!(matches!(scope, UnvoteScope::Any), Error::<T>::NoPermission);
 							// Shouldn't be possible to fail, but we handle it gracefully.
 							tally.remove(v.1).ok_or(ArithmeticError::Underflow)?;
+							Self::try_sub_delegator_vote(vtoken, v.2, v.1)?;
 							if let Some(approve) = v.1.as_standard() {
 								tally.reduce(approve, *delegations);
 							}
@@ -1071,6 +1069,38 @@ pub mod pallet {
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
+		}
+
+		fn try_add_delegator_vote(
+			vtoken: CurrencyIdOf<T>,
+			derivative_index: DerivativeIndex,
+			vote: AccountVote<BalanceOf<T>>,
+		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
+			DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
+				match maybe_vote {
+					Some(inner_vote) => {
+						inner_vote.checked_add(vote).map_err(|_| ArithmeticError::Overflow)?;
+						Ok(*inner_vote)
+					},
+					None => Err(Error::<T>::NoData.into()),
+				}
+			})
+		}
+
+		fn try_sub_delegator_vote(
+			vtoken: CurrencyIdOf<T>,
+			derivative_index: DerivativeIndex,
+			vote: AccountVote<BalanceOf<T>>,
+		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
+			DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
+				match maybe_vote {
+					Some(inner_vote) => {
+						inner_vote.checked_sub(vote).map_err(|_| ArithmeticError::Underflow)?;
+						Ok(*inner_vote)
+					},
+					None => Err(Error::<T>::NoData.into()),
+				}
+			})
 		}
 	}
 }
