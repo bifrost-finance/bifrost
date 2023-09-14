@@ -27,7 +27,7 @@ use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
+	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v3::prelude::*;
 
@@ -42,7 +42,7 @@ mod tests;
 pub use crate::{
 	currency::{
 		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
+		DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
 	},
 	traits::*,
 };
@@ -70,7 +70,9 @@ pub type VtokenMintPrice = u128;
 pub type Balance = u128;
 
 /// Price of an asset.
-pub type Price = u64;
+pub type Price = FixedU128;
+
+pub type PriceDetail = (Price, Timestamp);
 
 /// Precision of symbol.
 pub type Precision = u32;
@@ -136,6 +138,20 @@ pub type TrieIndex = u32;
 
 /// Distribution Id
 pub type DistributionId = u32;
+
+/// The fixed point number
+pub type Rate = FixedU128;
+
+/// The fixed point number, range from 0 to 1.
+pub type Ratio = Permill;
+
+pub type Liquidity = FixedU128;
+
+pub type Shortfall = FixedU128;
+
+pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
 pub type DerivativeIndex = u16;
 

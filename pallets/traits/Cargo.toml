@@ -1,0 +1,60 @@
+[package]
+authors = ["Parallel Team", "Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+name = "pallet-traits"
+version = "0.8.0"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+log = { version = "0.4.17", default-features = false }
+num-bigint = { version = '0.4.3', default-features = false }
+num-traits = { version = '0.2.15', default-features = false }
+impl-trait-for-tuples = "0.2.2"
+primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+scale-info = { version = "2.3.1", default-features = false, features = [
+	"derive",
+] }
+serde = { version = "1.0.160", features = ['derive'], optional = true }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, features = [
+	'std',
+] }
+
+[features]
+default = ['std']
+std = [
+	'serde',
+	'codec/std',
+	'frame-support/std',
+	'frame-system/std',
+	'sp-runtime/std',
+	'scale-info/std',
+	'sp-std/std',
+	'primitives/std',
+	'num-bigint/std',
+	'num-traits/std',
+	'sp-core/std',
+	'xcm-executor/std',
+	'xcm/std',
+	'xcm-builder/std',
+]
+
+try-runtime = ['frame-support/try-runtime']
+
+[lib]
+doctest = false
