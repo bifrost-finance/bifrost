@@ -1533,6 +1533,23 @@ impl lend_market::Config for Runtime {
 	type LiquidationFreeAssetId = RelayCurrencyId;
 }
 
+parameter_types! {
+	pub const OracleMaxMembers: u32 = 100;
+}
+
+impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxMembers = OracleMaxMembers;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1716,6 +1733,7 @@ construct_runtime! {
 		LendMarket: lend_market::{Pallet, Call, Storage, Event<T>} = 131,
 		Prices: pallet_prices::{Pallet, Call, Storage, Event<T>} = 132,
 		Oracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>} = 133,
+		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
 	}
 }
 
