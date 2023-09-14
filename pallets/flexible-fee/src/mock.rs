@@ -22,6 +22,7 @@ use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use balances::Call as BalancesCall;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_vtoken_voting::AccountVote;
 use cumulus_primitives_core::ParaId as Pid;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
@@ -35,14 +36,20 @@ use frame_support::{
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{Balance, CurrencyId, ExtraFeeInfo, MessageId, ParaId, TokenSymbol};
+use node_primitives::{
+	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
+	ParaId, TokenSymbol, VKSM,
+};
 use orml_traits::MultiCurrency;
+use pallet_xcm::EnsureResponse;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
 	generic,
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	traits::{
+		AccountIdConversion, BlakeTwo256, BlockNumberProvider, IdentityLookup, UniqueSaturatedInto,
+	},
 	AccountId32, SaturatedConversion,
 };
 use std::convert::TryInto;
@@ -80,6 +87,7 @@ frame_support::construct_runtime!(
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -88,6 +96,13 @@ pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeC
 
 pub(crate) const SALP_CONTRIBUTE_CALL: <Test as frame_system::Config>::RuntimeCall =
 	RuntimeCall::Salp(bifrost_salp::Call::contribute { index: 2001, value: 1_000_000_000_000 });
+
+pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
+		vtoken: VKSM,
+		poll_index: 1u32,
+		vote: AccountVote::Split { aye: 1, nay: 1 },
+	});
 
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -237,6 +252,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::SalpContribute,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+				},
 			_ => ExtraFeeInfo::default(),
 		}
 	}
@@ -530,3 +550,71 @@ impl pallet_xcm::Config for Test {
 }
 
 //************** Salp mock end *****************
+
+// ************** VtokenVoting mock start *****************
+impl bifrost_vtoken_voting::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type MaxVotes = ConstU32<256>;
+	type ParachainId = ParaInfo;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = ();
+}
+
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
+	fn check_derivative_index_exists(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> bool {
+		true
+	}
+
+	fn get_multilocation(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Some(Parent.into())
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index)
+			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
+	}
+}
+
+parameter_types! {
+	pub static RelaychainBlockNumber: BlockNumber = 1;
+}
+
+pub struct RelaychainDataProvider;
+
+impl RelaychainDataProvider {
+	pub fn set_block_number(block: BlockNumber) {
+		RelaychainBlockNumber::set(block);
+	}
+}
+
+impl BlockNumberProvider for RelaychainDataProvider {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		RelaychainBlockNumber::get()
+	}
+}
+
+ord_parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+// ************** VtokenVoting mock end *****************
