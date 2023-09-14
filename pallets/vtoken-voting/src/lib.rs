@@ -335,8 +335,9 @@ pub mod pallet {
 				T::RelaychainBlockNumberProvider::current_block_number();
 
 			weight += T::DbWeight::get().reads(1);
-			ReferendumTimeout::<T>::take(relay_current_block_number).iter().for_each(
-				|(vtoken, poll_index)| {
+			let timeout = ReferendumTimeout::<T>::get(relay_current_block_number);
+			if !timeout.is_empty() {
+				timeout.iter().for_each(|(vtoken, poll_index)| {
 					ReferendumInfoFor::<T>::mutate(
 						vtoken,
 						poll_index,
@@ -351,8 +352,10 @@ pub mod pallet {
 						},
 					);
 					weight += T::DbWeight::get().reads_writes(1, 1);
-				},
-			);
+				});
+				weight += T::DbWeight::get().reads_writes(1, 1);
+				ReferendumTimeout::<T>::remove(relay_current_block_number.clone());
+			}
 
 			weight
 		}
@@ -712,8 +715,8 @@ pub mod pallet {
 							}
 						},
 					)?;
-					PendingRemoveDelegatorVote::<T>::remove(query_id);
 				}
+				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
 					vtoken,
 					poll_index,
