@@ -39,7 +39,9 @@ bifrost-currencies = { path = "../currencies", default-features = false }
 
 [features]
 default = ['std']
-runtime-benchmarks = ['frame-benchmarking']
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+]
 std = [
 	'codec/std',
 	'frame-support/std',
