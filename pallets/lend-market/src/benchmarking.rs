@@ -55,109 +55,23 @@ const INITIAL_AMOUNT: u32 = 500_000_000;
 
 fn transfer_initial_balance<
 	T: Config
-		// + pallet_assets::Config<AssetId = CurrencyId, Balance = Balance>
 		+ pallet_prices::Config
 		+ pallet_balances::Config<Balance = Balance>,
 >(
 	caller: T::AccountId,
 ) {
 	let account_id = T::Lookup::unlookup(caller.clone());
-	// pallet_assets::Pallet::<T>::force_create(
-	// 	SystemOrigin::Root.into(),
-	// 	KSM.into(),
-	// 	account_id.clone(),
-	// 	true,
-	// 	1,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_create(
-	// 	SystemOrigin::Root.into(),
-	// 	VKSM.into(),
-	// 	account_id.clone(),
-	// 	true,
-	// 	1,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_create(
-	// 	SystemOrigin::Root.into(),
-	// 	DOT.into(),
-	// 	account_id.clone(),
-	// 	true,
-	// 	1,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_create(
-	// 	SystemOrigin::Root.into(),
-	// 	PHA.into(),
-	// 	account_id.clone(),
-	// 	true,
-	// 	1,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_create(
-	// 	SystemOrigin::Root.into(),
-	// 	DOT_U.into(),
-	// 	account_id.clone(),
-	// 	true,
-	// 	1,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_set_metadata(
-	// 	SystemOrigin::Root.into(),
-	// 	KSM.into(),
-	// 	b"kusama".to_vec(),
-	// 	b"KSM".to_vec(),
-	// 	12,
-	// 	true,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_set_metadata(
-	// 	SystemOrigin::Root.into(),
-	// 	VKSM.into(),
-	// 	b"xkusama".to_vec(),
-	// 	b"sKSM".to_vec(),
-	// 	12,
-	// 	true,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_set_metadata(
-	// 	SystemOrigin::Root.into(),
-	// 	DOT.into(),
-	// 	b"polkadot".to_vec(),
-	// 	b"DOT".to_vec(),
-	// 	12,
-	// 	true,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_set_metadata(
-	// 	SystemOrigin::Root.into(),
-	// 	PHA.into(),
-	// 	b"cDot_6_13".to_vec(),
-	// 	b"cDot_6_13".to_vec(),
-	// 	12,
-	// 	true,
-	// )
-	// .ok();
-	// pallet_assets::Pallet::<T>::force_set_metadata(
-	// 	SystemOrigin::Root.into(),
-	// 	DOT_U.into(),
-	// 	b"tether".to_vec(),
-	// 	b"USDT".to_vec(),
-	// 	6,
-	// 	true,
-	// )
-	// .ok();
 	pallet_balances::Pallet::<T>::force_set_balance(
 		SystemOrigin::Root.into(),
 		account_id,
 		10_000_000_000_000_u128,
 	)
 	.unwrap();
-	// <T as pallet::Config>::Assets::mint_into(DOT_U, &caller, INITIAL_AMOUNT.into()).unwrap();
-	// <T as pallet::Config>::Assets::mint_into(KSM, &caller, INITIAL_AMOUNT.into()).unwrap();
-	// <T as pallet::Config>::Assets::mint_into(VKSM, &caller, INITIAL_AMOUNT.into()).unwrap();
-	// <T as pallet::Config>::Assets::mint_into(DOT, &caller, INITIAL_AMOUNT.into()).unwrap();
-	// <T as pallet::Config>::Assets::mint_into(PHA, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(DOT_U, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(KSM, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(VKSM, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(DOT, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(PHA, &caller, INITIAL_AMOUNT.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT_U, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
@@ -176,8 +90,8 @@ fn set_account_borrows<T: Config>(
 		BorrowSnapshot { principal: borrow_balance, borrow_index: Rate::one() },
 	);
 	TotalBorrows::<T>::insert(asset_id, borrow_balance);
-	// T::Assets::burn_from(asset_id, &who, borrow_balance, Precision::Exact, Fortitude::Force)
-	// 	.unwrap();
+	T::Assets::burn_from(asset_id, &who, borrow_balance, Precision::Exact, Fortitude::Force)
+		.unwrap();
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
@@ -235,6 +149,8 @@ benchmarks! {
 
 	force_update_market {
 		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		let caller: T::AccountId = whitelisted_caller();
+		transfer_initial_balance::<T>(caller.clone());
 	}: _(SystemOrigin::Root,DOT_U, pending_market_mock::<T>(LUSDT))
 	verify {
 		assert_last_event::<T>(Event::<T>::UpdatedMarket(DOT_U, pending_market_mock::<T>(LUSDT)).into());

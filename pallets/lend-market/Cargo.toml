@@ -29,6 +29,7 @@ serde = { version = "1.0.160", features = ['derive'], optional = true }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false}
 
 [dev-dependencies]
 orml-oracle = "0.4.1-dev"
@@ -41,6 +42,7 @@ bifrost-currencies = { path = "../currencies", default-features = false }
 default = ['std']
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
 ]
 std = [
 	'codec/std',
@@ -61,6 +63,7 @@ std = [
 	'num-traits/std',
 	'pallet-traits/std',
 	"bifrost-asset-registry/std",
+	"xcm-builder/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 
