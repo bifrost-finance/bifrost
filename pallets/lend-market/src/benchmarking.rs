@@ -1,16 +1,19 @@
 //! LendMarket pallet benchmarking.
 
 #![cfg(feature = "runtime-benchmarks")]
-use super::*;
-use crate::{AccountBorrows, Pallet as LendMarket};
-
+pub use crate::{AccountBorrows, Pallet as LendMarket, *};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::assert_ok;
+use frame_support::{
+	assert_ok,
+	traits::tokens::{Fortitude, Precision},
+};
 use frame_system::{self, RawOrigin as SystemOrigin};
-use node_primitives::{Balance, CurrencyId, DOT, KSM, USDT};
+use node_primitives::{currency::PHA, Balance, CurrencyId, DOT, DOT_U, KSM, VKSM, VSKSM};
 use rate_model::{InterestRateModel, JumpModel};
 use sp_std::prelude::*;
 
+pub const LKSM: CurrencyId = CurrencyId::Token2(11);
+pub const LUSDT: CurrencyId = CurrencyId::Token2(12);
 const SEED: u32 = 0;
 
 const RATE_MODEL_MOCK: InterestRateModel = InterestRateModel::Jump(JumpModel {
@@ -37,7 +40,7 @@ fn market_mock<T: Config>() -> Market<BalanceOf<T>> {
 		liquidate_incentive_reserved_factor: Ratio::from_percent(3),
 		supply_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
 		borrow_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
-		lend_token_id: 1200,
+		lend_token_id: LKSM,
 	}
 }
 
@@ -51,112 +54,23 @@ fn pending_market_mock<T: Config>(lend_token_id: CurrencyId) -> Market<BalanceOf
 const INITIAL_AMOUNT: u32 = 500_000_000;
 
 fn transfer_initial_balance<
-	T: Config
-		+ pallet_assets::Config<AssetId = CurrencyId, Balance = Balance>
-		+ pallet_prices::Config
-		+ pallet_balances::Config<Balance = Balance>,
+	T: Config + pallet_prices::Config + pallet_balances::Config<Balance = Balance>,
 >(
 	caller: T::AccountId,
 ) {
 	let account_id = T::Lookup::unlookup(caller.clone());
-	pallet_assets::Pallet::<T>::force_create(
-		SystemOrigin::Root.into(),
-		KSM.into(),
-		account_id.clone(),
-		true,
-		1,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_create(
-		SystemOrigin::Root.into(),
-		VKSM.into(),
-		account_id.clone(),
-		true,
-		1,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_create(
-		SystemOrigin::Root.into(),
-		DOT.into(),
-		account_id.clone(),
-		true,
-		1,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_create(
-		SystemOrigin::Root.into(),
-		PHA.into(),
-		account_id.clone(),
-		true,
-		1,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_create(
-		SystemOrigin::Root.into(),
-		USDT.into(),
-		account_id.clone(),
-		true,
-		1,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_set_metadata(
-		SystemOrigin::Root.into(),
-		KSM.into(),
-		b"kusama".to_vec(),
-		b"KSM".to_vec(),
-		12,
-		true,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_set_metadata(
-		SystemOrigin::Root.into(),
-		VKSM.into(),
-		b"xkusama".to_vec(),
-		b"sKSM".to_vec(),
-		12,
-		true,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_set_metadata(
-		SystemOrigin::Root.into(),
-		DOT.into(),
-		b"polkadot".to_vec(),
-		b"DOT".to_vec(),
-		12,
-		true,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_set_metadata(
-		SystemOrigin::Root.into(),
-		PHA.into(),
-		b"cDot_6_13".to_vec(),
-		b"cDot_6_13".to_vec(),
-		12,
-		true,
-	)
-	.ok();
-	pallet_assets::Pallet::<T>::force_set_metadata(
-		SystemOrigin::Root.into(),
-		USDT.into(),
-		b"tether".to_vec(),
-		b"USDT".to_vec(),
-		6,
-		true,
-	)
-	.ok();
-	pallet_balances::Pallet::<T>::set_balance(
+	pallet_balances::Pallet::<T>::force_set_balance(
 		SystemOrigin::Root.into(),
 		account_id,
 		10_000_000_000_000_u128,
-		0_u128,
 	)
 	.unwrap();
-	<T as pallet::Config>::Assets::mint_into(USDT, &caller, INITIAL_AMOUNT.into()).unwrap();
+	<T as pallet::Config>::Assets::mint_into(DOT_U, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(KSM, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(VKSM, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(DOT, &caller, INITIAL_AMOUNT.into()).unwrap();
 	<T as pallet::Config>::Assets::mint_into(PHA, &caller, INITIAL_AMOUNT.into()).unwrap();
-	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), USDT, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT_U, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT, 1.into()).unwrap();
@@ -174,7 +88,8 @@ fn set_account_borrows<T: Config>(
 		BorrowSnapshot { principal: borrow_balance, borrow_index: Rate::one() },
 	);
 	TotalBorrows::<T>::insert(asset_id, borrow_balance);
-	T::Assets::burn_from(asset_id, &who, borrow_balance).unwrap();
+	T::Assets::burn_from(asset_id, &who, borrow_balance, Precision::Exact, Fortitude::Force)
+		.unwrap();
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
@@ -184,7 +99,7 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 benchmarks! {
 	where_clause {
 		where
-			T: pallet_assets::Config<AssetId = CurrencyId, Balance = Balance> + pallet_prices::Config + pallet_balances::Config<Balance = Balance>
+			T: pallet_prices::Config + pallet_balances::Config<Balance = Balance> // pallet_assets::Config<AssetId = CurrencyId, Balance = Balance> +
 	}
 
 	add_market {
@@ -201,12 +116,12 @@ benchmarks! {
 	}
 
 	update_rate_model {
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-	}: _(SystemOrigin::Root, USDT, RATE_MODEL_MOCK)
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+	}: _(SystemOrigin::Root, DOT_U, RATE_MODEL_MOCK)
 	verify {
 		let mut market = pending_market_mock::<T>(LUSDT);
 		market.rate_model = RATE_MODEL_MOCK;
-		assert_last_event::<T>(Event::<T>::UpdatedMarket(USDT, market).into());
+		assert_last_event::<T>(Event::<T>::UpdatedMarket(DOT_U, market).into());
 	}
 
 	update_market {
@@ -231,10 +146,12 @@ benchmarks! {
 	}
 
 	force_update_market {
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-	}: _(SystemOrigin::Root,USDT, pending_market_mock::<T>(LUSDT))
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		let caller: T::AccountId = whitelisted_caller();
+		transfer_initial_balance::<T>(caller.clone());
+	}: _(SystemOrigin::Root,DOT_U, pending_market_mock::<T>(LUSDT))
 	verify {
-		assert_last_event::<T>(Event::<T>::UpdatedMarket(USDT, pending_market_mock::<T>(LUSDT)).into());
+		assert_last_event::<T>(Event::<T>::UpdatedMarket(DOT_U, pending_market_mock::<T>(LUSDT)).into());
 	}
 
 	add_reward {
@@ -256,21 +173,21 @@ benchmarks! {
 	}
 
 	update_market_reward_speed {
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(USDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-	}: _(SystemOrigin::Root, USDT, Some(1_000_000), Some(1_000_000))
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(DOT_U)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+	}: _(SystemOrigin::Root, DOT_U, Some(1_000_000), Some(1_000_000))
 	verify {
-		assert_last_event::<T>(Event::<T>::MarketRewardSpeedUpdated(USDT, 1_000_000, 1_000_000).into());
+		assert_last_event::<T>(Event::<T>::MarketRewardSpeedUpdated(DOT_U, 1_000_000, 1_000_000).into());
 	}
 
 	claim_reward {
 		let caller: T::AccountId = whitelisted_caller();
 		transfer_initial_balance::<T>(caller.clone());
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(USDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, 100_000_000));
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(DOT_U)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, 100_000_000));
 		assert_ok!(LendMarket::<T>::add_reward(SystemOrigin::Signed(caller.clone()).into(), 1_000_000_000_000_u128));
-		assert_ok!(LendMarket::<T>::update_market_reward_speed(SystemOrigin::Root.into(), USDT, Some(1_000_000), Some(1_000_000)));
+		assert_ok!(LendMarket::<T>::update_market_reward_speed(SystemOrigin::Root.into(), DOT_U, Some(1_000_000), Some(1_000_000)));
 		let target_height = frame_system::Pallet::<T>::block_number().saturating_add(One::one());
 		frame_system::Pallet::<T>::set_block_number(target_height);
 	}: _(SystemOrigin::Signed(caller.clone()))
@@ -281,14 +198,14 @@ benchmarks! {
 	claim_reward_for_market {
 		let caller: T::AccountId = whitelisted_caller();
 		transfer_initial_balance::<T>(caller.clone());
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(USDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, 100_000_000));
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(DOT_U)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, 100_000_000));
 		assert_ok!(LendMarket::<T>::add_reward(SystemOrigin::Signed(caller.clone()).into(), 1_000_000_000_000_u128));
-		assert_ok!(LendMarket::<T>::update_market_reward_speed(SystemOrigin::Root.into(), USDT, Some(1_000_000), Some(1_000_000)));
+		assert_ok!(LendMarket::<T>::update_market_reward_speed(SystemOrigin::Root.into(), DOT_U, Some(1_000_000), Some(1_000_000)));
 		let target_height = frame_system::Pallet::<T>::block_number().saturating_add(One::one());
 		frame_system::Pallet::<T>::set_block_number(target_height);
-	}: _(SystemOrigin::Signed(caller.clone()), USDT)
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U)
 	verify {
 		assert_last_event::<T>(Event::<T>::RewardPaid(caller, 1_000_000).into());
 	}
@@ -297,12 +214,12 @@ benchmarks! {
 	mint {
 		let caller: T::AccountId = whitelisted_caller();
 		transfer_initial_balance::<T>(caller.clone());
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(USDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(DOT_U)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
 		let amount: u32 = 100_000;
-	}: _(SystemOrigin::Signed(caller.clone()), USDT, amount.into())
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U, amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::Deposited(caller, USDT, amount.into()).into());
+		assert_last_event::<T>(Event::<T>::Deposited(caller, DOT_U, amount.into()).into());
 	}
 
 	borrow {
@@ -310,13 +227,13 @@ benchmarks! {
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), USDT, true));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT, borrowed_amount.into())
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), DOT_U, true));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U, borrowed_amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::Borrowed(caller, USDT, borrowed_amount.into()).into());
+		assert_last_event::<T>(Event::<T>::Borrowed(caller, DOT_U, borrowed_amount.into()).into());
 	}
 
 	redeem {
@@ -324,24 +241,24 @@ benchmarks! {
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 100_000_000;
 		let redeem_amount: u32 = 100_000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT, redeem_amount.into())
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U, redeem_amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::Redeemed(caller, USDT, redeem_amount.into()).into());
+		assert_last_event::<T>(Event::<T>::Redeemed(caller, DOT_U, redeem_amount.into()).into());
 	}
 
 	redeem_all {
 		let caller: T::AccountId = whitelisted_caller();
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 100_000_000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT)
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U)
 	verify {
-		assert_last_event::<T>(Event::<T>::Redeemed(caller, USDT, deposit_amount.into()).into());
+		assert_last_event::<T>(Event::<T>::Redeemed(caller, DOT_U, deposit_amount.into()).into());
 	}
 
 	repay_borrow {
@@ -350,14 +267,14 @@ benchmarks! {
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
 		let repay_amount: u32 = 100;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), USDT, true));
-		assert_ok!(LendMarket::<T>::borrow(SystemOrigin::Signed(caller.clone()).into(), USDT, borrowed_amount.into()));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT, repay_amount.into())
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), DOT_U, true));
+		assert_ok!(LendMarket::<T>::borrow(SystemOrigin::Signed(caller.clone()).into(), DOT_U, borrowed_amount.into()));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U, repay_amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::RepaidBorrow(caller, USDT, repay_amount.into()).into());
+		assert_last_event::<T>(Event::<T>::RepaidBorrow(caller, DOT_U, repay_amount.into()).into());
 	}
 
 	repay_borrow_all {
@@ -365,26 +282,26 @@ benchmarks! {
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), USDT, true));
-		assert_ok!(LendMarket::<T>::borrow(SystemOrigin::Signed(caller.clone()).into(), USDT, borrowed_amount.into()));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT)
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), DOT_U, true));
+		assert_ok!(LendMarket::<T>::borrow(SystemOrigin::Signed(caller.clone()).into(), DOT_U, borrowed_amount.into()));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U)
 	verify {
-		assert_last_event::<T>(Event::<T>::RepaidBorrow(caller, USDT, borrowed_amount.into()).into());
+		assert_last_event::<T>(Event::<T>::RepaidBorrow(caller, DOT_U, borrowed_amount.into()).into());
 	}
 
 	collateral_asset {
 		let caller: T::AccountId = whitelisted_caller();
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 200_000_000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), USDT, deposit_amount.into()));
-	}: _(SystemOrigin::Signed(caller.clone()), USDT, true)
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
+	}: _(SystemOrigin::Signed(caller.clone()), DOT_U, true)
 	verify {
-		assert_last_event::<T>(Event::<T>::CollateralAssetAdded(caller, USDT).into());
+		assert_last_event::<T>(Event::<T>::CollateralAssetAdded(caller, DOT_U).into());
 	}
 
 	liquidate_borrow {
@@ -414,11 +331,11 @@ benchmarks! {
 		let payer = T::Lookup::unlookup(caller.clone());
 		transfer_initial_balance::<T>(caller.clone());
 		let amount: u32 = 2000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-	}: _(SystemOrigin::Root, payer, USDT, amount.into())
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+	}: _(SystemOrigin::Root, payer, DOT_U, amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::ReservesAdded(caller, USDT, amount.into(), amount.into()).into());
+		assert_last_event::<T>(Event::<T>::ReservesAdded(caller, DOT_U, amount.into(), amount.into()).into());
 	}
 
 	reduce_reserves {
@@ -427,12 +344,12 @@ benchmarks! {
 		transfer_initial_balance::<T>(caller.clone());
 		let add_amount: u32 = 2000;
 		let reduce_amount: u32 = 1000;
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), USDT, pending_market_mock::<T>(LUSDT)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), USDT));
-		assert_ok!(LendMarket::<T>::add_reserves(SystemOrigin::Root.into(), payer.clone(), USDT, add_amount.into()));
-	}: _(SystemOrigin::Root, payer, USDT, reduce_amount.into())
+		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
+		assert_ok!(LendMarket::<T>::add_reserves(SystemOrigin::Root.into(), payer.clone(), DOT_U, add_amount.into()));
+	}: _(SystemOrigin::Root, payer, DOT_U, reduce_amount.into())
 	verify {
-		assert_last_event::<T>(Event::<T>::ReservesReduced(caller, USDT, reduce_amount.into(), (add_amount-reduce_amount).into()).into());
+		assert_last_event::<T>(Event::<T>::ReservesReduced(caller, DOT_U, reduce_amount.into(), (add_amount-reduce_amount).into()).into());
 	}
 
 	update_liquidation_free_collateral {

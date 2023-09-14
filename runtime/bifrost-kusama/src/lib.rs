@@ -2079,6 +2079,7 @@ mod benches {
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
 		[bifrost_vtoken_voting, VtokenVoting]
+		[lend_market, LendMarket]
 	);
 }
 
