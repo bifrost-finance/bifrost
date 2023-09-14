@@ -2017,7 +2017,7 @@ impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade
 			if let Some(old_metadata) =
 				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
 			{
-				log::info!("Old currency_metadatas is {:?}", old_metadata);
+				log::info!("Old currency_metadatas name is {:?}", old_metadata.name);
 			}
 		}
 
@@ -2046,7 +2046,9 @@ impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade
 			if let Some(new_metadata) =
 				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
 			{
-				log::info!("New currency_metadatas is {:?}", new_metadata);
+				let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
+				assert_eq!(new_metadata.symbol, symbol);
+				log::info!("New currency_metadatas name is {:?}", new_metadata.name);
 			}
 		}
 
