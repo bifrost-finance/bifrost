@@ -30,13 +30,14 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-stable-pool = { path = "../stable-pool", default-features = false }
+nutsfinance-stable-asset = { path = "../stable-asset" , default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 pallet-balances = { version = "4.0.0-dev",  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 bifrost-vtoken-minting = { path = "../vtoken-minting" }
 bifrost-slp = { path = "../slp" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-orml-tokens = "0.4.1-dev"
 bifrost-currencies = { workspace = true }
 xcm-executor  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 pallet-xcm  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
@@ -69,7 +70,7 @@ std = [
 	"sp-runtime/std",
 	"bifrost-asset-registry/std",
 	"bifrost-stable-pool/std",
-#	"nutsfinance-stable-asset/std",
+	"nutsfinance-stable-asset/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

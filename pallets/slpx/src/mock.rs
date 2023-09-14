@@ -24,7 +24,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::*,
-	parameter_types, sp_io,
+	parameter_types,
 	traits::{Everything, Nothing},
 	PalletId,
 };
@@ -60,7 +60,6 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -95,6 +94,8 @@ construct_runtime!(
 	Slpx: slpx,
 	  PolkadotXcm: pallet_xcm,
 	  ParachainInfo: parachain_info,
+	  StableAsset: nutsfinance_stable_asset,
+	  StablePool: bifrost_stable_pool
   }
 );
 
@@ -363,18 +364,12 @@ parameter_types! {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::*;
-		use TokenSymbol::*;
-
 		AssetIdMaps::<Test>::get_multi_location(id)
 	}
 }
 
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::*;
-		use TokenSymbol::*;
-
 		AssetIdMaps::<Test>::get_currency_id(location)
 	}
 }
@@ -532,6 +527,43 @@ impl pallet_xcm::Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
+pub struct EnsurePoolAssetId;
+impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+	fn validate(_: CurrencyId) -> bool {
+		true
+	}
+}
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
+
+impl nutsfinance_stable_asset::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type AssetId = CurrencyId;
+	type Balance = Balance;
+	type Assets = Tokens;
+	type PalletId = StableAssetPalletId;
+	type AtLeast64BitUnsigned = u128;
+	type FeePrecision = ConstU128<10_000_000_000>;
+	type APrecision = ConstU128<100>;
+	type PoolAssetLimit = ConstU32<5>;
+	type SwapExactOverAmount = ConstU128<100>;
+	type WeightInfo = ();
+	type ListingOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type EnsurePoolAssetId = EnsurePoolAssetId;
+}
+
+impl bifrost_stable_pool::Config for Test {
+	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Tokens;
+	type StableAsset = StableAsset;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
+}
+
 // Pallet slpx configuration
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
@@ -543,7 +575,7 @@ impl slpx::Config for Test {
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
-	type StablePoolHandler = ();
+	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
@@ -551,19 +583,7 @@ impl slpx::Config for Test {
 	type WeightInfo = ();
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	pallet_balances::GenesisConfig::<Test> { balances: vec![(ALICE, 10), (BOB, 20)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-	// orml_tokens::GenesisConfig::<Runtime> {
-	// 	balances: vec![(1, VKSM, 10), (2, VKSM, 20), (3, VKSM, 30), (4, VKSM, 40), (5, VKSM, 50)],
-	// }
-	// 	.assimilate_storage(&mut t)
-	// 	.unwrap();
-
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+#[cfg(feature = "runtime-benchmarks")]
+pub fn new_test_ext() -> frame_support::sp_io::TestExternalities {
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

@@ -36,8 +36,8 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use node_primitives::{
 	currency::{BNC, KSM, VKSM},
-	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmDestWeightAndFeeHandler,
-	XcmOperationType,
+	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
+	XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
@@ -49,7 +49,7 @@ use sp_runtime::{
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
 use xcm_builder::FixedWeightBounds;
-use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use xcm_executor::traits::ShouldExecute;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;

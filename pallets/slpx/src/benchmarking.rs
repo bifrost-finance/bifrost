@@ -18,17 +18,45 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::*;
+use bifrost_asset_registry::CurrencyIdToLocations;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, KSM};
 
-#[benchmarks(where T: bifrost_asset_registry::Config)]
+fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId, H160) {
+	let caller: T::AccountId = whitelisted_caller();
+	assert_ok!(Pallet::<T>::add_whitelist(
+		RawOrigin::Root.into(),
+		SupportChain::Astar,
+		caller.clone()
+	));
+	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+	let receiver = H160::from(addr);
+	let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
+	assert_ok!(<T as Config>::MultiCurrency::deposit(
+		KSM,
+		&evm_caller_account_id,
+		BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+	));
+
+	assert_ok!(<T as Config>::MultiCurrency::deposit(
+		VKSM,
+		&evm_caller_account_id,
+		BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+	));
+
+	CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
+	CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+
+	(caller, receiver)
+}
+
+#[benchmarks(where  T: Config + bifrost_asset_registry::Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
 mod benchmarks {
 	use super::*;
-	use bifrost_asset_registry::CurrencyIdToLocations;
+	use bifrost_stable_pool::AtLeast64BitUnsignedOf;
 	use frame_benchmarking::impl_benchmark_test_suite;
-	use node_primitives::KSM;
 
 	#[benchmark]
 	fn add_whitelist() {
@@ -71,23 +99,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn mint() {
-		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(Pallet::<T>::add_whitelist(
-			RawOrigin::Root.into(),
-			SupportChain::Astar,
-			caller.clone()
-		));
-		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let receiver = H160::from(addr);
-		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
-		<T as pallet::Config>::MultiCurrency::deposit(
-			KSM,
-			&evm_caller_account_id,
-			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
-		)
-		.unwrap();
-
-		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+		let (caller, receiver) = init_whitelist::<T>();
 
 		#[extrinsic_call]
 		_(
@@ -100,58 +112,73 @@ mod benchmarks {
 	}
 
 	#[benchmark]
+	fn redeem() {
+		let (caller, receiver) = init_whitelist::<T>();
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), receiver, VKSM, TargetChain::Astar(receiver));
+	}
+
+	#[benchmark]
 	fn zenlink_swap() {
-		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(Pallet::<T>::add_whitelist(
-			RawOrigin::Root.into(),
-			SupportChain::Astar,
-			caller.clone()
-		));
-		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let receiver = H160::from(addr);
-		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
-		<T as pallet::Config>::MultiCurrency::deposit(
-			KSM,
-			&evm_caller_account_id,
-			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
-		)
-		.unwrap();
-
-		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
-		CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
-
+		let (caller, receiver) = init_whitelist::<T>();
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller), receiver, KSM, VKSM, 0u128, TargetChain::Astar(receiver));
 	}
 
 	#[benchmark]
 	fn stable_pool_swap() {
-		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(Pallet::<T>::add_whitelist(
-			RawOrigin::Root.into(),
-			SupportChain::Astar,
-			caller.clone()
-		));
-		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let receiver = H160::from(addr);
-		let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
-		<T as pallet::Config>::MultiCurrency::deposit(
-			KSM,
-			&evm_caller_account_id,
-			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
-		)
-		.unwrap();
+		let (caller, receiver) = init_whitelist::<T>();
 
-		CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
-		CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
+			RawOrigin::Root.into(),
+			vec![KSM.into(), VKSM.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			whitelisted_caller(),
+			whitelisted_caller(),
+			1000000000000u128.into()
+		));
+
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::edit_token_rate(
+			RawOrigin::Root.into(),
+			0,
+			vec![
+				(VKSM.into(), (1u128.into(), 1u128.into())),
+				(KSM.into(), (10u128.into(), 30u128.into()))
+			]
+		));
+
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
+			KSM,
+			&caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128)
+		));
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
+			VKSM,
+			&caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128)
+		));
+
+		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
+		let amounts: <T as nutsfinance_stable_asset::pallet::Config>::Balance = amounts1.into();
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(
+			RawOrigin::Signed(caller.clone()).into(),
+			0,
+			vec![amounts, amounts],
+			amounts
+		));
 
 		#[extrinsic_call]
-		Pallet::<T>::zenlink_swap(
+		_(
 			RawOrigin::Signed(caller),
 			receiver,
+			0u32,
 			KSM,
 			VKSM,
-			0u128,
+			BalanceOf::<T>::unique_saturated_from(10000000000u128),
 			TargetChain::Astar(receiver),
 		);
 	}

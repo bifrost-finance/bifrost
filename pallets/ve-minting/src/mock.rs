@@ -275,7 +275,7 @@ parameter_types! {
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
@@ -480,13 +480,6 @@ impl ExtBuilder {
 			(CHARLIE, BNC, 1_000_000_000_000),
 			(CHARLIE, vBNC, 1_000_000_000_000_000),
 		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

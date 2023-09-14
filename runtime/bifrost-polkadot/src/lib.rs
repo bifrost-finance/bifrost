@@ -1696,15 +1696,7 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-	define_benchmarks!(
-		[pallet_vesting, Vesting]
-		[bifrost_call_switchgear, CallSwitchgear]
-		[bifrost_vtoken_minting, VtokenMinting]
-		[bifrost_slp, Slp]
-		[bifrost_ve_minting, VeMinting]
-		[bifrost_slpx, Slpx]
-		[bifrost_vtoken_voting, VtokenVoting]
-	);
+	define_benchmarks!([bifrost_ve_minting, VeMinting]);
 }
 
 impl_runtime_apis! {

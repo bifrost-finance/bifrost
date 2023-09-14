@@ -32,8 +32,8 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use node_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, ParaId, SlpOperator, SlpxOperator,
-	TokenSymbol, TokenSymbol::*, VKSM,
+	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
+	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_arithmetic::Percent;
@@ -41,7 +41,7 @@ use sp_core::{ConstU32, H256};
 pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
-	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	traits::{BlakeTwo256, Convert, IdentityLookup, UniqueSaturatedInto},
 };
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
@@ -81,6 +81,7 @@ construct_runtime!(
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -488,6 +489,7 @@ parameter_types! {
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
 
 pub struct XcmConfig;
@@ -546,6 +548,27 @@ impl pallet_xcm::Config for Test {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+}
+
+pub struct BifrostAccountIdToMultiLocation;
+impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
+	fn convert(account: AccountId) -> MultiLocation {
+		X1(AccountId32 { network: None, id: account.into() }).into()
+	}
+}
+
+impl xcm_interface::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type MultiCurrency = Currencies;
+	type RelayNetwork = RelayNetwork;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type ParachainSovereignAccount = TreasuryAccount;
+	type XcmExecutor = DoNothingExecuteXcm;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type SalpHelper = Salp;
+	type ParachainId = ParaInfo;
+	type CallBackTimeOut = ConstU32<10>;
 }
 
 pub struct ParaInfo;

@@ -1317,6 +1317,7 @@ dependencies = [
  "frame-system",
  "hex-literal 0.3.4",
  "node-primitives",
+ "nutsfinance-stable-asset",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",

@@ -48,11 +48,10 @@ macro_rules! use_relay {
 
 pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-pub(crate) type CurrencyIdOf<T> =
+pub type CurrencyIdOf<T> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
 
-pub(crate) type BalanceOf<T> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {

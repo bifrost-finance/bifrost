@@ -80,7 +80,7 @@ pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::Runtime
 #[benchmarks(where T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config)]
 mod benchmarks {
 	use super::*;
-	use crate::primitives::PhalaLedger;
+	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
 	use frame_benchmarking::impl_benchmark_test_suite;
 	use node_primitives::VKSM;
 	use sp_arithmetic::traits::SaturatedConversion;
@@ -856,6 +856,19 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1]
 		));
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
+			1u64,
+			(
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: KSM,
+						delegator_id: Default::default(),
+						validators: vec![],
+					},
+				),
+				T::BlockNumber::from(10u32),
+			),
+		);
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
 
@@ -881,6 +894,19 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1]
 		));
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
+			1u64,
+			(
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: KSM,
+						delegator_id: Default::default(),
+						validators: vec![],
+					},
+				),
+				T::BlockNumber::from(10u32),
+			),
+		);
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
 
