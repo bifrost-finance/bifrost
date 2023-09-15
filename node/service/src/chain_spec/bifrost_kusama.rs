@@ -24,9 +24,10 @@ use std::{
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
-	GenesisConfig, IndicesConfig, InflationInfo, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	GenesisConfig, IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig,
+	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -128,6 +129,7 @@ pub fn bifrost_genesis(
 		Vec<CurrencyId>,
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
+	oracle_membership: Vec<AccountId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -142,6 +144,10 @@ pub fn bifrost_genesis(
 		},
 		technical_membership: TechnicalMembershipConfig {
 			members: technical_committee_membership.try_into().expect("convert error!"),
+			phantom: Default::default(),
+		},
+		oracle_membership: OracleMembershipConfig {
+			members: oracle_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
 		council: CouncilConfig { members: vec![], phantom: Default::default() },
@@ -216,6 +222,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
@@ -235,6 +242,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		(vec![], vec![], vec![]),
+		oracle_membership,
 	)
 }
 
@@ -304,6 +312,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
@@ -370,6 +379,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		(currency, vcurrency, vsbond),
+		oracle_membership,
 	)
 }
 
@@ -445,6 +455,10 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
 		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
 	];
+	let oracle_membership = vec![
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
+	];
 
 	bifrost_genesis(
 		invulnerables,
@@ -464,6 +478,7 @@ fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 			vec![],
 			vec![],
 		),
+		oracle_membership,
 	)
 }
 
@@ -503,6 +518,7 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
 	bifrost_genesis(
 		vec![
@@ -526,6 +542,7 @@ fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		(vec![(Token(DOT), 100_000_000, None), (Token(KSM), 10_000_000, None)], vec![], vec![]),
+		oracle_membership,
 	)
 }
 
@@ -642,6 +659,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![], // technical committee membership
 		salp_multisig,
 		(vec![], vec![], vec![]),
+		vec![],
 	)
 }
 

@@ -118,6 +118,9 @@ bifrost-currencies = { workspace = true }
 bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
 bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "polkadot" ] }
+lend-market = { path = "../../pallets/lend-market", default-features = false }
+lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
+pallet-prices = { path = "../../pallets/prices", default-features = false }
 
 # orml
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -126,6 +129,7 @@ orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-oracle = { version = "0.4.1-dev", default-features = false }
 
 merkle-distributor = { version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
@@ -204,6 +208,7 @@ std = [
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
 	"orml-xcm-support/std",
+	"orml-oracle/std",
 	"bifrost-runtime-common/std",
 	"bifrost-farming/std",
 	"bifrost-farming-rpc-runtime-api/std",
@@ -226,6 +231,9 @@ std = [
 	"bifrost-cross-in-out/std",
 	"substrate-wasm-builder",
 	"bifrost-slpx/std",
+	"lend-market/std",
+	"lend-market-rpc-runtime-api/std",
+	"pallet-prices/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
 ]
@@ -261,6 +269,7 @@ runtime-benchmarks = [
 	"bifrost-stable-pool/runtime-benchmarks",
 	"bifrost-vtoken-voting/runtime-benchmarks",
 	"sp-api/disable-logging",
+	"lend-market/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -306,6 +315,7 @@ try-runtime = [
 	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
+	"orml-oracle/try-runtime",
 	"zenlink-protocol/try-runtime",
 	"merkle-distributor/try-runtime",
 	"bifrost-flexible-fee/try-runtime",
@@ -326,6 +336,8 @@ try-runtime = [
 	"nutsfinance-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
+	"lend-market/try-runtime",
+	"pallet-prices/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
