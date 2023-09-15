@@ -36,7 +36,7 @@ use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use node_primitives::{
 	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
-	ParaId, TokenSymbol, VKSM,
+	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
 };
 use orml_traits::MultiCurrency;
 use pallet_xcm::EnsureResponse;
@@ -501,6 +501,18 @@ impl pallet_xcm::Config for Test {
 //************** Salp mock end *****************
 
 // ************** VtokenVoting mock start *****************
+pub struct SimpleVTokenSupplyProvider;
+
+impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
+	fn get_vtoken_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+
+	fn get_token_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+}
+
 impl bifrost_vtoken_voting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -511,6 +523,7 @@ impl bifrost_vtoken_voting::Config for Test {
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type VTokenSupplyProvider = SimpleVTokenSupplyProvider;
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParaInfo;
 	type QueryTimeout = QueryTimeout;

@@ -1498,6 +1498,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type XcmDestWeightAndFee = XcmInterface;
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type VTokenSupplyProvider = VtokenMinting;
 	type ParachainId = SelfParaChainId;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;

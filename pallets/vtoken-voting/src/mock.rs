@@ -31,7 +31,7 @@ use frame_system::EnsureRoot;
 use node_primitives::{
 	currency::{KSM, VBNC, VKSM},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, DoNothingRouter, TokenSymbol, XcmOperationType,
+	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
 };
 use pallet_xcm::EnsureResponse;
 use sp_core::H256;
@@ -308,6 +308,18 @@ impl BlockNumberProvider for RelaychainDataProvider {
 	}
 }
 
+pub struct SimpleVTokenSupplyProvider;
+
+impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
+	fn get_vtoken_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+
+	fn get_token_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+}
+
 impl vtoken_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -318,6 +330,7 @@ impl vtoken_voting::Config for Runtime {
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type VTokenSupplyProvider = SimpleVTokenSupplyProvider;
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;

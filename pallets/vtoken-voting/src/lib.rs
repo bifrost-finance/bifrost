@@ -45,7 +45,7 @@ use frame_support::{
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use node_primitives::{
 	currency::{VDOT, VKSM},
-	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
+	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
 	CurrencyId, DerivativeIndex, XcmOperationType,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
@@ -110,6 +110,8 @@ pub mod pallet {
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
+		type VTokenSupplyProvider: VTokenSupplyProvider<CurrencyIdOf<Self>, BalanceOf<Self>>;
+
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
 
@@ -131,7 +133,8 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			vote: AccountVote<BalanceOf<T>>,
+			new_vote: AccountVote<BalanceOf<T>>,
+			delegator_vote: AccountVote<BalanceOf<T>>,
 		},
 		Unlocked {
 			who: AccountIdOf<T>,
@@ -270,7 +273,7 @@ pub mod pallet {
 			PollIndex,
 			DerivativeIndex,
 			AccountIdOf<T>,
-			Option<AccountVote<BalanceOf<T>>>,
+			Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
 		),
 	>;
 
@@ -396,8 +399,10 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
-			let derivative_index = Self::try_select_derivative_index(vtoken, vote)?;
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
+
+			let new_vote = Self::compute_new_vote(vtoken, vote)?;
+			let derivative_index = Self::try_select_derivative_index(vtoken, new_vote)?;
 			if let Some(d) = VoteDelegatorFor::<T>::get((&who, vtoken, poll_index)) {
 				ensure!(d == derivative_index, Error::<T>::ChangeDelegator)
 			}
@@ -419,7 +424,14 @@ pub mod pallet {
 			}
 
 			// record vote info
-			let maybe_old_vote = Self::try_vote(&who, vtoken, poll_index, derivative_index, vote)?;
+			let maybe_old_vote = Self::try_vote(
+				&who,
+				vtoken,
+				poll_index,
+				derivative_index,
+				new_vote,
+				vote.balance(),
+			)?;
 
 			// send XCM message
 			let delegator_vote =
@@ -449,7 +461,13 @@ pub mod pallet {
 				},
 			)?;
 
-			Self::deposit_event(Event::<T>::Voted { who, vtoken, poll_index, vote });
+			Self::deposit_event(Event::<T>::Voted {
+				who,
+				vtoken,
+				poll_index,
+				new_vote,
+				delegator_vote,
+			});
 
 			Ok(())
 		}
@@ -644,8 +662,15 @@ pub mod pallet {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
-					if let Some(old_vote) = maybe_old_vote {
-						Self::try_vote(&who, vtoken, poll_index, derivative_index, old_vote)?;
+					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
+						Self::try_vote(
+							&who,
+							vtoken,
+							poll_index,
+							derivative_index,
+							old_vote,
+							vtoken_balance,
+						)?;
 					}
 				} else {
 					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
@@ -747,7 +772,8 @@ pub mod pallet {
 			poll_index: PollIndex,
 			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
-		) -> Result<Option<AccountVote<BalanceOf<T>>>, DispatchError> {
+			vtoken_balance: BalanceOf<T>,
+		) -> Result<Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>, DispatchError> {
 			ensure!(
 				vote.balance() <= T::MultiCurrency::total_balance(vtoken, who),
 				Error::<T>::InsufficientFunds
@@ -762,16 +788,20 @@ pub mod pallet {
 								// Shouldn't be possible to fail, but we handle it gracefully.
 								tally.remove(votes[i].1).ok_or(ArithmeticError::Underflow)?;
 								Self::try_sub_delegator_vote(vtoken, votes[i].2, votes[i].1)?;
-								old_vote = Some(votes[i].1);
+								old_vote = Some((votes[i].1, votes[i].3));
 								if let Some(approve) = votes[i].1.as_standard() {
 									tally.reduce(approve, *delegations);
 								}
 								votes[i].1 = vote;
 								votes[i].2 = derivative_index;
+								votes[i].3 = vtoken_balance;
 							},
 							Err(i) => {
 								votes
-									.try_insert(i, (poll_index, vote, derivative_index))
+									.try_insert(
+										i,
+										(poll_index, vote, derivative_index, vtoken_balance),
+									)
 									.map_err(|_| Error::<T>::MaxVotesReached)?;
 							},
 						}
@@ -786,7 +816,7 @@ pub mod pallet {
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
-					Self::extend_lock(&who, vtoken, &poll_index, vote.balance())?;
+					Self::extend_lock(&who, vtoken, &poll_index, vtoken_balance)?;
 					Ok(old_vote)
 				})
 			})
@@ -1127,6 +1157,23 @@ pub mod pallet {
 					None => Err(Error::<T>::NoData.into()),
 				}
 			})
+		}
+
+		fn compute_new_vote(
+			vtoken: CurrencyIdOf<T>,
+			vote: AccountVote<BalanceOf<T>>,
+		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+			let vtoken_supply =
+				T::VTokenSupplyProvider::get_vtoken_supply(vtoken).ok_or(Error::<T>::NoData)?;
+			let token_supply =
+				T::VTokenSupplyProvider::get_token_supply(token).ok_or(Error::<T>::NoData)?;
+			let mut new_vote = vote;
+			new_vote
+				.checked_mul(token_supply)
+				.and_then(|_| new_vote.checked_div(vtoken_supply))?;
+
+			Ok(new_vote)
 		}
 	}
 }

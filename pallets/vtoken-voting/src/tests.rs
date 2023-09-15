@@ -83,7 +83,8 @@ fn basic_voting_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: aye(2, 5),
+			new_vote: aye(2, 5),
+			delegator_vote: aye(2, 5),
 		}));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
 
@@ -112,7 +113,8 @@ fn split_voting_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: split(10, 0),
+			new_vote: split(10, 0),
+			delegator_vote: split(10, 0),
 		}));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
 		assert_ok!(VtokenVoting::vote(
@@ -149,7 +151,8 @@ fn abstain_voting_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: split_abstain(0, 0, 10),
+			new_vote: split_abstain(0, 0, 10),
+			delegator_vote: split_abstain(0, 0, 10),
 		}));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 10));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
@@ -163,7 +166,8 @@ fn abstain_voting_works() {
 			who: BOB,
 			vtoken,
 			poll_index,
-			vote: split_abstain(0, 0, 20),
+			new_vote: split_abstain(0, 0, 20),
+			delegator_vote: split_abstain(0, 0, 30),
 		}));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 30));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
@@ -596,7 +600,8 @@ fn notify_vote_success_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: aye(2, 5),
+			new_vote: aye(2, 5),
+			delegator_vote: aye(2, 5),
 		}));
 
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
@@ -707,7 +712,8 @@ fn notify_vote_fail_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: aye(2, 5),
+			new_vote: aye(2, 5),
+			delegator_vote: aye(2, 5),
 		}));
 
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
@@ -757,7 +763,8 @@ fn notify_remove_delegator_vote_success_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: aye(2, 5),
+			new_vote: aye(2, 5),
+			delegator_vote: aye(2, 5),
 		}));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
 
@@ -813,7 +820,8 @@ fn notify_remove_delegator_vote_fail_works() {
 			who: ALICE,
 			vtoken,
 			poll_index,
-			vote: aye(2, 5),
+			new_vote: aye(2, 5),
+			delegator_vote: aye(2, 5),
 		}));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response_success()));
 
