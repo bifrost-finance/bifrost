@@ -486,3 +486,9 @@ pub trait DerivativeAccountHandler<CurrencyId, Balance> {
 	#[cfg(feature = "runtime-benchmarks")]
 	fn add_delegator(token: CurrencyId, index: DerivativeIndex, who: xcm::v3::MultiLocation);
 }
+
+pub trait VTokenSupplyProvider<CurrencyId, Balance> {
+	fn get_vtoken_supply(vtoken: CurrencyId) -> Option<Balance>;
+
+	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
+}

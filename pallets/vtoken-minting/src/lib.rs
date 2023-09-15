@@ -43,8 +43,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator,
-	TimeUnit, VtokenMintingInterface, VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
+	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -1646,5 +1646,23 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 	fn get_hydradx_parachain_id() -> u32 {
 		T::HydradxParachainId::get()
+	}
+}
+
+impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
+	fn get_vtoken_supply(vtoken: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
+		if CurrencyId::is_vtoken(&vtoken) {
+			Some(T::MultiCurrency::total_issuance(vtoken))
+		} else {
+			None
+		}
+	}
+
+	fn get_token_supply(token: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
+		if CurrencyId::is_token(&token) {
+			Some(Self::token_pool(token))
+		} else {
+			None
+		}
 	}
 }

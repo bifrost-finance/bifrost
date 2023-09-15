@@ -59,15 +59,28 @@ fn vote_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			use bifrost_kusama_runtime::{RuntimeEvent, RuntimeOrigin, System, VtokenVoting};
+			use bifrost_kusama_runtime::{
+				RuntimeEvent, RuntimeOrigin, System, VtokenMinting, VtokenVoting,
+			};
 
-			assert_ok!(Tokens::set_balance(
-				RuntimeOrigin::root(),
-				MultiAddress::Id(ALICE.into()),
-				VKSM,
-				u64::MAX.into(),
-				Zero::zero(),
+			assert_ok!(VtokenMinting::mint(
+				RuntimeOrigin::signed(ALICE.into()),
+				KSM,
+				1_000_000_000_000,
+				Default::default()
 			));
+			assert_eq!(
+				<Runtime as bifrost_vtoken_voting::Config>::VTokenSupplyProvider::get_token_supply(
+					KSM
+				),
+				Some(1_000_000_000_000)
+			);
+			assert_eq!(
+				<Runtime as bifrost_vtoken_voting::Config>::VTokenSupplyProvider::get_vtoken_supply(
+					VKSM
+				),
+				Some(1_000_000_000_000)
+			);
 			let token = CurrencyId::to_token(&vtoken).unwrap();
 			assert_ok!(XcmInterface::set_xcm_dest_weight_and_fee(
 				token,
@@ -137,7 +150,8 @@ fn vote_works() {
 					who: _,
 					vtoken: VKSM,
 					poll_index: 0,
-					vote: _,
+					new_vote: _,
+					delegator_vote: _,
 				})
 			)));
 			System::reset_events();

@@ -24,8 +24,8 @@ use node_primitives::DerivativeIndex;
 use pallet_conviction_voting::{Conviction, Delegations, Vote};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, One, Zero},
-	Saturating,
+	traits::{AtLeast32BitUnsigned, EnsureDivAssign, EnsureMulAssign, One, Zero},
+	ArithmeticError, Saturating,
 };
 use sp_std::{fmt::Debug, prelude::*};
 
@@ -230,6 +230,44 @@ impl<Balance: Saturating> AccountVote<Balance> {
 				ab1.saturating_reduce(ab2);
 			},
 			_ => return Err(()),
+		}
+		Ok(())
+	}
+
+	pub fn checked_mul(&mut self, balance: Balance) -> Result<(), ArithmeticError>
+	where
+		Balance: Copy + EnsureMulAssign,
+	{
+		match self {
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_mul_assign(balance)?,
+			AccountVote::Split { aye: a1, nay: n1 } => {
+				a1.ensure_mul_assign(balance)?;
+				n1.ensure_mul_assign(balance)?;
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
+				a1.ensure_mul_assign(balance)?;
+				n1.ensure_mul_assign(balance)?;
+				ab1.ensure_mul_assign(balance)?;
+			},
+		}
+		Ok(())
+	}
+
+	pub fn checked_div(&mut self, balance: Balance) -> Result<(), ArithmeticError>
+	where
+		Balance: Copy + EnsureDivAssign,
+	{
+		match self {
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_div_assign(balance)?,
+			AccountVote::Split { aye: a1, nay: n1 } => {
+				a1.ensure_div_assign(balance)?;
+				n1.ensure_div_assign(balance)?;
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
+				a1.ensure_div_assign(balance)?;
+				n1.ensure_div_assign(balance)?;
+				ab1.ensure_div_assign(balance)?;
+			},
 		}
 		Ok(())
 	}
