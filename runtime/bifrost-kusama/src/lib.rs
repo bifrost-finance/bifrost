@@ -1708,7 +1708,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type RootOperatorAccountId = OracleRootOperatorAccountId;
 	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
-	type Members = CouncilMembership;
+	type Members = OracleMembership;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
@@ -1757,6 +1757,23 @@ impl lend_market::Config for Runtime {
 	type Assets = Currencies;
 	type RewardAssetId = NativeCurrencyId;
 	type LiquidationFreeAssetId = RelayCurrencyId;
+}
+
+parameter_types! {
+	pub const OracleMaxMembers: u32 = 100;
+}
+
+impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxMembers = OracleMaxMembers;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1947,6 +1964,7 @@ construct_runtime! {
 		LendMarket: lend_market::{Pallet, Call, Storage, Event<T>} = 131,
 		Prices: pallet_prices::{Pallet, Call, Storage, Event<T>} = 132,
 		Oracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>} = 133,
+		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
 	}
 }
 
@@ -2015,7 +2033,7 @@ impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade
 			if let Some(old_metadata) =
 				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
 			{
-				log::info!("Old currency_metadatas is {:?}", old_metadata);
+				log::info!("Old currency_metadatas name is {:?}", old_metadata.name);
 			}
 		}
 
@@ -2044,7 +2062,9 @@ impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade
 			if let Some(new_metadata) =
 				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
 			{
-				log::info!("New currency_metadatas is {:?}", new_metadata);
+				let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
+				assert_eq!(new_metadata.symbol, symbol);
+				log::info!("New currency_metadatas name is {:?}", new_metadata.name);
 			}
 		}
 
