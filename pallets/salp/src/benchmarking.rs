@@ -20,15 +20,16 @@
 #[cfg(feature = "runtime-benchmarks")]
 pub use crate::{Pallet as Salp, *};
 use bifrost_stable_pool::AtLeast64BitUnsignedOf;
-use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
+use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, ParaId, KSM, VSKSM};
+use node_primitives::{CurrencyId, ParaId, XcmOperationType, KSM, VSKSM};
 use sp_runtime::{
-	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
+	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
+use xcm_interface::XcmWeightAndFee;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	let events = frame_system::Pallet::<T>::events();
@@ -40,8 +41,8 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 
 fn create_fund<T: Config>(id: u32) -> ParaId {
 	let cap = BalanceOf::<T>::max_value();
-	let first_period = (0 as u32).into();
-	let last_period = (7 as u32).into();
+	let first_period = 0u32.into();
+	let last_period = 7u32.into();
 	let para_id = id;
 
 	assert_ok!(Salp::<T>::create(RawOrigin::Root.into(), para_id, cap, first_period, last_period));
@@ -49,299 +50,360 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 	para_id
 }
 
-#[allow(dead_code)]
-fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
+fn contribute_fund<T: Config + xcm_interface::Config>(index: ParaId) -> (T::AccountId, BalanceOf<T>)
+where
+	<<T as xcm_interface::Config>::MultiCurrency as MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::CurrencyId: From<CurrencyId>,
+{
+	let who: T::AccountId = whitelisted_caller();
 	let value = T::MinContribution::get();
-	assert_ok!(Salp::<T>::set_balance(who, value));
+	assert_ok!(Salp::<T>::set_balance(&who, value));
+	XcmWeightAndFee::<T>::insert(
+		xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
+		XcmOperationType::UmpContributeTransact,
+		(
+			Weight::from_parts(4000000000, 100000),
+			xcm_interface::BalanceOf::<T>::from(4000000000u32),
+		),
+	);
 	assert_ok!(Salp::<T>::contribute(RawOrigin::Signed(who.clone()).into(), index, value));
+	QueryIdContributionInfo::<T>::insert(0u64, (index, who.clone(), value));
+	MultisigConfirmAccount::<T>::put(who.clone());
+	(who, value)
 }
 
-fn kusama_setup<
-	T: Config
-		+ bifrost_stable_pool::Config
-		+ nutsfinance_stable_asset::Config
-		+ orml_tokens::Config<CurrencyId = CurrencyId>
-		+ bifrost_vtoken_minting::Config,
->() -> Result<(), BenchmarkError> {
-	Ok(())
-}
+#[benchmarks(
+where T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
+<<T as xcm_interface::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId: From<CurrencyId>
+)]
+mod benchmarks {
+	use super::*;
+	use frame_benchmarking::impl_benchmark_test_suite;
 
-pub fn lookup_of_account<T: Config>(
-	who: T::AccountId,
-) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
-	<T as frame_system::Config>::Lookup::unlookup(who)
-}
-
-benchmarks! {
-	where_clause {
-		where
-			T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config
-	}
-	contribute {
+	#[benchmark]
+	fn contribute() {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
 		let contribution = T::MinContribution::get();
+		XcmWeightAndFee::<T>::insert(
+			xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
+			XcmOperationType::UmpContributeTransact,
+			(
+				Weight::from_parts(4000000000, 100000),
+				xcm_interface::BalanceOf::<T>::from(4000000000u32),
+			),
+		);
 		assert_ok!(Salp::<T>::set_balance(&caller, contribution));
-	}: _(RawOrigin::Signed(caller.clone()), fund_index, contribution)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Contributing(contribution));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index, contribution);
 	}
 
-	refund {
+	#[benchmark]
+	fn refund() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, contribution) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Idle);
-	}: _(RawOrigin::Signed(caller.clone()), fund_index,(0 as u32).into(),(7 as u32).into(),contribution)
-	verify {
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index, 0u32.into(), 7u32.into(), contribution);
+
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Idle);
-		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
+		assert_last_event::<T>(
+			Event::<T>::Refunded(
+				caller.clone(),
+				fund_index,
+				0u32.into(),
+				7u32.into(),
+				contribution,
+			)
+			.into(),
+		)
 	}
 
-	unlock {
+	#[benchmark]
+	fn unlock() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Signed(caller.clone()), caller.clone(),fund_index)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Idle);
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), caller.clone(), fund_index);
 	}
 
-	batch_unlock {
-		let k in 1 .. 5;
+	#[benchmark]
+	fn batch_unlock() {
 		let fund_index = create_fund::<T>(1);
-		let contribution = T::MinContribution::get();
-		let mut caller: T::AccountId = whitelisted_caller();
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		for i in 0 .. k {
-			caller = account("contributor", i, 0);
-			contribute_fund::<T>(&caller,fund_index);
-			let _ = Salp::<T>::confirm_contribute(
-				confirmer.clone(),
-			0,
-			true
-			);
+		let caller: T::AccountId = whitelisted_caller();
+		for _ in 0..5 {
+			let (caller, _) = contribute_fund::<T>(fund_index);
+			assert_ok!(Pallet::<T>::confirm_contribute(
+				RawOrigin::Signed(caller.clone()).into(),
+				0u64,
+				true
+			));
 		}
+
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Signed(caller.clone()), fund_index)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Idle);
-		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index);
 	}
 
-	redeem {
+	#[benchmark]
+	fn redeem() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, contribution) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-		assert_ok!(Salp::<T>::unlock(caller_origin.clone(), caller.clone(), fund_index));
+		assert_ok!(Salp::<T>::unlock(
+			RawOrigin::Signed(caller.clone()).into(),
+			caller.clone(),
+			fund_index
+		));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
 		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
-	}: _(RawOrigin::Signed(caller.clone()), fund_index,contribution)
-	verify {
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index, contribution);
+
 		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
-		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 
-	set_multisig_confirm_account {
-		let caller: T::AccountId = whitelisted_caller();
-	}: _(RawOrigin::Root,caller)
+	#[benchmark]
+	fn set_multisig_confirm_account() {
+		#[extrinsic_call]
+		_(RawOrigin::Root, whitelisted_caller());
+	}
 
-	fund_success {
+	#[benchmark]
+	fn fund_success() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
-	}: _(RawOrigin::Root,fund_index)
 
-	fund_fail {
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index);
+	}
+
+	#[benchmark]
+	fn fund_fail() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
-	}: _(RawOrigin::Root,fund_index)
 
-	continue_fund {
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index);
+	}
+
+	#[benchmark]
+	fn continue_fund() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root,fund_index,0u32.into(),8u32.into())
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index, 0u32.into(), 3u32.into());
+	}
 
-	fund_retire {
+	#[benchmark]
+	fn fund_retire() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-		assert_ok!(Salp::<T>::unlock(caller_origin.clone(), caller.clone(), fund_index));
-	}: _(RawOrigin::Root, fund_index)
+		assert_ok!(Salp::<T>::unlock(
+			RawOrigin::Signed(caller.clone()).into(),
+			caller.clone(),
+			fund_index
+		));
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index);
+	}
 
-	fund_end {
+	#[benchmark]
+	fn fund_end() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root, fund_index)
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index);
+	}
 
-	create {
-		let cap = BalanceOf::<T>::max_value();
-		let first_period = (0 as u32).into();
-		let last_period = (7 as u32).into();
-		let para_id = 2001u32;
-	}: _(RawOrigin::Root, para_id, cap, first_period, last_period)
+	#[benchmark]
+	fn create() {
+		#[extrinsic_call]
+		_(RawOrigin::Root, 2001u32, BalanceOf::<T>::max_value(), 0u32.into(), 3u32.into());
+	}
 
-	edit {
+	#[benchmark]
+	fn edit() {
+		create_fund::<T>(2001u32);
+		#[extrinsic_call]
+		_(
+			RawOrigin::Root,
+			2001u32,
+			BalanceOf::<T>::max_value(),
+			BalanceOf::<T>::max_value(),
+			0u32.into(),
+			8u32.into(),
+			None,
+		);
+	}
+
+	#[benchmark]
+	fn confirm_contribute() {
 		let fund_index = create_fund::<T>(1);
-		let cap = BalanceOf::<T>::max_value();
-		let raised = BalanceOf::<T>::max_value();
-		let first_period = (0 as u32).into();
-		let last_period = (7 as u32).into();
-		let para_id = 1u32;
-	}: _(RawOrigin::Root, para_id, cap, raised,first_period, last_period,None)
+		let (caller, _) = contribute_fund::<T>(fund_index);
 
-	confirm_contribute {
-		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-	}: _(RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()), 0, true)
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), 0, true)
+	}
 
-	withdraw {
+	#[benchmark]
+	fn withdraw() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
-			true
-		));
+		contribute_fund::<T>(fund_index);
+
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root, fund_index)
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index)
+	}
 
-
-	dissolve_refunded {
+	#[benchmark]
+	fn dissolve_refunded() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer.clone(),
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-		assert_ok!(Salp::<T>::continue_fund(RawOrigin::Root.into(), fund_index, 2, T::SlotLength::get() + 1));
-	}: _(RawOrigin::Root, fund_index,0,7)
+		assert_ok!(Salp::<T>::continue_fund(
+			RawOrigin::Root.into(),
+			fund_index,
+			2,
+			T::SlotLength::get() + 1
+		));
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index, 0, 7)
+	}
 
-	dissolve {
+	#[benchmark]
+	fn dissolve() {
 		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: <T as frame_system::Config>::RuntimeOrigin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
-		assert_ok!(Salp::<T>::confirm_contribute(
-			confirmer,
-			0,
+		let (caller, _) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
 			true
 		));
+
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::fund_end(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root, fund_index)
+		#[extrinsic_call]
+		_(RawOrigin::Root, fund_index)
+	}
 
-	buyback {
-	}: _(RawOrigin::Root, 100u32.into())
-
-	buyback_vstoken_by_stable_pool {
-		kusama_setup::<T>()?;
+	#[benchmark]
+	fn buyback() {
 		let caller: T::AccountId = whitelisted_caller();
-		let fee_account: T::AccountId = account("seed",1,1);
+		let relay_currency_id = <T as Config>::RelayChainToken::get();
+		let relay_vstoken_id =
+			<T as Config>::CurrencyIdConversion::convert_to_vstoken(relay_currency_id).unwrap();
+
+		assert_ok!(zenlink_protocol::Pallet::<T>::create_pair(
+			RawOrigin::Root.into(),
+			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
+			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+		));
+
+		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
+			relay_currency_id,
+			&buybck_caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000u128)
+		));
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
+			relay_vstoken_id,
+			&buybck_caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000u128)
+		));
+
+		assert_ok!(zenlink_protocol::Pallet::<T>::add_liquidity(
+			RawOrigin::Signed(buybck_caller).into(),
+			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
+			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			1_000_000_000_000u128,
+			100_000_000_000_000u128,
+			0u128,
+			0u128,
+			T::BlockNumber::from(10u32),
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller), BalanceOf::<T>::unique_saturated_from(1000u128))
+	}
+
+	#[benchmark]
+	fn buyback_vstoken_by_stable_pool() {
+		let caller: T::AccountId = whitelisted_caller();
+		let fee_account: T::AccountId = account("seed", 1, 1);
 		let buyback_account: T::AccountId = T::BuybackPalletId::get().into_account_truncating();
 
 		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
@@ -361,40 +423,53 @@ benchmarks! {
 		assert_ok!(bifrost_stable_pool::Pallet::<T>::edit_token_rate(
 			RawOrigin::Root.into(),
 			0,
-			vec![(VSKSM.into(), (1u128.into(), 1u128.into())), (KSM.into(), (10u128.into(), 30u128.into()))]
+			vec![
+				(VSKSM.into(), (1u128.into(), 1u128.into())),
+				(KSM.into(), (10u128.into(), 30u128.into()))
+			]
 		));
 
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-			RawOrigin::Root.into(),
-			lookup_of_account::<T>(buyback_account.clone()),
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
 			KSM,
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+			&buyback_account,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128)
 		));
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-			RawOrigin::Root.into(),
-			lookup_of_account::<T>(caller.clone()),
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
 			KSM,
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+			&caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128)
 		));
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-			RawOrigin::Root.into(),
-			lookup_of_account::<T>(caller.clone()),
+		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(
 			VSKSM,
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
+			&caller,
+			BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128)
 		));
-		assert_eq!(
-			orml_tokens::Pallet::<T>::total_balance(KSM, &caller.clone()),
-			<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
-		);
-		assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(RawOrigin::Signed(caller.clone()).into(), 0, vec![amounts, amounts], amounts));
-		let minimum_mint_value = bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128);
-		let token_amount = bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128);
-		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(RawOrigin::Root.into(), KSM, minimum_mint_value));
-		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(RawOrigin::Signed(caller.clone()).into(), KSM, token_amount, BoundedVec::default()));
-	}: _(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
 
-	impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
+		assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(
+			RawOrigin::Signed(caller.clone()).into(),
+			0,
+			vec![amounts, amounts],
+			amounts
+		));
+		let minimum_mint_value =
+			bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128);
+		let token_amount =
+			bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128);
+		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(
+			RawOrigin::Root.into(),
+			KSM,
+			minimum_mint_value
+		));
+		assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(
+			RawOrigin::Signed(caller.clone()).into(),
+			KSM,
+			token_amount,
+			BoundedVec::default()
+		));
+		#[extrinsic_call]
+		_(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
+	}
+
+	//   `cargo test -p pallet-example-basic --all-features`, you will see one line per case:
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 }

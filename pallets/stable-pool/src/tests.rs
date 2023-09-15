@@ -29,7 +29,7 @@ fn create_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let pool_asset: CurrencyId = CurrencyId::BLP(0);
 
 	assert_ok!(StablePool::create_pool(
-		RuntimeOrigin::signed(1),
+		RuntimeOrigin::root(),
 		vec![coin0, coin1],
 		vec![10000000000u128, 10000000000u128],
 		10000000u128,
@@ -49,7 +49,7 @@ fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	let pool_asset = CurrencyId::BLP(0);
 
 	assert_ok!(StablePool::create_pool(
-		RuntimeOrigin::signed(1),
+		RuntimeOrigin::root(),
 		vec![coin0, coin1],
 		vec![1u128, 1u128],
 		10000000u128,
@@ -96,7 +96,7 @@ fn create_pool_successful() {
 		let coin1 = VDOT;
 		assert_eq!(StableAsset::pool_count(), 0);
 		assert_ok!(StablePool::create_pool(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			vec![coin0, coin1],
 			vec![1u128, 1u128],
 			1u128,
@@ -140,7 +140,7 @@ fn mint_successful_equal_amounts() {
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		System::set_block_number(2);
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(coin0, (1, 1)), (coin1, (1, 1))]
 		));
@@ -236,7 +236,7 @@ fn get_swap_output_amount() {
 
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(coin0, (1, 1)), (coin1, (1, 1))]
 		));
@@ -309,7 +309,7 @@ fn mint_swap_redeem1() {
 
 		let (coin0, coin1, _pool_asset, swap_id) = create_pool();
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 		));
@@ -340,7 +340,7 @@ fn mint_swap_redeem2() {
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 		));
@@ -403,7 +403,7 @@ fn mint_swap_redeem_for_precisions() {
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, _pool_asset, _swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 		));
@@ -441,7 +441,7 @@ fn redeem_single() {
 
 		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
 		assert_ok!(StablePool::create_pool(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -453,7 +453,7 @@ fn redeem_single() {
 			1000000000000u128.into()
 		));
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (10, 11))]
 		));
@@ -553,7 +553,7 @@ fn redeem_multi() {
 
 		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
 		assert_ok!(StablePool::create_pool(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -565,7 +565,7 @@ fn redeem_multi() {
 			1000000000000u128.into()
 		));
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(DOT, (1, 1)), (VDOT, (10, 11))]
 		));
@@ -651,7 +651,7 @@ fn bnc_add_liquidity_should_work() {
 
 		let amounts = vec![100_000_000_000u128, 100_000_000_000u128];
 		assert_ok!(StablePool::create_pool(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			vec![coin0.into(), coin1.into()],
 			vec![1u128.into(), 1u128.into()],
 			0u128.into(),
@@ -663,7 +663,7 @@ fn bnc_add_liquidity_should_work() {
 			1000000000000u128.into()
 		));
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(BNC, (1, 1)), (VBNC, (10, 11))]
 		));
@@ -678,7 +678,7 @@ fn edit_token_rate() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_noop!(
 			StablePool::edit_token_rate(
-				RuntimeOrigin::signed(1),
+				RuntimeOrigin::root(),
 				0,
 				vec![(BNC, (1, 1)), (VBNC, (10, 11))]
 			),
@@ -686,7 +686,7 @@ fn edit_token_rate() {
 		);
 		let (_coin0, _coin1, _pool_asset, _swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
+			RuntimeOrigin::root(),
 			0,
 			vec![(BNC, (1, 1)), (VBNC, (10, 11))]
 		));
@@ -698,11 +698,7 @@ fn edit_token_rate() {
 			vec![(VBNC, (10, 11)), (BNC, (1, 1))]
 		);
 
-		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
-			0,
-			vec![(VBNC, (10, 12))]
-		));
+		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![(VBNC, (10, 12))]));
 		assert_eq!(
 			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
@@ -711,7 +707,7 @@ fn edit_token_rate() {
 			vec![(VBNC, (10, 12)), (BNC, (1, 1))]
 		);
 
-		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::signed(1), 0, vec![]));
+		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![]));
 		assert_eq!(
 			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
@@ -719,11 +715,7 @@ fn edit_token_rate() {
 			)>>(),
 			vec![]
 		);
-		assert_ok!(StablePool::edit_token_rate(
-			RuntimeOrigin::signed(1),
-			0,
-			vec![(VBNC, (10, 12))]
-		));
+		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![(VBNC, (10, 12))]));
 		assert_eq!(
 			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,

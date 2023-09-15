@@ -27,7 +27,7 @@ use frame_support::{
 	parameter_types,
 	traits::{Everything, GenesisBuild, Get, Nothing},
 };
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::EnsureRoot;
 use node_primitives::{
 	currency::{KSM, VBNC, VKSM},
 	traits::XcmDestWeightAndFeeHandler,
@@ -277,6 +277,15 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		Self::get_multilocation(token, derivative_index)
 			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(_token: CurrencyId) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(_token: CurrencyId, _who: MultiLocation) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(_token: CurrencyId, _index: DerivativeIndex, _who: MultiLocation) {}
 }
 
 parameter_types! {
@@ -304,7 +313,7 @@ impl vtoken_voting::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<Controller, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmDestWeightAndFee;
 	type DerivativeAccount = DerivativeAccount;
@@ -351,4 +360,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub fn new_test_ext_benchmark() -> sp_io::TestExternalities {
+	frame_system::GenesisConfig::default()
+		.build_storage::<Runtime>()
+		.unwrap()
+		.into()
 }

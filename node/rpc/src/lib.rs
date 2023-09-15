@@ -131,6 +131,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
+	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -144,7 +145,8 @@ where
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
-	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
+	module.merge(StablePoolRpc::new(client).into_rpc())?;
 
 	Ok(module)
 }

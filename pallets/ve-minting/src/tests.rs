@@ -37,11 +37,7 @@ fn _checkpoint() {
 			end: System::block_number() + 365 * 86400 / 12,
 		};
 
-		assert_ok!(VeMinting::set_config(
-			RuntimeOrigin::signed(ALICE),
-			Some(0),
-			Some(7 * 86400 / 12)
-		));
+		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::_checkpoint(&BOB, old_locked, new_locked));
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(7499936934420));
@@ -53,11 +49,7 @@ fn update_reward() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
-		assert_ok!(VeMinting::set_config(
-			RuntimeOrigin::signed(ALICE),
-			Some(0),
-			Some(7 * 86400 / 12)
-		));
+		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
 
 		System::set_block_number(System::block_number() + 40);
 		assert_ok!(VeMinting::create_lock_inner(
@@ -96,11 +88,7 @@ fn notify_reward_amount() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
-		assert_ok!(VeMinting::set_config(
-			RuntimeOrigin::signed(ALICE),
-			Some(0),
-			Some(7 * 86400 / 12)
-		));
+		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
 
 		System::set_block_number(System::block_number() + 40);
 		assert_noop!(
@@ -122,7 +110,7 @@ fn notify_reward_amount() {
 
 		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
-			RuntimeOrigin::signed(ALICE),
+			RuntimeOrigin::root(),
 			ALICE,
 			Some(7 * 86400 / 12),
 			rewards.clone()
@@ -136,7 +124,7 @@ fn notify_reward_amount() {
 		assert_ok!(VeMinting::get_rewards_inner(&BOB));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
 		assert_ok!(VeMinting::notify_rewards(
-			RuntimeOrigin::signed(ALICE),
+			RuntimeOrigin::root(),
 			ALICE,
 			Some(7 * 86400 / 12),
 			rewards
@@ -165,7 +153,7 @@ fn create_lock_to_withdraw() {
 		asset_registry();
 		System::set_block_number(System::block_number() + 7 * 86400 / 12); // a week
 		assert_ok!(VeMinting::set_config(
-			RuntimeOrigin::signed(ALICE),
+			RuntimeOrigin::root(),
 			Some(4 * 365 * 86400 / 12),
 			Some(7 * 86400 / 12)
 		));
@@ -178,7 +166,7 @@ fn create_lock_to_withdraw() {
 
 		let rewards = vec![(KSM, 1000)];
 		assert_ok!(VeMinting::notify_rewards(
-			RuntimeOrigin::signed(ALICE),
+			RuntimeOrigin::root(),
 			ALICE,
 			Some(7 * 86400 / 12),
 			rewards
