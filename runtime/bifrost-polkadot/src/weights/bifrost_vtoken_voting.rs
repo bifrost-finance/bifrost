@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -90,8 +90,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `14356`
 		//  Estimated: `17821`
-		// Minimum execution time: 133_000 nanoseconds.
-		Weight::from_parts(147_000_000, 17821)
+		// Minimum execution time: 298_891 nanoseconds.
+		Weight::from_parts(310_932_000, 17821)
 			.saturating_add(T::DbWeight::get().reads(15))
 			.saturating_add(T::DbWeight::get().writes(10))
 	}
@@ -129,8 +129,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `5531`
 		//  Estimated: `17128`
-		// Minimum execution time: 119_000 nanoseconds.
-		Weight::from_parts(125_000_000, 17128)
+		// Minimum execution time: 267_328 nanoseconds.
+		Weight::from_parts(274_051_000, 17128)
 			.saturating_add(T::DbWeight::get().reads(15))
 			.saturating_add(T::DbWeight::get().writes(9))
 	}
@@ -154,8 +154,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `2103`
 		//  Estimated: `17128`
-		// Minimum execution time: 68_000 nanoseconds.
-		Weight::from_parts(71_000_000, 17128)
+		// Minimum execution time: 163_235 nanoseconds.
+		Weight::from_parts(166_276_000, 17128)
 			.saturating_add(T::DbWeight::get().reads(8))
 			.saturating_add(T::DbWeight::get().writes(4))
 	}
@@ -181,8 +181,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `965`
 		//  Estimated: `4430`
-		// Minimum execution time: 42_000 nanoseconds.
-		Weight::from_parts(45_000_000, 4430)
+		// Minimum execution time: 94_053 nanoseconds.
+		Weight::from_parts(105_489_000, 4430)
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -194,8 +194,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `370`
 		//  Estimated: `3553`
-		// Minimum execution time: 17_000 nanoseconds.
-		Weight::from_parts(18_000_000, 3553)
+		// Minimum execution time: 39_404 nanoseconds.
+		Weight::from_parts(45_802_000, 3553)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -207,8 +207,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `372`
 		//  Estimated: `3837`
-		// Minimum execution time: 19_000 nanoseconds.
-		Weight::from_parts(21_000_000, 3837)
+		// Minimum execution time: 49_788 nanoseconds.
+		Weight::from_parts(50_805_000, 3837)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -218,8 +218,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `321`
 		//  Estimated: `3553`
-		// Minimum execution time: 14_000 nanoseconds.
-		Weight::from_parts(14_000_000, 3553)
+		// Minimum execution time: 40_937 nanoseconds.
+		Weight::from_parts(41_714_000, 3553)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -229,8 +229,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 8_000 nanoseconds.
-		Weight::from_parts(8_000_000, 0)
+		// Minimum execution time: 7_244 nanoseconds.
+		Weight::from_parts(24_083_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// Storage: VtokenVoting VoteLockingPeriod (r:0 w:1)
@@ -239,8 +239,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 8_000 nanoseconds.
-		Weight::from_parts(8_000_000, 0)
+		// Minimum execution time: 23_244 nanoseconds.
+		Weight::from_parts(23_717_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	// Storage: VtokenVoting PendingVotingInfo (r:1 w:0)
@@ -251,8 +251,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `361`
 		//  Estimated: `3582`
-		// Minimum execution time: 15_000 nanoseconds.
-		Weight::from_parts(16_000_000, 3582)
+		// Minimum execution time: 43_638 nanoseconds.
+		Weight::from_parts(44_768_000, 3582)
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
 	// Storage: VtokenVoting PendingRemoveDelegatorVote (r:1 w:0)
@@ -261,8 +261,8 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		// Proof Size summary in bytes:
 		//  Measured:  `329`
 		//  Estimated: `3501`
-		// Minimum execution time: 13_000 nanoseconds.
-		Weight::from_parts(13_000_000, 3501)
+		// Minimum execution time: 38_311 nanoseconds.
+		Weight::from_parts(38_955_000, 3501)
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
 }

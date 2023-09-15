@@ -26,7 +26,7 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2023-09-14, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! HOSTNAME: `MacBook-Pro-2`, CPU: `<UNKNOWN>`
+//! HOSTNAME: `bifrost-jenkins`, CPU: `Intel(R) Xeon(R) CPU E5-26xx v4`
 //! WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-kusama-local"), DB CACHE: 1024
 
 // Executed Command:
@@ -64,8 +64,8 @@ impl<T: frame_system::Config> bifrost_system_staking::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `445`
 		//  Estimated: `6385`
-		// Minimum execution time: 12_000 nanoseconds.
-		Weight::from_parts(12_000_000, 6385)
+		// Minimum execution time: 28_850 nanoseconds.
+		Weight::from_parts(29_556_000, 6385)
 			.saturating_add(T::DbWeight::get().reads(4))
 	}
 	// Storage: SystemStaking TokenStatus (r:1 w:1)
@@ -76,8 +76,8 @@ impl<T: frame_system::Config> bifrost_system_staking::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `109`
 		//  Estimated: `3574`
-		// Minimum execution time: 16_000 nanoseconds.
-		Weight::from_parts(16_000_000, 3574)
+		// Minimum execution time: 41_759 nanoseconds.
+		Weight::from_parts(42_957_000, 3574)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -89,8 +89,8 @@ impl<T: frame_system::Config> bifrost_system_staking::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `403`
 		//  Estimated: `3868`
-		// Minimum execution time: 20_000 nanoseconds.
-		Weight::from_parts(21_000_000, 3868)
+		// Minimum execution time: 51_852 nanoseconds.
+		Weight::from_parts(53_735_000, 3868)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -106,23 +106,23 @@ impl<T: frame_system::Config> bifrost_system_staking::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `1190`
 		//  Estimated: `4655`
-		// Minimum execution time: 28_000 nanoseconds.
-		Weight::from_parts(29_000_000, 4655)
+		// Minimum execution time: 68_013 nanoseconds.
+		Weight::from_parts(69_859_000, 4655)
 			.saturating_add(T::DbWeight::get().reads(4))
 	}
 	fn on_redeem_success() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 0 nanoseconds.
-		Weight::from_parts(1_000_000, 0)
+		// Minimum execution time: 1_959 nanoseconds.
+		Weight::from_parts(2_084_000, 0)
 	}
 	fn on_redeemed() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 0 nanoseconds.
-		Weight::from_parts(1_000_000, 0)
+		// Minimum execution time: 1_994 nanoseconds.
+		Weight::from_parts(2_059_000, 0)
 	}
 	// Storage: SystemStaking TokenList (r:1 w:1)
 	// Proof Skipped: SystemStaking TokenList (max_values: Some(1), max_size: None, mode: Measured)
@@ -132,8 +132,8 @@ impl<T: frame_system::Config> bifrost_system_staking::WeightInfo for BifrostWeig
 		// Proof Size summary in bytes:
 		//  Measured:  `169`
 		//  Estimated: `1654`
-		// Minimum execution time: 8_000 nanoseconds.
-		Weight::from_parts(9_000_000, 1654)
+		// Minimum execution time: 22_823 nanoseconds.
+		Weight::from_parts(23_707_000, 1654)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
