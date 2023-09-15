@@ -1482,7 +1482,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type RootOperatorAccountId = OracleRootOperatorAccountId;
 	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
-	type Members = CouncilMembership;
+	type Members = OracleMembership;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
