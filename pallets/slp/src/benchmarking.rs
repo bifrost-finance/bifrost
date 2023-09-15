@@ -19,924 +19,958 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, v1::BenchmarkError, whitelisted_caller};
-use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
-use frame_system::RawOrigin;
-use node_primitives::TokenSymbol;
-use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedFrom};
+use crate::*;
+use frame_benchmarking::v2::*;
+use frame_support::assert_ok;
 
-#[allow(unused_imports)]
-pub use crate::{Pallet as Slp, *};
+const DELEGATOR1: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: [1u8; 32] }) };
+const DELEGATOR2: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: [2u8; 32] }) };
 
-use crate::KSM;
-
-pub fn lookup_of_account<T: Config>(
-	who: T::AccountId,
-) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
-	<T as frame_system::Config>::Lookup::unlookup(who)
-}
-
-fn kusama_setup<
-	T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config,
->() -> Result<(), BenchmarkError> {
-	let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin()
-		.map_err(|_| BenchmarkError::Weightless)?;
-	let caller: T::AccountId = whitelisted_caller();
-
-	let validator_0_account_id_20: [u8; 20] =
-		hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-
-	let validator_0_location = MultiLocation {
-		parents: 1,
-		interior: X2(
-			Parachain(2023),
-			AccountKey20 { network: None, key: validator_0_account_id_20 },
-		),
-	};
-
-	let treasury_account_id_32: [u8; 32] =
-		hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
-			.into();
-	// let treasury_account :T::AccountId =
-	// sp_core::crypto::AccountId32::new(treasury_account_id_32);
-	let treasury_location = MultiLocation {
-		parents: 0,
-		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
-	};
-
-	// set operate_origins
-	assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(caller.clone())));
-
-	// Set OngoingTimeUnitUpdateInterval as 1/3 round(600 blocks per round, 12 seconds per block)
-	assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(
-		origin.clone(),
-		KSM,
-		Some(BlockNumberFor::<T>::from(200u32))
-	));
-
-	<frame_system::Pallet<T>>::set_block_number(BlockNumberFor::<T>::from(300u32));
-
-	// Initialize ongoing timeunit as 1.
-	assert_ok!(Slp::<T>::update_ongoing_time_unit(
-		RawOrigin::Signed(caller.clone()).into(),
-		KSM,
-		TimeUnit::Era(0)
-	));
-
-	// Initialize currency delays.
-	let delay =
-		Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
-	assert_ok!(Slp::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
-
+pub fn set_mins_and_maxs<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
 	let mins_and_maxs = MinimumsMaximums {
-		delegator_bonded_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		delegator_bonded_minimum: 0u32.into(),
 
-		bond_extra_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		unbond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		rebond_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
-		unbond_record_maximum: 1u32,
+		bond_extra_minimum: 0u32.into(),
+		unbond_minimum: 0u32.into(),
+		rebond_minimum: 0u32.into(),
+		unbond_record_maximum: 5u32,
 		validators_back_maximum: 100u32,
-		delegator_active_staking_maximum: BalanceOf::<T>::unique_saturated_from(
-			200_000_000_000_000_000_000u128,
-		),
+		delegator_active_staking_maximum: 1_000_000_000u32.into(),
 		validators_reward_maximum: 300u32,
-		delegation_amount_minimum: BalanceOf::<T>::unique_saturated_from(0u128),
+		delegation_amount_minimum: 0u32.into(),
 		delegators_maximum: 10,
 		validators_maximum: 10,
 	};
 
 	// Set minimums and maximums
-	assert_ok!(Slp::<T>::set_minimums_and_maximums(origin.clone(), KSM, Some(mins_and_maxs)));
-
-	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::<T>::initialize_delegator(origin.clone(), KSM, None));
-	//DelegatorNotExist
-
-	// update some KSM balance to treasury account
-	assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-		RawOrigin::Root.into(),
-		lookup_of_account::<T>(T::EntranceAccount::get().into_account_truncating()),
-		KSM,
-		// BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000_000u128),
-		// BalanceOf::<T>::unique_saturated_from(0u128)
-		// 1_000_000_000_000_000_000u128.into(),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
-	));
-
-	// Set fee source
-	assert_ok!(Slp::<T>::set_fee_source(
-		origin.clone(),
-		KSM,
-		Some((treasury_location, BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128))),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Bond,
-		Some((Weight::from_parts(0, u64::MAX), BalanceOf::<T>::unique_saturated_from(0u128))),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::BondExtra,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Unbond,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Chill,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Rebond,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Undelegate,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Delegate,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Payout,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::CancelLeave,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Liquidize,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::ExecuteLeave,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferBack,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::XtokensTransferBack,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferTo,
-		Some((
-			Weight::from_parts(20_000_000_000, u64::MAX),
-			BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		)),
-	));
-
-	// Set delegator ledger
-	assert_ok!(Slp::<T>::add_validator(
-		origin.clone(),
-		KSM,
-		Box::new(validator_0_location.clone()),
-	));
-
-	// initialize delegator
-	Ok(())
+	assert_ok!(Pallet::<T>::set_minimums_and_maximums(origin, KSM, Some(mins_and_maxs)));
 }
 
-benchmarks! {
-	where_clause {
-		where
-			T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config
+pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
+	set_mins_and_maxs::<T>(origin.clone());
+	DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+	T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		KSM,
+		XcmOperationType::Bond,
+		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+	)
+	.unwrap();
+
+	assert_ok!(Pallet::<T>::bond(origin, KSM, Box::new(DELEGATOR1), 10u32.into(), None));
+}
+
+pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
+	assert_ok!(Pallet::<T>::set_ongoing_time_unit_update_interval(
+		origin.clone(),
+		KSM,
+		Some(0u32.into())
+	));
+
+	// Initialize ongoing timeunit as 1.
+	assert_ok!(Pallet::<T>::update_ongoing_time_unit(origin.clone(), KSM, TimeUnit::Era(0)));
+
+	let delay =
+		Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
+	assert_ok!(Pallet::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
+}
+
+#[benchmarks(where T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config)]
+mod benchmarks {
+	use super::*;
+	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
+	use frame_benchmarking::impl_benchmark_test_suite;
+	use node_primitives::VKSM;
+	use sp_arithmetic::traits::SaturatedConversion;
+
+	#[benchmark]
+	fn initialize_delegator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, None);
+
+		Ok(())
 	}
 
-	initialize_delegator {
-		kusama_setup::<T>()?;
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let call = Call::<T>::initialize_delegator {
-			currency_id:KSM,
-			delegator_location: None
-		};
-	}: {call.dispatch_bypass_filter(origin)?}
+	#[benchmark]
+	fn bond() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
-	bond {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who:T::AccountId = whitelisted_caller();
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let validator_0_account_id_20: [u8; 20] =
-			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let validator_0_location = MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(2023),
-				AccountKey20 { network: None, key: validator_0_account_id_20 },
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Bond,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			10u32.into(),
+			None,
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn bond_extra() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::BondExtra,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			None,
+			10u32.into(),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn unbond() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		init_ongoing_time::<T>(origin.clone());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Unbond,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			None,
+			0u32.into(),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn unbond_all() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		init_ongoing_time::<T>(origin.clone());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Unbond,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn rebond() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		init_ongoing_time::<T>(origin.clone());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Rebond,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			None,
+			Some(0u32.into()),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn delegate() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		Validators::<T>::insert(KSM, BoundedVec::try_from(vec![DELEGATOR1]).unwrap());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Delegate,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			vec![DELEGATOR1],
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn undelegate() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		ValidatorsByDelegator::<T>::insert(
+			KSM,
+			DELEGATOR1,
+			BoundedVec::try_from(vec![DELEGATOR1, DELEGATOR2]).unwrap(),
+		);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Delegate,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			vec![DELEGATOR1],
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn redelegate() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		Validators::<T>::insert(KSM, BoundedVec::try_from(vec![DELEGATOR1]).unwrap());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Delegate,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Some(vec![DELEGATOR1]),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn payout() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Payout,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Box::new(DELEGATOR1),
+			Some(TimeUnit::Era(0)),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn liquidize() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Liquidize,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Some(TimeUnit::SlashingSpan(0)),
+			None,
+			None,
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn chill() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		init_ongoing_time::<T>(origin.clone());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Chill,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn transfer_back() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::TransferBack,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		let (_, exit_account) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
+		let exit_account_32 = Pallet::<T>::account_id_to_account_32(exit_account).unwrap();
+		let to = Pallet::<T>::account_32_to_parent_location(exit_account_32).unwrap();
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Box::new(to),
+			10u32.into(),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn transfer_to() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::TransferTo,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		let (entrance_account, _) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
+		let entrance_account_32 = Pallet::<T>::account_id_to_account_32(entrance_account).unwrap();
+		let from = Pallet::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(from),
+			Box::new(DELEGATOR1),
+			10u32.into(),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn convert_asset() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		DelegatorsMultilocation2Index::<T>::insert(PHA, DELEGATOR1, 0);
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::ConvertAsset,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		DelegatorLedgers::<T>::insert(
+			PHA,
+			DELEGATOR1,
+			Ledger::Phala(PhalaLedger {
+				account: DELEGATOR1,
+				active_shares: 10u32.into(),
+				unlocking_shares: 10u32.into(),
+				unlocking_time_unit: None,
+				bonded_pool_id: None,
+				bonded_pool_collection_id: None,
+			}),
+		);
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			PHA,
+			Box::new(DELEGATOR1),
+			10u32.into(),
+			true,
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn increase_token_pool() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 10u32.into());
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn decrease_token_pool() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		assert_ok!(Pallet::<T>::increase_token_pool(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			10u32.into()
+		));
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 10u32.into());
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn update_ongoing_time_unit() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		OngoingTimeUnitUpdateInterval::<T>::insert(KSM, T::BlockNumber::from(0u32));
+		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, T::BlockNumber::from(0u32));
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, TimeUnit::Era(0));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn refund_currency_due_unbond() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_ongoing_time::<T>(origin.clone());
+
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		orml_tokens::Pallet::<T>::deposit(
+			KSM,
+			&exit_account,
+			<T as orml_tokens::Config>::Balance::saturated_from(1_000_000_000_000u128),
+		)
+		.unwrap();
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn supplement_fee_reserve() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		let (entrance_account, _) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
+		let entrance_account_32 = Pallet::<T>::account_id_to_account_32(entrance_account).unwrap();
+		let from = Pallet::<T>::account_32_to_local_location(entrance_account_32).unwrap();
+
+		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
+
+		FeeSources::<T>::insert(KSM, (from, BalanceOf::<T>::from(1000u32)));
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::TransferTo,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+		Ok(())
+	}
+
+	#[benchmark]
+	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		init_ongoing_time::<T>(origin.clone());
+
+		assert_ok!(Pallet::<T>::increase_token_pool(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			1000u32.into()
+		));
+
+		CurrencyTuneExchangeRateLimit::<T>::insert(
+			KSM,
+			(1000u32, Permill::from_parts(100_0000u32)),
+		);
+		HostingFees::<T>::insert(KSM, (Permill::from_parts(100_0000u32), DELEGATOR1));
+
+		orml_tokens::Pallet::<T>::deposit(
+			VKSM,
+			&whitelisted_caller(),
+			<T as orml_tokens::Config>::Balance::saturated_from(1_000_000_000_000u128),
+		)
+		.unwrap();
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			10u32.into(),
+			Some(DELEGATOR1),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_operate_origin() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(whitelisted_caller()));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_fee_source() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Some((DELEGATOR1, 10u32.into())),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn add_delegator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u16, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn remove_delegator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+
+		assert_ok!(Pallet::<T>::add_delegator(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			0,
+			Box::new(DELEGATOR1)
+		));
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn add_validator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn remove_validator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		assert_ok!(Pallet::<T>::add_validator(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1)
+		));
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_validators_by_delegator() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		Validators::<T>::insert(KSM, BoundedVec::try_from(vec![DELEGATOR2]).unwrap());
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			vec![DELEGATOR2],
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_delegator_ledger() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+
+		let ledger = Box::new(Some(Ledger::Substrate(SubstrateLedger {
+			account: Default::default(),
+			total: 1000u32.into(),
+			active: 1000u32.into(),
+			unlocking: vec![],
+		})));
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), ledger);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_minimums_and_maximums() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 0u32.into(),
+
+			bond_extra_minimum: 0u32.into(),
+			unbond_minimum: 0u32.into(),
+			rebond_minimum: 0u32.into(),
+			unbond_record_maximum: 5u32,
+			validators_back_maximum: 100u32,
+			delegator_active_staking_maximum: 1_000_000_000u32.into(),
+			validators_reward_maximum: 300u32,
+			delegation_amount_minimum: 0u32.into(),
+			delegators_maximum: 10,
+			validators_maximum: 10,
+		};
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(mins_and_maxs));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_currency_delays() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(delay));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_hosting_fees() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Some((Permill::from_parts(100_0000u32), DELEGATOR1)),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_currency_tune_exchange_rate_limit() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Some((1000u32, Permill::from_parts(100_0000u32))),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_ongoing_time_unit_update_interval() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Some(T::BlockNumber::from(100u32)),
+		);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn add_supplement_fee_account_to_whitelist() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn remove_supplement_fee_account_from_whitelist() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		assert_ok!(Pallet::<T>::add_supplement_fee_account_to_whitelist(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1)
+		));
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn confirm_delegator_ledger_query_response() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u64);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn fail_delegator_ledger_query_response() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u64);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn confirm_validators_by_delegator_query_response() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		Validators::<T>::insert(KSM, BoundedVec::try_from(vec![DELEGATOR1]).unwrap());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Delegate,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		assert_ok!(Pallet::<T>::delegate(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			vec![DELEGATOR1]
+		));
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
+			1u64,
+			(
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: KSM,
+						delegator_id: Default::default(),
+						validators: vec![],
+					},
+				),
+				T::BlockNumber::from(10u32),
 			),
-		};
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		let call = Call::<T>::bond {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			amount:BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			validator:Some(validator_0_location.clone())
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+		);
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
 
-	bond_extra {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let validator_0_account_id_20: [u8; 20] =
-			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let validator_0_location = MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(2023),
-				AccountKey20 { network: None, key: validator_0_account_id_20 },
+		Ok(())
+	}
+
+	#[benchmark]
+	fn fail_validators_by_delegator_query_response() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		init_bond::<T>(origin.clone());
+		Validators::<T>::insert(KSM, BoundedVec::try_from(vec![DELEGATOR1]).unwrap());
+
+		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			KSM,
+			XcmOperationType::Delegate,
+			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		)?;
+
+		assert_ok!(Pallet::<T>::delegate(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			vec![DELEGATOR1]
+		));
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
+			1u64,
+			(
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: KSM,
+						delegator_id: Default::default(),
+						validators: vec![],
+					},
+				),
+				T::BlockNumber::from(10u32),
 			),
-		};
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
+		);
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn reset_validators() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, vec![DELEGATOR1]);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn set_validator_boost_list() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, vec![DELEGATOR1]);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn add_to_validator_boost_list() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn remove_from_validator_boot_list() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		assert_ok!(Pallet::<T>::add_to_validator_boost_list(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-		));
-		let call = Call::<T>::bond_extra {
-				currency_id:KSM,
-				who:Box::new(subaccount_0_location.clone()),
-				validator:Some(validator_0_location.clone()),
-				amount:BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			};
-	  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	rebond {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let validator_0_account_id_20: [u8; 20] =
-			hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
-		let validator_0_location = MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(2023),
-				AccountKey20 { network: None, key: validator_0_account_id_20 },
-			),
-		};
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-		));
-		let call = Call::<T>::rebond {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			validator:Some(validator_0_location.clone()),
-			amount:Some(BalanceOf::<T>::unique_saturated_from(0u128)),
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	delegate {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-		));
-		let call = Call::<T>::delegate {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			targets:vec![validator_0_location.clone()],
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	redelegate {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-		));
-		let call = Call::<T>::redelegate {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			targets:Some(vec![validator_0_location.clone()]),
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	payout {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		let call = Call::<T>::payout {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			validator:Box::new(validator_0_location.clone()),
-			when:Some(TimeUnit::Era(27))
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	liquidize {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-		));
-		<frame_system::Pallet<T>>::set_block_number(BlockNumberFor::<T>::from(101_000u32));
-		let call = Call::<T>::liquidize {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-			when:Some(TimeUnit::SlashingSpan(5)),
-			validator:None,
-			amount:None
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	transfer_back {
-		kusama_setup::<T>()?;
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let exit_account_id_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746f75740000000000000000000000000000000000000000"]
-				.into();
-		let exit_account_location = MultiLocation {
-			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: exit_account_id_32 }),
-		};
-
-		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferBack,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
-	));
-		let call = Call::<T>::transfer_back {
-			currency_id:KSM,
-			from:Box::new(subaccount_0_location.clone()),
-			to:Box::new(exit_account_location.clone()),
-			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	increase_token_pool {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let call = Call::<T>::increase_token_pool {
-			currency_id:KSM,
-			amount: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)
-		};
-  }: {call.dispatch_bypass_filter(origin)?}
-
-	decrease_token_pool {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM, BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
-		let call = Call::<T>::decrease_token_pool {
-			currency_id:KSM,
-			amount: BalanceOf::<T>::unique_saturated_from(10_000_000u128)
-		};
-  }: {call.dispatch_bypass_filter(origin)?}
-
-	update_ongoing_time_unit {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		let call = Call::<T>::update_ongoing_time_unit {
-			currency_id:KSM,
-			time_unit: TimeUnit::Era(27)
-		};
-  }: {call.dispatch_bypass_filter(origin)?}
-
-	refund_currency_due_unbond {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		let call = Call::<T>::refund_currency_due_unbond {
-			currency_id:KSM,
-		};
-  }: {call.dispatch_bypass_filter(origin)?}
-
-	charge_host_fee_and_tune_vtoken_exchange_rate {
-		kusama_setup::<T>()?;
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-
-		let pct_100 = Permill::from_percent(100);
-		let treasury_32: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"];
-				let pct = Permill::from_percent(20);
-		let treasury_location = MultiLocation {
-			parents: 0,
-			interior: X1(AccountId32 { network: None, id: treasury_32 }),
-		};
-		assert_ok!(Slp::<T>::set_hosting_fees(origin.clone(), KSM, Some((pct, treasury_location))));
-		assert_ok!(Slp::<T>::set_currency_tune_exchange_rate_limit(origin.clone(), KSM,Some((1, pct_100))));
-		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(CurrencyId::VToken(TokenSymbol::KSM), &who, BalanceOf::<T>::unique_saturated_from(1000000000000u128)));
-		assert_ok!(<T as pallet::Config>::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::KSM), &who, BalanceOf::<T>::unique_saturated_from(1000000000000u128)));
-
-		assert_ok!(Slp::<T>::increase_token_pool(origin.clone(), KSM,BalanceOf::<T>::unique_saturated_from(10_000_000_000u128)));
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
-			Some(validator_0_location.clone()),
+			Box::new(DELEGATOR1)
 		));
 
-		let call = Call::<T>::charge_host_fee_and_tune_vtoken_exchange_rate {
-			currency_id:KSM,
-			value: BalanceOf::<T>::unique_saturated_from(100_000_000_000u128),
-			who:Some(subaccount_0_location.clone()),
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
-	confirm_delegator_ledger_query_response {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
+		Ok(())
+	}
 
-		assert_ok!(Slp::<T>::bond(
-		RawOrigin::Signed(who.clone()).into(),
-		KSM,
-		Box::new(subaccount_0_location.clone()),
-		BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-		Some(validator_0_location.clone()),
-	));
-	let call = Call::<T>::confirm_delegator_ledger_query_response {
-			currency_id:KSM,
-			query_id:	0,
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-
-	fail_delegator_ledger_query_response {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-		kusama_setup::<T>()?;
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-
-		assert_ok!(Slp::<T>::bond(
-			RawOrigin::Signed(who.clone()).into(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			BalanceOf::<T>::unique_saturated_from(5_000_000_000_000_000_000u128),
-			Some(validator_0_location.clone()),
-	));
-		let call = Call::<T>::fail_delegator_ledger_query_response {
-			currency_id:KSM,
-			query_id:0,
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	chill {
-		kusama_setup::<T>()?;
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
-
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-		RawOrigin::Root.into(),
-		lookup_of_account::<T>(entrance_account.clone()),
-		KSM,
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
-	));
-
-		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
+	//   `cargo test -p bifrost-slp --all-features`
+	impl_benchmark_test_suite!(
+		Pallet,
+		crate::mocks::mock_kusama::ExtBuilder::default().build(),
+		crate::mocks::mock_kusama::Runtime
 	);
-
-
-	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
-	let entrance_account_location: MultiLocation =
-		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
-
-		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::Chill,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
-	));
-		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
-			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
-			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
-			unlocking: vec![],
-		};
-		let ledger = Ledger::Substrate(sb_ledger);
-		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
-
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		assert_ok!(Slp::<T>::update_ongoing_time_unit(
-			origin.clone(),KSM,TimeUnit::Era(27)
-		));
-
-		let delay =
-			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
-
-
-		CurrencyDelays::<T>::insert(KSM, delay);
-
-	let call = Call::<T>::chill {
-			currency_id:KSM,
-			who:Box::new(subaccount_0_location.clone()),
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	supplement_fee_reserve {
-		kusama_setup::<T>()?;
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
-
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-		RawOrigin::Root.into(),
-		lookup_of_account::<T>(entrance_account.clone()),
-		KSM,
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
-	));
-
-		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
-	);
-
-
-	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
-	let entrance_account_location: MultiLocation =
-		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
-
-		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferTo,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
-	));
-		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
-			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
-			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
-			unlocking: vec![],
-		};
-		let ledger = Ledger::Substrate(sb_ledger);
-		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
-
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		assert_ok!(Slp::<T>::update_ongoing_time_unit(
-			origin.clone(),KSM,TimeUnit::Era(27)
-		));
-
-		let delay =
-			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
-
-
-		CurrencyDelays::<T>::insert(KSM, delay);
-
-		assert_ok!(Slp::<T>::set_fee_source (
-			origin.clone(),
-			KSM,
-			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
-		));
-
-	let call = Call::<T>::supplement_fee_reserve {
-			currency_id:KSM,
-			dest:Box::new(subaccount_0_location.clone()),
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-
-	confirm_validators_by_delegator_query_response {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-
-		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
-
-		kusama_setup::<T>()?;
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-		RawOrigin::Root.into(),
-		lookup_of_account::<T>(entrance_account.clone()),
-		KSM,
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
-	));
-
-		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
-	);
-
-
-	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
-	let entrance_account_location: MultiLocation =
-		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
-
-		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferTo,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
-	));
-		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
-			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
-			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
-			unlocking: vec![],
-		};
-		let ledger = Ledger::Substrate(sb_ledger);
-		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
-
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		assert_ok!(Slp::<T>::update_ongoing_time_unit(
-			origin.clone(),KSM,TimeUnit::Era(27)
-		));
-
-		let delay =
-			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
-
-
-		CurrencyDelays::<T>::insert(KSM, delay);
-		assert_ok!(Slp::<T>::delegate (
-			origin.clone(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
-		));
-
-		assert_ok!(Slp::<T>::set_fee_source (
-			origin.clone(),
-			KSM,
-			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
-		));
-
-	let call = Call::<T>::confirm_validators_by_delegator_query_response {
-			currency_id:KSM,
-			query_id:0,
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	fail_validators_by_delegator_query_response {
-		let origin = <T as pallet::Config>::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let who: T::AccountId = whitelisted_caller();
-
-		let subaccount_0_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(who.clone()).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let who2: T::AccountId = whitelisted_caller();
-		let validator_0_account_id_20: [u8; 32] = Pallet::<T>::account_id_to_account_32(who2.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Pallet::<T>::account_32_to_parent_location(validator_0_account_id_20).unwrap();
-
-		let entrance_account: T::AccountId = T::EntranceAccount::get().into_account_truncating();
-
-		kusama_setup::<T>()?;
-		assert_ok!(orml_tokens::Pallet::<T>::set_balance(
-		RawOrigin::Root.into(),
-		lookup_of_account::<T>(entrance_account.clone()),
-		KSM,
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(0u128)
-	));
-
-		assert_eq!(orml_tokens::Pallet::<T>::total_balance(KSM, &entrance_account),
-		<T as orml_tokens::Config>::Balance::unique_saturated_from(1_000_000_000_000_000_000u128)
-	);
-
-
-	let entrance_account_32 = Slp::<T>::account_id_to_account_32(entrance_account.clone()).unwrap();
-	let entrance_account_location: MultiLocation =
-		Slp::<T>::account_32_to_local_location(entrance_account_32).unwrap();
-
-		assert_ok!(Slp::<T>::set_operate_origin(origin.clone(), KSM, Some(who.clone())));
-		assert_ok!(Slp::<T>::add_delegator(origin.clone(), KSM, 1u16,Box::new(subaccount_0_location.clone())));
-		assert_ok!(Slp::<T>::add_validator(origin.clone(), KSM,Box::new(validator_0_location.clone())));
-		assert_ok!(<T as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		KSM,
-		XcmOperationType::TransferTo,
-		Some((Weight::from_parts(20_000_000_000, u64::MAX), BalanceOf::<T>::unique_saturated_from(10_000_000_000u128))),
-	));
-		let sb_ledger = SubstrateLedger {
-			account: subaccount_0_location.clone(),
-			total: BalanceOf::<T>::unique_saturated_from(1000_000_000_000u128),
-			active: BalanceOf::<T>::unique_saturated_from(500_000_000_000u128),
-			unlocking: vec![],
-		};
-		let ledger = Ledger::Substrate(sb_ledger);
-		DelegatorLedgers::<T>::insert(KSM, subaccount_0_location.clone(), ledger);
-
-		assert_ok!(Slp::<T>::set_ongoing_time_unit_update_interval(origin.clone(), KSM, Some(BlockNumberFor::<T>::from(0u32))));
-
-		assert_ok!(Slp::<T>::update_ongoing_time_unit(
-			origin.clone(),KSM,TimeUnit::Era(27)
-		));
-
-		let delay =
-			Delays { unlock_delay: TimeUnit::Era(24), leave_delegators_delay: TimeUnit::Era(24) };
-
-
-		CurrencyDelays::<T>::insert(KSM, delay);
-		assert_ok!(Slp::<T>::delegate (
-			origin.clone(),
-			KSM,
-			Box::new(subaccount_0_location.clone()),
-			vec![validator_0_location.clone()],
-		));
-		// DelegatorLedgerXcmUpdateQueue::<T>::insert(0, (update_entry.clone(), 1000));
-
-		assert_ok!(Slp::<T>::set_fee_source (
-			origin.clone(),
-			KSM,
-			Some((entrance_account_location.clone(),BalanceOf::<T>::unique_saturated_from(5_000_000_000u128)))
-		));
-
-	let call = Call::<T>::fail_validators_by_delegator_query_response {
-			currency_id:KSM,
-			query_id:0,
-		};
-  }: {call.dispatch_bypass_filter(RawOrigin::Signed(who.clone()).into())?}
-
-	impl_benchmark_test_suite!(Slp, crate::mocks::mock_kusama::ExtBuilder::default().build(), crate::mocks::mock_kusama::Runtime);
-
 }

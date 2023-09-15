@@ -34,8 +34,6 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-#[cfg(feature = "runtime-benchmarks")]
-use node_primitives::currency::VKSM;
 use node_primitives::{
 	currency::{BNC, KSM},
 	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmOperationType,
@@ -460,8 +458,6 @@ impl Config for Runtime {
 	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = ();
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -584,20 +580,6 @@ impl ExtBuilder {
 			(BOB, BNC, 100_000_000_000_000),
 			(CHARLIE, BNC, 100_000_000_000_000),
 			(entrance_account, BNC, 100_000_000_000_000),
-		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		use sp_runtime::traits::AccountIdConversion;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
-
-		self.balances(vec![
-			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
-			(whitelist_caller.clone(), VKSM, 100_000_000_000_000),
-			(pool_account.clone(), KSM, 100_000_000_000_000),
 		])
 	}
 

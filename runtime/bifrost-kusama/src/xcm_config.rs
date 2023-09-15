@@ -696,6 +696,9 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -874,6 +877,9 @@ impl orml_xtokens::Config for Runtime {
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
@@ -904,6 +910,9 @@ impl xcm_interface::Config for Runtime {
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = ParachainAccount;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type SalpHelper = Salp;

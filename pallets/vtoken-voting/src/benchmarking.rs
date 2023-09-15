@@ -19,16 +19,21 @@
 use crate::*;
 use assert_matches::assert_matches;
 use frame_benchmarking::v2::*;
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use node_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
-use sp_runtime::traits::Bounded;
+use sp_runtime::traits::UniqueSaturatedFrom;
 
 const SEED: u32 = 0;
 
 fn funded_account<T: Config>(name: &'static str, index: u32) -> AccountIdOf<T> {
 	let caller = account(name, index, SEED);
-	T::MultiCurrency::deposit(VKSM, &caller, BalanceOf::<T>::max_value()).unwrap();
+	assert_ok!(T::MultiCurrency::deposit(
+		VKSM,
+		&caller,
+		BalanceOf::<T>::unique_saturated_from(1000000000000u128)
+	));
 	caller
 }
 
@@ -350,5 +355,5 @@ mod benchmarks {
 	//
 	// The line generates three steps per benchmark, with repeat=1 and the three steps are
 	//   [low, mid, high] of the range.
-	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Runtime);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext_benchmark(), crate::mock::Runtime);
 }

@@ -20,7 +20,24 @@
 
 //! A list of the different weight modules for our runtime.
 
+pub mod bifrost_asset_registry;
+pub mod bifrost_call_switchgear;
+pub mod bifrost_cross_in_out;
 pub mod bifrost_currencies;
+pub mod bifrost_farming;
+pub mod bifrost_fee_share;
+pub mod bifrost_flexible_fee;
+pub mod bifrost_salp;
+pub mod bifrost_slp;
+pub mod bifrost_slpx;
+pub mod bifrost_stable_pool;
+pub mod bifrost_system_maker;
+pub mod bifrost_system_staking;
+pub mod bifrost_token_issuer;
+pub mod bifrost_vsbond_auction;
+pub mod bifrost_vstoken_conversion;
+pub mod bifrost_vtoken_minting;
+pub mod bifrost_vtoken_voting;
 pub mod orml_oracle;
 pub mod orml_tokens;
 pub mod pallet_xcm;

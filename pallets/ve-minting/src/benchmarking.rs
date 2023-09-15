@@ -165,5 +165,5 @@ benchmarks! {
 		T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::BNC), &account("seed",1,1), BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128))?;
 	}: _(RawOrigin::Root,account("seed",1,1),Some((7 * 86400 / 12u32).into()),rewards)
 
-		// impl_benchmark_test_suite!(VeMinting,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);
+		impl_benchmark_test_suite!(VeMinting,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);
 }

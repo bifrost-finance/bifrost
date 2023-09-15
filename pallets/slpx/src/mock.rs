@@ -30,9 +30,11 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
+use node_primitives::{
+	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol,
+};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
-use sp_core::{blake2_256, H256};
+use sp_core::{blake2_256, ConstU128, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{
@@ -58,7 +60,6 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -91,7 +92,10 @@ construct_runtime!(
 	ZenlinkProtocol: zenlink_protocol,
 	XTokens: orml_xtokens,
 	Slpx: slpx,
-	  PolkadotXcm: pallet_xcm
+	  PolkadotXcm: pallet_xcm,
+	  ParachainInfo: parachain_info,
+	  StableAsset: nutsfinance_stable_asset,
+	  StablePool: bifrost_stable_pool
   }
 );
 
@@ -357,15 +361,30 @@ parameter_types! {
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
+pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
+impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		AssetIdMaps::<Test>::get_multi_location(id)
+	}
+}
+
+impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
+	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+		AssetIdMaps::<Test>::get_currency_id(location)
+	}
+}
+
+impl parachain_info::Config for Test {}
+
 impl orml_xtokens::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = ();
+	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
 	type AccountIdToMultiLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -467,8 +486,6 @@ impl bifrost_slp::Config for Test {
 	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -491,7 +508,7 @@ impl pallet_xcm::Config for Test {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = ();
 	type XcmTeleportFilter = Nothing;
@@ -510,6 +527,43 @@ impl pallet_xcm::Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
+pub struct EnsurePoolAssetId;
+impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+	fn validate(_: CurrencyId) -> bool {
+		true
+	}
+}
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
+
+impl nutsfinance_stable_asset::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type AssetId = CurrencyId;
+	type Balance = Balance;
+	type Assets = Tokens;
+	type PalletId = StableAssetPalletId;
+	type AtLeast64BitUnsigned = u128;
+	type FeePrecision = ConstU128<10_000_000_000>;
+	type APrecision = ConstU128<100>;
+	type PoolAssetLimit = ConstU32<5>;
+	type SwapExactOverAmount = ConstU128<100>;
+	type WeightInfo = ();
+	type ListingOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type EnsurePoolAssetId = EnsurePoolAssetId;
+}
+
+impl bifrost_stable_pool::Config for Test {
+	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Tokens;
+	type StableAsset = StableAsset;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
+}
+
 // Pallet slpx configuration
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
@@ -517,14 +571,19 @@ parameter_types! {
 
 impl slpx::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
-	type StablePoolHandler = ();
+	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
 	type ParachainId = ParachainId;
 	type WeightInfo = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub fn new_test_ext() -> frame_support::sp_io::TestExternalities {
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

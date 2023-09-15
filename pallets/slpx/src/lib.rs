@@ -334,7 +334,7 @@ pub mod pallet {
 
 		/// Swap and transfer to target chain
 		#[pallet::call_index(1)]
-		#[pallet::weight(<T as Config>::WeightInfo::swap())]
+		#[pallet::weight(<T as Config>::WeightInfo::zenlink_swap())]
 		pub fn zenlink_swap(
 			origin: OriginFor<T>,
 			evm_caller: H160,
@@ -471,7 +471,7 @@ pub mod pallet {
 
 		/// Stable pool swap
 		#[pallet::call_index(3)]
-		#[pallet::weight(<T as Config>::WeightInfo::swap())]
+		#[pallet::weight(<T as Config>::WeightInfo::stable_pool_swap())]
 		pub fn stable_pool_swap(
 			origin: OriginFor<T>,
 			evm_caller: H160,

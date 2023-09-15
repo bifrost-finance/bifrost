@@ -32,8 +32,8 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use node_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, ParaId, SlpOperator, SlpxOperator,
-	TokenSymbol, TokenSymbol::*, VKSM,
+	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
+	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_arithmetic::Percent;
@@ -41,7 +41,7 @@ use sp_core::{ConstU32, H256};
 pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
-	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	traits::{BlakeTwo256, Convert, IdentityLookup, UniqueSaturatedInto},
 };
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
@@ -52,7 +52,6 @@ use zenlink_protocol::{
 };
 
 use crate as salp;
-use crate::WeightInfo;
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -81,6 +80,7 @@ construct_runtime!(
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
 		StablePool: bifrost_stable_pool::{Pallet, Call, Storage},
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -471,7 +471,7 @@ impl salp::Config for Test {
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
-	type WeightInfo = SalpWeightInfo;
+	type WeightInfo = ();
 	type XcmInterface = MockXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -488,6 +488,7 @@ parameter_types! {
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
 
 pub struct XcmConfig;
@@ -548,89 +549,31 @@ impl pallet_xcm::Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
+pub struct BifrostAccountIdToMultiLocation;
+impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
+	fn convert(account: AccountId) -> MultiLocation {
+		X1(AccountId32 { network: None, id: account.into() }).into()
+	}
+}
+
+impl xcm_interface::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type MultiCurrency = Currencies;
+	type RelayNetwork = RelayNetwork;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type ParachainSovereignAccount = TreasuryAccount;
+	type XcmExecutor = DoNothingExecuteXcm;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type SalpHelper = Salp;
+	type ParachainId = ParaInfo;
+	type CallBackTimeOut = ConstU32<10>;
+}
+
 pub struct ParaInfo;
 impl Get<Pid> for ParaInfo {
 	fn get() -> Pid {
 		Pid::from(2001)
-	}
-}
-
-pub struct SalpWeightInfo;
-impl WeightInfo for SalpWeightInfo {
-	fn contribute() -> Weight {
-		Weight::zero()
-	}
-
-	fn unlock() -> Weight {
-		Weight::zero()
-	}
-
-	fn redeem() -> Weight {
-		Weight::zero()
-	}
-
-	fn refund() -> Weight {
-		Weight::zero()
-	}
-
-	fn batch_unlock(_k: u32) -> Weight {
-		Weight::zero()
-	}
-
-	fn set_multisig_confirm_account() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_success() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_fail() -> Weight {
-		Weight::zero()
-	}
-
-	fn continue_fund() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_retire() -> Weight {
-		Weight::zero()
-	}
-
-	fn fund_end() -> Weight {
-		Weight::zero()
-	}
-
-	fn create() -> Weight {
-		Weight::zero()
-	}
-
-	fn edit() -> Weight {
-		Weight::zero()
-	}
-
-	fn confirm_contribute() -> Weight {
-		Weight::zero()
-	}
-
-	fn withdraw() -> Weight {
-		Weight::zero()
-	}
-
-	fn dissolve_refunded() -> Weight {
-		Weight::zero()
-	}
-
-	fn dissolve() -> Weight {
-		Weight::zero()
-	}
-
-	fn buyback() -> Weight {
-		Weight::zero()
-	}
-
-	fn buyback_vstoken_by_stable_pool() -> Weight {
-		Weight::zero()
 	}
 }
 

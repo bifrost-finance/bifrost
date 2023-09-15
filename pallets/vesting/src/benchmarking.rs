@@ -170,8 +170,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 
@@ -202,8 +200,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&source, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 

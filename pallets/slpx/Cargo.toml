@@ -30,19 +30,23 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 xcm-interface = { path = "../xcm-interface", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-stable-pool = { path = "../stable-pool", default-features = false }
+nutsfinance-stable-asset = { path = "../stable-asset" , default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 pallet-balances = { version = "4.0.0-dev",  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 bifrost-vtoken-minting = { path = "../vtoken-minting" }
 bifrost-slp = { path = "../slp" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-orml-tokens = "0.4.1-dev"
 bifrost-currencies = { workspace = true }
 xcm-executor  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 pallet-xcm  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-builder  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-simulator  = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
+parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
+
 
 [features]
 default = ["std"]
@@ -66,11 +70,15 @@ std = [
 	"sp-runtime/std",
 	"bifrost-asset-registry/std",
 	"bifrost-stable-pool/std",
+	"nutsfinance-stable-asset/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
 with-bifrost-polkadot-runtime = []

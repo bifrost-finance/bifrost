@@ -20,6 +20,7 @@ use codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*, traits::Get, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+use node_primitives::DerivativeIndex;
 use pallet_conviction_voting::{Conviction, Delegations, Vote};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -295,7 +296,7 @@ where
 	MaxVotes: Get<u32>,
 {
 	/// The current votes of the account.
-	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>), MaxVotes>,
+	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>, DerivativeIndex), MaxVotes>,
 	/// The total amount of delegations that this account has received, post-conviction-weighting.
 	pub delegations: Delegations<Balance>,
 	/// Any pre-existing locks from past voting/delegating activity.

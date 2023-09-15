@@ -88,6 +88,9 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 
+# Nuts Finance
+nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
+
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
@@ -112,6 +115,8 @@ bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features
 pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 bifrost-currencies = { workspace = true }
+bifrost-stable-pool = { path = "../../pallets/stable-pool", default-features = false }
+bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "polkadot" ] }
 lend-market = { path = "../../pallets/lend-market", default-features = false }
 lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
@@ -229,6 +234,8 @@ std = [
 	"lend-market/std",
 	"lend-market-rpc-runtime-api/std",
 	"pallet-prices/std",
+	"bifrost-stable-pool/std",
+	"bifrost-stable-pool-rpc-runtime-api/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 
@@ -259,6 +266,7 @@ runtime-benchmarks = [
 	"bifrost-ve-minting/runtime-benchmarks",
 	"bifrost-cross-in-out/runtime-benchmarks",
 	"bifrost-slpx/runtime-benchmarks",
+	"bifrost-stable-pool/runtime-benchmarks",
 	"bifrost-vtoken-voting/runtime-benchmarks",
 	"sp-api/disable-logging",
 	"lend-market/runtime-benchmarks",
@@ -325,6 +333,8 @@ try-runtime = [
 	"bifrost-ve-minting/try-runtime",
 	"bifrost-cross-in-out/try-runtime",
 	"bifrost-slpx/try-runtime",
+	"nutsfinance-stable-asset/try-runtime",
+	"bifrost-stable-pool/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
 	"lend-market/try-runtime",
 	"pallet-prices/try-runtime",
