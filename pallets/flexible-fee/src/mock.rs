@@ -540,6 +540,15 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		Self::get_multilocation(token, derivative_index)
 			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(_token: CurrencyId) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(_token: CurrencyId, _who: MultiLocation) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(_token: CurrencyId, _index: DerivativeIndex, _who: MultiLocation) {}
 }
 
 parameter_types! {
