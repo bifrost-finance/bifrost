@@ -273,7 +273,7 @@ pub mod pallet {
 			PollIndex,
 			DerivativeIndex,
 			AccountIdOf<T>,
-			Option<AccountVote<BalanceOf<T>>>,
+			Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
 		),
 	>;
 
@@ -424,8 +424,14 @@ pub mod pallet {
 			}
 
 			// record vote info
-			let maybe_old_vote =
-				Self::try_vote(&who, vtoken, poll_index, derivative_index, new_vote)?;
+			let maybe_old_vote = Self::try_vote(
+				&who,
+				vtoken,
+				poll_index,
+				derivative_index,
+				new_vote,
+				vote.balance(),
+			)?;
 
 			// send XCM message
 			let delegator_vote =
@@ -656,8 +662,15 @@ pub mod pallet {
 					// rollback vote
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
-					if let Some(old_vote) = maybe_old_vote {
-						Self::try_vote(&who, vtoken, poll_index, derivative_index, old_vote)?;
+					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
+						Self::try_vote(
+							&who,
+							vtoken,
+							poll_index,
+							derivative_index,
+							old_vote,
+							vtoken_balance,
+						)?;
 					}
 				} else {
 					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
@@ -759,7 +772,8 @@ pub mod pallet {
 			poll_index: PollIndex,
 			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
-		) -> Result<Option<AccountVote<BalanceOf<T>>>, DispatchError> {
+			vtoken_balance: BalanceOf<T>,
+		) -> Result<Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>, DispatchError> {
 			ensure!(
 				vote.balance() <= T::MultiCurrency::total_balance(vtoken, who),
 				Error::<T>::InsufficientFunds
@@ -774,16 +788,20 @@ pub mod pallet {
 								// Shouldn't be possible to fail, but we handle it gracefully.
 								tally.remove(votes[i].1).ok_or(ArithmeticError::Underflow)?;
 								Self::try_sub_delegator_vote(vtoken, votes[i].2, votes[i].1)?;
-								old_vote = Some(votes[i].1);
+								old_vote = Some((votes[i].1, votes[i].3));
 								if let Some(approve) = votes[i].1.as_standard() {
 									tally.reduce(approve, *delegations);
 								}
 								votes[i].1 = vote;
 								votes[i].2 = derivative_index;
+								votes[i].3 = vtoken_balance;
 							},
 							Err(i) => {
 								votes
-									.try_insert(i, (poll_index, vote, derivative_index))
+									.try_insert(
+										i,
+										(poll_index, vote, derivative_index, vtoken_balance),
+									)
 									.map_err(|_| Error::<T>::MaxVotesReached)?;
 							},
 						}
@@ -798,7 +816,7 @@ pub mod pallet {
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
-					Self::extend_lock(&who, vtoken, &poll_index, vote.balance())?;
+					Self::extend_lock(&who, vtoken, &poll_index, vtoken_balance)?;
 					Ok(old_vote)
 				})
 			})

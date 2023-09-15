@@ -334,7 +334,7 @@ where
 	MaxVotes: Get<u32>,
 {
 	/// The current votes of the account.
-	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>, DerivativeIndex), MaxVotes>,
+	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>, DerivativeIndex, Balance), MaxVotes>,
 	/// The total amount of delegations that this account has received, post-conviction-weighting.
 	pub delegations: Delegations<Balance>,
 	/// Any pre-existing locks from past voting/delegating activity.
