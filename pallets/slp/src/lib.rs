@@ -239,6 +239,8 @@ pub mod pallet {
 		AmountNotProvided,
 		FailToConvert,
 		ExceedMaxLengthLimit,
+		/// Transfer to failed
+		TransferToError,
 	}
 
 	#[pallet::event]
