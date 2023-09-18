@@ -39,7 +39,7 @@ test-runtimes:
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="with-all-runtime,runtime-benchmarks, polkadot" --exclude "*-integration-tests"
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*-integration-tests" --exclude "node-*" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:

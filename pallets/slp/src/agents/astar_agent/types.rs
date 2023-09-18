@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Config;
+use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
@@ -45,15 +45,15 @@ pub enum AstarUtilityCall<AstarCall> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum AstarDappsStakingCall<T: Config> {
 	#[codec(index = 3)]
-	BondAndStake(SmartContract<T::AccountId>, #[codec(compact)] u128),
+	BondAndStake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 4)]
-	UnbondAndUnstake(SmartContract<T::AccountId>, #[codec(compact)] u128),
+	UnbondAndUnstake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 5)]
 	WithdrawUnbonded,
 	#[codec(index = 6)]
 	NominationTransfer(
 		SmartContract<T::AccountId>,
-		#[codec(compact)] u128,
+		#[codec(compact)] BalanceOf<T>,
 		SmartContract<T::AccountId>,
 	),
 	#[codec(index = 7)]
