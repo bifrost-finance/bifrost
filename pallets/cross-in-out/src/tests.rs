@@ -22,7 +22,7 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
 use node_primitives::currency::KSM;
 use sp_runtime::DispatchError::BadOrigin;
-use xcm::opaque::v2::{Junction, Junctions::X1};
+use xcm::v3::prelude::*;
 
 #[test]
 fn cross_in_and_cross_out_should_work() {

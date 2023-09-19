@@ -66,6 +66,7 @@ pub trait WeightInfo {
 	fn register_linked_account() -> Weight;
 	fn cross_out() -> Weight;
 	fn change_outer_linked_account() -> Weight;
+	fn set_crossout_fee() -> Weight;
 }
 
 /// Weights for bifrost_cross_in_out using the Bifrost node and recommended hardware.
@@ -219,6 +220,12 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 		//  Measured:  `309`
 		//  Estimated: `5877`
 		// Minimum execution time: 51_122_000 picoseconds.
+		Weight::from_parts(52_439_000, 5877)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
+	}
+
+	fn set_crossout_fee() -> Weight {
 		Weight::from_parts(52_439_000, 5877)
 			.saturating_add(T::DbWeight::get().reads(2_u64))
 			.saturating_add(T::DbWeight::get().writes(2_u64))
@@ -378,5 +385,11 @@ impl WeightInfo for () {
 		Weight::from_parts(52_439_000, 5877)
 			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
+	}
+
+	fn set_crossout_fee() -> Weight {
+		Weight::from_parts(52_439_000, 5877)
+		.saturating_add(RocksDbWeight::get().reads(2_u64))
+		.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
 }

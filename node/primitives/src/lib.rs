@@ -29,6 +29,7 @@ use sp_runtime::{
 	MultiSignature, OpaqueExtrinsic,
 };
 use xcm::v3::prelude::*;
+pub use zenlink_protocol::AssetId;
 
 pub mod currency;
 mod salp;
@@ -58,9 +59,6 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them.
 pub type AccountIndex = u32;
-
-/// An index to an asset
-pub type AssetId = u32;
 
 /// Vtoken Mint type
 pub type VtokenMintPrice = u128;

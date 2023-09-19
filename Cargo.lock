@@ -619,6 +619,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-bcmp",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -1092,6 +1093,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-bcmp",
  "pallet-bounties",
  "pallet-collator-selection",
  "pallet-collective",
@@ -7172,6 +7174,21 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-bcmp"
+version = "0.0.0"
+source = "git+https://github.com/bifrost-finance/pallet-bcmp?rev=ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9#ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-std",
 ]
 

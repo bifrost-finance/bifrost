@@ -31,6 +31,7 @@ use core::convert::TryInto;
 use bifrost_slp::{Ledger, QueryResponseManager};
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
+use cumulus_primitives_core::relay_chain::vstaging::HashT;
 pub use frame_support::{
 	construct_runtime,
 	inherent::Vec,
@@ -110,6 +111,7 @@ use bifrost_vtoken_voting::{
 };
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use sp_core::H256;
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -1335,6 +1337,10 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+parameter_types! {
+	pub AnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_CROSS_IN_OUT"[..]);
+}
+
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1342,6 +1348,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
+	type AnchorAddress = AnchorAddress;
 }
 
 impl bifrost_slpx::Config for Runtime {
@@ -1618,6 +1625,24 @@ where
 
 // zenlink runtime end
 
+// bool network runtime start
+
+parameter_types! {
+	pub const PureMessage: H256 = pallet_bcmp::PURE_MESSAGE;
+	pub const DefaultAdmin: Option<AccountId> = None;
+}
+
+impl pallet_bcmp::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PureMessage = PureMessage;
+	type DefaultAdmin = DefaultAdmin;
+	type Consumers = CrossInOut;
+	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
+}
+
+// bool network runtime end
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -1703,6 +1728,10 @@ construct_runtime! {
 		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+
+		// bool
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>} = 128,
+
 		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
 	}
 }
@@ -1714,7 +1743,7 @@ pub type Signature = sp_runtime::MultiSignature;
 /// Index of a transaction in the chain.
 pub type Index = u32;
 /// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
+pub type Hash = H256;
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, AccountIndex>;
 /// Block header type as expected by this runtime.

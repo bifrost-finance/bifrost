@@ -28,11 +28,11 @@ use sp_std::{
 	convert::{TryFrom, TryInto},
 	prelude::*,
 };
-use zenlink_protocol::{AssetId, LOCAL, NATIVE};
+pub use zenlink_protocol::{LOCAL, NATIVE};
 
 use crate::{
 	traits::{CurrencyIdExt, TokenInfo},
-	LeasePeriod, ParaId, PoolId, TryConvertFrom,
+	AssetId, LeasePeriod, ParaId, PoolId, TryConvertFrom,
 };
 
 pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);

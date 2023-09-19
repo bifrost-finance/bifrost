@@ -23,16 +23,19 @@
 extern crate alloc;
 
 use alloc::{vec, vec::Vec};
-use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::AccountIdConversion, PalletId};
+use frame_support::{
+	dispatch::DispatchErrorWithPostInfo, ensure, pallet_prelude::*,
+	sp_runtime::traits::AccountIdConversion, PalletId,
+};
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
+use node_primitives::{AssetId, CurrencyId, TryConvertFrom, FIL};
 use orml_traits::MultiCurrency;
+use pallet_bcmp::Message;
+use sp_core::{H256, U256};
+use sp_runtime::{traits::UniqueSaturatedFrom, SaturatedConversion};
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
-use xcm::{
-	opaque::v2::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
-	v2::MultiLocation,
-};
+use xcm::v3::prelude::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -48,12 +51,28 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::Balance;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+type CurrencyBalance<T> =
+	<<T as pallet_bcmp::Config>::Currency as frame_support::traits::Currency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+
+const MAX_ACCOUNT_LENGTH: usize = 32;
+const AMOUNT_LENGTH: usize = 32;
+const MAX_CURRENCY_ID_LENGTH: usize = 32;
+
+#[derive(RuntimeDebug, Clone, Eq, PartialEq, Encode, Decode, TypeInfo)]
+pub struct Payload<T: Config> {
+	pub amount: BalanceOf<T>,
+	pub currency_id: CurrencyId,
+	pub receiver: AccountIdOf<T>,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_bcmp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Currecny operation handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
@@ -69,6 +88,10 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxLengthLimit: Get<u32>;
+
+		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
+		#[pallet::constant]
+		type AnchorAddress: Get<H256>;
 	}
 
 	#[pallet::error]
@@ -84,6 +107,12 @@ pub mod pallet {
 		AmountLowerThanMinimum,
 		ExceedMaxLengthLimit,
 		FailedToConvert,
+		InvalidDestinationMultilocation,
+		CrossOutFeeNotSet,
+		InvalidCrossInPath,
+		FailedToSendMessage,
+		InvalidPayloadLength,
+		Unexpected,
 	}
 
 	#[pallet::event]
@@ -133,6 +162,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			cross_in_minimum: BalanceOf<T>,
 			cross_out_minimum: BalanceOf<T>,
+		},
+		CrossOutFeeSet {
+			currency_id: CurrencyId,
+			cross_out_fee: BalanceOf<T>,
 		},
 	}
 
@@ -189,6 +222,11 @@ pub mod pallet {
 	pub type CrossingMinimumAmount<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
 
+	/// cross-out fee amount in BNC
+	#[pallet::storage]
+	#[pallet::getter(fn get_cross_out_fee)]
+	pub type CrossOutFee<T> = StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>>;
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -200,7 +238,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::cross_in())]
+		#[pallet::weight(<T as Config>::WeightInfo::cross_in())]
 		pub fn cross_in(
 			origin: OriginFor<T>,
 			location: Box<MultiLocation>,
@@ -210,50 +248,21 @@ pub mod pallet {
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin)?;
 
-			ensure!(
-				CrossCurrencyRegistry::<T>::contains_key(currency_id),
-				Error::<T>::CurrencyNotSupportCrossInAndOut
-			);
-
-			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
-				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
-			ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
+			// currency_id must not be FIL, FIL should be cross-in by pallet-bcmp
+			ensure!(currency_id != FIL, Error::<T>::InvalidCrossInPath);
 
 			let issue_whitelist =
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
 
-			let entrance_account_mutlilcaition = Box::new(MultiLocation {
-				parents: 0,
-				interior: X1(AccountId32 {
-					network: Any,
-					id: T::EntrancePalletId::get().into_account_truncating(),
-				}),
-			});
+			Self::inner_cross_in(location, currency_id, amount, remark)?;
 
-			// If the cross_in destination is entrance account, it is not required to be registered.
-			let dest = if entrance_account_mutlilcaition == location {
-				T::EntrancePalletId::get().into_account_truncating()
-			} else {
-				Self::outer_multilocation_to_account(currency_id, location.clone())
-					.ok_or(Error::<T>::NoAccountIdMapping)?
-			};
-
-			T::MultiCurrency::deposit(currency_id, &dest, amount)?;
-
-			Self::deposit_event(Event::CrossedIn {
-				dest,
-				currency_id,
-				location: *location,
-				amount,
-				remark,
-			});
 			Ok(())
 		}
 
 		/// Destroy some balance from an account and issue cross-out event.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::cross_out())]
+		#[pallet::weight(<T as Config>::WeightInfo::cross_out())]
 		pub fn cross_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -278,13 +287,18 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(currency_id, &crosser, amount)?;
 
+			// if currecny_id is FIL, send message to pallet-bcmp
+			if currency_id == FIL {
+				Self::send_message(crosser.clone(), currency_id, amount, Box::new(location))?;
+			}
+
 			Self::deposit_event(Event::CrossedOut { currency_id, crosser, location, amount });
 			Ok(())
 		}
 
 		// Register the mapping relationship of Bifrost account and account from other chains
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::register_linked_account())]
+		#[pallet::weight(<T as Config>::WeightInfo::register_linked_account())]
 		pub fn register_linked_account(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -329,7 +343,7 @@ pub mod pallet {
 
 		// Change originally registered linked outer chain multilocation
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::change_outer_linked_account())]
+		#[pallet::weight(<T as Config>::WeightInfo::change_outer_linked_account())]
 		pub fn change_outer_linked_account(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -369,7 +383,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::register_currency_for_cross_in_out())]
+		#[pallet::weight(<T as Config>::WeightInfo::register_currency_for_cross_in_out())]
 		pub fn register_currency_for_cross_in_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -388,7 +402,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::deregister_currency_for_cross_in_out())]
+		#[pallet::weight(<T as Config>::WeightInfo::deregister_currency_for_cross_in_out())]
 		pub fn deregister_currency_for_cross_in_out(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -403,7 +417,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_to_issue_whitelist())]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -437,7 +451,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_from_issue_whitelist())]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -460,7 +474,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::add_to_register_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_to_register_whitelist())]
 		pub fn add_to_register_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -494,7 +508,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(9)]
-		#[pallet::weight(T::WeightInfo::remove_from_register_whitelist())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_from_register_whitelist())]
 		pub fn remove_from_register_whitelist(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -523,7 +537,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(T::WeightInfo::set_crossing_minimum_amount())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_crossing_minimum_amount())]
 		pub fn set_crossing_minimum_amount(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -541,6 +555,208 @@ pub mod pallet {
 			});
 
 			Ok(())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_crossout_fee())]
+		pub fn set_crossout_fee(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			cross_out_fee: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			CrossOutFee::<T>::insert(currency_id, cross_out_fee);
+
+			Self::deposit_event(Event::CrossOutFeeSet { currency_id, cross_out_fee });
+
+			Ok(())
+		}
+	}
+
+	impl<T: Config> pallet_bcmp::ConsumerLayer<T> for Pallet<T> {
+		/// Called by 'Bcmp::receive_message', has already verified committee's signature.
+		fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+			let payload = Self::parse_payload(&message.payload)?;
+
+			let accuount_u8_array = Self::get_account_id_u8_array(payload.receiver);
+
+			// receiver account to native location
+			let location = Box::new(MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 { network: None, id: accuount_u8_array }),
+			});
+
+			let remark_op = if &message.extra_feed.len() == &0usize {
+				None
+			} else {
+				Some(message.extra_feed.clone())
+			};
+
+			Self::inner_cross_in(location, payload.currency_id, payload.amount, remark_op)?;
+
+			Ok(().into())
+		}
+
+		fn anchor_addr() -> H256 {
+			T::AnchorAddress::get()
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub(crate) fn send_message(
+			sender: AccountIdOf<T>,
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+			dst_location: Box<MultiLocation>,
+		) -> Result<(), Error<T>> {
+			let (dst_chain, receiver) = Self::get_chain_and_receiver(&dst_location)?;
+
+			let payload = Self::eth_api_encode(amount, currency_id, &receiver)?;
+			let src_anchor = T::AnchorAddress::get();
+
+			let fee = Self::get_cross_out_fee(currency_id).ok_or(Error::<T>::CrossOutFeeNotSet)?;
+			let fee = CurrencyBalance::<T>::unique_saturated_from(fee.saturated_into::<u128>());
+
+			pallet_bcmp::Pallet::<T>::send_message(sender, fee, src_anchor, dst_chain, payload)
+				.map_err(|_| Error::<T>::FailedToSendMessage)?;
+
+			Ok(())
+		}
+
+		/// Example for parsing payload from Evm payload, contains 'amount' and 'receiver'.
+		pub(crate) fn parse_payload(raw: &[u8]) -> Result<Payload<T>, DispatchErrorWithPostInfo> {
+			return if raw.len() == MAX_ACCOUNT_LENGTH + AMOUNT_LENGTH + MAX_CURRENCY_ID_LENGTH {
+				let amount: u128 = U256::from_big_endian(&raw[..32])
+					.try_into()
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+
+				// decode currency_id
+				let currency_id_u64: u64 = U256::from_big_endian(&raw[32..64])
+					.try_into()
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+				let currency_id = CurrencyId::try_from(currency_id_u64)
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+
+				// account id decode may different, ie. 'AccountId20', 'AccountId32', ..
+				let account_len = T::AccountId::max_encoded_len();
+				if account_len >= raw.len() {
+					return Err(Error::<T>::FailedToConvert.into());
+				}
+				let receiver = T::AccountId::decode(&mut raw[raw.len() - account_len..].as_ref())
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+				Ok(Payload {
+					amount: SaturatedConversion::saturated_from(amount),
+					currency_id,
+					receiver,
+				})
+			} else {
+				Err(Error::<T>::InvalidPayloadLength.into())
+			};
+		}
+
+		/// Encoding to Evm payload. In total 32+32+32=96 bytes.
+		pub(crate) fn eth_api_encode(
+			amount: BalanceOf<T>,
+			currency_id: CurrencyId,
+			receiver: &[u8],
+		) -> Result<Vec<u8>, Error<T>> {
+			let mut fixed_amount = [0u8; 32];
+			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
+			let mut payload = fixed_amount.to_vec();
+
+			// currency_id to u64
+			let currency_id_asset: AssetId = AssetId::try_convert_from(currency_id, 0u32)
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let mut fixed_currency_id = [0u8; 32];
+			U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
+			payload.append(&mut fixed_currency_id.to_vec());
+
+			let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
+			payload.append(&mut fixed_address);
+			Ok(payload)
+		}
+
+		/// Extend bytes to target length.
+		pub(crate) fn extend_to_bytes32(data: &[u8], size: usize) -> Vec<u8> {
+			let mut append = Vec::new();
+			let mut len = data.len();
+			while len < size {
+				append.push(0);
+				len += 1;
+			}
+			append.append(&mut data.to_vec());
+			append
+		}
+
+		pub(crate) fn get_chain_and_receiver(
+			location: &MultiLocation,
+		) -> Result<(u32, Vec<u8>), Error<T>> {
+			match location {
+				MultiLocation {
+					parents: 100,
+					interior: X1(AccountKey20 { network: Some(network_id), key: account_20 }),
+				} =>
+					if let NetworkId::Ethereum { chain_id } = network_id {
+						let receiver = account_20.to_vec();
+						return Ok((*chain_id as u32, receiver));
+					} else {
+						Err(Error::<T>::InvalidDestinationMultilocation)
+					},
+				_ => Err(Error::<T>::InvalidDestinationMultilocation),
+			}
+		}
+
+		pub(crate) fn inner_cross_in(
+			location: Box<MultiLocation>,
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+			remark: Option<Vec<u8>>,
+		) -> Result<(), Error<T>> {
+			ensure!(
+				CrossCurrencyRegistry::<T>::contains_key(currency_id),
+				Error::<T>::CurrencyNotSupportCrossInAndOut
+			);
+
+			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
+				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
+			ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
+
+			let entrance_account_mutlilcaition = Box::new(MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 {
+					network: None,
+					id: T::EntrancePalletId::get().into_account_truncating(),
+				}),
+			});
+
+			// If the cross_in destination is entrance account, it is not required to be registered.
+			let dest = if entrance_account_mutlilcaition == location {
+				T::EntrancePalletId::get().into_account_truncating()
+			} else {
+				Self::outer_multilocation_to_account(currency_id, location.clone())
+					.ok_or(Error::<T>::NoAccountIdMapping)?
+			};
+
+			T::MultiCurrency::deposit(currency_id, &dest, amount)
+				.map_err(|_| Error::<T>::Unexpected)?;
+
+			Self::deposit_event(Event::CrossedIn {
+				dest,
+				currency_id,
+				location: *location,
+				amount,
+				remark,
+			});
+
+			Ok(())
+		}
+
+		pub(crate) fn get_account_id_u8_array(account_id: AccountIdOf<T>) -> [u8; 32] {
+			let mut account_id_u8_array = [0u8; 32];
+			let account_id_u8_vec = account_id.encode();
+			account_id_u8_array.copy_from_slice(&account_id_u8_vec);
+			account_id_u8_array
 		}
 	}
 }

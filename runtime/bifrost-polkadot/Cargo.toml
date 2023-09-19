@@ -18,10 +18,12 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 ] }
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
-strum = { version = "0.24", default-features = false, features = [ "derive" ] }
+strum = { version = "0.24", default-features = false, features = ["derive"] }
 strum_macros = "0.24"
 # primitives
-node-primitives = { default-features = false, path = "../../node/primitives", features=["with-bifrost-polkadot-runtime"] }
+node-primitives = { default-features = false, path = "../../node/primitives", features = [
+	"with-bifrost-polkadot-runtime",
+] }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -108,11 +110,15 @@ bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-ap
 bifrost-fee-share = { path = "../../pallets/fee-share", default-features = false }
 bifrost-ve-minting = { path = "../../pallets/ve-minting", default-features = false }
 bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api", default-features = false }
-bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features=["with-bifrost-polkadot-runtime"] }
+bifrost-slpx = { path = "../../pallets/slpx", default-features = false, features = [
+	"with-bifrost-polkadot-runtime",
+] }
 pallet-ranked-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 bifrost-currencies = { workspace = true }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "polkadot" ] }
+bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [
+	"polkadot",
+] }
 
 # orml
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -126,6 +132,9 @@ merkle-distributor = { version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
+
+# Bool Network
+pallet-bcmp = { version = "*", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", optional = true }
@@ -162,6 +171,7 @@ std = [
 	"pallet-treasury/std",
 	"pallet-preimage/std",
 	"pallet-scheduler/std",
+	"pallet-bcmp/std",
 	"sp-api/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
