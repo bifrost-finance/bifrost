@@ -108,7 +108,7 @@ pub struct Delays {
 	pub leave_delegators_delay: TimeUnit,
 }
 
-/// XCM operations list
+/// DEPRECATED
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum XcmOperation {
 	// XTokens

@@ -26,9 +26,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod migration;
+use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
-
-use bifrost_slp::{Ledger, QueryResponseManager};
+use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -66,13 +67,11 @@ use sp_std::{marker::PhantomData, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
-
 /// Constant values used within the runtime.
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
-#[allow(unused_imports)]
-use bifrost_flexible_fee::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+
 pub use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -90,11 +89,15 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::{CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator},
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
+	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TimeUnit,
-	TokenSymbol,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
+	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
+
 // zenlink imports
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -108,16 +111,12 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
-use bifrost_vtoken_voting::{
-	traits::{DerivativeAccountHandler, XcmDestWeightAndFeeHandler},
-	DerivativeIndex,
-};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
 	ExistentialDeposits, MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia,
-	StatemineTransferFee, UmpTransactFee, XcmConfig, XcmRouter,
+	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
 
@@ -133,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 980,
+	spec_version: 982,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -324,6 +323,8 @@ parameter_types! {
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
+	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
+	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 }
 
 impl frame_system::Config for Runtime {
@@ -1092,70 +1093,40 @@ impl pallet_vesting::Config for Runtime {
 
 // Bifrost modules start
 
-// Aggregate name getter to get fee names if the call needs to pay extra fees.
-// If any call need to pay extra fees, it should be added as an item here.
-// Used together with AggregateExtraFeeFilter below.
-pub struct FeeNameGetter;
-impl NameGetter<RuntimeCall> for FeeNameGetter {
-	fn get_name(c: &RuntimeCall) -> ExtraFeeName {
+pub struct ExtraFeeMatcher;
+impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
+	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
 		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) =>
-				ExtraFeeName::SalpContribute,
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::SalpContribute,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
 			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
 				..
-			}) => ExtraFeeName::StatemineTransfer,
-			_ => ExtraFeeName::NoExtraFee,
-		}
-	}
-}
-
-// Aggregate filter to filter if the call needs to pay extra fees
-// If any call need to pay extra fees, it should be added as an item here.
-pub struct AggregateExtraFeeFilter;
-impl Contains<RuntimeCall> for AggregateExtraFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::StatemineTransfer,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+				},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
+				vtoken,
 				..
-			}) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct ContributeFeeFilter;
-impl Contains<RuntimeCall> for ContributeFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct StatemineTransferFeeFilter;
-impl Contains<RuntimeCall> for StatemineTransferFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
-				..
-			}) => true,
-			_ => false,
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
+				extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+			},
+			_ => ExtraFeeInfo::default(),
 		}
 	}
 }
 
 parameter_types! {
-	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub UmpContributeFee: Balance = UmpTransactFee::get();
 	pub MaxFeeCurrencyOrderListLen: u32 = 50;
 }
-
-pub type MiscFeeHandlers = (
-	MiscFeeHandler<Runtime, RelayCurrencyId, UmpContributeFee, ContributeFeeFilter>,
-	MiscFeeHandler<Runtime, RelayCurrencyId, StatemineTransferFee, StatemineTransferFeeFilter>,
-);
 
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
@@ -1163,16 +1134,13 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = RelayCurrencyId;
-	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = Treasury;
-	type WeightInfo = bifrost_flexible_fee::weights::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler = MiscFeeHandlers;
+	type WeightInfo = weights::bifrost_flexible_fee::BifrostWeight<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 parameter_types! {
@@ -1289,7 +1257,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type WeightInfo = bifrost_salp::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_salp::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<
 		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
@@ -1316,7 +1284,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
-	type WeightInfo = bifrost_vsbond_auction::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vsbond_auction::BifrostWeight<Runtime>;
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1326,7 +1294,7 @@ impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = bifrost_token_issuer::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_token_issuer::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
@@ -1336,14 +1304,14 @@ impl bifrost_call_switchgear::Config for Runtime {
 		CoreAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
-	type WeightInfo = bifrost_call_switchgear::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_call_switchgear::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type RegisterOrigin = EitherOfDiverse<MoreThanHalfCouncil, TechAdmin>;
-	type WeightInfo = bifrost_asset_registry::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_asset_registry::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1405,13 +1373,11 @@ impl bifrost_slp::Config for Runtime {
 		TechAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
-	type WeightInfo = bifrost_slp::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
-	type XcmRouter = XcmRouter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -1419,6 +1385,7 @@ impl bifrost_slp::Config for Runtime {
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1432,7 +1399,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	>;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_vstoken_conversion::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1449,7 +1416,7 @@ impl bifrost_farming::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type WeightInfo = bifrost_farming::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_farming::BifrostWeight<Runtime>;
 	type FarmingBoost = FarmingBoostPalletId;
 	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
@@ -1469,7 +1436,7 @@ impl bifrost_system_staking::Config for Runtime {
 		CoreAdmin,
 		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
 	>;
-	type WeightInfo = bifrost_system_staking::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_system_staking::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1483,7 +1450,7 @@ impl bifrost_system_maker::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_system_maker::BifrostWeight<Runtime>;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1497,7 +1464,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = bifrost_fee_share::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_fee_share::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
@@ -1506,7 +1473,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type EntrancePalletId = SlpEntrancePalletId;
-	type WeightInfo = bifrost_cross_in_out::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_cross_in_out::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
 }
 
@@ -1514,41 +1481,10 @@ parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
 }
 
-pub struct XcmDestWeightAndFee;
-impl XcmDestWeightAndFeeHandler<Runtime> for XcmDestWeightAndFee {
-	fn get_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::Vote)
-	}
-
-	fn get_remove_vote(token: CurrencyId) -> Option<(xcm::v3::Weight, Balance)> {
-		Slp::xcm_dest_weight_and_fee(token, bifrost_slp::XcmOperation::RemoveVote)
-	}
-}
-
-pub struct DerivativeAccount;
-impl DerivativeAccountHandler<Runtime> for DerivativeAccount {
-	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index).is_some()
-	}
-
-	fn get_multilocation(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<MultiLocation> {
-		Slp::get_delegator_multilocation_by_index(token, derivative_index)
-	}
-
-	fn get_stake_info(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<(Balance, Balance)> {
-		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Slp::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
-				Ledger::Substrate(l) if token == CurrencyId::Token(TokenSymbol::KSM) =>
-					Some((l.total, l.active)),
-				_ => None,
-			})
-		})
+pub struct DerivativeAccountTokenFilter;
+impl Contains<CurrencyId> for DerivativeAccountTokenFilter {
+	fn contains(token: &CurrencyId) -> bool {
+		*token == RelayCurrencyId::get()
 	}
 }
 
@@ -1559,13 +1495,14 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type XcmDestWeightAndFee = XcmDestWeightAndFee;
-	type DerivativeAccount = DerivativeAccount;
+	type XcmDestWeightAndFee = XcmInterface;
+	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type VTokenSupplyProvider = VtokenMinting;
 	type ParachainId = SelfParaChainId;
-	type MaxVotes = ConstU32<512>;
+	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
-	type WeightInfo = bifrost_vtoken_voting::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;
 }
 
 // Bifrost modules end
@@ -1689,7 +1626,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type FeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = Slpx;
-	type WeightInfo = bifrost_vtoken_minting::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vtoken_minting::BifrostWeight<Runtime>;
 	type OnRedeemSuccess = OnRedeemSuccess;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
@@ -1711,7 +1648,7 @@ impl bifrost_slpx::Config for Runtime {
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
-	type WeightInfo = bifrost_slpx::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
 }
 
 pub struct EnsurePoolAssetId;
@@ -1742,7 +1679,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 }
 
 impl bifrost_stable_pool::Config for Runtime {
-	type WeightInfo = bifrost_stable_pool::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_stable_pool::BifrostWeight<Runtime>;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
@@ -1988,7 +1925,61 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	(migration::XcmInterfaceMigration, BLPOnRuntimeUpgrade<Runtime>),
 >;
+
+use frame_support::traits::OnRuntimeUpgrade;
+pub struct BLPOnRuntimeUpgrade<T>(PhantomData<T>);
+impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade<T> {
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `pre_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		for pool_id in 0..pool_count {
+			if let Some(old_metadata) =
+				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
+			{
+				log::info!("Old currency_metadatas name is {:?}", old_metadata.name);
+			}
+		}
+
+		Ok(vec![])
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Bifrost `on_runtime_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		let weight = bifrost_asset_registry::migration::update_blp_metadata::<Runtime>(pool_count);
+
+		log::info!("Bifrost `on_runtime_upgrade finished`");
+
+		weight
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `post_upgrade`...");
+
+		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
+		for pool_id in 0..pool_count {
+			if let Some(new_metadata) =
+				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
+			{
+				let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
+				assert_eq!(new_metadata.symbol, symbol);
+				log::info!("New currency_metadatas name is {:?}", new_metadata.name);
+			}
+		}
+
+		Ok(())
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
@@ -1997,23 +1988,22 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_salp, Salp]
-		[bifrost_vsbond_auction, VSBondAuction]
-		[bifrost_token_issuer, TokenIssuer]
-		[bifrost_call_switchgear, CallSwitchgear]
-		[parachain_staking, ParachainStaking]
-		[bifrost_vtoken_minting, VtokenMinting]
-		[bifrost_farming, Farming]
-		[bifrost_system_staking, SystemStaking]
-		[bifrost_slp, Slp]
 		[bifrost_asset_registry, AssetRegistry]
-		[bifrost_fee_share, FeeShare]
+		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_cross_in_out, CrossInOut]
+		[bifrost_farming, Farming]
+		[bifrost_fee_share, FeeShare]
 		[bifrost_flexible_fee, FlexibleFee]
-		[bifrost_system_maker, SystemMaker]
-		[bifrost_vstoken_conversion, VstokenConversion]
+		[bifrost_salp, Salp]
+		[bifrost_slp, Slp]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
+		[bifrost_system_maker, SystemMaker]
+		[bifrost_system_staking, SystemStaking]
+		[bifrost_token_issuer, TokenIssuer]
+		[bifrost_vsbond_auction, VSBondAuction]
+		[bifrost_vstoken_conversion, VstokenConversion]
+		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_vtoken_voting, VtokenVoting]
 	);
 }
@@ -2140,8 +2130,11 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance,utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
+			let call = utx.function;
+
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
+
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),

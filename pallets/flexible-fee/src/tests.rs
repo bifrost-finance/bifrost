@@ -42,7 +42,7 @@ pub const CHARLIE: AccountId32 = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
 pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
@@ -253,9 +253,6 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 	});
 }
 
-// Three tests below are ignored due to some bugs of zenlink. Tests will be reopened after the bugs
-// fixed.
-
 #[test]
 fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
@@ -278,22 +275,21 @@ fn ensure_can_charge_fee_should_work() {
 			asset_order_list_vec.clone()
 		));
 
-		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
-		let _ = FlexibleFee::set_user_default_fee_currency(
-			origin_signed_bob.clone(),
-			Some(CURRENCY_ID_0),
-		);
-
+		// Alice's default fee currency is Asset 1
 		let _ = FlexibleFee::set_user_default_fee_currency(
 			RuntimeOrigin::signed(ALICE),
 			Some(CURRENCY_ID_1),
 		);
 
+		// Bob's default fee currency is Asset 0
 		let _ = FlexibleFee::set_user_default_fee_currency(
-			RuntimeOrigin::signed(CHARLIE),
-			Some(CURRENCY_ID_2),
+			origin_signed_bob.clone(),
+			Some(CURRENCY_ID_0),
 		);
 
+		// Alice originally should have 50 Asset 0 and 200 Asset 1
+		// Now that 50 < 100, so Alice should be deducted some amount from Asset 1 and get 100 Asset
+		// 0
 		assert_ok!(FlexibleFee::ensure_can_charge_fee(
 			&ALICE,
 			100,
@@ -301,20 +297,146 @@ fn ensure_can_charge_fee_should_work() {
 		));
 
 		// Alice should be deducted 100 from Asset 1 since Asset 0 doesn't have enough balance.
-		// asset1 : 200-100=100 asset0: 50+100 = 150
+		// asset1 : 200-112=88 asset0: 50+100 = 150
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_0, &ALICE), 150);
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &ALICE), 88);
 
+		// Currency 0 is the native currency.
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&ALICE), 150);
 
-		// Bob
+		// Bob originally should have 100 Asset 0 and 200 Asset 1
 		assert_ok!(FlexibleFee::ensure_can_charge_fee(
 			&BOB,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
 		));
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&BOB), 100); // no exitential deposit requirement. 100 is enough
+																		// Bob should be deducted 100 from Asset 0 since Asset 0 has enough balance.
+																		// Currency 1 should not be affected.
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &BOB), 200);
+	});
+}
+
+#[test]
+fn find_out_fee_currency_and_amount_should_work() {
+	new_test_ext().execute_with(|| {
+		basic_setup();
+
+		// set universal fee currency order list
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![
+			CURRENCY_ID_4,
+			CURRENCY_ID_3,
+			CURRENCY_ID_2,
+			CURRENCY_ID_1,
+			CURRENCY_ID_0,
+		])
+		.unwrap();
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		// charlie originally has 200 currency 0(Native currency)
+		let (fee_token, amount_in, amount_out) =
+			FlexibleFee::find_out_fee_currency_and_amount(&CHARLIE, 88).unwrap().unwrap();
+		assert_eq!(fee_token, CURRENCY_ID_0);
+		assert_eq!(amount_in, 88);
+		assert_eq!(amount_out, 88);
+
+		// alice originally should have 50 Asset 0. Should use Currency 4 to pay fee.
+		let (fee_token, amount_in, amount_out) =
+			FlexibleFee::find_out_fee_currency_and_amount(&ALICE, 88).unwrap().unwrap();
+		assert_eq!(fee_token, CURRENCY_ID_4);
+		assert_eq!(amount_in, 97);
+		assert_eq!(amount_out, 88);
+	});
+}
+
+#[test]
+fn get_extrinsic_and_extra_fee_total_should_work() {
+	new_test_ext().execute_with(|| {
+		basic_setup();
+
+		let native_asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_0).unwrap();
+		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_4).unwrap();
+
+		// call with no extra fee
+		let path_vec = vec![native_asset_id, native_asset_id];
+		let (total_fee, extra_bnc_fee, fee_value, path) =
+			FlexibleFee::get_extrinsic_and_extra_fee_total(&BALANCE_TRANSFER_CALL, 88).unwrap();
+		assert_eq!(total_fee, 88);
+		assert_eq!(extra_bnc_fee, 0);
+		assert_eq!(fee_value, 0);
+		assert_eq!(path, path_vec);
+
+		//  salp contribuite call with extra fee
+		let path_vec = vec![native_asset_id, asset_id];
+		let (total_fee, extra_bnc_fee, fee_value, path) =
+			FlexibleFee::get_extrinsic_and_extra_fee_total(&SALP_CONTRIBUTE_CALL, 88).unwrap();
+		assert_eq!(total_fee, 200);
+		assert_eq!(extra_bnc_fee, 112);
+		assert_eq!(fee_value, 100);
+		assert_eq!(path, path_vec);
+
+		// vtoken-voting vote call with extra fee
+		let path_vec = vec![native_asset_id, asset_id];
+		let (total_fee, extra_bnc_fee, fee_value, path) =
+			FlexibleFee::get_extrinsic_and_extra_fee_total(&VTOKENVOTING_VOTE_CALL, 88).unwrap();
+		assert_eq!(total_fee, 200);
+		assert_eq!(extra_bnc_fee, 112);
+		assert_eq!(fee_value, 100);
+		assert_eq!(path, path_vec);
+	});
+}
+
+#[test]
+fn cal_fee_token_and_amount_should_work() {
+	new_test_ext().execute_with(|| {
+		basic_setup();
+
+		// set universal fee currency order list
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![
+			CURRENCY_ID_4,
+			CURRENCY_ID_3,
+			CURRENCY_ID_2,
+			CURRENCY_ID_1,
+			CURRENCY_ID_0,
+		])
+		.unwrap();
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		// use default asset_order_list_vec
+		let (currency_id, amount_in) =
+			FlexibleFee::cal_fee_token_and_amount(&ALICE, 20, &BALANCE_TRANSFER_CALL).unwrap();
+		assert_eq!(currency_id, CURRENCY_ID_4);
+		assert_eq!(amount_in, 21);
+
+		// set alice's default fee currency to be CURRENCY_ID_0
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(
+			RuntimeOrigin::signed(ALICE),
+			Some(CURRENCY_ID_0),
+		));
+
+		// alice has enough balance of CURRENCY_ID_0, so should use CURRENCY_ID_0 to pay fee
+		let (currency_id, amount_in) =
+			FlexibleFee::cal_fee_token_and_amount(&ALICE, 20, &BALANCE_TRANSFER_CALL).unwrap();
+		assert_eq!(currency_id, CURRENCY_ID_0);
+		assert_eq!(amount_in, 20);
+
+		// alice originally only have 50 CURRENCY_ID_0. Should use Currency 4 to pay fee.
+		let (currency_id, amount_in) =
+			FlexibleFee::cal_fee_token_and_amount(&ALICE, 88, &SALP_CONTRIBUTE_CALL).unwrap();
+		assert_eq!(currency_id, CURRENCY_ID_4);
+		assert_eq!(amount_in, 251);
 	});
 }
 
@@ -380,37 +502,51 @@ fn correct_and_deposit_fee_should_work() {
 #[test]
 fn deduct_salp_fee_should_work() {
 	new_test_ext().execute_with(|| {
-		// deposit some money for Charlie
-		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &CHARLIE, 200)); // Native token
-		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &CHARLIE, 200_000_000)); // Token KSM
-
-		// prepare call variable
-		let para_id = 2001;
-		let value = 1_000_000_000_000;
-
-		let call = RuntimeCall::Salp(bifrost_salp::Call::contribute { index: para_id, value });
+		basic_setup();
 
 		// prepare info variable
 		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let xt = TestXt::new(SALP_CONTRIBUTE_CALL.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
-		// 99 inclusion fee and a tip of 8
-		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+		// 80 inclusion fee and a tip of 8
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &SALP_CONTRIBUTE_CALL, &info, 80, 8));
 
-		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
-		// fee is: 133780717
+		// originally Charlie has 200 currency 0(Native currency)
+		// 200 - 88 = 112. extra fee cost 104. 112 - 104 = 8
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 8);
+
+		// Other currencies should not be affected
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_1, &CHARLIE),
+			20
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_2, &CHARLIE),
+			30
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_3, &CHARLIE),
+			40
+		);
 		assert_eq!(
 			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_4, &CHARLIE),
-			100000000
+			50
 		);
-		// treasury account has the fee
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(
-				CURRENCY_ID_4,
-				&<Test as crate::Config>::TreasuryAccount::get()
-			),
-			100000000
-		);
+	});
+}
+
+#[test]
+fn get_currency_asset_id_should_work() {
+	new_test_ext().execute_with(|| {
+		// BNC
+		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_0).unwrap();
+		let bnc_asset_id = AssetId { chain_id: 2001, asset_type: 0, asset_index: 0 };
+		assert_eq!(asset_id, bnc_asset_id);
+
+		// KSM
+		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_4).unwrap();
+		let ksm_asset_id = AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 };
+		assert_eq!(asset_id, ksm_asset_id);
 	});
 }

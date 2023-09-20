@@ -33,36 +33,6 @@ const SUBACCOUNT_0_LOCATION: MultiLocation =
 	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: SUBACCOUNT_0_32 }) };
 
 #[test]
-fn set_xcm_dest_weight_and_fee_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		System::set_block_number(1);
-
-		// Insert a new record.
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::signed(ALICE),
-			KSM,
-			XcmOperation::Bond,
-			Some((5_000_000_000.into(), 5_000_000_000))
-		));
-
-		assert_eq!(
-			XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond),
-			Some((5_000_000_000.into(), 5_000_000_000))
-		);
-
-		// Delete a record.
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::signed(ALICE),
-			KSM,
-			XcmOperation::Bond,
-			None
-		));
-
-		assert_eq!(XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond), None);
-	});
-}
-
-#[test]
 fn construct_xcm_and_send_as_subaccount_should_work() {
 	let para_chain_account_right: AccountId =
 		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
@@ -570,16 +540,13 @@ fn bond_works() {
 		register_subaccount_index_0();
 
 		// Bond 1 ksm for sub-account index 0
-		assert_noop!(
-			Slp::bond(
-				RuntimeOrigin::signed(ALICE),
-				DOT,
-				Box::new(SUBACCOUNT_0_LOCATION),
-				1_000_000_000_000,
-				None
-			),
-			Error::<Runtime>::XcmFailure
-		);
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(ALICE),
+			DOT,
+			Box::new(SUBACCOUNT_0_LOCATION),
+			1_000_000_000_000,
+			None
+		));
 	});
 }
 
@@ -633,73 +600,63 @@ fn register_subaccount_index_0() {
 	));
 
 	// Register Operation weight and fee
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::TransferTo,
+		XcmOperationType::TransferTo,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Bond,
+		XcmOperationType::Bond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::BondExtra,
+		XcmOperationType::BondExtra,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Unbond,
+		XcmOperationType::Unbond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Rebond,
+		XcmOperationType::Rebond,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Delegate,
+		XcmOperationType::Delegate,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Payout,
+		XcmOperationType::Payout,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Liquidize,
+		XcmOperationType::Liquidize,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::Chill,
+		XcmOperationType::Chill,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 
-	assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-		RuntimeOrigin::signed(ALICE),
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		DOT,
-		XcmOperation::TransferBack,
+		XcmOperationType::TransferBack,
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }

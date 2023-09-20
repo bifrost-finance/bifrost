@@ -23,7 +23,7 @@ use frame_support::{
 	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything, GenesisBuild, Nothing},
 	PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
@@ -269,7 +269,7 @@ impl nutsfinance_stable_asset::Config for Test {
 
 impl bifrost_stable_pool::Config for Test {
 	type WeightInfo = ();
-	type ControlOrigin = EnsureSignedBy<One, u128>;
+	type ControlOrigin = EnsureRoot<u128>;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type StableAsset = StableAsset;
@@ -383,16 +383,6 @@ impl ExtBuilder {
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
 			(6, BNC, 100_000_000_000_000),
-		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn for_benchmark(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![
-			(whitelist_caller.clone(), DOT, 100_000_000_000_000),
-			(whitelist_caller.clone(), VDOT, 100_000_000_000_000),
 		])
 	}
 

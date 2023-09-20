@@ -52,6 +52,8 @@ pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
 pub const VGLMR: CurrencyId = CurrencyId::VToken2(GLMR_TOKEN_ID);
+pub const DOT_U_TOKEN_ID: u8 = 2u8;
+pub const DOT_U: CurrencyId = CurrencyId::Token2(DOT_U_TOKEN_ID);
 pub const ASTR_TOKEN_ID: u8 = 3u8;
 pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
@@ -410,6 +412,7 @@ impl CurrencyId {
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
 			Self::VToken(symbol) => Ok(Self::Token(*symbol)),
+			Self::VToken2(id) => Ok(Self::Token2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -417,6 +420,7 @@ impl CurrencyId {
 	pub fn to_vtoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VToken2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -424,6 +428,7 @@ impl CurrencyId {
 	pub fn to_vstoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VSToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VSToken2(*id)),
 			_ => Err(()),
 		}
 	}

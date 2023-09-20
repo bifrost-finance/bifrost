@@ -20,6 +20,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
+orml-oracle = { version = "0.4.1-dev", default-features = false }
 
 [features]
 default = ["std"]
@@ -34,6 +35,7 @@ std = [
 	"sp-std/std",
 	"xcm/std",
 	"zenlink-protocol/std",
+	"orml-oracle/std",
 ]
 
 with-bifrost-runtime = [
@@ -43,3 +45,4 @@ with-bifrost-runtime = [
 with-bifrost-kusama-runtime = []
 with-bifrost-polkadot-runtime = []
 with-all-runtime = ["with-bifrost-runtime"]
+runtime-benchmarks = []

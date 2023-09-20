@@ -25,13 +25,13 @@ use crate::{
 	primitives::{
 		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
 		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, XcmOperation, TIMEOUT_BLOCKS,
+		OneToManyScheduledRequest, QueryId, TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
 	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, FeeSources,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegatorUpdateEntry, XcmDestWeightAndFee,
+	ValidatorsByDelegatorUpdateEntry,
 };
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
@@ -40,7 +40,7 @@ use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{
 	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
-	CurrencyId, TokenSymbol, VtokenMintingOperator,
+	CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
@@ -218,7 +218,7 @@ impl<T: Config>
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Bond,
+				XcmOperationType::Bond,
 				call,
 				who,
 				currency_id,
@@ -297,7 +297,7 @@ impl<T: Config>
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::BondExtra,
+				XcmOperationType::BondExtra,
 				call,
 				who,
 				currency_id,
@@ -384,7 +384,7 @@ impl<T: Config>
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Unbond,
+				XcmOperationType::Unbond,
 				call,
 				who,
 				currency_id,
@@ -469,7 +469,7 @@ impl<T: Config>
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Rebond,
+				XcmOperationType::Rebond,
 				call,
 				who,
 				currency_id,
@@ -541,7 +541,7 @@ impl<T: Config>
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Undelegate,
+				XcmOperationType::Undelegate,
 				call,
 				who,
 				currency_id,
@@ -636,7 +636,7 @@ impl<T: Config>
 
 		let (query_id, timeout, fee, xcm_message) =
 			Self::construct_xcm_as_subaccount_with_query_id(
-				XcmOperation::Liquidize,
+				XcmOperationType::Liquidize,
 				call.clone(),
 				who,
 				currency_id,
@@ -723,7 +723,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let fee = Self::construct_xcm_and_send_as_subaccount_without_query_id(
-			XcmOperation::TransferBack,
+			XcmOperationType::TransferBack,
 			call,
 			from,
 			currency_id,
@@ -947,7 +947,7 @@ impl<T: Config> MoonbeamAgent<T> {
 	}
 
 	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -957,12 +957,12 @@ impl<T: Config> MoonbeamAgent<T> {
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = match operation {
-			XcmOperation::Bond |
-			XcmOperation::BondExtra |
-			XcmOperation::Unbond |
-			XcmOperation::Rebond |
-			XcmOperation::Undelegate |
-			XcmOperation::Liquidize => T::SubstrateResponseManager::create_query_record(
+			XcmOperationType::Bond |
+			XcmOperationType::BondExtra |
+			XcmOperationType::Unbond |
+			XcmOperationType::Rebond |
+			XcmOperationType::Undelegate |
+			XcmOperationType::Liquidize => T::SubstrateResponseManager::create_query_record(
 				&responder,
 				Some(Pallet::<T>::confirm_delegator_ledger_call()),
 				timeout,
@@ -988,7 +988,7 @@ impl<T: Config> MoonbeamAgent<T> {
 	}
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -1006,7 +1006,7 @@ impl<T: Config> MoonbeamAgent<T> {
 	}
 
 	fn prepare_send_as_subaccount_call(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: MoonbeamCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -1019,8 +1019,9 @@ impl<T: Config> MoonbeamAgent<T> {
 			MoonbeamUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
 		));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}
@@ -1101,9 +1102,11 @@ impl<T: Config> MoonbeamAgent<T> {
 		// not succeed.
 		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
 
-		let (weight, fee_amount) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperationType::TransferTo,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter dest and beneficiary.
 		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
