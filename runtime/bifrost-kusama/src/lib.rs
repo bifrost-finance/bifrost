@@ -97,6 +97,7 @@ pub use node_primitives::{
 	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
 	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
+use sp_core::H256;
 
 // zenlink imports
 use zenlink_protocol::{
@@ -119,6 +120,7 @@ pub use xcm_config::{
 	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
+use cumulus_primitives_core::relay_chain::vstaging::HashT;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -1468,6 +1470,10 @@ impl bifrost_fee_share::Config for Runtime {
 	type FeeSharePalletId = FeeSharePalletId;
 }
 
+parameter_types! {
+	pub AnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_KUSAMA_CROSS_IN_OUT"[..]);
+}
+
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1475,6 +1481,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = weights::bifrost_cross_in_out::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
+	type AnchorAddress = AnchorAddress;
 }
 
 parameter_types! {
@@ -1783,6 +1790,24 @@ where
 
 // zenlink runtime end
 
+// bool network runtime start
+
+parameter_types! {
+	pub const PureMessage: H256 = pallet_bcmp::PURE_MESSAGE;
+	pub const DefaultAdmin: Option<AccountId> = None;
+}
+
+impl pallet_bcmp::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PureMessage = PureMessage;
+	type DefaultAdmin = DefaultAdmin;
+	type Consumers = CrossInOut;
+	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
+}
+
+// bool network runtime end
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -1851,6 +1876,8 @@ construct_runtime! {
 		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 		ZenlinkStableAMM: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>} = 82,
 		ZenlinkSwapRouter: zenlink_swap_router::{Pallet, Call, Event<T>} = 83,
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>} = 84,
+
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,

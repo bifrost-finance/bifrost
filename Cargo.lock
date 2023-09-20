@@ -918,6 +918,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-bcmp",
  "pallet-bounties",
  "pallet-collator-selection",
  "pallet-collective",

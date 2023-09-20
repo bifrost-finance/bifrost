@@ -1304,7 +1304,7 @@ impl bifrost_fee_share::Config for Runtime {
 }
 
 parameter_types! {
-	pub AnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_CROSS_IN_OUT"[..]);
+	pub AnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -1683,7 +1683,7 @@ construct_runtime! {
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
 		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
-		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>} = 82,
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>} = 84,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
