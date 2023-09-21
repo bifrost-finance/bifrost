@@ -116,7 +116,7 @@ pub mod pallet {
 		NotSupported,
 		CrossOutInfoNotSet,
 		ChainNetworkIdNotExist,
-		ReceiverNotProvided
+		ReceiverNotProvided,
 	}
 
 	#[pallet::event]
@@ -772,7 +772,7 @@ pub mod pallet {
 		) -> Result<AccountIdOf<T>, Error<T>> {
 			let account = Self::outer_multilocation_to_account(currency_id, &dest_location)
 				.ok_or(Error::<T>::NoAccountIdMapping)?;
-				Ok(account)
+			Ok(account)
 		}
 
 		fn get_registered_outer_multilocation_from_account(
@@ -782,7 +782,7 @@ pub mod pallet {
 			let location = Self::account_to_outer_multilocation(currency_id, account)
 				.ok_or(Error::<T>::NoMultilocationMapping)?;
 
-				Ok(location)
+			Ok(location)
 		}
 	}
 

@@ -45,7 +45,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{
 	traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister,
 	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface,
-	VtokenMintingOperator,XcmOperationType, VFIL
+	VtokenMintingOperator, XcmOperationType, VFIL,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -198,7 +198,7 @@ pub mod pallet {
 		FeeSet {
 			mint_fee: Permill,
 			redeem_fee: Permill,
-			// hosting_fee: BalanceOf<T>,
+			cancel_fee: Permill,
 		},
 		HookIterationLimitSet {
 			limit: u32,
@@ -241,12 +241,13 @@ pub mod pallet {
 		FailToConvert,
 		NetworkIdError,
 		FailToGetCrossOutInfo,
-		FailToGetPayload
+		FailToGetPayload,
 	}
 
+	// 【mint_fee, redeem_fee, cancel_fee】
 	#[pallet::storage]
 	#[pallet::getter(fn fees)]
-	pub type Fees<T: Config> = StorageValue<_, (Permill, Permill), ValueQuery>;
+	pub type Fees<T: Config> = StorageValue<_, (Permill, Permill, Permill), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_pool)]
@@ -518,27 +519,68 @@ pub mod pallet {
 				return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 			}
 
-			let (_, vtoken_amount, fee) =
-				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)?;
+			if token_id != FIL {
+				let (_, vtoken_amount, fee) =
+					Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)?;
 
-			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
-				if let Some(value_info) = value {
-					*value_info = value_info
-						.checked_add(&token_amount)
-						.ok_or(Error::<T>::CalculationOverflow)?;
-				} else {
-					return Err(Error::<T>::InvalidRebondToken);
-				}
-				Ok(())
-			})?;
+				TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
+					if let Some(value_info) = value {
+						*value_info = value_info
+							.checked_add(&token_amount)
+							.ok_or(Error::<T>::CalculationOverflow)?;
+					} else {
+						return Err(Error::<T>::InvalidRebondToken);
+					}
+					Ok(())
+				})?;
 
-			Self::deposit_event(Event::Rebonded {
-				address: exchanger,
-				token_id,
-				token_amount,
-				vtoken_amount,
-				fee,
-			});
+				Self::deposit_event(Event::Rebonded {
+					address: exchanger,
+					token_id,
+					token_amount,
+					vtoken_amount,
+					fee,
+				});
+			} else {
+				// In FIL case, user redeeming VFIL amount is stored under the key of FIL
+				// when user cancel redeeming, we need to change the cancelling amount to be under
+				// the key of VFL meaning we need to return the VFIL amount to the user
+				// we use mint_rate here analog to mint VFIL again
+				let (_mint_rate, _redeem_rate, cancel_rate) = Fees::<T>::get();
+				let cancel_fee = cancel_rate * token_amount;
+				let token_amount_excluding_fee =
+					token_amount.checked_sub(&cancel_fee).ok_or(Error::<T>::CalculationOverflow)?;
+
+				// record the amount of vFIL to be returned to the user due to cancel_redeem
+				// operation
+				Self::record_redeem_list(
+					&exchanger,
+					VFIL,
+					token_amount_excluding_fee,
+					RedeemType::Native,
+				)?;
+
+				Self::deposit_event(Event::Rebonded {
+					address: exchanger.clone(),
+					token_id: VFIL,
+					token_amount: Zero::zero(),
+					vtoken_amount: token_amount_excluding_fee,
+					fee: cancel_fee,
+				});
+
+				// send cancel_redeem cross-chain message
+				// we apply for full amount since the vfil-minting contract will charge the fee
+				Self::send_message(
+					XcmOperationType::CancelRedeem,
+					exchanger.clone(),
+					None,
+					token_amount,
+					VFIL,
+					FIL,
+				)
+				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+			}
+
 			Ok(())
 		}
 
@@ -749,12 +791,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			mint_fee: Permill,
 			redeem_fee: Permill,
+			cancel_fee: Permill,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee));
+			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee, cancel_fee));
 
-			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee });
+			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee, cancel_fee });
 			Ok(())
 		}
 
@@ -853,7 +896,7 @@ pub mod pallet {
 		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let (mint_rate, _redeem_rate) = Fees::<T>::get();
+			let (mint_rate, _redeem_rate, _cancel_rate) = Fees::<T>::get();
 			let mint_fee = mint_rate * token_amount;
 			let token_amount_excluding_fee =
 				token_amount.checked_sub(&mint_fee).ok_or(Error::<T>::CalculationOverflow)?;
@@ -1254,7 +1297,7 @@ pub mod pallet {
 				Error::<T>::CanNotRedeem,
 			);
 
-			let (_mint_rate, redeem_rate) = Fees::<T>::get();
+			let (_mint_rate, redeem_rate, _cancel_rate) = Fees::<T>::get();
 			let redeem_fee = redeem_rate * vtoken_amount;
 			let vtoken_amount =
 				vtoken_amount.checked_sub(&redeem_fee).ok_or(Error::<T>::CalculationOverflow)?;
@@ -1270,11 +1313,81 @@ pub mod pallet {
 				.as_u128()
 				.saturated_into();
 
+			// Burn the corresponding vtoken from the user's account.
+			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
+
 			// if it is vFIL, we record redeeming vFIL amount under the name of FIL
 			// however, when we fast-redeem the users' vfil, we will culculate the FIL/VFIL exchange
 			// at the time point and return corresponding amount of FIL to the users
 			let record_amount = if vtoken_id == VFIL { vtoken_amount } else { token_amount };
 
+			// record the amount of token to return to user
+			Self::record_redeem_list(&exchanger, token_id, record_amount, redeem_type)?;
+
+			let extra_weight = T::OnRedeemSuccess::on_redeemed(
+				exchanger.clone(),
+				token_id,
+				token_amount,
+				vtoken_amount,
+				redeem_fee,
+			);
+
+			// if it is vFIL, we need to send cross chain message
+			if vtoken_id == VFIL {
+				let entrance_account = T::EntranceAccount::get().into_account_truncating();
+				let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+				// first message, to send vFIL to the delegate-staking contract in filecoin network.
+				// cross-chain fee paid by the user
+				let receiver_location =
+					T::BridgeOperator::get_registered_outer_multilocation_from_account(
+						token_id,
+						entrance_account,
+					)
+					.map_err(|_| Error::<T>::FailToConvert)?;
+				Self::send_message(
+					XcmOperationType::TransferTo,
+					exchanger.clone(),
+					Some(&receiver_location),
+					vtoken_amount,
+					vtoken_id,
+					token_id,
+				)
+				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+
+				// second message, to send redeem message to the delegate-staking contract in
+				// filecoin network. cross-chain fee paid by the user
+				Self::send_message(
+					XcmOperationType::Redeem,
+					exchanger.clone(),
+					Some(&receiver_location),
+					vtoken_amount,
+					vtoken_id,
+					token_id,
+				)
+				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+			}
+
+			Self::deposit_event(Event::Redeemed {
+				address: exchanger,
+				token_id,
+				vtoken_amount,
+				token_amount,
+				fee: redeem_fee,
+			});
+
+			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
+		}
+
+		// record the amount of token to return to user
+		// if the dispatchable is call with the token_id param of vFIL, we will record the amount of
+		// vFIL to be returned to the user due to cancel_redeem operation
+		pub(crate) fn record_redeem_list(
+			exchanger: &AccountIdOf<T>,
+			token_id: CurrencyIdOf<T>,
+			record_amount: BalanceOf<T>,
+			redeem_type: RedeemType<AccountIdOf<T>>,
+		) -> DispatchResult {
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
 					// Calculate the time to be locked
@@ -1283,8 +1396,6 @@ pub mod pallet {
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
 						time_unit,
 					)?;
-
-					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 
 					// if overflow, return 0
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
@@ -1375,56 +1486,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			let extra_weight = T::OnRedeemSuccess::on_redeemed(
-				exchanger.clone(),
-				token_id,
-				token_amount,
-				vtoken_amount,
-				redeem_fee,
-			);
-
-			// if it is vFIL, we need to send cross chain message
-			if vtoken_id == VFIL {
-				let entrance_account = T::EntranceAccount::get().into_account_truncating();
-				let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
-
-				// first message, to send vFIL to the delegate-staking contract in filecoin network.
-				// cross-chain fee paid by the user
-				let receiver_location =
-					T::BridgeOperator::get_registered_outer_multilocation_from_account(
-						token_id,
-						entrance_account,
-					).map_err(|_| Error::<T>::FailToConvert)?;
-				Self::send_message(
-					XcmOperationType::TransferTo,
-					exchanger.clone(),
-					&receiver_location,
-					vtoken_amount,
-					vtoken_id,
-					token_id,
-				).map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
-
-				// second message, to send redeem message to the delegate-staking contract in
-				// filecoin network. cross-chain fee paid by the user
-				Self::send_message(
-					XcmOperationType::Redeem,
-					exchanger.clone(),
-					&receiver_location,
-					vtoken_amount,
-					vtoken_id,
-					token_id,
-				).map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
-			}
-
-			Self::deposit_event(Event::Redeemed {
-				address: exchanger,
-				token_id,
-				vtoken_amount,
-				token_amount,
-				fee: redeem_fee,
-			});
-
-			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
+			Ok(().into())
 		}
 
 		pub fn token_to_vtoken_inner(
@@ -1470,7 +1532,7 @@ pub mod pallet {
 		pub(crate) fn send_message(
 			operation: XcmOperationType,
 			fee_payer: AccountIdOf<T>,
-			to_location: &MultiLocation,
+			to_location_op: Option<&MultiLocation>,
 			amount: BalanceOf<T>,
 			currency_id: CurrencyId,
 			dest_native_currency_id: CurrencyId,
@@ -1483,16 +1545,20 @@ pub mod pallet {
 			let src_anchor = crossout_info.0;
 			let fee = crossout_info.2;
 
-			let receiver = T::BridgeOperator::get_receiver_from_multilocation(
-				dest_native_currency_id,
-				to_location,
-			)
-			.map_err(|_| Error::<T>::FailToConvert)?;
+			let receiver_op = to_location_op.and_then(|to_location| {
+				T::BridgeOperator::get_receiver_from_multilocation(
+					dest_native_currency_id,
+					to_location,
+				)
+				.map_err(|_| Error::<T>::FailToConvert)
+				.ok()
+			});
+			let receiver_slice_op = receiver_op.as_ref().map(Vec::as_slice);
 			let payload = T::BridgeOperator::get_cross_out_payload(
 				operation,
 				currency_id,
 				amount,
-				Some(&receiver),
+				receiver_slice_op,
 			)
 			.map_err(|_| Error::<T>::FailToGetPayload)?;
 
