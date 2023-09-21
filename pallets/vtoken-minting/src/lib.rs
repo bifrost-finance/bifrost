@@ -45,7 +45,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{
 	traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister,
 	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface,
-	VtokenMintingOperator,
+	VtokenMintingOperator,XcmOperationType, VFIL
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -237,6 +237,11 @@ pub mod pallet {
 		TooManyRedeems,
 		CanNotRedeem,
 		CanNotRebond,
+		FailToSendCrossOutMessage,
+		FailToConvert,
+		NetworkIdError,
+		FailToGetCrossOutInfo,
+		FailToGetPayload
 	}
 
 	#[pallet::storage]
@@ -1265,6 +1270,11 @@ pub mod pallet {
 				.as_u128()
 				.saturated_into();
 
+			// if it is vFIL, we record redeeming vFIL amount under the name of FIL
+			// however, when we fast-redeem the users' vfil, we will culculate the FIL/VFIL exchange
+			// at the time point and return corresponding amount of FIL to the users
+			let record_amount = if vtoken_id == VFIL { vtoken_amount } else { token_amount };
+
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
 					// Calculate the time to be locked
@@ -1275,15 +1285,16 @@ pub mod pallet {
 					)?;
 
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
+
+					// if overflow, return 0
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-						*pool = pool
-							.checked_sub(&token_amount)
-							.ok_or(Error::<T>::CalculationOverflow)?;
+						*pool = pool.checked_sub(&record_amount).unwrap_or(BalanceOf::<T>::zero());
+
 						Ok(())
 					})?;
 					UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool
-							.checked_add(&token_amount)
+							.checked_add(&record_amount)
 							.ok_or(Error::<T>::CalculationOverflow)?;
 						Ok(())
 					})?;
@@ -1291,7 +1302,7 @@ pub mod pallet {
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
-						(&exchanger, token_amount, &result_time_unit, redeem_type),
+						(&exchanger, record_amount, &result_time_unit, redeem_type),
 					);
 
 					if UserUnlockLedger::<T>::get(&exchanger, &token_id).is_some() {
@@ -1305,7 +1316,7 @@ pub mod pallet {
 										.map_err(|_| Error::<T>::TooManyRedeems)?;
 
 									*total_locked = total_locked
-										.checked_add(&token_amount)
+										.checked_add(&record_amount)
 										.ok_or(Error::<T>::CalculationOverflow)?;
 								};
 								Ok(())
@@ -1320,7 +1331,7 @@ pub mod pallet {
 						UserUnlockLedger::<T>::insert(
 							&exchanger,
 							&token_id,
-							(token_amount, ledger_list_origin),
+							(record_amount, ledger_list_origin),
 						);
 					}
 
@@ -1336,7 +1347,7 @@ pub mod pallet {
 										.try_push(next_id)
 										.map_err(|_| Error::<T>::TooManyRedeems)?;
 									*total_locked = total_locked
-										.checked_add(&token_amount)
+										.checked_add(&record_amount)
 										.ok_or(Error::<T>::CalculationOverflow)?;
 								};
 								Ok(())
@@ -1352,7 +1363,7 @@ pub mod pallet {
 						TimeUnitUnlockLedger::<T>::insert(
 							&result_time_unit,
 							&token_id,
-							(token_amount, ledger_list_origin, token_id),
+							(record_amount, ledger_list_origin, token_id),
 						);
 					}
 				},
@@ -1372,6 +1383,39 @@ pub mod pallet {
 				redeem_fee,
 			);
 
+			// if it is vFIL, we need to send cross chain message
+			if vtoken_id == VFIL {
+				let entrance_account = T::EntranceAccount::get().into_account_truncating();
+				let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+				// first message, to send vFIL to the delegate-staking contract in filecoin network.
+				// cross-chain fee paid by the user
+				let receiver_location =
+					T::BridgeOperator::get_registered_outer_multilocation_from_account(
+						token_id,
+						entrance_account,
+					).map_err(|_| Error::<T>::FailToConvert)?;
+				Self::send_message(
+					XcmOperationType::TransferTo,
+					exchanger.clone(),
+					&receiver_location,
+					vtoken_amount,
+					vtoken_id,
+					token_id,
+				).map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+
+				// second message, to send redeem message to the delegate-staking contract in
+				// filecoin network. cross-chain fee paid by the user
+				Self::send_message(
+					XcmOperationType::Redeem,
+					exchanger.clone(),
+					&receiver_location,
+					vtoken_amount,
+					vtoken_id,
+					token_id,
+				).map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+			}
+
 			Self::deposit_event(Event::Redeemed {
 				address: exchanger,
 				token_id,
@@ -1379,11 +1423,6 @@ pub mod pallet {
 				token_amount,
 				fee: redeem_fee,
 			});
-
-			// // if it is VFIL, then send cross chain message, to redeem FIL in filecoin network
-			// if vtoken_id == VFIL {
-			// 	T::BridgeOperator::send_crossout_message()
-			// }
 
 			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
 		}
@@ -1426,6 +1465,43 @@ pub mod pallet {
 
 		pub fn token_id_inner(vtoken_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
 			T::CurrencyIdConversion::convert_to_token(vtoken_id).ok()
+		}
+
+		pub(crate) fn send_message(
+			operation: XcmOperationType,
+			fee_payer: AccountIdOf<T>,
+			to_location: &MultiLocation,
+			amount: BalanceOf<T>,
+			currency_id: CurrencyId,
+			dest_native_currency_id: CurrencyId,
+		) -> Result<(), Error<T>> {
+			let network_id = T::BridgeOperator::get_chain_network(dest_native_currency_id)
+				.map_err(|_| Error::<T>::NetworkIdError)?;
+			let crossout_info = T::BridgeOperator::get_crossout_information(network_id, operation)
+				.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
+
+			let src_anchor = crossout_info.0;
+			let fee = crossout_info.2;
+
+			let receiver = T::BridgeOperator::get_receiver_from_multilocation(
+				dest_native_currency_id,
+				to_location,
+			)
+			.map_err(|_| Error::<T>::FailToConvert)?;
+			let payload = T::BridgeOperator::get_cross_out_payload(
+				operation,
+				currency_id,
+				amount,
+				Some(&receiver),
+			)
+			.map_err(|_| Error::<T>::FailToGetPayload)?;
+
+			T::BridgeOperator::send_crossout_message(
+				fee_payer, fee, src_anchor, payload, network_id,
+			)
+			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+
+			Ok(())
 		}
 	}
 }

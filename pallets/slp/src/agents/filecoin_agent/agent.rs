@@ -26,15 +26,12 @@ use crate::{
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{
-	traits::BridgeOperator, AssetId, CurrencyId, TryConvertFrom, VtokenMintingOperator,
-	XcmOperationType,
-};
+use node_primitives::{CurrencyId, VtokenMintingOperator, XcmOperationType};
 use orml_traits::MultiCurrency;
-use sp_core::{Get, U256};
+use sp_core::Get;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Zero},
-	DispatchResult, SaturatedConversion,
+	DispatchResult,
 };
 use sp_std::prelude::*;
 use xcm::v3::prelude::*;
@@ -379,47 +376,34 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
 
-		let network_id = T::BridgeOperator::get_chain_network(currency_id)
-			.map_err(|_| Error::<T>::NetworkIdError)?;
-		let transfer_crossout_info =
-			T::BridgeOperator::get_crossout_information(network_id, XcmOperationType::TransferTo)
-				.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
+		// burn the transfer amount
+		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
+			.map_err(|_e| Error::<T>::NotEnoughBalance)?;
 
-		let transfer_src_anchor = transfer_crossout_info.0;
-		let transfer_fee = transfer_crossout_info.2;
+		// set the fee_payer to be the hosting fee receiver, which is treasury account
+		let (_, fee_payer_location) =
+			Pallet::<T>::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 
-		let receiver = T::BridgeOperator::get_receiver_from_multilocation(currency_id, to)
-			.map_err(|_| Error::<T>::FailToConvert)?;
-		let transfer_payload =
-			T::BridgeOperator::get_transfer_payload(amount, currency_id, &receiver)
-				.map_err(|_| Error::<T>::FailToGetPayload)?;
-
-		// First message，transfer some FIL from entrance_account to delegate-staking contract
-		T::BridgeOperator::send_crossout_message(
-			from_account.clone(),
-			transfer_fee,
-			transfer_src_anchor,
-			transfer_payload,
-			network_id,
-		)
-		.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
-
-		let mint_crossout_info =
-			T::BridgeOperator::get_crossout_information(network_id, XcmOperationType::Mint)
-				.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
-		let mint_src_anchor = mint_crossout_info.0;
-		let mint_fee = mint_crossout_info.2;
-		let mint_call_payload = Self::get_mint_payload(amount, currency_id)?;
+		let fee_payer = Pallet::<T>::multilocation_to_account(&fee_payer_location)?;
+		// first message, send transfer message
+		Pallet::<T>::send_message(
+			XcmOperationType::TransferTo,
+			fee_payer.clone(),
+			to,
+			amount,
+			currency_id,
+			currency_id,
+		)?;
 
 		// second message，to call the goMint method in delegate-staking contract
-		T::BridgeOperator::send_crossout_message(
-			from_account,
-			mint_fee,
-			mint_src_anchor,
-			mint_call_payload,
-			network_id,
-		)
-		.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+		Pallet::<T>::send_message(
+			XcmOperationType::Mint,
+			fee_payer,
+			to,
+			amount,
+			currency_id,
+			currency_id,
+		)?;
 
 		Ok(())
 	}
@@ -560,30 +544,5 @@ impl<T: Config>
 		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
-	}
-}
-
-impl<T: Config> FilecoinAgent<T> {
-	pub(crate) fn get_mint_payload(
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<Vec<u8>, Error<T>> {
-		// the first byte is xcm operation type
-		let mut payload = Vec::new();
-		payload.push(XcmOperationType::Mint as u8);
-
-		// following 32 bytes is amount
-		let mut fixed_amount = [0u8; 32];
-		U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
-		payload.append(&mut fixed_amount.to_vec());
-
-		// following 32 bytes is currency_id
-		let currency_id_asset: AssetId =
-			AssetId::try_convert_from(currency_id, 0u32).map_err(|_| Error::<T>::FailToConvert)?;
-		let mut fixed_currency_id = [0u8; 32];
-		U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
-		payload.append(&mut fixed_currency_id.to_vec());
-
-		Ok(payload)
 	}
 }

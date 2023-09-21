@@ -116,6 +116,7 @@ pub mod pallet {
 		NotSupported,
 		CrossOutInfoNotSet,
 		ChainNetworkIdNotExist,
+		ReceiverNotProvided
 	}
 
 	#[pallet::event]
@@ -652,7 +653,7 @@ pub mod pallet {
 	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for Pallet<T> {
 		type Error = Error<T>;
 		fn send_crossout_message(
-			sender: AccountIdOf<T>,
+			fee_payer: AccountIdOf<T>,
 			fee: BalanceOf<T>,
 			src_anchor: H256,
 			payload: Vec<u8>,
@@ -667,7 +668,7 @@ pub mod pallet {
 			// transform fee type
 			let fee = CurrencyBalance::<T>::unique_saturated_from(fee.saturated_into::<u128>());
 
-			pallet_bcmp::Pallet::<T>::send_message(sender, fee, src_anchor, dst_chain, payload)
+			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
 				.map_err(|_| Error::<T>::FailedToSendMessage)?;
 
 			Ok(())
@@ -690,20 +691,15 @@ pub mod pallet {
 			Ok(network_id)
 		}
 
-		/// Encoding to Evm payload. In total 1+32+32+32=97 bytes.
-		fn get_transfer_payload(
-			amount: BalanceOf<T>,
+		fn get_cross_out_payload(
+			operation: XcmOperationType,
 			currency_id: CurrencyId,
-			receiver: &[u8],
+			amount: BalanceOf<T>,
+			receiver_op: Option<&[u8]>,
 		) -> Result<Vec<u8>, Error<T>> {
 			// the first byte is xcm operation type
 			let mut payload = Vec::new();
 			payload.push(XcmOperationType::TransferTo as u8);
-
-			// following 32 bytes is amount
-			let mut fixed_amount = [0u8; 32];
-			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
-			payload.append(&mut fixed_amount.to_vec());
 
 			// following 32 bytes is currency_id
 			let currency_id_asset: AssetId = AssetId::try_convert_from(currency_id, 0u32)
@@ -712,9 +708,18 @@ pub mod pallet {
 			U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
 			payload.append(&mut fixed_currency_id.to_vec());
 
-			// following 32 bytes is receiver
-			let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
-			payload.append(&mut fixed_address);
+			// following 32 bytes is amount
+			let mut fixed_amount = [0u8; 32];
+			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
+			payload.append(&mut fixed_amount.to_vec());
+
+			if operation == XcmOperationType::TransferTo {
+				let receiver = receiver_op.ok_or(Error::<T>::ReceiverNotProvided)?;
+				// following 32 bytes is receiver
+				let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
+				payload.append(&mut fixed_address);
+			}
+
 			Ok(payload)
 		}
 
@@ -760,11 +765,30 @@ pub mod pallet {
 				Err(Error::<T>::NotSupported)?
 			}
 		}
+
+		fn get_registered_account_from_outer_multilocation(
+			currency_id: CurrencyId,
+			dest_location: &MultiLocation,
+		) -> Result<AccountIdOf<T>, Error<T>> {
+			let account = Self::outer_multilocation_to_account(currency_id, &dest_location)
+				.ok_or(Error::<T>::NoAccountIdMapping)?;
+				Ok(account)
+		}
+
+		fn get_registered_outer_multilocation_from_account(
+			currency_id: CurrencyId,
+			account: AccountIdOf<T>,
+		) -> Result<MultiLocation, Error<T>> {
+			let location = Self::account_to_outer_multilocation(currency_id, account)
+				.ok_or(Error::<T>::NoMultilocationMapping)?;
+
+				Ok(location)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn send_message(
-			sender: AccountIdOf<T>,
+			fee_payer: AccountIdOf<T>,
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 			dest_location: Box<MultiLocation>,
@@ -772,14 +796,19 @@ pub mod pallet {
 			let receiver = Self::get_receiver_from_multilocation(currency_id, &dest_location)?;
 			let network_id = Self::get_network_id_from_multilocation(currency_id, &dest_location)?;
 
-			let payload = Self::get_transfer_payload(amount, currency_id, &receiver)?;
+			let payload = Self::get_cross_out_payload(
+				XcmOperationType::TransferTo,
+				currency_id,
+				amount,
+				Some(&receiver),
+			)?;
 
 			let transfer_crossout_info =
 				Self::get_crossout_information(network_id, XcmOperationType::TransferTo)?;
 			let src_anchor = transfer_crossout_info.0;
 			let fee = transfer_crossout_info.2;
 
-			Self::send_crossout_message(sender, fee, src_anchor, payload, network_id)?;
+			Self::send_crossout_message(fee_payer, fee, src_anchor, payload, network_id)?;
 
 			Ok(())
 		}

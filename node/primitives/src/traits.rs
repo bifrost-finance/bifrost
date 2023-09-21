@@ -499,7 +499,7 @@ pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
 	type Error;
 
 	fn send_crossout_message(
-		sender: AccountId,
+		fee_payer: AccountId,
 		fee: Balance,
 		src_anchor: H256,
 		payload: Vec<u8>,
@@ -513,10 +513,11 @@ pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
 
 	fn get_chain_network(chain_native_currency_id: CurrencyId) -> Result<NetworkId, Self::Error>;
 
-	fn get_transfer_payload(
-		amount: Balance,
+	fn get_cross_out_payload(
+		operation: XcmOperationType,
 		currency_id: CurrencyId,
-		receiver: &[u8],
+		amount: Balance,
+		receiver_op: Option<&[u8]>,
 	) -> Result<Vec<u8>, Self::Error>;
 
 	fn get_receiver_from_multilocation(
@@ -528,4 +529,14 @@ pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
 		dest_native_currecny_id: CurrencyId,
 		location: &MultiLocation,
 	) -> Result<NetworkId, Self::Error>;
+
+	fn get_registered_account_from_outer_multilocation(
+		currency_id: CurrencyId,
+		dest_location: &MultiLocation,
+	) -> Result<AccountId, Self::Error>;
+
+	fn get_registered_outer_multilocation_from_account(
+		currecny_id: CurrencyId,
+		account: AccountId,
+	) -> Result<MultiLocation, Self::Error>;
 }

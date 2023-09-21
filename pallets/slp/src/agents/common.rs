@@ -17,15 +17,17 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
-	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
-	Event,
+	vec, AccountIdOf, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord,
+	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, Encode, Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
 use frame_support::{ensure, traits::Len};
-use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
+use node_primitives::{
+	traits::BridgeOperator, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
+};
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
 use sp_runtime::{
@@ -317,6 +319,41 @@ impl<T: Config> Pallet<T> {
 
 		// Update the DelegatorLatestTuneRecord<T> storage.
 		DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);
+
+		Ok(())
+	}
+
+	pub(crate) fn send_message(
+		operation: XcmOperationType,
+		fee_payer: AccountIdOf<T>,
+		to_location: &MultiLocation,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+		dest_native_currency_id: CurrencyId,
+	) -> Result<(), Error<T>> {
+		let network_id = T::BridgeOperator::get_chain_network(dest_native_currency_id)
+			.map_err(|_| Error::<T>::NetworkIdError)?;
+		let crossout_info = T::BridgeOperator::get_crossout_information(network_id, operation)
+			.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
+
+		let src_anchor = crossout_info.0;
+		let fee = crossout_info.2;
+
+		let receiver = T::BridgeOperator::get_receiver_from_multilocation(
+			dest_native_currency_id,
+			to_location,
+		)
+		.map_err(|_| Error::<T>::FailToConvert)?;
+		let payload = T::BridgeOperator::get_cross_out_payload(
+			operation,
+			currency_id,
+			amount,
+			Some(&receiver),
+		)
+		.map_err(|_| Error::<T>::FailToGetPayload)?;
+
+		T::BridgeOperator::send_crossout_message(fee_payer, fee, src_anchor, payload, network_id)
+			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
 		Ok(())
 	}
