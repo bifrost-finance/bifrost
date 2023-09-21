@@ -20,10 +20,14 @@
 
 #![allow(clippy::unnecessary_cast)]
 
+use crate::{
+	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
+	TokenSymbol, XcmOperationType,
+};
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
-	pallet_prelude::DispatchResultWithPostInfo,
+	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
@@ -31,8 +35,6 @@ use sp_runtime::{
 	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
-
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, RedeemType, TokenId, TokenSymbol};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -420,4 +422,73 @@ pub trait TryConvertFrom<CurrencyId> {
 	fn try_convert_from(currency_id: CurrencyId, para_id: u32) -> Result<Self, Self::Error>
 	where
 		Self: Sized;
+}
+
+pub trait XcmDestWeightAndFeeHandler<CurrencyId, Balance>
+where
+	Balance: AtLeast32BitUnsigned,
+{
+	fn get_operation_weight_and_fee(
+		token: CurrencyId,
+		operation: XcmOperationType,
+	) -> Option<(Weight, Balance)>;
+
+	fn set_xcm_dest_weight_and_fee(
+		currency_id: CurrencyId,
+		operation: XcmOperationType,
+		weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult;
+}
+
+impl<CurrencyId, Balance> XcmDestWeightAndFeeHandler<CurrencyId, Balance> for ()
+where
+	Balance: AtLeast32BitUnsigned,
+{
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmOperationType,
+	) -> Option<(Weight, Balance)> {
+		Some((Zero::zero(), Zero::zero()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmOperationType,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
+pub trait FeeGetter<RuntimeCall> {
+	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
+}
+
+pub trait DerivativeAccountHandler<CurrencyId, Balance> {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<xcm::v3::MultiLocation>;
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(token: CurrencyId);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(token: CurrencyId, who: xcm::v3::MultiLocation);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(token: CurrencyId, index: DerivativeIndex, who: xcm::v3::MultiLocation);
+}
+
+pub trait VTokenSupplyProvider<CurrencyId, Balance> {
+	fn get_vtoken_supply(vtoken: CurrencyId) -> Option<Balance>;
+
+	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
 }

@@ -20,11 +20,12 @@ use codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*, traits::Get, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+use node_primitives::DerivativeIndex;
 use pallet_conviction_voting::{Conviction, Delegations, Vote};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, One, Zero},
-	Saturating,
+	traits::{AtLeast32BitUnsigned, EnsureDivAssign, EnsureMulAssign, One, Zero},
+	ArithmeticError, Saturating,
 };
 use sp_std::{fmt::Debug, prelude::*};
 
@@ -232,6 +233,44 @@ impl<Balance: Saturating> AccountVote<Balance> {
 		}
 		Ok(())
 	}
+
+	pub fn checked_mul(&mut self, balance: Balance) -> Result<(), ArithmeticError>
+	where
+		Balance: Copy + EnsureMulAssign,
+	{
+		match self {
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_mul_assign(balance)?,
+			AccountVote::Split { aye: a1, nay: n1 } => {
+				a1.ensure_mul_assign(balance)?;
+				n1.ensure_mul_assign(balance)?;
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
+				a1.ensure_mul_assign(balance)?;
+				n1.ensure_mul_assign(balance)?;
+				ab1.ensure_mul_assign(balance)?;
+			},
+		}
+		Ok(())
+	}
+
+	pub fn checked_div(&mut self, balance: Balance) -> Result<(), ArithmeticError>
+	where
+		Balance: Copy + EnsureDivAssign,
+	{
+		match self {
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_div_assign(balance)?,
+			AccountVote::Split { aye: a1, nay: n1 } => {
+				a1.ensure_div_assign(balance)?;
+				n1.ensure_div_assign(balance)?;
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
+				a1.ensure_div_assign(balance)?;
+				n1.ensure_div_assign(balance)?;
+				ab1.ensure_div_assign(balance)?;
+			},
+		}
+		Ok(())
+	}
 }
 
 /// A "prior" lock, i.e. a lock for some now-forgotten reason.
@@ -295,7 +334,7 @@ where
 	MaxVotes: Get<u32>,
 {
 	/// The current votes of the account.
-	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>), MaxVotes>,
+	pub votes: BoundedVec<(PollIndex, AccountVote<Balance>, DerivativeIndex, Balance), MaxVotes>,
 	/// The total amount of delegations that this account has received, post-conviction-weighting.
 	pub delegations: Delegations<Balance>,
 	/// Any pre-existing locks from past voting/delegating activity.

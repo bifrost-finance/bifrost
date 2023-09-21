@@ -696,6 +696,9 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -874,6 +877,9 @@ impl orml_xtokens::Config for Runtime {
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
@@ -894,10 +900,7 @@ impl orml_xcm::Config for Runtime {
 
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
-	pub ContributionWeight: Weight =  Weight::from_parts(milli::<Runtime>(RelayCurrencyId::get()) as u64 , 1000_000u64);
-	pub UmpTransactFee: Balance = prod_or_test!(milli::<Runtime>(RelayCurrencyId::get()),milli::<Runtime>(RelayCurrencyId::get()) * 100);
-	pub StatemineTransferFee: Balance = milli::<Runtime>(RelayCurrencyId::get()) * 4;
-	pub StatemineTransferWeight: Weight =  Weight::from_parts(4 * milli::<Runtime>(RelayCurrencyId::get()) as u64, 0);
+
 }
 
 impl xcm_interface::Config for Runtime {
@@ -907,12 +910,11 @@ impl xcm_interface::Config for Runtime {
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = ParachainAccount;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
-	type StatemineTransferWeight = StatemineTransferWeight;
-	type StatemineTransferFee = StatemineTransferFee;
-	type ContributionWeight = ContributionWeight;
-	type ContributionFee = UmpTransactFee;
 	type SalpHelper = Salp;
 	type ParachainId = SelfParaChainId;
 	type CallBackTimeOut = ConstU32<10>;

@@ -37,7 +37,7 @@ benchmarks! {
 	}: _(RawOrigin::Root,default_list)
 
 	impl_benchmark_test_suite!(
-	FlexibleFee,
-	crate::mock::ExtBuilder::default().build(),
+	Pallet,
+	crate::mock::new_test_ext(),
 	crate::mock::Test)
 }

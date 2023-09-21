@@ -67,9 +67,7 @@ fn relaychain_transact_works() {
 		});
 
 		Bifrost::execute_with(|| {
-			// QueryStatus::Pending { responder: V3(MultiLocation { parents: 1, interior: Here }),
-			// maybe_match_querier: Some(V3(MultiLocation { parents: 0, interior: Here })),
-			// maybe_notify: Some((0, 7)), timeout: 100 } let query_id =
+			let notify_vote_call_weight = notify_vote_call.get_dispatch_info().weight;
 			let query_id = pallet_xcm::Pallet::<Runtime>::new_notify_query(
 				MultiLocation::parent(),
 				notify_vote_call,
@@ -77,23 +75,20 @@ fn relaychain_transact_works() {
 				Here,
 			);
 
-			// QueryResponse { query_id: 0, response: DispatchResult(Success), max_weight: Weight {
-			// ref_time: 4000000000, proof_size: 0 }, querier: Some(MultiLocation { parents: 0,
-			// interior: Here }) }
 			let asset: MultiAsset =
-				MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(4000000000) };
+				MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(517318631) };
 			let msg = Xcm(vec![
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: Weight::from_parts(4000000000, 100000),
+					require_weight_at_most: Weight::from_parts(961496000, 83866),
 					call: vote_call.encode().into(),
 				},
 				ReportTransactStatus(QueryResponseInfo {
 					destination: MultiLocation::from(X1(Parachain(2001))),
 					query_id,
-					max_weight: Weight::from_parts(3000000, 0),
+					max_weight: notify_vote_call_weight,
 				}),
 				RefundSurplus,
 				DepositAsset {

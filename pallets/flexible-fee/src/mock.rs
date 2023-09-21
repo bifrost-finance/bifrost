@@ -18,32 +18,39 @@
 
 #![cfg(test)]
 
-use cumulus_primitives_core::ParaId as Pid;
-use std::convert::TryInto;
-
+use super::*;
+use crate::{self as flexible_fee, tests::CHARLIE};
+use balances::Call as BalancesCall;
 use bifrost_asset_registry::AssetIdMaps;
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::whitelisted_caller;
+use bifrost_vtoken_voting::AccountVote;
+use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, Everything, Get, Nothing},
+	traits::{Everything, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
+use node_primitives::{
+	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
+	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
+};
 use orml_traits::MultiCurrency;
+use pallet_xcm::EnsureResponse;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
 	generic,
 	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	traits::{
+		AccountIdConversion, BlakeTwo256, BlockNumberProvider, IdentityLookup, UniqueSaturatedInto,
+	},
 	AccountId32, SaturatedConversion,
 };
+use std::convert::TryInto;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
@@ -51,11 +58,6 @@ use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
-
-use super::*;
-#[allow(unused_imports)]
-use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
-use crate::{self as flexible_fee, tests::CHARLIE};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -83,8 +85,22 @@ frame_support::construct_runtime!(
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>},
 	}
 );
+
+pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::Balances(BalancesCall::transfer_allow_death { dest: ALICE, value: 69 });
+
+pub(crate) const SALP_CONTRIBUTE_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::Salp(bifrost_salp::Call::contribute { index: 2001, value: 1_000_000_000_000 });
+
+pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::RuntimeCall =
+	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
+		vtoken: VKSM,
+		poll_index: 1u32,
+		vote: AccountVote::Split { aye: 1, nay: 1 },
+	});
 
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -184,48 +200,8 @@ impl orml_tokens::Config for Test {
 	type CurrencyHooks = ();
 }
 
-// Aggregate name getter to get fee names if the call needs to pay extra fees.
-// If any call need to pay extra fees, it should be added as an item here.
-// Used together with AggregateExtraFeeFilter below.
-pub struct FeeNameGetter;
-impl NameGetter<RuntimeCall> for FeeNameGetter {
-	fn get_name(c: &RuntimeCall) -> ExtraFeeName {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) =>
-				ExtraFeeName::SalpContribute,
-			_ => ExtraFeeName::NoExtraFee,
-		}
-	}
-}
-
-// Aggregate filter to filter if the call needs to pay extra fees
-// If any call need to pay extra fees, it should be added as an item here.
-pub struct AggregateExtraFeeFilter;
-impl Contains<RuntimeCall> for AggregateExtraFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
-pub struct ContributeFeeFilter;
-impl Contains<RuntimeCall> for ContributeFeeFilter {
-	fn contains(c: &RuntimeCall) -> bool {
-		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			_ => false,
-		}
-	}
-}
-
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const SalpContributeFee: Balance = 100_000_000;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
@@ -239,17 +215,49 @@ impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
-	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
-	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler =
-		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
+	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParaInfo;
 	type ControlOrigin = EnsureRoot<AccountId>;
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmOperationType,
+	) -> Option<(Weight, Balance)> {
+		Some((Weight::from_parts(100, 100), 100u32.into()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmOperationType,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
+pub struct ExtraFeeMatcher;
+impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
+	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
+		match *c {
+			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::SalpContribute,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+				ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteVtoken,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+				},
+			_ => ExtraFeeInfo::default(),
+		}
+	}
 }
 
 pub struct ParaInfo;
@@ -260,7 +268,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
@@ -348,55 +356,6 @@ where
 		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
 
 		Ok(amount)
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-pub struct ExtBuilder {
-	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl Default for ExtBuilder {
-	fn default() -> Self {
-		Self { endowed_accounts: vec![] }
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId32, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
-		self
-	}
-
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		let whitelist_caller: AccountId32 = whitelisted_caller();
-		let c0 = CurrencyId::Token(TokenSymbol::try_from(0u8).unwrap_or_default());
-		let c1 = CurrencyId::Token(TokenSymbol::try_from(1u8).unwrap_or_default());
-		let c2 = CurrencyId::Token(TokenSymbol::try_from(2u8).unwrap_or_default());
-		let c3 = CurrencyId::Token(TokenSymbol::try_from(3u8).unwrap_or_default());
-		let c4 = CurrencyId::Token(TokenSymbol::try_from(4u8).unwrap_or_default());
-		let c5 = CurrencyId::Token(TokenSymbol::try_from(5u8).unwrap_or_default());
-
-		self.balances(vec![
-			(whitelist_caller.clone(), c0, 100_000_000_000_000),
-			(whitelist_caller.clone(), c1, 100_000_000_000_000),
-			(whitelist_caller.clone(), c2, 100_000_000_000_000),
-			(whitelist_caller.clone(), c3, 100_000_000_000_000),
-			(whitelist_caller.clone(), c4, 100_000_000_000_000),
-			(whitelist_caller.clone(), c5, 100_000_000_000_000),
-		])
-	}
-
-	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-		orml_tokens::GenesisConfig::<Test> { balances: self.endowed_accounts }
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-		t.into()
 	}
 }
 
@@ -540,3 +499,93 @@ impl pallet_xcm::Config for Test {
 }
 
 //************** Salp mock end *****************
+
+// ************** VtokenVoting mock start *****************
+pub struct SimpleVTokenSupplyProvider;
+
+impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
+	fn get_vtoken_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+
+	fn get_token_supply(_: CurrencyId) -> Option<Balance> {
+		Some(u64::MAX.into())
+	}
+}
+
+impl bifrost_vtoken_voting::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type XcmDestWeightAndFee = XcmDestWeightAndFee;
+	type DerivativeAccount = DerivativeAccount;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type VTokenSupplyProvider = SimpleVTokenSupplyProvider;
+	type MaxVotes = ConstU32<256>;
+	type ParachainId = ParaInfo;
+	type QueryTimeout = QueryTimeout;
+	type WeightInfo = ();
+}
+
+pub struct DerivativeAccount;
+impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
+	fn check_derivative_index_exists(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> bool {
+		true
+	}
+
+	fn get_multilocation(
+		_token: CurrencyId,
+		_derivative_index: DerivativeIndex,
+	) -> Option<MultiLocation> {
+		Some(Parent.into())
+	}
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)> {
+		Self::get_multilocation(token, derivative_index)
+			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(_token: CurrencyId) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(_token: CurrencyId, _who: MultiLocation) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(_token: CurrencyId, _index: DerivativeIndex, _who: MultiLocation) {}
+}
+
+parameter_types! {
+	pub static RelaychainBlockNumber: BlockNumber = 1;
+}
+
+pub struct RelaychainDataProvider;
+
+impl RelaychainDataProvider {
+	pub fn set_block_number(block: BlockNumber) {
+		RelaychainBlockNumber::set(block);
+	}
+}
+
+impl BlockNumberProvider for RelaychainDataProvider {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		RelaychainBlockNumber::get()
+	}
+}
+
+ord_parameter_types! {
+	pub const QueryTimeout: BlockNumber = 100;
+}
+
+// ************** VtokenVoting mock end *****************

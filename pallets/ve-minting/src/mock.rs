@@ -275,7 +275,7 @@ parameter_types! {
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
@@ -377,8 +377,6 @@ impl bifrost_slp::Config for Runtime {
 	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -386,6 +384,7 @@ impl bifrost_slp::Config for Runtime {
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = ();
 }
 
 parameter_types! {
@@ -481,13 +480,6 @@ impl ExtBuilder {
 			(CHARLIE, BNC, 1_000_000_000_000),
 			(CHARLIE, vBNC, 1_000_000_000_000_000),
 		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

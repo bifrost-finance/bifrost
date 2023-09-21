@@ -20,22 +20,24 @@
 
 #![cfg(test)]
 
+use crate as bifrost_slp;
+use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
-// use parachain_staking::ParachainStakingInterface;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{Everything, GenesisBuild, Nothing},
+	traits::{Everything, GenesisBuild, Nothing, ProcessMessageError},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use node_primitives::{
 	currency::{BNC, KSM, VKSM},
-	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol,
+	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
+	XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
@@ -47,10 +49,7 @@ use sp_runtime::{
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
 use xcm_builder::FixedWeightBounds;
-use xcm_executor::XcmExecutor;
-
-use crate as bifrost_slp;
-use crate::{Config, QueryResponseManager};
+use xcm_executor::traits::ShouldExecute;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -211,7 +210,7 @@ impl orml_xtokens::Config for Runtime {
 	type AccountIdToMultiLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -475,8 +474,6 @@ impl Config for Runtime {
 	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmRouter = ();
-	type XcmExecutor = ();
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -484,6 +481,26 @@ impl Config for Runtime {
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
+	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+}
+
+pub struct XcmDestWeightAndFee;
+impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmOperationType,
+	) -> Option<(Weight, Balance)> {
+		// Some((Weight::from_parts(100, 100), 100u32.into()))
+		Some((20_000_000_000.into(), 10_000_000_000))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmOperationType,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }
 
 parameter_types! {
@@ -493,12 +510,24 @@ parameter_types! {
 	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
 }
 
+pub struct Barrier;
+impl ShouldExecute for Barrier {
+	fn should_execute<Call>(
+		_origin: &MultiLocation,
+		_message: &mut [Instruction<Call>],
+		_max_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ProcessMessageError> {
+		Ok(())
+	}
+}
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type AssetTransactor = ();
 	type AssetTrap = PolkadotXcm;
-	type Barrier = ();
+	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
 	type IsReserve = ();
 	type IsTeleporter = ();
@@ -508,7 +537,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SubscriptionService = PolkadotXcm;
 	type Trader = ();
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmSender = ();
+	type XcmSender = DoNothingRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = ConstU32<64>;
 	type FeeManager = ();
@@ -532,9 +561,9 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = ();
+	type XcmRouter = DoNothingRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -569,20 +598,6 @@ impl ExtBuilder {
 
 	pub fn one_hundred_for_alice(self) -> Self {
 		self.balances(vec![(ALICE, BNC, 100), (ALICE, KSM, 100), (ALICE, VKSM, 100)])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		use sp_runtime::traits::AccountIdConversion;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		let pool_account: AccountId = PalletId(*b"lighten#").into_account_truncating();
-
-		self.balances(vec![
-			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
-			(whitelist_caller.clone(), VKSM, 100_000_000_000_000),
-			(pool_account.clone(), KSM, 100_000_000_000_000),
-		])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

@@ -21,12 +21,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::MaxEncodedLen;
+use frame_support::dispatch::Weight;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
+	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v3::prelude::*;
 
@@ -41,7 +42,7 @@ mod tests;
 pub use crate::{
 	currency::{
 		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
+		DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, VBNC, VDOT, VKSM, VSKSM,
 	},
 	traits::*,
 };
@@ -69,7 +70,9 @@ pub type VtokenMintPrice = u128;
 pub type Balance = u128;
 
 /// Price of an asset.
-pub type Price = u64;
+pub type Price = FixedU128;
+
+pub type PriceDetail = (Price, Timestamp);
 
 /// Precision of symbol.
 pub type Precision = u32;
@@ -136,12 +139,30 @@ pub type TrieIndex = u32;
 /// Distribution Id
 pub type DistributionId = u32;
 
+/// The fixed point number
+pub type Rate = FixedU128;
+
+/// The fixed point number, range from 0 to 1.
+pub type Ratio = Permill;
+
+pub type Liquidity = FixedU128;
+
+pub type Shortfall = FixedU128;
+
+pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+pub type DerivativeIndex = u16;
+
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
 )]
 pub enum ExtraFeeName {
 	SalpContribute,
 	StatemineTransfer,
+	VoteVtoken,
+	VoteRemoveDelegatorVote,
 	NoExtraFee,
 }
 
@@ -234,5 +255,96 @@ impl SendXcm for DoNothingRouter {
 	}
 	fn deliver(_: ()) -> Result<XcmHash, SendError> {
 		Ok([0; 32])
+	}
+}
+
+pub struct Weightless;
+impl PreparedMessage for Weightless {
+	fn weight_of(&self) -> Weight {
+		Weight::default()
+	}
+}
+
+pub struct DoNothingExecuteXcm;
+impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
+	type Prepared = Weightless;
+
+	fn prepare(_message: Xcm<Call>) -> Result<Self::Prepared, Xcm<Call>> {
+		Ok(Weightless)
+	}
+
+	fn execute(
+		_origin: impl Into<MultiLocation>,
+		_pre: Self::Prepared,
+		_hash: XcmHash,
+		_weight_credit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn execute_xcm(
+		_origin: impl Into<MultiLocation>,
+		_message: Xcm<Call>,
+		_hash: XcmHash,
+		_weight_limit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn execute_xcm_in_credit(
+		_origin: impl Into<MultiLocation>,
+		_message: Xcm<Call>,
+		_hash: XcmHash,
+		_weight_limit: Weight,
+		_weight_credit: Weight,
+	) -> Outcome {
+		Outcome::Complete(Weight::default())
+	}
+
+	fn charge_fees(_location: impl Into<MultiLocation>, _fees: MultiAssets) -> XcmResult {
+		Ok(())
+	}
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+pub enum XcmOperationType {
+	// SALP operations
+	UmpContributeTransact,
+	// Statemine operations
+	StatemineTransfer,
+	// SLP operations
+	Bond,
+	WithdrawUnbonded,
+	BondExtra,
+	Unbond,
+	Rebond,
+	Delegate,
+	Payout,
+	Liquidize,
+	TransferBack,
+	TransferTo,
+	Chill,
+	Undelegate,
+	CancelLeave,
+	XtokensTransferBack,
+	ExecuteLeave,
+	ConvertAsset,
+	// VtokenVoting operations
+	Vote,
+	RemoveVote,
+	Any,
+}
+
+pub struct ExtraFeeInfo {
+	pub extra_fee_name: ExtraFeeName,
+	pub extra_fee_currency: CurrencyId,
+}
+
+impl Default for ExtraFeeInfo {
+	fn default() -> Self {
+		Self {
+			extra_fee_name: ExtraFeeName::NoExtraFee,
+			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
+		}
 	}
 }

@@ -1,7 +1,7 @@
 name: Srtool build
 
 env:
-  SUBWASM_VERSION: 0.19.0
+  SUBWASM_VERSION: 0.20.0
 
 on:
   workflow_dispatch:
@@ -31,7 +31,6 @@ jobs:
         with:
           chain: ${{ matrix.chain }}
           runtime_dir: runtime/${{ matrix.chain }}
-          tag: 1.66.1
       - name: Summary
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json

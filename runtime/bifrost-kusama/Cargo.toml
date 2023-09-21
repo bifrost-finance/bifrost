@@ -231,8 +231,8 @@ std = [
 	"bifrost-slpx/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
-    "bifrost-vtoken-voting/std",
-    "zenlink-protocol/std",
+	"bifrost-vtoken-voting/std",
+	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
 	"zenlink-stable-amm-runtime-api/std",
@@ -284,7 +284,7 @@ runtime-benchmarks = [
 	"bifrost-fee-share/runtime-benchmarks",
 	"bifrost-slpx/runtime-benchmarks",
 	"bifrost-stable-pool/runtime-benchmarks",
-    "bifrost-vtoken-voting/runtime-benchmarks",
+	"bifrost-vtoken-voting/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -352,7 +352,7 @@ try-runtime = [
 	"bifrost-slpx/try-runtime",
 	"nutsfinance-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
-    "bifrost-vtoken-voting/try-runtime",
+	"bifrost-vtoken-voting/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
