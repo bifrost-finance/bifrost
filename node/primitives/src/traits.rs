@@ -30,11 +30,13 @@ use frame_support::{
 	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
+use sp_core::H256;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
 	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
+use xcm::opaque::lts::{MultiLocation, NetworkId};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -491,4 +493,39 @@ pub trait VTokenSupplyProvider<CurrencyId, Balance> {
 	fn get_vtoken_supply(vtoken: CurrencyId) -> Option<Balance>;
 
 	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
+}
+
+pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
+	type Error;
+
+	fn send_crossout_message(
+		sender: AccountId,
+		fee: Balance,
+		src_anchor: H256,
+		payload: Vec<u8>,
+		network_id: NetworkId,
+	) -> Result<(), Self::Error>;
+
+	fn get_crossout_information(
+		network_id: NetworkId,
+		operation: XcmOperationType,
+	) -> Result<(H256, H256, Balance), Self::Error>;
+
+	fn get_chain_network(chain_native_currency_id: CurrencyId) -> Result<NetworkId, Self::Error>;
+
+	fn get_transfer_payload(
+		amount: Balance,
+		currency_id: CurrencyId,
+		receiver: &[u8],
+	) -> Result<Vec<u8>, Self::Error>;
+
+	fn get_receiver_from_multilocation(
+		dest_native_currecny_id: CurrencyId,
+		location: &MultiLocation,
+	) -> Result<Vec<u8>, Self::Error>;
+
+	fn get_network_id_from_multilocation(
+		dest_native_currecny_id: CurrencyId,
+		location: &MultiLocation,
+	) -> Result<NetworkId, Self::Error>;
 }

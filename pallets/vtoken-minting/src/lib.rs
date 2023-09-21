@@ -43,8 +43,9 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
-	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+	traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister,
+	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface,
+	VtokenMintingOperator,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -132,6 +133,9 @@ pub mod pallet {
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
+
+		// Bool bridge operator to send cross out message
+		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 	}
 
 	#[pallet::event]
@@ -1375,6 +1379,12 @@ pub mod pallet {
 				token_amount,
 				fee: redeem_fee,
 			});
+
+			// // if it is VFIL, then send cross chain message, to redeem FIL in filecoin network
+			// if vtoken_id == VFIL {
+			// 	T::BridgeOperator::send_crossout_message()
+			// }
+
 			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
 		}
 

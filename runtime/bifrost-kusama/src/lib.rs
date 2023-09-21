@@ -112,6 +112,7 @@ use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
 mod xcm_config;
+use cumulus_primitives_core::relay_chain::vstaging::HashT;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -120,7 +121,6 @@ pub use xcm_config::{
 	XcmConfig, XcmRouter,
 };
 use xcm_executor::XcmExecutor;
-use cumulus_primitives_core::relay_chain::vstaging::HashT;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -1388,6 +1388,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type BridgeOperator = CrossInOut;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1642,6 +1643,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type BridgeOperator = CrossInOut;
 }
 
 impl bifrost_slpx::Config for Runtime {

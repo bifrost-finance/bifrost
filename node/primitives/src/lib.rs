@@ -307,30 +307,35 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum XcmOperationType {
 	// SALP operations
-	UmpContributeTransact,
+	UmpContributeTransact = 0,
 	// Statemine operations
-	StatemineTransfer,
+	StatemineTransfer = 1,
 	// SLP operations
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
-	Undelegate,
-	CancelLeave,
-	XtokensTransferBack,
-	ExecuteLeave,
-	ConvertAsset,
+	Bond = 2,
+	WithdrawUnbonded = 3,
+	BondExtra = 4,
+	Unbond = 5,
+	Rebond = 6,
+	Delegate = 7,
+	Payout = 8,
+	Liquidize = 9,
+	TransferBack = 10,
+	TransferTo = 11,
+	Chill = 12,
+	Undelegate = 13,
+	CancelLeave = 14,
+	XtokensTransferBack = 15,
+	ExecuteLeave = 16,
+	ConvertAsset = 17,
 	// VtokenVoting operations
-	Vote,
-	RemoveVote,
-	Any,
+	Vote = 18,
+	RemoveVote = 19,
+	// CrossInOut operations
+	Mint = 20,
+	Redeem = 21,
+	CancelRedeem = 22,
+	ExpressStaking = 23,
+	Any = 99,
 }
 
 pub struct ExtraFeeInfo {

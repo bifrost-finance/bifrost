@@ -207,9 +207,17 @@ impl<T: frame_system::Config> bifrost_cross_in_out::WeightInfo for BifrostWeight
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
 
-	fn set_crossout_fee() -> Weight {
-		Weight::from_parts(57_171_000, 3777)
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().writes(2))
+	fn set_cross_out_info() -> Weight {
+		Weight::from_parts(52_439_000, 5877)
+		.saturating_add(RocksDbWeight::get().reads(2_u64))
+		.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
+
+	fn set_chain_network_id() -> Weight {
+		Weight::from_parts(52_439_000, 5877)
+		.saturating_add(RocksDbWeight::get().reads(2_u64))
+		.saturating_add(RocksDbWeight::get().writes(2_u64))
+	}
+
+
 }

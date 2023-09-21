@@ -39,7 +39,7 @@ use frame_system::{
 };
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
-	traits::XcmDestWeightAndFeeHandler,
+	traits::{BridgeOperator, XcmDestWeightAndFeeHandler},
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
 	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
@@ -159,6 +159,9 @@ pub mod pallet {
 		type MaxLengthLimit: Get<u32>;
 
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
+
+		// Bool bridge operator to send cross out message
+		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -241,6 +244,10 @@ pub mod pallet {
 		ExceedMaxLengthLimit,
 		/// Transfer to failed
 		TransferToError,
+		NetworkIdError,
+		FailToGetCrossOutInfo,
+		FailToGetPayload,
+		FailToSendCrossOutMessage,
 	}
 
 	#[pallet::event]

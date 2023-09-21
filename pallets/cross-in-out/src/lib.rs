@@ -28,7 +28,7 @@ use frame_support::{
 	sp_runtime::traits::AccountIdConversion, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{AssetId, CurrencyId, TryConvertFrom, FIL};
+use node_primitives::{AssetId, BridgeOperator, CurrencyId, TryConvertFrom, XcmOperationType, FIL};
 use orml_traits::MultiCurrency;
 use pallet_bcmp::Message;
 use sp_core::{H256, U256};
@@ -113,6 +113,9 @@ pub mod pallet {
 		FailedToSendMessage,
 		InvalidPayloadLength,
 		Unexpected,
+		NotSupported,
+		CrossOutInfoNotSet,
+		ChainNetworkIdNotExist,
 	}
 
 	#[pallet::event]
@@ -160,12 +163,16 @@ pub mod pallet {
 		},
 		CrossingMinimumAmountSet {
 			currency_id: CurrencyId,
-			cross_in_minimum: BalanceOf<T>,
-			cross_out_minimum: BalanceOf<T>,
+			cross_in_and_cross_out_minimum: Option<(BalanceOf<T>, BalanceOf<T>)>,
 		},
-		CrossOutFeeSet {
-			currency_id: CurrencyId,
-			cross_out_fee: BalanceOf<T>,
+		CrossOutInfoSet {
+			network_id: NetworkId,
+			operation: XcmOperationType,
+			src_dst_anchor_and_fee: Option<(H256, H256, BalanceOf<T>)>,
+		},
+		ChainNetworkIdSet {
+			chain_native_currency_id: CurrencyId,
+			network_id: Option<NetworkId>,
 		},
 	}
 
@@ -222,10 +229,24 @@ pub mod pallet {
 	pub type CrossingMinimumAmount<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
 
+	/// 【 NetworkId, Operation 】 => (src-anchor, dst-anchor, crossout-fee)
 	/// cross-out fee amount in BNC
 	#[pallet::storage]
-	#[pallet::getter(fn get_cross_out_fee)]
-	pub type CrossOutFee<T> = StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>>;
+	#[pallet::getter(fn get_cross_out_info)]
+	pub type CrossOutInfo<T> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		NetworkId,
+		Blake2_128Concat,
+		XcmOperationType,
+		(H256, H256, BalanceOf<T>),
+		OptionQuery,
+	>;
+
+	/// chain native currency id => chain network id
+	#[pallet::storage]
+	#[pallet::getter(fn get_chain_network_id)]
+	pub type ChainNetworkId<T> = StorageMap<_, Blake2_128Concat, CurrencyId, NetworkId>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -541,34 +562,59 @@ pub mod pallet {
 		pub fn set_crossing_minimum_amount(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			cross_in_minimum: BalanceOf<T>,
-			cross_out_minimum: BalanceOf<T>,
+			cross_in_and_cross_out_minimum: Option<(BalanceOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			CrossingMinimumAmount::<T>::insert(currency_id, (cross_in_minimum, cross_out_minimum));
+			CrossingMinimumAmount::<T>::mutate_exists(currency_id, |old_min_info| {
+				*old_min_info = cross_in_and_cross_out_minimum;
+			});
 
 			Self::deposit_event(Event::CrossingMinimumAmountSet {
 				currency_id,
-				cross_in_minimum,
-				cross_out_minimum,
+				cross_in_and_cross_out_minimum,
 			});
 
 			Ok(())
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_crossout_fee())]
-		pub fn set_crossout_fee(
+		#[pallet::weight(<T as Config>::WeightInfo::set_cross_out_info())]
+		pub fn set_cross_out_info(
 			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			cross_out_fee: BalanceOf<T>,
+			network_id: NetworkId,
+			operation: XcmOperationType,
+			src_dst_anchor_and_fee: Option<(H256, H256, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			CrossOutFee::<T>::insert(currency_id, cross_out_fee);
+			CrossOutInfo::<T>::mutate_exists(network_id, operation, |old_info| {
+				*old_info = src_dst_anchor_and_fee;
+			});
 
-			Self::deposit_event(Event::CrossOutFeeSet { currency_id, cross_out_fee });
+			Self::deposit_event(Event::CrossOutInfoSet {
+				network_id,
+				operation,
+				src_dst_anchor_and_fee,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(12)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_chain_network_id())]
+		pub fn set_chain_network_id(
+			origin: OriginFor<T>,
+			chain_native_currency_id: CurrencyId,
+			network_id: Option<NetworkId>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			ChainNetworkId::<T>::mutate_exists(chain_native_currency_id, |old_network_id| {
+				*old_network_id = network_id;
+			});
+
+			Self::deposit_event(Event::ChainNetworkIdSet { chain_native_currency_id, network_id });
 
 			Ok(())
 		}
@@ -603,23 +649,137 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for Pallet<T> {
+		type Error = Error<T>;
+		fn send_crossout_message(
+			sender: AccountIdOf<T>,
+			fee: BalanceOf<T>,
+			src_anchor: H256,
+			payload: Vec<u8>,
+			network_id: NetworkId,
+		) -> Result<(), Error<T>> {
+			let dst_chain: u32 = if let NetworkId::Ethereum { chain_id } = network_id {
+				chain_id.saturated_into::<u32>()
+			} else {
+				return Err(Error::<T>::Unexpected);
+			};
+
+			// transform fee type
+			let fee = CurrencyBalance::<T>::unique_saturated_from(fee.saturated_into::<u128>());
+
+			pallet_bcmp::Pallet::<T>::send_message(sender, fee, src_anchor, dst_chain, payload)
+				.map_err(|_| Error::<T>::FailedToSendMessage)?;
+
+			Ok(())
+		}
+
+		fn get_crossout_information(
+			network_id: NetworkId,
+			operation: XcmOperationType,
+		) -> Result<(H256, H256, BalanceOf<T>), Error<T>> {
+			let info = Self::get_cross_out_info(network_id, operation)
+				.ok_or(Error::<T>::CrossOutInfoNotSet)?;
+
+			Ok(info)
+		}
+
+		fn get_chain_network(chain_native_currency_id: CurrencyId) -> Result<NetworkId, Error<T>> {
+			let network_id = Self::get_chain_network_id(chain_native_currency_id)
+				.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
+
+			Ok(network_id)
+		}
+
+		/// Encoding to Evm payload. In total 1+32+32+32=97 bytes.
+		fn get_transfer_payload(
+			amount: BalanceOf<T>,
+			currency_id: CurrencyId,
+			receiver: &[u8],
+		) -> Result<Vec<u8>, Error<T>> {
+			// the first byte is xcm operation type
+			let mut payload = Vec::new();
+			payload.push(XcmOperationType::TransferTo as u8);
+
+			// following 32 bytes is amount
+			let mut fixed_amount = [0u8; 32];
+			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
+			payload.append(&mut fixed_amount.to_vec());
+
+			// following 32 bytes is currency_id
+			let currency_id_asset: AssetId = AssetId::try_convert_from(currency_id, 0u32)
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let mut fixed_currency_id = [0u8; 32];
+			U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
+			payload.append(&mut fixed_currency_id.to_vec());
+
+			// following 32 bytes is receiver
+			let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
+			payload.append(&mut fixed_address);
+			Ok(payload)
+		}
+
+		fn get_receiver_from_multilocation(
+			dest_native_currecny_id: CurrencyId,
+			location: &MultiLocation,
+		) -> Result<Vec<u8>, Error<T>> {
+			// if it is FIL, get account20 from multilocation
+			if dest_native_currecny_id == FIL {
+				match location {
+					MultiLocation {
+						parents: _,
+						interior: X1(AccountKey20 { network: _, key: account_20 }),
+					} => {
+						let receiver = account_20.to_vec();
+						return Ok(receiver);
+					},
+
+					_ => Err(Error::<T>::InvalidDestinationMultilocation),
+				}
+			} else {
+				Err(Error::<T>::NotSupported)?
+			}
+		}
+
+		fn get_network_id_from_multilocation(
+			dest_native_currecny_id: CurrencyId,
+			location: &MultiLocation,
+		) -> Result<NetworkId, Error<T>> {
+			// if it is FIL, get account20 from multilocation
+			if dest_native_currecny_id == FIL {
+				match location {
+					MultiLocation {
+						parents: _,
+						interior: X1(AccountKey20 { network: Some(network_id), key: _ }),
+					} => {
+						return Ok(*network_id);
+					},
+
+					_ => Err(Error::<T>::InvalidDestinationMultilocation),
+				}
+			} else {
+				Err(Error::<T>::NotSupported)?
+			}
+		}
+	}
+
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn send_message(
 			sender: AccountIdOf<T>,
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
-			dst_location: Box<MultiLocation>,
+			dest_location: Box<MultiLocation>,
 		) -> Result<(), Error<T>> {
-			let (dst_chain, receiver) = Self::get_chain_and_receiver(&dst_location)?;
+			let receiver = Self::get_receiver_from_multilocation(currency_id, &dest_location)?;
+			let network_id = Self::get_network_id_from_multilocation(currency_id, &dest_location)?;
 
-			let payload = Self::eth_api_encode(amount, currency_id, &receiver)?;
-			let src_anchor = T::AnchorAddress::get();
+			let payload = Self::get_transfer_payload(amount, currency_id, &receiver)?;
 
-			let fee = Self::get_cross_out_fee(currency_id).ok_or(Error::<T>::CrossOutFeeNotSet)?;
-			let fee = CurrencyBalance::<T>::unique_saturated_from(fee.saturated_into::<u128>());
+			let transfer_crossout_info =
+				Self::get_crossout_information(network_id, XcmOperationType::TransferTo)?;
+			let src_anchor = transfer_crossout_info.0;
+			let fee = transfer_crossout_info.2;
 
-			pallet_bcmp::Pallet::<T>::send_message(sender, fee, src_anchor, dst_chain, payload)
-				.map_err(|_| Error::<T>::FailedToSendMessage)?;
+			Self::send_crossout_message(sender, fee, src_anchor, payload, network_id)?;
 
 			Ok(())
 		}
@@ -655,28 +815,6 @@ pub mod pallet {
 			};
 		}
 
-		/// Encoding to Evm payload. In total 32+32+32=96 bytes.
-		pub(crate) fn eth_api_encode(
-			amount: BalanceOf<T>,
-			currency_id: CurrencyId,
-			receiver: &[u8],
-		) -> Result<Vec<u8>, Error<T>> {
-			let mut fixed_amount = [0u8; 32];
-			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
-			let mut payload = fixed_amount.to_vec();
-
-			// currency_id to u64
-			let currency_id_asset: AssetId = AssetId::try_convert_from(currency_id, 0u32)
-				.map_err(|_| Error::<T>::FailedToConvert)?;
-			let mut fixed_currency_id = [0u8; 32];
-			U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
-			payload.append(&mut fixed_currency_id.to_vec());
-
-			let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
-			payload.append(&mut fixed_address);
-			Ok(payload)
-		}
-
 		/// Extend bytes to target length.
 		pub(crate) fn extend_to_bytes32(data: &[u8], size: usize) -> Vec<u8> {
 			let mut append = Vec::new();
@@ -687,24 +825,6 @@ pub mod pallet {
 			}
 			append.append(&mut data.to_vec());
 			append
-		}
-
-		pub(crate) fn get_chain_and_receiver(
-			location: &MultiLocation,
-		) -> Result<(u32, Vec<u8>), Error<T>> {
-			match location {
-				MultiLocation {
-					parents: 100,
-					interior: X1(AccountKey20 { network: Some(network_id), key: account_20 }),
-				} =>
-					if let NetworkId::Ethereum { chain_id } = network_id {
-						let receiver = account_20.to_vec();
-						return Ok((*chain_id as u32, receiver));
-					} else {
-						Err(Error::<T>::InvalidDestinationMultilocation)
-					},
-				_ => Err(Error::<T>::InvalidDestinationMultilocation),
-			}
 		}
 
 		pub(crate) fn inner_cross_in(

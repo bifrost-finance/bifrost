@@ -1217,6 +1217,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type BridgeOperator = CrossInOut;
 }
 
 parameter_types! {
@@ -1480,6 +1481,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2006>;
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
+	type BridgeOperator = CrossInOut;
 }
 
 parameter_types! {
