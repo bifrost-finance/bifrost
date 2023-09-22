@@ -542,43 +542,14 @@ pub mod pallet {
 					fee,
 				});
 			} else {
-				// In FIL case, user redeeming VFIL amount is stored under the key of FIL
-				// when user cancel redeeming, we need to change the cancelling amount to be under
-				// the key of VFL meaning we need to return the VFIL amount to the user
-				// we use mint_rate here analog to mint VFIL again
-				let (_mint_rate, _redeem_rate, cancel_rate) = Fees::<T>::get();
-				let cancel_fee = cancel_rate * token_amount;
-				let token_amount_excluding_fee =
-					token_amount.checked_sub(&cancel_fee).ok_or(Error::<T>::CalculationOverflow)?;
-
-				// record the amount of vFIL to be returned to the user due to cancel_redeem
-				// operation
-				Self::record_redeem_list(
+				// in Vfil case, token_amount is the amount of vfil. We transfer the cancelling
+				// amount from under fil key to vfil key.
+				Self::vtoken_cancel_redeem_operation(
 					&exchanger,
-					VFIL,
-					token_amount_excluding_fee,
-					RedeemType::Native,
-				)?;
-
-				Self::deposit_event(Event::Rebonded {
-					address: exchanger.clone(),
-					token_id: VFIL,
-					token_amount: Zero::zero(),
-					vtoken_amount: token_amount_excluding_fee,
-					fee: cancel_fee,
-				});
-
-				// send cancel_redeem cross-chain message
-				// we apply for full amount since the vfil-minting contract will charge the fee
-				Self::send_message(
-					XcmOperationType::CancelRedeem,
-					exchanger.clone(),
-					None,
 					token_amount,
-					VFIL,
-					FIL,
-				)
-				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+					vtoken_id,
+					token_id,
+				)?;
 			}
 
 			Ok(())
@@ -653,27 +624,39 @@ pub mod pallet {
 				_ => return Err(Error::<T>::TokenUnlockLedgerNotFound.into()),
 			};
 
-			let (token_amount, vtoken_amount, fee) =
-				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, unlock_amount)?;
+			if token_id != FIL {
+				let (token_amount, vtoken_amount, fee) =
+					Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, unlock_amount)?;
 
-			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
-				if let Some(value_info) = value {
-					*value_info = value_info
-						.checked_add(&token_amount)
-						.ok_or(Error::<T>::CalculationOverflow)?;
-				} else {
-					return Err(Error::<T>::InvalidRebondToken);
-				}
-				Ok(())
-			})?;
+				TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
+					if let Some(value_info) = value {
+						*value_info = value_info
+							.checked_add(&token_amount)
+							.ok_or(Error::<T>::CalculationOverflow)?;
+					} else {
+						return Err(Error::<T>::InvalidRebondToken);
+					}
+					Ok(())
+				})?;
 
-			Self::deposit_event(Event::RebondedByUnlockId {
-				address: exchanger,
-				token_id,
-				token_amount: unlock_amount,
-				vtoken_amount,
-				fee,
-			});
+				Self::deposit_event(Event::RebondedByUnlockId {
+					address: exchanger,
+					token_id,
+					token_amount: unlock_amount,
+					vtoken_amount,
+					fee,
+				});
+			} else {
+				// in Vfil case, token_amount is the amount of vfil. We transfer the cancelling
+				// amount from under fil key to vfil key.
+				Self::vtoken_cancel_redeem_operation(
+					&exchanger,
+					unlock_amount,
+					vtoken_id,
+					token_id,
+				)?;
+			}
+
 			Ok(())
 		}
 
@@ -1345,6 +1328,7 @@ pub mod pallet {
 						entrance_account,
 					)
 					.map_err(|_| Error::<T>::FailToConvert)?;
+
 				Self::send_message(
 					XcmOperationType::TransferTo,
 					exchanger.clone(),
@@ -1564,6 +1548,62 @@ pub mod pallet {
 
 			T::BridgeOperator::send_crossout_message(
 				fee_payer, fee, src_anchor, payload, network_id,
+			)
+			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+
+			Ok(())
+		}
+
+		fn vtoken_cancel_redeem_operation(
+			exchanger: &AccountIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+			vtoken_id: CurrencyId,
+			token_id: CurrencyId,
+		) -> DispatchResult {
+			// In FIL case, user redeeming VFIL amount is stored under the key of FIL
+			// when user cancel redeeming, we need to change the cancelling amount to be under
+			// the key of VFL meaning we need to return the VFIL amount to the user
+			// we use mint_rate here analog to mint VFIL again
+			let (_mint_rate, _redeem_rate, cancel_rate) = Fees::<T>::get();
+			let cancel_fee = cancel_rate * vtoken_amount;
+			let vtoken_amount_excluding_fee =
+				vtoken_amount.checked_sub(&cancel_fee).ok_or(Error::<T>::CalculationOverflow)?;
+
+			// record the amount of vFIL to be returned to the user due to cancel_redeem
+			// operation
+			Self::record_redeem_list(
+				&exchanger,
+				vtoken_id,
+				vtoken_amount_excluding_fee,
+				RedeemType::Native,
+			)?;
+
+			// charge fee
+			Self::record_redeem_list(
+				&T::FeeAccount::get(),
+				vtoken_id,
+				cancel_fee,
+				RedeemType::Native,
+			)?;
+
+			Self::deposit_event(Event::Rebonded {
+				address: exchanger.clone(),
+				token_id: vtoken_id,
+				token_amount: Zero::zero(),
+				vtoken_amount: vtoken_amount_excluding_fee,
+				fee: cancel_fee,
+			});
+
+			// send cancel_redeem cross-chain message
+			// we apply for token_amount_excluding_fee since the vfil-minting contract will not
+			// charge fee again for delegate-staking contract
+			Self::send_message(
+				XcmOperationType::CancelRedeem,
+				exchanger.clone(),
+				None,
+				vtoken_amount_excluding_fee,
+				vtoken_id,
+				token_id,
 			)
 			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
