@@ -242,6 +242,7 @@ pub mod pallet {
 		NetworkIdError,
 		FailToGetCrossOutInfo,
 		FailToGetPayload,
+		ExchangeRateError,
 	}
 
 	// 【mint_fee, redeem_fee, cancel_fee】
@@ -330,6 +331,12 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn hook_iteration_limit)]
 	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	// token_id => (numerator, denominator). For now, only FIL is supported.
+	#[pallet::storage]
+	#[pallet::getter(fn special_vtoken_exchange_rate)]
+	pub type SpecialVtokenExchangeRate<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>), OptionQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
@@ -877,20 +884,14 @@ pub mod pallet {
 			token_id: CurrencyId,
 			token_amount: BalanceOf<T>,
 		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
-			let token_pool_amount = Self::token_pool(token_id);
-			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 			let (mint_rate, _redeem_rate, _cancel_rate) = Fees::<T>::get();
 			let mint_fee = mint_rate * token_amount;
 			let token_amount_excluding_fee =
 				token_amount.checked_sub(&mint_fee).ok_or(Error::<T>::CalculationOverflow)?;
-			let mut vtoken_amount = token_amount_excluding_fee;
-			if token_pool_amount != BalanceOf::<T>::zero() {
-				vtoken_amount = U256::from(token_amount_excluding_fee.saturated_into::<u128>())
-					.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
-					.checked_div(token_pool_amount.saturated_into::<u128>().into())
-					.ok_or(Error::<T>::CalculationOverflow)?
-					.as_u128()
-					.saturated_into();
+			let mut vtoken_amount =
+				Self::get_token_exchange_amount(token_id, token_amount_excluding_fee)?;
+			if vtoken_amount == BalanceOf::<T>::zero() {
+				vtoken_amount = token_amount_excluding_fee;
 			}
 
 			// Charging fees
@@ -916,6 +917,21 @@ pub mod pallet {
 			time_unit: TimeUnit,
 			redeem_type: RedeemType<AccountIdOf<T>>,
 		) -> DispatchResult {
+			// unlock_amount is the amount of token.
+			// for FIL, the incoming unlock amount is VFIL amount. We change it to FIL amount, and
+			// give the VFIL amount to the ledger_unlock_amount variable. ledger_unlock_amount is
+			// for updating ledger storage. for other tokens, unlock_amount and ledger_unlock_amount
+			// are the same.
+			let mut ledger_unlock_amount = unlock_amount;
+
+			// if it is FIL, since the stored value is vfil, we need to convert it to fil by current
+			// exchange rate.
+			if token_id == FIL {
+				let vtoken_id =
+					token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+				unlock_amount = Self::get_vtoken_exchange_amount(vtoken_id, unlock_amount)?;
+			}
+
 			let ed = T::MultiCurrency::minimum_balance(token_id);
 			let mut account_to_send = account.clone();
 
@@ -943,12 +959,12 @@ pub mod pallet {
 					&token_id,
 					|value| -> Result<(), Error<T>> {
 						if let Some((total_locked_origin, ledger_list_origin, _)) = value {
-							if total_locked_origin == &unlock_amount {
+							if total_locked_origin == &ledger_unlock_amount {
 								*value = None;
 								return Ok(());
 							}
 							*total_locked_origin = total_locked_origin
-								.checked_sub(&unlock_amount)
+								.checked_sub(&ledger_unlock_amount)
 								.ok_or(Error::<T>::CalculationOverflow)?;
 							ledger_list_origin.retain(|x| x != index);
 						} else {
@@ -963,13 +979,13 @@ pub mod pallet {
 					&token_id,
 					|value| -> Result<(), Error<T>> {
 						if let Some((total_locked_origin, ledger_list_origin)) = value {
-							if total_locked_origin == &unlock_amount {
+							if total_locked_origin == &ledger_unlock_amount {
 								*value = None;
 								return Ok(());
 							}
 							ledger_list_origin.retain(|x| x != index);
 							*total_locked_origin = total_locked_origin
-								.checked_sub(&unlock_amount)
+								.checked_sub(&ledger_unlock_amount)
 								.ok_or(Error::<T>::CalculationOverflow)?;
 						} else {
 							return Err(Error::<T>::UserUnlockLedgerNotFound);
@@ -1057,23 +1073,31 @@ pub mod pallet {
 					RedeemType::Native => {},
 				};
 				unlock_amount = entrance_account_balance;
+
+				ledger_unlock_amount = unlock_amount;
+				if token_id == FIL {
+					ledger_unlock_amount =
+						Self::get_token_exchange_amount(token_id, unlock_amount)?;
+				}
+
 				T::MultiCurrency::transfer(
 					token_id,
 					&T::EntranceAccount::get().into_account_truncating(),
 					&account_to_send,
 					unlock_amount,
 				)?;
+
 				TokenUnlockLedger::<T>::mutate_exists(
 					&token_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
 						if let Some((_, total_locked_origin, _, _)) = value {
-							if total_locked_origin == &unlock_amount {
+							if total_locked_origin == &ledger_unlock_amount {
 								*value = None;
 								return Ok(());
 							}
 							*total_locked_origin = total_locked_origin
-								.checked_sub(&unlock_amount)
+								.checked_sub(&ledger_unlock_amount)
 								.ok_or(Error::<T>::CalculationOverflow)?;
 						} else {
 							return Err(Error::<T>::TokenUnlockLedgerNotFound);
@@ -1087,12 +1111,12 @@ pub mod pallet {
 					&token_id,
 					|value| -> Result<(), Error<T>> {
 						if let Some((total_locked_origin, _ledger_list_origin, _)) = value {
-							if total_locked_origin == &unlock_amount {
+							if total_locked_origin == &ledger_unlock_amount {
 								*value = None;
 								return Ok(());
 							}
 							*total_locked_origin = total_locked_origin
-								.checked_sub(&unlock_amount)
+								.checked_sub(&ledger_unlock_amount)
 								.ok_or(Error::<T>::CalculationOverflow)?;
 						} else {
 							return Err(Error::<T>::TimeUnitUnlockLedgerNotFound);
@@ -1106,13 +1130,13 @@ pub mod pallet {
 					&token_id,
 					|value| -> Result<(), Error<T>> {
 						if let Some((total_locked_origin, _ledger_list_origin)) = value {
-							if total_locked_origin == &unlock_amount {
+							if total_locked_origin == &ledger_unlock_amount {
 								*value = None;
 								return Ok(());
 							}
 
 							*total_locked_origin = total_locked_origin
-								.checked_sub(&unlock_amount)
+								.checked_sub(&ledger_unlock_amount)
 								.ok_or(Error::<T>::CalculationOverflow)?;
 						} else {
 							return Err(Error::<T>::UserUnlockLedgerNotFound);
@@ -1127,7 +1151,9 @@ pub mod pallet {
 				.ok_or(Error::<T>::CalculationOverflow)?;
 
 			UnlockingTotal::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
+				*pool = pool
+					.checked_sub(&ledger_unlock_amount)
+					.ok_or(Error::<T>::CalculationOverflow)?;
 				Ok(())
 			})?;
 
@@ -1287,14 +1313,7 @@ pub mod pallet {
 			// Charging fees
 			T::MultiCurrency::transfer(vtoken_id, &exchanger, &T::FeeAccount::get(), redeem_fee)?;
 
-			let token_pool_amount = Self::token_pool(token_id);
-			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
-				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
-				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
-				.ok_or(Error::<T>::CalculationOverflow)?
-				.as_u128()
-				.saturated_into();
+			let token_amount = Self::get_vtoken_exchange_amount(vtoken_id, vtoken_amount)?;
 
 			// Burn the corresponding vtoken from the user's account.
 			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
@@ -1475,34 +1494,20 @@ pub mod pallet {
 
 		pub fn token_to_vtoken_inner(
 			token_id: CurrencyIdOf<T>,
-			vtoken_id: CurrencyIdOf<T>,
+			_vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		) -> BalanceOf<T> {
-			let token_pool_amount = Self::token_pool(token_id);
-			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-
-			U256::from(token_amount.saturated_into::<u128>())
-				.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
-				.checked_div(token_pool_amount.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+			Self::get_token_exchange_amount(token_id, token_amount)
+				.unwrap_or(BalanceOf::<T>::zero())
 		}
 
 		pub fn vtoken_to_token_inner(
-			token_id: CurrencyIdOf<T>,
+			_token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> BalanceOf<T> {
-			let token_pool_amount = Self::token_pool(token_id);
-			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-
-			U256::from(vtoken_amount.saturated_into::<u128>())
-				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
-				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+			Self::get_vtoken_exchange_amount(vtoken_id, vtoken_amount)
+				.unwrap_or(BalanceOf::<T>::zero())
 		}
 
 		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
@@ -1608,6 +1613,66 @@ pub mod pallet {
 			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
 			Ok(())
+		}
+
+		fn get_vtoken_exchange_rate(
+			token_id: CurrencyIdOf<T>,
+		) -> Result<Option<(BalanceOf<T>, BalanceOf<T>)>, Error<T>> {
+			let result = if token_id == FIL {
+				Self::special_vtoken_exchange_rate(token_id)
+			} else {
+				let vtoken_id =
+					token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+				let token_pool_amount = Self::token_pool(token_id);
+				let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+
+				Some((token_pool_amount, vtoken_total_issuance))
+			};
+
+			Ok(result)
+		}
+
+		fn get_vtoken_exchange_amount(
+			vtoken_id: CurrencyIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let (nominator, denominator) =
+				Self::get_vtoken_exchange_rate(token_id)?.ok_or(Error::<T>::ExchangeRateError)?;
+
+			if denominator == Zero::zero() {
+				Ok(BalanceOf::<T>::zero())
+			} else {
+				let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
+					.saturating_mul(nominator.saturated_into::<u128>().into())
+					.checked_div(denominator.saturated_into::<u128>().into())
+					.ok_or(Error::<T>::CalculationOverflow)?
+					.as_u128()
+					.saturated_into();
+
+				Ok(token_amount)
+			}
+		}
+
+		fn get_token_exchange_amount(
+			token_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let (nominator, denominator) =
+				Self::get_vtoken_exchange_rate(token_id)?.ok_or(Error::<T>::ExchangeRateError)?;
+
+			if nominator == Zero::zero() {
+				Ok(BalanceOf::<T>::zero())
+			} else {
+				let vtoken_amount = U256::from(token_amount.saturated_into::<u128>())
+					.saturating_mul(denominator.saturated_into::<u128>().into())
+					.checked_div(nominator.saturated_into::<u128>().into())
+					.ok_or(Error::<T>::CalculationOverflow)?
+					.as_u128()
+					.saturated_into();
+
+				Ok(vtoken_amount)
+			}
 		}
 	}
 }
