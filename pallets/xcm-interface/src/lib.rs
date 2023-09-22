@@ -247,10 +247,10 @@ pub mod pallet {
 				id: Concrete(MultiLocation::new(1, Junctions::Here)),
 				fun: Fungible(xcm_fee_u128),
 			};
-			assets.push(statemine_asset);
+			assets.push(statemine_asset.clone());
 			assets.push(fee_asset.clone());
 			let msg = Xcm(vec![
-				WithdrawAsset(assets),
+				WithdrawAsset(statemine_asset.into()),
 				InitiateReserveWithdraw {
 					assets: All.into(),
 					reserve: MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
