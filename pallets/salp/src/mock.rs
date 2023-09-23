@@ -568,6 +568,7 @@ impl xcm_interface::Config for Test {
 	type SalpHelper = Salp;
 	type ParachainId = ParaInfo;
 	type CallBackTimeOut = ConstU32<10>;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
 }
 
 pub struct ParaInfo;
