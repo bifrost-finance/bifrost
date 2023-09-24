@@ -1946,12 +1946,6 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 	}
 
 	fn anchor_addr() -> H256 {
-		// 从CrossInOut的CrossOutInfo<T>中获取回传汇率的anchor地址
-	}
-
-	fn match_consumer(anchor: &H256, message: &Message) -> DispatchResultWithPostInfo {
-
-		// 不同网络我是要提供不同的anchor id的，所以这里要判定一下
-		// 如果是我库里的anchor的其中一个，我把它留下来
+		T::AnchorAddress::get()
 	}
 }

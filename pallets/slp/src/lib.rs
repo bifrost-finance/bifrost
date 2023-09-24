@@ -32,7 +32,11 @@ pub use crate::{
 	Junctions::X1,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
+use frame_support::{
+	pallet_prelude::*,
+	traits::{Contains, Currency},
+	weights::Weight,
+};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -47,7 +51,7 @@ use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-use sp_core::{bounded::BoundedVec, H160};
+use sp_core::{bounded::BoundedVec, H160, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -87,6 +91,10 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
+
+type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -165,7 +173,7 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			BalanceOf<Self>,
 			CurrencyId,
-			BoolFeeBalance<T>,
+			BoolFeeBalance<Self>,
 		>;
 
 		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
@@ -258,6 +266,7 @@ pub mod pallet {
 		FailToGetPayload,
 		FailToSendCrossOutMessage,
 		FailToGetFee,
+		FailedToSendMessage,
 	}
 
 	#[pallet::event]

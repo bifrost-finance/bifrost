@@ -19,29 +19,23 @@ use crate::{
 	pallet::Error,
 	vec, AccountIdOf, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Encode, Event,
+	DelegatorsMultilocation2Index, DispatchResultWithPostInfo, Encode, Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
-use frame_support::{
-	ensure,
-	traits::{Currency, Len},
-};
+use frame_support::{ensure, traits::Len};
 use node_primitives::{
 	traits::BridgeOperator, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
 };
 use orml_traits::MultiCurrency;
-use sp_core::{Get, U256};
+use pallet_bcmp::{ConsumerLayer, Message};
+use sp_core::{Get, H256, U256};
 use sp_runtime::{
 	traits::{UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult,
 };
 use xcm::{v3::prelude::*, VersionedMultiLocation};
-
-type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
-	<T as frame_system::Config>::AccountId,
->>::Balance;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -364,5 +358,16 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| Error::<T>::FailedToSendMessage)?;
 
 		Ok(())
+	}
+}
+
+// For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
+impl<T: Config> ConsumerLayer<T> for Pallet<T> {
+	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn anchor_addr() -> H256 {
+		T::AnchorAddress::get()
 	}
 }
