@@ -69,6 +69,9 @@ type BoolFeeBalance<T> =
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
 
+const CURRENCY_ID_LENGTH: usize = 32;
+const AMOUNT_LENGTH: usize = 16;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -229,6 +232,10 @@ pub mod pallet {
 		FastRedeemFailed {
 			err: DispatchError,
 		},
+		SpecialVtokenExchangeRateSet {
+			token_id: CurrencyIdOf<T>,
+			exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -259,6 +266,9 @@ pub mod pallet {
 		ExchangeRateError,
 		FailToGetFee,
 		FailedToSendMessage,
+		InvalidExchangeRate,
+		InvalidPayloadLength,
+		InvalidXcmOperation,
 	}
 
 	// 【mint_fee, redeem_fee, cancel_fee】
@@ -847,6 +857,19 @@ pub mod pallet {
 			MinTimeUnit::<T>::mutate(&token_id, |old_time_unit| *old_time_unit = time_unit.clone());
 
 			Self::deposit_event(Event::MinTimeUnitSet { token_id, time_unit });
+			Ok(())
+		}
+
+		#[pallet::call_index(13)]
+		#[pallet::weight({0})]
+		pub fn set_special_vtoken_exchange_rate(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::inner_set_special_vtoken_exchange_rate(token_id, exchange_rate)?;
 			Ok(())
 		}
 	}
@@ -1689,6 +1712,52 @@ pub mod pallet {
 				Ok(vtoken_amount)
 			}
 		}
+
+		pub fn update_exchange_rate(payload: &[u8]) -> Result<(), Error<T>> {
+			// get currency_id from payload
+			let currency_id_u64: u64 = U256::from_big_endian(&payload[8..264])
+				.try_into()
+				.map_err(|_| Error::<T>::FailToConvert)?;
+			let currency_id =
+				CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailToConvert)?;
+
+			ensure!(currency_id == FIL, Error::<T>::NotSupportTokenType);
+
+			// get exchange_rate nominator and denominator from payload
+			let nominator: u128 = U256::from_big_endian(&payload[264..392])
+				.try_into()
+				.map_err(|_| Error::<T>::FailToConvert)?;
+			let nominator: BalanceOf<T> = nominator.saturated_into::<BalanceOf<T>>();
+
+			let denominator: u128 = U256::from_big_endian(&payload[392..520])
+				.try_into()
+				.map_err(|_| Error::<T>::FailToConvert)?;
+			let denominator: BalanceOf<T> = denominator.saturated_into::<BalanceOf<T>>();
+
+			// update SpecialVtokenExchangeRate
+			Self::inner_set_special_vtoken_exchange_rate(
+				currency_id,
+				Some((nominator, denominator)),
+			)?;
+
+			Ok(())
+		}
+
+		fn inner_set_special_vtoken_exchange_rate(
+			token_id: CurrencyIdOf<T>,
+			exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
+		) -> Result<(), Error<T>> {
+			if let Some((_nominator, denominator)) = exchange_rate {
+				ensure!(denominator > Zero::zero(), Error::<T>::InvalidExchangeRate);
+			}
+
+			SpecialVtokenExchangeRate::<T>::mutate_exists(token_id, |old_exchange_rate| {
+				*old_exchange_rate = exchange_rate
+			});
+
+			Self::deposit_event(Event::SpecialVtokenExchangeRateSet { token_id, exchange_rate });
+			Ok(())
+		}
 	}
 }
 
@@ -1942,6 +2011,22 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 // For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
 impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+		let payload = &message.payload;
+
+		// decode XcmOperationType from the first byte
+		let operation: XcmOperationType = payload[0].try_into()?;
+
+		match operation {
+			XcmOperationType::PassExchangeRateBack => {
+				let max_len = CURRENCY_ID_LENGTH
+					.checked_add(2 * AMOUNT_LENGTH)
+					.ok_or(Error::<T>::CalculationOverflow)?;
+				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
+				Self::update_exchange_rate(&payload)
+			},
+			_ => Err(Error::<T>::InvalidXcmOperation),
+		}?;
+
 		Ok(().into())
 	}
 

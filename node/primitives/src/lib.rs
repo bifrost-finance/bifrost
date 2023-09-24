@@ -338,6 +338,41 @@ pub enum XcmOperationType {
 	Any = 99,
 }
 
+impl TryFrom<u8> for XcmOperationType {
+	type Error = &'static str;
+
+	fn try_from(value: u8) -> Result<Self, Self::Error> {
+		match value {
+			0 => Ok(XcmOperationType::UmpContributeTransact),
+			1 => Ok(XcmOperationType::StatemineTransfer),
+			2 => Ok(XcmOperationType::Bond),
+			3 => Ok(XcmOperationType::WithdrawUnbonded),
+			4 => Ok(XcmOperationType::BondExtra),
+			5 => Ok(XcmOperationType::Unbond),
+			6 => Ok(XcmOperationType::Rebond),
+			7 => Ok(XcmOperationType::Delegate),
+			8 => Ok(XcmOperationType::Payout),
+			9 => Ok(XcmOperationType::Liquidize),
+			10 => Ok(XcmOperationType::TransferBack),
+			11 => Ok(XcmOperationType::TransferTo),
+			12 => Ok(XcmOperationType::Chill),
+			13 => Ok(XcmOperationType::Undelegate),
+			14 => Ok(XcmOperationType::CancelLeave),
+			15 => Ok(XcmOperationType::XtokensTransferBack),
+			16 => Ok(XcmOperationType::ExecuteLeave),
+			17 => Ok(XcmOperationType::ConvertAsset),
+			18 => Ok(XcmOperationType::Vote),
+			19 => Ok(XcmOperationType::RemoveVote),
+			20 => Ok(XcmOperationType::Mint),
+			21 => Ok(XcmOperationType::Redeem),
+			22 => Ok(XcmOperationType::CancelRedeem),
+			23 => Ok(XcmOperationType::PassExchangeRateBack),
+			99 => Ok(XcmOperationType::Any),
+			_ => Err("No matching enum variant"),
+		}
+	}
+}
+
 pub struct ExtraFeeInfo {
 	pub extra_fee_name: ExtraFeeName,
 	pub extra_fee_currency: CurrencyId,
