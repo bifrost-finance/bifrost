@@ -43,6 +43,7 @@ std = [
 	"frame-benchmarking?/std",
 	"orml-traits/std",
 	"xcm/std",
+	"pallet-bcmp/std",
 ]
 
 runtime-benchmarks = [

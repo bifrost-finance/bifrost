@@ -1289,6 +1289,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-bcmp",
  "pallet-indices",
  "pallet-utility",
  "pallet-xcm",
@@ -1633,6 +1634,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-bcmp",
  "pallet-collective",
  "pallet-xcm",
  "parity-scale-codec",
@@ -7264,7 +7266,7 @@ dependencies = [
 [[package]]
 name = "pallet-bcmp"
 version = "0.0.0"
-source = "git+https://github.com/bifrost-finance/pallet-bcmp?rev=ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9#ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9"
+source = "git+https://github.com/bifrost-finance/pallet-bcmp?rev=7e04cd45af3bd1add283f9dcd9e8458b7dd82cb9#7e04cd45af3bd1add283f9dcd9e8458b7dd82cb9"
 dependencies = [
  "frame-support",
  "frame-system",

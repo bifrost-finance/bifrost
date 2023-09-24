@@ -25,14 +25,14 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use frame_support::{
 	dispatch::DispatchErrorWithPostInfo, ensure, pallet_prelude::*,
-	sp_runtime::traits::AccountIdConversion, PalletId,
+	sp_runtime::traits::AccountIdConversion, traits::Currency, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{AssetId, BridgeOperator, CurrencyId, TryConvertFrom, XcmOperationType, FIL};
 use orml_traits::MultiCurrency;
 use pallet_bcmp::Message;
 use sp_core::{H256, U256};
-use sp_runtime::{traits::UniqueSaturatedFrom, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::v3::prelude::*;
@@ -51,10 +51,9 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::Balance;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-type CurrencyBalance<T> =
-	<<T as pallet_bcmp::Config>::Currency as frame_support::traits::Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::Balance;
+type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
 
 const MAX_ACCOUNT_LENGTH: usize = 32;
 const AMOUNT_LENGTH: usize = 32;
@@ -114,7 +113,6 @@ pub mod pallet {
 		InvalidPayloadLength,
 		Unexpected,
 		NotSupported,
-		CrossOutInfoNotSet,
 		ChainNetworkIdNotExist,
 		ReceiverNotProvided,
 	}
@@ -165,11 +163,6 @@ pub mod pallet {
 		CrossingMinimumAmountSet {
 			currency_id: CurrencyId,
 			cross_in_and_cross_out_minimum: Option<(BalanceOf<T>, BalanceOf<T>)>,
-		},
-		CrossOutInfoSet {
-			network_id: NetworkId,
-			operation: XcmOperationType,
-			src_dst_anchor_and_fee: Option<(H256, H256, BalanceOf<T>)>,
 		},
 		ChainNetworkIdSet {
 			chain_native_currency_id: CurrencyId,
@@ -229,20 +222,6 @@ pub mod pallet {
 	#[pallet::getter(fn get_crossing_minimum_amount)]
 	pub type CrossingMinimumAmount<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
-
-	/// 【 NetworkId, Operation 】 => (src-anchor, dst-anchor, crossout-fee)
-	/// cross-out fee amount in BNC
-	#[pallet::storage]
-	#[pallet::getter(fn get_cross_out_info)]
-	pub type CrossOutInfo<T> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		NetworkId,
-		Blake2_128Concat,
-		XcmOperationType,
-		(H256, H256, BalanceOf<T>),
-		OptionQuery,
-	>;
 
 	/// chain native currency id => chain network id
 	#[pallet::storage]
@@ -580,29 +559,6 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_cross_out_info())]
-		pub fn set_cross_out_info(
-			origin: OriginFor<T>,
-			network_id: NetworkId,
-			operation: XcmOperationType,
-			src_dst_anchor_and_fee: Option<(H256, H256, BalanceOf<T>)>,
-		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			CrossOutInfo::<T>::mutate_exists(network_id, operation, |old_info| {
-				*old_info = src_dst_anchor_and_fee;
-			});
-
-			Self::deposit_event(Event::CrossOutInfoSet {
-				network_id,
-				operation,
-				src_dst_anchor_and_fee,
-			});
-
-			Ok(())
-		}
-
-		#[pallet::call_index(12)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_chain_network_id())]
 		pub fn set_chain_network_id(
 			origin: OriginFor<T>,
@@ -650,45 +606,32 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for Pallet<T> {
+	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId, BoolFeeBalance<T>>
+		for Pallet<T>
+	{
 		type Error = Error<T>;
-		fn send_crossout_message(
-			fee_payer: AccountIdOf<T>,
-			fee: BalanceOf<T>,
-			src_anchor: H256,
-			payload: Vec<u8>,
-			network_id: NetworkId,
-		) -> Result<(), Error<T>> {
-			let dst_chain: u32 = if let NetworkId::Ethereum { chain_id } = network_id {
+
+		fn get_chain_network_and_id(
+			chain_native_currency_id: CurrencyId,
+		) -> Result<(NetworkId, u32), Error<T>> {
+			let network_id = Self::get_chain_network_id(chain_native_currency_id)
+				.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
+
+			let chain_id: u32 = if let NetworkId::Ethereum { chain_id } = network_id {
 				chain_id.saturated_into::<u32>()
 			} else {
 				return Err(Error::<T>::Unexpected);
 			};
 
-			// transform fee type
-			let fee = CurrencyBalance::<T>::unique_saturated_from(fee.saturated_into::<u128>());
-
-			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
-				.map_err(|_| Error::<T>::FailedToSendMessage)?;
-
-			Ok(())
+			Ok((network_id, chain_id))
 		}
 
-		fn get_crossout_information(
-			network_id: NetworkId,
-			operation: XcmOperationType,
-		) -> Result<(H256, H256, BalanceOf<T>), Error<T>> {
-			let info = Self::get_cross_out_info(network_id, operation)
-				.ok_or(Error::<T>::CrossOutInfoNotSet)?;
+		fn get_crossout_fee(chain_id: u32, payload: &[u8]) -> Result<BoolFeeBalance<T>, Error<T>> {
+			let fee_standard = pallet_bcmp::ChainToGasConfig::<T>::get(&chain_id);
+			let fee =
+				pallet_bcmp::Pallet::<T>::calculate_total_fee(payload.len() as u64, fee_standard);
 
-			Ok(info)
-		}
-
-		fn get_chain_network(chain_native_currency_id: CurrencyId) -> Result<NetworkId, Error<T>> {
-			let network_id = Self::get_chain_network_id(chain_native_currency_id)
-				.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
-
-			Ok(network_id)
+			Ok(fee)
 		}
 
 		fn get_cross_out_payload(
@@ -794,7 +737,7 @@ pub mod pallet {
 			dest_location: Box<MultiLocation>,
 		) -> Result<(), Error<T>> {
 			let receiver = Self::get_receiver_from_multilocation(currency_id, &dest_location)?;
-			let network_id = Self::get_network_id_from_multilocation(currency_id, &dest_location)?;
+			let dst_chain = Self::get_chain_network_and_id(currency_id)?.1;
 
 			let payload = Self::get_cross_out_payload(
 				XcmOperationType::TransferTo,
@@ -803,12 +746,11 @@ pub mod pallet {
 				Some(&receiver),
 			)?;
 
-			let transfer_crossout_info =
-				Self::get_crossout_information(network_id, XcmOperationType::TransferTo)?;
-			let src_anchor = transfer_crossout_info.0;
-			let fee = transfer_crossout_info.2;
+			let src_anchor = T::AnchorAddress::get();
+			let fee = Self::get_crossout_fee(dst_chain, &payload)?;
 
-			Self::send_crossout_message(fee_payer, fee, src_anchor, payload, network_id)?;
+			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
+				.map_err(|_| Error::<T>::FailedToSendMessage)?;
 
 			Ok(())
 		}

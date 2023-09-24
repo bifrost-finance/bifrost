@@ -121,7 +121,7 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "4ae0372e2c624e6acc98305564b9d395f70814c0" }
 orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "4ae0372e2c624e6acc98305564b9d395f70814c0" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "d011e5ca62b93e8f688c2042c1f92cdbafc5d1d0" }
-pallet-bcmp = { git = "https://github.com/bifrost-finance/pallet-bcmp", rev = "ed4f37d16f1170a5963e3365b5e3f66dee2d1fa9" }
+pallet-bcmp = { git = "https://github.com/bifrost-finance/pallet-bcmp", rev = "7e04cd45af3bd1add283f9dcd9e8458b7dd82cb9" }
 
 [workspace.dependencies]
 bifrost-currencies = { path = "./pallets/currencies", default-features = false }

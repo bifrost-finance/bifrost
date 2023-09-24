@@ -24,7 +24,10 @@ use crate::{
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
-use frame_support::{ensure, traits::Len};
+use frame_support::{
+	ensure,
+	traits::{Currency, Len},
+};
 use node_primitives::{
 	traits::BridgeOperator, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
 };
@@ -35,6 +38,10 @@ use sp_runtime::{
 	DispatchResult,
 };
 use xcm::{v3::prelude::*, VersionedMultiLocation};
+
+type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -331,13 +338,11 @@ impl<T: Config> Pallet<T> {
 		currency_id: CurrencyId,
 		dest_native_currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		let network_id = T::BridgeOperator::get_chain_network(dest_native_currency_id)
-			.map_err(|_| Error::<T>::NetworkIdError)?;
-		let crossout_info = T::BridgeOperator::get_crossout_information(network_id, operation)
-			.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
+		let (_network_id, dst_chain) =
+			T::BridgeOperator::get_chain_network_and_id(dest_native_currency_id)
+				.map_err(|_| Error::<T>::NetworkIdError)?;
 
-		let src_anchor = crossout_info.0;
-		let fee = crossout_info.2;
+		let src_anchor = T::AnchorAddress::get();
 
 		let receiver = T::BridgeOperator::get_receiver_from_multilocation(
 			dest_native_currency_id,
@@ -352,8 +357,11 @@ impl<T: Config> Pallet<T> {
 		)
 		.map_err(|_| Error::<T>::FailToGetPayload)?;
 
-		T::BridgeOperator::send_crossout_message(fee_payer, fee, src_anchor, payload, network_id)
-			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+		let fee = T::BridgeOperator::get_crossout_fee(dst_chain, &payload)
+			.map_err(|_| Error::<T>::FailToGetFee)?;
+
+		pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
+			.map_err(|_| Error::<T>::FailedToSendMessage)?;
 
 		Ok(())
 	}

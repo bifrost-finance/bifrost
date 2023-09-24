@@ -1613,7 +1613,8 @@ impl pallet_bcmp::Config for Runtime {
 	type Currency = Balances;
 	type PureMessage = PureMessage;
 	type DefaultAdmin = DefaultAdmin;
-	type Consumers = CrossInOut;
+	// Three pallets are using bcmp to pass cross-out message.
+	type Consumers = (CrossInOut, Slp, VtokenMinting);
 	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
 }
 

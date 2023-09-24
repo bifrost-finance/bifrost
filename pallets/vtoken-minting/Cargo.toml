@@ -26,6 +26,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-bcmp = { version = "*", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -57,6 +58,7 @@ std = [
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
+	"pallet-bcmp/std",
 ]
 
 runtime-benchmarks = [

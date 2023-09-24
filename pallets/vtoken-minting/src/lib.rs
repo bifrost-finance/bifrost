@@ -49,7 +49,8 @@ use node_primitives::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_core::U256;
+use pallet_bcmp::{ConsumerLayer, Message};
+use sp_core::{H256, U256};
 use sp_std::{vec, vec::Vec};
 pub use traits::*;
 
@@ -63,6 +64,11 @@ pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountId
 
 pub type UnlockId = u32;
 
+type BoolFeeBalance<T> =
+	<<T as pallet_bcmp::Config>::Currency as frame_support::traits::Currency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -75,7 +81,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_bcmp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
@@ -135,7 +141,16 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		// Bool bridge operator to send cross out message
-		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+		type BridgeOperator: BridgeOperator<
+			AccountIdOf<Self>,
+			BalanceOf<Self>,
+			CurrencyId,
+			BoolFeeBalance<Self>,
+		>;
+
+		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
+		#[pallet::constant]
+		type AnchorAddress: Get<H256>;
 	}
 
 	#[pallet::event]
@@ -240,9 +255,10 @@ pub mod pallet {
 		FailToSendCrossOutMessage,
 		FailToConvert,
 		NetworkIdError,
-		FailToGetCrossOutInfo,
 		FailToGetPayload,
 		ExchangeRateError,
+		FailToGetFee,
+		FailedToSendMessage,
 	}
 
 	// 【mint_fee, redeem_fee, cancel_fee】
@@ -353,14 +369,14 @@ pub mod pallet {
 				})
 				.ok();
 
-			T::WeightInfo::on_initialize()
+			<T as Config>::WeightInfo::on_initialize()
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -373,7 +389,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::redeem())]
+		#[pallet::weight(<T as Config>::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			vtoken_id: CurrencyIdOf<T>,
@@ -384,7 +400,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::rebond())]
+		#[pallet::weight(<T as Config>::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -563,7 +579,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::rebond_by_unlock_id())]
+		#[pallet::weight(<T as Config>::WeightInfo::rebond_by_unlock_id())]
 		pub fn rebond_by_unlock_id(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -668,7 +684,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::set_unlock_duration())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_unlock_duration())]
 		pub fn set_unlock_duration(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -686,7 +702,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_minimum_mint())]
 		pub fn set_minimum_mint(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -721,7 +737,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::set_minimum_redeem())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_minimum_redeem())]
 		pub fn set_minimum_redeem(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -738,7 +754,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::add_support_rebond_token())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_support_rebond_token())]
 		pub fn add_support_rebond_token(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -754,7 +770,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::remove_support_rebond_token())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_support_rebond_token())]
 		pub fn remove_support_rebond_token(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -776,7 +792,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(9)]
-		#[pallet::weight(T::WeightInfo::set_fees())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_fees())]
 		pub fn set_fees(
 			origin: OriginFor<T>,
 			mint_fee: Permill,
@@ -792,7 +808,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(T::WeightInfo::set_hook_iteration_limit())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_hook_iteration_limit())]
 		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -1379,7 +1395,7 @@ pub mod pallet {
 				fee: redeem_fee,
 			});
 
-			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
+			Ok(Some(<T as Config>::WeightInfo::redeem() + extra_weight).into())
 		}
 
 		// record the amount of token to return to user
@@ -1526,13 +1542,11 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			dest_native_currency_id: CurrencyId,
 		) -> Result<(), Error<T>> {
-			let network_id = T::BridgeOperator::get_chain_network(dest_native_currency_id)
-				.map_err(|_| Error::<T>::NetworkIdError)?;
-			let crossout_info = T::BridgeOperator::get_crossout_information(network_id, operation)
-				.map_err(|_| Error::<T>::FailToGetCrossOutInfo)?;
+			let (_network_id, dst_chain) =
+				T::BridgeOperator::get_chain_network_and_id(dest_native_currency_id)
+					.map_err(|_| Error::<T>::NetworkIdError)?;
 
-			let src_anchor = crossout_info.0;
-			let fee = crossout_info.2;
+			let src_anchor = T::AnchorAddress::get();
 
 			let receiver_op = to_location_op.and_then(|to_location| {
 				T::BridgeOperator::get_receiver_from_multilocation(
@@ -1551,10 +1565,11 @@ pub mod pallet {
 			)
 			.map_err(|_| Error::<T>::FailToGetPayload)?;
 
-			T::BridgeOperator::send_crossout_message(
-				fee_payer, fee, src_anchor, payload, network_id,
-			)
-			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
+			let fee = T::BridgeOperator::get_crossout_fee(dst_chain, &payload)
+				.map_err(|_| Error::<T>::FailToGetFee)?;
+
+			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
+				.map_err(|_| Error::<T>::FailedToSendMessage)?;
 
 			Ok(())
 		}
@@ -1921,5 +1936,22 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 		} else {
 			None
 		}
+	}
+}
+
+// For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
+impl<T: Config> ConsumerLayer<T> for Pallet<T> {
+	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn anchor_addr() -> H256 {
+		// 从CrossInOut的CrossOutInfo<T>中获取回传汇率的anchor地址
+	}
+
+	fn match_consumer(anchor: &H256, message: &Message) -> DispatchResultWithPostInfo {
+
+		// 不同网络我是要提供不同的anchor id的，所以这里要判定一下
+		// 如果是我库里的anchor的其中一个，我把它留下来
 	}
 }

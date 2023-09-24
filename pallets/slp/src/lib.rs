@@ -100,7 +100,7 @@ pub mod pallet {
 	use xcm::v3::{MaybeErrorCode, Response};
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_xcm::Config {
+	pub trait Config: frame_system::Config + pallet_xcm::Config + pallet_bcmp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
@@ -161,7 +161,16 @@ pub mod pallet {
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
 
 		// Bool bridge operator to send cross out message
-		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+		type BridgeOperator: BridgeOperator<
+			AccountIdOf<Self>,
+			BalanceOf<Self>,
+			CurrencyId,
+			BoolFeeBalance<T>,
+		>;
+
+		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
+		#[pallet::constant]
+		type AnchorAddress: Get<H256>;
 	}
 
 	#[pallet::error]
@@ -248,6 +257,7 @@ pub mod pallet {
 		FailToGetCrossOutInfo,
 		FailToGetPayload,
 		FailToSendCrossOutMessage,
+		FailToGetFee,
 	}
 
 	#[pallet::event]

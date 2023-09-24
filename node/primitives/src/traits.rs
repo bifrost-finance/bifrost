@@ -30,7 +30,6 @@ use frame_support::{
 	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
-use sp_core::H256;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
 	BoundedVec, DispatchResult,
@@ -495,23 +494,13 @@ pub trait VTokenSupplyProvider<CurrencyId, Balance> {
 	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
 }
 
-pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
+pub trait BridgeOperator<AccountId, Balance, CurrencyId, FeeBalance> {
 	type Error;
+	fn get_chain_network_and_id(
+		chain_native_currency_id: CurrencyId,
+	) -> Result<(NetworkId, u32), Self::Error>;
 
-	fn send_crossout_message(
-		fee_payer: AccountId,
-		fee: Balance,
-		src_anchor: H256,
-		payload: Vec<u8>,
-		network_id: NetworkId,
-	) -> Result<(), Self::Error>;
-
-	fn get_crossout_information(
-		network_id: NetworkId,
-		operation: XcmOperationType,
-	) -> Result<(H256, H256, Balance), Self::Error>;
-
-	fn get_chain_network(chain_native_currency_id: CurrencyId) -> Result<NetworkId, Self::Error>;
+	fn get_crossout_fee(chain_id: u32, payload: &[u8]) -> Result<FeeBalance, Self::Error>;
 
 	fn get_cross_out_payload(
 		operation: XcmOperationType,

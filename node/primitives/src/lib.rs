@@ -334,7 +334,7 @@ pub enum XcmOperationType {
 	Mint = 20,
 	Redeem = 21,
 	CancelRedeem = 22,
-	ExpressStaking = 23,
+	PassExchangeRateBack = 23,
 	Any = 99,
 }
 
