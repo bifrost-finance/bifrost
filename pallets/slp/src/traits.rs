@@ -205,6 +205,15 @@ pub trait StakingAgent<
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 
 	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
+
+	/// ************************************
+	/// crosschain operation
+	/// ************************************
+	fn execute_crosschain_operation(
+		&self,
+		currency_id: CurrencyId,
+		payload: &[u8],
+	) -> Result<(), Error>;
 }
 
 /// Helper to build xcm message

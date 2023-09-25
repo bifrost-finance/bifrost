@@ -135,6 +135,13 @@ pub mod parachains {
 	}
 }
 
+#[allow(non_snake_case)]
+pub mod heterogeneousChains {
+	pub mod filecoin {
+		pub const ID: u32 = 314;
+	}
+}
+
 pub trait XcmHelper<AccountId, Balance> {
 	fn contribute(
 		contributer: AccountId,

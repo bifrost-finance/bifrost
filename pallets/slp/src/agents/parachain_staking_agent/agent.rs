@@ -1066,6 +1066,14 @@ impl<T: Config>
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
+
+	fn execute_crosschain_operation(
+		&self,
+		_currency_id: CurrencyId,
+		_payload: &[u8],
+	) -> Result<(), Error<T>> {
+		Err(Error::<T>::Unsupported)
+	}
 }
 
 /// Internal functions.

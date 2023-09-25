@@ -153,6 +153,11 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
 pub type DerivativeIndex = u16;
 
+pub const CROSSCHAIN_OPERATION_LENGTH: usize = 1;
+pub const CROSSCHAIN_CURRENCY_ID_LENGTH: usize = 32;
+pub const CROSSCHAIN_AMOUNT_LENGTH: usize = 16;
+pub const CROSSCHAIN_ACCOUNT_LENGTH: usize = 32;
+
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
 )]
@@ -335,6 +340,7 @@ pub enum XcmOperationType {
 	Redeem = 21,
 	CancelRedeem = 22,
 	PassExchangeRateBack = 23,
+	UpdateDelegatorLedger = 24,
 	Any = 99,
 }
 
@@ -367,6 +373,7 @@ impl TryFrom<u8> for XcmOperationType {
 			21 => Ok(XcmOperationType::Redeem),
 			22 => Ok(XcmOperationType::CancelRedeem),
 			23 => Ok(XcmOperationType::PassExchangeRateBack),
+			24 => Ok(XcmOperationType::UpdateDelegatorLedger),
 			99 => Ok(XcmOperationType::Any),
 			_ => Err("No matching enum variant"),
 		}

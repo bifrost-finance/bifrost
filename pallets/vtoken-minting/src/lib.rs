@@ -45,7 +45,8 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{
 	traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister,
 	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface,
-	VtokenMintingOperator, XcmOperationType, VFIL,
+	VtokenMintingOperator, XcmOperationType, CROSSCHAIN_AMOUNT_LENGTH,
+	CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH, VFIL,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -68,9 +69,6 @@ type BoolFeeBalance<T> =
 	<<T as pallet_bcmp::Config>::Currency as frame_support::traits::Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
-
-const CURRENCY_ID_LENGTH: usize = 32;
-const AMOUNT_LENGTH: usize = 16;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -1715,7 +1713,7 @@ pub mod pallet {
 
 		pub fn update_exchange_rate(payload: &[u8]) -> Result<(), Error<T>> {
 			// get currency_id from payload
-			let currency_id_u64: u64 = U256::from_big_endian(&payload[8..264])
+			let currency_id_u64: u64 = U256::from_big_endian(&payload[1..33])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let currency_id =
@@ -1724,12 +1722,12 @@ pub mod pallet {
 			ensure!(currency_id == FIL, Error::<T>::NotSupportTokenType);
 
 			// get exchange_rate nominator and denominator from payload
-			let nominator: u128 = U256::from_big_endian(&payload[264..392])
+			let nominator: u128 = U256::from_big_endian(&payload[33..49])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let nominator: BalanceOf<T> = nominator.saturated_into::<BalanceOf<T>>();
 
-			let denominator: u128 = U256::from_big_endian(&payload[392..520])
+			let denominator: u128 = U256::from_big_endian(&payload[49..65])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let denominator: BalanceOf<T> = denominator.saturated_into::<BalanceOf<T>>();
@@ -2018,9 +2016,9 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 
 		match operation {
 			XcmOperationType::PassExchangeRateBack => {
-				let max_len = CURRENCY_ID_LENGTH
-					.checked_add(2 * AMOUNT_LENGTH)
-					.ok_or(Error::<T>::CalculationOverflow)?;
+				let max_len = CROSSCHAIN_OPERATION_LENGTH +
+					CROSSCHAIN_CURRENCY_ID_LENGTH +
+					2 * CROSSCHAIN_AMOUNT_LENGTH;
 				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
 				Self::update_exchange_rate(&payload)
 			},

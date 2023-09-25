@@ -915,6 +915,14 @@ impl<T: Config>
 
 		Ok(())
 	}
+
+	fn execute_crosschain_operation(
+		&self,
+		_currency_id: CurrencyId,
+		_payload: &[u8],
+	) -> Result<(), Error<T>> {
+		Err(Error::<T>::Unsupported)
+	}
 }
 
 /// Trait XcmBuilder implementation for Kusama/Polkadot

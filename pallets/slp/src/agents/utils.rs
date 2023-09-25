@@ -33,6 +33,7 @@ use xcm::{
 	},
 	v3::prelude::*,
 };
+use xcm_interface::traits::heterogeneousChains;
 
 // Some untilities.
 impl<T: Config> Pallet<T> {
@@ -320,5 +321,29 @@ impl<T: Config> Pallet<T> {
 			.expect("infinite length input; no invalid inputs for type; qed");
 
 		H160::from_slice(sub_id.as_slice())
+	}
+
+	pub fn account_to_filecoin_multilocation(account: &[u8]) -> Result<MultiLocation, Error<T>> {
+		let account_20 = Self::to_fixed_array(account).ok_or(Error::<T>::FailToConvert)?;
+
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(AccountKey20 {
+				network: Some(NetworkId::Ethereum {
+					chain_id: heterogeneousChains::filecoin::ID.into(),
+				}),
+				key: *account_20,
+			}),
+		};
+
+		Ok(location)
+	}
+
+	pub fn to_fixed_array(slice: &[u8]) -> Option<&[u8; 20]> {
+		if slice.len() == 20 {
+			Some(unsafe { &*(slice.as_ptr() as *const [u8; 20]) })
+		} else {
+			None
+		}
 	}
 }

@@ -48,10 +48,11 @@ use node_primitives::{
 	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
+use pallet_bcmp::{ConsumerLayer, Message};
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-use sp_core::{bounded::BoundedVec, H160, H256};
+use sp_core::{bounded::BoundedVec, H160, H256, U256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -267,6 +268,8 @@ pub mod pallet {
 		FailToSendCrossOutMessage,
 		FailToGetFee,
 		FailedToSendMessage,
+		InvalidPayloadLength,
+		InvalidXcmOperation,
 	}
 
 	#[pallet::event]
@@ -2441,5 +2444,28 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 	#[cfg(feature = "runtime-benchmarks")]
 	fn add_delegator(currency_id: CurrencyIdOf<T>, index: DerivativeIndex, who: MultiLocation) {
 		Pallet::<T>::inner_add_delegator(index, &who, currency_id).unwrap();
+	}
+}
+
+// For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
+impl<T: Config> ConsumerLayer<T> for Pallet<T> {
+	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+		let payload = &message.payload;
+
+		// get currency_id from payload
+		let currency_id_u64: u64 = U256::from_big_endian(&payload[1..33])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let currency_id =
+			CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailToConvert)?;
+
+		let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+		staking_agent.execute_crosschain_operation(currency_id, payload)?;
+
+		Ok(().into())
+	}
+
+	fn anchor_addr() -> H256 {
+		T::AnchorAddress::get()
 	}
 }

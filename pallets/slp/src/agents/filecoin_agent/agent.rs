@@ -26,11 +26,14 @@ use crate::{
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{CurrencyId, VtokenMintingOperator, XcmOperationType};
+use node_primitives::{
+	CurrencyId, VtokenMintingOperator, XcmOperationType, CROSSCHAIN_ACCOUNT_LENGTH,
+	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
+};
 use orml_traits::MultiCurrency;
-use sp_core::Get;
+use sp_core::{Get, U256};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Zero},
+	traits::{CheckedAdd, CheckedSub, UniqueSaturatedFrom, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -544,5 +547,83 @@ impl<T: Config>
 		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
+	}
+
+	fn execute_crosschain_operation(
+		&self,
+		currency_id: CurrencyId,
+		payload: &[u8],
+	) -> Result<(), Error<T>> {
+		// decode XcmOperationType from the first byte
+		let operation: XcmOperationType =
+			payload[0].try_into().map_err(|_| Error::<T>::FailToConvert)?;
+
+		match operation {
+			XcmOperationType::UpdateDelegatorLedger => {
+				let max_len = CROSSCHAIN_OPERATION_LENGTH +
+					CROSSCHAIN_CURRENCY_ID_LENGTH +
+					CROSSCHAIN_ACCOUNT_LENGTH +
+					CROSSCHAIN_AMOUNT_LENGTH;
+				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
+				Self::renew_delegator_ledger(self, currency_id, &payload)
+			},
+			_ => Err(Error::<T>::InvalidXcmOperation),
+		}?;
+
+		Ok(())
+	}
+}
+
+impl<T: Config> FilecoinAgent<T> {
+	fn renew_delegator_ledger(
+		&self,
+		currency_id: CurrencyId,
+		payload: &[u8],
+	) -> Result<(), Error<T>> {
+		// decode filecoin account from payload. For filecoin, only the first 20 bytes are used, not
+		// the whole 32 bytes.
+		let filecoin_account: &[u8] = &payload[40..60];
+
+		// transform account into MultiLocation
+		let filecoin_multilocation =
+			Pallet::<T>::account_to_filecoin_multilocation(&filecoin_account)?;
+
+		// get initial_pledge
+		let initial_pledge: u128 = U256::from_big_endian(&payload[72..88])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let initial_pledge: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(initial_pledge);
+
+		// renew delegator ledger
+		let ledger = DelegatorLedgers::<T>::get(currency_id, &filecoin_multilocation);
+
+		if ledger.is_none() {
+			Self::bond(self, &filecoin_multilocation, initial_pledge, &None, currency_id)?;
+		} else {
+			if let Some(Ledger::Filecoin(filecoin_ledger)) = ledger {
+				let original_initial_pledge = filecoin_ledger.initial_pledge;
+				if original_initial_pledge < initial_pledge {
+					let bond_extra_amount = initial_pledge
+						.checked_sub(&original_initial_pledge)
+						.ok_or(Error::<T>::OverFlow)?;
+					Self::bond_extra(
+						self,
+						&filecoin_multilocation,
+						bond_extra_amount,
+						&None,
+						currency_id,
+					)?;
+				} else if original_initial_pledge > initial_pledge {
+					let unbond_amount = original_initial_pledge
+						.checked_sub(&initial_pledge)
+						.ok_or(Error::<T>::OverFlow)?;
+					Self::unbond(self, &filecoin_multilocation, unbond_amount, &None, currency_id)?;
+				}
+			} else {
+				Err(Error::<T>::Unexpected)?
+			}
+		}
+
+		Ok(())
 	}
 }
