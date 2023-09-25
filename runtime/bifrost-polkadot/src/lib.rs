@@ -1218,6 +1218,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
 	type BridgeOperator = CrossInOut;
+	type AnchorAddress = SlpAnchorAddress;
 }
 
 parameter_types! {
@@ -1305,7 +1306,9 @@ impl bifrost_fee_share::Config for Runtime {
 }
 
 parameter_types! {
-	pub AnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+	pub CrossInOutAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+	pub VtokenMintingAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_VTOKEN_MINTING"[..]);
+	pub SlpAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_SLP"[..]);
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -1315,7 +1318,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = weights::bifrost_cross_in_out::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
-	type AnchorAddress = AnchorAddress;
+	type AnchorAddress = CrossInOutAnchorAddress;
 }
 
 impl bifrost_slpx::Config for Runtime {
@@ -1482,6 +1485,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type BridgeOperator = CrossInOut;
+	type AnchorAddress = VtokenMintingAnchorAddress;
 }
 
 parameter_types! {
