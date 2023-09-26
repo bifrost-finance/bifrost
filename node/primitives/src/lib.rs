@@ -153,9 +153,9 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
 pub type DerivativeIndex = u16;
 
-pub const CROSSCHAIN_OPERATION_LENGTH: usize = 1;
+pub const CROSSCHAIN_OPERATION_LENGTH: usize = 32;
 pub const CROSSCHAIN_CURRENCY_ID_LENGTH: usize = 32;
-pub const CROSSCHAIN_AMOUNT_LENGTH: usize = 16;
+pub const CROSSCHAIN_AMOUNT_LENGTH: usize = 32;
 pub const CROSSCHAIN_ACCOUNT_LENGTH: usize = 32;
 
 #[derive(

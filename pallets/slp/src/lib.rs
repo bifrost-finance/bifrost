@@ -2452,8 +2452,8 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
 		let payload = &message.payload;
 
-		// get currency_id from payload
-		let currency_id_u64: u64 = U256::from_big_endian(&payload[1..33])
+		// get currency_id from payload. The second 32 bytes of payload is the currency_id
+		let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
 			.try_into()
 			.map_err(|_| Error::<T>::FailToConvert)?;
 		let currency_id =

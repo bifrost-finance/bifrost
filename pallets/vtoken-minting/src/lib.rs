@@ -1712,8 +1712,8 @@ pub mod pallet {
 		}
 
 		pub fn update_exchange_rate(payload: &[u8]) -> Result<(), Error<T>> {
-			// get currency_id from payload
-			let currency_id_u64: u64 = U256::from_big_endian(&payload[1..33])
+			// get currency_id from payload. The second 32 bytes are currency_id.
+			let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let currency_id =
@@ -1722,12 +1722,12 @@ pub mod pallet {
 			ensure!(currency_id == FIL, Error::<T>::NotSupportTokenType);
 
 			// get exchange_rate nominator and denominator from payload
-			let nominator: u128 = U256::from_big_endian(&payload[33..49])
+			let nominator: u128 = U256::from_big_endian(&payload[64..96])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let nominator: BalanceOf<T> = nominator.saturated_into::<BalanceOf<T>>();
 
-			let denominator: u128 = U256::from_big_endian(&payload[49..65])
+			let denominator: u128 = U256::from_big_endian(&payload[96..128])
 				.try_into()
 				.map_err(|_| Error::<T>::FailToConvert)?;
 			let denominator: BalanceOf<T> = denominator.saturated_into::<BalanceOf<T>>();
@@ -2011,8 +2011,11 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
 		let payload = &message.payload;
 
-		// decode XcmOperationType from the first byte
-		let operation: XcmOperationType = payload[0].try_into()?;
+		// decode XcmOperationType from the first 32 bytes
+		let operation_u8: u8 = U256::from_big_endian(&payload[0..32])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let operation: XcmOperationType = XcmOperationType::try_from(operation_u8)?;
 
 		match operation {
 			XcmOperationType::PassExchangeRateBack => {

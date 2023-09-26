@@ -554,16 +554,19 @@ impl<T: Config>
 		currency_id: CurrencyId,
 		payload: &[u8],
 	) -> Result<(), Error<T>> {
-		// decode XcmOperationType from the first byte
+		// decode XcmOperationType from the first 32 bytes
+		let operation_u8: u8 = U256::from_big_endian(&payload[0..32])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
 		let operation: XcmOperationType =
-			payload[0].try_into().map_err(|_| Error::<T>::FailToConvert)?;
+			XcmOperationType::try_from(operation_u8).map_err(|_| Error::<T>::FailToConvert)?;
 
 		match operation {
 			XcmOperationType::UpdateDelegatorLedger => {
 				let max_len = CROSSCHAIN_OPERATION_LENGTH +
 					CROSSCHAIN_CURRENCY_ID_LENGTH +
-					CROSSCHAIN_ACCOUNT_LENGTH +
-					CROSSCHAIN_AMOUNT_LENGTH;
+					CROSSCHAIN_AMOUNT_LENGTH +
+					CROSSCHAIN_ACCOUNT_LENGTH;
 				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
 				Self::renew_delegator_ledger(self, currency_id, &payload)
 			},
@@ -582,14 +585,15 @@ impl<T: Config> FilecoinAgent<T> {
 	) -> Result<(), Error<T>> {
 		// decode filecoin account from payload. For filecoin, only the first 20 bytes are used, not
 		// the whole 32 bytes.
-		let filecoin_account: &[u8] = &payload[40..60];
+		let mut filecoin_account = [0u8; 20];
+		filecoin_account.copy_from_slice(&payload[96..116]);
 
 		// transform account into MultiLocation
 		let filecoin_multilocation =
 			Pallet::<T>::account_to_filecoin_multilocation(&filecoin_account)?;
 
 		// get initial_pledge
-		let initial_pledge: u128 = U256::from_big_endian(&payload[72..88])
+		let initial_pledge: u128 = U256::from_big_endian(&payload[64..96])
 			.try_into()
 			.map_err(|_| Error::<T>::FailToConvert)?;
 		let initial_pledge: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(initial_pledge);

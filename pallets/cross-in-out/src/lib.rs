@@ -28,7 +28,10 @@ use frame_support::{
 	sp_runtime::traits::AccountIdConversion, traits::Currency, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{AssetId, BridgeOperator, CurrencyId, TryConvertFrom, XcmOperationType, FIL};
+use node_primitives::{
+	BridgeOperator, CurrencyId, TokenInfo, XcmOperationType, CROSSCHAIN_ACCOUNT_LENGTH,
+	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH, FIL,
+};
 use orml_traits::MultiCurrency;
 use pallet_bcmp::Message;
 use sp_core::{H256, U256};
@@ -55,12 +58,9 @@ type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::Balance;
 
-const MAX_ACCOUNT_LENGTH: usize = 32;
-const AMOUNT_LENGTH: usize = 32;
-const MAX_CURRENCY_ID_LENGTH: usize = 32;
-
 #[derive(RuntimeDebug, Clone, Eq, PartialEq, Encode, Decode, TypeInfo)]
 pub struct Payload<T: Config> {
+	pub operation: XcmOperationType,
 	pub amount: BalanceOf<T>,
 	pub currency_id: CurrencyId,
 	pub receiver: AccountIdOf<T>,
@@ -634,33 +634,36 @@ pub mod pallet {
 			Ok(fee)
 		}
 
+		// In order to facilitate the data transfromation in EVM, we set every field in payload to
+		// 32 bytes
 		fn get_cross_out_payload(
 			operation: XcmOperationType,
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 			receiver_op: Option<&[u8]>,
 		) -> Result<Vec<u8>, Error<T>> {
-			// the first byte is xcm operation type
+			// the first 32 bytes is xcm operation type
 			let mut payload = Vec::new();
-			payload.push(XcmOperationType::TransferTo as u8);
+			let mut fixed_operation = [0u8; 32];
+			U256::from(operation as u8).to_big_endian(&mut fixed_operation);
+			payload.extend_from_slice(&fixed_operation);
 
 			// following 32 bytes is currency_id
-			let currency_id_asset: AssetId = AssetId::try_convert_from(currency_id, 0u32)
-				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let currency_id_u64: u64 = currency_id.currency_id();
 			let mut fixed_currency_id = [0u8; 32];
-			U256::from(currency_id_asset.asset_index).to_big_endian(&mut fixed_currency_id);
-			payload.append(&mut fixed_currency_id.to_vec());
+			U256::from(currency_id_u64).to_big_endian(&mut fixed_currency_id);
+			payload.extend_from_slice(&fixed_currency_id);
 
 			// following 32 bytes is amount
 			let mut fixed_amount = [0u8; 32];
 			U256::from(amount.saturated_into::<u128>()).to_big_endian(&mut fixed_amount);
-			payload.append(&mut fixed_amount.to_vec());
+			payload.extend_from_slice(&fixed_amount);
 
 			if operation == XcmOperationType::TransferTo {
 				let receiver = receiver_op.ok_or(Error::<T>::ReceiverNotProvided)?;
 				// following 32 bytes is receiver
-				let mut fixed_address = Self::extend_to_bytes32(receiver, 32);
-				payload.append(&mut fixed_address);
+				let fixed_address = Self::extend_to_bytes32(receiver, 32);
+				payload.extend_from_slice(&fixed_address);
 			}
 
 			Ok(payload)
@@ -755,11 +758,17 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Example for parsing payload from Evm payload, contains 'amount' and 'receiver'.
 		pub(crate) fn parse_payload(raw: &[u8]) -> Result<Payload<T>, DispatchErrorWithPostInfo> {
-			return if raw.len() == MAX_ACCOUNT_LENGTH + AMOUNT_LENGTH + MAX_CURRENCY_ID_LENGTH {
-				let amount: u128 = U256::from_big_endian(&raw[..32])
+			return if raw.len() ==
+				CROSSCHAIN_OPERATION_LENGTH +
+					CROSSCHAIN_CURRENCY_ID_LENGTH +
+					CROSSCHAIN_AMOUNT_LENGTH +
+					CROSSCHAIN_ACCOUNT_LENGTH
+			{
+				let operation_u8: u8 = U256::from_big_endian(&raw[..32])
 					.try_into()
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+				let operation = XcmOperationType::try_from(operation_u8)
 					.map_err(|_| Error::<T>::FailedToConvert)?;
 
 				// decode currency_id
@@ -769,18 +778,15 @@ pub mod pallet {
 				let currency_id = CurrencyId::try_from(currency_id_u64)
 					.map_err(|_| Error::<T>::FailedToConvert)?;
 
-				// account id decode may different, ie. 'AccountId20', 'AccountId32', ..
-				let account_len = T::AccountId::max_encoded_len();
-				if account_len >= raw.len() {
-					return Err(Error::<T>::FailedToConvert.into());
-				}
-				let receiver = T::AccountId::decode(&mut raw[raw.len() - account_len..].as_ref())
+				let amount_u128: u128 = U256::from_big_endian(&raw[64..96])
+					.try_into()
 					.map_err(|_| Error::<T>::FailedToConvert)?;
-				Ok(Payload {
-					amount: SaturatedConversion::saturated_from(amount),
-					currency_id,
-					receiver,
-				})
+				let amount = amount_u128.saturated_into::<BalanceOf<T>>();
+
+				let receiver = T::AccountId::decode(&mut raw[96..128].as_ref())
+					.map_err(|_| Error::<T>::FailedToConvert)?;
+
+				Ok(Payload { operation, amount, currency_id, receiver })
 			} else {
 				Err(Error::<T>::InvalidPayloadLength.into())
 			};
