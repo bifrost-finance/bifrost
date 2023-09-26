@@ -64,7 +64,6 @@ pub trait WeightInfo {
 	fn register_linked_account() -> Weight;
 	fn cross_out() -> Weight;
 	fn change_outer_linked_account() -> Weight;
-	fn set_cross_out_info() -> Weight;
 	fn set_chain_network_id() -> Weight;
 }
 
@@ -221,12 +220,6 @@ impl WeightInfo for () {
 		Weight::from_parts(57_253_000, 3777)
 			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
-	}
-
-	fn set_cross_out_info() -> Weight {
-		Weight::from_parts(52_439_000, 5877)
-		.saturating_add(RocksDbWeight::get().reads(2_u64))
-		.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
 
 	fn set_chain_network_id() -> Weight {

@@ -126,8 +126,6 @@ bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/ru
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [
 	"polkadot",
 ] }
-
-# orml
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
