@@ -43,10 +43,10 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister,
-	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface,
-	VtokenMintingOperator, XcmOperationType, CROSSCHAIN_AMOUNT_LENGTH,
-	CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH, VFIL,
+	currency::VFIL, traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt,
+	CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider,
+	VtokenMintingInterface, VtokenMintingOperator, XcmOperationType, CROSSCHAIN_AMOUNT_LENGTH,
+	CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
