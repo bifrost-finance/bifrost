@@ -583,20 +583,19 @@ impl<T: Config> FilecoinAgent<T> {
 		currency_id: CurrencyId,
 		payload: &[u8],
 	) -> Result<(), Error<T>> {
-		// decode filecoin account from payload. For filecoin, only the first 20 bytes are used, not
-		// the whole 32 bytes.
-		let mut filecoin_account = [0u8; 20];
-		filecoin_account.copy_from_slice(&payload[96..116]);
-
-		// transform account into MultiLocation
-		let filecoin_multilocation =
-			Pallet::<T>::account_to_filecoin_multilocation(&filecoin_account)?;
-
 		// get initial_pledge
 		let initial_pledge: u128 = U256::from_big_endian(&payload[64..96])
 			.try_into()
 			.map_err(|_| Error::<T>::FailToConvert)?;
 		let initial_pledge: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(initial_pledge);
+
+		let miner_actor_id: u64 = U256::from_big_endian(&payload[96..128])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+
+		// transform account into MultiLocation
+		let filecoin_multilocation =
+			Pallet::<T>::filecoin_miner_id_to_multilocation(miner_actor_id)?;
 
 		// renew delegator ledger
 		let ledger = DelegatorLedgers::<T>::get(currency_id, &filecoin_multilocation);

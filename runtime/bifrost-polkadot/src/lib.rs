@@ -1319,6 +1319,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type WeightInfo = weights::bifrost_cross_in_out::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
 	type AnchorAddress = CrossInOutAnchorAddress;
+	type FeeAccount = BifrostFeeAccount;
 }
 
 impl bifrost_slpx::Config for Runtime {

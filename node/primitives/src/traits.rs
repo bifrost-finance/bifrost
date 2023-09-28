@@ -500,7 +500,7 @@ pub trait BridgeOperator<AccountId, Balance, CurrencyId, FeeBalance> {
 		chain_native_currency_id: CurrencyId,
 	) -> Result<(NetworkId, u32), Self::Error>;
 
-	fn get_crossout_fee(chain_id: u32, payload: &[u8]) -> Result<FeeBalance, Self::Error>;
+	fn get_crossout_fee(chain_id: u32, payload_length: u64) -> Result<FeeBalance, Self::Error>;
 
 	fn get_cross_out_payload(
 		operation: XcmOperationType,

@@ -1586,7 +1586,7 @@ pub mod pallet {
 			)
 			.map_err(|_| Error::<T>::FailToGetPayload)?;
 
-			let fee = T::BridgeOperator::get_crossout_fee(dst_chain, &payload)
+			let fee = T::BridgeOperator::get_crossout_fee(dst_chain, payload.len() as u64)
 				.map_err(|_| Error::<T>::FailToGetFee)?;
 
 			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)

@@ -339,6 +339,22 @@ impl<T: Config> Pallet<T> {
 		Ok(location)
 	}
 
+	pub fn filecoin_miner_id_to_multilocation(
+		miner_actor_id: u64,
+	) -> Result<MultiLocation, Error<T>> {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(AccountIndex64 {
+				network: Some(NetworkId::Ethereum {
+					chain_id: heterogeneousChains::filecoin::ID.into(),
+				}),
+				index: miner_actor_id,
+			}),
+		};
+
+		Ok(location)
+	}
+
 	pub fn to_fixed_array(slice: &[u8]) -> Option<&[u8; 20]> {
 		if slice.len() == 20 {
 			Some(unsafe { &*(slice.as_ptr() as *const [u8; 20]) })

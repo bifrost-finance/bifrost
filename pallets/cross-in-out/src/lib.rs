@@ -29,13 +29,14 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	BridgeOperator, CurrencyId, TokenInfo, XcmOperationType, CROSSCHAIN_ACCOUNT_LENGTH,
-	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH, FIL,
+	currency::VFIL, BridgeOperator, CurrencyId, TokenInfo, XcmOperationType, BNC,
+	CROSSCHAIN_ACCOUNT_LENGTH, CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH,
+	CROSSCHAIN_OPERATION_LENGTH, FIL,
 };
 use orml_traits::MultiCurrency;
 use pallet_bcmp::Message;
 use sp_core::{H256, U256};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{traits::UniqueSaturatedFrom, SaturatedConversion};
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::v3::prelude::*;
@@ -82,6 +83,9 @@ pub mod pallet {
 		/// Entrance account Pallet Id
 		type EntrancePalletId: Get<PalletId>;
 
+		/// Fee collecting account.
+		type FeeAccount: Get<AccountIdOf<Self>>;
+
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
@@ -115,6 +119,7 @@ pub mod pallet {
 		NotSupported,
 		ChainNetworkIdNotExist,
 		ReceiverNotProvided,
+		NotEnoughFee,
 	}
 
 	#[pallet::event]
@@ -204,7 +209,7 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// Mapping a multilocation of a outer chain to a Bifrost account
+	/// Mapping a multilocation of a outer chain(chain native token) to a Bifrost account
 	#[pallet::storage]
 	#[pallet::getter(fn outer_multilocation_to_account)]
 	pub type OuterMultilocationToAccount<T> = StorageDoubleMap<
@@ -225,8 +230,13 @@ pub mod pallet {
 
 	/// chain native currency id => chain network id
 	#[pallet::storage]
-	#[pallet::getter(fn get_chain_network_id)]
-	pub type ChainNetworkId<T> = StorageMap<_, Blake2_128Concat, CurrencyId, NetworkId>;
+	#[pallet::getter(fn get_chain_network_id_by_currency)]
+	pub type Currency2ChainNetworkId<T> = StorageMap<_, Blake2_128Concat, CurrencyId, NetworkId>;
+
+	/// chain native currency id => chain network id
+	#[pallet::storage]
+	#[pallet::getter(fn get_native_currency_by_chain_network_id)]
+	pub type ChainNetworkId2Currency<T> = StorageMap<_, Blake2_128Concat, NetworkId, CurrencyId>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -246,6 +256,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
 			remark: Option<Vec<u8>>,
+			src_chain_native_currency_id: CurrencyId,
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin)?;
 
@@ -256,7 +267,13 @@ pub mod pallet {
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
 
-			Self::inner_cross_in(location, currency_id, amount, remark)?;
+			Self::inner_cross_in(
+				location,
+				currency_id,
+				amount,
+				remark,
+				src_chain_native_currency_id,
+			)?;
 
 			Ok(())
 		}
@@ -266,8 +283,11 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::cross_out())]
 		pub fn cross_out(
 			origin: OriginFor<T>,
+			// transfer_currency
 			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
+			// to which chain, represented in native currency id
+			dest_chain_native_currency_id: CurrencyId,
 		) -> DispatchResult {
 			let crosser = ensure_signed(origin)?;
 
@@ -283,14 +303,38 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &crosser);
 			ensure!(balance >= amount, Error::<T>::NotEnoughBalance);
 
-			let location = AccountToOuterMultilocation::<T>::get(currency_id, &crosser)
-				.ok_or(Error::<T>::NoMultilocationMapping)?;
+			let location =
+				AccountToOuterMultilocation::<T>::get(dest_chain_native_currency_id, &crosser)
+					.ok_or(Error::<T>::NoMultilocationMapping)?;
 
 			T::MultiCurrency::withdraw(currency_id, &crosser, amount)?;
 
-			// if currecny_id is FIL, send message to pallet-bcmp
-			if currency_id == FIL {
-				Self::send_message(crosser.clone(), currency_id, amount, Box::new(location))?;
+			// calculate and deduct cross-chain fee from user.
+			let payload_length = CROSSCHAIN_OPERATION_LENGTH +
+				CROSSCHAIN_CURRENCY_ID_LENGTH +
+				CROSSCHAIN_AMOUNT_LENGTH +
+				CROSSCHAIN_ACCOUNT_LENGTH;
+
+			let dst_chain = Self::get_chain_network_and_id(dest_chain_native_currency_id)?.1;
+			let cross_chain_fee = Self::get_crossout_fee(dst_chain, payload_length as u64)?;
+			let cross_chain_fee =
+				BalanceOf::<T>::unique_saturated_from(cross_chain_fee.saturated_into::<u128>());
+
+			// we charge cross-chain fee in BNC
+			T::MultiCurrency::transfer(BNC, &crosser, &T::FeeAccount::get(), cross_chain_fee)
+				.map_err(|_| Error::<T>::NotEnoughFee)?;
+
+			// if currecny_id is FIL or VFIL, send message to pallet-bcmp
+			if currency_id == FIL || currency_id == VFIL {
+				Self::send_message(
+					crosser.clone(),
+					currency_id,
+					amount,
+					Box::new(location),
+					dest_chain_native_currency_id,
+				)?;
+			} else {
+				Err(Error::<T>::NotSupported)?;
 			}
 
 			Self::deposit_event(Event::CrossedOut { currency_id, crosser, location, amount });
@@ -567,9 +611,28 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			ChainNetworkId::<T>::mutate_exists(chain_native_currency_id, |old_network_id| {
-				*old_network_id = network_id;
-			});
+			if let Some(new_network_id) = network_id {
+				Currency2ChainNetworkId::<T>::mutate_exists(
+					chain_native_currency_id,
+					|old_network_id| {
+						*old_network_id = network_id;
+					},
+				);
+
+				ChainNetworkId2Currency::<T>::mutate_exists(new_network_id, |old_currency_id| {
+					*old_currency_id = Some(chain_native_currency_id);
+				});
+			} else {
+				let old_network_id = Currency2ChainNetworkId::<T>::take(chain_native_currency_id);
+				if let Some(old_network_id) = old_network_id {
+					ChainNetworkId2Currency::<T>::mutate_exists(
+						old_network_id,
+						|old_currency_id| {
+							*old_currency_id = None;
+						},
+					);
+				}
+			}
 
 			Self::deposit_event(Event::ChainNetworkIdSet { chain_native_currency_id, network_id });
 
@@ -596,7 +659,20 @@ pub mod pallet {
 				Some(message.extra_feed.clone())
 			};
 
-			Self::inner_cross_in(location, payload.currency_id, payload.amount, remark_op)?;
+			// get src_chain_network_id according to src_chain_id
+			let src_chain_id = Self::get_src_chain_id_by_uid(&message.uid);
+			let src_chain_network_id = NetworkId::Ethereum { chain_id: src_chain_id as u64 };
+			let src_chain_native_currency_id =
+				Self::get_native_currency_by_chain_network_id(src_chain_network_id)
+					.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
+
+			Self::inner_cross_in(
+				location,
+				payload.currency_id,
+				payload.amount,
+				remark_op,
+				src_chain_native_currency_id,
+			)?;
 
 			Ok(().into())
 		}
@@ -614,7 +690,7 @@ pub mod pallet {
 		fn get_chain_network_and_id(
 			chain_native_currency_id: CurrencyId,
 		) -> Result<(NetworkId, u32), Error<T>> {
-			let network_id = Self::get_chain_network_id(chain_native_currency_id)
+			let network_id = Self::get_chain_network_id_by_currency(chain_native_currency_id)
 				.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
 
 			let chain_id: u32 = if let NetworkId::Ethereum { chain_id } = network_id {
@@ -626,10 +702,12 @@ pub mod pallet {
 			Ok((network_id, chain_id))
 		}
 
-		fn get_crossout_fee(chain_id: u32, payload: &[u8]) -> Result<BoolFeeBalance<T>, Error<T>> {
+		fn get_crossout_fee(
+			chain_id: u32,
+			payload_length: u64,
+		) -> Result<BoolFeeBalance<T>, Error<T>> {
 			let fee_standard = pallet_bcmp::ChainToGasConfig::<T>::get(&chain_id);
-			let fee =
-				pallet_bcmp::Pallet::<T>::calculate_total_fee(payload.len() as u64, fee_standard);
+			let fee = pallet_bcmp::Pallet::<T>::calculate_total_fee(payload_length, fee_standard);
 
 			Ok(fee)
 		}
@@ -738,9 +816,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 			dest_location: Box<MultiLocation>,
+			dest_chain_native_currency_id: CurrencyId,
 		) -> Result<(), Error<T>> {
-			let receiver = Self::get_receiver_from_multilocation(currency_id, &dest_location)?;
-			let dst_chain = Self::get_chain_network_and_id(currency_id)?.1;
+			let receiver = Self::get_receiver_from_multilocation(
+				dest_chain_native_currency_id,
+				&dest_location,
+			)?;
+			let dst_chain = Self::get_chain_network_and_id(dest_chain_native_currency_id)?.1;
 
 			let payload = Self::get_cross_out_payload(
 				XcmOperationType::TransferTo,
@@ -750,7 +832,7 @@ pub mod pallet {
 			)?;
 
 			let src_anchor = T::AnchorAddress::get();
-			let fee = Self::get_crossout_fee(dst_chain, &payload)?;
+			let fee = Self::get_crossout_fee(dst_chain, payload.len() as u64)?;
 
 			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
 				.map_err(|_| Error::<T>::FailedToSendMessage)?;
@@ -809,6 +891,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 			remark: Option<Vec<u8>>,
+			src_chain_native_currency_id: CurrencyId,
 		) -> Result<(), Error<T>> {
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
@@ -831,7 +914,7 @@ pub mod pallet {
 			let dest = if entrance_account_mutlilcaition == location {
 				T::EntrancePalletId::get().into_account_truncating()
 			} else {
-				Self::outer_multilocation_to_account(currency_id, location.clone())
+				Self::outer_multilocation_to_account(src_chain_native_currency_id, location.clone())
 					.ok_or(Error::<T>::NoAccountIdMapping)?
 			};
 
@@ -854,6 +937,15 @@ pub mod pallet {
 			let account_id_u8_vec = account_id.encode();
 			account_id_u8_array.copy_from_slice(&account_id_u8_vec);
 			account_id_u8_array
+		}
+
+		// Parse src_chain_id from uid
+		pub(crate) fn get_src_chain_id_by_uid(uid: &H256) -> u32 {
+			let mut src_chain_bytes = [0u8; 4];
+			src_chain_bytes.copy_from_slice(&uid.0[..4]);
+			let src_chain = u32::from_be_bytes(src_chain_bytes);
+
+			src_chain
 		}
 	}
 }
