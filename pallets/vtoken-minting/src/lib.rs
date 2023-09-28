@@ -44,16 +44,16 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use node_primitives::{
 	currency::VFIL, traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt,
-	CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider,
-	VtokenMintingInterface, VtokenMintingOperator, XcmOperationType, CROSSCHAIN_AMOUNT_LENGTH,
-	CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
+	CurrencyIdRegister, ReceiveFromAnchor, RedeemType, SlpOperator, SlpxOperator, TimeUnit,
+	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator, XcmOperationType,
+	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use pallet_bcmp::{ConsumerLayer, Message};
-use sp_core::{H256, U256};
+use sp_core::U256;
 use sp_std::{vec, vec::Vec};
 pub use traits::*;
+use xcm::opaque::lts::NetworkId;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -64,11 +64,6 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 pub type UnlockId = u32;
-
-type BoolFeeBalance<T> =
-	<<T as pallet_bcmp::Config>::Currency as frame_support::traits::Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -142,16 +137,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		// Bool bridge operator to send cross out message
-		type BridgeOperator: BridgeOperator<
-			AccountIdOf<Self>,
-			BalanceOf<Self>,
-			CurrencyId,
-			BoolFeeBalance<Self>,
-		>;
-
-		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
-		#[pallet::constant]
-		type AnchorAddress: Get<H256>;
+		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 	}
 
 	#[pallet::event]
@@ -1567,8 +1553,6 @@ pub mod pallet {
 				T::BridgeOperator::get_chain_network_and_id(dest_native_currency_id)
 					.map_err(|_| Error::<T>::NetworkIdError)?;
 
-			let src_anchor = T::AnchorAddress::get();
-
 			let receiver_op = to_location_op.and_then(|to_location| {
 				T::BridgeOperator::get_receiver_from_multilocation(
 					dest_native_currency_id,
@@ -1586,11 +1570,9 @@ pub mod pallet {
 			)
 			.map_err(|_| Error::<T>::FailToGetPayload)?;
 
-			let fee = T::BridgeOperator::get_crossout_fee(dst_chain, payload.len() as u64)
-				.map_err(|_| Error::<T>::FailToGetFee)?;
-
-			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
-				.map_err(|_| Error::<T>::FailedToSendMessage)?;
+			T::BridgeOperator::send_message_to_anchor(fee_payer, dst_chain, &payload)
+				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)
+				.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
 			Ok(())
 		}
@@ -2007,16 +1989,12 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 }
 
 // For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
-impl<T: Config> ConsumerLayer<T> for Pallet<T> {
-	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
-		let payload = &message.payload;
-
-		// decode XcmOperationType from the first 32 bytes
-		let operation_u8: u8 = U256::from_big_endian(&payload[0..32])
-			.try_into()
-			.map_err(|_| Error::<T>::FailToConvert)?;
-		let operation: XcmOperationType = XcmOperationType::try_from(operation_u8)?;
-
+impl<T: Config> ReceiveFromAnchor for Pallet<T> {
+	fn receive_from_anchor(
+		operation: XcmOperationType,
+		payload: &[u8],
+		_src_chain_network: NetworkId,
+	) -> DispatchResultWithPostInfo {
 		match operation {
 			XcmOperationType::PassExchangeRateBack => {
 				let max_len = CROSSCHAIN_OPERATION_LENGTH +
@@ -2031,7 +2009,15 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 		Ok(().into())
 	}
 
-	fn anchor_addr() -> H256 {
-		T::AnchorAddress::get()
+	fn match_operations(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network: NetworkId,
+	) -> DispatchResultWithPostInfo {
+		if &operation == &XcmOperationType::PassExchangeRateBack {
+			return Self::receive_from_anchor(operation, payload, src_chain_network);
+		}
+
+		Ok(().into())
 	}
 }

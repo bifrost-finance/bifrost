@@ -21,6 +21,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-oracle = { version = "0.4.1-dev", default-features = false }
+impl-trait-for-tuples = "0.2.1"
 
 [features]
 default = ["std"]

@@ -32,11 +32,7 @@ pub use crate::{
 	Junctions::X1,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
-use frame_support::{
-	pallet_prelude::*,
-	traits::{Contains, Currency},
-	weights::Weight,
-};
+use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
@@ -44,15 +40,14 @@ use frame_system::{
 use node_primitives::{
 	currency::{BNC, KSM, MOVR, PHA},
 	traits::{BridgeOperator, XcmDestWeightAndFeeHandler},
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, ReceiveFromAnchor,
+	SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
-use pallet_bcmp::{ConsumerLayer, Message};
 use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
-use sp_core::{bounded::BoundedVec, H160, H256, U256};
+use sp_core::{bounded::BoundedVec, H160, U256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -93,10 +88,6 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::CurrencyId;
 const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 
-type BoolFeeBalance<T> = <<T as pallet_bcmp::Config>::Currency as Currency<
-	<T as frame_system::Config>::AccountId,
->>::Balance;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -109,7 +100,7 @@ pub mod pallet {
 	use xcm::v3::{MaybeErrorCode, Response};
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_xcm::Config + pallet_bcmp::Config {
+	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
@@ -170,16 +161,7 @@ pub mod pallet {
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
 
 		// Bool bridge operator to send cross out message
-		type BridgeOperator: BridgeOperator<
-			AccountIdOf<Self>,
-			BalanceOf<Self>,
-			CurrencyId,
-			BoolFeeBalance<Self>,
-		>;
-
-		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
-		#[pallet::constant]
-		type AnchorAddress: Get<H256>;
+		type BridgeOperator: BridgeOperator<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 	}
 
 	#[pallet::error]
@@ -2448,10 +2430,12 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 }
 
 // For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
-impl<T: Config> ConsumerLayer<T> for Pallet<T> {
-	fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
-		let payload = &message.payload;
-
+impl<T: Config> ReceiveFromAnchor for Pallet<T> {
+	fn receive_from_anchor(
+		_operation: XcmOperationType,
+		payload: &[u8],
+		_src_chain_network: NetworkId,
+	) -> DispatchResultWithPostInfo {
 		// get currency_id from payload. The second 32 bytes of payload is the currency_id
 		let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
 			.try_into()
@@ -2460,12 +2444,21 @@ impl<T: Config> ConsumerLayer<T> for Pallet<T> {
 			CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailToConvert)?;
 
 		let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+
 		staking_agent.execute_crosschain_operation(currency_id, payload)?;
 
 		Ok(().into())
 	}
 
-	fn anchor_addr() -> H256 {
-		T::AnchorAddress::get()
+	fn match_operations(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network_id: NetworkId,
+	) -> DispatchResultWithPostInfo {
+		if &operation == &XcmOperationType::UpdateDelegatorLedger {
+			return Self::receive_from_anchor(operation, payload, src_chain_network_id);
+		}
+
+		Ok(().into())
 	}
 }

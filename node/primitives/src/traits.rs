@@ -30,6 +30,7 @@ use frame_support::{
 	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
+use impl_trait_for_tuples::impl_for_tuples;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
 	BoundedVec, DispatchResult,
@@ -494,13 +495,18 @@ pub trait VTokenSupplyProvider<CurrencyId, Balance> {
 	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
 }
 
-pub trait BridgeOperator<AccountId, Balance, CurrencyId, FeeBalance> {
+pub trait BridgeOperator<AccountId, Balance, CurrencyId> {
 	type Error;
+
+	fn send_message_to_anchor(
+		fee_payer: AccountId,
+		dst_chain: u32,
+		payload: &[u8],
+	) -> Result<(), Self::Error>;
+
 	fn get_chain_network_and_id(
 		chain_native_currency_id: CurrencyId,
 	) -> Result<(NetworkId, u32), Self::Error>;
-
-	fn get_crossout_fee(chain_id: u32, payload_length: u64) -> Result<FeeBalance, Self::Error>;
 
 	fn get_cross_out_payload(
 		operation: XcmOperationType,
@@ -528,4 +534,37 @@ pub trait BridgeOperator<AccountId, Balance, CurrencyId, FeeBalance> {
 		currecny_id: CurrencyId,
 		account: AccountId,
 	) -> Result<MultiLocation, Self::Error>;
+}
+
+pub trait ReceiveFromAnchor {
+	fn receive_from_anchor(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network_id: NetworkId,
+	) -> DispatchResultWithPostInfo;
+	fn match_operations(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network: NetworkId,
+	) -> DispatchResultWithPostInfo;
+}
+
+#[impl_for_tuples(1, 5)]
+impl ReceiveFromAnchor for Tuple {
+	fn receive_from_anchor(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network_id: NetworkId,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn match_operations(
+		operation: XcmOperationType,
+		payload: &[u8],
+		src_chain_network: NetworkId,
+	) -> DispatchResultWithPostInfo {
+		for_tuples!( #( Tuple::match_operations(operation, payload, src_chain_network)?; )* );
+		Ok(().into())
+	}
 }

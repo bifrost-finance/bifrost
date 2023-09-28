@@ -6610,6 +6610,7 @@ dependencies = [
  "bstringify",
  "frame-support",
  "frame-system",
+ "impl-trait-for-tuples",
  "orml-oracle",
  "parity-scale-codec",
  "scale-info",

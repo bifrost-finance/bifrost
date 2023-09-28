@@ -24,13 +24,12 @@ extern crate alloc;
 
 use alloc::{vec, vec::Vec};
 use frame_support::{
-	dispatch::DispatchErrorWithPostInfo, ensure, pallet_prelude::*,
-	sp_runtime::traits::AccountIdConversion, traits::Currency, PalletId,
+	ensure, pallet_prelude::*, sp_runtime::traits::AccountIdConversion, traits::Currency, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{
-	currency::VFIL, BridgeOperator, CurrencyId, TokenInfo, XcmOperationType, BNC,
-	CROSSCHAIN_ACCOUNT_LENGTH, CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH,
+	currency::VFIL, BridgeOperator, CurrencyId, ReceiveFromAnchor, TokenInfo, XcmOperationType,
+	BNC, CROSSCHAIN_ACCOUNT_LENGTH, CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH,
 	CROSSCHAIN_OPERATION_LENGTH, FIL,
 };
 use orml_traits::MultiCurrency;
@@ -95,6 +94,9 @@ pub mod pallet {
 		/// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
 		#[pallet::constant]
 		type AnchorAddress: Get<H256>;
+
+		/// The cross-chain operation executor
+		type CrossChainOperationExecutor: ReceiveFromAnchor;
 	}
 
 	#[pallet::error]
@@ -120,6 +122,7 @@ pub mod pallet {
 		ChainNetworkIdNotExist,
 		ReceiverNotProvided,
 		NotEnoughFee,
+		InvalidXcmOperation,
 	}
 
 	#[pallet::event]
@@ -643,35 +646,25 @@ pub mod pallet {
 	impl<T: Config> pallet_bcmp::ConsumerLayer<T> for Pallet<T> {
 		/// Called by 'Bcmp::receive_message', has already verified committee's signature.
 		fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
-			let payload = Self::parse_payload(&message.payload)?;
+			let payload = &message.payload;
 
-			let accuount_u8_array = Self::get_account_id_u8_array(payload.receiver);
-
-			// receiver account to native location
-			let location = Box::new(MultiLocation {
-				parents: 0,
-				interior: X1(AccountId32 { network: None, id: accuount_u8_array }),
-			});
-
-			let remark_op = if &message.extra_feed.len() == &0usize {
-				None
-			} else {
-				Some(message.extra_feed.clone())
-			};
+			// we first get opertation type
+			// decode XcmOperationType from the first 32 bytes
+			let operation_u8: u8 = U256::from_big_endian(&payload[0..32])
+				.try_into()
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let operation: XcmOperationType = XcmOperationType::try_from(operation_u8)
+				.map_err(|_| Error::<T>::FailedToConvert)?;
 
 			// get src_chain_network_id according to src_chain_id
 			let src_chain_id = Self::get_src_chain_id_by_uid(&message.uid);
 			let src_chain_network_id = NetworkId::Ethereum { chain_id: src_chain_id as u64 };
-			let src_chain_native_currency_id =
-				Self::get_native_currency_by_chain_network_id(src_chain_network_id)
-					.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
 
-			Self::inner_cross_in(
-				location,
-				payload.currency_id,
-				payload.amount,
-				remark_op,
-				src_chain_native_currency_id,
+			// send to cross-chain operation executor
+			T::CrossChainOperationExecutor::match_operations(
+				operation,
+				payload,
+				src_chain_network_id,
 			)?;
 
 			Ok(().into())
@@ -682,10 +675,28 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId, BoolFeeBalance<T>>
-		for Pallet<T>
-	{
+	impl<T: Config> BridgeOperator<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for Pallet<T> {
 		type Error = Error<T>;
+
+		fn send_message_to_anchor(
+			fee_payer: AccountIdOf<T>,
+			dst_chain: u32,
+			payload: &[u8],
+		) -> Result<(), Error<T>> {
+			let src_anchor = T::AnchorAddress::get();
+			let fee = Self::get_crossout_fee(dst_chain, payload.len() as u64)?;
+
+			pallet_bcmp::Pallet::<T>::send_message(
+				fee_payer,
+				fee,
+				src_anchor,
+				dst_chain,
+				payload.to_vec(),
+			)
+			.map_err(|_| Error::<T>::FailedToSendMessage)?;
+
+			Ok(())
+		}
 
 		fn get_chain_network_and_id(
 			chain_native_currency_id: CurrencyId,
@@ -700,16 +711,6 @@ pub mod pallet {
 			};
 
 			Ok((network_id, chain_id))
-		}
-
-		fn get_crossout_fee(
-			chain_id: u32,
-			payload_length: u64,
-		) -> Result<BoolFeeBalance<T>, Error<T>> {
-			let fee_standard = pallet_bcmp::ChainToGasConfig::<T>::get(&chain_id);
-			let fee = pallet_bcmp::Pallet::<T>::calculate_total_fee(payload_length, fee_standard);
-
-			Ok(fee)
 		}
 
 		// In order to facilitate the data transfromation in EVM, we set every field in payload to
@@ -810,6 +811,39 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> ReceiveFromAnchor for Pallet<T> {
+		fn receive_from_anchor(
+			operation: XcmOperationType,
+			payload: &[u8],
+			src_chain_network: NetworkId,
+		) -> DispatchResultWithPostInfo {
+			match operation {
+				XcmOperationType::TransferBack => {
+					let max_len = CROSSCHAIN_OPERATION_LENGTH +
+						CROSSCHAIN_CURRENCY_ID_LENGTH +
+						CROSSCHAIN_AMOUNT_LENGTH + CROSSCHAIN_ACCOUNT_LENGTH;
+					ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
+					Self::execute_cross_in_operation(&payload, src_chain_network)
+				},
+				_ => Err(Error::<T>::InvalidXcmOperation),
+			}?;
+
+			Ok(().into())
+		}
+
+		fn match_operations(
+			operation: XcmOperationType,
+			payload: &[u8],
+			src_chain_network_id: NetworkId,
+		) -> DispatchResultWithPostInfo {
+			if &operation == &XcmOperationType::TransferBack {
+				return Self::receive_from_anchor(operation, payload, src_chain_network_id);
+			}
+
+			Ok(().into())
+		}
+	}
+
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn send_message(
 			fee_payer: AccountIdOf<T>,
@@ -831,47 +865,9 @@ pub mod pallet {
 				Some(&receiver),
 			)?;
 
-			let src_anchor = T::AnchorAddress::get();
-			let fee = Self::get_crossout_fee(dst_chain, payload.len() as u64)?;
-
-			pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
-				.map_err(|_| Error::<T>::FailedToSendMessage)?;
+			Self::send_message_to_anchor(fee_payer, dst_chain, &payload)?;
 
 			Ok(())
-		}
-
-		pub(crate) fn parse_payload(raw: &[u8]) -> Result<Payload<T>, DispatchErrorWithPostInfo> {
-			return if raw.len() ==
-				CROSSCHAIN_OPERATION_LENGTH +
-					CROSSCHAIN_CURRENCY_ID_LENGTH +
-					CROSSCHAIN_AMOUNT_LENGTH +
-					CROSSCHAIN_ACCOUNT_LENGTH
-			{
-				let operation_u8: u8 = U256::from_big_endian(&raw[..32])
-					.try_into()
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-				let operation = XcmOperationType::try_from(operation_u8)
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-
-				// decode currency_id
-				let currency_id_u64: u64 = U256::from_big_endian(&raw[32..64])
-					.try_into()
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-				let currency_id = CurrencyId::try_from(currency_id_u64)
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-
-				let amount_u128: u128 = U256::from_big_endian(&raw[64..96])
-					.try_into()
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-				let amount = amount_u128.saturated_into::<BalanceOf<T>>();
-
-				let receiver = T::AccountId::decode(&mut raw[96..128].as_ref())
-					.map_err(|_| Error::<T>::FailedToConvert)?;
-
-				Ok(Payload { operation, amount, currency_id, receiver })
-			} else {
-				Err(Error::<T>::InvalidPayloadLength.into())
-			};
 		}
 
 		/// Extend bytes to target length.
@@ -946,6 +942,57 @@ pub mod pallet {
 			let src_chain = u32::from_be_bytes(src_chain_bytes);
 
 			src_chain
+		}
+
+		pub(crate) fn execute_cross_in_operation(
+			payload: &[u8],
+			src_chain_network_id: NetworkId,
+		) -> Result<(), Error<T>> {
+			// decode currency_id
+			let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
+				.try_into()
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let currency_id =
+				CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailedToConvert)?;
+
+			let amount_u128: u128 = U256::from_big_endian(&payload[64..96])
+				.try_into()
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let amount = amount_u128.saturated_into::<BalanceOf<T>>();
+
+			let receiver = T::AccountId::decode(&mut payload[96..128].as_ref())
+				.map_err(|_| Error::<T>::FailedToConvert)?;
+			let accuount_u8_array = Self::get_account_id_u8_array(receiver);
+
+			// receiver account to native location
+			let location = Box::new(MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 { network: None, id: accuount_u8_array }),
+			});
+
+			let src_chain_native_currency_id =
+				Self::get_native_currency_by_chain_network_id(src_chain_network_id)
+					.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
+
+			Self::inner_cross_in(
+				location,
+				currency_id,
+				amount,
+				None,
+				src_chain_native_currency_id,
+			)?;
+
+			Ok(())
+		}
+
+		pub fn get_crossout_fee(
+			chain_id: u32,
+			payload_length: u64,
+		) -> Result<BoolFeeBalance<T>, Error<T>> {
+			let fee_standard = pallet_bcmp::ChainToGasConfig::<T>::get(&chain_id);
+			let fee = pallet_bcmp::Pallet::<T>::calculate_total_fee(payload_length, fee_standard);
+
+			Ok(fee)
 		}
 	}
 }

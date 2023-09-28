@@ -1218,7 +1218,6 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
 	type BridgeOperator = CrossInOut;
-	type AnchorAddress = SlpAnchorAddress;
 }
 
 parameter_types! {
@@ -1307,8 +1306,6 @@ impl bifrost_fee_share::Config for Runtime {
 
 parameter_types! {
 	pub CrossInOutAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
-	pub VtokenMintingAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_VTOKEN_MINTING"[..]);
-	pub SlpAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_SLP"[..]);
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -1320,6 +1317,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type AnchorAddress = CrossInOutAnchorAddress;
 	type FeeAccount = BifrostFeeAccount;
+	type CrossChainOperationExecutor = (CrossInOut, Slp, VtokenMinting);
 }
 
 impl bifrost_slpx::Config for Runtime {
@@ -1486,7 +1484,6 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type BridgeOperator = CrossInOut;
-	type AnchorAddress = VtokenMintingAnchorAddress;
 }
 
 parameter_types! {
@@ -1619,7 +1616,7 @@ impl pallet_bcmp::Config for Runtime {
 	type PureMessage = PureMessage;
 	type DefaultAdmin = DefaultAdmin;
 	// Three pallets are using bcmp to pass cross-out message.
-	type Consumers = (CrossInOut, Slp, VtokenMinting);
+	type Consumers = CrossInOut;
 	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
 }
 

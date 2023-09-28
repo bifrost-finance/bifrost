@@ -1,3 +1,4 @@
+// #![feature(tuple_trait)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use num_bigint::{BigUint, ToBigUint};

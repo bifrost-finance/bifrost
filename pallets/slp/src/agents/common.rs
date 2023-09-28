@@ -335,8 +335,6 @@ impl<T: Config> Pallet<T> {
 			T::BridgeOperator::get_chain_network_and_id(dest_native_currency_id)
 				.map_err(|_| Error::<T>::NetworkIdError)?;
 
-		let src_anchor = T::AnchorAddress::get();
-
 		let receiver = T::BridgeOperator::get_receiver_from_multilocation(
 			dest_native_currency_id,
 			to_location,
@@ -350,11 +348,8 @@ impl<T: Config> Pallet<T> {
 		)
 		.map_err(|_| Error::<T>::FailToGetPayload)?;
 
-		let fee = T::BridgeOperator::get_crossout_fee(dst_chain, payload.len() as u64)
-			.map_err(|_| Error::<T>::FailToGetFee)?;
-
-		pallet_bcmp::Pallet::<T>::send_message(fee_payer, fee, src_anchor, dst_chain, payload)
-			.map_err(|_| Error::<T>::FailedToSendMessage)?;
+		T::BridgeOperator::send_message_to_anchor(fee_payer, dst_chain, &payload)
+			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
 		Ok(())
 	}
