@@ -27,8 +27,8 @@ use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::{
-	CurrencyId, VtokenMintingOperator, XcmOperationType, CROSSCHAIN_ACCOUNT_LENGTH,
-	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
+	BridgeOperator, CurrencyId, VtokenMintingOperator, XcmOperationType, CROSSCHAIN_ACCOUNT_LENGTH,
+	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH, FIL,
 };
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
@@ -370,7 +370,7 @@ impl<T: Config>
 	fn transfer_to(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
@@ -378,6 +378,15 @@ impl<T: Config>
 		let from_account = Pallet::<T>::native_multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
+
+		// We don't use the sent-in "to".
+		// "to" must be delegate-staking contract, which should be already mapped
+		// to the entrance account in the storage AccountToOuterMultilocation
+		let to_location = T::BridgeOperator::get_registered_outer_multilocation_from_account(
+			FIL,
+			entrance_account.clone(),
+		)
+		.map_err(|_| Error::<T>::MultilocationNotExist)?;
 
 		// burn the transfer amount
 		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
@@ -392,7 +401,7 @@ impl<T: Config>
 		Pallet::<T>::send_message(
 			XcmOperationType::TransferTo,
 			fee_payer.clone(),
-			to,
+			&to_location,
 			amount,
 			currency_id,
 			currency_id,
@@ -402,7 +411,7 @@ impl<T: Config>
 		Pallet::<T>::send_message(
 			XcmOperationType::Mint,
 			fee_payer,
-			to,
+			&to_location,
 			amount,
 			currency_id,
 			currency_id,

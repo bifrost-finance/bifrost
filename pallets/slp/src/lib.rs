@@ -252,6 +252,7 @@ pub mod pallet {
 		FailedToSendMessage,
 		InvalidPayloadLength,
 		InvalidXcmOperation,
+		MultilocationNotExist,
 	}
 
 	#[pallet::event]

@@ -928,13 +928,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(crate) fn get_account_id_u8_array(account_id: AccountIdOf<T>) -> [u8; 32] {
-			let mut account_id_u8_array = [0u8; 32];
-			let account_id_u8_vec = account_id.encode();
-			account_id_u8_array.copy_from_slice(&account_id_u8_vec);
-			account_id_u8_array
-		}
-
 		// Parse src_chain_id from uid
 		pub(crate) fn get_src_chain_id_by_uid(uid: &H256) -> u32 {
 			let mut src_chain_bytes = [0u8; 4];
@@ -960,22 +953,29 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::FailedToConvert)?;
 			let amount = amount_u128.saturated_into::<BalanceOf<T>>();
 
-			let receiver = T::AccountId::decode(&mut payload[96..128].as_ref())
-				.map_err(|_| Error::<T>::FailedToConvert)?;
-			let accuount_u8_array = Self::get_account_id_u8_array(receiver);
-
-			// receiver account to native location
-			let location = Box::new(MultiLocation {
-				parents: 0,
-				interior: X1(AccountId32 { network: None, id: accuount_u8_array }),
-			});
-
 			let src_chain_native_currency_id =
 				Self::get_native_currency_by_chain_network_id(src_chain_network_id)
 					.ok_or(Error::<T>::ChainNetworkIdNotExist)?;
 
+			let sender_location = if src_chain_native_currency_id == FIL {
+				// This is not receiver. It's original sender. Need to map to bounded bifrost
+				// account. only use the first 20 bytes as receiver out of 32 bytes
+				let mut sender_vec = [0u8; 20];
+				sender_vec.copy_from_slice(&payload[96..116]);
+
+				Box::new(MultiLocation {
+					parents: 100,
+					interior: X1(AccountKey20 {
+						network: Some(src_chain_network_id),
+						key: sender_vec,
+					}),
+				})
+			} else {
+				Err(Error::<T>::NotSupported)?
+			};
+
 			Self::inner_cross_in(
-				location,
+				sender_location,
 				currency_id,
 				amount,
 				None,
