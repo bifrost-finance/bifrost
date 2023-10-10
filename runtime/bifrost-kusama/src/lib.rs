@@ -26,10 +26,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod migration;
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
-use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -132,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 982,
+	spec_version: 984,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1925,61 +1923,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(migration::XcmInterfaceMigration, BLPOnRuntimeUpgrade<Runtime>),
+	(),
 >;
-
-use frame_support::traits::OnRuntimeUpgrade;
-pub struct BLPOnRuntimeUpgrade<T>(PhantomData<T>);
-impl<T: bifrost_asset_registry::Config> OnRuntimeUpgrade for BLPOnRuntimeUpgrade<T> {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-
-		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
-		for pool_id in 0..pool_count {
-			if let Some(old_metadata) =
-				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
-			{
-				log::info!("Old currency_metadatas name is {:?}", old_metadata.name);
-			}
-		}
-
-		Ok(vec![])
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-
-		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
-		let weight = bifrost_asset_registry::migration::update_blp_metadata::<Runtime>(pool_count);
-
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-
-		weight
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `post_upgrade`...");
-
-		let pool_count = nutsfinance_stable_asset::PoolCount::<Runtime>::get();
-		for pool_id in 0..pool_count {
-			if let Some(new_metadata) =
-				bifrost_asset_registry::CurrencyMetadatas::<Runtime>::get(CurrencyId::BLP(pool_id))
-			{
-				let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
-				assert_eq!(new_metadata.symbol, symbol);
-				log::info!("New currency_metadatas name is {:?}", new_metadata.name);
-			}
-		}
-
-		Ok(())
-	}
-}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
