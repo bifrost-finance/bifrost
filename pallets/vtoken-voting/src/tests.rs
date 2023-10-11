@@ -426,12 +426,14 @@ fn kill_referendum_with_origin_signed_fails() {
 fn set_delegator_role_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
+		let poll_index = 3;
 		let derivative_index: DerivativeIndex = 100;
 		let role = aye(10, 3).into();
 
 		assert_ok!(VtokenVoting::set_delegator_role(
 			RuntimeOrigin::root(),
 			vtoken,
+			poll_index,
 			derivative_index,
 			role,
 		));
@@ -594,7 +596,10 @@ fn notify_vote_success_works() {
 				tally: TallyOf::<Runtime>::from_parts(10, 0, 2),
 			}))
 		);
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
 		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
 			who: ALICE,
@@ -612,7 +617,10 @@ fn notify_vote_success_works() {
 				tally: TallyOf::<Runtime>::from_parts(10, 0, 2),
 			}))
 		);
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::VoteNotified {
 			vtoken,
 			poll_index,
@@ -706,7 +714,10 @@ fn notify_vote_fail_works() {
 				tally: TallyOf::<Runtime>::from_parts(10, 0, 2),
 			}))
 		);
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
 		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
 			who: ALICE,
@@ -718,7 +729,10 @@ fn notify_vote_fail_works() {
 
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), query_id, response.clone()));
 		assert_eq!(ReferendumInfoFor::<Runtime>::get(vtoken, poll_index), None);
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(0, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(0, 5))
+		);
 		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::VoteNotified {
 			vtoken,
 			poll_index,
@@ -757,7 +771,10 @@ fn notify_remove_delegator_vote_success_works() {
 		let response = response_success();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 5)));
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(10, 0, 2));
 		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::Voted {
 			who: ALICE,
@@ -783,7 +800,10 @@ fn notify_remove_delegator_vote_success_works() {
 			poll_index,
 			derivative_index,
 		));
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 
 		query_id = 1;
 		assert_ok!(VtokenVoting::notify_remove_delegator_vote(
@@ -791,7 +811,10 @@ fn notify_remove_delegator_vote_success_works() {
 			query_id,
 			response.clone()
 		));
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(0, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(0, 5))
+		);
 		System::assert_has_event(RuntimeEvent::VtokenVoting(Event::DelegatorVoteRemovedNotified {
 			vtoken,
 			poll_index,
@@ -840,7 +863,10 @@ fn notify_remove_delegator_vote_fail_works() {
 			poll_index,
 			derivative_index,
 		));
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 
 		query_id = 1;
 		assert_ok!(VtokenVoting::notify_remove_delegator_vote(
@@ -848,7 +874,10 @@ fn notify_remove_delegator_vote_fail_works() {
 			query_id,
 			response.clone()
 		));
-		assert_eq!(DelegatorVote::<Runtime>::get(vtoken, derivative_index), Some(aye(2, 5)));
+		assert_eq!(
+			DelegatorVote::<Runtime>::get((vtoken, poll_index, derivative_index)),
+			Some(aye(2, 5))
+		);
 		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::ResponseReceived {
 			responder: Parent.into(),
 			query_id,

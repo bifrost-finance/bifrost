@@ -290,12 +290,13 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
-	pub type DelegatorVote<T: Config> = StorageDoubleMap<
+	pub type DelegatorVote<T: Config> = StorageNMap<
 		_,
-		Twox64Concat,
-		CurrencyIdOf<T>,
-		Twox64Concat,
-		DerivativeIndex,
+		(
+			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
+			NMapKey<Twox64Concat, PollIndex>,
+			NMapKey<Twox64Concat, DerivativeIndex>,
+		),
 		AccountVote<BalanceOf<T>>,
 	>;
 
@@ -321,7 +322,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub delegator_votes: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub delegator_votes: Vec<(CurrencyIdOf<T>, PollIndex, u8, DerivativeIndex)>,
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 	}
 
@@ -335,14 +336,15 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.delegator_votes.iter().for_each(|(vtoken, role, derivative_index)| {
-				let vote_role = VoteRole::try_from(*role).unwrap();
-				DelegatorVote::<T>::insert(
-					vtoken,
-					derivative_index,
-					AccountVote::<BalanceOf<T>>::from(vote_role),
-				);
-			});
+			self.delegator_votes
+				.iter()
+				.for_each(|(vtoken, poll_index, role, derivative_index)| {
+					let vote_role = VoteRole::try_from(*role).unwrap();
+					DelegatorVote::<T>::insert(
+						(vtoken, poll_index, derivative_index),
+						AccountVote::<BalanceOf<T>>::from(vote_role),
+					);
+				});
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
@@ -357,26 +359,28 @@ pub mod pallet {
 				T::RelaychainBlockNumberProvider::current_block_number();
 
 			weight += T::DbWeight::get().reads(1);
-			let timeout = ReferendumTimeout::<T>::get(relay_current_block_number);
-			if !timeout.is_empty() {
-				timeout.iter().for_each(|(vtoken, poll_index)| {
-					ReferendumInfoFor::<T>::mutate(
-						vtoken,
-						poll_index,
-						|maybe_info| match maybe_info {
-							Some(info) =>
-								if let ReferendumInfo::Ongoing(_) = info {
-									*info = ReferendumInfo::Completed(
-										relay_current_block_number.into(),
-									);
-								},
-							None => {},
-						},
-					);
-					weight += T::DbWeight::get().reads_writes(1, 1);
-				});
-				weight += T::DbWeight::get().reads_writes(1, 1);
-				ReferendumTimeout::<T>::remove(relay_current_block_number);
+			for relay_block_number in ReferendumTimeout::<T>::iter_keys() {
+				if relay_current_block_number >= relay_block_number {
+					let info_list = ReferendumTimeout::<T>::get(relay_block_number);
+					if !info_list.is_empty() {
+						info_list.iter().for_each(|(vtoken, poll_index)| {
+							ReferendumInfoFor::<T>::mutate(vtoken, poll_index, |maybe_info| {
+								match maybe_info {
+									Some(info) =>
+										if let ReferendumInfo::Ongoing(_) = info {
+											*info = ReferendumInfo::Completed(
+												relay_current_block_number.into(),
+											);
+										},
+									None => {},
+								}
+							});
+							weight += T::DbWeight::get().reads_writes(1, 1);
+						});
+						weight += T::DbWeight::get().reads_writes(1, 1);
+						ReferendumTimeout::<T>::remove(relay_block_number);
+					}
+				}
 			}
 
 			weight
@@ -402,7 +406,7 @@ pub mod pallet {
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
 			let new_vote = Self::compute_new_vote(vtoken, vote)?;
-			let derivative_index = Self::try_select_derivative_index(vtoken, new_vote)?;
+			let derivative_index = Self::try_select_derivative_index(vtoken, poll_index, new_vote)?;
 			if let Some(d) = VoteDelegatorFor::<T>::get((&who, vtoken, poll_index)) {
 				ensure!(d == derivative_index, Error::<T>::ChangeDelegator)
 			}
@@ -434,8 +438,8 @@ pub mod pallet {
 			)?;
 
 			// send XCM message
-			let delegator_vote =
-				DelegatorVote::<T>::get(vtoken, derivative_index).ok_or(Error::<T>::NoData)?;
+			let delegator_vote = DelegatorVote::<T>::get((vtoken, poll_index, derivative_index))
+				.ok_or(Error::<T>::NoData)?;
 			let vote_call =
 				<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, delegator_vote);
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
@@ -507,7 +511,10 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
-			ensure!(DelegatorVote::<T>::contains_key(vtoken, derivative_index), Error::<T>::NoData);
+			ensure!(
+				DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)),
+				Error::<T>::NoData
+			);
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
@@ -566,6 +573,7 @@ pub mod pallet {
 		pub fn set_delegator_role(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 			vote_role: VoteRole,
 		) -> DispatchResult {
@@ -577,13 +585,12 @@ pub mod pallet {
 				Error::<T>::NoData
 			);
 			ensure!(
-				!DelegatorVote::<T>::contains_key(vtoken, derivative_index),
+				!DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)),
 				Error::<T>::DerivativeIndexOccupied
 			);
 
 			DelegatorVote::<T>::insert(
-				vtoken,
-				derivative_index,
+				(vtoken, poll_index, derivative_index),
 				AccountVote::<BalanceOf<T>>::from(vote_role),
 			);
 
@@ -738,8 +745,7 @@ pub mod pallet {
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
 					DelegatorVote::<T>::try_mutate_exists(
-						vtoken,
-						derivative_index,
+						(vtoken, poll_index, derivative_index),
 						|maybe_vote| {
 							if let Some(inner_vote) = maybe_vote {
 								inner_vote
@@ -775,7 +781,7 @@ pub mod pallet {
 			vtoken_balance: BalanceOf<T>,
 		) -> Result<Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>, DispatchError> {
 			ensure!(
-				vote.balance() <= T::MultiCurrency::total_balance(vtoken, who),
+				vtoken_balance <= T::MultiCurrency::total_balance(vtoken, who),
 				Error::<T>::InsufficientFunds
 			);
 			let mut old_vote = None;
@@ -787,7 +793,9 @@ pub mod pallet {
 							Ok(i) => {
 								// Shouldn't be possible to fail, but we handle it gracefully.
 								tally.remove(votes[i].1).ok_or(ArithmeticError::Underflow)?;
-								Self::try_sub_delegator_vote(vtoken, votes[i].2, votes[i].1)?;
+								Self::try_sub_delegator_vote(
+									vtoken, poll_index, votes[i].2, votes[i].1,
+								)?;
 								old_vote = Some((votes[i].1, votes[i].3));
 								if let Some(approve) = votes[i].1.as_standard() {
 									tally.reduce(approve, *delegations);
@@ -807,7 +815,7 @@ pub mod pallet {
 						}
 						// Shouldn't be possible to fail, but we handle it gracefully.
 						tally.add(vote).ok_or(ArithmeticError::Overflow)?;
-						Self::try_add_delegator_vote(vtoken, derivative_index, vote)?;
+						Self::try_add_delegator_vote(vtoken, poll_index, derivative_index, vote)?;
 						if let Some(approve) = vote.as_standard() {
 							tally.increase(approve, *delegations);
 						}
@@ -848,7 +856,7 @@ pub mod pallet {
 							ensure!(matches!(scope, UnvoteScope::Any), Error::<T>::NoPermission);
 							// Shouldn't be possible to fail, but we handle it gracefully.
 							tally.remove(v.1).ok_or(ArithmeticError::Underflow)?;
-							Self::try_sub_delegator_vote(vtoken, v.2, v.1)?;
+							Self::try_sub_delegator_vote(vtoken, poll_index, v.2, v.1)?;
 							if let Some(approve) = v.1.as_standard() {
 								tally.reduce(approve, *delegations);
 							}
@@ -1101,11 +1109,12 @@ pub mod pallet {
 
 		fn try_select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 			my_vote: AccountVote<BalanceOf<T>>,
 		) -> Result<DerivativeIndex, DispatchError> {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 
-			let mut data = DelegatorVote::<T>::iter_prefix(vtoken)
+			let mut data = DelegatorVote::<T>::iter_prefix((vtoken, poll_index))
 				.map(|(index, vote)| {
 					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
 						.unwrap_or(Default::default());
@@ -1129,34 +1138,38 @@ pub mod pallet {
 
 		fn try_add_delegator_vote(
 			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
 		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
-			DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
-				match maybe_vote {
+			DelegatorVote::<T>::try_mutate_exists(
+				(vtoken, poll_index, derivative_index),
+				|maybe_vote| match maybe_vote {
 					Some(inner_vote) => {
 						inner_vote.checked_add(vote).map_err(|_| ArithmeticError::Overflow)?;
 						Ok(*inner_vote)
 					},
 					None => Err(Error::<T>::NoData.into()),
-				}
-			})
+				},
+			)
 		}
 
 		fn try_sub_delegator_vote(
 			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
 			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
 		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
-			DelegatorVote::<T>::try_mutate_exists(vtoken, derivative_index, |maybe_vote| {
-				match maybe_vote {
+			DelegatorVote::<T>::try_mutate_exists(
+				(vtoken, poll_index, derivative_index),
+				|maybe_vote| match maybe_vote {
 					Some(inner_vote) => {
 						inner_vote.checked_sub(vote).map_err(|_| ArithmeticError::Underflow)?;
 						Ok(*inner_vote)
 					},
 					None => Err(Error::<T>::NoData.into()),
-				}
-			})
+				},
+			)
 		}
 
 		fn compute_new_vote(
