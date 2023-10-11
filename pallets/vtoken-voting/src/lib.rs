@@ -359,28 +359,26 @@ pub mod pallet {
 				T::RelaychainBlockNumberProvider::current_block_number();
 
 			weight += T::DbWeight::get().reads(1);
-			for relay_block_number in ReferendumTimeout::<T>::iter_keys() {
-				if relay_current_block_number >= relay_block_number {
-					let info_list = ReferendumTimeout::<T>::get(relay_block_number);
-					if !info_list.is_empty() {
-						info_list.iter().for_each(|(vtoken, poll_index)| {
-							ReferendumInfoFor::<T>::mutate(vtoken, poll_index, |maybe_info| {
-								match maybe_info {
-									Some(info) =>
-										if let ReferendumInfo::Ongoing(_) = info {
-											*info = ReferendumInfo::Completed(
-												relay_current_block_number.into(),
-											);
-										},
-									None => {},
-								}
-							});
-							weight += T::DbWeight::get().reads_writes(1, 1);
-						});
-						weight += T::DbWeight::get().reads_writes(1, 1);
-						ReferendumTimeout::<T>::remove(relay_block_number);
-					}
-				}
+			let timeout = ReferendumTimeout::<T>::get(relay_current_block_number);
+			if !timeout.is_empty() {
+				timeout.iter().for_each(|(vtoken, poll_index)| {
+					ReferendumInfoFor::<T>::mutate(
+						vtoken,
+						poll_index,
+						|maybe_info| match maybe_info {
+							Some(info) =>
+								if let ReferendumInfo::Ongoing(_) = info {
+									*info = ReferendumInfo::Completed(
+										relay_current_block_number.into(),
+									);
+								},
+							None => {},
+						},
+					);
+					weight += T::DbWeight::get().reads_writes(1, 1);
+				});
+				weight += T::DbWeight::get().reads_writes(1, 1);
+				ReferendumTimeout::<T>::remove(relay_current_block_number);
 			}
 
 			weight
