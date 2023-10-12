@@ -718,7 +718,7 @@ parameter_types! {
 
 impl xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
