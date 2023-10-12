@@ -26,6 +26,7 @@ use frame_support::{
 		fungibles::Inspect,
 		tokens::{Fortitude::Polite, Preservation::Expendable},
 	},
+	weights::RuntimeDbWeight,
 };
 use node_primitives::currency::{VBNC, VKSM};
 use pallet_conviction_voting::Vote;
@@ -657,7 +658,7 @@ fn notify_vote_success_max_works() {
 			RelaychainDataProvider::set_block_number(
 				1 + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
 			);
-			VtokenVoting::on_initialize(Zero::zero());
+			VtokenVoting::on_idle(Zero::zero(), Weight::MAX);
 		}
 	});
 }
@@ -877,11 +878,13 @@ fn notify_remove_delegator_vote_with_no_data_works() {
 }
 
 #[test]
-fn on_initialize_works() {
+fn on_idle_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
-		RelaychainDataProvider::set_block_number(1);
-		for (query_id, poll_index) in (0..50).collect::<Vec<_>>().iter().enumerate() {
+		for (index, poll_index) in (0..50).collect::<Vec<_>>().iter().enumerate() {
+			let relay_block_number = index as BlockNumber;
+			let query_id = index as QueryId;
+			RelaychainDataProvider::set_block_number(relay_block_number);
 			assert_ok!(VtokenVoting::vote(
 				RuntimeOrigin::signed(ALICE),
 				vtoken,
@@ -895,16 +898,27 @@ fn on_initialize_works() {
 			));
 		}
 
+		let count = 30;
 		RelaychainDataProvider::set_block_number(
-			1 + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
+			count + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
 		);
-		VtokenVoting::on_initialize(Zero::zero());
+		let db_weight = RuntimeDbWeight { read: 1, write: 1 };
+		let weight =
+			db_weight.reads(3) + db_weight.reads_writes(1, 2) * count + db_weight.writes(2) * count;
+		let used_weight = VtokenVoting::on_idle(Zero::zero(), weight);
+		assert_eq!(used_weight, Weight::from_parts(153, 0));
 
+		let mut actual_count = 0;
 		for poll_index in 0..50 {
-			assert_eq!(
-				ReferendumInfoFor::<Runtime>::get(vtoken, poll_index),
-				Some(ReferendumInfo::Completed(101))
-			);
+			let relay_block_number = poll_index as BlockNumber;
+			if ReferendumTimeout::<Runtime>::get(
+				relay_block_number + UndecidingTimeout::<Runtime>::get(vtoken).unwrap(),
+			)
+			.is_empty()
+			{
+				actual_count += 1;
+			}
 		}
+		assert_eq!(actual_count, count);
 	});
 }
