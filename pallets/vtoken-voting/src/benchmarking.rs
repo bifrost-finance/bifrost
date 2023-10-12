@@ -43,7 +43,10 @@ fn account_vote<T: Config>(b: BalanceOf<T>) -> AccountVote<BalanceOf<T>> {
 	AccountVote::Standard { vote: v, balance: b }
 }
 
-fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
+fn init_vote<T: Config>(
+	vtoken: CurrencyIdOf<T>,
+	poll_index: PollIndex,
+) -> Result<(), BenchmarkError> {
 	let derivative_index = 0;
 	let token = CurrencyId::to_token(&vtoken).unwrap();
 	T::XcmDestWeightAndFee::set_xcm_dest_weight_and_fee(
@@ -58,6 +61,7 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 	Pallet::<T>::set_delegator_role(
 		RawOrigin::Root.into(),
 		vtoken,
+		poll_index,
 		derivative_index,
 		VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
 	)?;
@@ -79,7 +83,7 @@ mod benchmarks {
 		let control_origin =
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
@@ -113,11 +117,12 @@ mod benchmarks {
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
 		let vtoken = VKSM;
+		let poll_index = 0u32;
 		let old_vote = account_vote::<T>(100u32.into());
 		let control_origin =
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let r = 50;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for index in (0..r).collect::<Vec<_>>().iter() {
@@ -156,7 +161,7 @@ mod benchmarks {
 		let poll_index = 0u32;
 		let vote = account_vote::<T>(100u32.into());
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		Pallet::<T>::vote(origin.clone().into(), vtoken, poll_index, vote)?;
 		Pallet::<T>::set_referendum_status(
 			RawOrigin::Root.into(),
@@ -182,7 +187,7 @@ mod benchmarks {
 		let vote = account_vote::<T>(100u32.into());
 		let derivative_index = 0u16;
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		Pallet::<T>::vote(origin.clone().into(), vtoken, poll_index, vote)?;
 		Pallet::<T>::set_referendum_status(
 			RawOrigin::Root.into(),
@@ -212,7 +217,7 @@ mod benchmarks {
 		let poll_index = 0u32;
 		let vote = account_vote::<T>(100u32.into());
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
 		let origin_caller = RawOrigin::Signed(caller);
@@ -235,10 +240,11 @@ mod benchmarks {
 		let origin =
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let vtoken = VKSM;
+		let poll_index = 0u32;
 		let derivative_index = 10;
 		let vote_role = VoteRole::SplitAbstain;
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		T::DerivativeAccount::add_delegator(
 			CurrencyId::to_token(&vtoken).unwrap(),
 			derivative_index,
@@ -249,6 +255,7 @@ mod benchmarks {
 		_(
 			origin as <T as frame_system::Config>::RuntimeOrigin,
 			vtoken,
+			poll_index,
 			derivative_index,
 			vote_role,
 		);
@@ -264,7 +271,7 @@ mod benchmarks {
 		let poll_index = 0u32;
 		let info = ReferendumInfo::Completed(<frame_system::Pallet<T>>::block_number());
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
 		let origin_caller = RawOrigin::Signed(caller);
@@ -312,7 +319,7 @@ mod benchmarks {
 		let query_id = 1u64;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
 		let origin_caller = RawOrigin::Signed(caller);
@@ -334,7 +341,7 @@ mod benchmarks {
 		let query_id = 1u64;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 
-		init_vote::<T>(vtoken)?;
+		init_vote::<T>(vtoken, poll_index)?;
 		let caller = funded_account::<T>("caller", 0);
 		whitelist_account!(caller);
 		let origin_caller = RawOrigin::Signed(caller);
