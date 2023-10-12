@@ -26,6 +26,7 @@ use frame_support::{
 	pallet_prelude::Weight,
 	parameter_types,
 	traits::{Everything, GenesisBuild, Get, Nothing},
+	weights::RuntimeDbWeight,
 };
 use frame_system::EnsureRoot;
 use node_primitives::{
@@ -73,6 +74,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub const DbWeight: RuntimeDbWeight = RuntimeDbWeight { read: 1, write: 2 };
 }
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
@@ -83,7 +85,7 @@ impl frame_system::Config for Runtime {
 	type BlockNumber = u64;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
-	type DbWeight = ();
+	type DbWeight = DbWeight;
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;

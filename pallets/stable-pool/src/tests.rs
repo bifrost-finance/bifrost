@@ -529,6 +529,48 @@ fn redeem_single() {
 			2
 		));
 		assert_eq!(Tokens::free_balance(coin1, &6), 904_596_263_064);
+		assert_noop!(
+			StablePool::modify_fees(
+				RuntimeOrigin::root(),
+				0,
+				Some(10_000_000_000),
+				Some(10_000_000_000),
+				Some(10_000_000_000)
+			),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_ok!(StablePool::modify_fees(
+			RuntimeOrigin::root(),
+			0,
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+		));
+		assert_ok!(StablePool::redeem_single(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			5_000_000_000u128,
+			1,
+			0,
+			2
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 904_596_263_064);
+		assert_ok!(StablePool::modify_fees(
+			RuntimeOrigin::root(),
+			0,
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+			Some(999_999_999),
+		));
+		assert_ok!(StablePool::redeem_single(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			5_000_000_000u128,
+			1,
+			0,
+			2
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 908_716_032_298);
 	});
 }
 
