@@ -242,9 +242,9 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
 			ensure!(
-				mint_fee.map(|x| x <= fee_denominator).unwrap_or(true) &&
-					swap_fee.map(|x| x <= fee_denominator).unwrap_or(true) &&
-					redeem_fee.map(|x| x <= fee_denominator).unwrap_or(true),
+				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
 				nutsfinance_stable_asset::Error::<T>::ArgumentsError
 			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
