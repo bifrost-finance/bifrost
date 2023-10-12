@@ -240,6 +240,13 @@ pub mod pallet {
 			redeem_fee: Option<T::AtLeast64BitUnsigned>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
+			ensure!(
+				mint_fee.map(|x| x <= fee_denominator).unwrap_or(true) &&
+					swap_fee.map(|x| x <= fee_denominator).unwrap_or(true) &&
+					redeem_fee.map(|x| x <= fee_denominator).unwrap_or(true),
+				nutsfinance_stable_asset::Error::<T>::ArgumentsError
+			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
@@ -614,14 +621,6 @@ impl<T: Config> Pallet<T> {
 		}
 		T::MultiCurrency::transfer(pool_info.assets[i_usize], &pool_info.account_id, who, dy)?;
 		T::MultiCurrency::withdraw(pool_info.pool_asset, who, redeem_amount)?;
-		let mut amounts: Vec<T::Balance> = Vec::new();
-		for idx in 0..pool_size {
-			if idx == i_usize {
-				amounts.push(dy);
-			} else {
-				amounts.push(Zero::zero());
-			}
-		}
 
 		pool_info.total_supply = total_supply;
 		pool_info.balances = balances;
