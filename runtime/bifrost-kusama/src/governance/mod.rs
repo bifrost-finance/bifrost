@@ -23,9 +23,19 @@ pub use bifrost_runtime_common::dollar;
 mod fellowship;
 mod origins;
 pub use origins::{
-	custom_origins, Fellows, FellowshipAdmin, FellowshipExperts, FellowshipInitiates,
+	custom_origins, CoreAdmin, Fellows, FellowshipAdmin, FellowshipExperts, FellowshipInitiates,
 	FellowshipMasters, ReferendumCanceller, ReferendumKiller, SALPAdmin, SystemStakingAdmin,
-	ValidatorElection, WhitelistedCaller, *,
+	TechAdmin, ValidatorElection, WhitelistedCaller, *,
 };
 mod tracks;
 pub use tracks::TracksInfo;
+
+pub type CoreAdminOrCouncil = EitherOfDiverse<
+	CoreAdmin,
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+>;
+
+pub type TechAdminOrCouncil = EitherOfDiverse<
+	TechAdmin,
+	EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
+>;
