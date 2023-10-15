@@ -292,6 +292,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 
 parameter_types! {
 	pub static RelaychainBlockNumber: BlockNumber = 1;
+	pub static ReferendumCheckInterval: BlockNumber = 1;
 }
 
 pub struct RelaychainDataProvider;
@@ -336,6 +337,7 @@ impl vtoken_voting::Config for Runtime {
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = ();
 }
 
@@ -354,7 +356,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	let mut delegator_votes = Vec::new();
-	for poll_index in 0..256 {
+	for poll_index in 0..=256 {
 		delegator_votes.extend(vec![
 			(VKSM, poll_index, 0, 0),
 			(VKSM, poll_index, 1, 1),

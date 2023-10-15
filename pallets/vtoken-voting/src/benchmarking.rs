@@ -84,9 +84,17 @@ mod benchmarks {
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		init_vote::<T>(vtoken, poll_index)?;
+		let derivative_index = 0;
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
+			Pallet::<T>::set_delegator_role(
+				RawOrigin::Root.into(),
+				vtoken,
+				*index,
+				derivative_index,
+				VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
+			)?;
 			Pallet::<T>::on_idle(Zero::zero(), Weight::MAX);
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
 			Pallet::<T>::notify_vote(
@@ -123,9 +131,19 @@ mod benchmarks {
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 
 		init_vote::<T>(vtoken, poll_index)?;
+		let derivative_index = 0;
 		let r = 50;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for index in (0..r).collect::<Vec<_>>().iter() {
+			if *index != 0 {
+				Pallet::<T>::set_delegator_role(
+					RawOrigin::Root.into(),
+					vtoken,
+					*index,
+					derivative_index,
+					VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
+				)?;
+			}
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, old_vote)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,

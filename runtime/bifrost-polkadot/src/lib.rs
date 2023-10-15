@@ -1346,6 +1346,7 @@ impl bifrost_stable_pool::Config for Runtime {
 
 parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
+	pub const ReferendumCheckInterval: BlockNumber = 300;
 }
 
 pub struct DerivativeAccountTokenFilter;
@@ -1369,6 +1370,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ParachainId = SelfParaChainId;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;
 }
 
