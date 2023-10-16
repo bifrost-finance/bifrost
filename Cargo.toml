@@ -29,6 +29,7 @@ members = [
 	"pallets/stable-pool",
 	"pallets/lend-market",
 	"pallets/prices",
+	"pallets/leverage-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 ]
