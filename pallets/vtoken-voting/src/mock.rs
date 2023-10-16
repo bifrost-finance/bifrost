@@ -292,6 +292,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 
 parameter_types! {
 	pub static RelaychainBlockNumber: BlockNumber = 1;
+	pub static ReferendumCheckInterval: BlockNumber = 1;
 }
 
 pub struct RelaychainDataProvider;
@@ -336,6 +337,7 @@ impl vtoken_voting::Config for Runtime {
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = ();
 }
 
@@ -353,20 +355,24 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
+	let mut delegator_votes = Vec::new();
+	for poll_index in 0..=256 {
+		delegator_votes.extend(vec![
+			(VKSM, poll_index, 0, 0),
+			(VKSM, poll_index, 1, 1),
+			(VKSM, poll_index, 2, 2),
+			(VKSM, poll_index, 3, 3),
+			(VKSM, poll_index, 4, 4),
+			(VKSM, poll_index, 5, 5),
+			(VKSM, poll_index, 10, 10),
+			(VKSM, poll_index, 11, 11),
+			(VKSM, poll_index, 15, 15),
+			(VKSM, poll_index, 20, 20),
+			(VKSM, poll_index, 21, 21),
+		]);
+	}
 	vtoken_voting::GenesisConfig::<Runtime> {
-		delegator_votes: vec![
-			(VKSM, 0, 0),
-			(VKSM, 1, 1),
-			(VKSM, 2, 2),
-			(VKSM, 3, 3),
-			(VKSM, 4, 4),
-			(VKSM, 5, 5),
-			(VKSM, 10, 10),
-			(VKSM, 11, 11),
-			(VKSM, 15, 15),
-			(VKSM, 20, 20),
-			(VKSM, 21, 21),
-		],
+		delegator_votes,
 		undeciding_timeouts: vec![(VKSM, 100)],
 	}
 	.assimilate_storage(&mut t)

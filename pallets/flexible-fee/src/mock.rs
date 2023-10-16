@@ -513,6 +513,10 @@ impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
 	}
 }
 
+parameter_types! {
+	pub const ReferendumCheckInterval: BlockNumber = 300;
+}
+
 impl bifrost_vtoken_voting::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -527,6 +531,7 @@ impl bifrost_vtoken_voting::Config for Test {
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParaInfo;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = ();
 }
 
