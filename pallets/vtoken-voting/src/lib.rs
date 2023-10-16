@@ -29,6 +29,8 @@ mod tests;
 
 mod call;
 mod vote;
+
+pub mod migration;
 pub mod weights;
 
 use crate::vote::{Casting, Tally, Voting};
@@ -81,7 +83,11 @@ pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 pub mod pallet {
 	use super::*;
 
+	/// The current storage version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -121,6 +127,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type QueryTimeout: Get<BlockNumberFor<Self>>;
+
+		#[pallet::constant]
+		type ReferendumCheckInterval: Get<BlockNumberFor<Self>>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -353,10 +362,12 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_idle(_n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
+		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
 			let db_weight = T::DbWeight::get();
 			let mut used_weight = db_weight.reads(3);
-			if remaining_weight.any_lt(used_weight) {
+			if remaining_weight.any_lt(used_weight) ||
+				n % T::ReferendumCheckInterval::get() != Zero::zero()
+			{
 				return Weight::zero();
 			}
 			let relay_current_block_number =
@@ -1141,7 +1152,7 @@ pub mod pallet {
 			Ok(*index)
 		}
 
-		fn try_add_delegator_vote(
+		pub(crate) fn try_add_delegator_vote(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			derivative_index: DerivativeIndex,
