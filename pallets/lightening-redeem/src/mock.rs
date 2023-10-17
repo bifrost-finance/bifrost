@@ -21,7 +21,7 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
+	traits::{Nothing, OnFinalize, OnInitialize},
 	PalletId,
 };
 use node_primitives::{
@@ -48,15 +48,11 @@ pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>}
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Council: pallet_collective::<Instance1>,
+		LighteningRedeem: bifrost_lightening_redeem
 	}
 );
 
@@ -72,15 +68,14 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -189,7 +184,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
 			balances: self

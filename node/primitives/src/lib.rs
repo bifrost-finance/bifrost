@@ -21,7 +21,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::MaxEncodedLen;
-use frame_support::dispatch::Weight;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
@@ -276,7 +275,7 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 	fn execute(
 		_origin: impl Into<MultiLocation>,
 		_pre: Self::Prepared,
-		_hash: XcmHash,
+		_hash: &mut XcmHash,
 		_weight_credit: Weight,
 	) -> Outcome {
 		Outcome::Complete(Weight::default())

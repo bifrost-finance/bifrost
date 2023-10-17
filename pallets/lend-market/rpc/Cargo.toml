@@ -11,15 +11,15 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 serde = { version = "1.0.160", features = ["derive"] }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", features = [
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", features = [
 	'std',
 ] }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", features = [
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", features = [
 	'std',
 ] }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", features = [
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", features = [
 	'std',
 ] }
 

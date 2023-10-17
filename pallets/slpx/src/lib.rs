@@ -25,7 +25,6 @@ use frame_support::{
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::Get,
-	RuntimeDebug,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{
@@ -38,7 +37,7 @@ use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
 use sp_runtime::{
 	traits::{BlakeTwo256, CheckedSub},
-	DispatchError, Saturating,
+	DispatchError, RuntimeDebug, Saturating,
 };
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};

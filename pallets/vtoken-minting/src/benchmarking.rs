@@ -126,7 +126,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller), KSM, unlock_id)
 
 	on_initialize {
-		let block_num = T::BlockNumber::from(10u32);
+		let block_num =BlockNumberFor::<T>::from(10u32);
 	}:{VtokenMinting::<T>::on_initialize(block_num);}
 
 	impl_benchmark_test_suite!(

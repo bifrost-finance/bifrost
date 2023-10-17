@@ -26,6 +26,7 @@ use frame_support::{
 };
 use frame_system::EnsureSignedBy;
 use primitives::{AccountId, Balance};
+use sp_runtime::BuildStorage;
 
 use crate as asset_registry;
 
@@ -36,14 +37,13 @@ parameter_types!(
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = Everything;
 	type RuntimeOrigin = RuntimeOrigin;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type RuntimeCall = RuntimeCall;
 	type Hash = sp_runtime::testing::H256;
 	type Hashing = sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-	type Header = sp_runtime::testing::Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type BlockWeights = ();
@@ -74,7 +74,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -90,18 +90,13 @@ impl asset_registry::Config for Runtime {
 	type WeightInfo = ();
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: frame_system::{Pallet, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		AssetRegistry: asset_registry::{Pallet, Call, Event<T>, Storage},
+	pub enum Runtime {
+		System: frame_system,
+		Balances: pallet_balances,
+		AssetRegistry: asset_registry,
 	}
 );
 
@@ -117,7 +112,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self.balances.into_iter().collect::<Vec<_>>(),

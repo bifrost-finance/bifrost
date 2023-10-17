@@ -29,7 +29,7 @@ use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{Everything, GenesisBuild, Nothing},
+	traits::{Everything, Nothing},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -43,7 +43,7 @@ use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
-	AccountId32, Percent,
+	AccountId32, BuildStorage, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
@@ -52,7 +52,6 @@ use xcm_executor::XcmExecutor;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
-pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
@@ -60,22 +59,18 @@ pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
-		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
-		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
-		Utility: pallet_utility::{Pallet, Call, Event},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+	pub enum Runtime {
+		System: frame_system,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Tokens: orml_tokens,
+		XTokens: orml_xtokens,
+		Slp: bifrost_slp,
+		VtokenMinting: bifrost_vtoken_minting,
+		AssetRegistry: bifrost_asset_registry,
+		ParachainStaking: parachain_staking,
+		Utility: pallet_utility,
+		PolkadotXcm: pallet_xcm,
 	}
 );
 
@@ -97,14 +92,13 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type BlockWeights = ();
@@ -140,7 +134,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -519,6 +513,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -550,6 +545,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct ExtBuilder {
@@ -584,7 +581,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

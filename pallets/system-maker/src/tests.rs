@@ -80,8 +80,8 @@ fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
 		asset_0_currency_id,
 		asset_1_currency_id
 	));
-	let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() +
-		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
+	let deadline: BlockNumberFor<Runtime> =
+		<frame_system::Pallet<Runtime>>::block_number() + BlockNumberFor::<Runtime>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(ALICE),
 		asset_0_currency_id,

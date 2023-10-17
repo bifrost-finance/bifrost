@@ -18,11 +18,13 @@
 
 use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
 use sp_arithmetic::Percent;
 use sp_core::H160;
-use sp_runtime::traits::{IdentityLookup, StaticLookup};
+use sp_runtime::{
+	traits::{IdentityLookup, StaticLookup},
+	RuntimeDebug,
+};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 

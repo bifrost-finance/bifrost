@@ -88,7 +88,7 @@ pub mod pallet {
 			AccountId = AccountIdOf<Self>,
 			AtLeast64BitUnsigned = Self::AtLeast64BitUnsigned,
 			Config = Self,
-			BlockNumber = Self::BlockNumber,
+			BlockNumber = BlockNumberFor<Self>,
 		>;
 
 		type VtokenMinting: VtokenMintingOperator<
@@ -224,7 +224,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			a: T::AtLeast64BitUnsigned,
-			future_a_block: T::BlockNumber,
+			future_a_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			T::StableAsset::modify_a(pool_id, a, future_a_block)

@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use codec::{Decode, Encode};
-use frame_support::{sp_runtime::MultiSignature, RuntimeDebug};
+use frame_support::sp_runtime::MultiSignature;
+use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 use crate::ChainId;

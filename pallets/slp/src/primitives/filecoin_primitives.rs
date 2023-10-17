@@ -18,8 +18,8 @@
 
 use crate::{CurrencyId, MultiLocation};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct FilecoinLedger<Balance> {

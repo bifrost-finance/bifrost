@@ -18,9 +18,9 @@
 
 use crate::{MultiLocation, TimeUnit};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TokenSymbol};
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 

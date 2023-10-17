@@ -127,8 +127,8 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			let (start, end) = Self::get_start_and_end_release_block();
 			// relsease fixed amount every day if within release interval and has enough balance in
 			// the pool account

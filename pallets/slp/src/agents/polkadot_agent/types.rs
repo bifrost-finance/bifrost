@@ -18,10 +18,9 @@
 
 use crate::{pallet::Error, AccountIdOf, BalanceOf, Config, CurrencyId};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use node_primitives::{currency::KSM, DOT};
 use scale_info::TypeInfo;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{
 	opaque::v3::Instruction,

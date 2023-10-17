@@ -974,7 +974,7 @@ impl<T: Config> PolkadotAgent<T> {
 		// prepare the query_id for reporting back transact status
 		let responder = MultiLocation::parent();
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 
 		// Generate query_id need( responder,callback, timeout)
 		let query_id = match operation {

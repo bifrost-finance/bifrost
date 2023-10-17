@@ -19,6 +19,8 @@
 use crate::*;
 use alloc::vec::Vec;
 use frame_support::traits::OnRuntimeUpgrade;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::TryRuntimeError;
 
 const LOG_TARGET: &str = "cross-in-out::migration";
 
@@ -61,7 +63,7 @@ impl<T: Config> OnRuntimeUpgrade for CrossInOutMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		let cnt = IssueWhiteList::<T>::iter().count();
 		// print out the pre-migrate storage count
 		log::info!(target: LOG_TARGET, "IssueWhiteList pre-migrate storage count: {:?}", cnt);
@@ -69,7 +71,7 @@ impl<T: Config> OnRuntimeUpgrade for CrossInOutMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(cnt: Vec<u8>) -> Result<(), TryRuntimeError> {
 		let new_count = IssueWhiteList::<T>::iter().count();
 
 		let old_count: u64 = Decode::decode(&mut cnt.as_slice())

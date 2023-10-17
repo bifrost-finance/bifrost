@@ -45,17 +45,13 @@ pub(crate) type Signature = sp_runtime::MultiSignature;
 pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
-		Salp: salp::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Tokens: orml_tokens,
+		Multisig: pallet_multisig,
+		Salp: salp,
 	}
 );
 
@@ -75,15 +71,14 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = Index;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -284,7 +279,7 @@ impl WeightInfo for SalpWeightInfo {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![

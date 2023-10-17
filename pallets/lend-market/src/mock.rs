@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub use super::*;
+use sp_runtime::BuildStorage;
 
 use bifrost_asset_registry::AssetIdMaps;
 use frame_support::{
@@ -24,7 +25,7 @@ use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 pub use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
+use sp_runtime::{traits::IdentityLookup, AccountId32};
 use sp_std::vec::Vec;
 use std::{
 	cell::RefCell,
@@ -34,7 +35,6 @@ use std::{
 
 pub use node_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM, VSKSM};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const LDOT: CurrencyId = CurrencyId::Token2(10);
@@ -44,20 +44,16 @@ pub const PHA: CurrencyId = CurrencyId::Token2(5);
 pub const VPHA: CurrencyId = CurrencyId::VToken2(5);
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Tokens: orml_tokens,
+		Currencies: bifrost_currencies,
 		AssetRegistry: bifrost_asset_registry,
-		LendMarket: crate::{Pallet, Storage, Call, Event<T>},
-		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
-		Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
+		LendMarket: crate,
+		TimestampPallet: pallet_timestamp,
+		Assets: pallet_assets,
+		Prices: pallet_prices,
 	}
 );
 
@@ -73,13 +69,12 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
+	type Nonce = u32;
+	type Block = Block;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
@@ -133,7 +128,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -215,7 +210,11 @@ impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
 }
 
 impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: TimeStampedPrice) -> sp_runtime::DispatchResult {
+	fn feed_value(
+		_: Option<AccountId>,
+		_: CurrencyId,
+		_: TimeStampedPrice,
+	) -> sp_runtime::DispatchResult {
 		Ok(())
 	}
 }
@@ -343,7 +342,7 @@ impl Config for Test {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![

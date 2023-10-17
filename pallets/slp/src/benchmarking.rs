@@ -488,8 +488,8 @@ mod benchmarks {
 		let origin = <T as Config>::ControlOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Weightless)?;
 
-		OngoingTimeUnitUpdateInterval::<T>::insert(KSM, T::BlockNumber::from(0u32));
-		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, T::BlockNumber::from(0u32));
+		OngoingTimeUnitUpdateInterval::<T>::insert(KSM, BlockNumberFor::<T>::from(0u32));
+		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, BlockNumberFor::<T>::from(0u32));
 
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, TimeUnit::Era(0));
@@ -780,7 +780,7 @@ mod benchmarks {
 		_(
 			origin as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
-			Some(T::BlockNumber::from(100u32)),
+			Some(BlockNumberFor::<T>::from(100u32)),
 		);
 
 		Ok(())
@@ -866,7 +866,7 @@ mod benchmarks {
 						validators: vec![],
 					},
 				),
-				T::BlockNumber::from(10u32),
+				BlockNumberFor::<T>::from(10u32),
 			),
 		);
 		#[extrinsic_call]
@@ -904,7 +904,7 @@ mod benchmarks {
 						validators: vec![],
 					},
 				),
-				T::BlockNumber::from(10u32),
+				BlockNumberFor::<T>::from(10u32),
 			),
 		);
 		#[extrinsic_call]

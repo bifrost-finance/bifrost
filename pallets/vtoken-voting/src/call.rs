@@ -18,8 +18,7 @@
 
 use crate::{AccountVote, BalanceOf, Config, DerivativeIndex, PollIndex};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::boxed::Box;
 
 #[cfg(feature = "kusama")]

@@ -21,9 +21,8 @@
 extern crate alloc;
 
 use frame_support::{
-	dispatch::{CallMetadata, GetCallMetadata},
 	pallet_prelude::*,
-	traits::{Contains, PalletInfoAccess},
+	traits::{CallMetadata, Contains, GetCallMetadata, PalletInfoAccess},
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
@@ -100,7 +99,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

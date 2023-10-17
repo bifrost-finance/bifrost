@@ -955,7 +955,7 @@ impl<T: Config> MoonbeamAgent<T> {
 		// prepare the query_id for reporting back transact status
 		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = match operation {
 			XcmOperationType::Bond |
 			XcmOperationType::BondExtra |

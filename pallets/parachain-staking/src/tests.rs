@@ -6145,7 +6145,7 @@ fn test_hotfix_remove_delegation_requests_exited_candidates_errors_when_candidat
 }
 
 #[test]
-fn locking_zero_amount_is_ignored() {
+fn locking_zero_amount_removes_lock() {
 	use frame_support::traits::{LockableCurrency, WithdrawReasons};
 
 	// this test demonstrates the behavior of pallet Balance's `LockableCurrency` implementation of
@@ -6158,8 +6158,8 @@ fn locking_zero_amount_is_ignored() {
 		assert_eq!(crate::mock::query_lock_amount(1, DELEGATOR_LOCK_ID), Some(1));
 
 		Balances::set_lock(DELEGATOR_LOCK_ID, &1, 0, WithdrawReasons::all());
-		// Note that we tried to call `set_lock(0)` and it ignored it, we still have our lock
-		assert_eq!(crate::mock::query_lock_amount(1, DELEGATOR_LOCK_ID), Some(1));
+		// Note that we tried to call `set_lock(0)` and the previous lock gets removed
+		assert_eq!(crate::mock::query_lock_amount(1, DELEGATOR_LOCK_ID), None);
 	});
 }
 

@@ -13,7 +13,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.2.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 log = { version = "0.4.17", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
@@ -21,47 +21,47 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 [dependencies.frame-support]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dependencies.frame-system]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
-bifrost-currencies = { workspace = true }
+bifrost-currencies = { path = "../../pallets/currencies", default-features = false}
 
 [dev-dependencies.sp-core]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dev-dependencies.sp-io]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dependencies.sp-std]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dependencies.sp-runtime]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [dev-dependencies.pallet-balances]
 default-features = false
 git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v0.9.42"
+branch = "polkadot-v1.0.0"
 
 [features]
 default = ["std"]

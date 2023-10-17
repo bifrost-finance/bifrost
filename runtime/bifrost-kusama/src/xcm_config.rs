@@ -54,6 +54,7 @@ use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
 use xcm_builder::Account32Hash;
+use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -203,11 +204,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
 					if (id == parachains::Statemine::ID &&
 						index == parachains::Statemine::PALLET_ID) =>
+				{
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(RMRK))
 					} else {
 						None
-					},
+					}
+				},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
@@ -304,7 +307,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		origin: &MultiLocation,
 		message: &mut [Instruction<Call>],
 		max_weight: Weight,
-		_weight_credit: &mut Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
@@ -670,6 +673,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = ();
 	type MessageExporter = ();
+	type Aliasers = Nothing;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -719,6 +723,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

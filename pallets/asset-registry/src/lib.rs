@@ -28,7 +28,6 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
 	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
-	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -40,7 +39,7 @@ use primitives::{
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{One, UniqueSaturatedFrom},
-	ArithmeticError, FixedPointNumber, FixedU128,
+	ArithmeticError, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
@@ -177,6 +176,7 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyId, AssetMetadata<BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub currency: Vec<(CurrencyId, BalanceOf<T>, Option<(String, String, u8)>)>,
 		pub vcurrency: Vec<CurrencyId>,
@@ -184,20 +184,8 @@ pub mod pallet {
 		pub phantom: PhantomData<T>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			GenesisConfig {
-				currency: Default::default(),
-				vcurrency: Default::default(),
-				vsbond: Default::default(),
-				phantom: PhantomData,
-			}
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for (currency_id, metadata) in
 				self.currency.iter().map(|(currency_id, minimal_balance, metadata)| {

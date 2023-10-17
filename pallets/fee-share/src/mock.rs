@@ -31,7 +31,7 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Everything, GenesisBuild, Nothing},
+	traits::{Everything, Nothing},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -40,12 +40,11 @@ use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::{hashing::blake2_256, ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
 	traits::{
 		AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput,
 		UniqueSaturatedInto,
 	},
-	AccountId32, SaturatedConversion,
+	AccountId32, BuildStorage, SaturatedConversion,
 };
 use xcm::{prelude::*, v3::Weight};
 use xcm_builder::FixedWeightBounds;
@@ -74,22 +73,18 @@ pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>},
-		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		XTokens: orml_xtokens,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		FeeShare: bifrost_fee_share,
+		Slp: bifrost_slp,
+		VtokenMinting: bifrost_vtoken_minting,
+		ZenlinkProtocol: zenlink_protocol,
+		AssetRegistry: bifrost_asset_registry,
+		PolkadotXcm: pallet_xcm,
 	}
 );
 
@@ -103,7 +98,6 @@ impl bifrost_asset_registry::Config for Runtime {
 	type WeightInfo = ();
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
@@ -115,15 +109,14 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -164,7 +157,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -484,6 +477,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -515,6 +509,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct ExtBuilder {
@@ -549,7 +545,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

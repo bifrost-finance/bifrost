@@ -25,9 +25,7 @@
 use core::cmp::max;
 
 pub use crate::rate_model::*;
-
 use frame_support::{
-	log,
 	pallet_prelude::*,
 	require_transactional,
 	traits::{
@@ -54,6 +52,7 @@ use sp_runtime::{
 };
 use sp_std::{result::Result, vec::Vec};
 
+use log;
 use sp_io::hashing::blake2_256;
 pub use types::{BorrowSnapshot, Deposits, EarnedSnapshot, Market, MarketState, RewardMarketState};
 pub use weights::WeightInfo;
@@ -397,7 +396,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AssetIdOf<T>,
-		RewardMarketState<T::BlockNumber, BalanceOf<T>>,
+		RewardMarketState<BlockNumberFor<T>, BalanceOf<T>>,
 		ValueQuery,
 	>;
 
@@ -408,7 +407,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AssetIdOf<T>,
-		RewardMarketState<T::BlockNumber, BalanceOf<T>>,
+		RewardMarketState<BlockNumberFor<T>, BalanceOf<T>>,
 		ValueQuery,
 	>;
 

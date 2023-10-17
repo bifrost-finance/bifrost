@@ -205,7 +205,7 @@ pub mod v2 {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		fn pre_upgrade() -> Result<Vec<u8>,TryRuntimeError> {
 			let pallet_name = T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none");
 
 			ensure!(
@@ -225,7 +225,7 @@ pub mod v2 {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+		fn post_upgrade(state: Vec<u8>) -> Result<(),TryRuntimeError> {
 			let (tp_nums_old, td_nums_old): (u32, u32) =
 				Decode::decode(&mut &state[..]).expect("pre_upgrade provides a valid state; qed");
 

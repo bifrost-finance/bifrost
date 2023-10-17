@@ -43,6 +43,7 @@ use pallet_xcm::ensure_response;
 use scale_info::TypeInfo;
 use xcm_interface::ChainId;
 use zenlink_protocol::{AssetId, ExportZenlink};
+use sp_runtime::traits::One;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -94,7 +95,6 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
-		sp_std::convert::TryInto,
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
@@ -104,14 +104,14 @@ pub mod pallet {
 	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
-	use sp_std::prelude::*;
+	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v3::{MaybeErrorCode, MultiLocation};
 	use xcm_interface::traits::XcmHelper;
 
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
+	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
@@ -337,19 +337,13 @@ pub mod pallet {
 	>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub initial_multisig_account: Option<AccountIdOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { initial_multisig_account: None }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			if let Some(ref key) = self.initial_multisig_account {
 				MultisigConfirmAccount::<T>::put(key)
@@ -1303,7 +1297,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
-			if n != 0 && (n % T::ReleaseCycle::get()) == 0 {
+			if n != Zero::zero() && (n % T::ReleaseCycle::get()) == Zero::zero() {
 				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
 					// Calculate the release amount
 					let release_amount = T::ReleaseRatio::get() * rp_balance;
@@ -1337,7 +1331,7 @@ pub mod pallet {
 			block: BlockNumberFor<T>,
 			last_slot: LeasePeriod,
 		) -> Result<bool, Error<T>> {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			Ok(block >= block_end_redeem)
@@ -1349,7 +1343,7 @@ pub mod pallet {
 			block: BlockNumberFor<T>,
 			last_slot: LeasePeriod,
 		) -> Result<bool, Error<T>> {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			Ok(block >= block_begin_redeem && block < block_end_redeem)
@@ -1357,11 +1351,8 @@ pub mod pallet {
 
 		pub(crate) fn block_end_of_lease_period_index(
 			slot: LeasePeriod,
-		) -> Result<BlockNumberFor<T>, Error<T>> {
-			let end_block =
-				(slot + 1).checked_mul(T::LeasePeriod::get()).ok_or(Error::<T>::Overflow)?;
-
-			Ok(end_block)
+		) -> BlockNumberFor<T> {
+				(BlockNumberFor::<T>::from(slot) + One::one()).saturating_mul(T::LeasePeriod::get())
 		}
 
 		pub fn find_fund(

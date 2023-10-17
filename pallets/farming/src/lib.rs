@@ -98,10 +98,10 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
-			Self::BlockNumber,
+			BlockNumberFor<Self>,
 		>;
 
-		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type WhitelistMaximumLimit: Get<u32>;

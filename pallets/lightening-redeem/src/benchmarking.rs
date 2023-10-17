@@ -69,9 +69,9 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let amount: u128 = 1_000;
 		LighteningRedeem::<T>::add_ksm_to_pool(RawOrigin::Signed(caller.clone()).into(), BalanceOf::<T>::unique_saturated_from(amount))?;
-		StartEndReleaseBlock::<T>::mutate(|interval| *interval = (T::BlockNumber::from(0u32), T::BlockNumber::from(100u32)));
+		StartEndReleaseBlock::<T>::mutate(|interval| *interval = (BlockNumberFor::<T>::from(0u32),BlockNumberFor::<T>::from(100u32)));
 
-		let block_num = T::BlockNumber::from(10u32);
+		let block_num =BlockNumberFor::<T>::from(10u32);
 	}:{LighteningRedeem::<T>::on_initialize(block_num);}
 }
 

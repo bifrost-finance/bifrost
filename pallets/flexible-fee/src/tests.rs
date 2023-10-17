@@ -110,8 +110,8 @@ fn basic_setup() {
 		asset_4_currency_id
 	));
 
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	let mut deadline: BlockNumberFor<Test> =
+		<frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -124,8 +124,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 2
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -138,8 +137,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 3
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -152,8 +150,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 4
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,

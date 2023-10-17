@@ -22,7 +22,7 @@ pub mod bifrost_kusama;
 pub mod bifrost_polkadot;
 
 pub use node_primitives::{AccountId, Block, Signature};
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use sc_chain_spec::ChainSpecExtension;
 use serde::{Deserialize, Serialize};
 use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -37,16 +37,6 @@ type AccountPublic = <Signature as Verify>::Signer;
 /// customizable from the chain spec.
 #[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
 #[serde(rename_all = "camelCase")]
-pub struct Extensions {
-	/// Block numbers with known hashes.
-	pub fork_blocks: sc_client_api::ForkBlocks<node_primitives::Block>,
-	/// Known bad block hashes.
-	pub bad_blocks: sc_client_api::BadBlocks<node_primitives::Block>,
-}
-
-/// The extensions for the [`ChainSpec`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
-#[serde(deny_unknown_fields)]
 pub struct RelayExtensions {
 	/// The relay chain of the Parachain.
 	pub relay_chain: String,

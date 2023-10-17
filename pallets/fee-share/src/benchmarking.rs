@@ -27,7 +27,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use crate::{Pallet as FeeShare, *};
 
 benchmarks! {
-	on_initialize {}:{FeeShare::<T>::on_idle(T::BlockNumber::from(10u32),Weight::from_parts(0, 0));}
+	on_initialize {}:{FeeShare::<T>::on_idle(BlockNumberFor::<T>::from(10u32),Weight::from_parts(0, 0));}
 
 	create_distribution {
 		let caller: T::AccountId = whitelisted_caller();
@@ -55,7 +55,7 @@ benchmarks! {
 		None,
 		Some(tokens_proportion.clone()),
 		Some(true))
-	set_era_length {}: _(RawOrigin::Root,T::BlockNumber::from(10u32))
+	set_era_length {}: _(RawOrigin::Root,BlockNumberFor::<T>::from(10u32))
 	execute_distribute {
 		let caller: T::AccountId = whitelisted_caller();
 		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];

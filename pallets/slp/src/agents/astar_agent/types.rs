@@ -18,9 +18,9 @@
 
 use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
 use sp_core::H160;
+use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::WeightLimit, VersionedMultiAssets, VersionedMultiLocation};
 

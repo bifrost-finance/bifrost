@@ -43,12 +43,11 @@ use pallet_xcm::EnsureResponse;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
-	generic,
 	testing::Header,
 	traits::{
 		AccountIdConversion, BlakeTwo256, BlockNumberProvider, IdentityLookup, UniqueSaturatedInto,
 	},
-	AccountId32, SaturatedConversion,
+	AccountId32, BuildStorage, SaturatedConversion,
 };
 use std::convert::TryInto;
 use xcm::prelude::*;
@@ -70,22 +69,18 @@ pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u128,
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: system::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Storage, Event<T>},
-		Balances: balances::{Pallet, Call, Storage, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
-		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: system,
+		Tokens: orml_tokens,
+		Balances: balances,
+		TransactionPayment: pallet_transaction_payment,
+		FlexibleFee: flexible_fee,
+		ZenlinkProtocol: zenlink_protocol,
+		Currencies: bifrost_currencies,
+		Salp: bifrost_salp,
+		AssetRegistry: bifrost_asset_registry,
+		PolkadotXcm: pallet_xcm,
+		VtokenVoting: bifrost_vtoken_voting,
 	}
 );
 
@@ -119,15 +114,14 @@ impl system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u32;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = u128;
+	type Nonce = u128;
+	type Block = Block;
 	// needs to be u128 against u64, otherwise the account address will be half cut.
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
@@ -169,7 +163,7 @@ impl balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -361,7 +355,7 @@ where
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }
 
 //************** Salp mock start *****************
@@ -465,6 +459,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -496,6 +491,8 @@ impl pallet_xcm::Config for Test {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 //************** Salp mock end *****************
@@ -577,10 +574,10 @@ impl RelaychainDataProvider {
 }
 
 impl BlockNumberProvider for RelaychainDataProvider {
-	type BlockNumber = BlockNumber;
+	type BlockNumber = BlockNumberFor<Test>;
 
 	fn current_block_number() -> Self::BlockNumber {
-		RelaychainBlockNumber::get()
+		RelaychainBlockNumber::get().into()
 	}
 }
 

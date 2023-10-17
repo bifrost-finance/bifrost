@@ -50,7 +50,6 @@ pub mod custom_origins {
 		/// Origin able to configure SystemStaking.
 		SystemStakingAdmin,
 		/// Origin able to execute SALP protocol.
-		#[strum(serialize = "salp_admin")]
 		SALPAdmin,
 		/// Origin commanded by any members of the Polkadot Fellowship (no Dan grade needed).
 		FellowshipInitiates,

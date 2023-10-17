@@ -35,8 +35,9 @@ use frame_support::{
 		vec::Vec,
 	},
 	traits::EnsureOrigin,
-	PalletId, RuntimeDebug,
+	PalletId
 };
+use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use frame_support::{Deserialize, Serialize};
 use frame_system::pallet_prelude::*;
@@ -655,20 +656,14 @@ pub mod pallet {
 		StorageValue<_, StorageVersion, ValueQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
 		pub pallet_version: StorageVersion,
 		pub _phantom: PhantomData<(T, I)>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
-		fn default() -> Self {
-			GenesisConfig { pallet_version: Default::default(), _phantom: PhantomData }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
 			PalletVersion::<T, I>::put(self.pallet_version);
 		}

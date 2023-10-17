@@ -69,7 +69,7 @@ benchmarks! {
 		add_locks::<T>(&caller, l as u8);
 		add_vesting_schedule::<T>(&caller)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&caller),
 			Some(100u32.into()),
@@ -118,7 +118,7 @@ benchmarks! {
 		add_locks::<T>(&other, l as u8);
 		add_vesting_schedule::<T>(&other)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&other),
 			Some(100u32.into()),

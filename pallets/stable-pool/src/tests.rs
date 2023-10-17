@@ -184,7 +184,8 @@ fn mint_successful_equal_amounts() {
 		assert_eq!(Tokens::free_balance(coin0, &swap_id), 10000000u128 - BALANCE_OFF);
 		assert_eq!(Tokens::free_balance(coin1, &swap_id), 10000000u128 - BALANCE_OFF);
 		assert_eq!(Tokens::free_balance(pool_asset, &3), 199800000000000000u128 - BALANCE_OFF);
-		assert_eq!(Tokens::free_balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF); // fee_recipient
+		assert_eq!(Tokens::free_balance(pool_asset, &2), 200000000000000u128 - BALANCE_OFF);
+		// fee_recipient
 	});
 }
 

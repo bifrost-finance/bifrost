@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config, TokenUnlockLedger};
-use frame_support::{log, pallet_prelude::*, traits::OnRuntimeUpgrade};
+use frame_support::{pallet_prelude::*, traits::OnRuntimeUpgrade};
 use node_primitives::{RedeemType, TimeUnit};
 use sp_std::marker::PhantomData;
 

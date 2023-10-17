@@ -16,22 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::net::SocketAddr;
-
-use codec::Encode;
-use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use node_primitives::Block;
 use node_service::{self as service, IdentifyVariant};
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+	NetworkParams, Result, SharedParams, SubstrateCli,
 };
+use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
+use sp_runtime::traits::AccountIdConversion;
 
 use crate::{Cli, RelayChainCli, Subcommand};
 
@@ -159,35 +154,6 @@ impl SubstrateCli for Cli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		load_spec(id)
 	}
-
-	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_bifrost_kusama() || spec.is_dev() {
-			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-			{
-				&service::collator_kusama::bifrost_kusama_runtime::VERSION
-			}
-			#[cfg(not(any(
-				feature = "with-bifrost-kusama-runtime",
-				feature = "with-bifrost-runtime"
-			)))]
-			panic!("{}", service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE);
-		} else if spec.is_bifrost_polkadot() {
-			#[cfg(any(
-				feature = "with-bifrost-polkadot-runtime",
-				feature = "with-bifrost-runtime"
-			))]
-			{
-				&service::collator_polkadot::bifrost_polkadot_runtime::VERSION
-			}
-			#[cfg(not(any(
-				feature = "with-bifrost-polkadot-runtime",
-				feature = "with-bifrost-runtime"
-			)))]
-			panic!("{}", service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE);
-		} else {
-			panic!("{}", "unknown runtime!");
-		}
-	}
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -221,10 +187,6 @@ impl SubstrateCli for RelayChainCli {
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
-	}
-
-	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		polkadot_cli::Cli::native_runtime_version(chain_spec)
 	}
 }
 
@@ -322,10 +284,13 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::ExportGenesisState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|_config| {
-				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
-				let state_version = Cli::native_runtime_version(&spec).state_version();
-				cmd.run::<Block>(&*spec, state_version)
+			let chain_spec = &runner.config().chain_spec;
+
+			with_runtime_or_err!(chain_spec, {
+				return runner.sync_run(|config| {
+					let partials = new_partial(&config, false)?;
+					cmd.run(&*config.chain_spec, &*partials.client)
+				});
 			})
 		},
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
@@ -407,7 +372,12 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						with_runtime_or_err!(chain_spec, {
-							return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+							return runner.sync_run(|config| {
+								cmd.run::<Block, ExtendedHostFunctions<
+									sp_io::SubstrateHostFunctions,
+									<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
+								>>(config)
+							});
 						})
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
@@ -452,8 +422,6 @@ pub fn run() -> Result<()> {
 		},
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
-			use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
 
@@ -487,11 +455,12 @@ pub fn run() -> Result<()> {
 			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
-				let hwbench = (!cli.no_hardware_benchmarks).then_some(
-					config.database.path().map(|database_path| {
+				let hwbench = (!cli.no_hardware_benchmarks)
+					.then_some(config.database.path().map(|database_path| {
 						let _ = std::fs::create_dir_all(database_path);
 						sc_sysinfo::gather_hwbench(Some(database_path))
-					})).flatten();
+					}))
+					.flatten();
 
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
@@ -506,30 +475,19 @@ pub fn run() -> Result<()> {
 				let id = ParaId::from(para_id);
 
 				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(&id);
-
-				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
-
-				let block: node_primitives::Block =
-					generate_genesis_block(&*config.chain_spec, state_version)
-						.map_err(|e| format!("{:?}", e))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+					AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
+						&id,
+					);
 
 				let polkadot_config = SubstrateCli::create_configuration(
 					&polkadot_cli,
 					&polkadot_cli,
 					config.tokio_handle.clone(),
 				)
-					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
-				info!("Parachain id: {:?}", id);
-				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
+				info!("Parachain Account: {parachain_account}");
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
-
-				if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relay_chain_args.is_empty() {
-					log::warn!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
-				}
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
@@ -547,14 +505,6 @@ pub fn run() -> Result<()> {
 impl DefaultConfigurationValues for RelayChainCli {
 	fn p2p_listen_port() -> u16 {
 		30334
-	}
-
-	fn rpc_ws_listen_port() -> u16 {
-		9945
-	}
-
-	fn rpc_http_listen_port() -> u16 {
-		9934
 	}
 
 	fn prometheus_listen_port() -> u16 {
@@ -584,18 +534,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 			.shared_params()
 			.base_path()?
 			.or_else(|| self.base_path.clone().map(Into::into)))
-	}
-
-	fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_http(default_listen_port)
-	}
-
-	fn rpc_ipc(&self) -> Result<Option<String>> {
-		self.base.base.rpc_ipc()
-	}
-
-	fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_ws(default_listen_port)
 	}
 
 	fn prometheus_config(
@@ -639,10 +577,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
 		self.base.base.rpc_methods()
-	}
-
-	fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-		self.base.base.rpc_ws_max_connections()
 	}
 
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {

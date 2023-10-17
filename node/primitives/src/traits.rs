@@ -26,13 +26,12 @@ use crate::{
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
-	dispatch::DispatchError,
 	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
-	BoundedVec, DispatchResult,
+	BoundedVec, DispatchError, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
 

@@ -112,14 +112,12 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T: Config<I>, I: 'static = ()> =
 	<<T as Config<I>>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-type LeasePeriodOf<T> = <T as frame_system::Config>::BlockNumber;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> {
+	pub trait Config<I: 'static = ()>: frame_system::Config {
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -266,8 +264,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			token_symbol: TokenSymbol,
-			#[pallet::compact] first_slot: LeasePeriodOf<T>,
-			#[pallet::compact] last_slot: LeasePeriodOf<T>,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
 			#[pallet::compact] amount: BalanceOf<T, I>,
 			#[pallet::compact] total_price: BalanceOf<T, I>,
 			order_type: OrderType,

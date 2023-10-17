@@ -664,7 +664,7 @@ impl<T: Config> AstarAgent<T> {
 		// prepare the query_id for reporting back transact status
 		let responder = Self::get_astar_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 
 		// Generate query_id need( responder,callback, timeout)
 		let query_id = match operation {

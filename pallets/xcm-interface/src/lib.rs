@@ -115,7 +115,7 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		#[pallet::constant]
-		type CallBackTimeOut: Get<Self::BlockNumber>;
+		type CallBackTimeOut: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::error]
@@ -171,7 +171,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

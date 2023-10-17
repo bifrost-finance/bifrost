@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 pub use codec::Encode;
-use frame_support::{traits::GenesisBuild, weights::constants::*};
+use frame_support::{weights::constants::*};
 pub use node_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
 pub use sp_runtime::{

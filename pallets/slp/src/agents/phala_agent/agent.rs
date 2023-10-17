@@ -794,7 +794,7 @@ impl<T: Config> PhalaAgent<T> {
 		// prepare the query_id for reporting back transact status
 		let responder = Self::get_pha_multilocation();
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
 
 		let (call_as_subaccount, fee, weight) =

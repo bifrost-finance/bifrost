@@ -42,6 +42,7 @@ use frame_support::{
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
+use log;
 use node_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
 	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
@@ -322,8 +323,8 @@ pub mod pallet {
 	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			Self::handle_on_initialize()
 				.map_err(|err| {
 					Self::deposit_event(Event::FastRedeemFailed { err });
@@ -667,10 +668,11 @@ pub mod pallet {
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						T::CurrencyIdRegister::register_vtoken_metadata(token_symbol)?;
 					},
-				CurrencyId::Token2(token_id) =>
+				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						T::CurrencyIdRegister::register_vtoken2_metadata(token_id)?;
-					},
+					}
+				},
 				_ => (),
 			}
 

@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Config, QueryIdContributionInfo};
-use frame_support::{log, pallet_prelude::*, traits::OnRuntimeUpgrade};
+use frame_support::{pallet_prelude::*, traits::OnRuntimeUpgrade};
+use log;
 use sp_std::marker::PhantomData;
 
 pub struct RemoveUnusedQueryIdContributionInfo<T>(PhantomData<T>);

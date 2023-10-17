@@ -20,11 +20,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::Weight;
-use frame_support::{
-	parameter_types,
-	traits::{GenesisBuild, Nothing},
-	PalletId,
-};
+use frame_support::{parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureRoot;
 use node_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
@@ -32,9 +28,8 @@ use node_primitives::{
 };
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-	AccountId32,
+	AccountId32, BuildStorage,
 };
 
 use crate as bifrost_token_issuer;
@@ -50,21 +45,16 @@ pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>}
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Council: pallet_collective::<Instance1>,
+		TokenIssuer: bifrost_token_issuer
 	}
 );
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
@@ -76,15 +66,14 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -125,7 +114,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -224,7 +213,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

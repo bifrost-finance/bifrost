@@ -258,7 +258,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		origin: &MultiLocation,
 		message: &mut [Instruction<Call>],
 		max_weight: Weight,
-		_weight_credit: &mut Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
@@ -522,6 +522,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = ();
 	type MessageExporter = ();
+	type Aliasers = Nothing;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -568,6 +569,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

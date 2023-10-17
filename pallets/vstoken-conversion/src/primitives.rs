@@ -17,9 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
+use sp_runtime::RuntimeDebug;
 
 /// Exchange rate of vstoken-conversion
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen, Default)]

@@ -27,12 +27,11 @@ use frame_support::{dispatch::DispatchClass, log, pallet_prelude::*, transaction
 use frame_system::pallet_prelude::*;
 use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
+pub use pallet::*;
+use pallet_traits::*;
 use sp_runtime::{traits::CheckedDiv, FixedU128};
 use sp_std::vec::Vec;
 use xcm::v3::MultiLocation;
-
-pub use pallet::*;
-use pallet_traits::*;
 
 #[cfg(test)]
 mod mock;

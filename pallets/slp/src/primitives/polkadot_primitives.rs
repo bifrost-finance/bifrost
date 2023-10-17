@@ -18,9 +18,9 @@
 
 use crate::MultiLocation;
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit};
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

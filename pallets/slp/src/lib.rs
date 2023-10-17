@@ -2096,7 +2096,7 @@ pub mod pallet {
 			let current_block_number = <frame_system::Pallet<T>>::block_number();
 			// get the due block number
 			let due_block_number = current_block_number
-				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 				.ok_or(Error::<T>::OverFlow)?;
 
 			let mut validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)> = vec![];
@@ -2169,7 +2169,7 @@ pub mod pallet {
 
 			// get the due block number if the validator is not in the validator boost list
 			let mut due_block_number = current_block_number
-				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 				.ok_or(Error::<T>::OverFlow)?;
 
 			let validator_boost_list_op = ValidatorBoostList::<T>::get(currency_id);
@@ -2185,7 +2185,7 @@ pub mod pallet {
 					let original_due_block = validator_boost_vec[index].1;
 					// get the due block number
 					due_block_number = original_due_block
-						.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+						.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 						.ok_or(Error::<T>::OverFlow)?;
 
 					validator_boost_vec[index].1 = due_block_number;

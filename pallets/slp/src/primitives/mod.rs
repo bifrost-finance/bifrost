@@ -27,9 +27,9 @@ pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
 use node_primitives::TimeUnit;
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 pub type QueryId = u64;
 pub const TIMEOUT_BLOCKS: u32 = 1000;

@@ -18,11 +18,11 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-pub use crate::{Pallet as Salp, *};
+use crate::{Pallet as Salp, *};
 use bifrost_stable_pool::AtLeast64BitUnsignedOf;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use node_primitives::{CurrencyId, ParaId, XcmOperationType, KSM, VSKSM};
 use sp_runtime::{
 	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
@@ -393,7 +393,7 @@ mod benchmarks {
 			100_000_000_000_000u128,
 			0u128,
 			0u128,
-			T::BlockNumber::from(10u32),
+			BlockNumberFor::<T>::from(10u32),
 		));
 
 		#[extrinsic_call]
