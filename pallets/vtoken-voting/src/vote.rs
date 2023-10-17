@@ -125,6 +125,7 @@ pub enum PollStatus<Tally, Moment> {
 	None,
 	Ongoing(Tally),
 	Completed(Moment, bool),
+	Killed(Moment),
 }
 
 impl<Tally, Moment> PollStatus<Tally, Moment> {

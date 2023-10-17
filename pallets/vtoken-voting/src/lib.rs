@@ -501,9 +501,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_referendum_expired(vtoken, poll_index)
+			Self::ensure_referendum_completed(vtoken, poll_index)
 				.or(Self::ensure_referendum_killed(vtoken, poll_index))
-				.map_err(|_| Error::<T>::NotExpired)?;
+				.map_err(|_| Error::<T>::NoPermissionYet)?;
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
@@ -896,7 +896,8 @@ pub mod pallet {
 							}
 							Ok(())
 						},
-						PollStatus::None => Ok(()), // Poll was cancelled.
+						PollStatus::Killed(_) => Ok(()), // Poll was killed.
+						PollStatus::None => Ok(()),      // Poll was cancelled.
 					})
 				} else {
 					Ok(())
@@ -1119,6 +1120,7 @@ pub mod pallet {
 					Ok(result)
 				},
 				Some(ReferendumInfo::Completed(end)) => f(PollStatus::Completed(end, false)),
+				Some(ReferendumInfo::Killed(end)) => f(PollStatus::Killed(end)),
 				_ => f(PollStatus::None),
 			}
 		}
