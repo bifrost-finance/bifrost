@@ -249,6 +249,12 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 	new_test_ext().execute_with(|| {
 		let poll_index = 3;
 		let vtoken = VKSM;
+		let locking_period = 10;
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::root(),
+			vtoken,
+			locking_period,
+		));
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(1, 1)));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
@@ -261,6 +267,7 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 			poll_index,
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
+		RelaychainDataProvider::set_block_number(13);
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &poll_index));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
@@ -272,7 +279,12 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 	new_test_ext().execute_with(|| {
 		let poll_index = 3;
 		let vtoken = VKSM;
-
+		let locking_period = 10;
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::root(),
+			vtoken,
+			locking_period,
+		));
 		for i in 1..=5 {
 			assert_ok!(VtokenVoting::vote(
 				RuntimeOrigin::signed(i),
@@ -288,6 +300,7 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 			poll_index,
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
+		RelaychainDataProvider::set_block_number(163);
 		for i in 1..=5 {
 			assert_ok!(VtokenVoting::try_remove_vote(&i, vtoken, poll_index, UnvoteScope::Any));
 		}
