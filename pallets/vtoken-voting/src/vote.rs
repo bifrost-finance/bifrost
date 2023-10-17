@@ -154,11 +154,11 @@ pub enum AccountVote<Balance> {
 impl<Balance: Saturating> AccountVote<Balance> {
 	/// Returns `Some` of the lock periods that the account is locked for, assuming that the
 	/// referendum passed iff `approved` is `true`.
-	pub fn locked_if(self, approved: bool) -> Option<(u32, Balance)> {
+	pub fn locked_if(self, _approved: bool) -> Option<(u32, Balance)> {
 		// winning side: can only be removed after the lock period ends.
 		match self {
 			AccountVote::Standard { vote: Vote { conviction: Conviction::None, .. }, .. } => None,
-			AccountVote::Standard { vote, balance } if vote.aye == approved =>
+			AccountVote::Standard { vote, balance } /* if vote.aye == _approved */ =>
 				Some((vote.conviction.lock_periods(), balance)),
 			_ => None,
 		}

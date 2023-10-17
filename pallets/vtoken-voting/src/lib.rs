@@ -913,12 +913,13 @@ pub mod pallet {
 			poll_index: &PollIndex,
 		) -> DispatchResult {
 			let class_lock_needed = VotingFor::<T>::mutate(who, |voting| {
-				voting.rejig(frame_system::Pallet::<T>::block_number());
+				voting.rejig(T::RelaychainBlockNumberProvider::current_block_number());
 				voting.locked_balance()
 			});
 			let lock_needed = ClassLocksFor::<T>::mutate(who, |locks| {
 				locks.retain(|x| &x.0 != poll_index);
-				if !class_lock_needed.is_zero() {
+				if !class_lock_needed.is_zero() && !Self::is_referendum_killed(vtoken, *poll_index)
+				{
 					let ok = locks.try_push((*poll_index, class_lock_needed)).is_ok();
 					debug_assert!(
 						ok,
@@ -1102,6 +1103,13 @@ pub mod pallet {
 			let responder = T::ResponseOrigin::ensure_origin(origin.clone())
 				.or_else(|_| T::ControlOrigin::ensure_origin(origin).map(|_| Here.into()))?;
 			Ok(responder)
+		}
+
+		fn is_referendum_killed(vtoken: CurrencyIdOf<T>, poll_index: PollIndex) -> bool {
+			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
+				Some(ReferendumInfo::Killed(_)) => true,
+				_ => false,
+			}
 		}
 
 		fn try_access_poll<R>(

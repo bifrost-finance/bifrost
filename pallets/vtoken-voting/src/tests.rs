@@ -326,9 +326,13 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 			2,
 			ReferendumInfoOf::<Runtime>::Completed(1),
 		));
-		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 0));
-		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 1));
-		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 2));
+
+		let locking_period = 10;
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::root(),
+			vtoken,
+			locking_period,
+		));
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
@@ -339,15 +343,14 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		// run_to(3);
+		RelaychainDataProvider::set_block_number(21);
+
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &0));
-		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		// run_to(6);
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &1));
-		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
-		// run_to(7);
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
