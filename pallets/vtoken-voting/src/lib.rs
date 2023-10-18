@@ -237,6 +237,8 @@ pub mod pallet {
 		TooMany,
 		/// Change delegator is not allowed.
 		ChangeDelegator,
+		/// DelegatorVoteRole mismatch.
+		DelegatorVoteRoleMismatch,
 	}
 
 	/// Information concerning any given referendum.
@@ -443,7 +445,11 @@ pub mod pallet {
 			}
 
 			if !DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)) {
-				let default_vote: AccountVote<BalanceOf<T>> = VoteRole::from(vote).into();
+				let role = DelegatorVoteRole::<T>::get(vtoken, derivative_index)
+					.ok_or(Error::<T>::NoData)?;
+				let target_role = VoteRole::from(vote);
+				ensure!(role == target_role, Error::<T>::DelegatorVoteRoleMismatch);
+				let default_vote: AccountVote<BalanceOf<T>> = target_role.into();
 				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), default_vote);
 			}
 
@@ -880,7 +886,7 @@ pub mod pallet {
 							Ok(())
 						},
 						PollStatus::Completed(end, approved) => {
-							if let Some((lock_periods, balance)) = v.1.locked_if(approved) {
+							if let Some((lock_periods, _)) = v.1.locked_if(approved) {
 								let unlock_at = end.saturating_add(
 									VoteLockingPeriod::<T>::get(vtoken)
 										.ok_or(Error::<T>::NoData)?
@@ -892,7 +898,8 @@ pub mod pallet {
 										matches!(scope, UnvoteScope::Any),
 										Error::<T>::NoPermissionYet
 									);
-									prior.accumulate(unlock_at, balance)
+									// v.3 is the actual locked vtoken balance
+									prior.accumulate(unlock_at, v.3)
 								}
 							}
 							Ok(())
@@ -1137,7 +1144,7 @@ pub mod pallet {
 		fn try_select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			my_vote: AccountVote<BalanceOf<T>>,
+			new_vote: AccountVote<BalanceOf<T>>,
 		) -> Result<DerivativeIndex, DispatchError> {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 
@@ -1154,22 +1161,22 @@ pub mod pallet {
 			}
 			let mut data = delegator_votes
 				.into_iter()
-				.map(|(index, vote)| {
-					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
+				.map(|(index, voted)| {
+					let (_, available_vote) = T::DerivativeAccount::get_stake_info(token, index)
 						.unwrap_or(Default::default());
-					(active, vote, index)
+					(available_vote, voted, index)
 				})
-				.filter(|(_, vote, _)| VoteRole::from(*vote) == VoteRole::from(my_vote))
+				.filter(|(_, voted, _)| VoteRole::from(*voted) == VoteRole::from(new_vote))
 				.collect::<Vec<_>>();
 			data.sort_by(|a, b| {
 				(b.0.saturating_sub(b.1.balance())).cmp(&(a.0.saturating_sub(a.1.balance())))
 			});
 
-			let (active, vote, index) = data.first().ok_or(Error::<T>::NoData)?;
-			active
-				.checked_sub(&vote.balance())
+			let (available_vote, voted, index) = data.first().ok_or(Error::<T>::NoData)?;
+			available_vote
+				.checked_sub(&voted.balance())
 				.ok_or(ArithmeticError::Underflow)?
-				.checked_sub(&my_vote.balance())
+				.checked_sub(&new_vote.balance())
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
