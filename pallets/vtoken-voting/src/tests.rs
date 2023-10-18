@@ -347,25 +347,120 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 			locking_period,
 		));
 
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 5), (1, 10), (2, 5)])
+				.unwrap()
+		);
+
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5), (0, 10)])
+				.unwrap()
+		);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5), (0, 10), (1, 10)])
+				.unwrap()
+		);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 10), (1, 10), (2, 10)])
+				.unwrap()
+		);
 
 		RelaychainDataProvider::set_block_number(21);
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 10)]).unwrap()
+		);
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &1));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 10)]).unwrap()
+		);
 
 		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![]).unwrap()
+		);
+	});
+}
+
+#[test]
+fn removed_votes_when_referendum_killed() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(5, 2)));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::root(),
+			vtoken,
+			0,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::root(),
+			vtoken,
+			1,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::root(),
+			vtoken,
+			2,
+			ReferendumInfoOf::<Runtime>::Completed(1),
+		));
+
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 0));
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 1));
+		assert_ok!(VtokenVoting::kill_referendum(RuntimeOrigin::root(), vtoken, 2));
+
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 5), (1, 10), (2, 5)])
+				.unwrap()
+		);
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5)]).unwrap()
+		);
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
+		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5)]).unwrap()
+		);
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
+		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![]).unwrap()
+		);
 	});
 }
 
