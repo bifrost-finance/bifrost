@@ -189,6 +189,12 @@ mod benchmarks {
 		)?;
 		Pallet::<T>::set_vote_locking_period(RawOrigin::Root.into(), vtoken, 0u32.into())?;
 
+		let notify_origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let query_id = 0u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		Pallet::<T>::notify_vote(notify_origin, query_id, response)?;
+
 		#[extrinsic_call]
 		_(origin, vtoken, poll_index);
 
