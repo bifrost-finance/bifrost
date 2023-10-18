@@ -580,7 +580,7 @@ impl slpx::Config for Test {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub fn new_test_ext() -> frame_support::sp_io::TestExternalities {
+pub fn new_test_ext() -> sp_io::TestExternalities {
 	use sp_runtime::BuildStorage;
 	frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }

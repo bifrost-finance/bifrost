@@ -18,7 +18,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 use crate::{Pallet as SystemStaking, *};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
 	assert_ok,
 	sp_runtime::{traits::UniqueSaturatedFrom, Perbill, Permill},
@@ -26,6 +26,7 @@ use frame_support::{
 };
 use frame_system::{Pallet as System, RawOrigin};
 use node_primitives::{CurrencyId, PoolId, TokenSymbol};
+use sp_std::vec;
 
 benchmarks! {
 	on_initialize {

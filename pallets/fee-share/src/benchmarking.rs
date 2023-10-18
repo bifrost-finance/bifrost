@@ -19,10 +19,11 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
-use frame_support::{assert_ok, dispatch::Weight};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use node_primitives::{CurrencyId, TokenSymbol};
+use sp_std::vec;
 
 use crate::{Pallet as FeeShare, *};
 

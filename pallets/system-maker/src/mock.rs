@@ -30,7 +30,6 @@ use frame_support::{
 	pallet_prelude::Get,
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
-	sp_std::marker::PhantomData,
 	traits::{Everything, Nothing},
 	PalletId,
 };
@@ -46,6 +45,7 @@ use sp_runtime::{
 	},
 	AccountId32, BuildStorage, SaturatedConversion,
 };
+use sp_std::marker::PhantomData;
 use xcm::{prelude::*, v3::Weight};
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;

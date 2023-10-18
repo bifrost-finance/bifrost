@@ -21,7 +21,7 @@
 use super::*;
 use crate::Pallet as AssetRegistry;
 use frame_benchmarking::{benchmarks, v1::BenchmarkError};
-use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
+use frame_support::{assert_ok, traits::UnfilteredDispatchable};
 use primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::traits::UniqueSaturatedFrom;
 use xcm::v3::prelude::*;

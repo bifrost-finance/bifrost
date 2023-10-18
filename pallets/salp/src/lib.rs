@@ -41,9 +41,9 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_xcm::ensure_response;
 use scale_info::TypeInfo;
+use sp_runtime::traits::One;
 use xcm_interface::ChainId;
 use zenlink_protocol::{AssetId, ExportZenlink};
-use sp_runtime::traits::One;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -1349,10 +1349,8 @@ pub mod pallet {
 			Ok(block >= block_begin_redeem && block < block_end_redeem)
 		}
 
-		pub(crate) fn block_end_of_lease_period_index(
-			slot: LeasePeriod,
-		) -> BlockNumberFor<T> {
-				(BlockNumberFor::<T>::from(slot) + One::one()).saturating_mul(T::LeasePeriod::get())
+		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			(BlockNumberFor::<T>::from(slot) + One::one()).saturating_mul(T::LeasePeriod::get())
 		}
 
 		pub fn find_fund(

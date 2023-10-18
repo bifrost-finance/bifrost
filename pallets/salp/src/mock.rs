@@ -25,7 +25,6 @@ use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
-	sp_std::marker::PhantomData,
 	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, Nothing},
 	weights::Weight,
 	PalletId,
@@ -43,6 +42,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Convert, IdentityLookup, UniqueSaturatedInto},
 	BuildStorage,
 };
+use sp_std::marker::PhantomData;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;

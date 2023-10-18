@@ -23,8 +23,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
-use frame_support::{dispatch::DispatchClass, log, pallet_prelude::*, transactional};
+use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
+use log;
 use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
 pub use pallet::*;

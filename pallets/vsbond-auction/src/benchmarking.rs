@@ -21,7 +21,7 @@
 use frame_benchmarking::{
 	account, benchmarks, impl_benchmark_test_suite, v1::BenchmarkError, whitelisted_caller,
 };
-use frame_support::{dispatch::UnfilteredDispatchable, sp_runtime::traits::UniqueSaturatedFrom};
+use frame_support::{sp_runtime::traits::UniqueSaturatedFrom, traits::UnfilteredDispatchable};
 use frame_system::RawOrigin;
 use node_primitives::TokenSymbol;
 

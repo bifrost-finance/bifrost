@@ -19,7 +19,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::{benchmarks, v1::BenchmarkError};
-use frame_support::dispatch::UnfilteredDispatchable;
+use frame_support::traits::UnfilteredDispatchable;
 use node_primitives::{CurrencyId, TokenSymbol};
 
 use super::*;

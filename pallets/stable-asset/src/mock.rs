@@ -17,7 +17,7 @@
 
 use crate as stable_asset;
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	parameter_types,
 	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, Nothing, OnUnbalanced},
 	PalletId,
@@ -26,7 +26,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
-use sp_runtime::BuildStorage;
+use sp_runtime::{BuildStorage, DispatchError};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 

@@ -18,10 +18,11 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, sp_io};
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use hex_literal::hex;
 use node_primitives::TokenSymbol;
 use sp_core::{bounded::BoundedVec, ConstU32};
+use sp_io;
 use zenlink_protocol::AssetId;
 
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];

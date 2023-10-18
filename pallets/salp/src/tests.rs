@@ -19,11 +19,11 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate::{mock::*, Error, FundStatus, *};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, DispatchError};
 use xcm_interface::SalpHelper;
 use zenlink_protocol::AssetId;
 

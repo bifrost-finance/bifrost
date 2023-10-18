@@ -22,8 +22,8 @@ use crate::{
 };
 use frame_support::assert_noop;
 use frame_support::assert_ok;
-use frame_support::dispatch::DispatchError;
 use orml_traits::MultiCurrency;
+use sp_runtime::DispatchError;
 
 pub const BALANCE_OFF: u128 = 1;
 

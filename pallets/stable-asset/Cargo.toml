@@ -20,18 +20,18 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 
 [dependencies.frame-support]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dependencies.frame-system]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dependencies.sp-core]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -40,28 +40,28 @@ bifrost-currencies = { path = "../../pallets/currencies", default-features = fal
 
 [dev-dependencies.sp-core]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dev-dependencies.sp-io]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dependencies.sp-std]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dependencies.sp-runtime]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [dev-dependencies.pallet-balances]
 default-features = false
-git = "https://github.com/paritytech/substrate"
-branch = "polkadot-v1.0.0"
+git = "https://github.com/paritytech/polkadot-sdk"
+branch = "release-polkadot-v1.1.0"
 
 [features]
 default = ["std"]

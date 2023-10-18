@@ -17,11 +17,11 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 //! Benchmarking
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::{Currency, Get, OnFinalize, OnInitialize, ReservableCurrency};
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::{Perbill, Percent};
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
 
 use crate::{
 	AccountIdOf, BalanceOf, Call, CandidateBondLessRequest, Config, DelegationAction, Pallet,
