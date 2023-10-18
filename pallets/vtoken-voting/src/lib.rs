@@ -504,6 +504,7 @@ pub mod pallet {
 			Self::ensure_referendum_completed(vtoken, poll_index)
 				.or(Self::ensure_referendum_killed(vtoken, poll_index))
 				.map_err(|_| Error::<T>::NoPermissionYet)?;
+			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;

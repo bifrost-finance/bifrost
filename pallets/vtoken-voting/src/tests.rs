@@ -315,11 +315,16 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 fn lock_amalgamation_valid_with_multiple_removed_votes() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
+		let response = response_success();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(5, 2)));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response.clone()));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response.clone()));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response.clone()));
 
 		assert_ok!(VtokenVoting::set_referendum_status(
 			RuntimeOrigin::root(),
@@ -406,11 +411,16 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 fn removed_votes_when_referendum_killed() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
+		let response = response_success();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(5, 2)));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response.clone()));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response.clone()));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response.clone()));
 
 		assert_ok!(VtokenVoting::set_referendum_status(
 			RuntimeOrigin::root(),
