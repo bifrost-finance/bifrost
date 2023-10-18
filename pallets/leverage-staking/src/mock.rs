@@ -68,7 +68,7 @@ frame_support::construct_runtime!(
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
 		AssetRegistry: bifrost_asset_registry,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
-		// StablePool: bifrost_stable_pool,
+		StablePool: bifrost_stable_pool,
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		LendMarket: lend_market::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
@@ -279,6 +279,17 @@ impl nutsfinance_stable_asset::Config for Test {
 	type EnsurePoolAssetId = EnsurePoolAssetId;
 }
 
+impl bifrost_stable_pool::Config for Test {
+	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<u128>;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type StableAsset = StableAsset;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
+}
+
 parameter_types! {
 	pub const LeverageStakingPalletId: PalletId = PalletId(*b"bf/levst");
 }
@@ -289,6 +300,7 @@ impl leverage_staking::Config for Test {
 	type ControlOrigin = EnsureRoot<u128>;
 	type VtokenMinting = VtokenMinting;
 	type LendMarket = LendMarket;
+	type StablePoolHandler = StablePool;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 	type PalletId = LeverageStakingPalletId;
@@ -473,13 +485,11 @@ impl ExtBuilder {
 
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
-			(1, BNC, 1_000_000_000_000),
-			// (1, VDOT, 100_000_000),
+			(0, DOT, unit(10000)),
+			(0, VDOT, unit(10000)),
+			(1, BNC, unit(1)),
 			(1, DOT, unit(1000)),
-			// (2, VDOT, 100_000_000_000_000),
-			(3, DOT, 200_000_000),
-			(4, DOT, 100_000_000),
-			(6, BNC, 100_000_000_000_000),
+			(3, DOT, unit(1000)),
 		])
 	}
 

@@ -28,8 +28,29 @@ fn init_lend_market() {
 	TimestampPallet::set_timestamp(6000);
 }
 
+fn init_stable_pool() {
+	assert_ok!(StablePool::create_pool(
+		RuntimeOrigin::root(),
+		vec![DOT, VDOT],
+		vec![1u128, 1u128],
+		10000000u128,
+		20000000u128,
+		50000000u128,
+		10000u128,
+		2,
+		1,
+		1000000000000000000u128,
+	));
+	assert_ok!(StablePool::edit_token_rate(
+		RuntimeOrigin::root(),
+		0,
+		vec![(DOT, (1, 1)), (VDOT, (1, 1))]
+	));
+	let amounts = vec![unit(1000), unit(1000)];
+	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
+}
 #[test]
-fn mint_successful_equal_amounts() {
+fn flash_loan_deposit() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init_lend_market();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
@@ -40,6 +61,36 @@ fn mint_successful_equal_amounts() {
 			DOT,
 			FixedU128::from_inner(unit(1_100_000)),
 			100_000
+		));
+		assert_eq!(
+			AccountBorrows::<Test>::get(DOT, 1),
+			BorrowSnapshot { principal: 10_000, borrow_index: 1.into() },
+		);
+	});
+}
+
+#[test]
+fn flash_loan_repay() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		init_lend_market();
+		init_stable_pool();
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
+		assert_ok!(LeverageStaking::flash_loan_deposit(
+			RuntimeOrigin::signed(1),
+			DOT,
+			FixedU128::from_inner(unit(1_100_000)),
+			100_000
+		));
+		assert_eq!(
+			AccountBorrows::<Test>::get(DOT, 1),
+			BorrowSnapshot { principal: 10_000, borrow_index: 1.into() },
+		);
+		assert_ok!(LeverageStaking::flash_loan_repay(
+			RuntimeOrigin::signed(1),
+			DOT,
+			FixedU128::from_inner(unit(1_100_000)),
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),

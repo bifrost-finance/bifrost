@@ -38,7 +38,7 @@ use node_primitives::{
 };
 pub use nutsfinance_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
-	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,
+	RedeemSingleResult, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
 };
 use orml_traits::MultiCurrency;
 use sp_core::U256;
@@ -822,6 +822,42 @@ impl<T: Config> Pallet<T> {
 		Ok(downscale_out)
 	}
 
+	pub fn get_swap_input(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: T::Balance,
+	) -> Result<T::Balance, DispatchError> {
+		let mut pool_info = T::StableAsset::pool(pool_id)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let dy = Self::upscale(
+			amount,
+			pool_id,
+			*pool_info
+				.assets
+				.get(currency_id_out as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+		)?;
+		let SwapResult { dx, dy: _, .. } =
+			nutsfinance_stable_asset::Pallet::<T>::get_swap_amount_exact(
+				&pool_info,
+				currency_id_in,
+				currency_id_out,
+				dy,
+			)
+			.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
+		let downscale_out = Self::downscale(
+			dx,
+			pool_id,
+			*pool_info
+				.assets
+				.get(currency_id_in as usize)
+				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+		)?;
+
+		Ok(downscale_out)
+	}
+
 	pub fn add_liquidity_amount(
 		pool_id: StableAssetPoolId,
 		mut amounts: Vec<T::Balance>,
@@ -843,5 +879,20 @@ impl<T: Config> Pallet<T> {
 			nutsfinance_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 
 		Ok(mint_amount)
+	}
+
+	fn get_pool_id(
+		currency_id_in: &AssetIdOf<T>,
+		currency_id_out: &AssetIdOf<T>,
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
+		Pools::<T>::iter().find_map(|(pool_id, pool_info)| {
+			if pool_info.assets.get(0) == Some(currency_id_in) && pool_info.assets.get(1) == Some(currency_id_out) {
+				Some((pool_id, 0, 1))
+			} else if pool_info.assets.get(0) == Some(currency_id_out) && pool_info.assets.get(1) == Some(currency_id_in) {
+				Some((pool_id, 1, 0))
+			} else {
+				None
+			}
+		})
 	}
 }

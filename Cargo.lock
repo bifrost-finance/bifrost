@@ -5423,6 +5423,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-runtime-common",
+ "bifrost-stable-pool",
  "bifrost-vtoken-minting",
  "env_logger 0.10.0",
  "frame-benchmarking",

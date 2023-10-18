@@ -53,11 +53,15 @@ use sp_runtime::{
 use sp_std::marker::PhantomData;
 pub use weights::WeightInfo;
 
+use bifrost_stable_pool::traits::StablePoolHandler;
 use lend_market::{AccountIdOf, AssetIdOf, BalanceOf, InterestRateModel};
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+
+	#[pallet::pallet]
+	#[pallet::without_storage_info]
+	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + lend_market::Config {
@@ -75,6 +79,12 @@ pub mod pallet {
 
 		type LendMarket: LendMarketTrait<AssetIdOf<Self>, AccountIdOf<Self>, BalanceOf<Self>>;
 
+		type StablePoolHandler: StablePoolHandler<
+			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
+			CurrencyId = AssetIdOf<Self>,
+		>;
+
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
 
 		type CurrencyIdRegister: CurrencyIdRegister<AssetIdOf<Self>>;
@@ -85,6 +95,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		ArgumentsError,
 		NotSupportTokenType,
 	}
 
@@ -94,9 +105,16 @@ pub mod pallet {
 		FlashLoanDeposited { asset_id: AssetIdOf<T>, rate: Rate, input_value: BalanceOf<T> },
 	}
 
-	#[pallet::pallet]
-	#[pallet::without_storage_info]
-	pub struct Pallet<T>(PhantomData<T>);
+	#[pallet::storage]
+	pub type AccountFlashLoans<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		AssetIdOf<T>,
+		Blake2_128Concat,
+		T::AccountId,
+		AccountFlashLoanInfo<BalanceOf<T>>,
+		// ValueQuery,
+	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -143,8 +161,91 @@ pub mod pallet {
 			log::debug!("flash_loan_deposit: additional_issuance_token_value: {:?}, rate: {:?}, input_value: {:?}, token_value: {:?}, vtoken_id: {:?}, vtoken_value: {:?}", 
 			additional_issuance_token_value, rate, input_value, token_value, vtoken_id, vtoken_value);
 
+			AccountFlashLoans::<T>::insert(
+				asset_id,
+				&who,
+				AccountFlashLoanInfo { amount: input_value, leverage_rate: rate },
+			);
 			Self::deposit_event(Event::<T>::FlashLoanDeposited { asset_id, rate, input_value });
 			Ok(().into())
 		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_price())]
+		pub fn flash_loan_repay(
+			origin: OriginFor<T>,
+			asset_id: AssetIdOf<T>,
+			rate: Rate,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			log::debug!(
+				"flash_loan_repay: vtoken_id: {:?}, asset_id: {:?}, rate: {:?}",
+				vtoken_id,
+				asset_id,
+				rate
+			);
+			// let flash_loan_info = AccountFlashLoans::<T>::get(asset_id, &who);
+			AccountFlashLoans::<T>::mutate(
+				asset_id,
+				&who,
+				|maybe_flash_loan_info| -> DispatchResult {
+					let flash_loan_info =
+						maybe_flash_loan_info.as_mut().ok_or(Error::<T>::ArgumentsError)?;
+					ensure!(flash_loan_info.leverage_rate >= rate, Error::<T>::ArgumentsError);
+
+					let token_value = FixedU128::from_inner(flash_loan_info.amount)
+						.checked_mul(&rate)
+						.map(|r| r.into_inner())
+						.ok_or(ArithmeticError::Underflow)?;
+					// TODO: get VDOT amount from stable-pool through token_value
+					let (pool_id, currency_id_in, currency_id_out) =
+						T::StablePoolHandler::get_pool_id(&vtoken_id, &asset_id)
+							.ok_or(Error::<T>::ArgumentsError)?;
+					let vtoken_value = T::StablePoolHandler::get_swap_input(
+						pool_id,
+						currency_id_in,
+						currency_id_out,
+						token_value,
+					)?;
+					<T as lend_market::Config>::Assets::mint_into(vtoken_id, &who, vtoken_value)?;
+					T::StablePoolHandler::swap(
+						&who,
+						pool_id,
+						currency_id_in,
+						currency_id_out,
+						vtoken_value,
+						token_value,
+					)?;
+					log::debug!("flash_loan_repay: token_value: {:?}, vtoken_value: {:?}, vtoken_id: {:?}, asset_id: {:?}, rate: {:?}, flash_loan_info: {:?}",
+					token_value, vtoken_value, vtoken_id, asset_id, rate, flash_loan_info);
+					T::LendMarket::do_repay_borrow(&who, asset_id, token_value)?;
+					T::LendMarket::do_redeem(&who, vtoken_id, vtoken_value)?;
+					<T as lend_market::Config>::Assets::burn_from(
+						vtoken_id,
+						&who,
+						vtoken_value,
+						Precision::Exact,
+						Fortitude::Force,
+					)?;
+
+					flash_loan_info.leverage_rate = flash_loan_info
+						.leverage_rate
+						.checked_sub(&rate)
+						.ok_or(ArithmeticError::Underflow)?;
+					Ok(())
+				},
+			)?;
+			Ok(().into())
+		}
 	}
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct AccountFlashLoanInfo<Balance> {
+	amount: Balance,
+	leverage_rate: Rate,
 }

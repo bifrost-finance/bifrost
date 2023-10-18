@@ -27,6 +27,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
+bifrost-stable-pool = { path = "../stable-pool", default-features = false }
 
 [dev-dependencies]
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
@@ -66,6 +67,7 @@ std = [
 	"bifrost-asset-registry/std",
 	"xcm-builder/std",
 	"lend-market/std",
+	"bifrost-stable-pool/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 
