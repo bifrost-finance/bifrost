@@ -349,10 +349,10 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			Self::mint_inner(exchanger, token_id, token_amount, remark)
+			Self::mint_inner(exchanger, token_id, token_amount, remark).map(|_| ())
 		}
 
 		#[pallet::call_index(1)]
@@ -1200,7 +1200,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-		) -> DispatchResultWithPostInfo {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
@@ -1223,7 +1223,7 @@ pub mod pallet {
 				fee,
 				remark,
 			});
-			Ok(().into())
+			Ok(vtoken_amount.into())
 		}
 
 		#[transactional]
@@ -1589,7 +1589,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
 		remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::mint_inner(exchanger, token_id, token_amount, remark)
 	}
 

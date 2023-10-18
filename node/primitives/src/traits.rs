@@ -319,7 +319,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		token_id: CurrencyId,
 		token_amount: Balance,
 		remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo;
+	) -> Result<Balance, DispatchError>;
 	fn redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
@@ -357,8 +357,8 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_token_amount: Balance,
 		_remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo {
-		Ok(().into())
+	) ->  Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn redeem(

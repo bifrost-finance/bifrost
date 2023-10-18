@@ -54,7 +54,6 @@ use sp_std::marker::PhantomData;
 pub use weights::WeightInfo;
 
 use lend_market::{AccountIdOf, AssetIdOf, BalanceOf, InterestRateModel};
-use pallet_traits::LendMarket;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -74,7 +73,7 @@ pub mod pallet {
 			BalanceOf<Self>,
 		>;
 
-		type LendMarket: LendMarket<AssetIdOf<Self>, AccountIdOf<Self>, BalanceOf<Self>>;
+		type LendMarket: LendMarketTrait<AssetIdOf<Self>, AccountIdOf<Self>, BalanceOf<Self>>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
 
@@ -92,7 +91,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlashLoanDeposited { asset_id: AssetIdOf<T>, rate: Rate, amount: BalanceOf<T> },
+		FlashLoanDeposited { asset_id: AssetIdOf<T>, rate: Rate, input_value: BalanceOf<T> },
 	}
 
 	#[pallet::pallet]
@@ -107,17 +106,18 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T>,
 			rate: Rate,
-			amount: BalanceOf<T>,
+			input_value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let token_amount = FixedU128::from_inner(amount);
-			let additional_issuance_token_value = token_amount
+			let token_value = FixedU128::from_inner(input_value)
 				.checked_mul(&rate)
-				.ok_or(ArithmeticError::Underflow)?
-				.checked_sub(&token_amount)
 				.map(|r| r.into_inner())
 				.ok_or(ArithmeticError::Underflow)?;
+
+			let additional_issuance_token_value =
+				token_value.checked_sub(input_value).ok_or(ArithmeticError::Underflow)?;
+
 			<T as lend_market::Config>::Assets::mint_into(
 				asset_id,
 				&who,
@@ -125,13 +125,9 @@ pub mod pallet {
 			)?;
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let token_value = T::VtokenMinting::mint(
-				who.clone(),
-				asset_id,
-				amount + additional_issuance_token_value,
-				BoundedVec::default(),
-			);
-			T::LendMarket::do_mint(&who, vtoken_id, token_value)?;
+			let vtoken_value =
+				T::VtokenMinting::mint(who.clone(), asset_id, token_value, BoundedVec::default())?;
+			T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 			let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
 			if deposits.is_collateral == false {
 				T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
@@ -144,8 +140,10 @@ pub mod pallet {
 				Precision::Exact,
 				Fortitude::Force,
 			)?;
+			log::debug!("flash_loan_deposit: additional_issuance_token_value: {:?}, rate: {:?}, input_value: {:?}, token_value: {:?}, vtoken_id: {:?}, vtoken_value: {:?}", 
+			additional_issuance_token_value, rate, input_value, token_value, vtoken_id, vtoken_value);
 
-			Self::deposit_event(Event::<T>::FlashLoanDeposited { asset_id, rate, amount });
+			Self::deposit_event(Event::<T>::FlashLoanDeposited { asset_id, rate, input_value });
 			Ok(().into())
 		}
 	}

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 pub use super::*;
 
-// use crate as bifrost_stable_pool;
+use crate as leverage_staking;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -26,6 +26,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
+use lend_market::{JumpModel, Market, MarketState};
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT, *,
@@ -48,6 +49,7 @@ use xcm::{
 };
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -70,6 +72,7 @@ frame_support::construct_runtime!(
 		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 		LendMarket: lend_market::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		LeverageStaking: leverage_staking::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -276,16 +279,20 @@ impl nutsfinance_stable_asset::Config for Test {
 	type EnsurePoolAssetId = EnsurePoolAssetId;
 }
 
-// impl bifrost_stable_pool::Config for Test {
-// 	type WeightInfo = ();
-// 	type ControlOrigin = EnsureRoot<u128>;
-// 	type CurrencyId = CurrencyId;
-// 	type MultiCurrency = Currencies;
-// 	type StableAsset = StableAsset;
-// 	type VtokenMinting = VtokenMinting;
-// 	type CurrencyIdConversion = AssetIdMaps<Test>;
-// 	type CurrencyIdRegister = AssetIdMaps<Test>;
-// }
+parameter_types! {
+	pub const LeverageStakingPalletId: PalletId = PalletId(*b"bf/levst");
+}
+
+impl leverage_staking::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<u128>;
+	type VtokenMinting = VtokenMinting;
+	type LendMarket = LendMarket;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
+	type CurrencyIdRegister = AssetIdMaps<Test>;
+	type PalletId = LeverageStakingPalletId;
+}
 
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
@@ -468,7 +475,7 @@ impl ExtBuilder {
 		self.balances(vec![
 			(1, BNC, 1_000_000_000_000),
 			// (1, VDOT, 100_000_000),
-			(1, DOT, 100_000_000_000_000),
+			(1, DOT, unit(1000)),
 			// (2, VDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
@@ -521,5 +528,30 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+pub fn unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(12))
+}
+
+pub const fn market_mock(lend_token_id: CurrencyId) -> Market<Balance> {
+	Market {
+		close_factor: Ratio::from_percent(50),
+		collateral_factor: Ratio::from_percent(50),
+		liquidation_threshold: Ratio::from_percent(55),
+		liquidate_incentive: Rate::from_inner(Rate::DIV / 100 * 110),
+		liquidate_incentive_reserved_factor: Ratio::from_percent(3),
+		state: MarketState::Pending,
+		rate_model: InterestRateModel::Jump(JumpModel {
+			base_rate: Rate::from_inner(Rate::DIV / 100 * 2),
+			jump_rate: Rate::from_inner(Rate::DIV / 100 * 10),
+			full_rate: Rate::from_inner(Rate::DIV / 100 * 32),
+			jump_utilization: Ratio::from_percent(80),
+		}),
+		reserve_factor: Ratio::from_percent(15),
+		supply_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
+		borrow_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
+		lend_token_id,
 	}
 }
