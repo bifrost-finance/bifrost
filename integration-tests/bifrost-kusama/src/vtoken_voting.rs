@@ -130,7 +130,6 @@ fn vote_works() {
 			assert_ok!(VtokenVoting::set_delegator_role(
 				RuntimeOrigin::root(),
 				vtoken,
-				poll_index,
 				5,
 				VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
 			));

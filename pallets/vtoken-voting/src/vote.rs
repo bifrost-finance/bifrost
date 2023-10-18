@@ -100,21 +100,21 @@ impl TryFrom<u8> for VoteRole {
 	type Error = ();
 	fn try_from(i: u8) -> Result<VoteRole, ()> {
 		Ok(match i {
-			0 => VoteRole::Standard { aye: true, conviction: Conviction::None }, // TODO remove
+			0 => VoteRole::Standard { aye: true, conviction: Conviction::None },
 			1 => VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
 			2 => VoteRole::Standard { aye: true, conviction: Conviction::Locked2x },
 			3 => VoteRole::Standard { aye: true, conviction: Conviction::Locked3x },
 			4 => VoteRole::Standard { aye: true, conviction: Conviction::Locked4x },
 			5 => VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
 			6 => VoteRole::Standard { aye: true, conviction: Conviction::Locked6x },
-			10 => VoteRole::Standard { aye: false, conviction: Conviction::None }, // TODO remove
+			10 => VoteRole::Standard { aye: false, conviction: Conviction::None },
 			11 => VoteRole::Standard { aye: false, conviction: Conviction::Locked1x },
 			12 => VoteRole::Standard { aye: false, conviction: Conviction::Locked2x },
 			13 => VoteRole::Standard { aye: false, conviction: Conviction::Locked3x },
 			14 => VoteRole::Standard { aye: false, conviction: Conviction::Locked4x },
 			15 => VoteRole::Standard { aye: false, conviction: Conviction::Locked5x },
 			16 => VoteRole::Standard { aye: false, conviction: Conviction::Locked6x },
-			20 => VoteRole::Split, // TODO remove
+			20 => VoteRole::Split,
 			21 => VoteRole::SplitAbstain,
 			_ => return Err(()),
 		})

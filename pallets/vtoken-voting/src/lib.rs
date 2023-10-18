@@ -299,6 +299,10 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
 
 	#[pallet::storage]
+	pub type DelegatorVoteRole<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, CurrencyIdOf<T>, Twox64Concat, DerivativeIndex, VoteRole>;
+
+	#[pallet::storage]
 	pub type DelegatorVote<T: Config> = StorageNMap<
 		_,
 		(
@@ -331,29 +335,24 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub delegator_votes: Vec<(CurrencyIdOf<T>, PollIndex, u8, DerivativeIndex)>,
+		pub delegator_vote_roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			GenesisConfig { delegator_votes: vec![], undeciding_timeouts: vec![] }
+			GenesisConfig { delegator_vote_roles: vec![], undeciding_timeouts: vec![] }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.delegator_votes
-				.iter()
-				.for_each(|(vtoken, poll_index, role, derivative_index)| {
-					let vote_role = VoteRole::try_from(*role).unwrap();
-					DelegatorVote::<T>::insert(
-						(vtoken, poll_index, derivative_index),
-						AccountVote::<BalanceOf<T>>::from(vote_role),
-					);
-				});
+			self.delegator_vote_roles.iter().for_each(|(vtoken, role, derivative_index)| {
+				let vote_role = VoteRole::try_from(*role).unwrap();
+				DelegatorVoteRole::<T>::insert(vtoken, derivative_index, vote_role);
+			});
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
@@ -441,6 +440,11 @@ pub mod pallet {
 			} else {
 				Self::ensure_referendum_ongoing(vtoken, poll_index)?;
 				submitted = true;
+			}
+
+			if !DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)) {
+				let default_vote: AccountVote<BalanceOf<T>> = VoteRole::from(vote).into();
+				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), default_vote);
 			}
 
 			// record vote info
@@ -590,7 +594,6 @@ pub mod pallet {
 		pub fn set_delegator_role(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 			vote_role: VoteRole,
 		) -> DispatchResult {
@@ -602,14 +605,11 @@ pub mod pallet {
 				Error::<T>::NoData
 			);
 			ensure!(
-				!DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)),
+				!DelegatorVoteRole::<T>::contains_key(vtoken, derivative_index),
 				Error::<T>::DerivativeIndexOccupied
 			);
 
-			DelegatorVote::<T>::insert(
-				(vtoken, poll_index, derivative_index),
-				AccountVote::<BalanceOf<T>>::from(vote_role),
-			);
+			DelegatorVoteRole::<T>::insert(vtoken, derivative_index, vote_role);
 
 			Self::deposit_event(Event::<T>::DelegatorRoleSet {
 				vtoken,
@@ -1141,7 +1141,19 @@ pub mod pallet {
 		) -> Result<DerivativeIndex, DispatchError> {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 
-			let mut data = DelegatorVote::<T>::iter_prefix((vtoken, poll_index))
+			let vote_roles = DelegatorVoteRole::<T>::iter_prefix(vtoken).collect::<Vec<_>>();
+			let mut delegator_votes =
+				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
+			let delegator_vote_keys =
+				delegator_votes.iter().map(|(index, _)| *index).collect::<Vec<_>>();
+			for vote_role in vote_roles {
+				if !delegator_vote_keys.contains(&vote_role.0) {
+					delegator_votes
+						.push((vote_role.0, AccountVote::<BalanceOf<T>>::from(vote_role.1)));
+				}
+			}
+			let mut data = delegator_votes
+				.into_iter()
 				.map(|(index, vote)| {
 					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
 						.unwrap_or(Default::default());

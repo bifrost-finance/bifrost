@@ -548,14 +548,12 @@ fn kill_referendum_with_origin_signed_fails() {
 fn set_delegator_role_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
-		let poll_index = 3;
 		let derivative_index: DerivativeIndex = 100;
 		let role = aye(10, 3).into();
 
 		assert_ok!(VtokenVoting::set_delegator_role(
 			RuntimeOrigin::root(),
 			vtoken,
-			poll_index,
 			derivative_index,
 			role,
 		));
