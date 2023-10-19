@@ -516,7 +516,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::NoPermissionYet)?;
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
-			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::OnlyExpired)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
 
 			Self::deposit_event(Event::<T>::Unlocked { who, vtoken, poll_index });
@@ -920,22 +920,11 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: &PollIndex,
 		) -> DispatchResult {
-			let class_lock_needed = VotingFor::<T>::mutate(who, |voting| {
+			VotingFor::<T>::mutate(who, |voting| {
 				voting.rejig(T::RelaychainBlockNumberProvider::current_block_number());
-				voting.locked_balance()
 			});
 			let lock_needed = ClassLocksFor::<T>::mutate(who, |locks| {
 				locks.retain(|x| &x.0 != poll_index);
-				if !class_lock_needed.is_zero() && !Self::is_referendum_killed(vtoken, *poll_index)
-				{
-					let ok = locks.try_push((*poll_index, class_lock_needed)).is_ok();
-					debug_assert!(
-						ok,
-						"Vec bounded by number of classes; \
-					all items in Vec associated with a unique class; \
-					qed"
-					);
-				}
 				locks.iter().map(|x| x.1).max().unwrap_or(Zero::zero())
 			});
 			if lock_needed.is_zero() {
@@ -1111,13 +1100,6 @@ pub mod pallet {
 			let responder = T::ResponseOrigin::ensure_origin(origin.clone())
 				.or_else(|_| T::ControlOrigin::ensure_origin(origin).map(|_| Here.into()))?;
 			Ok(responder)
-		}
-
-		fn is_referendum_killed(vtoken: CurrencyIdOf<T>, poll_index: PollIndex) -> bool {
-			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
-				Some(ReferendumInfo::Killed(_)) => true,
-				_ => false,
-			}
 		}
 
 		fn try_access_poll<R>(

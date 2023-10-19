@@ -358,47 +358,30 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 				.unwrap()
 		);
 
+		RelaychainDataProvider::set_block_number(10);
+		assert_noop!(
+			VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0),
+			Error::<Runtime>::NoPermissionYet
+		);
+
+		RelaychainDataProvider::set_block_number(11);
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5), (0, 10)])
-				.unwrap()
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5)]).unwrap()
 		);
 
+		RelaychainDataProvider::set_block_number(11);
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(usable_balance(vtoken, &ALICE), 5);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5), (0, 10), (1, 10)])
-				.unwrap()
-		);
-
-		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
-		assert_eq!(
-			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 10), (1, 10), (2, 10)])
-				.unwrap()
+			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5)]).unwrap()
 		);
 
 		RelaychainDataProvider::set_block_number(21);
-
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &0));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
-		assert_eq!(
-			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 10)]).unwrap()
-		);
-
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &1));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
-		assert_eq!(
-			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 10)]).unwrap()
-		);
-
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &2));
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
