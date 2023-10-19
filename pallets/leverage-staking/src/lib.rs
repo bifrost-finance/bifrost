@@ -31,7 +31,7 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		fungibles::{Inspect, Mutate},
-		tokens::{Fortitude, Precision},
+		tokens::{Fortitude, Precision, Preservation},
 		Get,
 	},
 	BoundedVec, PalletId, Parameter,
@@ -47,7 +47,7 @@ pub use pallet_traits::{
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
 };
 use sp_runtime::{
-	traits::{CheckedMul, CheckedSub, StaticLookup},
+	traits::{CheckedMul, CheckedSub, StaticLookup, Zero},
 	ArithmeticError, FixedU128, RuntimeDebug,
 };
 use sp_std::marker::PhantomData;
@@ -102,7 +102,17 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlashLoanDeposited { asset_id: AssetIdOf<T>, rate: Rate, input_value: BalanceOf<T> },
+		FlashLoanDeposited {
+			who: AccountIdOf<T>,
+			asset_id: AssetIdOf<T>,
+			amount: BalanceOf<T>,
+			rate: Rate,
+		},
+		FlashLoanRepaid {
+			who: AccountIdOf<T>,
+			asset_id: AssetIdOf<T>,
+			rate: Rate,
+		},
 	}
 
 	#[pallet::storage]
@@ -113,7 +123,6 @@ pub mod pallet {
 		Blake2_128Concat,
 		T::AccountId,
 		AccountFlashLoanInfo<BalanceOf<T>>,
-		// ValueQuery,
 	>;
 
 	#[pallet::call]
@@ -128,19 +137,24 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			if let Some(flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
+				Self::do_repay(&who, asset_id, None)?;
+			}
+
 			let token_value = FixedU128::from_inner(input_value)
 				.checked_mul(&rate)
 				.map(|r| r.into_inner())
 				.ok_or(ArithmeticError::Underflow)?;
 
-			let additional_issuance_token_value =
-				token_value.checked_sub(input_value).ok_or(ArithmeticError::Underflow)?;
-
-			<T as lend_market::Config>::Assets::mint_into(
+			T::Assets::transfer(
 				asset_id,
 				&who,
-				additional_issuance_token_value,
+				&lend_market::Pallet::<T>::account_id(),
+				input_value,
+				Preservation::Expendable,
 			)?;
+
+			<T as lend_market::Config>::Assets::mint_into(asset_id, &who, token_value)?;
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_value =
@@ -150,23 +164,26 @@ pub mod pallet {
 			if deposits.is_collateral == false {
 				T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 			}
-			T::LendMarket::do_borrow(&who, asset_id, additional_issuance_token_value)?;
+			T::LendMarket::do_borrow(&who, asset_id, token_value)?;
 			<T as lend_market::Config>::Assets::burn_from(
 				asset_id,
 				&who,
-				additional_issuance_token_value,
+				token_value,
 				Precision::Exact,
 				Fortitude::Force,
 			)?;
-			log::debug!("flash_loan_deposit: additional_issuance_token_value: {:?}, rate: {:?}, input_value: {:?}, token_value: {:?}, vtoken_id: {:?}, vtoken_value: {:?}", 
-			additional_issuance_token_value, rate, input_value, token_value, vtoken_id, vtoken_value);
 
 			AccountFlashLoans::<T>::insert(
 				asset_id,
 				&who,
 				AccountFlashLoanInfo { amount: input_value, leverage_rate: rate },
 			);
-			Self::deposit_event(Event::<T>::FlashLoanDeposited { asset_id, rate, input_value });
+			Self::deposit_event(Event::<T>::FlashLoanDeposited {
+				who,
+				asset_id,
+				rate,
+				amount: input_value,
+			});
 			Ok(().into())
 		}
 
@@ -179,68 +196,89 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
-				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-
-			log::debug!(
-				"flash_loan_repay: vtoken_id: {:?}, asset_id: {:?}, rate: {:?}",
-				vtoken_id,
-				asset_id,
-				rate
-			);
-			// let flash_loan_info = AccountFlashLoans::<T>::get(asset_id, &who);
-			AccountFlashLoans::<T>::mutate(
-				asset_id,
-				&who,
-				|maybe_flash_loan_info| -> DispatchResult {
-					let flash_loan_info =
-						maybe_flash_loan_info.as_mut().ok_or(Error::<T>::ArgumentsError)?;
-					ensure!(flash_loan_info.leverage_rate >= rate, Error::<T>::ArgumentsError);
-
-					let token_value = FixedU128::from_inner(flash_loan_info.amount)
-						.checked_mul(&rate)
-						.map(|r| r.into_inner())
-						.ok_or(ArithmeticError::Underflow)?;
-					// TODO: get VDOT amount from stable-pool through token_value
-					let (pool_id, currency_id_in, currency_id_out) =
-						T::StablePoolHandler::get_pool_id(&vtoken_id, &asset_id)
-							.ok_or(Error::<T>::ArgumentsError)?;
-					let vtoken_value = T::StablePoolHandler::get_swap_input(
-						pool_id,
-						currency_id_in,
-						currency_id_out,
-						token_value,
-					)?;
-					<T as lend_market::Config>::Assets::mint_into(vtoken_id, &who, vtoken_value)?;
-					T::StablePoolHandler::swap(
-						&who,
-						pool_id,
-						currency_id_in,
-						currency_id_out,
-						vtoken_value,
-						token_value,
-					)?;
-					log::debug!("flash_loan_repay: token_value: {:?}, vtoken_value: {:?}, vtoken_id: {:?}, asset_id: {:?}, rate: {:?}, flash_loan_info: {:?}",
-					token_value, vtoken_value, vtoken_id, asset_id, rate, flash_loan_info);
-					T::LendMarket::do_repay_borrow(&who, asset_id, token_value)?;
-					T::LendMarket::do_redeem(&who, vtoken_id, vtoken_value)?;
-					<T as lend_market::Config>::Assets::burn_from(
-						vtoken_id,
-						&who,
-						vtoken_value,
-						Precision::Exact,
-						Fortitude::Force,
-					)?;
-
-					flash_loan_info.leverage_rate = flash_loan_info
-						.leverage_rate
-						.checked_sub(&rate)
-						.ok_or(ArithmeticError::Underflow)?;
-					Ok(())
-				},
-			)?;
+			Self::do_repay(&who, asset_id, Some(rate))?;
 			Ok(().into())
 		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	pub fn do_repay(
+		who: &T::AccountId,
+		asset_id: AssetIdOf<T>,
+		maybe_rate: Option<Rate>,
+	) -> DispatchResult {
+		let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+		AccountFlashLoans::<T>::try_mutate_exists(
+			asset_id,
+			&who,
+			|maybe_flash_loan_info| -> DispatchResult {
+				let flash_loan_info =
+					maybe_flash_loan_info.as_mut().ok_or(Error::<T>::ArgumentsError)?;
+				let rate = match maybe_rate {
+					Some(r) => {
+						ensure!(flash_loan_info.leverage_rate >= r, Error::<T>::ArgumentsError);
+						r
+					},
+					None => flash_loan_info.leverage_rate,
+				};
+
+				let token_value = FixedU128::from_inner(flash_loan_info.amount)
+					.checked_mul(&rate)
+					.map(|r| r.into_inner())
+					.ok_or(ArithmeticError::Underflow)?;
+				let (pool_id, currency_id_in, currency_id_out) =
+					T::StablePoolHandler::get_pool_id(&vtoken_id, &asset_id)
+						.ok_or(Error::<T>::ArgumentsError)?;
+				let vtoken_value = T::StablePoolHandler::get_swap_input(
+					pool_id,
+					currency_id_in,
+					currency_id_out,
+					token_value,
+				)?;
+				<T as lend_market::Config>::Assets::mint_into(vtoken_id, &who, vtoken_value)?;
+				T::StablePoolHandler::swap(
+					&who,
+					pool_id,
+					currency_id_in,
+					currency_id_out,
+					vtoken_value,
+					token_value,
+				)?;
+				T::LendMarket::do_repay_borrow(&who, asset_id, token_value)?;
+				T::LendMarket::do_redeem(&who, vtoken_id, vtoken_value)?;
+				<T as lend_market::Config>::Assets::burn_from(
+					vtoken_id,
+					&who,
+					vtoken_value,
+					Precision::Exact,
+					Fortitude::Force,
+				)?;
+
+				flash_loan_info.leverage_rate = flash_loan_info
+					.leverage_rate
+					.checked_sub(&rate)
+					.ok_or(ArithmeticError::Underflow)?;
+				if flash_loan_info.leverage_rate == Rate::zero() {
+					T::Assets::transfer(
+						asset_id,
+						&lend_market::Pallet::<T>::account_id(),
+						&who,
+						flash_loan_info.amount,
+						Preservation::Expendable,
+					)?;
+					*maybe_flash_loan_info = None;
+				}
+				Self::deposit_event(Event::<T>::FlashLoanRepaid {
+					who: who.clone(),
+					asset_id,
+					rate,
+				});
+				Ok(())
+			},
+		)
 	}
 }
 
