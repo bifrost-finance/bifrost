@@ -237,6 +237,8 @@ pub mod pallet {
 		TooMany,
 		/// Change delegator is not allowed.
 		ChangeDelegator,
+		/// DelegatorVoteRole mismatch.
+		DelegatorVoteRoleMismatch,
 	}
 
 	/// Information concerning any given referendum.
@@ -443,7 +445,11 @@ pub mod pallet {
 			}
 
 			if !DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)) {
-				let default_vote: AccountVote<BalanceOf<T>> = VoteRole::from(vote).into();
+				let role = DelegatorVoteRole::<T>::get(vtoken, derivative_index)
+					.ok_or(Error::<T>::NoData)?;
+				let target_role = VoteRole::from(vote);
+				ensure!(role == target_role, Error::<T>::DelegatorVoteRoleMismatch);
+				let default_vote: AccountVote<BalanceOf<T>> = target_role.into();
 				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), default_vote);
 			}
 
@@ -510,7 +516,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::NoPermissionYet)?;
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
-			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::OnlyExpired)?;
 			Self::update_lock(&who, vtoken, &poll_index)?;
 
 			Self::deposit_event(Event::<T>::Unlocked { who, vtoken, poll_index });
@@ -880,7 +886,7 @@ pub mod pallet {
 							Ok(())
 						},
 						PollStatus::Completed(end, approved) => {
-							if let Some((lock_periods, balance)) = v.1.locked_if(approved) {
+							if let Some((lock_periods, _)) = v.1.locked_if(approved) {
 								let unlock_at = end.saturating_add(
 									VoteLockingPeriod::<T>::get(vtoken)
 										.ok_or(Error::<T>::NoData)?
@@ -892,7 +898,8 @@ pub mod pallet {
 										matches!(scope, UnvoteScope::Any),
 										Error::<T>::NoPermissionYet
 									);
-									prior.accumulate(unlock_at, balance)
+									// v.3 is the actual locked vtoken balance
+									prior.accumulate(unlock_at, v.3)
 								}
 							}
 							Ok(())
@@ -913,22 +920,11 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: &PollIndex,
 		) -> DispatchResult {
-			let class_lock_needed = VotingFor::<T>::mutate(who, |voting| {
+			VotingFor::<T>::mutate(who, |voting| {
 				voting.rejig(T::RelaychainBlockNumberProvider::current_block_number());
-				voting.locked_balance()
 			});
 			let lock_needed = ClassLocksFor::<T>::mutate(who, |locks| {
 				locks.retain(|x| &x.0 != poll_index);
-				if !class_lock_needed.is_zero() && !Self::is_referendum_killed(vtoken, *poll_index)
-				{
-					let ok = locks.try_push((*poll_index, class_lock_needed)).is_ok();
-					debug_assert!(
-						ok,
-						"Vec bounded by number of classes; \
-					all items in Vec associated with a unique class; \
-					qed"
-					);
-				}
 				locks.iter().map(|x| x.1).max().unwrap_or(Zero::zero())
 			});
 			if lock_needed.is_zero() {
@@ -1106,13 +1102,6 @@ pub mod pallet {
 			Ok(responder)
 		}
 
-		fn is_referendum_killed(vtoken: CurrencyIdOf<T>, poll_index: PollIndex) -> bool {
-			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
-				Some(ReferendumInfo::Killed(_)) => true,
-				_ => false,
-			}
-		}
-
 		fn try_access_poll<R>(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
@@ -1137,7 +1126,7 @@ pub mod pallet {
 		fn try_select_derivative_index(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			my_vote: AccountVote<BalanceOf<T>>,
+			new_vote: AccountVote<BalanceOf<T>>,
 		) -> Result<DerivativeIndex, DispatchError> {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 
@@ -1154,22 +1143,22 @@ pub mod pallet {
 			}
 			let mut data = delegator_votes
 				.into_iter()
-				.map(|(index, vote)| {
-					let (_, active) = T::DerivativeAccount::get_stake_info(token, index)
+				.map(|(index, voted)| {
+					let (_, available_vote) = T::DerivativeAccount::get_stake_info(token, index)
 						.unwrap_or(Default::default());
-					(active, vote, index)
+					(available_vote, voted, index)
 				})
-				.filter(|(_, vote, _)| VoteRole::from(*vote) == VoteRole::from(my_vote))
+				.filter(|(_, voted, _)| VoteRole::from(*voted) == VoteRole::from(new_vote))
 				.collect::<Vec<_>>();
 			data.sort_by(|a, b| {
 				(b.0.saturating_sub(b.1.balance())).cmp(&(a.0.saturating_sub(a.1.balance())))
 			});
 
-			let (active, vote, index) = data.first().ok_or(Error::<T>::NoData)?;
-			active
-				.checked_sub(&vote.balance())
+			let (available_vote, voted, index) = data.first().ok_or(Error::<T>::NoData)?;
+			available_vote
+				.checked_sub(&voted.balance())
 				.ok_or(ArithmeticError::Underflow)?
-				.checked_sub(&my_vote.balance())
+				.checked_sub(&new_vote.balance())
 				.ok_or(ArithmeticError::Underflow)?;
 
 			Ok(*index)
