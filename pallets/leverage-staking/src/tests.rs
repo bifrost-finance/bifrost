@@ -20,15 +20,13 @@ use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use lend_market::{AccountBorrows, BorrowSnapshot};
 
-fn init_lend_market() {
+fn init() {
 	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), DOT, market_mock(VKSM)));
 	assert_ok!(LendMarket::activate_market(RuntimeOrigin::root(), DOT));
 	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), VDOT, market_mock(VBNC)));
 	assert_ok!(LendMarket::activate_market(RuntimeOrigin::root(), VDOT));
 	TimestampPallet::set_timestamp(6000);
-}
 
-fn init_stable_pool() {
 	assert_ok!(StablePool::create_pool(
 		RuntimeOrigin::root(),
 		vec![DOT, VDOT],
@@ -49,11 +47,11 @@ fn init_stable_pool() {
 	let amounts = vec![unit(1000), unit(1000)];
 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
 }
+
 #[test]
 fn flash_loan_deposit() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		init_lend_market();
-		init_stable_pool();
+		init();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
@@ -80,8 +78,7 @@ fn flash_loan_deposit() {
 #[test]
 fn flash_loan_repay() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
-		init_lend_market();
-		init_stable_pool();
+		init();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
@@ -98,7 +95,7 @@ fn flash_loan_repay() {
 		assert_ok!(LeverageStaking::flash_loan_repay(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(1_000_000)),
+			Some(FixedU128::from_inner(unit(1_000_000))),
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
@@ -114,12 +111,12 @@ fn flash_loan_repay() {
 		assert_ok!(LeverageStaking::flash_loan_repay(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(100_000)),
+			Some(FixedU128::from_inner(unit(100_000))),
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
 			BorrowSnapshot { principal: 0, borrow_index: 1.into() },
 		);
-		assert_eq!(AccountFlashLoans::<Test>::get(DOT, 1), None,);
+		assert_eq!(AccountFlashLoans::<Test>::get(DOT, 1), None);
 	});
 }

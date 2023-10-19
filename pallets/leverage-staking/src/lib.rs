@@ -30,24 +30,20 @@ pub use codec::{Decode, Encode};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		fungibles::{Inspect, Mutate},
+		fungibles::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
 		Get,
 	},
-	BoundedVec, PalletId, Parameter,
+	BoundedVec, PalletId,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, Rate, TimeUnit,
-	VtokenMintingInterface,
-};
-use orml_traits::MultiCurrency;
+use node_primitives::{CurrencyIdConversion, CurrencyIdRegister, Rate, VtokenMintingInterface};
 pub use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
 };
 use sp_runtime::{
-	traits::{CheckedMul, CheckedSub, StaticLookup, Zero},
+	traits::{CheckedMul, CheckedSub, Zero},
 	ArithmeticError, FixedU128, RuntimeDebug,
 };
 use sp_std::marker::PhantomData;
@@ -137,7 +133,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if let Some(flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
+			if let Some(_flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
 				Self::do_repay(&who, asset_id, None)?;
 			}
 
@@ -192,11 +188,11 @@ pub mod pallet {
 		pub fn flash_loan_repay(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T>,
-			rate: Rate,
+			rate: Option<Rate>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			Self::do_repay(&who, asset_id, Some(rate))?;
+			Self::do_repay(&who, asset_id, rate)?;
 			Ok(().into())
 		}
 	}
@@ -249,6 +245,7 @@ impl<T: Config> Pallet<T> {
 				)?;
 				T::LendMarket::do_repay_borrow(&who, asset_id, token_value)?;
 				T::LendMarket::do_redeem(&who, vtoken_id, vtoken_value)?;
+
 				<T as lend_market::Config>::Assets::burn_from(
 					vtoken_id,
 					&who,

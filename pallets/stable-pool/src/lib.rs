@@ -828,7 +828,7 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
-		let mut pool_info = T::StableAsset::pool(pool_id)
+		let pool_info = T::StableAsset::pool(pool_id)
 			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
 		let dy = Self::upscale(
 			amount,
@@ -886,9 +886,13 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: &AssetIdOf<T>,
 	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
 		Pools::<T>::iter().find_map(|(pool_id, pool_info)| {
-			if pool_info.assets.get(0) == Some(currency_id_in) && pool_info.assets.get(1) == Some(currency_id_out) {
+			if pool_info.assets.get(0) == Some(currency_id_in) &&
+				pool_info.assets.get(1) == Some(currency_id_out)
+			{
 				Some((pool_id, 0, 1))
-			} else if pool_info.assets.get(0) == Some(currency_id_out) && pool_info.assets.get(1) == Some(currency_id_in) {
+			} else if pool_info.assets.get(0) == Some(currency_id_out) &&
+				pool_info.assets.get(1) == Some(currency_id_in)
+			{
 				Some((pool_id, 1, 0))
 			} else {
 				None

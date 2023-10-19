@@ -18,7 +18,6 @@
 
 //! traits for stable-pool
 use crate::*;
-use nutsfinance_stable_asset::StableAssetPoolInfo;
 
 pub trait StablePoolHandler {
 	type Balance;
@@ -243,26 +242,26 @@ impl StablePoolHandler for () {
 	}
 
 	fn get_swap_output(
-		pool_id: StableAssetPoolId,
-		currency_id_in: PoolTokenIndex,
-		currency_id_out: PoolTokenIndex,
-		amount: Self::Balance,
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
 	) -> Result<Self::Balance, DispatchError> {
 		Ok(0)
 	}
 
 	fn get_swap_input(
-		pool_id: StableAssetPoolId,
-		currency_id_in: PoolTokenIndex,
-		currency_id_out: PoolTokenIndex,
-		amount: Self::Balance,
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
 	) -> Result<Self::Balance, DispatchError> {
 		Ok(0)
 	}
 
 	fn get_pool_id(
-		currency_id_in: &Self::CurrencyId,
-		currency_id_out: &Self::CurrencyId,
+		_currency_id_in: &Self::CurrencyId,
+		_currency_id_out: &Self::CurrencyId,
 	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
 		None
 	}
