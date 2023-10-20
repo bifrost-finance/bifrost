@@ -41,9 +41,9 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
-use sp_core::U512;
+use sp_core::{U256, U512};
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
+	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, UniqueSaturatedInto, Zero},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
@@ -798,11 +798,19 @@ impl<T: Config> Pallet<T> {
 			let time_diff_div: T::AtLeast64BitUnsigned = t1.checked_sub(&t0)?.into();
 			if a1 > a0 {
 				let diff = a1.checked_sub(&a0)?;
-				let amount = diff.checked_mul(&time_diff)?.checked_div(&time_diff_div)?;
+				let amount = U256::from(diff.saturated_into::<u128>())
+					.checked_mul(U256::from(time_diff.saturated_into::<u128>()))?
+					.checked_div(U256::from(time_diff_div.saturated_into::<u128>()))?
+					.as_u128()
+					.unique_saturated_into();
 				Some(a0.checked_add(&amount)?)
 			} else {
 				let diff = a0.checked_sub(&a1)?;
-				let amount = diff.checked_mul(&time_diff)?.checked_div(&time_diff_div)?;
+				let amount = U256::from(diff.saturated_into::<u128>())
+					.checked_mul(U256::from(time_diff.saturated_into::<u128>()))?
+					.checked_div(U256::from(time_diff_div.saturated_into::<u128>()))?
+					.as_u128()
+					.unique_saturated_into();
 				Some(a0.checked_sub(&amount)?)
 			}
 		} else {
@@ -962,11 +970,13 @@ impl<T: Config> Pallet<T> {
 		let mint_fee: T::AtLeast64BitUnsigned = pool_info.mint_fee;
 
 		if pool_info.mint_fee > zero {
-			fee_amount = mint_amount
-				.checked_mul(&mint_fee)
+			fee_amount = U256::from(mint_amount.saturated_into::<u128>())
+				.checked_mul(U256::from(mint_fee.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&fee_denominator)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(fee_denominator.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			mint_amount = mint_amount.checked_sub(&fee_amount).ok_or(Error::<T>::Math)?;
 		}
 
@@ -1033,11 +1043,13 @@ impl<T: Config> Pallet<T> {
 			.checked_div(&pool_info.precisions[output_index_usize])
 			.ok_or(Error::<T>::Math)?;
 		if pool_info.swap_fee > zero {
-			let fee_amount: T::AtLeast64BitUnsigned = dy
-				.checked_mul(&pool_info.swap_fee)
+			let fee_amount = U256::from(dy.saturated_into::<u128>())
+				.checked_mul(U256::from(pool_info.swap_fee.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&fee_denominator)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(fee_denominator.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			dy = dy.checked_sub(&fee_amount).ok_or(Error::<T>::Math)?;
 		}
 		Ok(SwapResult {
@@ -1080,7 +1092,11 @@ impl<T: Config> Pallet<T> {
 		let swap_exact_over_amount = T::SwapExactOverAmount::get();
 		if pool_info.swap_fee > zero {
 			let diff = fee_denominator.checked_sub(&pool_info.swap_fee)?;
-			dy = dy.checked_mul(&fee_denominator)?.checked_div(&diff)?;
+			dy = U256::from(dy.saturated_into::<u128>())
+				.checked_mul(U256::from(fee_denominator.saturated_into::<u128>()))?
+				.checked_div(U256::from(diff.saturated_into::<u128>()))?
+				.as_u128()
+				.unique_saturated_into();
 		}
 
 		let a: T::AtLeast64BitUnsigned = Self::get_a(
@@ -1132,22 +1148,26 @@ impl<T: Config> Pallet<T> {
 
 		let mut fee_amount: T::AtLeast64BitUnsigned = zero;
 		if pool_info.redeem_fee > zero {
-			fee_amount = amount
-				.checked_mul(&pool_info.redeem_fee)
+			fee_amount = U256::from(amount.saturated_into::<u128>())
+				.checked_mul(U256::from(pool_info.redeem_fee.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&fee_denominator)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(fee_denominator.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			// Redemption fee is charged with pool token before redemption.
 			amount = amount.checked_sub(&fee_amount).ok_or(Error::<T>::Math)?;
 		}
 
 		for i in 0..pool_info.balances.len() {
 			let balance_i: T::AtLeast64BitUnsigned = balances[i];
-			let diff_i: T::AtLeast64BitUnsigned = balance_i
-				.checked_mul(&amount)
+			let diff_i: T::AtLeast64BitUnsigned = U256::from(balance_i.saturated_into::<u128>())
+				.checked_mul(U256::from(amount.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&d)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(d.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			balances[i] = balance_i.checked_sub(&diff_i).ok_or(Error::<T>::Math)?;
 			let amounts_i: T::AtLeast64BitUnsigned =
 				diff_i.checked_div(&pool_info.precisions[i]).ok_or(Error::<T>::Math)?;
@@ -1196,11 +1216,13 @@ impl<T: Config> Pallet<T> {
 		let mut fee_amount: T::AtLeast64BitUnsigned = zero;
 
 		if pool_info.redeem_fee > zero {
-			fee_amount = amount
-				.checked_mul(&pool_info.redeem_fee)
+			fee_amount = U256::from(amount.saturated_into::<u128>())
+				.checked_mul(U256::from(pool_info.redeem_fee.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&fee_denominator)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(fee_denominator.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			// Redemption fee is charged with pool token before redemption.
 			amount = amount.checked_sub(&fee_amount).ok_or(Error::<T>::Math)?;
 		}
@@ -1270,11 +1292,13 @@ impl<T: Config> Pallet<T> {
 			let div_amount: T::AtLeast64BitUnsigned = fee_denominator
 				.checked_sub(&pool_info.redeem_fee)
 				.ok_or(Error::<T>::Math)?;
-			redeem_amount = redeem_amount
-				.checked_mul(&fee_denominator)
+			redeem_amount = U256::from(redeem_amount.saturated_into::<u128>())
+				.checked_mul(U256::from(fee_denominator.saturated_into::<u128>()))
 				.ok_or(Error::<T>::Math)?
-				.checked_div(&div_amount)
-				.ok_or(Error::<T>::Math)?;
+				.checked_div(U256::from(div_amount.saturated_into::<u128>()))
+				.ok_or(Error::<T>::Math)?
+				.as_u128()
+				.unique_saturated_into();
 			let sub_amount: T::AtLeast64BitUnsigned = old_d.checked_sub(&new_d).ok_or(Error::<T>::Math)?;
 			fee_amount = redeem_amount.checked_sub(&sub_amount).ok_or(Error::<T>::Math)?;
 		}
@@ -1306,11 +1330,13 @@ impl<T: Config> Pallet<T> {
 			let mut balance_of: T::AtLeast64BitUnsigned =
 				T::Assets::free_balance(pool_info.assets[i], &pool_info.account_id).into();
 			if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, pool_info.assets[i]) {
-				balance_of = balance_of
-					.checked_mul(&numerator)
+				balance_of = U256::from(balance_of.saturated_into::<u128>())
+					.checked_mul(U256::from(numerator.saturated_into::<u128>()))
 					.ok_or(Error::<T>::Math)?
-					.checked_div(&denominator)
-					.ok_or(Error::<T>::Math)?;
+					.checked_div(U256::from(denominator.saturated_into::<u128>()))
+					.ok_or(Error::<T>::Math)?
+					.as_u128()
+					.unique_saturated_into();
 			}
 			*balance = balance_of
 				.checked_mul(&pool_info.precisions[i])
@@ -1370,11 +1396,13 @@ impl<T: Config> Pallet<T> {
 			let mut balance_of: T::AtLeast64BitUnsigned =
 				T::Assets::free_balance(pool_info.assets[i], &pool_info.account_id).into();
 			if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, pool_info.assets[i]) {
-				balance_of = balance_of
-					.checked_mul(&numerator)
+				balance_of = U256::from(balance_of.saturated_into::<u128>())
+					.checked_mul(U256::from(numerator.saturated_into::<u128>()))
 					.ok_or(Error::<T>::Math)?
-					.checked_div(&denominator)
-					.ok_or(Error::<T>::Math)?;
+					.checked_div(U256::from(denominator.saturated_into::<u128>()))
+					.ok_or(Error::<T>::Math)?
+					.as_u128()
+					.unique_saturated_into();
 			}
 			*balance = balance_of
 				.checked_mul(&pool_info.precisions[i])
@@ -2094,7 +2122,11 @@ impl<T: Config> StableAsset for Pallet<T> {
 					let mut balance_of: T::AtLeast64BitUnsigned =
 						T::Assets::free_balance(output_asset, &pool_info.account_id).into();
 					if let Some((denominator, numerator)) = Self::get_token_rate(pool_info.pool_id, output_asset) {
-						balance_of = balance_of.checked_mul(&numerator)?.checked_div(&denominator)?;
+						balance_of = U256::from(balance_of.saturated_into::<u128>())
+							.checked_mul(U256::from(numerator.saturated_into::<u128>()))?
+							.checked_div(U256::from(denominator.saturated_into::<u128>()))?
+							.as_u128()
+							.unique_saturated_into();
 					}
 					// make sure pool can affort the output amount
 					if swap_result.dy <= balance_of.into() {

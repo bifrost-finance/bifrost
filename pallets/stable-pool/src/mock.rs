@@ -25,6 +25,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 pub use node_primitives::{
+	currency::{MOVR, VMOVR},
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
 };
@@ -368,6 +369,14 @@ impl Default for ExtBuilder {
 	}
 }
 
+pub fn million_unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(18))
+}
+
+pub fn unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(12))
+}
+
 impl ExtBuilder {
 	pub fn balances(mut self, endowed_accounts: Vec<(u128, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
@@ -376,10 +385,11 @@ impl ExtBuilder {
 
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
+			(0, BNC, unit(1000)),
+			(0, MOVR, million_unit(1_000_000)),
+			(0, VMOVR, million_unit(1_000_000)),
 			(1, BNC, 1_000_000_000_000),
-			// (1, VDOT, 100_000_000),
 			(1, DOT, 100_000_000_000_000),
-			// (2, VDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
 			(6, BNC, 100_000_000_000_000),
@@ -398,8 +408,9 @@ impl ExtBuilder {
 				(DOT, 1_000_000, None),
 				(ASTR, 10_000_000, None),
 				(GLMR, 10_000_000, None),
+				(MOVR, 10_000_000, None),
 			],
-			vcurrency: vec![VDOT],
+			vcurrency: vec![VDOT, VMOVR],
 			vsbond: vec![],
 			phantom: Default::default(),
 		}
