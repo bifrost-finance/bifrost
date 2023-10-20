@@ -446,14 +446,14 @@ pub mod pallet {
 
 	/// DefaultVersion is using for initialize the StorageVersion
 	#[pallet::type_value]
-	pub(super) fn DefaultVersion<T: Config>() -> Versions {
+	pub(super) fn DefaultVersion() -> Versions {
 		Versions::V0
 	}
 
 	/// Storage version of the pallet.
 	#[pallet::storage]
 	pub(crate) type StorageVersion<T: Config> =
-		StorageValue<_, Versions, ValueQuery, DefaultVersion<T>>;
+		StorageValue<_, Versions, ValueQuery, DefaultVersion>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]

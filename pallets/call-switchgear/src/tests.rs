@@ -36,7 +36,7 @@ const TOKENS_TRANSFER: &<Runtime as frame_system::Config>::RuntimeCall =
 
 #[test]
 fn switchoff_transaction_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		System::set_block_number(1);
 
 		assert_noop!(
@@ -97,7 +97,7 @@ fn switchoff_transaction_should_work() {
 
 #[test]
 fn switchon_transaction_transaction_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		System::set_block_number(1);
 
 		assert_ok!(CallSwitchgear::switchoff_transaction(
@@ -160,7 +160,7 @@ fn switchon_transaction_transaction_should_work() {
 
 #[test]
 fn switchoff_transaction_filter_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
@@ -192,7 +192,7 @@ fn switchoff_transaction_filter_work() {
 
 #[test]
 fn disable_transfers_filter_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
 		assert_ok!(CallSwitchgear::disable_transfers(RuntimeOrigin::signed(1), KSM));
 		assert!(DisableTransfersFilter::<Runtime>::contains(&KSM));

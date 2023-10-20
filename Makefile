@@ -68,7 +68,7 @@ format:
 
 .PHONY: clippy # cargo clippy
 clippy:
-	cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
+	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
