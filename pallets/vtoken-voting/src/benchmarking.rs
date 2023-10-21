@@ -83,7 +83,7 @@ mod benchmarks {
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
-			Pallet::<T>::on_initialize(Zero::zero());
+			Pallet::<T>::on_idle(Zero::zero(), Weight::MAX);
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
@@ -165,6 +165,12 @@ mod benchmarks {
 			ReferendumInfo::Completed(0u32.into()),
 		)?;
 		Pallet::<T>::set_vote_locking_period(RawOrigin::Root.into(), vtoken, 0u32.into())?;
+
+		let notify_origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let query_id = 0u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		Pallet::<T>::notify_vote(notify_origin, query_id, response)?;
 
 		#[extrinsic_call]
 		_(origin, vtoken, poll_index);

@@ -63,6 +63,26 @@ fn create_pool2() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 	(coin0, coin1, pool_asset, 30160825295207673652903702381u128)
 }
 
+fn create_movr_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
+	let coin0 = MOVR;
+	let coin1 = VMOVR;
+	let pool_asset: CurrencyId = CurrencyId::BLP(0);
+
+	assert_ok!(StablePool::create_pool(
+		RuntimeOrigin::root(),
+		vec![coin0, coin1],
+		vec![1u128, 1u128],
+		10000000u128,
+		20000000u128,
+		50000000u128,
+		10000u128,
+		2,
+		1,
+		million_unit(1),
+	));
+	(coin0, coin1, pool_asset, 30160825295207673652903702381u128)
+}
+
 #[test]
 fn modify_a_argument_error_failed() {
 	env_logger::try_init().unwrap_or(());
@@ -529,6 +549,48 @@ fn redeem_single() {
 			2
 		));
 		assert_eq!(Tokens::free_balance(coin1, &6), 904_596_263_064);
+		assert_noop!(
+			StablePool::modify_fees(
+				RuntimeOrigin::root(),
+				0,
+				Some(10_000_000_000),
+				Some(10_000_000_000),
+				Some(10_000_000_000)
+			),
+			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+		);
+		assert_ok!(StablePool::modify_fees(
+			RuntimeOrigin::root(),
+			0,
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+		));
+		assert_ok!(StablePool::redeem_single(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			5_000_000_000u128,
+			1,
+			0,
+			2
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 904_596_263_064);
+		assert_ok!(StablePool::modify_fees(
+			RuntimeOrigin::root(),
+			0,
+			Some(9_999_999_999),
+			Some(9_999_999_999),
+			Some(999_999_999),
+		));
+		assert_ok!(StablePool::redeem_single(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			5_000_000_000u128,
+			1,
+			0,
+			2
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 908_716_032_298);
 	});
 }
 
@@ -723,5 +785,24 @@ fn edit_token_rate() {
 			)>>(),
 			vec![(VBNC, (10, 12))]
 		);
+	});
+}
+
+#[test]
+fn redeem_movr() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let (coin0, coin1, pool_asset, _swap_id) = create_movr_pool();
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (90_000_000, 100_000_000))]
+		));
+		let amounts = vec![million_unit(100_000), million_unit(200_000)];
+		assert_ok!(StablePool::mint_inner(&0, 0, amounts, 0));
+		assert_eq!(Tokens::free_balance(pool_asset, &0), 321765598211330627258732);
+		assert_ok!(StablePool::redeem_proportion_inner(&0, 0, million_unit(300_000), vec![0, 0]));
+		assert_eq!(Tokens::free_balance(pool_asset, &0), 21765598211330627258732);
+		assert_eq!(Tokens::free_balance(coin0, &0), 992676625984156921892393);
+		assert_eq!(Tokens::free_balance(coin1, &0), 985353251968313843784786);
 	});
 }

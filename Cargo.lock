@@ -6551,7 +6551,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.82"
+version = "0.9.84"
 dependencies = [
  "clap",
  "cumulus-client-cli",
@@ -15512,6 +15512,7 @@ dependencies = [
 name = "xcm-interface"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
