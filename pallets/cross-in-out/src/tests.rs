@@ -25,6 +25,96 @@ use sp_runtime::DispatchError::BadOrigin;
 use xcm::v3::prelude::*;
 
 #[test]
+fn cross_in_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+		};
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None
+			),
+			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
+		);
+
+		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None
+			),
+			Error::<Runtime>::NoCrossingMinimumSet
+		);
+
+		CrossingMinimumAmount::<Runtime>::insert(KSM, (1000, 1000));
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None
+			),
+			Error::<Runtime>::AmountLowerThanMinimum
+		);
+
+		CrossingMinimumAmount::<Runtime>::insert(KSM, (1, 1));
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None
+			),
+			Error::<Runtime>::NotAllowed
+		);
+
+		let bounded_vector = BoundedVec::try_from(vec![ALICE]).unwrap();
+		IssueWhiteList::<Runtime>::insert(KSM, bounded_vector);
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None
+			),
+			Error::<Runtime>::NoAccountIdMapping
+		);
+
+		AccountToOuterMultilocation::<Runtime>::insert(KSM, ALICE, location.clone());
+		OuterMultilocationToAccount::<Runtime>::insert(KSM, location.clone(), ALICE);
+
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
+		assert_ok!(CrossInOut::cross_in(
+			RuntimeOrigin::signed(ALICE),
+			Box::new(location),
+			KSM,
+			100,
+			None
+		));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 100);
+
+		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), KSM, 50));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 50);
+	});
+}
+
+#[test]
 fn cross_in_and_cross_out_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation {

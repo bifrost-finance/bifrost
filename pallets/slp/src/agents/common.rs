@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, AccountIdOf, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord,
-	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	vec, AccountIdOf, BalanceOf, BoundedVec, Box, Config, CurrencyLatestTuneRecord,
+	DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Encode, Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
@@ -352,5 +352,34 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| Error::<T>::FailToSendCrossOutMessage)?;
 
 		Ok(())
+	}
+
+	pub(crate) fn check_tuning_limit(currency_id: CurrencyId) -> Result<u32, Error<T>> {
+		// Get current TimeUnit.
+		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+			.ok_or(Error::<T>::TimeUnitNotExist)?;
+		// If this is the first time.
+		if !CurrencyLatestTuneRecord::<T>::contains_key(currency_id) {
+			// Insert an empty record into CurrencyLatestTuneRecord storage.
+			CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit.clone(), 0));
+		}
+
+		// Get CurrencyLatestTuneRecord for the currencyId.
+		let (latest_time_unit, tune_num) = Self::get_currency_latest_tune_record(currency_id)
+			.ok_or(Error::<T>::CurrencyLatestTuneRecordNotExist)?;
+
+		// See if exceeds tuning limit.
+		// If it has been tuned in the current time unit, ensure this tuning is within limit.
+		let (limit_num, _) = Self::get_currency_tune_exchange_rate_limit(currency_id)
+			.ok_or(Error::<T>::TuneExchangeRateLimitNotSet)?;
+		let mut new_tune_num = Zero::zero();
+		if latest_time_unit == current_time_unit {
+			ensure!(tune_num < limit_num, Error::<T>::GreaterThanMaximum);
+			new_tune_num = tune_num;
+		}
+
+		new_tune_num = new_tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+
+		Ok(new_tune_num)
 	}
 }

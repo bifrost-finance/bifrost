@@ -1317,7 +1317,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type AnchorAddress = CrossInOutAnchorAddress;
 	type FeeAccount = BifrostFeeAccount;
-	type CrossChainOperationExecutor = (CrossInOut, Slp, VtokenMinting);
+	type CrossChainOperationExecutor = (CrossInOut, Slp);
 }
 
 impl bifrost_slpx::Config for Runtime {

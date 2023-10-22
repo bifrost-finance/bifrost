@@ -44,16 +44,14 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use node_primitives::{
 	currency::VFIL, traits::BridgeOperator, CurrencyId, CurrencyIdConversion, CurrencyIdExt,
-	CurrencyIdRegister, ReceiveFromAnchor, RedeemType, SlpOperator, SlpxOperator, TimeUnit,
-	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator, XcmOperationType,
-	CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH, CROSSCHAIN_OPERATION_LENGTH,
+	CurrencyIdRegister, RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenSupplyProvider,
+	VtokenMintingInterface, VtokenMintingOperator, XcmOperationType,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{vec, vec::Vec};
 pub use traits::*;
-use xcm::opaque::lts::NetworkId;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -253,6 +251,7 @@ pub mod pallet {
 		InvalidExchangeRate,
 		InvalidPayloadLength,
 		InvalidXcmOperation,
+		FailToUpdateSpecialVtokenExchangeRate,
 	}
 
 	// 【mint_fee, redeem_fee, cancel_fee】
@@ -841,19 +840,6 @@ pub mod pallet {
 			MinTimeUnit::<T>::mutate(&token_id, |old_time_unit| *old_time_unit = time_unit.clone());
 
 			Self::deposit_event(Event::MinTimeUnitSet { token_id, time_unit });
-			Ok(())
-		}
-
-		#[pallet::call_index(13)]
-		#[pallet::weight({0})]
-		pub fn set_special_vtoken_exchange_rate(
-			origin: OriginFor<T>,
-			token_id: CurrencyIdOf<T>,
-			exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
-		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			Self::inner_set_special_vtoken_exchange_rate(token_id, exchange_rate)?;
 			Ok(())
 		}
 	}
@@ -1693,37 +1679,7 @@ pub mod pallet {
 			}
 		}
 
-		pub fn update_exchange_rate(payload: &[u8]) -> Result<(), Error<T>> {
-			// get currency_id from payload. The second 32 bytes are currency_id.
-			let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
-				.try_into()
-				.map_err(|_| Error::<T>::FailToConvert)?;
-			let currency_id =
-				CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailToConvert)?;
-
-			ensure!(currency_id == FIL, Error::<T>::NotSupportTokenType);
-
-			// get exchange_rate nominator and denominator from payload
-			let nominator: u128 = U256::from_big_endian(&payload[64..96])
-				.try_into()
-				.map_err(|_| Error::<T>::FailToConvert)?;
-			let nominator: BalanceOf<T> = nominator.saturated_into::<BalanceOf<T>>();
-
-			let denominator: u128 = U256::from_big_endian(&payload[96..128])
-				.try_into()
-				.map_err(|_| Error::<T>::FailToConvert)?;
-			let denominator: BalanceOf<T> = denominator.saturated_into::<BalanceOf<T>>();
-
-			// update SpecialVtokenExchangeRate
-			Self::inner_set_special_vtoken_exchange_rate(
-				currency_id,
-				Some((nominator, denominator)),
-			)?;
-
-			Ok(())
-		}
-
-		fn inner_set_special_vtoken_exchange_rate(
+		pub fn inner_set_special_vtoken_exchange_rate(
 			token_id: CurrencyIdOf<T>,
 			exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
 		) -> Result<(), Error<T>> {
@@ -1900,6 +1856,21 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_hydradx_parachain_id() -> u32 {
 		T::HydradxParachainId::get()
 	}
+
+	fn update_special_vtoken_exchange_rate(
+		token_id: CurrencyIdOf<T>,
+		exchange_rate: Option<(BalanceOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		Self::inner_set_special_vtoken_exchange_rate(token_id, exchange_rate)
+			.map_err(|_| Error::<T>::FailToUpdateSpecialVtokenExchangeRate)?;
+		Ok(())
+	}
+
+	fn get_special_vtoken_exchange_rate(
+		token_id: CurrencyIdOf<T>,
+	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
+		SpecialVtokenExchangeRate::<T>::get(token_id)
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1985,39 +1956,5 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 		} else {
 			None
 		}
-	}
-}
-
-// For use of passing the FIL/VFIL exchange rate to SpecialVtokenExchangeRate storage
-impl<T: Config> ReceiveFromAnchor for Pallet<T> {
-	fn receive_from_anchor(
-		operation: XcmOperationType,
-		payload: &[u8],
-		_src_chain_network: NetworkId,
-	) -> DispatchResultWithPostInfo {
-		match operation {
-			XcmOperationType::PassExchangeRateBack => {
-				let max_len = CROSSCHAIN_OPERATION_LENGTH +
-					CROSSCHAIN_CURRENCY_ID_LENGTH +
-					2 * CROSSCHAIN_AMOUNT_LENGTH;
-				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
-				Self::update_exchange_rate(&payload)
-			},
-			_ => Err(Error::<T>::InvalidXcmOperation),
-		}?;
-
-		Ok(().into())
-	}
-
-	fn match_operations(
-		operation: XcmOperationType,
-		payload: &[u8],
-		src_chain_network: NetworkId,
-	) -> DispatchResultWithPostInfo {
-		if &operation == &XcmOperationType::PassExchangeRateBack {
-			return Self::receive_from_anchor(operation, payload, src_chain_network);
-		}
-
-		Ok(().into())
 	}
 }

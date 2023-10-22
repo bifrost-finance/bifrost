@@ -153,6 +153,14 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
+
+	// update the special vtoken exchange rate(FIL)
+	fn update_special_vtoken_exchange_rate(
+		token_id: CurrencyId,
+		exchange_rate: Option<(Balance, Balance)>,
+	) -> DispatchResult;
+
+	fn get_special_vtoken_exchange_rate(token_id: CurrencyId) -> Option<(Balance, Balance)>;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.

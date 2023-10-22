@@ -19,7 +19,7 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	AccountIdOf, BalanceOf, BoundedVec, Config, CurrencyLatestTuneRecord, DelegatorLedgers,
 	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
 	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
@@ -33,8 +33,8 @@ use node_primitives::{
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, UniqueSaturatedFrom, Zero},
-	DispatchResult,
+	traits::{CheckedAdd, CheckedDiv, CheckedSub, UniqueSaturatedFrom, Zero},
+	DispatchResult, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use xcm::v3::prelude::*;
@@ -438,52 +438,44 @@ impl<T: Config>
 	// one block per 30 seconds . Kblock takes around 8.33 hours.
 	fn tune_vtoken_exchange_rate(
 		&self,
-		who: &Option<MultiLocation>,
-		token_amount: BalanceOf<T>,
-		_vtoken_amount: BalanceOf<T>,
+		_who: &Option<MultiLocation>,
+		nominator: BalanceOf<T>,
+		denominator: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		let who = who.as_ref().ok_or(Error::<T>::ValidatorNotExist)?;
+		// ensure amount valid
+		ensure!(nominator > Zero::zero(), Error::<T>::AmountZero);
+		ensure!(denominator > Zero::zero(), Error::<T>::AmountZero);
 
-		// ensure "who" is a valid validator
-		let validator_vec =
-			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorNotExist)?;
-		ensure!(validator_vec.contains(who), Error::<T>::ValidatorNotExist);
+		// ensure within tune limit of exchange rate
+		let (_, max_permill) = Pallet::<T>::get_currency_tune_exchange_rate_limit(currency_id)
+			.ok_or(Error::<T>::TuneExchangeRateLimitNotSet)?;
+		ensure!(nominator <= max_permill.mul_floor(denominator), Error::<T>::GreaterThanMaximum);
+		let (old_nominator, old_denominator) =
+			T::VtokenMinting::get_special_vtoken_exchange_rate(currency_id)
+				.ok_or(Error::<T>::ExchangeRateNotExist)?;
+		ensure!(old_denominator > Zero::zero(), Error::<T>::AmountZero);
 
+		// ensure new exchange rate is greater than old excahnge rate
+		let old_rate = old_nominator.checked_div(&old_denominator).ok_or(Error::<T>::OverFlow)?;
+		let new_rate = nominator.checked_div(&denominator).ok_or(Error::<T>::OverFlow)?;
+		ensure!(new_rate >= old_rate, Error::<T>::LessThanOldExchangeRate);
+
+		// Ensure this tune is within limit.
 		// Get current TimeUnit.
 		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		// Get DelegatorLatestTuneRecord for the currencyId.
-		let latest_time_unit_op = DelegatorLatestTuneRecord::<T>::get(currency_id, &who);
-		// ensure each delegator can only tune once per TimeUnit at most.
-		ensure!(
-			latest_time_unit_op != Some(current_time_unit.clone()),
-			Error::<T>::DelegatorAlreadyTuned
-		);
+		// Check whether tuning times exceed limit. And get the new tune_num
+		let new_tune_num = Pallet::<T>::check_tuning_limit(currency_id)?;
+		// Update the CurrencyLatestTuneRecord<T> storage.
+		CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit, new_tune_num));
 
-		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
-
-		// issue the increased interest amount to the entrance account
-		// Get charged fee value
-		let (fee_permill, _beneficiary) =
-			Pallet::<T>::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
-		let fee_to_charge = fee_permill.mul_floor(token_amount);
-		let amount_to_increase =
-			token_amount.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;
-
-		if amount_to_increase > Zero::zero() {
-			// Tune the vtoken exchange rate.
-			T::VtokenMinting::increase_token_pool(currency_id, amount_to_increase)
-				.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
-
-			// Deposit token to entrance account
-			let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-			T::MultiCurrency::deposit(currency_id, &entrance_account, amount_to_increase)
-				.map_err(|_e| Error::<T>::MultiCurrencyError)?;
-
-			// Update the DelegatorLatestTuneRecord<T> storage.
-			DelegatorLatestTuneRecord::<T>::insert(currency_id, who, current_time_unit);
-		}
+		// update SpecialVtokenExchangeRate
+		T::VtokenMinting::update_special_vtoken_exchange_rate(
+			currency_id,
+			Some((nominator, denominator)),
+		)
+		.map_err(|_| Error::<T>::FailToUpdateExchangeRate)?;
 
 		Ok(())
 	}
@@ -506,26 +498,54 @@ impl<T: Config>
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
 	}
 
-	/// Charge hosting fee.
+	/// FIL not supporting charge hosting fee on Bifrost network. It is charged on Filecoin network.
 	fn charge_hosting_fee(
-		&self,
-		amount: BalanceOf<T>,
-		_from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_charge_hosting_fee(amount, to, currency_id)
-	}
-
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
 		&self,
 		_amount: BalanceOf<T>,
 		_from: &MultiLocation,
 		_to: &MultiLocation,
 		_currency_id: CurrencyId,
+	) -> DispatchResult {
+		Err(Error::<T>::Unsupported)?;
+		Ok(())
+	}
+
+	/// For Filecoin, from and to should be accounts in Bifrost network.
+	/// `From` is treasury account, `to` should be an account which is registered in
+	/// AccountToOuterMultilocation storage.
+	fn supplement_fee_reserve(
+		&self,
+		amount: BalanceOf<T>,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
+		// Ensure `to` registered in AccountToOuterMultilocation storage.
+		let to_account = Pallet::<T>::native_multilocation_to_account(&to)?;
+		let dest_location = T::BridgeOperator::get_registered_outer_multilocation_from_account(
+			currency_id,
+			to_account.clone(),
+		)
+		.map_err(|_| Error::<T>::MultilocationNotExist)?;
+
+		let source_account = Pallet::<T>::native_multilocation_to_account(&from)?;
+
+		// cross out transfer from dest_account to dest location in Filecoin network
+		// burn the transfer amount
+		T::MultiCurrency::withdraw(currency_id, &source_account, amount)
+			.map_err(|_e| Error::<T>::NotEnoughBalance)?;
+
+		// send transfer message
+		Pallet::<T>::send_message(
+			XcmOperationType::TransferTo,
+			source_account,
+			&dest_location,
+			amount,
+			currency_id,
+			currency_id,
+		)?;
+
+		Ok(())
 	}
 
 	fn check_delegator_ledger_query_response(
@@ -578,6 +598,13 @@ impl<T: Config>
 					CROSSCHAIN_ACCOUNT_LENGTH;
 				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
 				Self::renew_delegator_ledger(self, currency_id, &payload)
+			},
+			XcmOperationType::PassExchangeRateBack => {
+				let max_len = CROSSCHAIN_OPERATION_LENGTH +
+					CROSSCHAIN_CURRENCY_ID_LENGTH +
+					2 * CROSSCHAIN_AMOUNT_LENGTH;
+				ensure!(payload.len() == max_len, Error::<T>::InvalidPayloadLength);
+				Self::update_exchange_rate(self, &payload)
 			},
 			_ => Err(Error::<T>::InvalidXcmOperation),
 		}?;
@@ -635,6 +662,32 @@ impl<T: Config> FilecoinAgent<T> {
 				Err(Error::<T>::Unexpected)?
 			}
 		}
+
+		Ok(())
+	}
+
+	pub fn update_exchange_rate(&self, payload: &[u8]) -> Result<(), Error<T>> {
+		// get currency_id from payload. The second 32 bytes are currency_id.
+		let currency_id_u64: u64 = U256::from_big_endian(&payload[32..64])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let currency_id =
+			CurrencyId::try_from(currency_id_u64).map_err(|_| Error::<T>::FailToConvert)?;
+
+		ensure!(currency_id == FIL, Error::<T>::NotSupportedCurrencyId);
+
+		// get exchange_rate nominator and denominator from payload
+		let nominator: u128 = U256::from_big_endian(&payload[64..96])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let nominator: BalanceOf<T> = nominator.saturated_into::<BalanceOf<T>>();
+
+		let denominator: u128 = U256::from_big_endian(&payload[96..128])
+			.try_into()
+			.map_err(|_| Error::<T>::FailToConvert)?;
+		let denominator: BalanceOf<T> = denominator.saturated_into::<BalanceOf<T>>();
+
+		Self::tune_vtoken_exchange_rate(self, &None, nominator, denominator, currency_id)?;
 
 		Ok(())
 	}

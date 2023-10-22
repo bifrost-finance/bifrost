@@ -788,4 +788,10 @@ impl<T: frame_system::Config> bifrost_slp::WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+
+	fn set_special_vtoken_exchange_rate() -> Weight {
+		Weight::from_parts(31_544_000, 3469)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
 }
