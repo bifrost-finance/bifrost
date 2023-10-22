@@ -21,9 +21,14 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use node_primitives::currency::KSM;
-use sp_runtime::DispatchError::BadOrigin;
+use sp_core::{Hasher, Pair};
+use sp_runtime::{traits::BlakeTwo256, DispatchError::BadOrigin};
+use std::str::FromStr;
 
-const FILECOIN_NETWORK_ID: xcm::v3::NetworkId = NetworkId::Ethereum { chain_id: 314159 };
+const FROM_CHAIN_ID: u32 = 31337;
+const FILECOIN_NETWORK_ID: xcm::v3::NetworkId =
+	NetworkId::Ethereum { chain_id: FROM_CHAIN_ID as u64 };
+const ONE_FIL: u64 = 1_000_000_000_000_000_000;
 
 #[test]
 fn cross_in_and_cross_out_should_work() {
@@ -333,5 +338,98 @@ fn set_crossing_minimum_amount_should_work() {
 		));
 
 		assert_eq!(CrossingMinimumAmount::<Runtime>::get(KSM), Some((100, 100)));
+	});
+}
+
+/* unit tests for cross chain transfer */
+#[test]
+fn cross_in_fil_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let amount = 12000000000000000000;
+		let receiver = [1u8; 20].to_vec();
+
+		// can only get the first 3 32 bytes
+		let mut payload = CrossInOut::get_cross_out_payload(
+			XcmOperationType::TransferBack,
+			FIL,
+			amount,
+			Some(&receiver),
+		)
+		.unwrap();
+
+		// following 32 bytes is receiver
+		let fixed_address = CrossInOut::extend_to_bytes32(&receiver, 32);
+		payload.extend_from_slice(&fixed_address);
+
+		// cross-in-out pallet initialization
+		assert_ok!(CrossInOut::set_chain_network_id(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			Some(FILECOIN_NETWORK_ID)
+		));
+
+		// register currency
+		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+		));
+
+		// set crossing minimum amount
+		assert_ok!(CrossInOut::set_crossing_minimum_amount(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			Some((ONE_FIL, ONE_FIL))
+		));
+
+		// register wihitelist
+		assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
+		assert_ok!(CrossInOut::add_to_register_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
+
+		// register account id mapping
+		assert_ok!(CrossInOut::register_linked_account(
+			RuntimeOrigin::signed(ALICE),
+			FIL,
+			ALICE,
+			Box::new(MultiLocation {
+				parents: 100,
+				interior: X1(Junction::AccountKey20 {
+					network: Some(FILECOIN_NETWORK_ID),
+					key: [1u8; 20],
+				}),
+			})
+		));
+
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		let pk = cmt_pair.public().0.to_vec();
+
+		let dst_anchor: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+		let src_anchor =
+			H256::from_str("000000000000000000000008942c628b66a34c2234928a4adc3ccc437baa0dd0")
+				.unwrap();
+		let message = Message {
+			uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000")
+				.unwrap(),
+			cross_type: <Runtime as pallet_bcmp::Config>::PureMessage::get(),
+			src_anchor,
+			extra_feed: vec![],
+			dst_anchor,
+			payload,
+		};
+		let mock_sig = cmt_pair.sign(&message.encode()).0.to_vec();
+		assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), dst_anchor, pk.clone()));
+		assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), FROM_CHAIN_ID));
+		assert_ok!(Bcmp::enable_path(
+			RuntimeOrigin::signed(ALICE),
+			FROM_CHAIN_ID,
+			src_anchor,
+			dst_anchor
+		));
+		assert_ok!(Bcmp::receive_message(
+			RuntimeOrigin::signed(ALICE),
+			mock_sig.clone(),
+			message.encode()
+		));
+
+		assert_eq!(Tokens::free_balance(FIL, &ALICE), amount);
 	});
 }
