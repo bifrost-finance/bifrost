@@ -19,107 +19,21 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
+use frame_support::{assert_noop, assert_ok};
 use node_primitives::currency::KSM;
 use sp_runtime::DispatchError::BadOrigin;
-use xcm::v3::prelude::*;
 
-#[test]
-fn cross_in_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
-		);
-
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::NoCrossingMinimumSet
-		);
-
-		CrossingMinimumAmount::<Runtime>::insert(KSM, (1000, 1000));
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::AmountLowerThanMinimum
-		);
-
-		CrossingMinimumAmount::<Runtime>::insert(KSM, (1, 1));
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::NotAllowed
-		);
-
-		let bounded_vector = BoundedVec::try_from(vec![ALICE]).unwrap();
-		IssueWhiteList::<Runtime>::insert(KSM, bounded_vector);
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::NoAccountIdMapping
-		);
-
-		AccountToOuterMultilocation::<Runtime>::insert(KSM, ALICE, location.clone());
-		OuterMultilocationToAccount::<Runtime>::insert(KSM, location.clone(), ALICE);
-
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
-		assert_ok!(CrossInOut::cross_in(
-			RuntimeOrigin::signed(ALICE),
-			Box::new(location),
-			KSM,
-			100,
-			None
-		));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 100);
-
-		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), KSM, 50));
-		assert_eq!(Tokens::free_balance(KSM, &ALICE), 50);
-	});
-}
+const FILECOIN_NETWORK_ID: xcm::v3::NetworkId = NetworkId::Ethereum { chain_id: 314159 };
 
 #[test]
 fn cross_in_and_cross_out_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation {
 			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [0u8; 20],
+			}),
 		};
 
 		assert_noop!(
@@ -128,46 +42,8 @@ fn cross_in_and_cross_out_should_work() {
 				Box::new(location.clone()),
 				KSM,
 				100,
-				None
-			),
-			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
-		);
-
-		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::NoCrossingMinimumSet
-		);
-
-		CrossingMinimumAmount::<Runtime>::insert(KSM, (1000, 1000));
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
-			Error::<Runtime>::AmountLowerThanMinimum
-		);
-
-		CrossingMinimumAmount::<Runtime>::insert(KSM, (1, 1));
-
-		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
+				None,
+				KSM
 			),
 			Error::<Runtime>::NotAllowed
 		);
@@ -181,7 +57,50 @@ fn cross_in_and_cross_out_should_work() {
 				Box::new(location.clone()),
 				KSM,
 				100,
-				None
+				None,
+				KSM
+			),
+			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
+		);
+
+		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None,
+				KSM
+			),
+			Error::<Runtime>::NoCrossingMinimumSet
+		);
+
+		CrossingMinimumAmount::<Runtime>::insert(KSM, (1000, 1000));
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None,
+				KSM
+			),
+			Error::<Runtime>::AmountLowerThanMinimum
+		);
+
+		CrossingMinimumAmount::<Runtime>::insert(KSM, (1, 1));
+
+		assert_noop!(
+			CrossInOut::cross_in(
+				RuntimeOrigin::signed(ALICE),
+				Box::new(location.clone()),
+				KSM,
+				100,
+				None,
+				KSM
 			),
 			Error::<Runtime>::NoAccountIdMapping
 		);
@@ -195,11 +114,12 @@ fn cross_in_and_cross_out_should_work() {
 			Box::new(location),
 			KSM,
 			100,
-			None
+			None,
+			KSM
 		));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 100);
 
-		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), KSM, 50));
+		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), KSM, 50, KSM));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 50);
 	});
 }
@@ -255,12 +175,18 @@ fn register_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation {
 			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [0u8; 20],
+			}),
 		};
 
 		let location2 = MultiLocation {
 			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [0u8; 20],
+			}),
 		};
 
 		assert_noop!(
@@ -330,12 +256,18 @@ fn change_outer_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation {
 			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [0u8; 20],
+			}),
 		};
 
 		let location2 = MultiLocation {
 			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [0u8; 20],
+			}),
 		};
 
 		AccountToOuterMultilocation::<Runtime>::insert(KSM, BOB, location.clone());
@@ -386,15 +318,18 @@ fn change_outer_linked_account_should_work() {
 fn set_crossing_minimum_amount_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_noop!(
-			CrossInOut::set_crossing_minimum_amount(RuntimeOrigin::signed(BOB), KSM, 100, 100),
+			CrossInOut::set_crossing_minimum_amount(
+				RuntimeOrigin::signed(BOB),
+				KSM,
+				Some((100, 100))
+			),
 			BadOrigin
 		);
 
 		assert_ok!(CrossInOut::set_crossing_minimum_amount(
 			RuntimeOrigin::signed(ALICE),
 			KSM,
-			100,
-			100
+			Some((100, 100))
 		));
 
 		assert_eq!(CrossingMinimumAmount::<Runtime>::get(KSM), Some((100, 100)));

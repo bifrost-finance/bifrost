@@ -29,7 +29,7 @@ use node_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
 	CurrencyId, TokenSymbol,
 };
-use sp_core::{ConstU32, H256};
+use sp_core::{ConstU32, Hasher, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -58,7 +58,8 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>}
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>},
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -159,6 +160,8 @@ ord_parameter_types! {
 parameter_types! {
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const MaxLengthLimit: u32 = 100;
+	pub CrossInOutAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+	pub const FeeAccount: AccountId = CHARLIE;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -168,6 +171,24 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = ();
 	type MaxLengthLimit = MaxLengthLimit;
+	type AnchorAddress = CrossInOutAnchorAddress;
+	type FeeAccount = FeeAccount;
+	type CrossChainOperationExecutor = CrossInOut;
+}
+
+parameter_types! {
+	pub const PureMessage: H256 = pallet_bcmp::PURE_MESSAGE;
+	pub const DefaultAdmin: Option<AccountId> = Some(ALICE);
+}
+
+impl pallet_bcmp::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PureMessage = PureMessage;
+	type DefaultAdmin = DefaultAdmin;
+	// Three pallets are using bcmp to pass cross-out message.
+	type Consumers = CrossInOut;
+	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
 }
 
 pub struct ExtBuilder {
