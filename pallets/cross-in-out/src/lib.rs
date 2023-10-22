@@ -957,9 +957,9 @@ pub mod pallet {
 
 			let sender_location = if src_chain_native_currency_id == FIL {
 				// This is not receiver. It's original sender. Need to map to bounded bifrost
-				// account. only use the first 20 bytes as receiver out of 32 bytes
+				// account. only use the last 20 bytes as receiver out of 32 bytes
 				let mut sender_vec = [0u8; 20];
-				sender_vec.copy_from_slice(&payload[96..116]);
+				sender_vec.copy_from_slice(&payload[108..128]);
 
 				Box::new(MultiLocation {
 					parents: 100,
