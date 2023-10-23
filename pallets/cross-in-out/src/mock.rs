@@ -44,7 +44,7 @@ pub type Balance = u64;
 
 pub type AccountId = AccountId32;
 
-pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
+pub const ALICE: AccountId = AccountId32::new([2u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 

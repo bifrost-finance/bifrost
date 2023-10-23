@@ -48,6 +48,8 @@ pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "po
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
+pallet-bcmp = { version = "*", default-features = false }
+bifrost-cross-in-out = { path = "../../pallets/cross-in-out", default-features = false }
 
 env_logger = "0.10.0"
 

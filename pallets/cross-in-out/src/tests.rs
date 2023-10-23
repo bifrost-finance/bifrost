@@ -569,3 +569,28 @@ fn cross_out_vfil_should_work() {
 		assert_eq!(Tokens::free_balance(VFIL, &ALICE), endowed_amount - amount);
 	});
 }
+
+#[test]
+fn send_message_to_anchor_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let amount = ONE_FIL;
+
+		// initialize cross-in-out pallet and bcmp pallet
+		initialize_cross_in_out();
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		initialize_pallet_bcmp(cmt_pair);
+
+		let receiver: [u8; 20] = [1u8; 20];
+
+		// can only get the first 3 32 bytes
+		let payload = CrossInOut::get_cross_out_payload(
+			XcmOperationType::TransferTo,
+			FIL,
+			amount,
+			Some(&receiver),
+		)
+		.unwrap();
+
+		assert_ok!(CrossInOut::send_message_to_anchor(ALICE, FROM_CHAIN_ID, &payload));
+	});
+}

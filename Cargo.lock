@@ -1275,6 +1275,7 @@ name = "bifrost-slp"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-cross-in-out",
  "bifrost-currencies",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",

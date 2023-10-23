@@ -39,10 +39,10 @@ use node_primitives::{
 	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmOperationType,
 };
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
-use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, Hasher, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
-	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
+	traits::{AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
@@ -76,8 +76,43 @@ construct_runtime!(
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>},
 		Utility: pallet_utility::{Pallet, Call, Event},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>},
+		Bcmp: pallet_bcmp:: {Pallet, Call, Storage, Event<T>},
 	}
 );
+
+parameter_types! {
+	pub const PureMessage: H256 = pallet_bcmp::PURE_MESSAGE;
+	pub const DefaultAdmin: Option<AccountId> = Some(ALICE);
+}
+
+impl pallet_bcmp::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PureMessage = PureMessage;
+	type DefaultAdmin = DefaultAdmin;
+	// Three pallets are using bcmp to pass cross-out message.
+	type Consumers = CrossInOut;
+	type WeightInfo = pallet_bcmp::weight::BcmpWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub CrossInOutAnchorAddress: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+	pub const FeeAccount: AccountId = CHARLIE;
+}
+
+impl bifrost_cross_in_out::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type EntrancePalletId = SlpEntrancePalletId;
+	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
+	type AnchorAddress = CrossInOutAnchorAddress;
+	type FeeAccount = FeeAccount;
+	type CrossChainOperationExecutor = CrossInOut;
+}
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
@@ -232,6 +267,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type BridgeOperator = CrossInOut;
 }
 
 parameter_types! {
@@ -466,6 +502,7 @@ impl Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+	type BridgeOperator = CrossInOut;
 }
 
 pub struct XcmDestWeightAndFee;
