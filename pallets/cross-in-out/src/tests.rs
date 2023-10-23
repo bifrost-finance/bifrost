@@ -342,6 +342,71 @@ fn set_crossing_minimum_amount_should_work() {
 }
 
 /* unit tests for cross chain transfer */
+fn initialize_pallet_bcmp(cmt_pair: sp_core::ed25519::Pair) -> (H256, H256) {
+	let pk = cmt_pair.public().0.to_vec();
+
+	let dst_anchor: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
+	let src_anchor =
+		H256::from_str("000000000000000000000008942c628b66a34c2234928a4adc3ccc437baa0dd0").unwrap();
+
+	assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), dst_anchor, pk.clone()));
+	assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), FROM_CHAIN_ID));
+	assert_ok!(Bcmp::enable_path(
+		RuntimeOrigin::signed(ALICE),
+		FROM_CHAIN_ID,
+		src_anchor,
+		dst_anchor
+	));
+
+	(src_anchor, dst_anchor)
+}
+
+fn initialize_cross_in_out() {
+	// cross-in-out pallet initialization
+	assert_ok!(CrossInOut::set_chain_network_id(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Some(FILECOIN_NETWORK_ID)
+	));
+
+	// register currency
+	assert_ok!(CrossInOut::register_currency_for_cross_in_out(RuntimeOrigin::signed(ALICE), FIL,));
+	assert_ok!(CrossInOut::register_currency_for_cross_in_out(RuntimeOrigin::signed(ALICE), VFIL,));
+
+	// set crossing minimum amount
+	assert_ok!(CrossInOut::set_crossing_minimum_amount(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Some((ONE_FIL, ONE_FIL))
+	));
+	assert_ok!(CrossInOut::set_crossing_minimum_amount(
+		RuntimeOrigin::signed(ALICE),
+		VFIL,
+		Some((ONE_FIL, ONE_FIL))
+	));
+
+	// register wihitelist
+	assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
+	assert_ok!(CrossInOut::add_to_register_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
+
+	assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), VFIL, ALICE));
+	assert_ok!(CrossInOut::add_to_register_whitelist(RuntimeOrigin::signed(ALICE), VFIL, ALICE));
+
+	// register account id mapping
+	assert_ok!(CrossInOut::register_linked_account(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		ALICE,
+		Box::new(MultiLocation {
+			parents: 100,
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: [1u8; 20],
+			}),
+		})
+	));
+}
+
 #[test]
 fn cross_in_fil_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
@@ -361,51 +426,11 @@ fn cross_in_fil_should_work() {
 		let fixed_address = CrossInOut::extend_to_bytes32(&receiver, 32);
 		payload.extend_from_slice(&fixed_address);
 
-		// cross-in-out pallet initialization
-		assert_ok!(CrossInOut::set_chain_network_id(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-			Some(FILECOIN_NETWORK_ID)
-		));
-
-		// register currency
-		assert_ok!(CrossInOut::register_currency_for_cross_in_out(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-		));
-
-		// set crossing minimum amount
-		assert_ok!(CrossInOut::set_crossing_minimum_amount(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-			Some((ONE_FIL, ONE_FIL))
-		));
-
-		// register wihitelist
-		assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
-		assert_ok!(CrossInOut::add_to_register_whitelist(RuntimeOrigin::signed(ALICE), FIL, ALICE));
-
-		// register account id mapping
-		assert_ok!(CrossInOut::register_linked_account(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-			ALICE,
-			Box::new(MultiLocation {
-				parents: 100,
-				interior: X1(Junction::AccountKey20 {
-					network: Some(FILECOIN_NETWORK_ID),
-					key: [1u8; 20],
-				}),
-			})
-		));
+		initialize_cross_in_out();
 
 		let cmt_pair = sp_core::ed25519::Pair::generate().0;
-		let pk = cmt_pair.public().0.to_vec();
+		let (src_anchor, dst_anchor) = initialize_pallet_bcmp(cmt_pair);
 
-		let dst_anchor: H256 = BlakeTwo256::hash(&b"BIFROST_POLKADOT_CROSS_IN_OUT"[..]);
-		let src_anchor =
-			H256::from_str("000000000000000000000008942c628b66a34c2234928a4adc3ccc437baa0dd0")
-				.unwrap();
 		let message = Message {
 			uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000")
 				.unwrap(),
@@ -415,15 +440,8 @@ fn cross_in_fil_should_work() {
 			dst_anchor,
 			payload,
 		};
+
 		let mock_sig = cmt_pair.sign(&message.encode()).0.to_vec();
-		assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), dst_anchor, pk.clone()));
-		assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), FROM_CHAIN_ID));
-		assert_ok!(Bcmp::enable_path(
-			RuntimeOrigin::signed(ALICE),
-			FROM_CHAIN_ID,
-			src_anchor,
-			dst_anchor
-		));
 		assert_ok!(Bcmp::receive_message(
 			RuntimeOrigin::signed(ALICE),
 			mock_sig.clone(),
@@ -431,5 +449,123 @@ fn cross_in_fil_should_work() {
 		));
 
 		assert_eq!(Tokens::free_balance(FIL, &ALICE), amount);
+	});
+}
+
+#[test]
+fn cross_in_vfil_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let amount = 12000000000000000000;
+		let receiver = [1u8; 20].to_vec();
+
+		// can only get the first 3 32 bytes
+		let mut payload = CrossInOut::get_cross_out_payload(
+			XcmOperationType::TransferBack,
+			VFIL,
+			amount,
+			Some(&receiver),
+		)
+		.unwrap();
+
+		// following 32 bytes is receiver
+		let fixed_address = CrossInOut::extend_to_bytes32(&receiver, 32);
+		payload.extend_from_slice(&fixed_address);
+
+		initialize_cross_in_out();
+
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		let (src_anchor, dst_anchor) = initialize_pallet_bcmp(cmt_pair);
+
+		let message = Message {
+			uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000")
+				.unwrap(),
+			cross_type: <Runtime as pallet_bcmp::Config>::PureMessage::get(),
+			src_anchor,
+			extra_feed: vec![],
+			dst_anchor,
+			payload,
+		};
+
+		let mock_sig = cmt_pair.sign(&message.encode()).0.to_vec();
+		assert_ok!(Bcmp::receive_message(
+			RuntimeOrigin::signed(ALICE),
+			mock_sig.clone(),
+			message.encode()
+		));
+
+		assert_eq!(Tokens::free_balance(VFIL, &ALICE), amount);
+	});
+}
+
+#[test]
+fn fil_send_message_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		// endow some FIL to ALICE
+		let endowed_amount = 5 * ONE_FIL;
+		assert_ok!(Tokens::deposit(FIL, &ALICE, endowed_amount));
+		assert_eq!(Tokens::free_balance(FIL, &ALICE), endowed_amount);
+
+		let amount = ONE_FIL;
+		let receiver = [1u8; 20];
+		let receiver_location = MultiLocation {
+			parents: 100,
+			interior: X1(Junction::AccountKey20 {
+				network: Some(FILECOIN_NETWORK_ID),
+				key: receiver,
+			}),
+		};
+
+		// initialize cross-in-out pallet and bcmp pallet
+		initialize_cross_in_out();
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		initialize_pallet_bcmp(cmt_pair);
+
+		let dest_location =
+			crate::AccountToOuterMultilocation::<Runtime>::get(FIL, &ALICE).unwrap();
+		assert_eq!(dest_location, receiver_location);
+
+		assert_ok!(CrossInOut::send_message(ALICE, FIL, amount, Box::new(dest_location), FIL));
+	});
+}
+
+#[test]
+fn cross_out_fil_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let amount = ONE_FIL;
+
+		// endow some FIL to ALICE
+		let endowed_amount = 5 * ONE_FIL;
+		assert_ok!(Tokens::deposit(FIL, &ALICE, endowed_amount));
+		assert_eq!(Tokens::free_balance(FIL, &ALICE), endowed_amount);
+
+		// initialize cross-in-out pallet and bcmp pallet
+		initialize_cross_in_out();
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		initialize_pallet_bcmp(cmt_pair);
+
+		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), FIL, amount, FIL));
+
+		assert_eq!(Tokens::free_balance(FIL, &ALICE), endowed_amount - amount);
+	});
+}
+
+#[test]
+fn cross_out_vfil_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let amount = ONE_FIL;
+
+		// endow some FIL to ALICE
+		let endowed_amount = 5 * ONE_FIL;
+		assert_ok!(Tokens::deposit(VFIL, &ALICE, endowed_amount));
+		assert_eq!(Tokens::free_balance(VFIL, &ALICE), endowed_amount);
+
+		// initialize cross-in-out pallet and bcmp pallet
+		initialize_cross_in_out();
+		let cmt_pair = sp_core::ed25519::Pair::generate().0;
+		initialize_pallet_bcmp(cmt_pair);
+
+		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), VFIL, amount, FIL));
+
+		assert_eq!(Tokens::free_balance(VFIL, &ALICE), endowed_amount - amount);
 	});
 }
