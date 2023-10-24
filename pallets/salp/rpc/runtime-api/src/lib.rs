@@ -18,8 +18,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{Balance, RpcContributionStatus};
 use codec::Codec;
-use node_primitives::{Balance, RpcContributionStatus};
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {

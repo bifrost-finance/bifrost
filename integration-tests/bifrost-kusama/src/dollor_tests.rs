@@ -18,7 +18,7 @@
 
 use bifrost_kusama_runtime::Runtime;
 use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
-use node_primitives::{CurrencyId, TokenSymbol::*};
+use bifrost_primitives::{CurrencyId, TokenSymbol::*};
 
 const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
 const DECIMAL_12: u128 = 1_000_000_000_000;

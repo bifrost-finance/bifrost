@@ -28,6 +28,7 @@
 
 use core::fmt::Debug;
 
+use bifrost_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -37,7 +38,6 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;

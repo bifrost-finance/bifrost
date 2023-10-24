@@ -31,13 +31,13 @@ mod benchmarking;
 pub mod primitives;
 pub mod weights;
 
+use bifrost_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{AccountIdConversion, CheckedSub},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};

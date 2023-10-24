@@ -18,6 +18,8 @@
 
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
+pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -25,7 +27,6 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
@@ -36,7 +37,6 @@ pub use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
-pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
 use bifrost_currencies::BasicCurrencyAdapter;
@@ -309,12 +309,12 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		max_weight: Weight,
 		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
-		log::trace!(
-			target: "xcm::barriers",
-			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
-			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
-			origin, message, max_weight, _weight_credit,
-		);
+		// log::trace!(
+		// 	target: "xcm::barriers",
+		// 	"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+		// 	{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+		// 	origin, message, max_weight, _weight_credit,
+		// );
 		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
 		let mut iter = message.iter_mut();
 		// Make sure the first instruction is DescendOrigin
@@ -627,7 +627,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::redeem { .. }
 			) |
 			RuntimeCall::XcmInterface(
-				xcm_interface::Call::transfer_statemine_assets { .. }
+				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -701,12 +701,12 @@ impl pallet_xcm::Config for Runtime {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmRouter = node_primitives::DoNothingRouter;
+	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
 	type XcmTeleportFilter = Nothing;
@@ -884,7 +884,7 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
@@ -909,7 +909,7 @@ parameter_types! {
 
 }
 
-impl xcm_interface::Config for Runtime {
+impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;
@@ -917,7 +917,7 @@ impl xcm_interface::Config for Runtime {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = ParachainAccount;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;

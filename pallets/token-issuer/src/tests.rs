@@ -18,8 +18,8 @@
 
 #![cfg(test)]
 
+use bifrost_primitives::currency::ZLK;
 use frame_support::{assert_noop, assert_ok};
-use node_primitives::currency::ZLK;
 
 use crate::{mock::*, *};
 

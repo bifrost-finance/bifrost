@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use codec::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Copy, RuntimeDebug)]
@@ -28,8 +29,18 @@ pub enum ContributionStatus<BalanceOf> {
 	MigrateToIdle,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Copy, RuntimeDebug, scale_info::TypeInfo)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[derive(
+	Encode,
+	Decode,
+	Clone,
+	PartialEq,
+	Eq,
+	Copy,
+	RuntimeDebug,
+	scale_info::TypeInfo,
+	Serialize,
+	Deserialize,
+)]
 pub enum RpcContributionStatus {
 	Idle,
 	Contributing,

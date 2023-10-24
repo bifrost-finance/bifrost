@@ -1,5 +1,5 @@
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use codec::Encode;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::BoundedVec;
 use xcm::prelude::*;
 

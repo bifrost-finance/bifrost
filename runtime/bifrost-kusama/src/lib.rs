@@ -19,7 +19,7 @@
 //! The Bifrost Node runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
 
 // Make the WASM binary available.
@@ -28,6 +28,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -69,6 +71,15 @@ pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
 
+pub use bifrost_primitives::{
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
+	},
+	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, ParaId, PoolId, Price, Rate,
+	Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
+};
 pub use bifrost_runtime_common::{
 	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
@@ -85,15 +96,6 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use hex_literal::hex;
-pub use node_primitives::{
-	traits::{
-		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
-		XcmDestWeightAndFeeHandler,
-	},
-	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, ParaId, PoolId, Price, Rate,
-	Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
-};
 
 // zenlink imports
 use zenlink_protocol::{
@@ -107,7 +109,7 @@ pub mod governance;
 use governance::{custom_origins, CoreAdmin, TechAdmin};
 
 // xcm config
-mod xcm_config;
+pub mod xcm_config;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
@@ -153,6 +155,14 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
 	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
+/// into the relay chain.
+const UNINCLUDED_SEGMENT_CAPACITY: u32 = 1;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the
+/// number of blocks authored per slot.
+const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
@@ -959,6 +969,12 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
+		Runtime,
+		RELAY_CHAIN_SLOT_DURATION_MILLIS,
+		BLOCK_PROCESSING_VELOCITY,
+		UNINCLUDED_SEGMENT_CAPACITY,
+	>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1097,7 +1113,7 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::SalpContribute,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
+			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_statemine_assets {
 				..
 			}) => ExtraFeeInfo {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
@@ -1853,7 +1869,7 @@ construct_runtime! {
 		AssetRegistry: bifrost_asset_registry = 114,
 		VtokenMinting: bifrost_vtoken_minting = 115,
 		Slp: bifrost_slp = 116,
-		XcmInterface: xcm_interface = 117,
+		XcmInterface: bifrost_xcm_interface = 117,
 		VstokenConversion: bifrost_vstoken_conversion = 118,
 		Farming: bifrost_farming = 119,
 		SystemStaking: bifrost_system_staking = 120,
@@ -1863,7 +1879,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
-		StableAsset: nutsfinance_stable_asset = 128,
+		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool = 129,
 		VtokenVoting: bifrost_vtoken_voting = 130,
 	}
@@ -2304,31 +2320,7 @@ impl_runtime_apis! {
 	}
 }
 
-struct CheckInherents;
-
-impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
-	fn check_inherents(
-		block: &Block,
-		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
-	) -> sp_inherents::CheckInherentsResult {
-		let relay_chain_slot = relay_state_proof
-			.read_slot()
-			.expect("Could not read the relay chain slot from the proof");
-
-		let inherent_data =
-			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-				relay_chain_slot,
-				sp_std::time::Duration::from_secs(6),
-			)
-			.create_inherent_data()
-			.expect("Could not create the timestamp inherent data");
-
-		inherent_data.check_extrinsics(&block)
-	}
-}
-
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
-	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
-	CheckInherents = CheckInherents,
+	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>
 }

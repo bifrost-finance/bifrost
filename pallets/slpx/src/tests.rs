@@ -18,9 +18,9 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_primitives::TokenSymbol;
 use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use hex_literal::hex;
-use node_primitives::TokenSymbol;
 use sp_core::{bounded::BoundedVec, ConstU32};
 use sp_io;
 use zenlink_protocol::AssetId;

@@ -27,7 +27,7 @@ use frame_support::{
 	traits::Contains,
 	PalletId,
 };
-use node_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, TokenSymbol};
+use bifrost_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 
 use crate as lm;

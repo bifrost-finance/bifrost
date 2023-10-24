@@ -18,8 +18,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{Balance, BlockNumber};
 use codec::Codec;
-use node_primitives::{Balance, BlockNumber};
 use sp_api::decl_runtime_apis;
 use sp_core::U256;
 

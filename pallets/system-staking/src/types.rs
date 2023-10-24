@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::RoundIndex;
+use bifrost_primitives::PoolId;
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::*;
-use node_primitives::PoolId;
 use sp_arithmetic::per_things::{Perbill, Permill};
 use sp_runtime::traits::Zero;
 use sp_std::prelude::*;

@@ -19,17 +19,17 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
 use crate::{Pallet as Salp, *};
+use bifrost_primitives::{CurrencyId, ParaId, XcmOperationType, KSM, VSKSM};
 use bifrost_stable_pool::AtLeast64BitUnsignedOf;
+use bifrost_xcm_interface::XcmWeightAndFee;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
-use node_primitives::{CurrencyId, ParaId, XcmOperationType, KSM, VSKSM};
 use sp_runtime::{
 	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
-use xcm_interface::XcmWeightAndFee;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	let events = frame_system::Pallet::<T>::events();
@@ -50,9 +50,11 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 	para_id
 }
 
-fn contribute_fund<T: Config + xcm_interface::Config>(index: ParaId) -> (T::AccountId, BalanceOf<T>)
+fn contribute_fund<T: Config + bifrost_xcm_interface::Config>(
+	index: ParaId,
+) -> (T::AccountId, BalanceOf<T>)
 where
-	<<T as xcm_interface::Config>::MultiCurrency as MultiCurrency<
+	<<T as bifrost_xcm_interface::Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
 	>>::CurrencyId: From<CurrencyId>,
 {
@@ -60,11 +62,11 @@ where
 	let value = T::MinContribution::get();
 	assert_ok!(Salp::<T>::set_balance(&who, value));
 	XcmWeightAndFee::<T>::insert(
-		xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
+		bifrost_xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
 		XcmOperationType::UmpContributeTransact,
 		(
 			Weight::from_parts(4000000000, 100000),
-			xcm_interface::BalanceOf::<T>::from(4000000000u32),
+			bifrost_xcm_interface::BalanceOf::<T>::from(4000000000u32),
 		),
 	);
 	assert_ok!(Salp::<T>::contribute(RawOrigin::Signed(who.clone()).into(), index, value));
@@ -74,8 +76,8 @@ where
 }
 
 #[benchmarks(
-where T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
-<<T as xcm_interface::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId: From<CurrencyId>
+where T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + bifrost_xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
+<<T as bifrost_xcm_interface::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId: From<CurrencyId>
 )]
 mod benchmarks {
 	use super::*;
@@ -87,11 +89,11 @@ mod benchmarks {
 		let caller: T::AccountId = whitelisted_caller();
 		let contribution = T::MinContribution::get();
 		XcmWeightAndFee::<T>::insert(
-			xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
+			bifrost_xcm_interface::CurrencyIdOf::<T>::from(KSM.into()),
 			XcmOperationType::UmpContributeTransact,
 			(
 				Weight::from_parts(4000000000, 100000),
-				xcm_interface::BalanceOf::<T>::from(4000000000u32),
+				bifrost_xcm_interface::BalanceOf::<T>::from(4000000000u32),
 			),
 		);
 		assert_ok!(Salp::<T>::set_balance(&caller, contribution));

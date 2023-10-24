@@ -24,7 +24,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
-use node_primitives::{Amount, Balance, CurrencyId, MessageId, TokenSymbol};
+use bifrost_primitives::{Amount, Balance, CurrencyId, MessageId, TokenSymbol};
 use smallvec::smallvec;
 use sp_arithmetic::Percent;
 use sp_core::H256;

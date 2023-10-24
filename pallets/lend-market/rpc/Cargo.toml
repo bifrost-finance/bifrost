@@ -9,7 +9,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 	"derive",
 ] }
 jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
-node-primitives = { path = "../../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../../primitives", default-features = false }
 serde = { version = "1.0.160", features = ["derive"] }
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", features = [
 	'std',

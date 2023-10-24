@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{MultiLocation, TimeUnit};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use codec::{Decode, Encode};
-use node_primitives::{CurrencyId, TokenSymbol};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 

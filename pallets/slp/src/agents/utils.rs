@@ -19,10 +19,10 @@ use crate::{
 	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
 };
+use bifrost_primitives::CurrencyId;
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::CurrencyId;
 use sp_core::Get;
 use sp_std::prelude::*;
 use xcm::{

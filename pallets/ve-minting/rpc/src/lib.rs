@@ -18,6 +18,7 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
+use bifrost_primitives::Balance;
 pub use bifrost_ve_minting_rpc_runtime_api::{self as runtime_api, VeMintingRuntimeApi};
 use codec::Codec;
 use jsonrpsee::{
@@ -25,7 +26,6 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::Balance;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::U256;

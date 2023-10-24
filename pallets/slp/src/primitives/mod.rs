@@ -26,8 +26,8 @@ pub use moonbeam_primitives::*;
 pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
+use bifrost_primitives::TimeUnit;
 use codec::{Decode, Encode};
-use node_primitives::TimeUnit;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 

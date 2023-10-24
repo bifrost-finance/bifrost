@@ -15,7 +15,7 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/polkadot-sdk.git', branch = 'release-polkadot-v1.1.0', default-features = false }
 pallet-traits = { path = '../traits', default-features = false }
-node-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = [
 	"derive",
 ] }
@@ -43,7 +43,7 @@ std = [
 	'sp-core/std',
 	'orml-traits/std',
 	'orml-oracle/std',
-	'node-primitives/std',
+	'bifrost-primitives/std',
 	'scale-info/std',
 	'num-traits/std',
 	'pallet-traits/std',

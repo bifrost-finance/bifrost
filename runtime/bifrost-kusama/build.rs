@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(feature = "std")]
 fn main() {
 	substrate_wasm_builder::WasmBuilder::new()
 		.with_current_project()
@@ -24,6 +23,3 @@ fn main() {
 		.import_memory()
 		.build()
 }
-
-#[cfg(not(feature = "std"))]
-fn main() {}

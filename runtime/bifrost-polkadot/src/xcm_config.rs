@@ -18,15 +18,16 @@
 
 use super::*;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+};
+pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{ContainsPair, Get, ProcessMessageError},
-};
-use node_primitives::{
-	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 pub use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
@@ -38,7 +39,6 @@ pub use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
-pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
 use bifrost_currencies::BasicCurrencyAdapter;
@@ -484,7 +484,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::redeem { .. }
 			) |
 			RuntimeCall::XcmInterface(
-				xcm_interface::Call::transfer_statemine_assets { .. }
+				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -552,7 +552,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmRouter = node_primitives::DoNothingRouter;
+	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
 	type XcmTeleportFilter = Nothing;
@@ -719,7 +719,7 @@ parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account_truncating();
 }
 
-impl xcm_interface::Config for Runtime {
+impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MultiCurrency = Currencies;

@@ -25,6 +25,9 @@
 use core::cmp::max;
 
 pub use crate::rate_model::*;
+use bifrost_primitives::{
+	Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp,
+};
 use frame_support::{
 	pallet_prelude::*,
 	require_transactional,
@@ -36,7 +39,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp};
 use num_traits::cast::ToPrimitive;
 pub use pallet::*;
 use pallet_traits::{

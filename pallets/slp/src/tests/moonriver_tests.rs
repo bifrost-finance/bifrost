@@ -28,9 +28,9 @@ use crate::{
 	Junctions::X2,
 	*,
 };
+use bifrost_primitives::{currency::VMOVR, Balance};
 use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::{currency::VMOVR, Balance};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 

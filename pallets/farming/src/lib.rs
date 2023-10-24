@@ -34,6 +34,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 use crate::boost::*;
+use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -47,7 +48,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::{CurrencyId, FarmingInfo, PoolId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;

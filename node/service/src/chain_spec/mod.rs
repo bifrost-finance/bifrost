@@ -21,7 +21,7 @@ pub mod bifrost_kusama;
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub mod bifrost_polkadot;
 
-pub use node_primitives::{AccountId, Block, Signature};
+pub use bifrost_primitives::{AccountId, Block, Signature};
 use sc_chain_spec::ChainSpecExtension;
 use serde::{Deserialize, Serialize};
 use sp_core::{Pair, Public};

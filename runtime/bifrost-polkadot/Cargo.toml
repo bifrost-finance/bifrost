@@ -16,7 +16,7 @@ static_assertions = "1.1.0"
 strum = { version = "0.24", default-features = false, features = [ "derive" ] }
 strum_macros = "0.24"
 # primitives
-node-primitives = { default-features = false, path = "../../node/primitives" }
+bifrost-primitives = { default-features = false, path = "../../primitives" }
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -69,7 +69,7 @@ pallet-referenda = { git = "https://github.com/paritytech/polkadot-sdk", branch 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false ,features = ["parameterized-consensus-hook"] }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -126,10 +126,10 @@ orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 merkle-distributor = { version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
-xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
+bifrost-xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
 
 [build-dependencies]
-substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 [features]
 default = ["std"]
@@ -143,7 +143,7 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"pallet-balances/std",
 	"pallet-bounties/std",
 	"pallet-collective/std",
@@ -222,7 +222,6 @@ std = [
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
 	"bifrost-cross-in-out/std",
-	"substrate-wasm-builder",
 	"bifrost-slpx/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
@@ -312,7 +311,7 @@ try-runtime = [
 	"bifrost-asset-registry/try-runtime",
 	"bifrost-vtoken-minting/try-runtime",
 	"bifrost-slp/try-runtime",
-	"xcm-interface/try-runtime",
+	"bifrost-xcm-interface/try-runtime",
 	"bifrost-vstoken-conversion/try-runtime",
 	"bifrost-farming/try-runtime",
 	"bifrost-system-staking/try-runtime",

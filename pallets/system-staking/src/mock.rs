@@ -19,6 +19,7 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
@@ -32,7 +33,6 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{blake2_256, ConstU32, H256};
 use sp_runtime::{

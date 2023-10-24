@@ -36,6 +36,11 @@ pub use crate::{
 	call::*,
 	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
+use bifrost_primitives::{
+	currency::{VDOT, VKSM},
+	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
+	CurrencyId, DerivativeIndex, XcmOperationType,
+};
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	dispatch::GetDispatchInfo,
@@ -43,11 +48,6 @@ use frame_support::{
 	traits::{Get, LockIdentifier},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, *};
-use node_primitives::{
-	currency::{VDOT, VKSM},
-	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
-	CurrencyId, DerivativeIndex, XcmOperationType,
-};
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use pallet_conviction_voting::UnvoteScope;

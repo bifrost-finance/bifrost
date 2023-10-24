@@ -21,6 +21,11 @@
 #![cfg(test)]
 
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
+	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
+};
+use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
@@ -30,10 +35,6 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
-use node_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
-	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
-};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_arithmetic::Percent;
 use sp_core::{ConstU32, H256};
@@ -46,7 +47,6 @@ use sp_std::marker::PhantomData;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
-use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -74,7 +74,7 @@ construct_runtime!(
 		StableAsset: nutsfinance_stable_asset,
 		StablePool: bifrost_stable_pool,
 		VtokenMinting: bifrost_vtoken_minting,
-		XcmInterface: xcm_interface,
+		XcmInterface: bifrost_xcm_interface,
 	}
 );
 
@@ -553,7 +553,7 @@ impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	}
 }
 
-impl xcm_interface::Config for Test {
+impl bifrost_xcm_interface::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type MultiCurrency = Currencies;

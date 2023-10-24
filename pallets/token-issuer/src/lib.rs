@@ -22,9 +22,9 @@
 extern crate alloc;
 
 use alloc::{vec, vec::Vec};
+use bifrost_primitives::CurrencyId;
 use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 use sp_core::bounded::BoundedVec;
 pub use weights::WeightInfo;

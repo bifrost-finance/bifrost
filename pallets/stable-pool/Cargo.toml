@@ -14,7 +14,7 @@ sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "releas
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-node-primitives = { path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -48,7 +48,7 @@ std = [
 	"pallet-balances/std",
 	"nutsfinance-stable-asset/std",
 	"orml-traits/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
 ]

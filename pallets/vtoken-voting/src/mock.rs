@@ -20,6 +20,11 @@
 
 use crate as vtoken_voting;
 use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult};
+use bifrost_primitives::{
+	currency::{KSM, VBNC, VKSM},
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -28,11 +33,6 @@ use frame_support::{
 	traits::{Everything, Get, Nothing},
 };
 use frame_system::EnsureRoot;
-use node_primitives::{
-	currency::{KSM, VBNC, VKSM},
-	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
-};
 use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{

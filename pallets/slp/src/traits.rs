@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
-use node_primitives::CurrencyId;
+use bifrost_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
 use xcm::v3::Weight as XcmWeight;

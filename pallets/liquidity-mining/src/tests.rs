@@ -25,7 +25,7 @@ use frame_support::{
 	traits::Hooks,
 };
 use frame_system::pallet_prelude::OriginFor;
-use node_primitives::{Balance, CurrencyId, TokenSymbol};
+use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{

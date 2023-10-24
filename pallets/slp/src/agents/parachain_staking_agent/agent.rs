@@ -27,11 +27,11 @@ use crate::{
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet,
 	TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
 };
+use bifrost_primitives::{currency::BNC, CurrencyId, TokenSymbol, VtokenMintingOperator};
 use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{currency::BNC, CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 use sp_runtime::{

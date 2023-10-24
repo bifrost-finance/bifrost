@@ -1,6 +1,6 @@
 use crate::{mock::*, tests::LendMarket, Markets};
+use bifrost_primitives::{Rate, Ratio, SECONDS_PER_YEAR};
 use frame_support::assert_ok;
-use node_primitives::{Rate, Ratio, SECONDS_PER_YEAR};
 use sp_runtime::{
 	traits::{CheckedDiv, One, Saturating},
 	FixedPointNumber,

@@ -30,6 +30,9 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -37,7 +40,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;

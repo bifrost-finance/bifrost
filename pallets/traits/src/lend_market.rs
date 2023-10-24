@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use bifrost_primitives::{Rate, Ratio};
 use codec::{Decode, Encode};
-use primitives::{Rate, Ratio};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, FixedU128, RuntimeDebug};
 use sp_std::prelude::*;

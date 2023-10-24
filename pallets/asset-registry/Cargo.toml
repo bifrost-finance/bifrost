@@ -14,7 +14,7 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -36,7 +36,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking?/std",
-	"primitives/std",
+	"bifrost-primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",

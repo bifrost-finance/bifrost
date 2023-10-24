@@ -20,7 +20,7 @@
 
 /// Time.
 pub mod time {
-	use node_primitives::{BlockNumber, Moment};
+	use bifrost_primitives::{BlockNumber, Moment};
 	pub const MILLISECS_PER_BLOCK: Moment = 12000;
 	pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 

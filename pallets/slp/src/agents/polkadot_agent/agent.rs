@@ -28,14 +28,14 @@ use crate::{
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmWeight,
 };
+use bifrost_primitives::{
+	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
+	XcmOperationType, DOT, DOT_TOKEN_ID,
+};
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	currency::KSM, CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
-	XcmOperationType, DOT, DOT_TOKEN_ID,
-};
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedInto, Zero,

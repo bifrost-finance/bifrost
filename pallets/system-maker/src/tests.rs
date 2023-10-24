@@ -21,8 +21,8 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_primitives::{TimeUnit, VtokenMintingOperator};
 use frame_support::assert_ok;
-use node_primitives::{TimeUnit, VtokenMintingOperator};
 use sp_arithmetic::per_things::Permill;
 
 #[test]

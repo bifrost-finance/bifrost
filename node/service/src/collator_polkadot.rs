@@ -31,13 +31,13 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
+use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
-use node_primitives::Block;
 use polkadot_primitives::CollatorPair;
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};

@@ -33,6 +33,10 @@ pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
+	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -43,10 +47,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use log;
-use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
-	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
-};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
@@ -66,8 +66,8 @@ pub type UnlockId = u32;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::{currency::BNC, FIL};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-	use node_primitives::{currency::BNC, FIL};
 	use orml_traits::XcmTransfer;
 	use xcm::{prelude::*, v3::MultiLocation};
 

@@ -21,9 +21,9 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, ConvertInto, IdentityLookup},

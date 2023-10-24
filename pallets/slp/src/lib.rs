@@ -31,17 +31,17 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_primitives::{
+	currency::{BNC, KSM, MOVR, PHA},
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
+	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+};
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
-};
-use node_primitives::{
-	currency::{BNC, KSM, MOVR, PHA},
-	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -94,7 +94,7 @@ pub mod pallet {
 	use crate::agents::{
 		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
 	};
-	use node_primitives::{RedeemType, SlpxOperator};
+	use bifrost_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};

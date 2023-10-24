@@ -18,13 +18,13 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
+use bifrost_primitives::Balance;
 pub use bifrost_stable_pool_rpc_runtime_api::{self as runtime_api, StablePoolRuntimeApi};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::Balance;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;

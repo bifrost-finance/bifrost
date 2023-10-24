@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::MultiLocation;
+use bifrost_primitives::{CurrencyId, TimeUnit};
 use codec::{alloc::collections::BTreeMap, Decode, Encode};
-use node_primitives::{CurrencyId, TimeUnit};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;

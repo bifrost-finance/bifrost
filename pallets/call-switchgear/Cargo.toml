@@ -12,7 +12,7 @@ frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "r
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
@@ -32,7 +32,7 @@ std = [
 	"sp-io/std",
 	"sp-std/std",
 	"scale-info/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
 

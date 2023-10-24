@@ -30,19 +30,19 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
-use cumulus_primitives_core::{QueryId, Response};
-use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
-use node_primitives::{
+use bifrost_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
 	VtokenMintingInterface,
 };
+use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
+use bifrost_xcm_interface::ChainId;
+use cumulus_primitives_core::{QueryId, Response};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_xcm::ensure_response;
 use scale_info::TypeInfo;
 use sp_runtime::traits::One;
-use xcm_interface::ChainId;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -92,6 +92,10 @@ pub struct FundInfo<Balance, LeasePeriod> {
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
+	use bifrost_primitives::{
+		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
+	};
+	use bifrost_xcm_interface::traits::XcmHelper;
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
@@ -99,14 +103,10 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{
-		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
-	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v3::{MaybeErrorCode, MultiLocation};
-	use xcm_interface::traits::XcmHelper;
 
 	use super::*;
 
@@ -1440,7 +1440,8 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
+impl<T: Config>
+	bifrost_xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
 	for Pallet<T>
 {
 	fn confirm_contribute_call() -> <T as Config>::RuntimeCall {

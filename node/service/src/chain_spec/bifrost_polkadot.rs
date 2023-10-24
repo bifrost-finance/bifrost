@@ -23,11 +23,11 @@ use bifrost_polkadot_runtime::{
 	SessionConfig, SystemConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
 	WASM_BINARY,
 };
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;

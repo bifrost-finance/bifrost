@@ -19,13 +19,13 @@
 use std::{convert::TryInto, marker::PhantomData, sync::Arc};
 
 pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+use bifrost_primitives::{Balance, CurrencyId};
 use codec::{Codec, Decode};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
 pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;

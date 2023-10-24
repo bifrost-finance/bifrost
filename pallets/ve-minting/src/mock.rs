@@ -23,6 +23,7 @@
 
 use crate as bifrost_ve_minting;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol};
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
 use codec::{Decode, Encode};
@@ -36,7 +37,6 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{blake2_256, ConstU32, H256};
 use sp_runtime::{

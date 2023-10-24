@@ -81,8 +81,8 @@ pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::Runtime
 mod benchmarks {
 	use super::*;
 	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
+	use bifrost_primitives::VKSM;
 	use frame_benchmarking::impl_benchmark_test_suite;
-	use node_primitives::VKSM;
 	use sp_arithmetic::traits::SaturatedConversion;
 
 	#[benchmark]

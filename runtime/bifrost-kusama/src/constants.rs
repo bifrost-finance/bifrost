@@ -22,12 +22,12 @@
 pub mod currency {
 	use crate::Runtime;
 	use bifrost_asset_registry::Config;
+	use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::{Balance, CurrencyId, TokenSymbol};
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 

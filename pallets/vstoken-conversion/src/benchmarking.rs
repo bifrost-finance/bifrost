@@ -19,13 +19,13 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, BenchmarkError};
 use frame_support::{
 	assert_ok,
 	traits::{EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{AccountIdConversion, UniqueSaturatedFrom};
 

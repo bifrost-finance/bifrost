@@ -33,15 +33,16 @@ use crate::{
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
 	ValidatorsByDelegatorUpdateEntry,
 };
+use bifrost_primitives::{
+	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
+	CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
+};
+use bifrost_xcm_interface::traits::parachains;
 use codec::{alloc::collections::BTreeMap, Encode};
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
-	CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
-};
 use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
@@ -63,7 +64,6 @@ use xcm::{
 	v3::{prelude::*, Weight as XcmWeight},
 	VersionedMultiLocation,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Moonriver/Moonbeam
 pub struct MoonbeamAgent<T>(PhantomData<T>);

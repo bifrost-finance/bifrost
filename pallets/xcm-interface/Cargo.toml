@@ -1,5 +1,5 @@
 [package]
-name = "xcm-interface"
+name = "bifrost-xcm-interface"
 version = "0.8.0"
 authors = ["Ron yang<yrong1997@gmail.com>"]
 edition = "2021"
@@ -22,7 +22,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
@@ -45,7 +45,7 @@ std = [
 	"xcm/std",
 	"orml-traits/std",
 	"cumulus-primitives-core/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

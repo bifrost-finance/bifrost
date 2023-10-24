@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// use node_primitives::{CurrencyId, TokenSymbol};
+// use bifrost_primitives::{CurrencyId, TokenSymbol};
 
 // use crate::{cent, micro};
 

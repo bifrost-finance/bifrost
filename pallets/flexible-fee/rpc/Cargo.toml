@@ -14,7 +14,7 @@ sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "releas
 sp-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "./runtime-api" }
-node-primitives = { path = "../../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../../primitives", default-features = false }
 
 [features]
 default = ["std"]
@@ -25,5 +25,5 @@ std = [
     "sp-core/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
     "bifrost-flexible-fee-rpc-runtime-api/std",
-    "node-primitives/std",
+    "bifrost-primitives/std",
 ]

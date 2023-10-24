@@ -10,7 +10,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 log = { version = "0.4.14", default-features = false }
 
 # primitives
-node-primitives = { default-features = false, path = "../../node/primitives" }
+bifrost-primitives = { default-features = false, path = "../../primitives" }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -65,7 +65,7 @@ orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
-xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
+bifrost-xcm-interface = { path = "../../pallets/xcm-interface", default-features = false }
 bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 
 [features]
@@ -77,7 +77,7 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"sp-block-builder/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
@@ -114,6 +114,6 @@ std = [
 	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
-	"xcm-interface/std",
+	"bifrost-xcm-interface/std",
 	"bifrost-asset-registry/std",
 ]

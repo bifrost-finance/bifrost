@@ -23,6 +23,10 @@
 use crate as bifrost_slp;
 use crate::{Config, DispatchResult, QueryResponseManager, XcmDestWeightAndFeeHandler};
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	currency::{BNC, KSM},
+	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmOperationType,
+};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -34,10 +38,6 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{
-	currency::{BNC, KSM},
-	Amount, Balance, CurrencyId, SlpxOperator, TokenSymbol, XcmOperationType,
-};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};

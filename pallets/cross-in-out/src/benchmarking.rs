@@ -20,10 +20,10 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::traits::UniqueSaturatedFrom;
 use xcm::v2::prelude::*;
 

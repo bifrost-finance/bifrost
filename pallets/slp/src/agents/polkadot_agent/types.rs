@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{pallet::Error, AccountIdOf, BalanceOf, Config, CurrencyId};
+use bifrost_primitives::{currency::KSM, DOT};
 use codec::{Decode, Encode};
-use node_primitives::{currency::KSM, DOT};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::{boxed::Box, vec::Vec};

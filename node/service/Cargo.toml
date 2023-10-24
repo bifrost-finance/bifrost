@@ -91,7 +91,7 @@ futures = "0.3.28"
 bifrost-runtime-common = { path = "../../runtime/common"}
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama", optional = true }
 bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot", optional = true }
-node-primitives = { path = "../primitives" }
+bifrost-primitives = { path = "../../primitives" }
 node-rpc = { path = "../rpc" }
 
 # RPC related dependencies

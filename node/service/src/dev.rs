@@ -23,7 +23,7 @@ use futures::StreamExt;
 use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
 
-pub type Block = node_primitives::Block;
+pub type Block = bifrost_primitives::Block;
 pub type Executor = crate::collator_kusama::BifrostExecutor;
 pub type RuntimeApi = crate::collator_kusama::bifrost_kusama_runtime::RuntimeApi;
 pub type FullClient<RuntimeApi, ExecutorDispatch> =

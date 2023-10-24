@@ -23,10 +23,10 @@ use crate::{
 	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
 	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
+use bifrost_primitives::{CurrencyId, VtokenMintingOperator};
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 use sp_core::Get;
 use sp_runtime::{

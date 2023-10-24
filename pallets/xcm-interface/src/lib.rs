@@ -20,8 +20,8 @@
 
 pub mod calls;
 pub mod traits;
+use bifrost_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
 pub use calls::*;
-use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use traits::{ChainId, MessageId, Nonce, SalpHelper};

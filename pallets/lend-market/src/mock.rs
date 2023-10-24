@@ -16,13 +16,13 @@ pub use super::*;
 use sp_runtime::BuildStorage;
 
 use bifrost_asset_registry::AssetIdMaps;
+pub use bifrost_primitives::*;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-pub use node_primitives::*;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
 use sp_core::H256;
 use sp_runtime::{traits::IdentityLookup, AccountId32};
@@ -33,7 +33,7 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
-pub use node_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM, VSKSM};
+pub use bifrost_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM, VSKSM};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 

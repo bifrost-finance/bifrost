@@ -20,9 +20,9 @@ pub mod types;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 pub use frame_support::weights::Weight;
 use frame_support::{dispatch::DispatchResultWithPostInfo, traits::Get, PalletId};
-use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_runtime::{

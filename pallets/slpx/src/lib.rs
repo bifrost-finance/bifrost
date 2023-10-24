@@ -18,6 +18,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{
+	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -27,10 +31,6 @@ use frame_support::{
 	traits::Get,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::{
-	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
-};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -102,9 +102,9 @@ pub enum TargetChain<AccountId> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::RedeemType;
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::pallet_prelude::{ValueQuery, *};
-	use node_primitives::RedeemType;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]

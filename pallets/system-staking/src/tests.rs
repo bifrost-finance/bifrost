@@ -18,12 +18,12 @@
 #![cfg(test)]
 use crate::{mock::*, *};
 use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{TimeUnit, TokenInfo, VtokenMintingOperator};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	assert_ok,
 	sp_runtime::{Perbill, Permill},
 };
-use node_primitives::{TimeUnit, TokenInfo, VtokenMintingOperator};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 #[test]

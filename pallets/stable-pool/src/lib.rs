@@ -30,12 +30,12 @@ pub mod weights;
 pub use weights::*;
 pub mod traits;
 
-use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
-use frame_system::pallet_prelude::*;
-use node_primitives::{
+use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, TimeUnit,
 	VtokenMintingOperator,
 };
+use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
+use frame_system::pallet_prelude::*;
 pub use nutsfinance_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,

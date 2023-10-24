@@ -25,7 +25,7 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release
 sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0" }
-node-primitives = { path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
 sp-core = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0" }
@@ -57,7 +57,7 @@ std = [
 	"frame-benchmarking/std",
 	"sp-std/std",
 	"sp-runtime/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"orml-traits/std",
 	"sp-arithmetic/std",
 	"bifrost-slp/std",

@@ -26,8 +26,8 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 
-node-primitives = { path = "../../node/primitives", default-features = false }
-xcm-interface = { path = "../xcm-interface", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
+bifrost-xcm-interface = { path = "../xcm-interface", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-stable-pool = { path = "../stable-pool", default-features = false }
 nutsfinance-stable-asset = { path = "../stable-asset" , default-features = false }
@@ -61,7 +61,7 @@ std = [
 	"zenlink-protocol/std",
 	"orml-traits/std",
 	"orml-xtokens/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"cumulus-primitives-core/std",
 	"sp-std/std",
 	"bifrost-slp/std",

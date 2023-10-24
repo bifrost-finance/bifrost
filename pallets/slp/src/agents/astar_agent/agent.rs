@@ -29,14 +29,15 @@ use crate::{
 	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, Validators, XcmWeight,
 };
+use bifrost_primitives::{
+	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType, ASTR_TOKEN_ID,
+};
+use bifrost_xcm_interface::traits::parachains;
 use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType, ASTR_TOKEN_ID,
-};
 use orml_traits::XcmTransfer;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{
@@ -51,7 +52,6 @@ use xcm::{
 	v3::{prelude::*, Weight},
 	VersionedMultiAssets, VersionedMultiLocation,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Astar
 pub struct AstarAgent<T>(PhantomData<T>);

@@ -21,8 +21,8 @@
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller};
 use frame_support::BoundedVec;
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_std::vec;
 
 use crate::{Call, Config, Pallet};

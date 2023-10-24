@@ -41,7 +41,7 @@ use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use frame_support::{Deserialize, Serialize};
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
+use bifrost_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;

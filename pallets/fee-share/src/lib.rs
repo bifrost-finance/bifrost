@@ -30,6 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{CurrencyId, DistributionId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -39,7 +40,6 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, DistributionId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};

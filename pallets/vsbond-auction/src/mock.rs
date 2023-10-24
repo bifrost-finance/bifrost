@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types, traits::Contains, PalletId,
 };
 use frame_system::EnsureSignedBy;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},

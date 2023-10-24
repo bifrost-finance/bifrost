@@ -19,10 +19,10 @@
 
 use crate::*;
 use bifrost_asset_registry::CurrencyIdToLocations;
+use bifrost_primitives::{CurrencyId, KSM};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, KSM};
 
 fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId, H160) {
 	let caller: T::AccountId = whitelisted_caller();

@@ -8,7 +8,7 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 log = { version = "0.4.17", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-benchmarking = {  git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
@@ -33,7 +33,7 @@ default = ["std"]
 std = [
 	"codec/std",
 	"log/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
 	"sp-std/std",

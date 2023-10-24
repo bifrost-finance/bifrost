@@ -20,12 +20,12 @@
 #![allow(non_upper_case_globals)]
 
 use crate::Weight;
-use frame_support::{parameter_types, traits::Nothing, PalletId};
-use frame_system::EnsureRoot;
-use node_primitives::{
+use bifrost_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
 	CurrencyId, TokenSymbol,
 };
+use frame_support::{parameter_types, traits::Nothing, PalletId};
+use frame_system::EnsureRoot;
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},

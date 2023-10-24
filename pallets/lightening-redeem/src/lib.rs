@@ -20,7 +20,7 @@
 
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::traits::{AccountIdConversion, Saturating, UniqueSaturatedFrom, Zero};

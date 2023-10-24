@@ -21,12 +21,12 @@
 /// Money matters.
 pub mod currency {
 	use crate::Runtime;
+	use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::{Balance, CurrencyId, TokenSymbol};
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
@@ -79,7 +79,7 @@ pub mod currency {
 
 /// Time.
 pub mod time {
-	use node_primitives::{BlockNumber, Moment};
+	use bifrost_primitives::{BlockNumber, Moment};
 
 	/// Since BABE is probabilistic this is the average expected block time that
 	/// we are targetting. Blocks will be produced at a minimum duration defined

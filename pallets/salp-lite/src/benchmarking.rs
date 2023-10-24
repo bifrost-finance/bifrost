@@ -21,7 +21,7 @@
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::ParaId;
+use bifrost_primitives::ParaId;
 use sp_runtime::{traits::Bounded, SaturatedConversion};
 use sp_std::prelude::*;
 

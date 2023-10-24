@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Track configurations for governance.
-
+#![cfg_attr(not(feature = "std"), no_std)]
 use super::*;
 use sp_std::str::FromStr;
 

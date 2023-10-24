@@ -24,7 +24,7 @@ use frame_support::{
 	traits::{Nothing, OnFinalize, OnInitialize},
 	PalletId,
 };
-use node_primitives::{
+use bifrost_primitives::{
 	currency::{BNC, KSM, VSKSM},
 	CurrencyId, TokenSymbol,
 };

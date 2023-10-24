@@ -33,6 +33,7 @@ pub mod traits;
 pub mod weights;
 
 use crate::traits::Incentive;
+use bifrost_primitives::CurrencyId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -46,7 +47,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::CurrencyId;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;

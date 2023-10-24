@@ -8,19 +8,16 @@ version = "0.8.0"
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-log = "0.4.20"
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
+log = { version = "0.4.17", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 num-traits = { version = '0.2.15', default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-pallet-assets = { git = 'https://github.com/paritytech/polkadot-sdk.git', branch = 'release-polkadot-v1.1.0', default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-prices = { path = "../prices", default-features = false }
-node-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
 scale-info = { version = "2.9.0", default-features = false, features = [
@@ -46,16 +43,16 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
 ]
 std = [
+	'log/std',
 	'codec/std',
 	'frame-support/std',
 	'frame-system/std',
 	'frame-benchmarking/std',
 	'orml-traits/std',
-	'node-primitives/std',
+	'bifrost-primitives/std',
 	'sp-runtime/std',
 	'sp-std/std',
 	'sp-io/std',
-	'pallet-assets/std',
 	'pallet-prices/std',
 	'pallet-balances/std',
 	'pallet-timestamp/std',
@@ -67,6 +64,3 @@ std = [
 	"xcm-builder/std",
 ]
 try-runtime = ['frame-support/try-runtime']
-
-[lib]
-doctest = false

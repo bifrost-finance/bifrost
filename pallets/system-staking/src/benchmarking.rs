@@ -18,6 +18,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 use crate::{Pallet as SystemStaking, *};
+use bifrost_primitives::{CurrencyId, PoolId, TokenSymbol};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
 	assert_ok,
@@ -25,7 +26,6 @@ use frame_support::{
 	traits::OnInitialize,
 };
 use frame_system::{Pallet as System, RawOrigin};
-use node_primitives::{CurrencyId, PoolId, TokenSymbol};
 use sp_std::vec;
 
 benchmarks! {

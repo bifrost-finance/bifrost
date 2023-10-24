@@ -20,10 +20,10 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as VtokenMinting, *};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 
 benchmarks! {
 	set_minimum_mint {

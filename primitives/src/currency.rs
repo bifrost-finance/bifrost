@@ -21,7 +21,6 @@
 use bstringify::bstringify;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{
@@ -317,8 +316,7 @@ create_currency_id! {
 	// Bit 8 : 0 for Pokladot Ecosystem, 1 for Kusama Ecosystem
 	// Bit 7 : Reserved
 	// Bit 6 - 1 : The token ID
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo, MaxEncodedLen)]
-	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo, MaxEncodedLen, Serialize, Deserialize)]
 	#[repr(u8)]
 	pub enum TokenSymbol {
 		ASG("Asgard", 12) = 0,
@@ -357,8 +355,9 @@ pub type TokenId = u8;
 	PartialOrd,
 	Ord,
 	TypeInfo,
+	Serialize,
+	Deserialize,
 )]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
 	Native(TokenSymbol),

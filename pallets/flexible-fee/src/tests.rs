@@ -20,18 +20,18 @@
 
 #![cfg(test)]
 
-use node_primitives::TryConvertFrom;
+use bifrost_primitives::TryConvertFrom;
 // use balances::Call as BalancesCall;
 use crate::{
 	mock::*, BlockNumberFor, BoundedVec, Config, DispatchError::BadOrigin, UserDefaultFeeCurrency,
 };
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
 	traits::WithdrawReasons,
 	weights::Weight,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::{testing::TestXt, AccountId32};

@@ -30,7 +30,7 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::pallet_prelude::*;
-use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
+use bifrost_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -93,7 +93,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, ParaId};
+	use bifrost_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, ParaId};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;

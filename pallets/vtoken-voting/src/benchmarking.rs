@@ -18,10 +18,10 @@
 
 use crate::*;
 use assert_matches::assert_matches;
+use bifrost_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
 use sp_runtime::traits::UniqueSaturatedFrom;
 

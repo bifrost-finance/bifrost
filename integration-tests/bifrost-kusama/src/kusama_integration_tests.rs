@@ -18,7 +18,7 @@
 
 pub use codec::Encode;
 use frame_support::{weights::constants::*};
-pub use node_primitives::*;
+pub use bifrost_primitives::*;
 pub use orml_traits::{Change, GetByKey, MultiCurrency};
 pub use sp_runtime::{
 	traits::{AccountIdConversion, BadOrigin, Convert, Zero},

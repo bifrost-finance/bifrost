@@ -21,13 +21,13 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{BalanceOf, Call, Config, Info, Pallet as SystemMaker, Pallet, *};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, BenchmarkError};
 use frame_support::{
 	assert_ok,
 	traits::{EnsureOrigin, Hooks},
 };
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_core::Get;
 use sp_runtime::traits::{AccountIdConversion, UniqueSaturatedFrom};

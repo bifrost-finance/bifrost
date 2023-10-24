@@ -36,7 +36,7 @@ sc-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "re
 
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
-node-primitives = { path = "../primitives" }
+bifrost-primitives = { path = "../../primitives" }
 
 # CLI-specific dependencies
 sc-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }

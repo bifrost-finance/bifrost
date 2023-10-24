@@ -22,7 +22,12 @@ use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use balances::Call as BalancesCall;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
+	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
+};
 use bifrost_vtoken_voting::AccountVote;
+use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	ord_parameter_types, parameter_types,
@@ -33,10 +38,6 @@ use frame_support::{
 };
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use node_primitives::{
-	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
-	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
-};
 use orml_traits::MultiCurrency;
 use pallet_xcm::EnsureResponse;
 use sp_arithmetic::Percent;
@@ -53,7 +54,6 @@ use std::convert::TryInto;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
-use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };

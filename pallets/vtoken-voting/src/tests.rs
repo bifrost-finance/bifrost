@@ -20,6 +20,7 @@
 
 use super::*;
 use crate::mock::*;
+use bifrost_primitives::currency::{VBNC, VKSM};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{
@@ -27,7 +28,6 @@ use frame_support::{
 		tokens::{Fortitude::Polite, Preservation::Expendable},
 	},
 };
-use node_primitives::currency::{VBNC, VKSM};
 use pallet_conviction_voting::Vote;
 use pallet_xcm::Origin as XcmOrigin;
 

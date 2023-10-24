@@ -28,11 +28,11 @@ use bifrost_kusama_runtime::{
 	Range, RuntimeGenesisConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
 	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 
 use sc_chain_spec::Properties;
 use sc_service::ChainType;

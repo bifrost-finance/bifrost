@@ -19,12 +19,12 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
-use frame_system::EnsureSignedBy;
-use node_primitives::{
+use bifrost_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
 	CurrencyId, TokenSymbol,
 };
+use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
+use frame_system::EnsureSignedBy;
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},

@@ -18,9 +18,9 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::traits::UnfilteredDispatchable;
-use node_primitives::{CurrencyId, TokenSymbol};
 
 use super::*;
 #[allow(unused_imports)]

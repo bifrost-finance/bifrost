@@ -19,11 +19,11 @@
 #![cfg(test)]
 
 use crate::{mocks::mock_kusama::*, *};
-use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::{
+use bifrost_primitives::{
 	currency::{BNC, KSM, VKSM},
 	RedeemType,
 };
+use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 

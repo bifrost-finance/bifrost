@@ -24,7 +24,7 @@ use sp_core::H256;
 use sp_runtime::{traits::IdentityLookup, FixedPointNumber};
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use node_primitives::{
+pub use bifrost_primitives::{
 	currency::{FIL, VFIL},
 	DOT, KSM, VDOT, VKSM,
 };

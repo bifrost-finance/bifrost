@@ -17,12 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "runtime-benchmarks")]
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::{
 	account, benchmarks, impl_benchmark_test_suite, v1::BenchmarkError, whitelisted_caller,
 };
 use frame_support::{sp_runtime::traits::UniqueSaturatedFrom, traits::UnfilteredDispatchable};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 
 use super::*;
 #[allow(unused_imports)]

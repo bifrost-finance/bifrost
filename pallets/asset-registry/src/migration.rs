@@ -16,11 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use super::{AssetMetadata, Config, CurrencyMetadatas, Weight};
+use bifrost_primitives::CurrencyId;
 use frame_support::traits::Get;
-use primitives::CurrencyId;
 
 pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 	for pool_id in 0..pool_count {

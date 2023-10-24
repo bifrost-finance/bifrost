@@ -20,12 +20,12 @@
 
 extern crate alloc;
 
+use bifrost_primitives::CurrencyId;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{CallMetadata, Contains, GetCallMetadata, PalletInfoAccess},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
 

@@ -1,11 +1,14 @@
+cargo-features = ["resolver"]
+
 [workspace]
 members = [
-#	"integration-tests/bifrost-kusama",
-#	"integration-tests/bifrost-polkadot",
+	"integration-tests/bifrost-kusama",
+	"integration-tests/bifrost-polkadot",
+	"integration-tests/common",
 	"node/cli",
-	"node/primitives",
 	"node/rpc",
 	"node/service",
+	"primitives",
 	"pallets/asset-registry",
 	"pallets/currencies",
 	"pallets/flexible-fee",
@@ -27,10 +30,11 @@ members = [
 	"pallets/parachain-staking",
 	"pallets/ve-minting",
 	"pallets/stable-pool",
-	"pallets/lend-market",
-	"pallets/prices",
+	"pallets/stable-asset",
+
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
+	"runtime/common",
 ]
 
 resolver = "2"
@@ -103,13 +107,13 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-stable-amm = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-stable-amm-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
-zenlink-swap-router = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "74093208e6fb476d4f743e1ec57d65039b8a72c0" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-stable-amm = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-stable-amm-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
+zenlink-swap-router = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "f5d2ce81b72d36eb0b71d021a4eecf95d0a437e1" }
 merkle-distributor = { git = "https://github.com/bifrost-finance/merkle-distributor", rev = "030bfe47039aa61d3a58a7bf5e12c957401972d6" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
@@ -117,5 +121,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
-orml-oracle = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }
 orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4" }

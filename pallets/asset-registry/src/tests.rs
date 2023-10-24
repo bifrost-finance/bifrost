@@ -21,11 +21,11 @@
 #![cfg(test)]
 
 use super::*;
+use bifrost_primitives::TokenSymbol;
 use frame_support::{assert_noop, assert_ok};
 use mock::{
 	AssetRegistry, CouncilAccount, ExtBuilder, Runtime, RuntimeEvent, RuntimeOrigin, System,
 };
-use primitives::TokenSymbol;
 use xcm::prelude::*;
 
 #[test]

@@ -29,14 +29,15 @@ use crate::{
 	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
 	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
 };
+use bifrost_primitives::{
+	TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
+};
+use bifrost_xcm_interface::traits::parachains;
 use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
-};
 use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
@@ -55,7 +56,6 @@ use xcm::{
 	},
 	v3::prelude::*,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Phala
 pub struct PhalaAgent<T>(PhantomData<T>);

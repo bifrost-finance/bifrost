@@ -22,8 +22,8 @@
 use frame_benchmarking::{account, benchmarks, v1::BenchmarkError};
 use frame_support::{assert_ok, traits::EnsureOrigin};
 
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::traits::UniqueSaturatedFrom;
 use sp_std::vec;
 

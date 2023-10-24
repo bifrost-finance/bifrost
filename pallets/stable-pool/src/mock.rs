@@ -17,6 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate as bifrost_stable_pool;
 use bifrost_asset_registry::AssetIdMaps;
+pub use bifrost_primitives::{
+	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
+	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
+};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	ord_parameter_types, parameter_types,
@@ -24,10 +28,6 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-pub use node_primitives::{
-	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
-	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
-};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
 use sp_runtime::{

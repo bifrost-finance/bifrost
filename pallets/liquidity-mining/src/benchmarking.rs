@@ -30,7 +30,7 @@ use frame_support::{
 	sp_std::prelude::*,
 };
 use frame_system::RawOrigin;
-use node_primitives::Balance;
+use bifrost_primitives::Balance;
 
 use crate::{Pallet as LM, *};
 

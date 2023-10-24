@@ -20,12 +20,12 @@
 
 #![cfg(test)]
 
+use bifrost_primitives::{AccountId, Balance};
 use frame_support::{
 	construct_runtime, ord_parameter_types, pallet_prelude::ConstU32, parameter_types,
 	traits::Everything,
 };
 use frame_system::EnsureSignedBy;
-use primitives::{AccountId, Balance};
 use sp_runtime::BuildStorage;
 
 use crate as asset_registry;

@@ -24,8 +24,8 @@ use crate::{
 	Junctions::{Here, X1},
 	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
+use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use frame_support::{ensure, traits::Len};
-use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
 use sp_runtime::{
