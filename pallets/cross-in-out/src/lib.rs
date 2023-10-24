@@ -29,13 +29,13 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use node_primitives::{
 	currency::VFIL, BridgeOperator, CurrencyId, ReceiveFromAnchor, TokenInfo, XcmOperationType,
-	BNC, CROSSCHAIN_ACCOUNT_LENGTH, CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH,
+	CROSSCHAIN_ACCOUNT_LENGTH, CROSSCHAIN_AMOUNT_LENGTH, CROSSCHAIN_CURRENCY_ID_LENGTH,
 	CROSSCHAIN_OPERATION_LENGTH, FIL,
 };
 use orml_traits::MultiCurrency;
 use pallet_bcmp::Message;
 use sp_core::{H256, U256};
-use sp_runtime::{traits::UniqueSaturatedFrom, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::v3::prelude::*;
