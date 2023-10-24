@@ -37,7 +37,7 @@ use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
 use sp_runtime::{
 	traits::{BlakeTwo256, CheckedSub},
-	DispatchError, RuntimeDebug, Saturating,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};
@@ -654,16 +654,16 @@ impl<T: Config> Pallet<T> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
 		let execution_fee =
 			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
-		let minimum_balance = T::MultiCurrency::minimum_balance(currency_id);
+
 		T::MultiCurrency::transfer(
 			currency_id,
 			evm_caller_account_id,
 			&T::TreasuryAccount::get(),
 			execution_fee,
 		)?;
-		let balance_exclude_fee = free_balance
-			.checked_sub(&execution_fee.saturating_add(minimum_balance))
-			.ok_or(Error::<T>::FreeBalanceTooLow)?;
+
+		let balance_exclude_fee =
+			free_balance.checked_sub(&execution_fee).ok_or(Error::<T>::FreeBalanceTooLow)?;
 		Ok(balance_exclude_fee)
 	}
 

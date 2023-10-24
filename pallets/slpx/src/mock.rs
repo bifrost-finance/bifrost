@@ -126,7 +126,7 @@ impl frame_system::Config for Test {
 
 // Pallet balances configuration
 parameter_types! {
-  pub const ExistentialDeposit: u128 = 1;
+  pub const ExistentialDeposit: u128 = 10_000_000_000;
 }
 
 impl pallet_balances::Config for Test {
@@ -161,8 +161,12 @@ impl bifrost_currencies::Config for Test {
 
 // Pallet orml-tokens configuration
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> u128 {
-		0
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> u128 {
+		match currency_id {
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * 1_000_000_000,
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * 1_000_000_000,
+			_=> 10 * 1_000_000_000
+		}
 	};
 }
 pub type ReserveIdentifier = [u8; 8];

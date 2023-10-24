@@ -2144,6 +2144,7 @@ dependencies = [
 name = "bifrost-xcm-interface"
 version = "0.8.0"
 dependencies = [
+ "bifrost-asset-registry",
  "bifrost-primitives",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -7896,7 +7897,7 @@ checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "node-cli"
-version = "0.9.82"
+version = "0.9.84"
 dependencies = [
  "bifrost-primitives",
  "clap",

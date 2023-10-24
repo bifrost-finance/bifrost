@@ -911,7 +911,7 @@ parameter_types! {
 
 impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
@@ -924,4 +924,5 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type SalpHelper = Salp;
 	type ParachainId = SelfParaChainId;
 	type CallBackTimeOut = ConstU32<10>;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 }

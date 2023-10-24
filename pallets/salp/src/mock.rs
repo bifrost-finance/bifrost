@@ -565,6 +565,7 @@ impl bifrost_xcm_interface::Config for Test {
 	type SalpHelper = Salp;
 	type ParachainId = ParaInfo;
 	type CallBackTimeOut = ConstU64<10>;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
 }
 
 pub struct ParaInfo;

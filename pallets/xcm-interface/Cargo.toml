@@ -23,6 +23,7 @@ xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-s
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 bifrost-primitives = { path = "../../primitives", default-features = false }
+bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }

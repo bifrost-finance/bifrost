@@ -31,6 +31,7 @@ use frame_support::{
 	pallet_prelude::Weight,
 	parameter_types,
 	traits::{Everything, Get, Nothing},
+	weights::RuntimeDbWeight,
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::EnsureResponse;
@@ -68,6 +69,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub const DbWeight: RuntimeDbWeight = RuntimeDbWeight { read: 1, write: 2 };
 }
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
@@ -79,7 +81,7 @@ impl frame_system::Config for Runtime {
 	type Block = Block;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
-	type DbWeight = ();
+	type DbWeight = DbWeight;
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
@@ -287,6 +289,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 
 parameter_types! {
 	pub static RelaychainBlockNumber: BlockNumber = 1;
+	pub static ReferendumCheckInterval: BlockNumber = 1;
 }
 
 pub struct RelaychainDataProvider;
@@ -331,6 +334,7 @@ impl vtoken_voting::Config for Runtime {
 	type MaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = ();
 }
 
@@ -349,7 +353,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	vtoken_voting::GenesisConfig::<Runtime> {
-		delegator_votes: vec![
+		delegator_vote_roles: vec![
 			(VKSM, 0, 0),
 			(VKSM, 1, 1),
 			(VKSM, 2, 2),

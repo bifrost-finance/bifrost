@@ -138,6 +138,11 @@ fn cross_usdt() {
 				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
 			));
 
+			// get the fee balance of the alice before the transfer transaction
+			let alice_fee_balance_before =
+				Currencies::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE));
+
+			// Alice transfers 5 statemine asset to Bob
 			assert_ok!(XcmInterface::transfer_statemine_assets(
 				RuntimeOrigin::signed(ALICE.into()),
 				5 * USDT,
@@ -145,6 +150,16 @@ fn cross_usdt() {
 				Some(sp_runtime::AccountId32::from(BOB))
 			));
 
+			// get the fee balance of the alice after the transfer transaction
+			let alice_fee_balance_after =
+				Currencies::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE));
+
+			// assert alice_fee_balance_before and alice_fee_balance_after are equal, since we
+			// didn't deduct any fee from alice in this test (integration test doesn't go through
+			// flexible fee)
+			assert_eq!(alice_fee_balance_before, alice_fee_balance_after);
+
+			// assert Alice has 10-5 =5 statemine asset
 			assert_eq!(
 				Tokens::free_balance(CurrencyId::Token2(0), &AccountId::from(ALICE),),
 				5 * USDT
@@ -153,7 +168,10 @@ fn cross_usdt() {
 		Statemine::execute_with(|| {
 			use statemine_runtime::*;
 			println!("{:?}", System::events());
+
+			// assert Bob has 5 statemine asset
 			assert_eq!(Assets::balance(1984, AccountId::from(BOB)), 5 * USDT);
+
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success {
