@@ -21,8 +21,9 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use node_primitives::currency::KSM;
+use pallet_bcmp::fee::GasConfig;
 use sp_core::{Hasher, Pair};
-use sp_runtime::{traits::BlakeTwo256, DispatchError::BadOrigin};
+use sp_runtime::{traits::BlakeTwo256, DispatchError::BadOrigin, Percent};
 use std::str::FromStr;
 
 const FROM_CHAIN_ID: u32 = 31337;
@@ -538,10 +539,43 @@ fn cross_out_fil_should_work() {
 		assert_ok!(Tokens::deposit(FIL, &ALICE, endowed_amount));
 		assert_eq!(Tokens::free_balance(FIL, &ALICE), endowed_amount);
 
+		// endow some BNC to ALICE
+		let endowed_amount = 5 * ONE_FIL;
+		assert_ok!(Balances::deposit_into_existing(&ALICE, endowed_amount));
+
 		// initialize cross-in-out pallet and bcmp pallet
 		initialize_cross_in_out();
 		let cmt_pair = sp_core::ed25519::Pair::generate().0;
 		initialize_pallet_bcmp(cmt_pair);
+
+		// Bcmp set fee standard
+		let config = GasConfig {
+			chain_id: FROM_CHAIN_ID,
+			gas_per_byte: 1000,
+			base_gas_amount: 100,
+			gas_price: 100,
+			price_ratio: Percent::from_percent(1),
+			protocol_ratio: Percent::from_percent(0),
+		};
+		pallet_bcmp::ChainToGasConfig::<Runtime>::insert(FROM_CHAIN_ID, config);
+
+		let dst_chain = FROM_CHAIN_ID;
+		let receiver: [u8; 20] = [1u8; 20];
+		let fee_standard = pallet_bcmp::ChainToGasConfig::<Runtime>::get(&dst_chain);
+		let mut payload = CrossInOut::get_cross_out_payload(
+			XcmOperationType::TransferTo,
+			FIL,
+			amount,
+			Some(&receiver),
+		)
+		.unwrap();
+		let total_fee = Bcmp::calculate_total_fee(payload.len() as u64, fee_standard);
+
+		let src_anchor = <Runtime as crate::Config>::AnchorAddress::get();
+
+		let fee_standard = pallet_bcmp::ChainToGasConfig::<Runtime>::get(&FROM_CHAIN_ID);
+
+		assert_ok!(Bcmp::send_message(ALICE, total_fee, src_anchor, FROM_CHAIN_ID, payload));
 
 		assert_ok!(CrossInOut::cross_out(RuntimeOrigin::signed(ALICE), FIL, amount, FIL));
 

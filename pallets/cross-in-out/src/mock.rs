@@ -209,13 +209,13 @@ impl ExtBuilder {
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
-			(ALICE, BNC, 100),
-			(BOB, BNC, 100),
-			(CHARLIE, BNC, 100),
-			(ALICE, DOT, 100),
-			(ALICE, VDOT, 400),
-			(BOB, DOT, 100),
-			(BOB, KSM, 100),
+			(ALICE, BNC, 100_000_000_000_000),
+			(BOB, BNC, 100_000_000_000_000),
+			(CHARLIE, BNC, 100_000_000_000_000),
+			(ALICE, DOT, 100_000_000_000_000),
+			(ALICE, VDOT, 400_000_000_000_000),
+			(BOB, DOT, 100_000_000_000_000),
+			(BOB, KSM, 100_000_000_000_000),
 		])
 	}
 
