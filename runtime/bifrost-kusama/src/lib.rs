@@ -327,6 +327,7 @@ parameter_types! {
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
+	pub const BcmpFeeCollectorPalletId: PalletId = PalletId(*b"FCollect");
 }
 
 impl frame_system::Config for Runtime {

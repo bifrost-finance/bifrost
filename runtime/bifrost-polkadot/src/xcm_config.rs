@@ -637,7 +637,11 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			&SystemMakerPalletId::get(),
 		)
 		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
-			a.eq(&ZenklinkFeeAccount::get())
+			a.eq(&ZenklinkFeeAccount::get()) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(
+				&BcmpFeeCollectorPalletId::get(),
+			)
+			.eq(a)
 	}
 }
 
