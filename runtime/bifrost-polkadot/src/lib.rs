@@ -440,8 +440,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Treasury(..) |
 				RuntimeCall::Bounties(..) |
 				RuntimeCall::Tips(..) |
-				RuntimeCall::Vesting(pallet_vesting::Call::vest{..}) |
-				RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..}) |
+				RuntimeCall::Vesting(bifrost_vesting::Call::vest{..}) |
+				RuntimeCall::Vesting(bifrost_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
 				RuntimeCall::Utility(..) |
 				RuntimeCall::Proxy(..) |
@@ -950,12 +950,12 @@ impl pallet_collator_selection::Config for Runtime {
 
 // culumus runtime end
 
-impl pallet_vesting::Config for Runtime {
+impl bifrost_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
 }
 
 // Bifrost modules start
@@ -1629,7 +1629,7 @@ construct_runtime! {
 		Identity: pallet_identity = 54,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
-		Vesting: pallet_vesting = 60,
+		Vesting: bifrost_vesting = 60,
 
 		// Treasury stuff
 		Treasury: pallet_treasury = 61,

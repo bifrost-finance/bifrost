@@ -309,12 +309,12 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		max_weight: Weight,
 		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
-		// log::trace!(
-		// 	target: "xcm::barriers",
-		// 	"AllowTopLevelPaidExecutionDescendOriginFirst origin:
-		// 	{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
-		// 	origin, message, max_weight, _weight_credit,
-		// );
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
 		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
 		let mut iter = message.iter_mut();
 		// Make sure the first instruction is DescendOrigin

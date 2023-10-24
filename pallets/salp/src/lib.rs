@@ -23,7 +23,6 @@
 pub mod benchmarking;
 #[cfg(test)]
 pub mod mock;
-pub mod remove_storage;
 #[cfg(test)]
 mod tests;
 pub mod weights;

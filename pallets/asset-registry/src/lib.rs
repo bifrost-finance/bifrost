@@ -36,15 +36,12 @@ use frame_support::{
 	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 };
 use frame_system::pallet_prelude::*;
-use scale_info::TypeInfo;
+use scale_info::{prelude::string::String, TypeInfo};
 use sp_runtime::{
 	traits::{One, UniqueSaturatedFrom},
 	ArithmeticError, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{boxed::Box, vec::Vec};
-// NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
-// MultiLocation in the future.
-use scale_info::prelude::string::String;
 use xcm::{
 	opaque::{
 		lts::XcmContext,

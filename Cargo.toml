@@ -4,7 +4,6 @@ cargo-features = ["resolver"]
 members = [
 	"integration-tests/bifrost-kusama",
 	"integration-tests/bifrost-polkadot",
-	"integration-tests/common",
 	"node/cli",
 	"node/rpc",
 	"node/service",
@@ -30,11 +29,9 @@ members = [
 	"pallets/parachain-staking",
 	"pallets/ve-minting",
 	"pallets/stable-pool",
-	"pallets/stable-asset",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
-	"runtime/common",
 ]
 
 resolver = "2"

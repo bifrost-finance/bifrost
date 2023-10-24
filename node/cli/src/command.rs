@@ -486,7 +486,8 @@ pub fn run() -> Result<()> {
 				)
 				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
-				info!("Parachain Account: {parachain_account}");
+				info!("Parachain id: {:?}", id);
+				info!("Parachain Account: {}", parachain_account);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
