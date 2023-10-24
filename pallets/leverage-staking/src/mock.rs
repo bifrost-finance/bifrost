@@ -26,7 +26,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use lend_market::{JumpModel, Market, MarketState};
+use lend_market::{InterestRateModel, JumpModel, Market, MarketState};
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT, *,

@@ -357,7 +357,7 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_token_amount: Balance,
 		_remark: BoundedVec<u8, ConstU32<32>>,
-	) ->  Result<Balance, DispatchError> {
+	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
 	}
 

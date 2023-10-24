@@ -50,7 +50,7 @@ use sp_std::marker::PhantomData;
 pub use weights::WeightInfo;
 
 use bifrost_stable_pool::traits::StablePoolHandler;
-use lend_market::{AccountIdOf, AssetIdOf, BalanceOf, InterestRateModel};
+use lend_market::{AccountIdOf, AssetIdOf, BalanceOf};
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -157,7 +157,7 @@ pub mod pallet {
 				T::VtokenMinting::mint(who.clone(), asset_id, token_value, BoundedVec::default())?;
 			T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 			let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
-			if deposits.is_collateral == false {
+			if !deposits.is_collateral {
 				T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 			}
 			T::LendMarket::do_borrow(&who, asset_id, token_value)?;
