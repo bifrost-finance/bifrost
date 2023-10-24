@@ -314,21 +314,6 @@ pub mod pallet {
 
 			// if currecny_id is FIL or VFIL, send message to pallet-bcmp
 			if currency_id == FIL || currency_id == VFIL {
-				// calculate and deduct cross-chain fee from user.
-				let payload_length = CROSSCHAIN_OPERATION_LENGTH +
-					CROSSCHAIN_CURRENCY_ID_LENGTH +
-					CROSSCHAIN_AMOUNT_LENGTH +
-					CROSSCHAIN_ACCOUNT_LENGTH;
-
-				let dst_chain = Self::get_chain_network_and_id(dest_chain_native_currency_id)?.1;
-				let cross_chain_fee = Self::get_crossout_fee(dst_chain, payload_length as u64)?;
-				let cross_chain_fee =
-					BalanceOf::<T>::unique_saturated_from(cross_chain_fee.saturated_into::<u128>());
-
-				// we charge cross-chain fee in BNC
-				T::MultiCurrency::transfer(BNC, &crosser, &T::FeeAccount::get(), cross_chain_fee)
-					.map_err(|_| Error::<T>::NotEnoughFee)?;
-
 				Self::send_message(
 					crosser.clone(),
 					currency_id,
