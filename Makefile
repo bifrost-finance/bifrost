@@ -35,11 +35,11 @@ test-all: integration-test test-runtimes test-benchmarks
 
 .PHONY: test-runtimes
 test-runtimes:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
+	cargo test --features "with-all-runtime" --lib
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	SKIP_WASM_BUILD= cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "node-*" --exclude "*-runtime"
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "node-*" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
