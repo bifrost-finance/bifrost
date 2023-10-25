@@ -43,15 +43,15 @@ test-benchmarks:
 
 .PHONY: integration-test # integration test
 integration-test:
-	SKIP_WASM_BUILD= cargo test  -p *-integration-tests
+	cargo test  -p *-integration-tests
 
 .PHONY: kusama-integration-test # integration test
 kusama-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-kusama-integration-tests
+	cargo test -p bifrost-kusama-integration-tests
 
 .PHONY: polkadot-integration-test # integration test
 polkadot-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-polkadot-integration-tests
+	cargo test -p bifrost-polkadot-integration-tests
 
 .PHONY: clean # cargo clean
 clean:
