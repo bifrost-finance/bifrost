@@ -1455,6 +1455,14 @@ impl<T: Config> Pallet<T> {
 		Self::ensure_under_borrow_cap(asset_id, borrow_amount)?;
 		Self::ensure_enough_cash(asset_id, borrow_amount)?;
 		let borrow_value = Self::get_asset_value(asset_id, borrow_amount)?;
+		log::debug!(
+			target: "lend-market::borrow_allowed",
+			"asset_id: {:?}, borrower: {:?}, borrow_amount: {:?}, borrow_value: {:?}",
+			asset_id,
+			borrower,
+			borrow_amount,
+			borrow_value.into_inner(),
+		);
 		Self::ensure_liquidity(
 			borrower,
 			borrow_value,
@@ -1472,6 +1480,12 @@ impl<T: Config> Pallet<T> {
 		repay_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		if account_borrows < repay_amount {
+			log::debug!(
+				target: "lend-market::do_repay_borrow_with_amount",
+				"account_borrows: {:?}, repay_amount: {:?}",
+				account_borrows,
+				repay_amount,
+			);
 			return Err(Error::<T>::TooMuchRepay.into());
 		}
 		Self::update_reward_borrow_index(asset_id)?;
@@ -1815,6 +1829,14 @@ impl<T: Config> Pallet<T> {
 		// Assets holded by market currently.
 		let current_cash = T::Assets::balance(asset_id, &Self::account_id());
 		let total_cash = current_cash.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
+		log::debug!(
+			target: "lend-market::ensure_under_supply_cap",
+			"asset_id: {:?}, current_cash: {:?}, amount: {:?}, total_cash: {:?}, supply_cap: {:?}",
+			asset_id,
+			current_cash,
+			amount,
+			total_cash,
+			market.supply_cap,);
 		ensure!(total_cash <= market.supply_cap, Error::<T>::SupplyCapacityExceeded);
 
 		Ok(())
@@ -1874,6 +1896,14 @@ impl<T: Config> Pallet<T> {
 		if !lf_enable && total_liquidity >= lf_liquidity + reduce_amount {
 			return Ok(());
 		}
+		log::debug!(
+			target: "lend-market::ensure_liquidity",
+			"account: {:?}, total_liquidity: {:?}, lf_liquidity: {:?}, reduce_amount: {:?}",
+			account,
+			total_liquidity,
+			lf_liquidity,
+			reduce_amount
+		);
 		Err(Error::<T>::InsufficientLiquidity.into())
 	}
 
@@ -2114,6 +2144,13 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 				.checked_add(&collateral_asset_value)
 				.ok_or(ArithmeticError::Overflow)?
 		{
+			log::debug!(
+				target: "lend-market::collateral_asset",
+				"total_collateral_value: {:?}, total_borrowed_value: {:?}, collateral_asset_value: {:?}",
+				total_collateral_value.into_inner(),
+				total_borrowed_value.into_inner(),
+				collateral_asset_value.into_inner(),
+			);
 			return Err(Error::<T>::InsufficientLiquidity.into());
 		}
 		deposits.is_collateral = false;

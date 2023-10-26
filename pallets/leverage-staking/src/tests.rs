@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::mock::*;
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::{assert_noop, assert_ok, BoundedVec};
 use lend_market::{AccountBorrows, BorrowSnapshot};
 
 fn init() {
@@ -37,40 +37,53 @@ fn init() {
 		10000u128,
 		2,
 		1,
-		1000000000000000000u128,
+		unit(1),
 	));
 	assert_ok!(StablePool::edit_token_rate(
 		RuntimeOrigin::root(),
 		0,
-		vec![(DOT, (1, 1)), (VDOT, (1, 1))]
+		vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 	));
-	let amounts = vec![unit(1000), unit(1000)];
+	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100), BoundedVec::default()));
+	let amounts = vec![unit(100), unit(100)];
 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
+	// assert_ok!(StablePool::redeem_proportion(RuntimeOrigin::signed(0), 0,
+	// unit(1_000_000_000_000), vec![0, 0]));
 }
 
 #[test]
 fn flash_loan_deposit() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init();
-		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
+		assert_noop!(
+			LeverageStaking::flash_loan_deposit(
+				RuntimeOrigin::signed(1),
+				DOT,
+				FixedU128::from_inner(unit(1_000_000)),
+				100_000
+			),
+			lend_market::Error::<Test>::InvalidAmount
+		);
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(1_100_000)),
-			100_000
-		));
-
-		assert_ok!(LeverageStaking::flash_loan_deposit(
-			RuntimeOrigin::signed(1),
-			DOT,
-			FixedU128::from_inner(unit(1_200_000)),
+			FixedU128::from_inner(unit(900_000)),
 			100_000
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
-			BorrowSnapshot { principal: 120_000, borrow_index: 1.into() },
+			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() },
+		);
+		assert_eq!(
+			AccountFlashLoans::<Test>::get(DOT, 1).unwrap(),
+			AccountFlashLoanInfo {
+				amount: 100_000,
+				vtoken_amount: 190_000,
+				leverage_rate: FixedU128::from_inner(unit(900_000)),
+				collateral_factor: Permill::from_percent(50)
+			},
 		);
 	});
 }
@@ -85,17 +98,17 @@ fn flash_loan_repay() {
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(1_100_000)),
+			FixedU128::from_inner(unit(900_000)),
 			100_000
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
-			BorrowSnapshot { principal: 110_000, borrow_index: 1.into() },
+			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() }, // 110_000
 		);
 		assert_ok!(LeverageStaking::flash_loan_repay(
 			RuntimeOrigin::signed(1),
 			DOT,
-			Some(FixedU128::from_inner(unit(1_000_000))),
+			Some(FixedU128::from_inner(unit(800_000))),
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
@@ -105,7 +118,9 @@ fn flash_loan_repay() {
 			AccountFlashLoans::<Test>::get(DOT, 1).unwrap(),
 			AccountFlashLoanInfo {
 				amount: 100_000,
-				leverage_rate: FixedU128::from_inner(unit(100_000))
+				vtoken_amount: 110_000,
+				leverage_rate: FixedU128::from_inner(unit(100_000)),
+				collateral_factor: Permill::from_percent(50)
 			},
 		);
 		assert_ok!(LeverageStaking::flash_loan_repay(
