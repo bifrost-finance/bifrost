@@ -199,7 +199,7 @@ pub mod pallet {
 					if !deposits.is_collateral {
 						T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 					}
-				
+
 					let old_token_value = token_value;
 					token_value = market.collateral_factor * token_value;
 					log::debug!(
@@ -225,7 +225,8 @@ pub mod pallet {
 								BoundedVec::default(),
 							)?;
 							T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-							let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
+							let deposits =
+								lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
 							if !deposits.is_collateral {
 								T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 							}
@@ -333,12 +334,21 @@ impl<T: Config> Pallet<T> {
 				// <T as lend_market::Config>::Assets::mint_into(vtoken_id, &who, vtoken_value)?; //
 				// 17
 				<T as lend_market::Config>::Assets::mint_into(
-					vtoken_id,
+					asset_id,
 					&who,
 					token_value,
 					// flash_loan_info.vtoken_amount,
 				)?;
-				let vtoken_value = token_value;
+				let vtoken_value = FixedU128::from_inner(flash_loan_info.vtoken_amount)
+					.checked_mul(&rate)
+					.and_then(|r: FixedU128| {
+						r.checked_div(
+							&(flash_loan_info.leverage_rate +
+								FixedU128::from_inner(10_u128.pow(18))),
+						)
+					})
+					.map(|r: FixedU128| r.into_inner())
+					.ok_or(ArithmeticError::Underflow)?;
 				log::info!("vtoken_value: {:?},token_value{:?}", vtoken_value, token_value);
 
 				// 0 VDOT 0.1+17.8 DOT =17.9 DOT
@@ -359,7 +369,7 @@ impl<T: Config> Pallet<T> {
 				T::LendMarket::do_repay_borrow(
 					&who,
 					asset_id,
-					flash_loan_info.collateral_factor * token_value,
+					token_value, // flash_loan_info.collateral_factor *
 				)?; // if free_balance not enough, do_repay_borrow will fail
 
 				// 	let account_borrows =
@@ -396,9 +406,9 @@ impl<T: Config> Pallet<T> {
 					vtoken_value,
 				)?;
 				<T as lend_market::Config>::Assets::burn_from(
-					vtoken_id,
+					asset_id,
 					&who,
-					vtoken_value,
+					token_value,
 					Precision::Exact,
 					Fortitude::Force,
 				)?; // 17.5
@@ -407,6 +417,15 @@ impl<T: Config> Pallet<T> {
 					.leverage_rate
 					.checked_sub(&rate)
 					.ok_or(ArithmeticError::Underflow)?;
+
+				flash_loan_info.vtoken_amount = flash_loan_info
+					.vtoken_amount
+					.checked_sub(vtoken_value)
+					.ok_or(ArithmeticError::Underflow)?;
+
+				if flash_loan_info.leverage_rate.is_zero() {
+					*maybe_flash_loan_info = None;
+				}
 
 				Self::deposit_event(Event::<T>::FlashLoanRepaid {
 					who: who.clone(),
