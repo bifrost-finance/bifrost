@@ -18,15 +18,13 @@
 
 #![cfg(test)]
 // mod account_id;
-mod general_key;
-// mod asset_registry;
 // mod dollor_tests;
+// mod general_key;
 // mod kusama_cross_chain_transact;
 // mod kusama_integration_tests;
 // mod kusama_test_net;
 // mod salp;
 // mod slp;
-// mod statemine;
 // mod total_issuance;
 // mod treasury;
 // mod vtoken_minting;

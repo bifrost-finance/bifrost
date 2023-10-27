@@ -81,9 +81,9 @@ delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
 
 #![cfg(test)]
 use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
+use bifrost_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use bifrost_slp::{primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger};
 use frame_support::{assert_ok, BoundedVec};
-use bifrost_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use sp_runtime::Permill;

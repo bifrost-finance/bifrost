@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_kusama_runtime::Runtime;
-use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
 use bifrost_primitives::{CurrencyId, TokenSymbol::*};
+use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
 
 const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
 const DECIMAL_12: u128 = 1_000_000_000_000;
