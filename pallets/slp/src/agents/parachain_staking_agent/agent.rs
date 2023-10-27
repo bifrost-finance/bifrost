@@ -918,12 +918,12 @@ impl<T: Config>
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let from_account = Pallet::<T>::multilocation_to_account(from)?;
-		let to_account = Pallet::<T>::multilocation_to_account(to)?;
 
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
 		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(to_account == exit_account, Error::<T>::InvalidAccount);
 
+		let from_account = Pallet::<T>::multilocation_to_account(from)?;
 		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
 			.map_err(|_| Error::<T>::Unexpected)?;
 
@@ -947,9 +947,10 @@ impl<T: Config>
 
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account = Pallet::<T>::multilocation_to_account(from)?;
-		let to_account = Pallet::<T>::multilocation_to_account(to)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
+
+		let to_account = Pallet::<T>::multilocation_to_account(to)?;
 		T::MultiCurrency::transfer(currency_id, &from_account, &to_account, amount)
 			.map_err(|_| Error::<T>::Unexpected)?;
 
