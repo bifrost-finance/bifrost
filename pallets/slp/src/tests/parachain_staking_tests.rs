@@ -268,7 +268,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			request_briefs: request_briefs_set,
 			status: OneToManyDelegatorStatus::Active,
 		};
-		let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
+		let ledger2 = Ledger::Moonbeam(parachain_staking_ledger2);
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger2.clone());
 
 		System::set_block_number(700_000);
@@ -714,7 +714,7 @@ fn parachain_staking_liquidize_works() {
 			request_briefs: request_briefs_set,
 			status: OneToManyDelegatorStatus::Active,
 		};
-		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
+		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
 
