@@ -17,38 +17,31 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use super::types::{
-	MoonbeamCall, MoonbeamCurrencyId, MoonbeamParachainStakingCall, MoonbeamUtilityCall,
-	MoonbeamXtokensCall,
+	MoonbeamCall, MoonbeamCurrencyId, MoonbeamParachainStakingCall, MoonbeamXtokensCall,
 };
 use crate::{
+	agents::{MantaCall, MantaCurrencyId, MantaParachainStakingCall, MantaXtokensCall},
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation,
-		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, TIMEOUT_BLOCKS,
+		Ledger, MoonbeamLedgerUpdateOperation, OneToManyDelegatorStatus, OneToManyLedger, QueryId,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied,
-	DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorsMultilocation2Index, FeeSources,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegatorUpdateEntry,
+	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators, ValidatorsByDelegatorUpdateEntry,
 };
-use codec::{alloc::collections::BTreeMap, Encode};
+use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
-use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{
-	currency::{GLMR, GLMR_TOKEN_ID, MOVR},
-	CurrencyId, TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
+	currency::{GLMR, MANTA, MOVR},
+	CurrencyId, VtokenMintingOperator, XcmOperationType,
 };
-use orml_traits::MultiCurrency;
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero,
-	},
+	traits::{AccountIdConversion, CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -188,8 +181,6 @@ impl<T: Config>
 
 		// Get the delegator account id in Moonriver/Moonbeam network
 		let validator_multilocation = validator.as_ref().ok_or(Error::<T>::Unexpected)?;
-		let validator_account_id_20 =
-			Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
 
 		// Only allow bond with validators with maximum 1.3 times rewarded delegators. Otherwise,
 		// it's too crowded.
@@ -203,21 +194,42 @@ impl<T: Config>
 			.ok_or(Error::<T>::OverFlow)?;
 
 		let delegation_count: u32 = mins_maxs.validators_back_maximum;
-
 		// Construct xcm message.
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::DelegateWithAutoCompound(
-			validator_account_id_20,
-			amount,
-			Percent::from_percent(100),
-			candidate_delegation_count,
-			candidate_delegation_count,
-			delegation_count,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let validator_account_id_20 =
+					Pallet::<T>::multilocation_to_h160_account(validator_multilocation)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::DelegateWithAutoCompound(
+					validator_account_id_20,
+					amount,
+					Percent::from_percent(100),
+					candidate_delegation_count,
+					candidate_delegation_count,
+					delegation_count,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let validator_multilocation = validator.as_ref().ok_or(Error::<T>::Unexpected)?;
+				let validator_account_id =
+					Pallet::<T>::multilocation_to_account(validator_multilocation)?;
+				MantaCall::ParachainStaking(MantaParachainStakingCall::<T>::Delegate(
+					validator_account_id,
+					amount,
+					candidate_delegation_count,
+					delegation_count,
+				))
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				call,
 				who,
@@ -226,10 +238,10 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
+		Pallet::<T>::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
 			MoonbeamLedgerUpdateOperation::Bond,
@@ -240,7 +252,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -286,17 +298,33 @@ impl<T: Config>
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
 		// bond extra amount to the existing delegation.
-		// Construct xcm message..
-		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::DelegatorBondMore(
-			validator_h160_account,
-			amount,
-		));
+		// Construct xcm message.
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::DelegatorBondMore(
+					validator_h160_account,
+					amount,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
+				MantaCall::ParachainStaking(MantaParachainStakingCall::<T>::DelegatorBondMore(
+					validator_account,
+					amount,
+				))
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::BondExtra,
 				call,
 				who,
@@ -305,10 +333,10 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
+		Pallet::<T>::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
 			MoonbeamLedgerUpdateOperation::Bond,
@@ -319,7 +347,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -374,16 +402,34 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleDelegatorBondLess(
-			validator_h160_account,
-			amount,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::ScheduleDelegatorBondLess(
+					validator_h160_account,
+					amount,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
+				MantaCall::ParachainStaking(
+					MantaParachainStakingCall::<T>::ScheduleDelegatorBondLess(
+						validator_account,
+						amount,
+					),
+				)
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
 				call,
 				who,
@@ -392,10 +438,10 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
+		Pallet::<T>::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
 			MoonbeamLedgerUpdateOperation::BondLess,
@@ -406,7 +452,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -460,15 +506,30 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::CancelDelegationRequest(
-			validator_h160_account,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::CancelDelegationRequest(
+					validator_h160_account,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
+				MantaCall::ParachainStaking(
+					MantaParachainStakingCall::<T>::CancelDelegationRequest(validator_account),
+				)
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Rebond,
 				call,
 				who,
@@ -477,10 +538,10 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
+		Pallet::<T>::insert_delegator_ledger_update_entry(
 			who,
 			Some(collator),
 			MoonbeamLedgerUpdateOperation::CancelRequest,
@@ -491,7 +552,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -530,17 +591,32 @@ impl<T: Config>
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
 
-		// Do the undelegating work.
 		// Construct xcm message.
-		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&validator)?;
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ScheduleRevokeDelegation(
-			validator_h160_account,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let validator_h160_account =
+					Pallet::<T>::multilocation_to_h160_account(&validator)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::ScheduleRevokeDelegation(
+					validator_h160_account,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let validator_account = Pallet::<T>::multilocation_to_account(&validator)?;
+				MantaCall::ParachainStaking(
+					MantaParachainStakingCall::<T>::ScheduleRevokeDelegation(validator_account),
+				)
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Undelegate,
 				call,
 				who,
@@ -549,10 +625,10 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(
+		Pallet::<T>::insert_delegator_ledger_update_entry(
 			who,
 			Some(*validator),
 			MoonbeamLedgerUpdateOperation::Revoke,
@@ -563,7 +639,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -627,28 +703,47 @@ impl<T: Config>
 		}
 
 		// Construct xcm message.
-		let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
-		let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
-		let call = MoonbeamCall::Staking(MoonbeamParachainStakingCall::ExecuteDelegationRequest(
-			delegator_h160_account,
-			validator_h160_account,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => {
+				let delegator_h160_account = Pallet::<T>::multilocation_to_h160_account(who)?;
+				let validator_h160_account = Pallet::<T>::multilocation_to_h160_account(&collator)?;
+				MoonbeamCall::Staking(MoonbeamParachainStakingCall::<T>::ExecuteDelegationRequest(
+					delegator_h160_account,
+					validator_h160_account,
+				))
+				.encode()
+				.into()
+			},
+			MANTA => {
+				let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
+				let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
+				MantaCall::ParachainStaking(
+					MantaParachainStakingCall::<T>::ExecuteDelegationRequest(
+						delegator_account,
+						validator_account,
+					),
+				)
+				.encode()
+				.into()
+			},
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		let (query_id, timeout, fee, xcm_message) =
-			Self::construct_xcm_as_subaccount_with_query_id(
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Liquidize,
-				call.clone(),
+				call,
 				who,
 				currency_id,
 			)?;
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		if leaving {
-			Self::insert_delegator_ledger_update_entry(
+			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
 				MoonbeamLedgerUpdateOperation::ExecuteLeave,
@@ -658,7 +753,7 @@ impl<T: Config>
 				currency_id,
 			)?;
 		} else {
-			Self::insert_delegator_ledger_update_entry(
+			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
 				MoonbeamLedgerUpdateOperation::ExecuteRequest,
@@ -670,7 +765,7 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -713,16 +808,29 @@ impl<T: Config>
 		}));
 
 		// Construct xcm message.
-		let call = MoonbeamCall::Xtokens(MoonbeamXtokensCall::Transfer(
-			MoonbeamCurrencyId::SelfReserve,
-			amount.unique_saturated_into(),
-			dest,
-			WeightLimit::Unlimited,
-		));
+		let call: Vec<u8> = match currency_id {
+			MOVR | GLMR => MoonbeamCall::Xtokens(MoonbeamXtokensCall::<T>::Transfer(
+				MoonbeamCurrencyId::SelfReserve,
+				amount.unique_saturated_into(),
+				dest,
+				WeightLimit::Unlimited,
+			))
+			.encode()
+			.into(),
+			MANTA => MantaCall::Xtokens(MantaXtokensCall::<T>::Transfer(
+				MantaCurrencyId::MantaCurrency(1),
+				amount.unique_saturated_into(),
+				dest,
+				WeightLimit::Unlimited,
+			))
+			.encode()
+			.into(),
+			_ => Err(Error::<T>::Unsupported)?,
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let fee = Self::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
 			call,
 			from,
@@ -731,7 +839,7 @@ impl<T: Config>
 
 		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
 		// process.
-		Self::burn_fee_from_source_account(fee, currency_id)?;
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(())
 	}
@@ -756,7 +864,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -815,11 +923,7 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> DispatchResult {
 		// Get current VMOVR/MOVR、VGLMR/GLMR exchange rate.
-		let vtoken = match currency_id {
-			MOVR => Ok(CurrencyId::VToken(TokenSymbol::MOVR)),
-			GLMR => Ok(CurrencyId::VToken2(GLMR_TOKEN_ID)),
-			_ => Err(Error::<T>::NotSupportedCurrencyId),
-		}?;
+		let vtoken = currency_id.to_vtoken().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
 
 		let charge_amount =
 			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
@@ -835,7 +939,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -856,9 +960,13 @@ impl<T: Config>
 
 		// Update corresponding storages.
 		if should_update {
-			Self::update_ledger_query_response_storage(query_id, entry.clone(), currency_id)?;
+			Pallet::<T>::update_ledger_query_response_storage(
+				query_id,
+				entry.clone(),
+				currency_id,
+			)?;
 
-			Self::update_all_occupied_status_storage(currency_id)?;
+			Pallet::<T>::update_all_occupied_status_storage(currency_id)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
@@ -902,16 +1010,6 @@ impl<T: Config>
 
 /// Internal functions.
 impl<T: Config> MoonbeamAgent<T> {
-	fn get_moonbeam_para_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		match currency_id {
-			MOVR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
-			GLMR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
-			_ => Err(Error::<T>::NotSupportedCurrencyId),
-		}
-	}
-
 	fn get_glmr_local_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
 			MOVR => Ok(MultiLocation {
@@ -924,612 +1022,6 @@ impl<T: Config> MoonbeamAgent<T> {
 			}),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
-	}
-
-	fn get_glmr_multilocation(currency_id: CurrencyId) -> Result<MultiLocation, Error<T>> {
-		match currency_id {
-			MOVR => Ok(MultiLocation {
-				parents: 1,
-				interior: X2(
-					Parachain(parachains::moonriver::ID),
-					PalletInstance(parachains::moonriver::PALLET_ID),
-				),
-			}),
-			GLMR => Ok(MultiLocation {
-				parents: 1,
-				interior: X2(
-					Parachain(parachains::moonbeam::ID),
-					PalletInstance(parachains::moonbeam::PALLET_ID),
-				),
-			}),
-			_ => Err(Error::<T>::NotSupportedCurrencyId),
-		}
-	}
-
-	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperationType,
-		call: MoonbeamCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
-		// prepare the query_id for reporting back transact status
-		let responder = Self::get_moonbeam_para_multilocation(currency_id)?;
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = match operation {
-			XcmOperationType::Bond |
-			XcmOperationType::BondExtra |
-			XcmOperationType::Unbond |
-			XcmOperationType::Rebond |
-			XcmOperationType::Undelegate |
-			XcmOperationType::Liquidize => T::SubstrateResponseManager::create_query_record(
-				&responder,
-				Some(Pallet::<T>::confirm_delegator_ledger_call()),
-				timeout,
-			),
-			_ => {
-				ensure!(false, Error::<T>::Unsupported);
-				0
-			},
-		};
-
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
-
-		let xcm_message = Self::construct_xcm_message(
-			call_as_subaccount,
-			fee,
-			weight,
-			currency_id,
-			Some(query_id),
-		)?;
-
-		Ok((query_id, timeout, fee, xcm_message))
-	}
-
-	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperationType,
-		call: MoonbeamCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<BalanceOf<T>, Error<T>> {
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
-
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
-
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(fee)
-	}
-
-	fn prepare_send_as_subaccount_call(
-		operation: XcmOperationType,
-		call: MoonbeamCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(MoonbeamCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		let call_as_subaccount = MoonbeamCall::Utility(Box::new(
-			MoonbeamUtilityCall::AsDerivative(sub_account_index, Box::new(call)),
-		));
-
-		let (weight, fee) =
-			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
-	fn insert_delegator_ledger_update_entry(
-		who: &MultiLocation,
-		validator: Option<MultiLocation>,
-		update_operation: MoonbeamLedgerUpdateOperation,
-		amount: BalanceOf<T>,
-		query_id: QueryId,
-		timeout: BlockNumberFor<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		use MoonbeamLedgerUpdateOperation::{
-			BondLess, ExecuteLeave, ExecuteRequest, LeaveDelegator, Revoke,
-		};
-		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-
-		// First to see if the delegation relationship exist.
-		// If not, create one. If yes,
-		let unlock_time = match &update_operation {
-			BondLess | Revoke => Self::get_unlocking_round_from_current(false, currency_id)?,
-			LeaveDelegator => Self::get_unlocking_round_from_current(true, currency_id)?,
-			ExecuteRequest | ExecuteLeave => T::VtokenMinting::get_ongoing_time_unit(currency_id),
-			_ => None,
-		};
-
-		let entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id,
-			delegator_id: *who,
-			validator_id: validator,
-			update_operation,
-			amount,
-			unlock_time,
-		});
-		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
-
-		Ok(())
-	}
-
-	fn get_unlocking_round_from_current(
-		if_leave: bool,
-		currency_id: CurrencyId,
-	) -> Result<Option<TimeUnit>, Error<T>> {
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
-
-		let unlock_round = if let TimeUnit::Round(current_round) = current_time_unit {
-			let mut delay = delays.unlock_delay;
-			if if_leave {
-				delay = delays.leave_delegators_delay;
-			}
-
-			if let TimeUnit::Round(delay_round) = delay {
-				current_round.checked_add(delay_round).ok_or(Error::<T>::OverFlow)
-			} else {
-				Err(Error::<T>::InvalidDelays)
-			}
-		} else {
-			Err(Error::<T>::InvalidTimeUnit)
-		}?;
-
-		let unlock_time_unit = TimeUnit::Round(unlock_round);
-		Ok(Some(unlock_time_unit))
-	}
-
-	fn do_transfer_to(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		// Ensure amount is greater than zero.
-		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-
-		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
-		// not succeed.
-		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
-
-		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
-			currency_id,
-			XcmOperationType::TransferTo,
-		)
-		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		// Prepare parameter dest and beneficiary.
-		let dest = Self::get_moonbeam_para_multilocation(currency_id)?;
-		let beneficiary = Pallet::<T>::multilocation_to_local_multilocation(to)?;
-
-		let glmr_location = Self::get_glmr_multilocation(currency_id)?;
-		// Prepare parameter assets.
-		let asset = MultiAsset {
-			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(glmr_location),
-		};
-		let assets = MultiAssets::from(asset);
-
-		// Prepare fee asset.
-		let glmr_local_location = Self::get_glmr_local_multilocation(currency_id)?;
-		let fee_asset = MultiAsset {
-			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(glmr_local_location),
-		};
-
-		// prepare for xcm message
-		let msg = Xcm(vec![
-			WithdrawAsset(assets.clone()),
-			InitiateReserveWithdraw {
-				assets: All.into(),
-				reserve: dest,
-				xcm: Xcm(vec![
-					BuyExecution { fees: fee_asset, weight_limit: Limited(weight) },
-					DepositAsset { assets: AllCounted(1).into(), beneficiary },
-				]),
-			},
-		]);
-		let hash = msg.using_encoded(sp_io::hashing::blake2_256);
-		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(*from, msg, hash, weight, weight)
-			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmFailure)?;
-
-		Ok(())
-	}
-
-	fn update_ledger_query_response_storage(
-		query_id: QueryId,
-		query_entry: LedgerUpdateEntry<BalanceOf<T>>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		use MoonbeamLedgerUpdateOperation::{
-			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, ExecuteRequest,
-			LeaveDelegator, Revoke,
-		};
-		// update DelegatorLedgers<T> storage
-		if let LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
-			currency_id: _,
-			delegator_id,
-			validator_id: validator_id_op,
-			update_operation,
-			amount,
-			unlock_time,
-		}) = query_entry
-		{
-			DelegatorLedgers::<T>::mutate_exists(
-				currency_id,
-				delegator_id,
-				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
-						match update_operation {
-							// first bond and bond more operations
-							Bond => {
-								let validator_id =
-									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-								// If this is a bonding operation.
-								// Increase the total amount and add the delegation relationship.
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorLeaving
-								);
-								old_ledger.total = old_ledger
-									.total
-									.checked_add(&amount)
-									.ok_or(Error::<T>::OverFlow)?;
-
-								let amount_rs = old_ledger.delegations.get(&validator_id);
-								let original_amount =
-									if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
-
-								let new_amount = original_amount
-									.checked_add(&amount)
-									.ok_or(Error::<T>::OverFlow)?;
-								old_ledger.delegations.insert(validator_id, new_amount);
-							},
-							// schedule bond less request
-							BondLess => {
-								let validator_id =
-									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorLeaving
-								);
-
-								old_ledger.less_total = old_ledger
-									.less_total
-									.checked_add(&amount)
-									.ok_or(Error::<T>::OverFlow)?;
-
-								let unlock_time_unit =
-									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-								// add a new entry in requests and request_briefs
-								let new_request = OneToManyScheduledRequest {
-									validator: validator_id,
-									when_executable: unlock_time_unit.clone(),
-									action: OneToManyDelegationAction::<BalanceOf<T>>::Decrease(
-										amount,
-									),
-								};
-								old_ledger.requests.push(new_request);
-								old_ledger
-									.request_briefs
-									.insert(validator_id, (unlock_time_unit, amount));
-							},
-							// schedule revoke request
-							Revoke => {
-								let validator_id =
-									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorLeaving
-								);
-
-								let revoke_amount = old_ledger
-									.delegations
-									.get(&validator_id)
-									.ok_or(Error::<T>::Unexpected)?;
-
-								old_ledger.less_total = old_ledger
-									.less_total
-									.checked_add(&revoke_amount)
-									.ok_or(Error::<T>::OverFlow)?;
-
-								let unlock_time_unit =
-									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-								// add a new entry in requests and request_briefs
-								let new_request = OneToManyScheduledRequest {
-									validator: validator_id,
-									when_executable: unlock_time_unit.clone(),
-									action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-										*revoke_amount,
-									),
-								};
-								old_ledger.requests.push(new_request);
-								old_ledger
-									.request_briefs
-									.insert(validator_id, (unlock_time_unit, *revoke_amount));
-							},
-							// cancel bond less or revoke request
-							CancelRequest => {
-								let validator_id =
-									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorLeaving
-								);
-
-								let (_, cancel_amount) = old_ledger
-									.request_briefs
-									.get(&validator_id)
-									.ok_or(Error::<T>::Unexpected)?;
-
-								old_ledger.less_total = old_ledger
-									.less_total
-									.checked_sub(&cancel_amount)
-									.ok_or(Error::<T>::UnderFlow)?;
-
-								let request_index = old_ledger
-									.requests
-									.iter()
-									.position(|request| request.validator == validator_id)
-									.ok_or(Error::<T>::Unexpected)?;
-								old_ledger.requests.remove(request_index);
-
-								old_ledger.request_briefs.remove(&validator_id);
-							},
-							// schedule leave
-							LeaveDelegator => {
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorAlreadyLeaving
-								);
-
-								old_ledger.less_total = old_ledger.total;
-								let unlock_time =
-									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-								old_ledger.status =
-									OneToManyDelegatorStatus::Leaving(unlock_time.clone());
-
-								let mut new_requests = vec![];
-								let new_request_briefs: BTreeMap<
-									MultiLocation,
-									(TimeUnit, BalanceOf<T>),
-								> = BTreeMap::new();
-								for (vali, amt) in old_ledger.delegations.iter() {
-									let request_entry = OneToManyScheduledRequest {
-										validator: *vali,
-										when_executable: unlock_time.clone(),
-										action: OneToManyDelegationAction::<BalanceOf<T>>::Revoke(
-											*amt,
-										),
-									};
-									new_requests.push(request_entry);
-
-									old_ledger
-										.request_briefs
-										.insert(*vali, (unlock_time.clone(), *amt));
-								}
-
-								old_ledger.requests = new_requests;
-								old_ledger.request_briefs = new_request_briefs;
-							},
-							// cancel leave
-							CancelLeave => {
-								let leaving = matches!(
-									old_ledger.status,
-									OneToManyDelegatorStatus::Leaving(_)
-								);
-								ensure!(leaving, Error::<T>::DelegatorNotLeaving);
-
-								old_ledger.less_total = Zero::zero();
-								old_ledger.status = OneToManyDelegatorStatus::Active;
-
-								old_ledger.requests = vec![];
-								old_ledger.request_briefs = BTreeMap::new();
-							},
-							// execute leaving
-							ExecuteLeave => {
-								// make sure leaving time is less than or equal to current time.
-								let scheduled_time =
-									if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
-										old_ledger.clone().status
-									{
-										if let TimeUnit::Round(tu) = scheduled_time_unit {
-											tu
-										} else {
-											Err(Error::<T>::InvalidTimeUnit)?
-										}
-									} else {
-										Err(Error::<T>::DelegatorNotLeaving)?
-									};
-
-								let current_time_unit =
-									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
-
-								if let TimeUnit::Round(current_time) = current_time_unit {
-									ensure!(
-										current_time >= scheduled_time,
-										Error::<T>::LeavingNotDue
-									);
-								} else {
-									Err(Error::<T>::InvalidTimeUnit)?;
-								}
-
-								let empty_delegation_set: BTreeMap<MultiLocation, BalanceOf<T>> =
-									BTreeMap::new();
-								let request_briefs_set: BTreeMap<
-									MultiLocation,
-									(TimeUnit, BalanceOf<T>),
-								> = BTreeMap::new();
-								let new_ledger = OneToManyLedger::<BalanceOf<T>> {
-									account: old_ledger.clone().account,
-									total: Zero::zero(),
-									less_total: Zero::zero(),
-									delegations: empty_delegation_set,
-									requests: vec![],
-									request_briefs: request_briefs_set,
-									status: OneToManyDelegatorStatus::Active,
-								};
-								let moonbeam_ledger = Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
-
-								*old_ledger_opt = Some(moonbeam_ledger);
-								// execute request
-							},
-							ExecuteRequest => {
-								let validator_id =
-									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
-
-								ensure!(
-									old_ledger.status == OneToManyDelegatorStatus::Active,
-									Error::<T>::DelegatorLeaving
-								);
-
-								// ensure current round is no less than executable time.
-								let execute_time_unit =
-									unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
-
-								let execute_round =
-									if let TimeUnit::Round(current_round) = execute_time_unit {
-										current_round
-									} else {
-										Err(Error::<T>::InvalidTimeUnit)?
-									};
-
-								let request_time_unit = old_ledger
-									.request_briefs
-									.get(&validator_id)
-									.ok_or(Error::<T>::RequestNotExist)?;
-
-								let request_round =
-									if let TimeUnit::Round(req_round) = request_time_unit.0 {
-										req_round
-									} else {
-										Err(Error::<T>::InvalidTimeUnit)?
-									};
-
-								ensure!(execute_round >= request_round, Error::<T>::RequestNotDue);
-
-								let (_, execute_amount) = old_ledger
-									.request_briefs
-									.remove(&validator_id)
-									.ok_or(Error::<T>::Unexpected)?;
-								old_ledger.total = old_ledger
-									.total
-									.checked_sub(&execute_amount)
-									.ok_or(Error::<T>::UnderFlow)?;
-
-								old_ledger.less_total = old_ledger
-									.less_total
-									.checked_sub(&execute_amount)
-									.ok_or(Error::<T>::UnderFlow)?;
-
-								let request_index = old_ledger
-									.requests
-									.iter()
-									.position(|rqst| rqst.validator == validator_id)
-									.ok_or(Error::<T>::RequestNotExist)?;
-								old_ledger.requests.remove(request_index);
-
-								let old_delegate_amount = old_ledger
-									.delegations
-									.get(&validator_id)
-									.ok_or(Error::<T>::ValidatorNotBonded)?;
-								let new_delegate_amount = old_delegate_amount
-									.checked_sub(&execute_amount)
-									.ok_or(Error::<T>::UnderFlow)?;
-
-								if new_delegate_amount == Zero::zero() {
-									old_ledger
-										.delegations
-										.remove(&validator_id)
-										.ok_or(Error::<T>::Unexpected)?;
-								} else {
-									old_ledger
-										.delegations
-										.insert(validator_id, new_delegate_amount);
-								}
-							},
-						}
-						Ok(())
-					} else {
-						Err(Error::<T>::Unexpected)
-					}
-				},
-			)?;
-
-			// Delete the DelegatorLedgerXcmUpdateQueue<T> query
-			DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
-
-			// Delete the query in pallet_xcm.
-			T::SubstrateResponseManager::remove_query_record(query_id);
-
-			Ok(())
-		} else {
-			Err(Error::<T>::Unexpected)
-		}
-	}
-
-	fn update_all_occupied_status_storage(currency_id: CurrencyId) -> Result<(), Error<T>> {
-		let mut all_occupied = true;
-
-		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
-				if moonbeam_ledger.delegations.len() > moonbeam_ledger.request_briefs.len() {
-					all_occupied = false;
-					break;
-				}
-			} else {
-				Err(Error::<T>::Unexpected)?;
-			}
-		}
-		let original_status = DelegationsOccupied::<T>::get(currency_id);
-
-		match original_status {
-			Some(status) if status == all_occupied => (),
-			_ => DelegationsOccupied::<T>::insert(currency_id, all_occupied),
-		};
-
-		Ok(())
-	}
-
-	fn burn_fee_from_source_account(
-		fee: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		// get fee source first
-		let (source_location, reserved_fee) =
-			FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
-
-		// check if fee is too high to be covered.
-		ensure!(fee <= reserved_fee, Error::<T>::FeeTooHigh);
-
-		let source_account = Pallet::<T>::native_multilocation_to_account(&source_location)?;
-		// ensure the fee source account has the balance of currency_id
-		T::MultiCurrency::ensure_can_withdraw(currency_id, &source_account, fee)
-			.map_err(|_| Error::<T>::NotEnoughBalance)?;
-
-		// withdraw
-		T::MultiCurrency::withdraw(currency_id, &source_account, fee)
-			.map_err(|_| Error::<T>::NotEnoughBalance)?;
-
-		Ok(())
 	}
 
 	fn inner_construct_xcm_message(

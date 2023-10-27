@@ -21,11 +21,7 @@
 
 extern crate core;
 
-use crate::{
-	agents::{MantaAgent, PolkadotAgent},
-	Junction::GeneralIndex,
-	Junctions::X2,
-};
+use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
@@ -2306,12 +2302,11 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
-				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
+				MOVR | GLMR | MANTA => Ok(Box::new(MoonbeamAgent::<T>::new())),
 				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				ASTR => Ok(Box::new(AstarAgent::<T>::new())),
-				MANTA => Ok(Box::new(MantaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

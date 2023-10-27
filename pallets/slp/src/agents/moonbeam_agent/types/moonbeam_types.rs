@@ -15,79 +15,89 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{BalanceOf, Config, Decode, Encode};
+
+use crate::{BalanceOf, Config};
+use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
-use sp_runtime::traits::StaticLookup;
+use sp_arithmetic::Percent;
+use sp_core::H160;
+use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum MantaCall<T: Config> {
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum MoonbeamCall<T: Config> {
 	#[codec(index = 10)]
-	Balances(MantaBalancesCall<T>),
-	#[codec(index = 34)]
-	Xtokens(MantaXtokensCall<T>),
-	#[codec(index = 40)]
-	Utility(Box<MantaUtilityCall<Self>>),
-	#[codec(index = 48)]
-	ParachainStaking(MantaParachainStakingCall<T>),
+	Balances(MoonbeamBalancesCall<T>),
+	#[codec(index = 20)]
+	Staking(MoonbeamParachainStakingCall<T>),
+	#[codec(index = 30)]
+	Utility(Box<MoonbeamUtilityCall<Self>>),
+	#[codec(index = 106)]
+	Xtokens(MoonbeamXtokensCall<T>),
 }
 
-// 对MantaCall实现encode成Vec<u8>的方法
-impl<T: Config> MantaCall<T> {
+impl<T: Config> MoonbeamCall<T> {
 	pub fn encode(&self) -> Vec<u8> {
 		self.using_encoded(|x| x.to_vec())
 	}
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum MantaBalancesCall<T: Config> {
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum MoonbeamBalancesCall<T: Config> {
 	#[codec(index = 3)]
-	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
+	TransferKeepAlive(
+		<IdentityLookup<H160> as StaticLookup>::Source,
+		#[codec(compact)] BalanceOf<T>,
+	),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MantaUtilityCall<MantaCall> {
+pub enum MoonbeamUtilityCall<MoonbeamCall> {
 	#[codec(index = 1)]
-	AsDerivative(u16, Box<MantaCall>),
+	AsDerivative(u16, Box<MoonbeamCall>),
 	#[codec(index = 2)]
-	BatchAll(Box<Vec<Box<MantaCall>>>),
+	BatchAll(Box<Vec<Box<MoonbeamCall>>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MantaParachainStakingCall<T: Config> {
+pub enum MoonbeamParachainStakingCall<T: Config> {
 	#[codec(index = 18)]
-	Delegate(T::AccountId, BalanceOf<T>, u32, u32),
+	DelegateWithAutoCompound(H160, BalanceOf<T>, Percent, u32, u32, u32),
 	// schedule_revoke_delegation
 	#[codec(index = 19)]
 	ScheduleLeaveDelegators,
 	// execute_delegation_request
 	#[codec(index = 20)]
-	ExecuteLeaveDelegators(T::AccountId, u32),
+	ExecuteLeaveDelegators(H160, u32),
 	// cancel_delegation_request
 	#[codec(index = 21)]
 	CancelLeaveDelegators,
 	#[codec(index = 22)]
-	ScheduleRevokeDelegation(T::AccountId),
+	ScheduleRevokeDelegation(H160),
 	#[codec(index = 23)]
-	DelegatorBondMore(T::AccountId, BalanceOf<T>),
+	DelegatorBondMore(H160, BalanceOf<T>),
 	#[codec(index = 24)]
-	ScheduleDelegatorBondLess(T::AccountId, BalanceOf<T>),
+	ScheduleDelegatorBondLess(H160, BalanceOf<T>),
 	#[codec(index = 25)]
-	ExecuteDelegationRequest(T::AccountId, T::AccountId),
+	ExecuteDelegationRequest(H160, H160),
 	#[codec(index = 26)]
-	CancelDelegationRequest(T::AccountId),
+	CancelDelegationRequest(H160),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MantaXtokensCall<T: Config> {
+pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(MantaCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
+	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
 }
 
-#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
-pub enum MantaCurrencyId {
-	/// assetId 1 is Manta native token
-	MantaCurrency(u128),
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum MoonbeamCurrencyId {
+	// Our native token
+	SelfReserve,
+	// Assets representing other chains native tokens
+	ForeignAsset(u128),
+	// Our local assets
+	LocalAssetReserve(u128),
 }
