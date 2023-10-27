@@ -43,7 +43,6 @@ use sp_runtime::{
 	DispatchResult, Saturating,
 };
 use xcm::{opaque::v3::Instruction, v3::prelude::*, VersionedMultiLocation};
-use xcm_interface::traits::parachains;
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -355,45 +354,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub(crate) fn get_currency_local_multilocation(currency_id: CurrencyId) -> MultiLocation {
-		match currency_id {
-			KSM | DOT => MultiLocation::here(),
-			MOVR => MultiLocation {
-				parents: 0,
-				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
-			},
-			GLMR => MultiLocation {
-				parents: 0,
-				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
-			},
-			_ => MultiLocation::here(),
-		}
-	}
-
-	pub(crate) fn get_currency_full_multilocation(
-		currency_id: CurrencyId,
-	) -> Result<MultiLocation, Error<T>> {
-		match currency_id {
-			MOVR => Ok(MultiLocation {
-				parents: 1,
-				interior: X2(
-					Parachain(parachains::moonriver::ID),
-					PalletInstance(parachains::moonriver::PALLET_ID),
-				),
-			}),
-			GLMR => Ok(MultiLocation {
-				parents: 1,
-				interior: X2(
-					Parachain(parachains::moonbeam::ID),
-					PalletInstance(parachains::moonbeam::PALLET_ID),
-				),
-			}),
-			MANTA =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
-			_ => Err(Error::<T>::NotSupportedCurrencyId),
-		}
-	}
-
 	pub(crate) fn inner_construct_xcm_message(
 		currency_id: CurrencyId,
 		extra_fee: BalanceOf<T>,
@@ -447,6 +407,7 @@ impl<T: Config> Pallet<T> {
 			MANTA => 10,
 			MOVR | GLMR => 30,
 			ASTR => 11,
+			PHA => 3,
 			_ => Err(Error::<T>::Unsupported)?,
 		};
 
@@ -462,24 +423,6 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
-	}
-
-	pub(crate) fn get_para_multilocation_by_currency_id(
-		currency_id: CurrencyId,
-	) -> Result<MultiLocation, Error<T>> {
-		match currency_id {
-			KSM | DOT => Ok(MultiLocation::parent()),
-			MOVR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
-			GLMR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
-			ASTR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }),
-			MANTA =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
-			PHA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::phala::ID)) }),
-			_ => Err(Error::<T>::NotSupportedCurrencyId),
-		}
 	}
 
 	pub(crate) fn construct_xcm_as_subaccount_with_query_id(
@@ -1043,9 +986,7 @@ impl<T: Config> Pallet<T> {
 
 		Ok(())
 	}
-}
 
-impl<T: Config> Pallet<T> {
 	pub(crate) fn construct_xcm_message(
 		call: Vec<u8>,
 		extra_fee: BalanceOf<T>,

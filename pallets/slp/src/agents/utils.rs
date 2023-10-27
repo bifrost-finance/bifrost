@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, H160,
+	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, ASTR, DOT, GLMR, H160,
+	KSM, MANTA, MOVR, PHA,
 };
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
@@ -33,6 +34,7 @@ use xcm::{
 	},
 	v3::prelude::*,
 };
+use xcm_interface::traits::parachains;
 
 // Some untilities.
 impl<T: Config> Pallet<T> {
@@ -316,5 +318,62 @@ impl<T: Config> Pallet<T> {
 			.expect("infinite length input; no invalid inputs for type; qed");
 
 		H160::from_slice(sub_id.as_slice())
+	}
+
+	pub fn get_para_multilocation_by_currency_id(
+		currency_id: CurrencyId,
+	) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			KSM | DOT => Ok(MultiLocation::parent()),
+			MOVR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
+			GLMR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
+			ASTR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+			PHA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::phala::ID)) }),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
+	}
+
+	pub fn get_currency_full_multilocation(
+		currency_id: CurrencyId,
+	) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			MOVR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonriver::ID),
+					PalletInstance(parachains::moonriver::PALLET_ID),
+				),
+			}),
+			GLMR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonbeam::ID),
+					PalletInstance(parachains::moonbeam::PALLET_ID),
+				),
+			}),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
+	}
+
+	pub fn get_currency_local_multilocation(currency_id: CurrencyId) -> MultiLocation {
+		match currency_id {
+			KSM | DOT => MultiLocation::here(),
+			MOVR => MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
+			},
+			GLMR => MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
+			},
+			_ => MultiLocation::here(),
+		}
 	}
 }
