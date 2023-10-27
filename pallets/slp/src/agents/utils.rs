@@ -225,8 +225,6 @@ impl<T: Config> Pallet<T> {
 			let currency_id = match entry.clone() {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-				LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-					Some(parachain_staking_entry.currency_id),
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -284,8 +282,6 @@ impl<T: Config> Pallet<T> {
 		let currency_id = match entry {
 			LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 			LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-			LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-				Some(parachain_staking_entry.currency_id),
 		}
 		.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
