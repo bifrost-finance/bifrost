@@ -21,11 +21,15 @@
 
 extern crate core;
 
-use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
+use crate::{
+	agents::{MantaAgent, PolkadotAgent},
+	Junction::GeneralIndex,
+	Junctions::X2,
+};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation,
+		ValidatorsByDelegatorUpdateEntry,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
@@ -38,7 +42,7 @@ use frame_system::{
 	RawOrigin,
 };
 use node_primitives::{
-	currency::{BNC, KSM, MOVR, PHA},
+	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
 	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
@@ -500,19 +504,6 @@ pub mod pallet {
 	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
 	/// boundedVec).
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-
-	/// DEPRECATED
-	#[pallet::storage]
-	#[pallet::getter(fn xcm_dest_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		CurrencyId,
-		Blake2_128Concat,
-		XcmOperation,
-		(XcmWeight, BalanceOf<T>),
-		OptionQuery,
-	>;
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.
@@ -2320,6 +2311,7 @@ pub mod pallet {
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				ASTR => Ok(Box::new(AstarAgent::<T>::new())),
+				MANTA => Ok(Box::new(MantaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
