@@ -23,7 +23,7 @@ use crate::{
 	agents::{MantaCall, MantaCurrencyId, MantaParachainStakingCall, MantaXtokensCall},
 	pallet::{Error, Event},
 	primitives::{
-		Ledger, MoonbeamLedgerUpdateOperation, OneToManyDelegationAction, OneToManyDelegatorStatus,
+		Ledger, ParachainStakingLedgerUpdateOperation, OneToManyDelegationAction, OneToManyDelegatorStatus,
 		OneToManyLedger, OneToManyScheduledRequest, QueryId,
 	},
 	traits::{QueryResponseManager, StakingAgent},
@@ -57,11 +57,11 @@ use xcm::{
 };
 
 /// StakingAgent implementation for Moonriver/Moonbeam
-pub struct MoonbeamAgent<T>(PhantomData<T>);
+pub struct ParachainStakingAgent<T>(PhantomData<T>);
 
-impl<T> MoonbeamAgent<T> {
+impl<T> ParachainStakingAgent<T> {
 	pub fn new() -> Self {
-		MoonbeamAgent(PhantomData::<T>)
+		ParachainStakingAgent(PhantomData::<T>)
 	}
 }
 
@@ -72,7 +72,7 @@ impl<T: Config>
 		LedgerUpdateEntry<BalanceOf<T>>,
 		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
-	> for MoonbeamAgent<T>
+	> for ParachainStakingAgent<T>
 {
 	fn initialize_delegator(
 		&self,
@@ -297,7 +297,7 @@ impl<T: Config>
 			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonbeamLedgerUpdateOperation::Bond,
+				ParachainStakingLedgerUpdateOperation::Bond,
 				amount,
 				query_id,
 				timeout,
@@ -443,7 +443,7 @@ impl<T: Config>
 			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonbeamLedgerUpdateOperation::Bond,
+				ParachainStakingLedgerUpdateOperation::Bond,
 				amount,
 				query_id,
 				timeout,
@@ -605,7 +605,7 @@ impl<T: Config>
 			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonbeamLedgerUpdateOperation::BondLess,
+				ParachainStakingLedgerUpdateOperation::BondLess,
 				amount,
 				query_id,
 				timeout,
@@ -818,7 +818,7 @@ impl<T: Config>
 			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(collator),
-				MoonbeamLedgerUpdateOperation::CancelRequest,
+				ParachainStakingLedgerUpdateOperation::CancelRequest,
 				Zero::zero(),
 				query_id,
 				timeout,
@@ -963,7 +963,7 @@ impl<T: Config>
 			Pallet::<T>::insert_delegator_ledger_update_entry(
 				who,
 				Some(*validator),
-				MoonbeamLedgerUpdateOperation::Revoke,
+				ParachainStakingLedgerUpdateOperation::Revoke,
 				Zero::zero(),
 				query_id,
 				timeout,
@@ -1287,7 +1287,7 @@ impl<T: Config>
 				Pallet::<T>::insert_delegator_ledger_update_entry(
 					who,
 					Some(collator),
-					MoonbeamLedgerUpdateOperation::ExecuteLeave,
+					ParachainStakingLedgerUpdateOperation::ExecuteLeave,
 					Zero::zero(),
 					query_id,
 					timeout,
@@ -1297,7 +1297,7 @@ impl<T: Config>
 				Pallet::<T>::insert_delegator_ledger_update_entry(
 					who,
 					Some(collator),
-					MoonbeamLedgerUpdateOperation::ExecuteRequest,
+					ParachainStakingLedgerUpdateOperation::ExecuteRequest,
 					due_amount,
 					query_id,
 					timeout,

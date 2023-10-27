@@ -18,7 +18,7 @@
 use crate::{
 	pallet::Error,
 	primitives::{
-		MoonbeamLedgerUpdateEntry, MoonbeamLedgerUpdateOperation, OneToManyDelegationAction,
+		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, OneToManyDelegationAction,
 		OneToManyDelegatorStatus, OneToManyLedger, OneToManyScheduledRequest, TIMEOUT_BLOCKS,
 	},
 	traits::QueryResponseManager,
@@ -532,13 +532,13 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		validator: Option<MultiLocation>,
-		update_operation: MoonbeamLedgerUpdateOperation,
+		update_operation: ParachainStakingLedgerUpdateOperation,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		use MoonbeamLedgerUpdateOperation::{
+		use ParachainStakingLedgerUpdateOperation::{
 			BondLess, ExecuteLeave, ExecuteRequest, LeaveDelegator, Revoke,
 		};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -552,7 +552,7 @@ impl<T: Config> Pallet<T> {
 			_ => None,
 		};
 
-		let entry = LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
+		let entry = LedgerUpdateEntry::Moonbeam(ParachainStakingLedgerUpdateEntry {
 			currency_id,
 			delegator_id: *who,
 			validator_id: validator,
@@ -629,12 +629,12 @@ impl<T: Config> Pallet<T> {
 		query_entry: LedgerUpdateEntry<BalanceOf<T>>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		use MoonbeamLedgerUpdateOperation::{
+		use ParachainStakingLedgerUpdateOperation::{
 			Bond, BondLess, CancelLeave, CancelRequest, ExecuteLeave, ExecuteRequest,
 			LeaveDelegator, Revoke,
 		};
 		// update DelegatorLedgers<T> storage
-		if let LedgerUpdateEntry::Moonbeam(MoonbeamLedgerUpdateEntry {
+		if let LedgerUpdateEntry::Moonbeam(ParachainStakingLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
 			validator_id: validator_id_op,

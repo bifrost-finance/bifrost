@@ -91,7 +91,7 @@ const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::agents::{AstarAgent, FilecoinAgent, MoonbeamAgent, PhalaAgent};
+	use crate::agents::{AstarAgent, FilecoinAgent, ParachainStakingAgent, PhalaAgent};
 	use node_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
@@ -2300,7 +2300,7 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
-				BNC | MOVR | GLMR | MANTA => Ok(Box::new(MoonbeamAgent::<T>::new())),
+				BNC | MOVR | GLMR | MANTA => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				ASTR => Ok(Box::new(AstarAgent::<T>::new())),

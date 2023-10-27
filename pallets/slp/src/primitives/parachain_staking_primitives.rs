@@ -55,9 +55,9 @@ pub enum OneToManyDelegationAction<Balance> {
 	Decrease(Balance),
 }
 
-/// A type for Moonbeam ledger updating entries
+/// A type for ParachainStaking ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MoonbeamLedgerUpdateEntry<Balance> {
+pub struct ParachainStakingLedgerUpdateEntry<Balance> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
@@ -65,7 +65,7 @@ pub struct MoonbeamLedgerUpdateEntry<Balance> {
 	/// The validator id that needs to be update
 	pub validator_id: Option<MultiLocation>,
 	/// Update operation type
-	pub update_operation: MoonbeamLedgerUpdateOperation,
+	pub update_operation: ParachainStakingLedgerUpdateOperation,
 	#[codec(compact)]
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
@@ -75,7 +75,7 @@ pub struct MoonbeamLedgerUpdateEntry<Balance> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum MoonbeamLedgerUpdateOperation {
+pub enum ParachainStakingLedgerUpdateOperation {
 	Bond,
 	BondLess,
 	Revoke,

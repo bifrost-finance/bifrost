@@ -19,7 +19,7 @@
 mod astar_agent;
 mod common;
 mod filecoin_agent;
-mod moonbeam_agent;
+mod parachain_staking_agent;
 mod phala_agent;
 mod polkadot_agent;
 mod utils;
@@ -27,7 +27,7 @@ mod utils;
 pub use astar_agent::*;
 pub use common::*;
 pub use filecoin_agent::*;
-pub use moonbeam_agent::*;
+pub use parachain_staking_agent::*;
 pub use phala_agent::*;
 pub use polkadot_agent::*;
 pub use utils::*;
