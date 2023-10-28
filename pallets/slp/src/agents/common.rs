@@ -27,7 +27,8 @@ use crate::{
 	Junction::{AccountId32, Parachain},
 	Junctions::X1,
 	Ledger, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
-	Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR, PHA,
+	Vec, Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR,
+	PHA,
 };
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
@@ -360,7 +361,7 @@ impl<T: Config> Pallet<T> {
 		let mut call_as_subaccount: Vec<u8> = utility_call.encode();
 		// Since everyone use the same Utility pallet from Substrate repo, as_derivative function is
 		// always indexed 1.
-		call_as_subaccount.extend(1.encode());
+		call_as_subaccount.extend(1u8.encode());
 		call_as_subaccount.extend(sub_account_index.encode());
 		call_as_subaccount.extend(call);
 

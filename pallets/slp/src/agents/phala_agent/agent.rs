@@ -115,7 +115,7 @@ impl<T: Config>
 		let (query_id, timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
-				calls.encode().into(),
+				calls.encode(),
 				who,
 				currency_id,
 			)?;
@@ -218,7 +218,7 @@ impl<T: Config>
 		let (query_id, timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
-				calls.encode().into(),
+				calls.encode(),
 				who,
 				currency_id,
 			)?;
@@ -430,7 +430,7 @@ impl<T: Config>
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Payout,
-				calls.encode().into(),
+				calls.encode(),
 				who,
 				currency_id,
 			)?;
@@ -522,7 +522,7 @@ impl<T: Config>
 		// send it out.
 		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
-			call.encode().into(),
+			call.encode(),
 			from,
 			currency_id,
 		)?;
@@ -587,7 +587,7 @@ impl<T: Config>
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::ConvertAsset,
-				calls.encode().into(),
+				calls.encode(),
 				who,
 				currency_id,
 			)?;
