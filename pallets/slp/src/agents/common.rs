@@ -27,7 +27,7 @@ use crate::{
 	Junction::{AccountId32, Parachain},
 	Junctions::X1,
 	Ledger, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
-	Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, DOT, GLMR, KSM, MANTA, MOVR, PHA,
+	Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR, PHA,
 };
 use frame_support::{ensure, traits::Len};
 use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
@@ -581,6 +581,7 @@ impl<T: Config> Pallet<T> {
 					Err(Error::<T>::InvalidTimeUnit)?
 				}
 			},
+			(BNC, TimeUnit::Round(current_round)) |
 			(MOVR, TimeUnit::Round(current_round)) |
 			(GLMR, TimeUnit::Round(current_round)) |
 			(MANTA, TimeUnit::Round(current_round)) => {

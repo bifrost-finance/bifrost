@@ -1465,7 +1465,7 @@ fn moonriver_transfer_to_works() {
 				Box::new(subaccount_0_location),
 				5_000_000_000_000_000_000,
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 	});
 }
@@ -1517,7 +1517,7 @@ fn supplement_fee_account_whitelist_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		assert_noop!(
@@ -1542,7 +1542,7 @@ fn supplement_fee_account_whitelist_works() {
 				MOVR,
 				Box::new(entrance_account_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		assert_noop!(
@@ -1567,7 +1567,7 @@ fn supplement_fee_account_whitelist_works() {
 				MOVR,
 				Box::new(exit_account_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		// remove exit_account_location from whitelist
