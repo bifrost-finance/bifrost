@@ -207,20 +207,6 @@ pub trait StakingAgent<
 	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 }
 
-/// Helper to build xcm message
-//【For xcm v3】
-// pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
-pub trait XcmBuilder<Balance, ChainCallType, Error> {
-	fn construct_xcm_message(
-		call: ChainCallType,
-		extra_fee: Balance,
-		weight: XcmWeight,
-		currency_id: CurrencyId,
-		query_id: Option<QueryId>,
-		// response_back_location: AccountId
-	) -> Result<Xcm<()>, Error>;
-}
-
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
 pub trait QueryResponseManager<QueryId, AccountId, BlockNumber, RuntimeCall> {
 	// If the query exists and we've already got the Response, then True is returned. Otherwise,

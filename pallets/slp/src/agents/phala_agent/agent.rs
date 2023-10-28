@@ -21,7 +21,7 @@ use crate::{
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
 	},
-	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
+	traits::{QueryResponseManager, StakingAgent},
 	AccountIdOf, BalanceOf, Config, CurrencyId, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
 	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
@@ -729,50 +729,6 @@ impl<T: Config>
 		_query_id: QueryId,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
-	}
-}
-
-/// Trait XcmBuilder implementation for Phala
-impl<T: Config>
-	XcmBuilder<
-		BalanceOf<T>,
-		PhalaCall<T>,
-		Error<T>,
-		// , MultiLocation,
-	> for PhalaAgent<T>
-{
-	fn construct_xcm_message(
-		call: PhalaCall<T>,
-		extra_fee: BalanceOf<T>,
-		weight: XcmWeight,
-		_currency_id: CurrencyId,
-		_query_id: Option<QueryId>,
-	) -> Result<Xcm<()>, Error<T>> {
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
-		};
-
-		let self_sibling_parachain_account: [u8; 32] =
-			Sibling::from(T::ParachainId::get()).into_account_truncating();
-
-		Ok(Xcm(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: call.encode().into(),
-			},
-			RefundSurplus,
-			DepositAsset {
-				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
-				},
-			},
-		]))
 	}
 }
 
