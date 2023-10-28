@@ -364,7 +364,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_currency_local_multilocation(currency_id: CurrencyId) -> MultiLocation {
 		match currency_id {
-			KSM | DOT => MultiLocation::here(),
+			KSM | DOT | PHA | MANTA => MultiLocation::here(),
 			MOVR => MultiLocation {
 				parents: 0,
 				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
@@ -372,6 +372,10 @@ impl<T: Config> Pallet<T> {
 			GLMR => MultiLocation {
 				parents: 0,
 				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
+			},
+			ASTR => MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::astar::PALLET_ID)),
 			},
 			_ => MultiLocation::here(),
 		}

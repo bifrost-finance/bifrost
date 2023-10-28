@@ -22,9 +22,9 @@ use crate::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
+	AccountIdOf, BalanceOf, Config, CurrencyId, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -554,7 +554,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -669,7 +669,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -789,7 +789,7 @@ impl<T: Config> PhalaAgent<T> {
 		use crate::primitives::SubstrateLedgerUpdateOperation::Unlock;
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = match &update_operation {
-			Unlock => Self::get_unlocking_era_from_current(currency_id)?,
+			Unlock => Pallet::<T>::get_unlocking_time_unit_from_current(false, currency_id)?,
 			_ => None,
 		};
 
@@ -803,45 +803,6 @@ impl<T: Config> PhalaAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
 
 		Ok(())
-	}
-
-	fn get_unlocking_era_from_current(
-		currency_id: CurrencyId,
-	) -> Result<Option<TimeUnit>, Error<T>> {
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
-
-		let unlock_hour = if let TimeUnit::Hour(current_hour) = current_time_unit {
-			if let TimeUnit::Hour(delay_hour) = delays.unlock_delay {
-				current_hour.checked_add(delay_hour).ok_or(Error::<T>::OverFlow)
-			} else {
-				Err(Error::<T>::InvalidTimeUnit)
-			}
-		} else {
-			Err(Error::<T>::InvalidTimeUnit)
-		}?;
-
-		let unlock_time_unit = TimeUnit::Hour(unlock_hour);
-		Ok(Some(unlock_time_unit))
-	}
-
-	fn do_transfer_to(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-
-		// Prepare parameter assets.
-		let assets = {
-			let asset =
-				MultiAsset { fun: Fungible(amount.unique_saturated_into()), id: Concrete(dest) };
-			MultiAssets::from(asset)
-		};
-
-		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
 	}
 
 	fn update_ledger_query_response_storage(

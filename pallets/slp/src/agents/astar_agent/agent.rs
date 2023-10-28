@@ -24,9 +24,9 @@ use crate::{
 		SubstrateLedgerUpdateOperation, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
 	},
 	traits::{QueryResponseManager, StakingAgent},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators,
+	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators,
 };
 use codec::Encode;
 use core::marker::PhantomData;
@@ -34,7 +34,6 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, VtokenMintingOperator, XcmOperationType, ASTR_TOKEN_ID};
-use orml_traits::XcmTransfer;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
@@ -45,7 +44,6 @@ use xcm::{
 	v3::prelude::*,
 	VersionedMultiAssets, VersionedMultiLocation,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Astar
 pub struct AstarAgent<T>(PhantomData<T>);
@@ -447,7 +445,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -539,7 +537,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -722,27 +720,6 @@ impl<T: Config> AstarAgent<T> {
 		Ok(())
 	}
 
-	fn get_unlocking_era_from_current(
-		currency_id: CurrencyId,
-	) -> Result<Option<TimeUnit>, Error<T>> {
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
-
-		let unlock_era = if let TimeUnit::Era(current_era) = current_time_unit {
-			if let TimeUnit::Era(delay_era) = delays.unlock_delay {
-				current_era.checked_add(delay_era).ok_or(Error::<T>::OverFlow)
-			} else {
-				Err(Error::<T>::InvalidTimeUnit)
-			}
-		} else {
-			Err(Error::<T>::InvalidTimeUnit)
-		}?;
-
-		let unlock_time_unit = TimeUnit::Era(unlock_era);
-		Ok(Some(unlock_time_unit))
-	}
-
 	/// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
@@ -755,7 +732,7 @@ impl<T: Config> AstarAgent<T> {
 		use crate::primitives::SubstrateLedgerUpdateOperation::{Liquidize, Unlock};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = match &update_operation {
-			Unlock => Self::get_unlocking_era_from_current(currency_id)?,
+			Unlock => Pallet::<T>::get_unlocking_time_unit_from_current(false, currency_id)?,
 			Liquidize => T::VtokenMinting::get_ongoing_time_unit(currency_id),
 			_ => None,
 		};
@@ -768,34 +745,6 @@ impl<T: Config> AstarAgent<T> {
 			unlock_time,
 		});
 		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
-
-		Ok(())
-	}
-
-	fn do_transfer_to(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		// Ensure amount is greater than zero.
-		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-
-		// Prepare parameter dest and beneficiary.
-		let entrance_account = Pallet::<T>::multilocation_to_account(from)?;
-
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-
-		let dest = MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(parachains::astar::ID),
-				AccountId32 { network: None, id: to_32 },
-			),
-		};
-
-		T::XcmTransfer::transfer(entrance_account, currency_id, amount, dest, Unlimited)
-			.map_err(|_| Error::<T>::TransferToError)?;
 
 		Ok(())
 	}

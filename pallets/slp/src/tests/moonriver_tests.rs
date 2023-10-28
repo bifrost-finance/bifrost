@@ -21,8 +21,9 @@
 use crate::{
 	mocks::mock::*,
 	primitives::{
-		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, OneToManyDelegationAction,
-		OneToManyDelegatorStatus, OneToManyLedger, OneToManyScheduledRequest,
+		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
+		OneToManyScheduledRequest, ParachainStakingLedgerUpdateEntry,
+		ParachainStakingLedgerUpdateOperation,
 	},
 	Junction::Parachain,
 	Junctions::X2,
