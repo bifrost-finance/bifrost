@@ -30,7 +30,7 @@ pub use codec::{Decode, Encode};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		fungibles::Mutate,
+		fungibles::{Inspect, Mutate},
 		tokens::{Fortitude, Precision},
 		Get,
 	},
@@ -93,6 +93,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		ArgumentsError,
 		NotSupportTokenType,
+		InsufficientBalance,
 	}
 
 	#[pallet::event]
@@ -129,12 +130,36 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T>,
 			rate: Rate,
-			input_value: BalanceOf<T>,
+			maybe_input_value: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if let Some(_flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
-				Self::do_repay(&who, asset_id, None)?;
+			let free_balance = <T as lend_market::Config>::Assets::balance(asset_id, &who);
+			let input_value =
+				if let Some(flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
+					Self::do_repay(&who, asset_id, None)?;
+					let value = match maybe_input_value {
+						Some(v) => {
+							ensure!(free_balance >= v, Error::<T>::InsufficientBalance);
+							v
+						},
+						None => {
+							ensure!(
+								free_balance >= flash_loan_info.amount,
+								Error::<T>::InsufficientBalance
+							);
+							flash_loan_info.amount
+						},
+					};
+					value
+				} else {
+					let value = maybe_input_value.ok_or(Error::<T>::ArgumentsError)?;
+					ensure!(free_balance >= value, Error::<T>::InsufficientBalance);
+					value
+				};
+
+			if rate.is_zero() {
+				return Ok(().into());
 			}
 
 			let mut token_total_value = FixedU128::from_inner(input_value)
@@ -214,19 +239,6 @@ pub mod pallet {
 				rate,
 				amount: input_value,
 			});
-			Ok(().into())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_price())]
-		pub fn flash_loan_repay(
-			origin: OriginFor<T>,
-			asset_id: AssetIdOf<T>,
-			rate: Option<Rate>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			Self::do_repay(&who, asset_id, rate)?;
 			Ok(().into())
 		}
 	}
