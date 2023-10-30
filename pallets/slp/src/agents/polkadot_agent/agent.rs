@@ -101,19 +101,14 @@ impl<T: Config>
 			Error::<T>::ExceedActiveMaximum
 		);
 
-		// Get the delegator account id in Kusama/Polkadot network
-		let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
-
 		// Construct xcm message.
 		let call = match currency_id {
 			KSM => KusamaCall::Staking(StakingCall::<T>::Bond(
-				T::Lookup::unlookup(delegator_account),
 				amount,
 				RewardDestination::<AccountIdOf<T>>::Staked,
 			))
 			.encode(),
 			DOT => PolkadotCall::Staking(StakingCall::<T>::Bond(
-				T::Lookup::unlookup(delegator_account),
 				amount,
 				RewardDestination::<AccountIdOf<T>>::Staked,
 			))
