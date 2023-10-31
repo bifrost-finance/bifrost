@@ -96,11 +96,7 @@ pub enum PolkadotUtilityCall<PolkadotCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama/Polkadot has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(
-		<T::Lookup as StaticLookup>::Source,
-		#[codec(compact)] BalanceOf<T>,
-		RewardDestination<T::AccountId>,
-	),
+	Bond(#[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]
