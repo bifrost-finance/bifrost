@@ -15,7 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{Pallet as LeverageStaking, *};
+use crate::{Pallet, *};
 use frame_benchmarking::{account, v2::*};
 use frame_support::assert_ok;
 use frame_system::RawOrigin as SystemOrigin;
@@ -70,9 +70,6 @@ fn init<
 		10_000_000_000_000_u128,
 	)
 	.unwrap();
-	// <T as lend_market::Config>::Assets::mint_into(KSM, &caller, unit(1_000_000).into()).unwrap();
-	// <T as lend_market::Config>::Assets::mint_into(VKSM, &caller,
-	// unit(1_000_000).into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
 	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
 	<T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
@@ -95,12 +92,9 @@ fn init<
 	pallet_balances::Pallet::<T>::force_set_balance(
 		SystemOrigin::Root.into(),
 		T::Lookup::unlookup(fee_account.clone()),
-		// fee_account.into(),
 		10_000_000_000_000_u128,
 	)
 	.unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
-	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
 
 	assert_ok!(lend_market::Pallet::<T>::add_market(
 		SystemOrigin::Root.into(),
@@ -120,7 +114,6 @@ fn init<
 		unit(100)
 	));
 
-	// <T as lend_market::Config>::Assets::mint_into(KSM, &caller, unit(1_000_000))?;
 	let coin0 = KSM;
 	let coin1 = VKSM;
 	let amounts = vec![
@@ -154,12 +147,6 @@ fn init<
 		<T as nutsfinance_stable_asset::Config>::Balance::zero()
 	));
 
-	// assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(
-	// 	SystemOrigin::Root.into(),
-	// 	// SystemOrigin::Signed(caller.clone()).into(),
-	// 	KSM,
-	// 	bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128)
-	// ));
 	assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(
 		SystemOrigin::Signed(caller.clone()).into(),
 		KSM,
@@ -183,10 +170,10 @@ mod benchmarks {
 		init::<T>()?;
 		let caller: AccountIdOf<T> = account("caller", 1, SEED);
 		let coin0 = KSM;
-		let rate = FixedU128::from_inner(unit(100_000));
+		let rate = FixedU128::from_inner(unit(990_000));
 
 		#[extrinsic_call]
-		LeverageStaking::<T>::flash_loan_deposit(
+		Pallet::<T>::flash_loan_deposit(
 			SystemOrigin::Signed(caller.clone()),
 			coin0.into(),
 			rate,
@@ -197,7 +184,7 @@ mod benchmarks {
 	}
 
 	impl_benchmark_test_suite!(
-		LeverageStaking,
+		Pallet,
 		crate::mock::ExtBuilder::default().new_test_ext().build(),
 		crate::mock::Test
 	);

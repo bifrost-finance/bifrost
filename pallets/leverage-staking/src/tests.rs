@@ -107,7 +107,7 @@ fn flash_loan_repay() {
 		));
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
-			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() }, // 110_000
+			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() },
 		);
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),
