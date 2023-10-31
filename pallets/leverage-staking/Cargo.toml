@@ -8,6 +8,7 @@ version = "0.8.0"
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
+bifrost-stable-pool = { path = "../stable-pool", default-features = false }
 bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
@@ -18,23 +19,25 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 lend-market = { package = "lend-market", path = "../../pallets/lend-market", default-features = false }
 log = { version = "0.4.17", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
+nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-prices = { path = "../prices", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-traits = { path = "../traits", default-features = false }
 scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-pallet-traits = { path = "../traits", default-features = false }
-bifrost-stable-pool = { path = "../stable-pool", default-features = false }
+# env_logger = "0.10.0"
 
 [dev-dependencies]
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-currencies = { workspace = true }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
-env_logger = "0.10.0"
-nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
+# nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
 orml-tokens = "0.4.1-dev"
 orml-xtokens = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -68,6 +71,9 @@ std = [
 	"xcm-builder/std",
 	"lend-market/std",
 	"bifrost-stable-pool/std",
+	"pallet-prices/std",
+	"log/std",
+	# "env_logger/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 

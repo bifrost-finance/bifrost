@@ -123,6 +123,7 @@ lend-market = { path = "../../pallets/lend-market", default-features = false }
 lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
 pallet-prices = { path = "../../pallets/prices", default-features = false }
 bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting", default-features = false, features = [ "kusama" ] }
+leverage-staking = { path = "../../pallets/leverage-staking", default-features = false }
 
 # orml
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -240,6 +241,7 @@ std = [
 	"lend-market-rpc-runtime-api/std",
 	"pallet-prices/std",
 	"bifrost-vtoken-voting/std",
+	"leverage-staking/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"zenlink-stable-amm/std",
@@ -294,6 +296,7 @@ runtime-benchmarks = [
 	"bifrost-stable-pool/runtime-benchmarks",
 	"bifrost-vtoken-voting/runtime-benchmarks",
 	"lend-market/runtime-benchmarks",
+	"leverage-staking/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -365,6 +368,7 @@ try-runtime = [
 	"lend-market/try-runtime",
 	"pallet-prices/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
+	"leverage-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

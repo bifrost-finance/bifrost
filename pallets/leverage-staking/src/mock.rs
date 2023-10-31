@@ -290,10 +290,6 @@ impl bifrost_stable_pool::Config for Test {
 	type CurrencyIdRegister = AssetIdMaps<Test>;
 }
 
-parameter_types! {
-	pub const LeverageStakingPalletId: PalletId = PalletId(*b"bf/levst");
-}
-
 impl leverage_staking::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
@@ -302,8 +298,6 @@ impl leverage_staking::Config for Test {
 	type LendMarket = LendMarket;
 	type StablePoolHandler = StablePool;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
-	type CurrencyIdRegister = AssetIdMaps<Test>;
-	type PalletId = LeverageStakingPalletId;
 }
 
 parameter_types! {

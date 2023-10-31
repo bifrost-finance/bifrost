@@ -24,6 +24,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod weights;
 
 pub use codec::{Decode, Encode};
@@ -32,12 +34,11 @@ use frame_support::{
 	traits::{
 		fungibles::{Inspect, Mutate},
 		tokens::{Fortitude, Precision},
-		Get,
 	},
-	BoundedVec, PalletId,
+	BoundedVec,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use node_primitives::{CurrencyIdConversion, CurrencyIdRegister, Rate, VtokenMintingInterface};
+use node_primitives::{CurrencyIdConversion, Rate, VtokenMintingInterface};
 pub use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
@@ -82,11 +83,6 @@ pub mod pallet {
 		>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
-
-		type CurrencyIdRegister: CurrencyIdRegister<AssetIdOf<Self>>;
-
-		#[pallet::constant]
-		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::error]
@@ -134,33 +130,22 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let free_balance = <T as lend_market::Config>::Assets::balance(asset_id, &who);
 			let input_value =
 				if let Some(flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
 					Self::do_repay(&who, asset_id, None)?;
-					let value = match maybe_input_value {
-						Some(v) => {
-							ensure!(free_balance >= v, Error::<T>::InsufficientBalance);
-							v
-						},
-						None => {
-							ensure!(
-								free_balance >= flash_loan_info.amount,
-								Error::<T>::InsufficientBalance
-							);
-							flash_loan_info.amount
-						},
-					};
+					let value = maybe_input_value.unwrap_or(flash_loan_info.amount);
 					value
 				} else {
 					let value = maybe_input_value.ok_or(Error::<T>::ArgumentsError)?;
-					ensure!(free_balance >= value, Error::<T>::InsufficientBalance);
 					value
 				};
 
 			if rate.is_zero() {
 				return Ok(().into());
 			}
+
+			let free_balance = <T as lend_market::Config>::Assets::balance(asset_id, &who);
+			ensure!(free_balance >= input_value, Error::<T>::InsufficientBalance);
 
 			let mut token_total_value = FixedU128::from_inner(input_value)
 				.checked_mul(&rate)
