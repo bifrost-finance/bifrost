@@ -22,6 +22,7 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-prices = { path = "../prices", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 pallet-traits = { path = "../traits", default-features = false }
@@ -31,13 +32,14 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-# env_logger = "0.10.0"
 
 [dev-dependencies]
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-currencies = { workspace = true }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
 # nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
+env_logger = "0.10.0"
+orml-oracle = "0.4.1-dev"
 orml-tokens = "0.4.1-dev"
 orml-xtokens = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -52,6 +54,8 @@ default = ['std']
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
 ]
 std = [
 	"codec/std",

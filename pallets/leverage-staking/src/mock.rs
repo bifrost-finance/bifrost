@@ -31,7 +31,10 @@ pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT, *,
 };
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use orml_traits::{
+	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
+	DataProviderExtended,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -73,6 +76,7 @@ frame_support::construct_runtime!(
 		LendMarket: lend_market::{Pallet, Storage, Call, Event<T>},
 		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		LeverageStaking: leverage_staking::{Pallet, Storage, Call, Event<T>},
+		Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -220,11 +224,6 @@ impl orml_xtokens::Config for Test {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 impl pallet_balances::Config for Test {
@@ -378,6 +377,31 @@ impl PartialEq for CurrencyIdWrap {
 
 impl Eq for CurrencyIdWrap {}
 
+// pallet-price is using for benchmark compilation
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+pub struct MockDataProvider;
+impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
+	fn get(_asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
+		Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
+	}
+}
+
+impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
+	fn get_no_op(_key: &CurrencyId) -> Option<TimeStampedPrice> {
+		None
+	}
+
+	fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+		vec![]
+	}
+}
+
+impl DataFeeder<CurrencyId, TimeStampedPrice, u128> for MockDataProvider {
+	fn feed_value(_: u128, _: CurrencyId, _: TimeStampedPrice) -> sp_runtime::DispatchResult {
+		Ok(())
+	}
+}
+
 impl MockPriceFeeder {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
@@ -428,6 +452,17 @@ impl lend_market::Config for Test {
 	type Assets = Currencies;
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
+}
+
+impl pallet_prices::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Source = MockDataProvider;
+	type FeederOrigin = EnsureRoot<u128>;
+	type UpdateOrigin = EnsureRoot<u128>;
+	type RelayCurrency = RelayCurrencyId;
+	type Assets = Currencies;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
+	type WeightInfo = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]

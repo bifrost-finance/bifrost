@@ -1,13 +1,28 @@
+// This file is part of Bifrost.
+
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{Pallet as LeverageStaking, *};
-// use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
-// use frame_support::assert_ok;
 use frame_benchmarking::{account, v2::*};
 use frame_support::assert_ok;
 use frame_system::RawOrigin as SystemOrigin;
 use lend_market::{self, InterestRateModel, JumpModel, Market, MarketState};
 pub use node_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
-	DOT, GLMR, KSM, VDOT, *,
+	GLMR, KSM, VKSM, *,
 };
 use orml_traits::MultiCurrency;
 use sp_runtime::{
@@ -40,21 +55,6 @@ pub const fn market_mock(lend_token_id: CurrencyId) -> Market<Balance> {
 	}
 }
 
-// benchmarks! {
-// 	flash_loan_deposit {
-// 	let fee_account: T::AccountId = whitelisted_caller();
-// 	let coin0 = DOT;
-// 	let coin1 = VDOT;
-// 	let rate = FixedU128::from_inner(unit(1_000_000));
-// }: _(SystemOrigin::Signed(fee_account),
-// 	coin0.into(),
-// 	rate,
-// 	Some(10000u128.into()),
-// )
-
-// 	impl_benchmark_test_suite!(LeverageStaking, crate::mock::ExtBuilder::new_test_ext().build(),
-// crate::mock::Test); }
-
 fn init<
 	T: Config
 		+ bifrost_stable_pool::Config
@@ -63,22 +63,31 @@ fn init<
 		+ pallet_balances::Config<Balance = Balance>,
 >() -> Result<(), BenchmarkError> {
 	let caller: AccountIdOf<T> = account("caller", 1, SEED);
+	let account_id = T::Lookup::unlookup(caller.clone());
+	pallet_balances::Pallet::<T>::force_set_balance(
+		SystemOrigin::Root.into(),
+		account_id,
+		10_000_000_000_000_u128,
+	)
+	.unwrap();
+	// <T as lend_market::Config>::Assets::mint_into(KSM, &caller, unit(1_000_000).into()).unwrap();
+	// <T as lend_market::Config>::Assets::mint_into(VKSM, &caller,
+	// unit(1_000_000).into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
+	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
 	<T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
-		DOT.into(),
+		KSM.into(),
 		&caller,
 		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
 	)?;
 	<T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
-		VDOT.into(),
+		VKSM.into(),
 		&caller,
 		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
 	)?;
-	let a = <T as lend_market::Config>::Assets::balance(DOT, &caller);
-	log::debug!("aaaa{:?}", a);
 	let fee_account: AccountIdOf<T> = account("caller", 2, 2);
 	pallet_balances::Pallet::<T>::force_set_balance(
 		SystemOrigin::Root.into(),
-		// caller.into(),
 		T::Lookup::unlookup(caller.clone()),
 		10_000_000_000_000_u128,
 	)
@@ -90,28 +99,30 @@ fn init<
 		10_000_000_000_000_u128,
 	)
 	.unwrap();
-	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), DOT, 1.into()).unwrap();
-	pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VDOT, 1.into()).unwrap();
+	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), KSM, 1.into()).unwrap();
+	// pallet_prices::Pallet::<T>::set_price(SystemOrigin::Root.into(), VKSM, 1.into()).unwrap();
 
-	let a = <T as lend_market::Config>::Assets::balance(DOT, &caller); // <T as pallet_balances::Config>::Currency::free_balance(&caller);
-	log::debug!("bbbb{:?}", a);
 	assert_ok!(lend_market::Pallet::<T>::add_market(
 		SystemOrigin::Root.into(),
-		DOT,
+		KSM,
 		market_mock(VKSM)
 	));
-	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), DOT));
+	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), KSM));
 	assert_ok!(lend_market::Pallet::<T>::add_market(
 		SystemOrigin::Root.into(),
-		VDOT,
+		VKSM,
 		market_mock(VBNC)
 	));
-	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), VDOT));
-	// <T as lend_market::Config>::Assets::mint_into(DOT, &caller, unit(1_000_000))?;
-	let a = <T as lend_market::Config>::Assets::balance(DOT, &caller); // <T as pallet_balances::Config>::Currency::free_balance(&caller);
-	log::debug!("dddd{:?}", a);
-	let coin0 = DOT;
-	let coin1 = VDOT;
+	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), VKSM));
+	assert_ok!(lend_market::Pallet::<T>::mint(
+		SystemOrigin::Signed(caller.clone()).into(),
+		KSM,
+		unit(100)
+	));
+
+	// <T as lend_market::Config>::Assets::mint_into(KSM, &caller, unit(1_000_000))?;
+	let coin0 = KSM;
+	let coin1 = VKSM;
 	let amounts = vec![
 		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(100u128).into()),
 		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(100u128).into()),
@@ -132,8 +143,8 @@ fn init<
 		SystemOrigin::Root.into(),
 		0,
 		vec![
-			(DOT.into(), (1u128.into(), 1u128.into())),
-			(VDOT.into(), (90_000_000u128.into(), 100_000_000u128.into()))
+			(KSM.into(), (1u128.into(), 1u128.into())),
+			(VKSM.into(), (90_000_000u128.into(), 100_000_000u128.into()))
 		]
 	));
 	assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(
@@ -143,39 +154,18 @@ fn init<
 		<T as nutsfinance_stable_asset::Config>::Balance::zero()
 	));
 
-	// 	TimestampPallet::set_timestamp(6000);
-
-	assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(
-		SystemOrigin::Root.into(),
-		DOT,
-		bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128)
-	));
+	// assert_ok!(bifrost_vtoken_minting::Pallet::<T>::set_minimum_mint(
+	// 	SystemOrigin::Root.into(),
+	// 	// SystemOrigin::Signed(caller.clone()).into(),
+	// 	KSM,
+	// 	bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(0u128)
+	// ));
 	assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(
 		SystemOrigin::Signed(caller.clone()).into(),
-		DOT,
+		KSM,
 		bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(unit(100u128)),
 		BoundedVec::default()
 	));
-
-	// assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
-	// 	SystemOrigin::Root.into(),
-	// 	vec![DOT.into(), VDOT.into()],
-	// 	vec![1u128.into(), 1u128.into()],
-	// 	10000000u128.into(),
-	// 	20000000u128.into(),
-	// 	50000000u128.into(),
-	// 	10000u128.into(),
-	// 	fee_account.clone(),
-	// 	fee_account,
-	// 	unit(1).into(),
-	// ));
-	// 	assert_ok!(StablePool::edit_token_rate(
-	// 		SystemOrigin::Root.into(),
-	// 		0,
-	// 		vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
-	// 	));
-	// let amounts = vec![unit(100), unit(100)];
-	// 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
 
 	Ok(())
 }
@@ -190,21 +180,10 @@ mod benchmarks {
 
 	#[benchmark]
 	fn flash_loan_deposit() -> Result<(), BenchmarkError> {
-		log::info!("1111");
-		// env_logger::try_init().unwrap_or(());
 		init::<T>()?;
 		let caller: AccountIdOf<T> = account("caller", 1, SEED);
-		// <T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
-		// 	BNC.into(),
-		// 	&caller,
-		// 	<T as nutsfinance_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
-		// )?;
-		// let caller = funded_account::<T>("caller", 0);
-
-		let coin0 = DOT;
-		let rate = FixedU128::from_inner(unit(1_000_000));
-		let a = <T as lend_market::Config>::Assets::balance(DOT, &caller); // <T as pallet_balances::Config>::Currency::free_balance(&caller);
-		log::debug!("fdsf{:?}", a);
+		let coin0 = KSM;
+		let rate = FixedU128::from_inner(unit(100_000));
 
 		#[extrinsic_call]
 		LeverageStaking::<T>::flash_loan_deposit(
@@ -217,5 +196,9 @@ mod benchmarks {
 		Ok(())
 	}
 
-	impl_benchmark_test_suite!(LeverageStaking, crate::mock::default(), crate::mock::Test);
+	impl_benchmark_test_suite!(
+		LeverageStaking,
+		crate::mock::ExtBuilder::default().new_test_ext().build(),
+		crate::mock::Test
+	);
 }
