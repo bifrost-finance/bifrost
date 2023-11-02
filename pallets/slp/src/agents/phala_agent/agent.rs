@@ -1046,9 +1046,9 @@ impl<T: Config> PhalaAgent<T> {
 		let shares: u128 = U256::from((*total_shares).saturated_into::<u128>())
 			.saturating_mul(amount.saturated_into::<u128>().into())
 			.checked_div((*total_value).saturated_into::<u128>().into())
+			.map(|x| u128::try_from(x))
 			.ok_or(Error::<T>::OverFlow)?
-			.as_u128()
-			.saturated_into();
+			.map_err(|_| Error::<T>::OverFlow)?;
 
 		Ok(BalanceOf::<T>::unique_saturated_from(shares))
 	}

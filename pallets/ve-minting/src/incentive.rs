@@ -45,23 +45,24 @@ impl<T: Config> Pallet<T> {
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
 		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
-		let _total_supply = Self::total_supply(current_block_number)?;
-		if _total_supply == BalanceOf::<T>::zero() {
+		let total_supply = Self::total_supply(current_block_number)?;
+		if total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
 		conf.reward_rate.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
-			let increment: BalanceOf<T> = U256::from(
+			let increment: BalanceOf<T> = U512::from(
 				Self::last_time_reward_applicable()
 					.saturating_sub(conf.last_update_time)
 					.saturated_into::<u128>(),
 			)
-			.checked_mul(U256::from(reward.saturated_into::<u128>()))
+			.checked_mul(U512::from(reward.saturated_into::<u128>()))
 			.ok_or(ArithmeticError::Overflow)?
-			.checked_mul(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+			.checked_mul(U512::from(T::Multiplier::get().saturated_into::<u128>()))
 			.ok_or(ArithmeticError::Overflow)?
-			.checked_div(U256::from(_total_supply.saturated_into::<u128>()))
-			.unwrap_or_default()
-			.as_u128()
+			.checked_div(U512::from(total_supply.saturated_into::<u128>()))
+			.map(|x| u128::try_from(x))
+			.ok_or(ArithmeticError::Overflow)?
+			.map_err(|_| ArithmeticError::Overflow)?
 			.unique_saturated_into();
 			conf.reward_per_token_stored
 				.entry(*currency)
@@ -97,8 +98,9 @@ impl<T: Config> Pallet<T> {
 				))
 				.ok_or(ArithmeticError::Overflow)?
 				.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
-				.unwrap_or_default()
-				.as_u128()
+				.map(|x| u128::try_from(x))
+				.ok_or(ArithmeticError::Overflow)?
+				.map_err(|_| ArithmeticError::Overflow)?
 				.unique_saturated_into();
 			rewards
 				.entry(*currency)

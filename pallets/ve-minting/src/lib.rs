@@ -49,7 +49,7 @@ pub use incentive::*;
 use node_primitives::CurrencyId;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
-use sp_core::U256;
+use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 pub use traits::VeMintingInterface;
 pub use weights::WeightInfo;
@@ -348,8 +348,9 @@ pub mod pallet {
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
 					.checked_div(U256::from(T::MaxBlock::get().saturated_into::<u128>()))
-					.unwrap_or_default()
-					.as_u128()
+					.map(|x| u128::try_from(x))
+					.ok_or(ArithmeticError::Overflow)?
+					.map_err(|_| ArithmeticError::Overflow)?
 					.unique_saturated_into();
 				u_old.bias = u_old
 					.slope
@@ -362,8 +363,9 @@ pub mod pallet {
 			if new_locked.end > current_block_number && new_locked.amount > BalanceOf::<T>::zero() {
 				u_new.slope = U256::from(new_locked.amount.saturated_into::<u128>())
 					.checked_div(U256::from(T::MaxBlock::get().saturated_into::<u128>()))
-					.unwrap_or_default()
-					.as_u128()
+					.map(|x| u128::try_from(x))
+					.ok_or(ArithmeticError::Overflow)?
+					.map_err(|_| ArithmeticError::Overflow)?
 					.unique_saturated_into();
 				u_new.bias = u_new
 					.slope

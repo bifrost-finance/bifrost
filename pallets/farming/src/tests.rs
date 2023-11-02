@@ -47,7 +47,6 @@ fn asset_registry() {
 #[test]
 fn boost() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		env_logger::try_init().unwrap_or(());
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(

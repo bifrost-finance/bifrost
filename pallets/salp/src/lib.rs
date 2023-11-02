@@ -32,7 +32,10 @@ pub use weights::WeightInfo;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
 use cumulus_primitives_core::{QueryId, Response};
-use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
+use frame_support::{
+	pallet_prelude::*,
+	sp_runtime::{ArithmeticError, SaturatedConversion},
+};
 use node_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
 	VtokenMintingInterface,
@@ -1277,7 +1280,8 @@ pub mod pallet {
 						relay_currency_id,
 						relay_vtoken_id,
 						value,
-					);
+					)
+					.ok_or(ArithmeticError::Overflow)?;
 					T::StablePool::swap(
 						&T::BuybackPalletId::get().into_account_truncating(),
 						pool_id,
