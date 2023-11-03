@@ -251,6 +251,8 @@ fn swap_successful() {
 #[test]
 fn get_swap_output_amount() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+		System::set_block_number(2);
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
 
@@ -262,7 +264,24 @@ fn get_swap_output_amount() {
 		));
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
-		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(StablePool::get_swap_output(0, 0, 1, 5000000u128).ok(), Some(4999301));
+		assert_noop!(
+			StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 4999302),
+			Error::<Test>::SwapUnderMin
+		);
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 4999301));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
+		));
+		assert_eq!(StablePool::get_swap_output(0, 0, 1, 5000000u128).ok(), Some(4485945));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		));
+		assert_eq!(StablePool::get_swap_output(0, 0, 1, 5000000u128).ok(), Some(4980724));
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 1, 1, 5000000u128, 0),
 			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
@@ -284,10 +303,6 @@ fn get_swap_output_amount() {
 			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
-			StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 50000000000000000u128),
-			Error::<Test>::SwapUnderMin
-		);
-		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 1, 500000000u128, 0u128),
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
@@ -303,9 +318,9 @@ fn get_swap_output_amount() {
 				redeem_fee: 50000000u128,
 				total_supply: 300006989999594867u128,
 				a: 10000u128,
-				a_block: 0,
+				a_block: 2,
 				future_a: 10000u128,
-				future_a_block: 0,
+				future_a_block: 2,
 				balances: vec![150000000000000000u128, 150006990000000000u128],
 				fee_recipient: 2,
 				account_id: swap_id,
