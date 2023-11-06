@@ -54,6 +54,16 @@ fn init() {
 fn flash_loan_deposit() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init();
+		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(3), DOT, unit(1000)));
+		assert_noop!(
+			LeverageStaking::flash_loan_deposit(
+				RuntimeOrigin::signed(3),
+				DOT,
+				FixedU128::from_inner(unit(1_000_000)),
+				Some(100_000)
+			),
+			Error::<Test>::InsufficientBalance
+		);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
 		assert_noop!(
 			LeverageStaking::flash_loan_deposit(

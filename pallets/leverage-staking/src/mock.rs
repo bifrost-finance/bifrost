@@ -515,7 +515,6 @@ impl ExtBuilder {
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
 			(0, DOT, unit(1_000_000_000_000)),
-			// (0, VDOT, unit(1_000_000_000_000)),
 			(1, BNC, unit(1)),
 			(1, DOT, unit(1000)),
 			(3, DOT, unit(1000)),
@@ -528,7 +527,6 @@ impl ExtBuilder {
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![
-				// (CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
 				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 				(CurrencyId::Native(TokenSymbol::BNC), 10_000_000, None),
 				(DOT, 1_000_000, None),
@@ -541,7 +539,6 @@ impl ExtBuilder {
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
-		// .into()
 
 		pallet_balances::GenesisConfig::<Test> {
 			balances: self
