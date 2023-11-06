@@ -16,56 +16,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-	Config, CurrencyId, CurrencyIdToLocations, CurrencyIdToWeights, LocationToCurrencyIds, Weight,
-};
-use frame_support::{
-	log, migration::storage_key_iter, pallet_prelude::*, traits::OnRuntimeUpgrade,
-	StoragePrefixedMap,
-};
-use sp_std::marker::PhantomData;
-use xcm::v3::prelude::*;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-/// Migrate MultiLocation v1 to v3
-pub struct MigrateV1MultiLocationToV3<T>(PhantomData<T>);
-impl<T: Config> OnRuntimeUpgrade for MigrateV1MultiLocationToV3<T> {
-	fn on_runtime_upgrade() -> Weight {
-		log::info!(
-			target: "asset-registry",
-			"MigrateV1MultiLocationToV3::on_runtime_upgrade execute, will migrate the key type of LocationToCurrencyIds from old MultiLocation(v1/v2) to v3",
-		);
+use super::{AssetMetadata, Config, CurrencyMetadatas, Weight};
+use frame_support::traits::Get;
+use primitives::CurrencyId;
 
-		let mut weight: Weight = Weight::zero();
-
-		// migrate the key type of LocationToCurrencyIds
-		let module_prefix = LocationToCurrencyIds::<T>::module_prefix();
-		let storage_prefix = LocationToCurrencyIds::<T>::storage_prefix();
-		let old_data = storage_key_iter::<xcm::v2::MultiLocation, CurrencyId, Twox64Concat>(
-			module_prefix,
-			storage_prefix,
-		)
-		.drain()
-		.collect::<sp_std::vec::Vec<_>>();
-		for (old_key, value) in old_data {
-			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-			log::info!("old_key=========================={:?}", old_key);
-			let new_key: MultiLocation = old_key.try_into().expect("Stored xcm::v2::MultiLocation");
-			log::info!("new_key=========================={:?}", new_key);
-			LocationToCurrencyIds::<T>::insert(new_key, value);
+pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
+	for pool_id in 0..pool_count {
+		if let Some(old_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::BLP(pool_id)) {
+			let name = scale_info::prelude::format!("Bifrost Stable Pool Token {}", pool_id)
+				.as_bytes()
+				.to_vec();
+			let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
+			CurrencyMetadatas::<T>::insert(
+				CurrencyId::BLP(pool_id),
+				&AssetMetadata { name, symbol, ..old_metadata },
+			)
 		}
-
-		//migrate the value type of CurrencyIdToLocations
-		CurrencyIdToLocations::<T>::translate(|_key, old_value: xcm::v2::MultiLocation| {
-			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-			MultiLocation::try_from(old_value).ok()
-		});
-
-		//migrate the value type of CurrencyIdToWeights
-		CurrencyIdToWeights::<T>::translate(|_key, old_value: u128| {
-			weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
-			Some(Weight::from_parts(old_value as u64, 0u64))
-		});
-
-		weight
 	}
+
+	T::DbWeight::get().reads(pool_count.into()) + T::DbWeight::get().writes(pool_count.into())
 }

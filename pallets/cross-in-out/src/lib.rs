@@ -18,13 +18,11 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
-#![allow(deprecated)] // TODO: clear transaction
 
 // pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use frame_support::{ensure, pallet_prelude::*, sp_runtime::traits::AccountIdConversion, PalletId};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
@@ -38,6 +36,7 @@ use xcm::{
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -67,6 +66,9 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		type MaxLengthLimit: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -80,6 +82,8 @@ pub mod pallet {
 		AlreadyExist,
 		NoCrossingMinimumSet,
 		AmountLowerThanMinimum,
+		ExceedMaxLengthLimit,
+		FailedToConvert,
 	}
 
 	#[pallet::event]
@@ -132,6 +136,10 @@ pub mod pallet {
 		},
 	}
 
+	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
+	/// boundedVec).
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// To store currencies that support indirect cross-in and cross-out.
 	#[pallet::storage]
 	#[pallet::getter(fn get_cross_currency_registry)]
@@ -140,7 +148,8 @@ pub mod pallet {
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
 	#[pallet::getter(fn get_issue_whitelist)]
-	pub type IssueWhiteList<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
+	pub type IssueWhiteList<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
 	/// Accounts in the whitelist can register the mapping between a multilocation and an accountId.
 	#[pallet::storage]
@@ -182,6 +191,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -401,21 +411,27 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let empty_vec: Vec<AccountIdOf<T>> = Vec::new();
-			if Self::get_issue_whitelist(currency_id) == None {
-				IssueWhiteList::<T>::insert(currency_id, empty_vec);
+			let rs = Self::get_issue_whitelist(currency_id);
+			let mut issue_whitelist;
+			if let Some(bounded_vec) = rs {
+				issue_whitelist = bounded_vec.to_vec();
+				ensure!(
+					issue_whitelist.len() < T::MaxLengthLimit::get() as usize,
+					Error::<T>::ExceedMaxLengthLimit
+				);
+				ensure!(!issue_whitelist.contains(&account), Error::<T>::AlreadyExist);
+
+				issue_whitelist.push(account.clone());
+			} else {
+				issue_whitelist = vec![account.clone()];
 			}
 
-			IssueWhiteList::<T>::mutate(currency_id, |issue_whitelist| -> Result<(), Error<T>> {
-				match issue_whitelist {
-					Some(issue_list) if !issue_list.contains(&account) => {
-						issue_list.push(account.clone());
-						Self::deposit_event(Event::AddedToIssueList { account, currency_id });
-						Ok(())
-					},
-					_ => Err(Error::<T>::NotAllowed),
-				}
-			})?;
+			let bounded_issue_whitelist =
+				BoundedVec::try_from(issue_whitelist).map_err(|_| Error::<T>::FailedToConvert)?;
+
+			IssueWhiteList::<T>::insert(currency_id, bounded_issue_whitelist);
+
+			Self::deposit_event(Event::AddedToIssueList { account, currency_id });
 
 			Ok(())
 		}

@@ -115,7 +115,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 		// Snapshot total stake
 		<Staked<T>>::insert(1u32, <Total<T>>::get());
 		let db_weight = T::DbWeight::get();
-		db_weight.reads(5) + db_weight.writes(2) + Weight::from_ref_time(250_000_000_000 as u64)
+		db_weight.reads(5) + db_weight.writes(2) + Weight::from_parts(250_000_000_000 as u64, 0)
 	}
 
 	#[cfg(feature = "try-runtime")]
@@ -417,7 +417,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 		let top = migrated_candidates_top_count.saturating_mul(3 * weight.write + 3 * weight.read);
 		let bottom = migrated_candidates_bottom_count.saturating_mul(weight.write + weight.read);
 		// 20% max block weight as margin for error
-		Weight::from_ref_time(top.saturating_add(bottom).saturating_add(100_000_000_000))
+		Weight::from_parts(top.saturating_add(bottom).saturating_add(100_000_000_000), 0)
 	}
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
@@ -488,7 +488,7 @@ impl<T: Config> OnRuntimeUpgrade for PurgeStaleStorage<T> {
 			<Points<T>>::remove(i);
 		}
 		// 5% of the max block weight as safety margin for computation
-		Weight::from_ref_time(25_000_000_000).saturating_add(db_weight.reads_writes(reads, writes))
+		Weight::from_parts(25_000_000_000, 0).saturating_add(db_weight.reads_writes(reads, writes))
 	}
 
 	#[cfg(feature = "try-runtime")]

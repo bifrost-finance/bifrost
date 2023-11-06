@@ -19,17 +19,16 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers, Hash,
+	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
 	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
 	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
-use codec::Encode;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
+use sp_core::Get;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Zero},
 	DispatchResult,
@@ -51,7 +50,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for FilecoinAgent<T>
 {
@@ -66,7 +65,7 @@ impl<T: Config>
 		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(*delegator_multilocation)
@@ -241,10 +240,17 @@ impl<T: Config>
 		// Need to check whether this validator is in the whitelist.
 		let validators_vec =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let multi_hash = T::Hashing::hash(&worker.encode());
-		ensure!(validators_vec.contains(&(*worker, multi_hash)), Error::<T>::ValidatorNotExist);
+		ensure!(validators_vec.contains(worker), Error::<T>::ValidatorNotExist);
 
-		let validators_list = vec![(*worker, multi_hash)];
+		// ensure the length of validators_vec does not exceed the MaxLengthLimit.
+		ensure!(
+			validators_vec.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
+
+		let validators_list =
+			BoundedVec::try_from(vec![*worker]).map_err(|_| Error::<T>::FailToConvert)?;
+
 		// update ledger
 		ValidatorsByDelegator::<T>::insert(currency_id, *who, validators_list.clone());
 
@@ -254,7 +260,7 @@ impl<T: Config>
 		// Deposit event.
 		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 			currency_id,
-			validators_list,
+			validators_list: validators_list.to_vec(),
 			delegator_id: *who,
 		});
 
@@ -285,7 +291,7 @@ impl<T: Config>
 
 			let validators_by_delegator_vec = ValidatorsByDelegator::<T>::get(currency_id, who)
 				.ok_or(Error::<T>::ValidatorNotBonded)?;
-			ensure!(targets[0] == validators_by_delegator_vec[0].0, Error::<T>::ValidatorError);
+			ensure!(targets[0] == validators_by_delegator_vec[0], Error::<T>::ValidatorError);
 
 			// remove entry.
 			ValidatorsByDelegator::<T>::remove(currency_id, who);
@@ -368,12 +374,9 @@ impl<T: Config>
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
 
 		// "to" account must be one of the validator(worker) accounts
-		let multi_hash = T::Hashing::hash(&to.encode());
-		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(validator_vec.contains(&(*to, multi_hash)), Error::<T>::ValidatorNotExist);
-		} else {
-			Err(Error::<T>::ValidatorNotExist)?;
-		}
+		let validator_vec =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorNotExist)?;
+		ensure!(validator_vec.contains(to), Error::<T>::ValidatorNotExist);
 
 		// burn the amount
 		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
@@ -406,14 +409,11 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
 		let who = who.as_ref().ok_or(Error::<T>::ValidatorNotExist)?;
-		let multi_hash = T::Hashing::hash(&who.encode());
 
 		// ensure "who" is a valid validator
-		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(validator_vec.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
-		} else {
-			Err(Error::<T>::ValidatorNotExist)?;
-		}
+		let validator_vec =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorNotExist)?;
+		ensure!(validator_vec.contains(who), Error::<T>::ValidatorNotExist);
 
 		// Get current TimeUnit.
 		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
@@ -453,16 +453,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
-	}
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		// Get the delegator ledger
@@ -479,25 +469,6 @@ impl<T: Config>
 		}
 
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
-	}
-
-	/// Add a new worker for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Pallet::<T>::inner_add_validator(who, currency_id)
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-
-		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
-		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(*who, multi_hash)) {
-				Err(Error::<T>::ValidatorStillInUse)?;
-			}
-		}
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -535,7 +506,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

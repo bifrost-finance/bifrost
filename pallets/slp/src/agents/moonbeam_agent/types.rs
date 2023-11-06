@@ -20,6 +20,7 @@ use crate::{BalanceOf, Config};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
+use sp_arithmetic::Percent;
 use sp_core::H160;
 use sp_runtime::traits::{IdentityLookup, StaticLookup};
 use sp_std::{boxed::Box, vec::Vec};
@@ -27,8 +28,6 @@ use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamCall<T: Config> {
-	#[codec(index = 0)]
-	System(MoonbeamSystemCall),
 	#[codec(index = 10)]
 	Balances(MoonbeamBalancesCall<T>),
 	#[codec(index = 20)]
@@ -58,12 +57,15 @@ pub enum MoonbeamUtilityCall<MoonbeamCall> {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamParachainStakingCall<T: Config> {
-	#[codec(index = 17)]
-	Delegate(H160, BalanceOf<T>, u32, u32),
+	#[codec(index = 18)]
+	DelegateWithAutoCompound(H160, BalanceOf<T>, Percent, u32, u32, u32),
+	// schedule_revoke_delegation
 	#[codec(index = 19)]
 	ScheduleLeaveDelegators,
+	// execute_delegation_request
 	#[codec(index = 20)]
 	ExecuteLeaveDelegators(H160, u32),
+	// cancel_delegation_request
 	#[codec(index = 21)]
 	CancelLeaveDelegators,
 	#[codec(index = 22)]
@@ -82,12 +84,6 @@ pub enum MoonbeamParachainStakingCall<T: Config> {
 pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
 	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
-}
-
-#[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum MoonbeamSystemCall {
-	#[codec(index = 7)]
-	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

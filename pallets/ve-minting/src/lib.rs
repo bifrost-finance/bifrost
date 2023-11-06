@@ -51,16 +51,13 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
-use traits::VeMintingInterface;
+pub use traits::VeMintingInterface;
 pub use weights::WeightInfo;
 
-#[allow(type_alias_bounds)]
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
@@ -260,7 +257,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
 			min_mint: Option<BalanceOf<T>>,    // Minimum mint balance
@@ -282,7 +279,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::create_lock())]
 		pub fn create_lock(
 			origin: OriginFor<T>,
 			value: BalanceOf<T>,
@@ -293,28 +290,28 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::increase_amount())]
 		pub fn increase_amount(origin: OriginFor<T>, value: BalanceOf<T>) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
 			Self::increase_amount_inner(&exchanger, value)
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::increase_unlock_time())]
 		pub fn increase_unlock_time(origin: OriginFor<T>, time: T::BlockNumber) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::increase_unlock_time_inner(&exchanger, time)
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::withdraw_inner(&exchanger)
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
+		#[pallet::weight(T::WeightInfo::notify_rewards())]
 		pub fn notify_rewards(
 			origin: OriginFor<T>,
 			incentive_from: AccountIdOf<T>,
@@ -327,7 +324,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::mint())]
+		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::get_rewards_inner(&exchanger)
@@ -406,7 +403,7 @@ pub mod pallet {
 				.checked_mul(&T::Week::get())
 				.ok_or(ArithmeticError::Overflow)?;
 			for _i in 0..255 {
-				t_i += T::Week::get();
+				t_i = t_i.checked_add(&T::Week::get()).ok_or(ArithmeticError::Overflow)?;
 				let mut d_slope = Zero::zero();
 				if t_i > current_block_number {
 					t_i = current_block_number
@@ -441,7 +438,7 @@ pub mod pallet {
 
 				last_checkpoint = t_i;
 				last_point.block = t_i;
-				g_epoch += U256::one();
+				g_epoch = g_epoch.checked_add(U256::one()).ok_or(ArithmeticError::Overflow)?;
 
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
@@ -497,7 +494,9 @@ pub mod pallet {
 			}
 
 			// Now handle user history
-			let user_epoch = Self::user_point_epoch(addr) + U256::one();
+			let user_epoch = Self::user_point_epoch(addr)
+				.checked_add(U256::one())
+				.ok_or(ArithmeticError::Overflow)?;
 			UserPointEpoch::<T>::insert(addr, user_epoch);
 			u_new.block = current_block_number;
 			u_new.amount = Self::locked(addr).amount;
@@ -515,10 +514,10 @@ pub mod pallet {
 			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();
-			Supply::<T>::set(supply_before + value);
+			Supply::<T>::set(supply_before.checked_add(&value).ok_or(ArithmeticError::Overflow)?);
 
 			let old_locked = _locked.clone();
-			_locked.amount += value;
+			_locked.amount = _locked.amount.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
 			if unlock_time != Zero::zero() {
 				_locked.end = unlock_time
 			}
@@ -540,7 +539,10 @@ pub mod pallet {
 				end: _locked.end,
 				now: current_block_number,
 			});
-			Self::deposit_event(Event::Supply { supply_before, supply: supply_before + value });
+			Self::deposit_event(Event::Supply {
+				supply_before,
+				supply: supply_before.checked_add(&value).ok_or(ArithmeticError::Overflow)?,
+			});
 			Ok(())
 		}
 
@@ -600,12 +602,18 @@ pub mod pallet {
 				if _min >= _max {
 					break;
 				}
-				let _mid = (_min + _max + 1) / 2;
+				let _mid = (_min
+					.checked_add(_max)
+					.ok_or(ArithmeticError::Overflow)?
+					.checked_add(U256::one())
+					.ok_or(ArithmeticError::Overflow)?)
+				.checked_div(U256::from(2_u128))
+				.ok_or(ArithmeticError::Overflow)?;
 
 				if Self::user_point_history(addr, _mid).block <= block {
 					_min = _mid
 				} else {
-					_max = _mid - 1
+					_max = _mid.checked_sub(U256::one()).ok_or(ArithmeticError::Overflow)?
 				}
 			}
 

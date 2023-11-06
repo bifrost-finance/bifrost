@@ -20,7 +20,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_system::{Pallet as System, RawOrigin};
 use sp_runtime::traits::Bounded;
 
@@ -170,8 +170,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 
@@ -202,8 +200,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&source, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 
@@ -225,10 +221,7 @@ benchmarks! {
 			"Lock not created",
 		);
 	}
-}
 
-impl_benchmark_test_suite!(
-	Vesting,
-	crate::tests::ExtBuilder::default().existential_deposit(256).build(),
-	crate::tests::Test,
+	impl_benchmark_test_suite!(Vesting,crate::tests::ExtBuilder::default().existential_deposit(256).build(),crate::tests::Test,
 );
+}

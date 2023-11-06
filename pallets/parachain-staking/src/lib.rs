@@ -72,7 +72,6 @@ pub use traits::*;
 pub use types::*;
 use weights::WeightInfo;
 pub use RoundIndex;
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 
@@ -1298,8 +1297,8 @@ pub mod pallet {
 				2 * delegators.len() as u64,
 				3 * delegators.len() as u64
 			)
-			.saturating_add(Weight::from_ref_time(delegators.len() as u64).saturating_mul(100_000_000 as u64))
-			.saturating_add(Weight::from_ref_time(50_000_000 as u64))
+			.saturating_add(Weight::from_parts(delegators.len() as u64, 0).saturating_mul(100_000_000 as u64))
+			.saturating_add(Weight::from_parts(50_000_000 as u64, 0))
 		)]
 		pub fn hotfix_migrate_delegators_from_reserve_to_locks(
 			origin: OriginFor<T>,
@@ -1339,8 +1338,8 @@ pub mod pallet {
 				2 * collators.len() as u64,
 				3 * collators.len() as u64
 			)
-			.saturating_add(Weight::from_ref_time(collators.len() as u64).saturating_mul(100_000_000 as u64))
-			.saturating_add(Weight::from_ref_time(50_000_000 as u64))
+			.saturating_add(Weight::from_parts(collators.len() as u64, 0).saturating_mul(100_000_000 as u64))
+			.saturating_add(Weight::from_parts(50_000_000 as u64, 0))
 		)]
 		pub fn hotfix_migrate_collators_from_reserve_to_locks(
 			origin: OriginFor<T>,

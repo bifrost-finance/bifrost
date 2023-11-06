@@ -18,25 +18,22 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use super::*;
+use crate::Pallet as AssetRegistry;
+use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 use primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::traits::UniqueSaturatedFrom;
-
-use super::*;
-#[allow(unused_imports)]
-use crate::Pallet as AssetRegistry;
+use xcm::v3::prelude::*;
 
 benchmarks! {
 	register_native_asset {
-		let origin = T::RegisterOrigin::successful_origin();
-		let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-			xcm::v0::Junction::Parachain(1000),
-		));
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let v3_location = VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
 
 	let call = Call::<T>::register_native_asset {
 			currency_id: CurrencyId::Token(TokenSymbol::DOT),
-			location: Box::new(v0_location.clone()),
+			location: Box::new(v3_location.clone()),
 			metadata: Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -60,15 +57,13 @@ benchmarks! {
 	}
 
 	update_native_asset {
-		let origin = T::RegisterOrigin::successful_origin();
-		let v0_location = VersionedMultiLocation::V0(xcm::v0::MultiLocation::X1(
-			xcm::v0::Junction::Parachain(1000),
-		));
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let v3_location = VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
 
 		assert_ok!(AssetRegistry::<T>::register_native_asset(
 			origin.clone(),
 			CurrencyId::Token(TokenSymbol::DOT),
-			Box::new(v0_location.clone()),
+			Box::new(v3_location.clone()),
 			Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -79,7 +74,7 @@ benchmarks! {
 
 	let call = Call::<T>::update_native_asset {
 			currency_id: CurrencyId::Token(TokenSymbol::DOT),
-			location: Box::new(v0_location.clone()),
+			location: Box::new(v3_location.clone()),
 			metadata: Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -103,7 +98,7 @@ benchmarks! {
 	}
 
 	register_token_metadata {
-		let origin = T::RegisterOrigin::successful_origin();
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
@@ -120,7 +115,7 @@ benchmarks! {
 	}
 
 	register_vtoken_metadata {
-		let origin = T::RegisterOrigin::successful_origin();
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
@@ -150,7 +145,7 @@ benchmarks! {
 	}
 
 	register_vstoken_metadata {
-		let origin = T::RegisterOrigin::successful_origin();
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"KSM Native Token".to_vec(),
 			symbol: b"KSM".to_vec(),
@@ -180,7 +175,7 @@ benchmarks! {
 	}
 
 	register_vsbond_metadata {
-		let origin = T::RegisterOrigin::successful_origin();
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 				let metadata = AssetMetadata {
 			name: b"KSM Native Token".to_vec(),
 			symbol: b"KSM".to_vec(),
@@ -214,18 +209,19 @@ benchmarks! {
 	}
 
 	register_multilocation {
-		let origin = T::RegisterOrigin::successful_origin();
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"Bifrost Native Coin".to_vec(),
 			symbol: b"BNC".to_vec(),
 			decimals: 12,
 			minimal_balance: BalanceOf::<T>::unique_saturated_from(0u128),
 		};
-		// v1
-		let location = VersionedMultiLocation::V1(MultiLocation {
+		// v3
+		let location = VersionedMultiLocation::V3(MultiLocation {
 			parents: 1,
-			interior: xcm::v1::Junctions::X1(xcm::v1::Junction::Parachain(2001)),
+			interior: Junctions::X1(Parachain(2001)),
 		});
+
 		let multi_location: MultiLocation = location.clone().try_into().unwrap();
 
 		assert_ok!(AssetRegistry::<T>::register_token_metadata(
@@ -236,7 +232,7 @@ benchmarks! {
 		let call = Call::<T>::register_multilocation {
 			currency_id: CurrencyId::Token2(0),
 			location:Box::new(location.clone()),
-			weight:2000_000_000,
+			weight:Weight::from_parts(2000_000_000, u64::MAX),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
@@ -248,12 +244,41 @@ benchmarks! {
 			CurrencyIdToLocations::<T>::get(CurrencyId::Token2(0)),
 			Some(multi_location.clone())
 		);
-		assert_eq!(CurrencyIdToWeights::<T>::get(CurrencyId::Token2(0)), Some(2000_000_000));
+		assert_eq!(CurrencyIdToWeights::<T>::get(CurrencyId::Token2(0)), Some(Weight::from_parts(2000_000_000, u64::MAX)));
 	}
-}
 
-impl_benchmark_test_suite!(
+	force_set_multilocation {
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let metadata = AssetMetadata {
+			name: b"Bifrost Native Coin".to_vec(),
+			symbol: b"BNC".to_vec(),
+			decimals: 12,
+			minimal_balance: BalanceOf::<T>::unique_saturated_from(0u128),
+		};
+		// v3
+		let location = VersionedMultiLocation::V3(MultiLocation {
+			parents: 1,
+			interior: Junctions::X1(Parachain(2001)),
+		});
+
+		let multi_location: MultiLocation = location.clone().try_into().unwrap();
+
+		assert_ok!(AssetRegistry::<T>::register_token_metadata(
+			origin.clone(),
+			Box::new(metadata.clone())
+		));
+
+		let call = Call::<T>::force_set_multilocation {
+			currency_id: CurrencyId::Token2(0),
+			location:Box::new(location.clone()),
+			weight:Weight::from_parts(2000_000_000, u64::MAX),
+		};
+	}: {call.dispatch_bypass_filter(origin)?}
+
+	impl_benchmark_test_suite!(
 	AssetRegistry,
 	crate::mock::ExtBuilder::default().build(),
 	crate::mock::Runtime
 );
+
+}

@@ -20,14 +20,13 @@
 mod account_id;
 mod asset_registry;
 mod dollor_tests;
-mod flexible_fee;
-mod general_key;
 mod kusama_cross_chain_transact;
-mod kusama_cross_chain_transfer;
 mod kusama_integration_tests;
 mod kusama_test_net;
 // mod salp;
 mod slp;
 mod statemine;
+mod total_issuance;
 mod treasury;
 mod vtoken_minting;
+mod vtoken_voting;

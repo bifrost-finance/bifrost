@@ -28,7 +28,7 @@ pub enum ContributionStatus<BalanceOf> {
 	MigrateToIdle,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Copy, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Copy, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum RpcContributionStatus {
 	Idle,

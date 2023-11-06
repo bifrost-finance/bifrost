@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(dead_code)]
-#![allow(unused_variables)]
 pub mod types;
 pub mod weights;
 pub use weights::WeightInfo;
@@ -27,7 +25,10 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, inherent::Vec, traits:
 use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
+use sp_runtime::{
+	traits::{AccountIdConversion, Saturating, Zero},
+	BoundedVec,
+};
 pub use types::*;
 pub use RoundIndex;
 #[cfg(test)]
@@ -39,17 +40,13 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-pub type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -545,7 +542,12 @@ impl<T: Config> Pallet<T> {
 			// Deposit mint_amount ksm to pallet_account
 			T::MultiCurrency::deposit(token_id, &account, mint_amount)?;
 			// Change ksm mint to vksm
-			T::VtokenMintingInterface::mint(account.clone(), token_id, mint_amount)?;
+			T::VtokenMintingInterface::mint(
+				account.clone(),
+				token_id,
+				mint_amount,
+				BoundedVec::default(),
+			)?;
 
 			//Update system_shadow_amount += mint_amount
 			token_info.system_shadow_amount =
@@ -668,8 +670,8 @@ impl<T: Config> Pallet<T> {
 		address: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-		vtoken_amount: BalanceOf<T>,
-		fee: BalanceOf<T>,
+		_vtoken_amount: BalanceOf<T>,
+		_fee: BalanceOf<T>,
 	) -> Weight {
 		//Get pallet account
 		let pallet_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();

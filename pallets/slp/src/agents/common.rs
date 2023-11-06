@@ -17,16 +17,15 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
 	pallet::Error,
-	vec, BalanceOf, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
+	vec, BalanceOf, BoundedVec, Box, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode,
+	Event,
 	Junction::{AccountId32, Parachain},
 	Junctions::{Here, X1},
-	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmDestWeightAndFee, XcmOperation,
-	Zero,
+	MinimumsAndMaximums, MultiLocation, Pallet, Validators, Xcm, XcmOperationType, Zero,
 };
-use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{ensure, traits::Len};
-use node_primitives::{CurrencyId, VtokenMintingOperator};
+use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use orml_traits::MultiCurrency;
 use sp_core::{Get, U256};
 use sp_runtime::{
@@ -76,7 +75,6 @@ impl<T: Config> Pallet<T> {
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(currency_id);
 
@@ -87,24 +85,32 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::GreaterThanMaximum
 		);
 
-		if validators_set.is_none() {
-			Validators::<T>::insert(currency_id, vec![(who, multi_hash)]);
-		} else {
-			// Change corresponding storage.
-			Validators::<T>::mutate(currency_id, |validator_vec| -> Result<(), Error<T>> {
-				if let Some(ref mut validator_list) = validator_vec {
-					let rs =
-						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+		// ensure validator candidates are less than MaxLengthLimit
+		ensure!(
+			validators_set.len() < T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
 
-					if let Err(index) = rs {
-						validator_list.insert(index, (*who, multi_hash));
-					} else {
-						Err(Error::<T>::AlreadyExist)?
-					}
-				}
-				Ok(())
-			})?;
+		let mut validators_vec;
+		if let Some(validators_bounded_vec) = validators_set {
+			validators_vec = validators_bounded_vec.to_vec();
+			let rs = validators_vec.iter().position(|multi| multi == who);
+			// Check if the validator is in the already exist.
+			ensure!(rs.is_none(), Error::<T>::AlreadyExist);
+
+			// If the validator is not in the whitelist, add it.
+			validators_vec.push(*who);
+		} else {
+			validators_vec = vec![*who];
 		}
+
+		let bounded_list =
+			BoundedVec::try_from(validators_vec).map_err(|_| Error::<T>::FailToConvert)?;
+
+		Validators::<T>::insert(currency_id, bounded_list);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 
 		Ok(())
 	}
@@ -133,16 +139,20 @@ impl<T: Config> Pallet<T> {
 		let validators_set =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-		let multi_hash = T::Hashing::hash(&who.encode());
-		ensure!(validators_set.contains(&(*who, multi_hash)), Error::<T>::ValidatorNotExist);
+		ensure!(validators_set.contains(who), Error::<T>::ValidatorNotExist);
 
 		// Update corresponding storage.
 		Validators::<T>::mutate(currency_id, |validator_vec| {
 			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+				let index_op = validator_list.clone().iter().position(|va| va == who);
 
-				if let Ok(index) = rs {
+				if let Some(index) = index_op {
 					validator_list.remove(index);
+
+					Pallet::<T>::deposit_event(Event::ValidatorsRemoved {
+						currency_id,
+						validator_id: *who,
+					});
 				}
 			}
 		});
@@ -234,9 +244,11 @@ impl<T: Config> Pallet<T> {
 		// not succeed.
 		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
 
-		let (weight, fee_amount) =
-			XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::TransferTo)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee_amount) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperationType::TransferTo,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// Prepare parameter beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;

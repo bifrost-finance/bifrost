@@ -1,7 +1,7 @@
 name: Release
 
 env:
-  SUBWASM_VERSION: 0.19.0
+  SUBWASM_VERSION: 0.20.0
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -93,7 +93,7 @@ jobs:
             ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm
 
       - uses: 8398a7/action-slack@v3
-        if: failure()
+        if: always()
         with:
           status: ${{ job.status }}
           fields: repo,author,eventName,workflow,ref,commit

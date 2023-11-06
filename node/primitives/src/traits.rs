@@ -20,19 +20,21 @@
 
 #![allow(clippy::unnecessary_cast)]
 
+use crate::{
+	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
+	TokenSymbol, XcmOperationType,
+};
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	dispatch::DispatchError,
-	pallet_prelude::DispatchResultWithPostInfo,
+	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
-	DispatchResult,
+	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
+	BoundedVec, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
-
-use crate::{AssetIds, LeasePeriod, ParaId, PoolId, TokenId, TokenSymbol};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -87,7 +89,7 @@ pub trait BancorHandler<Balance> {
 
 impl<Balance> BancorHandler<Balance> for () {
 	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
-		DispatchResult::from(DispatchError::Token(TokenError::NoFunds))
+		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
 	}
 }
 
@@ -145,12 +147,20 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit)>;
+	) -> Option<(AccountId, Balance, TimeUnit, RedeemType<AccountId>)>;
+	fn get_astar_parachain_id() -> u32;
+	fn get_moonbeam_parachain_id() -> u32;
+	fn get_hydradx_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
 pub trait SlpOperator<CurrencyId> {
 	fn all_delegation_requests_occupied(currency_id: CurrencyId) -> bool;
+}
+
+/// Trait for Vtoken-Minting module to check whether accept redeeming or not.
+pub trait SlpxOperator<Balance> {
+	fn get_moonbeam_transfer_to_fee() -> Balance;
 }
 
 /// A mapping between CurrencyId and AssetMetadata.
@@ -212,6 +222,7 @@ pub trait CurrencyIdRegister<CurrencyId> {
 		first_slot: crate::LeasePeriod,
 		last_slot: crate::LeasePeriod,
 	) -> DispatchResult;
+	fn register_blp_metadata(pool_id: PoolId, decimals: u8) -> DispatchResult;
 }
 
 impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
@@ -290,6 +301,10 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 	) -> DispatchResult {
 		Ok(())
 	}
+
+	fn register_blp_metadata(_pool_id: PoolId, _decimals: u8) -> DispatchResult {
+		Ok(())
+	}
 }
 
 /// The interface to call farming pallet functions.
@@ -303,11 +318,18 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		exchanger: AccountId,
 		token_id: CurrencyId,
 		token_amount: Balance,
+		remark: BoundedVec<u8, ConstU32<32>>,
 	) -> DispatchResultWithPostInfo;
 	fn redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
+	) -> DispatchResultWithPostInfo;
+	fn slpx_redeem(
+		exchanger: AccountId,
+		vtoken_id: CurrencyId,
+		vtoken_amount: Balance,
+		redeem: RedeemType<AccountId>,
 	) -> DispatchResultWithPostInfo;
 	fn token_to_vtoken(
 		token_id: CurrencyId,
@@ -322,6 +344,77 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
+	fn get_astar_parachain_id() -> u32;
+	fn get_moonbeam_parachain_id() -> u32;
+	fn get_hydradx_parachain_id() -> u32;
+}
+
+impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, CurrencyId, Balance>
+	for ()
+{
+	fn mint(
+		_exchanger: AccountId,
+		_token_id: CurrencyId,
+		_token_amount: Balance,
+		_remark: BoundedVec<u8, ConstU32<32>>,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn redeem(
+		_exchanger: AccountId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn slpx_redeem(
+		_exchanger: AccountId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+		_redeem_type: RedeemType<AccountId>,
+	) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+
+	fn token_to_vtoken(
+		_token_id: CurrencyId,
+		_vtoken_id: CurrencyId,
+		_token_amount: Balance,
+	) -> Balance {
+		Zero::zero()
+	}
+
+	fn vtoken_to_token(
+		_token_id: CurrencyId,
+		_vtoken_id: CurrencyId,
+		_vtoken_amount: Balance,
+	) -> Balance {
+		Zero::zero()
+	}
+
+	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {
+		None
+	}
+
+	fn token_id(_vtoken_id: CurrencyId) -> Option<CurrencyId> {
+		None
+	}
+
+	fn get_minimums_redeem(_vtoken_id: CurrencyId) -> Balance {
+		Zero::zero()
+	}
+
+	fn get_astar_parachain_id() -> u32 {
+		0
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		0
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		0
+	}
 }
 
 pub trait TryConvertFrom<CurrencyId> {
@@ -329,4 +422,73 @@ pub trait TryConvertFrom<CurrencyId> {
 	fn try_convert_from(currency_id: CurrencyId, para_id: u32) -> Result<Self, Self::Error>
 	where
 		Self: Sized;
+}
+
+pub trait XcmDestWeightAndFeeHandler<CurrencyId, Balance>
+where
+	Balance: AtLeast32BitUnsigned,
+{
+	fn get_operation_weight_and_fee(
+		token: CurrencyId,
+		operation: XcmOperationType,
+	) -> Option<(Weight, Balance)>;
+
+	fn set_xcm_dest_weight_and_fee(
+		currency_id: CurrencyId,
+		operation: XcmOperationType,
+		weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult;
+}
+
+impl<CurrencyId, Balance> XcmDestWeightAndFeeHandler<CurrencyId, Balance> for ()
+where
+	Balance: AtLeast32BitUnsigned,
+{
+	fn get_operation_weight_and_fee(
+		_token: CurrencyId,
+		_operation: XcmOperationType,
+	) -> Option<(Weight, Balance)> {
+		Some((Zero::zero(), Zero::zero()))
+	}
+
+	fn set_xcm_dest_weight_and_fee(
+		_currency_id: CurrencyId,
+		_operation: XcmOperationType,
+		_weight_and_fee: Option<(Weight, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
+pub trait FeeGetter<RuntimeCall> {
+	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
+}
+
+pub trait DerivativeAccountHandler<CurrencyId, Balance> {
+	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
+
+	fn get_multilocation(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<xcm::v3::MultiLocation>;
+
+	fn get_stake_info(
+		token: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> Option<(Balance, Balance)>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn init_minimums_and_maximums(token: CurrencyId);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn new_delegator_ledger(token: CurrencyId, who: xcm::v3::MultiLocation);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add_delegator(token: CurrencyId, index: DerivativeIndex, who: xcm::v3::MultiLocation);
+}
+
+pub trait VTokenSupplyProvider<CurrencyId, Balance> {
+	fn get_vtoken_supply(vtoken: CurrencyId) -> Option<Balance>;
+
+	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
 }

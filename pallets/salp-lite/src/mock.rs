@@ -52,7 +52,7 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
+		Currencies: bifrost_currencies::{Pallet, Call},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
@@ -97,7 +97,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 1;
 	pub const TransferFee: u128 = 0;
 	pub const CreationFee: u128 = 0;
 	pub const TransactionByteFee: u128 = 0;
@@ -155,9 +155,9 @@ impl orml_tokens::Config for Test {
 	type CurrencyHooks = ();
 }
 
-pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+pub type BifrostToken = bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Test {
+impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
@@ -194,8 +194,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> RuntimeOrigin {
-		RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
+		Ok(RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get())))
 	}
 }
 
@@ -235,6 +235,50 @@ impl WeightInfo for SalpWeightInfo {
 	}
 
 	fn refund() -> Weight {
+		Weight::zero()
+	}
+
+	fn set_multisig_confirm_account() -> Weight {
+		Weight::zero()
+	}
+
+	fn issue() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_success() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_fail() -> Weight {
+		Weight::zero()
+	}
+
+	fn continue_fund() -> Weight {
+		Weight::zero()
+	}
+
+	fn fund_retire() -> Weight {
+		Weight::zero()
+	}
+
+	fn create() -> Weight {
+		Weight::zero()
+	}
+
+	fn edit() -> Weight {
+		Weight::zero()
+	}
+
+	fn withdraw() -> Weight {
+		Weight::zero()
+	}
+
+	fn dissolve_refunded() -> Weight {
+		Weight::zero()
+	}
+
+	fn dissolve() -> Weight {
 		Weight::zero()
 	}
 }

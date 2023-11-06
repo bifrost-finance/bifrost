@@ -17,7 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{
+	benchmarks, impl_benchmark_test_suite, v1::BenchmarkError, whitelisted_caller,
+};
 use frame_support::{dispatch::UnfilteredDispatchable, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
 
@@ -45,19 +47,19 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller), token_amount)
 
 	edit_exchange_price {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let price = BalanceOf::<T>::unique_saturated_from(50u128);
 		let call = Call::<T>::edit_exchange_price { price };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	edit_release_per_day {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let amount_per_day = BalanceOf::<T>::unique_saturated_from(50u128);
 		let call = Call::<T>::edit_release_per_day { amount_per_day };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	edit_release_start_and_end_block {
-		let origin = T::ControlOrigin::successful_origin();
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let start = BlockNumberFor::<T>::from(50u32);
 		let end = BlockNumberFor::<T>::from(100u32);
 		let call = Call::<T>::edit_release_start_and_end_block { start, end };

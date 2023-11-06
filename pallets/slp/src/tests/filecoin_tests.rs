@@ -18,12 +18,9 @@
 
 #![cfg(test)]
 
-use crate::{
-	mocks::mock::{VFIL, *},
-	primitives::FilecoinLedger,
-	FIL, *,
-};
+use crate::{mocks::mock::*, primitives::FilecoinLedger, *};
 use frame_support::{assert_noop, assert_ok, PalletId};
+use node_primitives::currency::{FIL, VFIL};
 use sp_runtime::traits::AccountIdConversion;
 
 fn mins_maxs_setup() {
@@ -50,11 +47,7 @@ fn initialize_delegator_setup() {
 		MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 	mins_maxs_setup();
-	let _ = Slp::initialize_delegator(
-		RuntimeOrigin::signed(ALICE),
-		FIL,
-		Some(Box::new(location.clone())),
-	);
+	let _ = Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), FIL, Some(Box::new(location)));
 }
 
 fn delegate_setup() {
@@ -66,13 +59,9 @@ fn delegate_setup() {
 
 	initialize_delegator_setup();
 
-	let _ = Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location.clone()));
-	let _ = Slp::delegate(
-		RuntimeOrigin::signed(ALICE),
-		FIL,
-		Box::new(location.clone()),
-		vec![owner_location.clone()],
-	);
+	let _ = Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location));
+	let _ =
+		Slp::delegate(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), vec![owner_location]);
 }
 
 fn bond_setup() {
@@ -81,13 +70,8 @@ fn bond_setup() {
 
 	delegate_setup();
 
-	let _ = Slp::bond(
-		RuntimeOrigin::signed(ALICE),
-		FIL,
-		Box::new(location.clone()),
-		1_000_000_000_000,
-		None,
-	);
+	let _ =
+		Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), 1_000_000_000_000, None);
 }
 
 #[test]
@@ -102,11 +86,11 @@ fn initialize_delegator_should_work() {
 		assert_ok!(Slp::initialize_delegator(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Some(Box::new(location.clone()))
+			Some(Box::new(location))
 		));
 
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(FIL), 1);
-		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), Some(location.clone()));
+		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), Some(location));
 		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location), Some(0));
 	});
 }
@@ -123,7 +107,7 @@ fn bond_should_work() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
+				Box::new(location),
 				1_000_000_000_000,
 				None
 			),
@@ -133,7 +117,7 @@ fn bond_should_work() {
 		delegate_setup();
 
 		assert_noop!(
-			Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone()), 1_000, None),
+			Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), 1_000, None),
 			Error::<Runtime>::LowerThanMinimum
 		);
 
@@ -141,7 +125,7 @@ fn bond_should_work() {
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
+				Box::new(location),
 				300_000_000_000_000,
 				None
 			),
@@ -151,22 +135,21 @@ fn bond_should_work() {
 		assert_ok!(Slp::bond(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
+			Box::new(location),
 			1_000_000_000_000,
 			None
 		));
 
-		let fil_ledger =
-			FilecoinLedger { account: location.clone(), initial_pledge: 1000000000000 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 1000000000000 };
 		let ledger = Ledger::Filecoin(fil_ledger);
 
-		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location), Some(ledger));
 
 		assert_noop!(
 			Slp::bond(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
+				Box::new(location),
 				1_000_000_000_000,
 				None
 			),
@@ -188,26 +171,20 @@ fn delegate_should_work() {
 
 		initialize_delegator_setup();
 
-		assert_ok!(Slp::add_validator(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-			Box::new(owner_location.clone())
-		));
+		assert_ok!(Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location)));
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
 		assert_ok!(Slp::delegate(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
-			vec![owner_location.clone()]
+			Box::new(location),
+			vec![owner_location]
 		));
 
 		assert_eq!(
-			ValidatorsByDelegator::<Runtime>::get(FIL, location.clone()),
+			ValidatorsByDelegator::<Runtime>::get(FIL, location),
 			Some(validator_list.clone())
 		);
 	});
@@ -223,7 +200,7 @@ fn bond_extra_should_work() {
 			Slp::bond_extra(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
+				Box::new(location),
 				None,
 				1_000_000_000_000,
 			),
@@ -235,16 +212,15 @@ fn bond_extra_should_work() {
 		assert_ok!(Slp::bond_extra(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
+			Box::new(location),
 			None,
 			1_000_000_000_000,
 		));
 
-		let fil_ledger =
-			FilecoinLedger { account: location.clone(), initial_pledge: 2000000000000 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 2000000000000 };
 		let ledger = Ledger::Filecoin(fil_ledger);
 
-		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location), Some(ledger));
 	});
 }
 
@@ -258,7 +234,7 @@ fn unbond_should_work() {
 			Slp::unbond(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
+				Box::new(location),
 				None,
 				500_000_000_000,
 			),
@@ -270,15 +246,15 @@ fn unbond_should_work() {
 		assert_ok!(Slp::unbond(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
+			Box::new(location),
 			None,
 			500_000_000_000,
 		));
 
-		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 500000000000 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 500000000000 };
 		let ledger = Ledger::Filecoin(fil_ledger);
 
-		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location), Some(ledger));
 	});
 }
 
@@ -298,43 +274,38 @@ fn undelegate_should_work() {
 			Slp::undelegate(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
-				vec![owner_location.clone()]
+				Box::new(location),
+				vec![owner_location]
 			),
 			Error::<Runtime>::DelegatorNotBonded
 		);
 
 		bond_setup();
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
-		assert_eq!(
-			ValidatorsByDelegator::<Runtime>::get(FIL, location.clone()),
-			Some(validator_list)
-		);
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
+		assert_eq!(ValidatorsByDelegator::<Runtime>::get(FIL, location), Some(validator_list));
 
 		assert_noop!(
 			Slp::undelegate(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
-				vec!(owner_location.clone())
+				Box::new(location),
+				vec!(owner_location)
 			),
 			Error::<Runtime>::AmountNotZero
 		);
 
 		// set ledger to zero
-		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 0 };
 		let ledger = Ledger::Filecoin(fil_ledger);
-		DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(FIL, location, ledger);
 
 		assert_noop!(
 			Slp::undelegate(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(location.clone()),
-				vec![other_location.clone()]
+				Box::new(location),
+				vec![other_location]
 			),
 			Error::<Runtime>::ValidatorError
 		);
@@ -342,11 +313,11 @@ fn undelegate_should_work() {
 		assert_ok!(Slp::undelegate(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
-			vec![owner_location.clone()]
+			Box::new(location),
+			vec![owner_location]
 		));
 
-		assert_eq!(ValidatorsByDelegator::<Runtime>::get(FIL, location.clone()), None);
+		assert_eq!(ValidatorsByDelegator::<Runtime>::get(FIL, location), None);
 	});
 }
 
@@ -364,7 +335,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				FIL,
 				100,
-				Some(location.clone())
+				Some(location)
 			),
 			Error::<Runtime>::TuneExchangeRateLimitNotSet
 		);
@@ -392,9 +363,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 		));
 
 		// insert validator into validators list.
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&location.clone().encode());
-		let validator_list = vec![(location.clone(), multi_hash)];
+		let validator_list = BoundedVec::try_from(vec![location]).unwrap();
 		Validators::<Runtime>::insert(FIL, validator_list);
 
 		// First set base vtoken exchange rate. Should be 1:1.
@@ -408,7 +377,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			FIL,
 			100,
-			Some(location.clone())
+			Some(location)
 		));
 
 		// Tokenpool should have been added 100.
@@ -432,38 +401,33 @@ fn remove_delegator_should_work() {
 			MultiLocation { parents: 100, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
-			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone())),
+			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location)),
 			Error::<Runtime>::DelegatorNotBonded
 		);
 
 		bond_setup();
 
-		let fil_ledger =
-			FilecoinLedger { account: location.clone(), initial_pledge: 1_000_000_000_000 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 1_000_000_000_000 };
 		let ledger = Ledger::Filecoin(fil_ledger);
-		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), Some(location.clone()));
-		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location.clone()), Some(0));
-		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), Some(ledger));
+		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), Some(location));
+		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location), Some(0));
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location), Some(ledger));
 
 		assert_noop!(
-			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location.clone())),
+			Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location)),
 			Error::<Runtime>::AmountNotZero
 		);
 
 		// set ledger to zero
-		let fil_ledger1 = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
+		let fil_ledger1 = FilecoinLedger { account: location, initial_pledge: 0 };
 		let ledger1 = Ledger::Filecoin(fil_ledger1);
-		DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger1);
+		DelegatorLedgers::<Runtime>::insert(FIL, location, ledger1);
 
-		assert_ok!(Slp::remove_delegator(
-			RuntimeOrigin::signed(ALICE),
-			FIL,
-			Box::new(location.clone())
-		));
+		assert_ok!(Slp::remove_delegator(RuntimeOrigin::signed(ALICE), FIL, Box::new(location)));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(FIL, 0), None);
-		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location.clone()), None);
-		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location.clone()), None);
+		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(FIL, location), None);
+		assert_eq!(DelegatorLedgers::<Runtime>::get(FIL, location), None);
 	});
 }
 
@@ -477,49 +441,34 @@ fn remove_validator_should_work() {
 			MultiLocation { parents: 111, interior: X1(Junction::from(BoundedVec::default())) };
 
 		assert_noop!(
-			Slp::remove_validator(
-				RuntimeOrigin::signed(ALICE),
-				FIL,
-				Box::new(owner_location.clone())
-			),
+			Slp::remove_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location)),
 			Error::<Runtime>::ValidatorSetNotExist
 		);
 
 		bond_setup();
 
-		let multi_hash =
-			<Runtime as frame_system::Config>::Hashing::hash(&owner_location.clone().encode());
-		let validator_list = vec![(owner_location.clone(), multi_hash)];
+		let validator_list = BoundedVec::try_from(vec![owner_location]).unwrap();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(validator_list.clone()));
 
-		assert_noop!(
-			Slp::remove_validator(
-				RuntimeOrigin::signed(ALICE),
-				FIL,
-				Box::new(owner_location.clone())
-			),
-			Error::<Runtime>::ValidatorStillInUse
-		);
-
 		// set ledger to zero
-		let fil_ledger = FilecoinLedger { account: location.clone(), initial_pledge: 0 };
+		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 0 };
 		let ledger = Ledger::Filecoin(fil_ledger);
-		DelegatorLedgers::<Runtime>::insert(FIL, location.clone(), ledger);
+		DelegatorLedgers::<Runtime>::insert(FIL, location, ledger);
 
 		assert_ok!(Slp::undelegate(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(location.clone()),
-			vec![owner_location.clone()]
+			Box::new(location),
+			vec![owner_location]
 		));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(owner_location.clone())
+			Box::new(owner_location)
 		));
 
-		let empty_vec = vec![];
+		let empty_vec = BoundedVec::default();
 		assert_eq!(Validators::<Runtime>::get(FIL), Some(empty_vec));
 	});
 }
@@ -559,8 +508,8 @@ fn filecoin_transfer_to_works() {
 			Slp::transfer_to(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(exit_account_location.clone()),
-				Box::new(owner_location.clone()),
+				Box::new(exit_account_location),
+				Box::new(owner_location),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::InvalidAccount
@@ -570,8 +519,8 @@ fn filecoin_transfer_to_works() {
 			Slp::transfer_to(
 				RuntimeOrigin::signed(ALICE),
 				FIL,
-				Box::new(entrance_account_location.clone()),
-				Box::new(location.clone()),
+				Box::new(entrance_account_location),
+				Box::new(location),
 				5_000_000_000_000_000_000,
 			),
 			Error::<Runtime>::ValidatorNotExist
@@ -580,8 +529,8 @@ fn filecoin_transfer_to_works() {
 		assert_ok!(Slp::transfer_to(
 			RuntimeOrigin::signed(ALICE),
 			FIL,
-			Box::new(entrance_account_location.clone()),
-			Box::new(owner_location.clone()),
+			Box::new(entrance_account_location),
+			Box::new(owner_location),
 			0,
 		));
 	});

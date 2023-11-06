@@ -20,7 +20,10 @@
 
 #![cfg(test)]
 
-use frame_support::{construct_runtime, ord_parameter_types, parameter_types, traits::Everything};
+use frame_support::{
+	construct_runtime, ord_parameter_types, pallet_prelude::ConstU32, parameter_types,
+	traits::Everything,
+};
 use frame_system::EnsureSignedBy;
 use primitives::{AccountId, Balance};
 
@@ -71,6 +74,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 ord_parameter_types! {

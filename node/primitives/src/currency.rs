@@ -35,12 +35,30 @@ use crate::{
 	LeasePeriod, ParaId, PoolId, TryConvertFrom,
 };
 
+pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
+pub const VMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const VBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+pub const VSKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
+pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
+pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
+
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
+pub const VDOT: CurrencyId = CurrencyId::VToken2(DOT_TOKEN_ID);
 pub const GLMR_TOKEN_ID: u8 = 1u8;
 pub const GLMR: CurrencyId = CurrencyId::Token2(GLMR_TOKEN_ID);
+pub const VGLMR: CurrencyId = CurrencyId::VToken2(GLMR_TOKEN_ID);
+pub const DOT_U_TOKEN_ID: u8 = 2u8;
+pub const DOT_U: CurrencyId = CurrencyId::Token2(DOT_U_TOKEN_ID);
+pub const ASTR_TOKEN_ID: u8 = 3u8;
+pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
+pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
@@ -179,7 +197,7 @@ macro_rules! create_currency_id {
 					| Self::VToken2(tk_id)
 					| Self::VSToken2(tk_id)
 					| Self::VSBond2(tk_id, ..) => tk_id as u64,
-					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) => 0u64
+					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) | Self::BLP(..) => 0u64
 				};
 
 		 		let discr = (c_discr << 8) + t_discr;
@@ -193,6 +211,7 @@ macro_rules! create_currency_id {
 					| Self::Token2(..)
 					| Self::VToken2(..)
 					| Self::VSToken2(..)
+					| Self::BLP(..)
 					| Self::StableLpToken(..)
 					=> (0x0000_ffff & discr) as u64,
 					Self::VSBond(_, pid, lp1, lp2) => {
@@ -356,6 +375,7 @@ pub enum CurrencyId {
 	VSToken2(TokenId),
 	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
 	StableLpToken(PoolId),
+	BLP(PoolId),
 }
 
 impl Default for CurrencyId {
@@ -392,6 +412,7 @@ impl CurrencyId {
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
 			Self::VToken(symbol) => Ok(Self::Token(*symbol)),
+			Self::VToken2(id) => Ok(Self::Token2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -399,6 +420,7 @@ impl CurrencyId {
 	pub fn to_vtoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VToken2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -406,6 +428,7 @@ impl CurrencyId {
 	pub fn to_vstoken(&self) -> Result<Self, ()> {
 		match self {
 			Self::Token(symbol) => Ok(Self::VSToken(*symbol)),
+			Self::Token2(id) => Ok(Self::VSToken2(*id)),
 			_ => Err(()),
 		}
 	}
@@ -425,6 +448,7 @@ impl CurrencyId {
 			Self::VSToken2(..) => 10,
 			Self::VSBond2(..) => 11,
 			Self::StableLpToken(..) => 13,
+			Self::BLP(..) => 14,
 		}
 	}
 }

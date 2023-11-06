@@ -13,12 +13,14 @@ scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }
 serde = { version = "1.0.160", optional = true, features = ["derive"] }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
+orml-oracle = { version = "0.4.1-dev", default-features = false }
 
 [features]
 default = ["std"]
@@ -31,7 +33,9 @@ std = [
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"xcm/std",
 	"zenlink-protocol/std",
+	"orml-oracle/std",
 ]
 
 with-bifrost-runtime = [
@@ -41,3 +45,4 @@ with-bifrost-runtime = [
 with-bifrost-kusama-runtime = []
 with-bifrost-polkadot-runtime = []
 with-all-runtime = ["with-bifrost-runtime"]
+runtime-benchmarks = []

@@ -25,18 +25,21 @@ build-bifrost-polkadot-release:
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
-.PHONY: build-bifrost-rococo-fast-release # build bifrost rococo fast release
-build-bifrost-rococo-fast-release:
-	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime,fast-runtime" --release
-
-
 .PHONY: check-all # cargo check all runtime
 check-all: format
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
-.PHONY: test-all # cargo test all runtime
-test-all:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime"
+.PHONY: test-all # cargo test all
+test-all: integration-test test-runtimes test-benchmarks
+
+
+.PHONY: test-runtimes
+test-runtimes:
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
+
+.PHONY: test-benchmarks
+test-benchmarks:
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*-integration-tests" --exclude "node-*" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
@@ -66,10 +69,6 @@ format:
 .PHONY: clippy # cargo clippy
 clippy:
 	cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
-
-.PHONY: test-benchmarking # test with benchmarking
-test-benchmarking:
-	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
@@ -117,16 +116,12 @@ build-bifrost-polkadot-wasm:
 build-bifrost-rococo-fast-wasm:
 	.maintain/build-wasm.sh bifrost-kusama fast
 
-.PHONY: check-try-runtime # check try runtime
-check-try-runtime:
-	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
-
 .PHONY: try-kusama-runtime-upgrade # try kusama runtime upgrade
 try-kusama-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
  			  -- try-runtime \
  			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-kusama-local on-runtime-upgrade \
+ 			  --chain=bifrost-kusama on-runtime-upgrade \
  			  --checks=all live \
  			  --uri=wss://bifrost-rpc.liebi.com:443/ws
 
@@ -135,7 +130,7 @@ try-polkadot-runtime-upgrade:
 	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
  			  -- try-runtime \
  			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-polkadot-local on-runtime-upgrade \
+ 			  --chain=bifrost-polkadot on-runtime-upgrade \
  			  --checks=all live \
  			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 

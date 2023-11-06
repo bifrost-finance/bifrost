@@ -18,21 +18,20 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
 
-// pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 extern crate alloc;
 
-use alloc::vec::Vec;
-
+use alloc::{vec, vec::Vec};
 use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
+use sp_core::bounded::BoundedVec;
 pub use weights::WeightInfo;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -59,6 +58,9 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		type MaxLengthLimit: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -69,6 +71,10 @@ pub mod pallet {
 		NotExist,
 		/// The origin is not allowed to perform the operation.
 		NotAllowed,
+		/// Failed to convert vec to boundedVec
+		ConvertError,
+		/// Excceed the max length limit of BoundedVec
+		ExceedMaxLen,
 	}
 
 	#[pallet::event]
@@ -88,19 +94,25 @@ pub mod pallet {
 		Transferred(T::AccountId, T::AccountId, CurrencyId, BalanceOf<T>),
 	}
 
+	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
+	/// boundedVec).
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
 	#[pallet::getter(fn get_issue_whitelist)]
-	pub type IssueWhiteList<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
+	pub type IssueWhiteList<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
 	/// Accounts in the whitelist can transfer the corresponding Currency.
 	#[pallet::storage]
 	#[pallet::getter(fn get_transfer_whitelist)]
-	pub type TransferWhiteList<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
+	pub type TransferWhiteList<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -117,22 +129,29 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let empty_vec: Vec<AccountIdOf<T>> = Vec::new();
-			if Self::get_issue_whitelist(currency_id) == None {
-				IssueWhiteList::<T>::insert(currency_id, empty_vec);
+			let issue_whitelist_new: BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>;
+			let mut issue_vec: Vec<AccountIdOf<T>>;
+			match Self::get_issue_whitelist(currency_id) {
+				None => {
+					issue_vec = vec![account.clone()];
+				},
+				Some(issue_whitelist) => {
+					issue_vec = issue_whitelist.into_inner();
+					ensure!(!issue_vec.contains(&account), Error::<T>::NotAllowed);
+					ensure!(
+						issue_vec.len() < T::MaxLengthLimit::get() as usize,
+						Error::<T>::ExceedMaxLen
+					);
+
+					issue_vec.push(account.clone());
+				},
 			}
 
-			IssueWhiteList::<T>::mutate(currency_id, |issue_whitelist| -> Result<(), Error<T>> {
-				match issue_whitelist {
-					Some(issue_list) if !issue_list.contains(&account) => {
-						issue_list.push(account.clone());
-						Self::deposit_event(Event::AddedToIssueList(account, currency_id));
-						Ok(())
-					},
-					_ => Err(Error::<T>::NotAllowed),
-				}
-			})?;
+			issue_whitelist_new =
+				BoundedVec::try_from(issue_vec).map_err(|_| Error::<T>::ConvertError)?;
+			IssueWhiteList::<T>::insert(currency_id, issue_whitelist_new);
 
+			Self::deposit_event(Event::AddedToIssueList(account, currency_id));
 			Ok(())
 		}
 
@@ -168,25 +187,29 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let empty_vec: Vec<AccountIdOf<T>> = Vec::new();
-			if Self::get_transfer_whitelist(currency_id) == None {
-				TransferWhiteList::<T>::insert(currency_id, empty_vec);
+			let transfer_whitelist_new: BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>;
+			let mut transfer_vec: Vec<AccountIdOf<T>>;
+			match Self::get_transfer_whitelist(currency_id) {
+				None => {
+					transfer_vec = vec![account.clone()];
+				},
+				Some(transfer_whitelist) => {
+					transfer_vec = transfer_whitelist.into_inner();
+					ensure!(!transfer_vec.contains(&account), Error::<T>::NotAllowed);
+					ensure!(
+						transfer_vec.len() < T::MaxLengthLimit::get() as usize,
+						Error::<T>::ExceedMaxLen
+					);
+
+					transfer_vec.push(account.clone());
+				},
 			}
 
-			TransferWhiteList::<T>::mutate(
-				currency_id,
-				|transfer_whitelist| -> Result<(), Error<T>> {
-					match transfer_whitelist {
-						Some(transfer_list) if !transfer_list.contains(&account) => {
-							transfer_list.push(account.clone());
-							Self::deposit_event(Event::AddedToTransferList(account, currency_id));
-							Ok(())
-						},
-						_ => Err(Error::<T>::NotAllowed),
-					}
-				},
-			)?;
+			transfer_whitelist_new =
+				BoundedVec::try_from(transfer_vec).map_err(|_| Error::<T>::ConvertError)?;
+			TransferWhiteList::<T>::insert(currency_id, transfer_whitelist_new);
 
+			Self::deposit_event(Event::AddedToTransferList(account, currency_id));
 			Ok(())
 		}
 

@@ -2,7 +2,7 @@ use crate::{kusama_integration_tests::*, kusama_test_net::*};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_kusama_runtime::{Runtime, VtokenMinting};
 use frame_support::{assert_ok, dispatch::RawOrigin};
-use sp_runtime::{traits::AccountIdConversion, Permill};
+use sp_runtime::{traits::AccountIdConversion, BoundedVec, Permill};
 use xcm_emulator::TestExt;
 
 /*
@@ -186,6 +186,7 @@ fn mint_should_work() {
 				RawOrigin::Signed(AccountId::new(ALICE)).into(),
 				CurrencyId::Token(TokenSymbol::KSM),
 				5_000_000_000_000,
+				BoundedVec::default()
 			));
 
 			//check balance
@@ -232,7 +233,8 @@ fn redeem_should_work() {
 			assert_ok!(VtokenMinting::mint(
 				RawOrigin::Signed(AccountId::new(ALICE)).into(),
 				CurrencyId::Token(TokenSymbol::KSM),
-				5 * 1_000_000_000_000
+				5 * 1_000_000_000_000,
+				BoundedVec::default()
 			));
 			assert_eq!(
 				VtokenMinting::token_pool(CurrencyId::Token(TokenSymbol::KSM)),

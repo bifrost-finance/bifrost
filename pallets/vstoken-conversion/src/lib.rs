@@ -44,24 +44,19 @@ pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate
 use sp_arithmetic::per_things::Percent;
 pub use weights::WeightInfo;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -166,7 +161,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::vsbond_convert_to_vstoken())]
 		pub fn vsbond_convert_to_vstoken(
 			origin: OriginFor<T>,
 			vs_bond_currency_id: CurrencyIdOf<T>,
@@ -241,7 +236,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::vstoken_convert_to_vsbond())]
 		pub fn vstoken_convert_to_vsbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
@@ -321,7 +316,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::set_exchange_fee())]
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
@@ -337,7 +332,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::set_exchange_rate())]
 		pub fn set_exchange_rate(
 			origin: OriginFor<T>,
 			lease: i32,
@@ -354,7 +349,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::set_relaychain_lease())]
 		pub fn set_relaychain_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 

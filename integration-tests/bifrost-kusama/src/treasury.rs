@@ -17,17 +17,17 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::assert_ok;
-use sp_runtime::{traits::AccountIdConversion, AccountId32};
+use sp_runtime::{traits::AccountIdConversion, AccountId32, BoundedVec};
 use xcm_emulator::TestExt;
 
 use crate::{
 	kusama_integration_tests::{RelayCurrencyId, RuntimeOrigin, TimeUnit, ALICE, BLOCKS_PER_YEAR},
 	kusama_test_net::{Bifrost, KusamaNet},
 };
-use node_primitives::{AccountId, CurrencyId, TokenSymbol, TryConvertFrom, VtokenMintingOperator};
-
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+use node_primitives::{
+	currency::{KSM, VKSM},
+	AccountId, TryConvertFrom, VtokenMintingOperator,
+};
 
 pub fn para_account_2001() -> AccountId {
 	// 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
@@ -79,6 +79,7 @@ fn bifrost_treasury_operations() {
 				bifrost_kusama_runtime::RuntimeOrigin::signed(treasury_account.clone()),
 				RelayCurrencyId::get(),
 				25_000_000_000_000_000,
+				BoundedVec::default()
 			));
 
 			assert_ok!(bifrost_kusama_runtime::ZenlinkProtocol::create_pair(

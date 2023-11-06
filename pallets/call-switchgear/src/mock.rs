@@ -20,7 +20,7 @@
 
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};
 use frame_system::EnsureSignedBy;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Amount, Balance, CurrencyId};
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
@@ -29,7 +29,6 @@ use super::*;
 
 pub type AccountId = u128;
 pub const ALICE: AccountId = 1;
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 use crate as bifrost_call_switchgear;
 
@@ -79,6 +78,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = ();
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 parameter_type_with_key! {

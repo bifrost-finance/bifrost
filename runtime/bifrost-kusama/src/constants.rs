@@ -33,6 +33,8 @@ pub mod currency {
 
 	pub const BNCS: Balance = 1_000_000_000_000;
 	pub const DOLLARS: Balance = BNCS;
+	pub const MILLIBNC: Balance = 1_000_000_000;
+	pub const MICROBNC: Balance = 1_000_000;
 
 	pub fn deposit<Runtime: Config>(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) +
@@ -44,7 +46,7 @@ pub mod currency {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
-			let p = base_tx_fee::<Runtime>() * 10;
+			let p = base_tx_fee::<Runtime>() * 580;
 			let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,

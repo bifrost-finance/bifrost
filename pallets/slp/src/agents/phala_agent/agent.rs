@@ -22,21 +22,21 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		XcmOperation, TIMEOUT_BLOCKS,
+		TIMEOUT_BLOCKS,
 	},
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
-	XcmDestWeightAndFee, XcmWeight,
+	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
 };
 use codec::Encode;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{TokenSymbol, VtokenMintingOperator};
+use node_primitives::{
+	TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
+};
 use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
@@ -71,7 +71,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for PhalaAgent<T>
 {
@@ -87,7 +87,7 @@ impl<T: Config>
 		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -127,7 +127,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Bond,
+			XcmOperationType::Bond,
 			calls,
 			who,
 			currency_id,
@@ -229,7 +229,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Unbond,
+			XcmOperationType::Unbond,
 			calls,
 			who,
 			currency_id,
@@ -306,11 +306,7 @@ impl<T: Config>
 			let validators_set =
 				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-			let multi_hash = T::Hashing::hash(&candidate.encode());
-			ensure!(
-				validators_set.contains(&(*candidate, multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validators_set.contains(candidate), Error::<T>::ValidatorNotExist);
 
 			// if the delegator is new, create a ledger for it
 			if !DelegatorLedgers::<T>::contains_key(currency_id, &who.clone()) {
@@ -444,7 +440,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Payout,
+			XcmOperationType::Payout,
 			calls,
 			who,
 			currency_id,
@@ -537,7 +533,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount_without_query_id(
-			XcmOperation::TransferBack,
+			XcmOperationType::TransferBack,
 			call,
 			from,
 			currency_id,
@@ -601,7 +597,7 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::ConvertAsset,
+			XcmOperationType::ConvertAsset,
 			calls,
 			who,
 			currency_id,
@@ -639,16 +635,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
-	}
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		// Get the delegator ledger
@@ -664,33 +650,6 @@ impl<T: Config>
 		}
 
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
-	}
-
-	/// Add a new serving delegator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		if let &MultiLocation {
-			parents: 1,
-			interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
-		} = who
-		{
-			Pallet::<T>::inner_add_validator(who, currency_id)
-		} else {
-			Err(Error::<T>::ValidatorMultilocationNotvalid)?
-		}
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-
-		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
-		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(*who, multi_hash)) {
-				Err(Error::<T>::ValidatorStillInUse)?;
-			}
-		}
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -753,7 +712,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)
@@ -827,7 +786,7 @@ impl<T: Config>
 /// Internal functions.
 impl<T: Config> PhalaAgent<T> {
 	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		calls: Vec<Box<PhalaCall<T>>>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -854,7 +813,7 @@ impl<T: Config> PhalaAgent<T> {
 	}
 
 	fn prepare_send_as_subaccount_call_params_with_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		calls: Vec<Box<PhalaCall<T>>>,
 		who: &MultiLocation,
 		query_id: QueryId,
@@ -882,14 +841,15 @@ impl<T: Config> PhalaAgent<T> {
 			)))
 		};
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: PhalaCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -912,7 +872,7 @@ impl<T: Config> PhalaAgent<T> {
 	}
 
 	fn prepare_send_as_subaccount_call_params_without_query_id(
-		operation: XcmOperation,
+		operation: XcmOperationType,
 		call: PhalaCall<T>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
@@ -926,8 +886,9 @@ impl<T: Config> PhalaAgent<T> {
 			Box::new(call),
 		)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		let (weight, fee) =
+			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		Ok((call_as_subaccount, fee, weight))
 	}

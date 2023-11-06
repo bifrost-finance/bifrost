@@ -1,7 +1,7 @@
 name: Srtool build
 
 env:
-  SUBWASM_VERSION: 0.19.0
+  SUBWASM_VERSION: 0.20.0
 
 on:
   workflow_dispatch:
@@ -16,14 +16,14 @@ jobs:
         chain: ["bifrost-kusama", "bifrost-polkadot"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
           fetch-depth: 0
 
       - name: Srtool build
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.6.0
+        uses: chevdor/srtool-actions@v0.8.0
         env:
           BUILD_OPTS: "--features on-chain-release-build"
           PARACHAIN_PALLET_ID: "0x05"
@@ -31,7 +31,6 @@ jobs:
         with:
           chain: ${{ matrix.chain }}
           runtime_dir: runtime/${{ matrix.chain }}
-
       - name: Summary
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json

@@ -35,10 +35,13 @@ use primitives::{
 	AssetIds, CurrencyId,
 	CurrencyId::{Native, Token, Token2},
 	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
-	ParaId, TokenId, TokenInfo, TokenSymbol,
+	ParaId, PoolId, TokenId, TokenInfo, TokenSymbol,
 };
 use scale_info::TypeInfo;
-use sp_runtime::{traits::One, ArithmeticError, FixedPointNumber, FixedU128};
+use sp_runtime::{
+	traits::{One, UniqueSaturatedFrom},
+	ArithmeticError, FixedPointNumber, FixedU128,
+};
 use sp_std::{boxed::Box, vec::Vec};
 // NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
 // MultiLocation in the future.
@@ -835,6 +838,22 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 			return Err(Error::<T>::CurrencyIdNotExists.into());
 		}
 	}
+
+	fn register_blp_metadata(pool_id: PoolId, decimals: u8) -> DispatchResult {
+		let name = scale_info::prelude::format!("Bifrost Stable Pool Token {}", pool_id)
+			.as_bytes()
+			.to_vec();
+		let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
+		Pallet::<T>::do_register_metadata(
+			CurrencyId::BLP(pool_id),
+			&AssetMetadata {
+				name,
+				symbol,
+				decimals,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(1_000_000u128),
+			},
+		)
+	}
 }
 
 /// Simple fee calculator that requires payment in a single fungible at a fixed rate.
@@ -920,7 +939,7 @@ where
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
 		);
-		let weight = weight.min(Weight::from_ref_time(self.weight));
+		let weight = weight.min(Weight::from_parts(self.weight, 0));
 		let weight_ratio =
 			FixedU128::saturating_from_rational(weight.ref_time(), WEIGHT_REF_TIME_PER_SECOND);
 		let amount = self

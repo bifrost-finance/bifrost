@@ -20,19 +20,18 @@ use crate::{
 	pallet::Error,
 	primitives::{
 		Ledger, OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
-		OneToManyScheduledRequest, QueryId, BNC,
+		OneToManyScheduledRequest, QueryId,
 	},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegationsOccupied, DelegatorLedgers,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet,
+	TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry,
 };
-use codec::{alloc::collections::BTreeMap, Encode};
+use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
+use node_primitives::{currency::BNC, CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 use sp_runtime::{
@@ -55,7 +54,7 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for ParachainStakingAgent<T>
 {
@@ -71,7 +70,7 @@ impl<T: Config>
 		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(delegator_multilocation)
@@ -96,12 +95,12 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
 
 		// check if the validator is in the white list.
-		let multi_hash = T::Hashing::hash(&collator.encode());
 		let validator_list =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 		validator_list
-			.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-			.map_err(|_| Error::<T>::ValidatorSetNotExist)?;
+			.iter()
+			.position(|va| va == &collator)
+			.ok_or(Error::<T>::ValidatorNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -228,6 +227,11 @@ impl<T: Config>
 
 		// check if the delegator exists, if not, return error.
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
+
+		// need to check if the validator is still in the validators list.
+		let validators =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+		ensure!(validators.contains(&collator), Error::<T>::ValidatorError);
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
@@ -979,16 +983,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
-	}
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		// Get the delegator ledger
@@ -1005,29 +999,6 @@ impl<T: Config>
 		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
 
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
-	}
-
-	/// Add a new serving delegator for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Pallet::<T>::inner_add_validator(who, currency_id)
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		// Check all the delegators' delegations, to see whether this specific validator is in use.
-		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::ParachainStaking(parachain_staking_ledger) = ledger {
-				ensure!(
-					!parachain_staking_ledger.delegations.contains_key(who),
-					Error::<T>::ValidatorStillInUse
-				);
-			} else {
-				Err(Error::<T>::ProblematicLedger)?;
-			}
-		}
-
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -1079,7 +1050,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

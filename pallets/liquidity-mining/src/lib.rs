@@ -683,11 +683,7 @@ pub mod pallet {
 		/// Create a liquidity-pool which type is `PoolType::SingleToken`, accepts any token as
 		/// deposit.
 		#[pallet::call_index(0)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create_single_token_pool())]
 		pub fn create_single_token_pool(
 			origin: OriginFor<T>,
 			token: CurrencyId,
@@ -719,11 +715,7 @@ pub mod pallet {
 		/// Create a liquidity-pool which type is `PoolType::Mining`, Only accepts `lpToken` as
 		/// deposit.
 		#[pallet::call_index(1)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create_mining_pool())]
 		pub fn create_mining_pool(
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
@@ -762,11 +754,7 @@ pub mod pallet {
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts free `vsToken`
 		/// and free `vsBond` as deposit.
 		#[pallet::call_index(2)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -802,11 +790,7 @@ pub mod pallet {
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts reserved
 		/// `vsToken` and reserved `vsBond` as deposit.
 		#[pallet::call_index(3)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create_eb_farming_pool())]
 		pub fn create_eb_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -881,11 +865,7 @@ pub mod pallet {
 
 		/// Kill a liquidity-pool at `PoolState::Uncharged`.
 		#[pallet::call_index(5)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::kill_pool())]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -914,11 +894,7 @@ pub mod pallet {
 		/// 2. If the pool is at `PoolState::Charged` and has some deposit, or `PoolState::Ongoing`,
 		/// 	the field `block_retired` of the pool would be set to the current block height.
 		#[pallet::call_index(6)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::force_retire_pool())]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -961,11 +937,7 @@ pub mod pallet {
 		///
 		/// __NOTE__: Forbid editing the liquidity-pool which type is `PoolType::EBFarming`;
 		#[pallet::call_index(7)]
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::edit_pool())]
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -1393,7 +1365,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(15)]
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight({1_000_000})]
 		pub fn lazy_migration_v2_0_0(
 			_origin: OriginFor<T>,
 			max_nums: u32,

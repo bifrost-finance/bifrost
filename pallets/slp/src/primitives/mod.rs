@@ -56,9 +56,9 @@ pub enum LedgerUpdateEntry<Balance> {
 /// A type for accommodating validators by delegator update entries for different kinds of
 /// currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<HashT> {
+pub enum ValidatorsByDelegatorUpdateEntry {
 	/// A type for substrate validators by delegator updating entries
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<HashT>),
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry),
 }
 
 /// Different minimum and maximum requirements for different chain
@@ -108,7 +108,7 @@ pub struct Delays {
 	pub leave_delegators_delay: TimeUnit,
 }
 
-/// XCM operations list
+/// DEPRECATED
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
 pub enum XcmOperation {
 	// XTokens
@@ -129,4 +129,6 @@ pub enum XcmOperation {
 	XtokensTransferBack,
 	ExecuteLeave,
 	ConvertAsset,
+	Vote,
+	RemoveVote,
 }

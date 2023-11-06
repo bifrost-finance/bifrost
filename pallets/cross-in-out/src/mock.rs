@@ -25,8 +25,11 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
-use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use node_primitives::{
+	currency::{BNC, DOT, KSM, VDOT},
+	CurrencyId, TokenSymbol,
+};
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -40,10 +43,7 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -57,7 +57,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage},
+		Currencies: bifrost_currencies::{Pallet, Call, Storage},
 		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>}
 	}
 );
@@ -100,9 +100,9 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
@@ -123,6 +123,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -154,6 +158,7 @@ ord_parameter_types! {
 
 parameter_types! {
 	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const MaxLengthLimit: u32 = 100;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -162,6 +167,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = ();
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub struct ExtBuilder {
@@ -186,17 +192,10 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, VDOT, 400),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

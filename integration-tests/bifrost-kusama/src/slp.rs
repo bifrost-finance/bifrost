@@ -81,11 +81,9 @@ delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
 
 #![cfg(test)]
 use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
-use bifrost_slp::{
-	primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation,
-};
+use bifrost_slp::{primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger};
 use frame_support::{assert_ok, BoundedVec};
-use node_primitives::TimeUnit;
+use node_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use sp_runtime::Permill;
@@ -142,20 +140,18 @@ fn slp_setup() {
 	cross_ksm_to_bifrost(BOB, 10000 * KSM_DECIMALS);
 
 	KusamaNet::execute_with(|| {
-		assert_ok!(kusama_runtime::Balances::set_balance(
+		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-			10000 * KSM_DECIMALS,
-			0,
+			10000 * KSM_DECIMALS
 		));
 	});
 
 	Bifrost::execute_with(|| {
-		assert_ok!(Balances::set_balance(
+		assert_ok!(Balances::force_set_balance(
 			RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(BIFROST_TREASURY_ACCOUNT)),
-			10000 * BNC_DECIMALS,
-			0,
+			10000 * BNC_DECIMALS
 		));
 	});
 
@@ -255,75 +251,85 @@ fn slp_setup() {
 		));
 
 		// Register Operation weight and fee
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::TransferTo,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::TransferTo,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Bond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Bond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::BondExtra,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::BondExtra,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Unbond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Unbond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Rebond,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Rebond,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Delegate,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Delegate,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Payout,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Payout,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Liquidize,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Liquidize,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::Chill,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::Chill,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
-		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
-			RuntimeOrigin::root(),
-			RelayCurrencyId::get(),
-			XcmOperation::TransferBack,
-			Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
-		));
+		assert_ok!(
+			<Runtime as bifrost_slp::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+				RelayCurrencyId::get(),
+				XcmOperation::TransferBack,
+				Some((Weight::from_parts(10000000000, 1000000), 10_000_000_000)),
+			)
+		);
 
 		// initialize two delegators
 		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::root(), RelayCurrencyId::get(), None));
@@ -376,11 +382,10 @@ fn vksm_vtoken_minting_setup() {
 
 fn cross_ksm_to_bifrost(to: [u8; 32], amount: u128) {
 	KusamaNet::execute_with(|| {
-		assert_ok!(kusama_runtime::Balances::set_balance(
+		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(to)),
-			amount,
-			0,
+			amount
 		));
 		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
 			kusama_runtime::RuntimeOrigin::signed(to.into()),
@@ -416,7 +421,8 @@ fn vtoken_minting() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 			// alice account should have 99.9 vKSM
 			assert_eq!(
@@ -426,7 +432,6 @@ fn vtoken_minting() {
 				),
 				99900000000000
 			);
-			// TODO : entrance_account should have 100 KSM
 			assert_eq!(
 				Currencies::free_balance(
 					CurrencyId::Token(TokenSymbol::KSM),
@@ -455,7 +460,8 @@ fn transfer_to() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 
 			assert_ok!(Slp::transfer_to(
@@ -478,7 +484,7 @@ fn transfer_to() {
 		KusamaNet::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				10049999909712564
+				10049999909994200
 			);
 		});
 	})
@@ -523,7 +529,7 @@ fn transfer_back() {
 					CurrencyId::Token(TokenSymbol::KSM),
 					&AccountId::from(EXIT_ACCOUNT)
 				),
-				49999919872000
+				49999929608000
 			);
 		});
 
@@ -834,7 +840,8 @@ fn delegate_works() {
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS
+				100 * KSM_DECIMALS,
+				BoundedVec::default()
 			));
 
 			assert_ok!(Slp::bond(
@@ -869,8 +876,8 @@ fn delegate_works() {
 				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(Nominations {
 					targets: BoundedVec::try_from(vec![
+						KUSAMA_ALICE_STASH_ACCOUNT.into(),
 						KUSAMA_BOB_STASH_ACCOUNT.into(),
-						KUSAMA_ALICE_STASH_ACCOUNT.into()
 					])
 					.unwrap(),
 					submitted_in: 0,
@@ -976,8 +983,8 @@ fn redelegate_works() {
 				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(Nominations {
 					targets: BoundedVec::try_from(vec![
+						KUSAMA_ALICE_STASH_ACCOUNT.into(),
 						KUSAMA_BOB_STASH_ACCOUNT.into(),
-						KUSAMA_ALICE_STASH_ACCOUNT.into()
 					])
 					.unwrap(),
 					submitted_in: 0,

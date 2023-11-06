@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet::Error, primitives::KSM, AccountIdOf, BalanceOf, Config, CurrencyId};
+use crate::{pallet::Error, AccountIdOf, BalanceOf, Config, CurrencyId};
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::DOT;
+use node_primitives::{currency::KSM, DOT};
 use scale_info::TypeInfo;
 use sp_runtime::traits::StaticLookup;
 use sp_std::{boxed::Box, vec::Vec};
