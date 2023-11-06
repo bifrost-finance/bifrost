@@ -85,7 +85,7 @@ pub trait RuntimeApiCollection:
 	+ sp_session::SessionKeys<Block>
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
 	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
-	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
+	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>
 	+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
 	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
 	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, AssetId>
@@ -108,7 +108,7 @@ where
 		+ sp_session::SessionKeys<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
-		+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
+		+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>
 		+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<
 			Block,
 			AccountId,

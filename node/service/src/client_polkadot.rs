@@ -20,7 +20,7 @@
 use std::sync::Arc;
 
 use node_primitives::{
-	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
+	AccountId, Balance, Block, BlockNumber,CurrencyId, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
 };
 use sc_client_api::{AuxStore, Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, TaskManager};
@@ -83,7 +83,7 @@ pub trait RuntimeApiCollection:
 	+ sp_session::SessionKeys<Block>
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
 	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
-	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
+	+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>
 	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
 	+ bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId>
 	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, AssetId>
@@ -105,7 +105,7 @@ where
 		+ sp_session::SessionKeys<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
-		+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId>
+		+ bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>
 		+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
 		+ bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId>
 		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, AssetId>,
