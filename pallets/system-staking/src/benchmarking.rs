@@ -93,6 +93,9 @@ benchmarks! {
 			Some(vec![1 as PoolId]),
 			Some(vec![Perbill::from_percent(100)]),
 		));
+		let caller: T::AccountId = whitelisted_caller();
+		assert_ok!(T::MultiCurrency::deposit(KSM, &caller, BalanceOf::<T>::unique_saturated_from(1000u128)));
+		assert_ok!(T::VtokenMintingInterface::mint(caller, KSM, BalanceOf::<T>::unique_saturated_from(1000u128), BoundedVec::default(),));
 	}: _(RawOrigin::Root,KSM)
 
 	on_redeem_success {
