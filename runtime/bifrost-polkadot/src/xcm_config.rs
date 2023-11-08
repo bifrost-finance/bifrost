@@ -124,6 +124,13 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			Token2(DOT_TOKEN_ID) => Some(MultiLocation::parent()),
 			Native(BNC) => Some(native_currency_location(id)),
 			// Moonbeam Native token
+			Token2(MANTA) => Some(MultiLocation::new(
+				1,
+				X1(
+					Parachain(parachains::manta::ID),
+				),
+			)),
+			// Moonbeam Native token
 			Token2(GLMR_TOKEN_ID) => Some(MultiLocation::new(
 				1,
 				X2(
