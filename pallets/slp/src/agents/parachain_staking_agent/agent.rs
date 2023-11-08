@@ -308,7 +308,7 @@ impl<T: Config>
 			// Send out the xcm message.
 			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 
-			log::debug!(target: "slp xcm::send_xcm", "dest: {:?}, xcm message: {:?}", &dest, &xcm_message);
+			log::debug!(target: "slp::send_xcm", "dest: {:?}, xcm message: {:?}", &dest, &xcm_message);
 
 
 			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
