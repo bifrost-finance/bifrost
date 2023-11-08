@@ -311,8 +311,12 @@ impl<T: Config>
 			log::debug!(target: "slp::send_xcm", "dest: {:?}, xcm message: {:?}", &dest, &xcm_message);
 
 
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
+			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| 
+				{
+				log::debug!(target: "slp::send_xcm", "error: {:?}", _e);
+				Error::<T>::XcmFailure
+		})?;
+				
 			query_index = query_id;
 		}
 
