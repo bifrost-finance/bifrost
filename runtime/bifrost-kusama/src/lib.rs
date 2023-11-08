@@ -814,7 +814,7 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub ProposalBondMinimum: Balance = 100 * BNCS;
 	pub ProposalBondMaximum: Balance = 500 * BNCS;
-	pub const SpendPeriod: BlockNumber = 6 * DAYS;
+	pub const SpendPeriod: BlockNumber = 2 * MINUTES;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
