@@ -21,7 +21,7 @@ use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ensure, parameter_types,
+	parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
@@ -34,6 +34,7 @@ pub use xcm_builder::{
 	FixedWeightBounds, IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	WithComputedOrigin,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
@@ -295,75 +296,48 @@ match_types! {
 	};
 }
 
-/// Barrier allowing a top level paid message with DescendOrigin instruction
-pub const DEFAULT_PROOF_SIZE: u64 = 64 * 1024;
-pub const DEFAULT_REF_TIMR: u64 = 10_000_000_000;
-pub struct AllowTopLevelPaidExecutionDescendOriginFirst<T>(PhantomData<T>);
-impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDescendOriginFirst<T> {
+/// Sets the message ID to `t` using a `SetTopic(t)` in the last position if present.
+///
+/// Requires some inner barrier to pass on the rest of the message.
+pub struct TrailingSetTopicAsId<InnerBarrier>(PhantomData<InnerBarrier>);
+impl<InnerBarrier: ShouldExecute> ShouldExecute for TrailingSetTopicAsId<InnerBarrier> {
 	fn should_execute<Call>(
 		origin: &MultiLocation,
-		message: &mut [Instruction<Call>],
+		instructions: &mut [Instruction<Call>],
 		max_weight: Weight,
-		_weight_credit: &mut Weight,
+		weight_credit: &mut Weight,
 	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
-			"AllowTopLevelPaidExecutionDescendOriginFirst origin:
-			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
-			origin, message, max_weight, _weight_credit,
+			"TrailingSetTopicAsId origin: {:?}, instructions: {:?}, max_weight: {:?}",
+			origin, instructions, max_weight,
 		);
-		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
-		let mut iter = message.iter_mut();
-		// Make sure the first instruction is DescendOrigin
-		iter.next()
-			.filter(|instruction| matches!(instruction, DescendOrigin(_)))
-			.ok_or(ProcessMessageError::Unsupported)?;
-
-		// Then WithdrawAsset
-		iter.next()
-			.filter(|instruction| matches!(instruction, WithdrawAsset(_)))
-			.ok_or(ProcessMessageError::Unsupported)?;
-
-		// Then BuyExecution
-		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
-		match i {
-			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
-				if weight.all_gte(max_weight) {
-					weight.set_ref_time(max_weight.ref_time());
-					weight.set_proof_size(max_weight.proof_size());
-				};
-			},
-			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
-				*weight_limit = Limited(max_weight);
-			},
-			_ => {},
+		let until = if let Some(SetTopic(_)) = instructions.last() {
+			instructions.len() - 1
+		} else {
+			instructions.len()
 		};
-
-		// Then Transact
-		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
-		match i {
-			Transact { ref mut require_weight_at_most, .. } => {
-				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
-				*require_weight_at_most = weight;
-				Ok(())
-			},
-			_ => Err(ProcessMessageError::Unsupported),
-		}
+		InnerBarrier::should_execute(&origin, &mut instructions[..until], max_weight, weight_credit)
 	}
 }
 
-pub type Barrier = (
-	// Weight that is paid for may be consumed.
+pub type Barrier = TrailingSetTopicAsId<(
 	TakeWeightCredit,
 	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
-	// If the message is one that immediately attemps to pay for execution, then allow it.
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	// Subscriptions for version tracking are OK.
-	AllowSubscriptionsFrom<Everything>,
-	// Barrier allowing a top level paid message with DescendOrigin instruction
-	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+	// Allow XCMs with some computed origins to pass through.
+	WithComputedOrigin<
+		(
+			// If the message is one that immediately attemps to pay for execution, then
+			// allow it.
+			AllowTopLevelPaidExecutionFrom<Everything>,
+			// Subscriptions for version tracking are OK.
+			AllowSubscriptionsFrom<Everything>,
+		),
+		UniversalLocation,
+		ConstU32<8>,
+	>,
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
