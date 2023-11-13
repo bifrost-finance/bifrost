@@ -1720,7 +1720,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	bifrost_slp::migrations::v3::SlpMigration3<Runtime>
+	bifrost_slp::migrations::v3::SlpMigration3<Runtime>,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
