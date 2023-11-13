@@ -39,6 +39,7 @@ pub const BASE_WEIGHT: u64 = 1000;
 pub enum Ledger<Balance> {
 	Substrate(SubstrateLedger<Balance>),
 	Moonbeam(OneToManyLedger<Balance>),
+	ParachainStaking(OneToManyLedger<Balance>),
 	Filecoin(FilecoinLedger<Balance>),
 	Phala(PhalaLedger<Balance>),
 }
