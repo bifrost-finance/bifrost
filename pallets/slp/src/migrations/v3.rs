@@ -33,11 +33,11 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration3<T> {
 			//migrate the value type of DelegatorLedgers
 			DelegatorLedgers::<T>::translate(|key1, key2, value: Ledger<BalanceOf<T>>| {
 				// Only migrate the Ledger::ParachainStaking
-				if key1 == BNC {
+				if key1 == MOVR || key1 == GLMR {
 					write_count = write_count + 1;
-					// change the Ledger::ParachainStaking to Ledger::Moonbeam
-					if let Ledger::ParachainStaking(ledger) = value {
-						let new_ledger = Ledger::Moonbeam(ledger);
+					// change Ledger::Moonbeam to Ledger::ParachainStaking
+					if let Ledger::Moonbeam(ledger) = value {
+						let new_ledger = Ledger::ParachainStaking(ledger);
 
 						log::info!(
 							target: LOG_TARGET,

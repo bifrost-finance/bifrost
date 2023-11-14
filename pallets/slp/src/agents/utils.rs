@@ -226,7 +226,9 @@ impl<T: Config> Pallet<T> {
 		if now <= timeout {
 			let currency_id = match entry.clone() {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+				LedgerUpdateEntry::ParachainStaking(moonbeam_entry) =>
+					Some(moonbeam_entry.currency_id),
+				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -283,7 +285,8 @@ impl<T: Config> Pallet<T> {
 			Self::get_delegator_ledger_update_entry(query_id).ok_or(Error::<T>::QueryNotExist)?;
 		let currency_id = match entry {
 			LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-			LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+			LedgerUpdateEntry::ParachainStaking(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+			_ => None,
 		}
 		.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 

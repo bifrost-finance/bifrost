@@ -50,6 +50,7 @@ pub enum LedgerUpdateEntry<Balance> {
 	/// A type for substrate ledger updating entries
 	Substrate(SubstrateLedgerUpdateEntry<Balance>),
 	Moonbeam(ParachainStakingLedgerUpdateEntry<Balance>),
+	ParachainStaking(ParachainStakingLedgerUpdateEntry<Balance>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of
