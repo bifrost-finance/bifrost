@@ -474,7 +474,7 @@ impl<T: Config> Pallet<T> {
 			_ => None,
 		};
 
-		let entry = LedgerUpdateEntry::Moonbeam(ParachainStakingLedgerUpdateEntry {
+		let entry = LedgerUpdateEntry::ParachainStaking(ParachainStakingLedgerUpdateEntry {
 			currency_id,
 			delegator_id: *who,
 			validator_id: validator,
@@ -513,7 +513,7 @@ impl<T: Config> Pallet<T> {
 		let mut all_occupied = true;
 
 		for (_, ledger) in DelegatorLedgers::<T>::iter_prefix(currency_id) {
-			if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
+			if let Ledger::ParachainStaking(moonbeam_ledger) = ledger {
 				if moonbeam_ledger.delegations.len() > moonbeam_ledger.request_briefs.len() {
 					all_occupied = false;
 					break;

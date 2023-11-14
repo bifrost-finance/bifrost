@@ -39,6 +39,7 @@ pub const BASE_WEIGHT: u64 = 1000;
 pub enum Ledger<Balance> {
 	Substrate(SubstrateLedger<Balance>),
 	Moonbeam(OneToManyLedger<Balance>),
+	ParachainStaking(OneToManyLedger<Balance>),
 	Filecoin(FilecoinLedger<Balance>),
 	Phala(PhalaLedger<Balance>),
 }
@@ -49,6 +50,7 @@ pub enum LedgerUpdateEntry<Balance> {
 	/// A type for substrate ledger updating entries
 	Substrate(SubstrateLedgerUpdateEntry<Balance>),
 	Moonbeam(ParachainStakingLedgerUpdateEntry<Balance>),
+	ParachainStaking(ParachainStakingLedgerUpdateEntry<Balance>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of

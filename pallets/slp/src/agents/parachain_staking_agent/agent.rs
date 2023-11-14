@@ -120,7 +120,7 @@ impl<T: Config>
 			.ok_or(Error::<T>::ValidatorNotExist)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -171,7 +171,7 @@ impl<T: Config>
 				request_briefs: request_briefs_set,
 				status: OneToManyDelegatorStatus::Active,
 			};
-			let moonbeam_ledger = Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
+			let moonbeam_ledger = Ledger::<BalanceOf<T>>::ParachainStaking(new_ledger);
 
 			DelegatorLedgers::<T>::insert(currency_id, who, moonbeam_ledger);
 		}
@@ -206,7 +206,7 @@ impl<T: Config>
 				currency_id,
 				who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						// first bond and bond more operations
 						// If this is a bonding operation.
 						// Increase the total amount and add the delegation relationship.
@@ -336,7 +336,7 @@ impl<T: Config>
 		ensure!(validators.contains(&collator), Error::<T>::ValidatorError);
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -374,7 +374,7 @@ impl<T: Config>
 				currency_id,
 				who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						// first bond and bond more operations
 						// If this is a bonding operation.
 						// Increase the total amount and add the delegation relationship.
@@ -476,7 +476,7 @@ impl<T: Config>
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -526,7 +526,7 @@ impl<T: Config>
 				currency_id,
 				who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						ensure!(
 							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
@@ -634,7 +634,7 @@ impl<T: Config>
 		// check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
 			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
 		} else {
@@ -650,7 +650,7 @@ impl<T: Config>
 			currency_id,
 			who,
 			|old_ledger_opt| -> Result<(), Error<T>> {
-				if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					ensure!(
 						old_ledger.status == OneToManyDelegatorStatus::Active,
 						Error::<T>::DelegatorAlreadyLeaving
@@ -702,7 +702,7 @@ impl<T: Config>
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -744,7 +744,7 @@ impl<T: Config>
 				currency_id,
 				who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						ensure!(
 							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
@@ -856,7 +856,7 @@ impl<T: Config>
 
 		// First, check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			ensure!(
 				ledger.status == OneToManyDelegatorStatus::Active,
 				Error::<T>::DelegatorLeaving
@@ -883,7 +883,7 @@ impl<T: Config>
 				currency_id,
 				who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						ensure!(
 							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
@@ -991,7 +991,7 @@ impl<T: Config>
 
 		// first check if the delegator exists.
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
 			match ledger.status {
 				OneToManyDelegatorStatus::Leaving(_) => Ok(()),
@@ -1010,7 +1010,7 @@ impl<T: Config>
 			currency_id,
 			who,
 			|old_ledger_opt| -> Result<(), Error<T>> {
-				if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+				if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 					let leaving = matches!(old_ledger.status, OneToManyDelegatorStatus::Leaving(_));
 					ensure!(leaving, Error::<T>::DelegatorNotLeaving);
 
@@ -1059,7 +1059,7 @@ impl<T: Config>
 
 		let ledger_option = DelegatorLedgers::<T>::get(currency_id, who);
 		let mut due_amount = Zero::zero();
-		if let Some(Ledger::Moonbeam(ledger)) = ledger_option {
+		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving. If yes, execute leaving.
 			if let OneToManyDelegatorStatus::Leaving(leaving_time) = ledger.status {
 				ensure!(now >= leaving_time, Error::<T>::LeavingNotDue);
@@ -1097,7 +1097,7 @@ impl<T: Config>
 					currency_id,
 					who,
 					|old_ledger_opt| -> Result<(), Error<T>> {
-						if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+						if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 							// make sure leaving time is less than or equal to current time.
 							let scheduled_time =
 								if let OneToManyDelegatorStatus::Leaving(scheduled_time_unit) =
@@ -1141,7 +1141,7 @@ impl<T: Config>
 								status: OneToManyDelegatorStatus::Active,
 							};
 							let parachain_staking_ledger =
-								Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
+								Ledger::<BalanceOf<T>>::ParachainStaking(new_ledger);
 
 							*old_ledger_opt = Some(parachain_staking_ledger);
 							Ok(())
@@ -1162,7 +1162,7 @@ impl<T: Config>
 					currency_id,
 					who,
 					|old_ledger_opt| -> Result<(), Error<T>> {
-						if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+						if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 							ensure!(
 								old_ledger.status == OneToManyDelegatorStatus::Active,
 								Error::<T>::DelegatorLeaving
@@ -1464,7 +1464,7 @@ impl<T: Config>
 		let ledger =
 			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
-		let total = if let Ledger::Moonbeam(moonbeam_ledger) = ledger {
+		let total = if let Ledger::ParachainStaking(moonbeam_ledger) = ledger {
 			moonbeam_ledger.total
 		} else {
 			Err(Error::<T>::Unexpected)?
@@ -1586,7 +1586,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 			LeaveDelegator, Revoke,
 		};
 		// update DelegatorLedgers<T> storage
-		if let LedgerUpdateEntry::Moonbeam(ParachainStakingLedgerUpdateEntry {
+		if let LedgerUpdateEntry::ParachainStaking(ParachainStakingLedgerUpdateEntry {
 			currency_id: _,
 			delegator_id,
 			validator_id: validator_id_op,
@@ -1599,7 +1599,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 				currency_id,
 				delegator_id,
 				|old_ledger_opt| -> Result<(), Error<T>> {
-					if let Some(Ledger::Moonbeam(ref mut old_ledger)) = old_ledger_opt {
+					if let Some(Ledger::ParachainStaking(ref mut old_ledger)) = old_ledger_opt {
 						match update_operation {
 							// first bond and bond more operations
 							Bond => {
@@ -1815,7 +1815,8 @@ impl<T: Config> ParachainStakingAgent<T> {
 									request_briefs: request_briefs_set,
 									status: OneToManyDelegatorStatus::Active,
 								};
-								let moonbeam_ledger = Ledger::<BalanceOf<T>>::Moonbeam(new_ledger);
+								let moonbeam_ledger =
+									Ledger::<BalanceOf<T>>::ParachainStaking(new_ledger);
 
 								*old_ledger_opt = Some(moonbeam_ledger);
 								// execute request
