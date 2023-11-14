@@ -1709,8 +1709,10 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
+	use super::*;
+
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = bifrost_slp::migrations::v3::SlpMigration3<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -1720,7 +1722,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	bifrost_slp::migrations::v3::SlpMigration3<Runtime>,
+	Migrations,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
