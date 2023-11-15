@@ -325,7 +325,7 @@ fn parachain_staking_bond_extra_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -338,7 +338,7 @@ fn parachain_staking_bond_extra_works() {
 				Some(validator_0_location),
 				5_000_000_000_000,
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -373,7 +373,7 @@ fn parachain_staking_unbond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -386,7 +386,7 @@ fn parachain_staking_unbond_works() {
 				Some(validator_0_location),
 				2_000_000_000_000,
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -421,14 +421,14 @@ fn parachain_staking_unbond_all_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
 
 		assert_noop!(
 			Slp::unbond_all(RuntimeOrigin::signed(ALICE), BNC, Box::new(subaccount_0_location),),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -472,7 +472,7 @@ fn parachain_staking_rebond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -485,7 +485,7 @@ fn parachain_staking_rebond_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -524,7 +524,7 @@ fn parachain_staking_undelegate_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -536,7 +536,7 @@ fn parachain_staking_undelegate_works() {
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -580,7 +580,7 @@ fn parachain_staking_redelegate_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(24)),
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, Box::new(subaccount_0_location), ledger);
@@ -592,7 +592,7 @@ fn parachain_staking_redelegate_works() {
 				Box::new(subaccount_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -638,7 +638,7 @@ fn parachain_staking_liquidize_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -652,7 +652,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::RequestNotDue
 		);
 
 		System::set_block_number(500);
@@ -672,7 +672,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
@@ -701,7 +701,7 @@ fn parachain_staking_liquidize_works() {
 				5_000_000_000_000,
 				Some(validator_0_location)
 			),
-			Error::<Runtime>::Unexpected
+			Error::<Runtime>::AlreadyBonded
 		);
 
 		// set delegator_0 ledger

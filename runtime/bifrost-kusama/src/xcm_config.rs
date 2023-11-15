@@ -53,7 +53,7 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
@@ -257,6 +257,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	// TODO: Generate remote accounts according to polkadot standards
 	// Derives a private `Account32` by hashing `("multiloc", received multilocation)`
 	Account32Hash<RelayNetwork, AccountId>,
 );
@@ -355,7 +356,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = (
+pub type Barrier = TrailingSetTopicAsId<(
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -366,7 +367,7 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,

@@ -33,7 +33,7 @@ pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
-		InstanceFilter, IsInVec, NeverEnsureOrigin, Nothing, Randomness,
+		InstanceFilter, IsInVec, Nothing, Randomness,
 	},
 	weights::{
 		constants::{
@@ -92,7 +92,7 @@ use frame_support::{
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{Currency, EitherOfDiverse, Get, Imbalance, LockIdentifier, OnUnbalanced},
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
 
 // zenlink imports
@@ -132,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 984,
+	spec_version: 986,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -836,6 +836,7 @@ parameter_types! {
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub CuratorDepositMin: Balance = 1 * BNCS;
 	pub CuratorDepositMax: Balance = 100 * BNCS;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -845,7 +846,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = NeverEnsureOrigin<Balance>;
+	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1915,7 +1916,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (bifrost_vtoken_voting::migration::v1::MigrateToV1<Runtime>,);
+	pub type Unreleased = bifrost_slp::migrations::v3::SlpMigration3<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -1925,7 +1926,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	Migrations,
+	(),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]

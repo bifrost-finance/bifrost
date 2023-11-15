@@ -70,13 +70,6 @@ pub mod pallet {
 	use super::*;
 	use crate::traits::*;
 
-	// DEPRECATED
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-	pub enum XcmInterfaceOperation {
-		UmpContributeTransact,
-		StatemineTransfer,
-	}
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -146,12 +139,6 @@ pub mod pallet {
 	/// XcmWeightAndFee from SLP module).
 	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-
-	// DEPRECATED: This storage is deprecated, we use XcmWeightAndFee instead.
-	#[pallet::storage]
-	#[pallet::getter(fn xcm_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
 
 	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.

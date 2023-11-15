@@ -58,6 +58,9 @@ pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
+pub const MANTA_TOKEN_ID: u8 = 8u8;
+pub const MANTA: CurrencyId = CurrencyId::Token2(MANTA_TOKEN_ID);
+pub const VMANTA: CurrencyId = CurrencyId::VToken2(MANTA_TOKEN_ID);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

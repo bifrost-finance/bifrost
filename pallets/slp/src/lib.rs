@@ -25,14 +25,14 @@ use crate::{agents::PolkadotAgent, Junction::GeneralIndex, Junctions::X2};
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
-		ValidatorsByDelegatorUpdateEntry, XcmOperation,
+		ValidatorsByDelegatorUpdateEntry,
 	},
 	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
 use bifrost_primitives::{
-	currency::{BNC, KSM, MOVR, PHA},
+	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
 	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
@@ -91,9 +91,7 @@ const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::agents::{
-		AstarAgent, FilecoinAgent, MoonbeamAgent, ParachainStakingAgent, PhalaAgent,
-	};
+	use crate::agents::{AstarAgent, FilecoinAgent, ParachainStakingAgent, PhalaAgent};
 	use bifrost_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
@@ -500,19 +498,6 @@ pub mod pallet {
 	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
 	/// boundedVec).
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-
-	/// DEPRECATED
-	#[pallet::storage]
-	#[pallet::getter(fn xcm_dest_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		CurrencyId,
-		Blake2_128Concat,
-		XcmOperation,
-		(XcmWeight, BalanceOf<T>),
-		OptionQuery,
-	>;
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.
@@ -2315,8 +2300,7 @@ pub mod pallet {
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM | DOT => Ok(Box::new(PolkadotAgent::<T>::new())),
-				MOVR | GLMR => Ok(Box::new(MoonbeamAgent::<T>::new())),
-				BNC => Ok(Box::new(ParachainStakingAgent::<T>::new())),
+				BNC | MOVR | GLMR | MANTA => Ok(Box::new(ParachainStakingAgent::<T>::new())),
 				FIL => Ok(Box::new(FilecoinAgent::<T>::new())),
 				PHA => Ok(Box::new(PhalaAgent::<T>::new())),
 				ASTR => Ok(Box::new(AstarAgent::<T>::new())),

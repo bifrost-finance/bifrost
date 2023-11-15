@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod agent;
-mod types;
+mod manta_types;
+mod moonbeam_types;
 
-pub use agent::*;
-pub use types::*;
+pub use manta_types::*;
+pub use moonbeam_types::*;

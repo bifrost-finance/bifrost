@@ -40,6 +40,12 @@ pub enum MoonbeamCall<T: Config> {
 	Xtokens(MoonbeamXtokensCall<T>),
 }
 
+impl<T: Config> MoonbeamCall<T> {
+	pub fn encode(&self) -> Vec<u8> {
+		self.using_encoded(|x| x.to_vec())
+	}
+}
+
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamBalancesCall<T: Config> {
 	#[codec(index = 3)]
