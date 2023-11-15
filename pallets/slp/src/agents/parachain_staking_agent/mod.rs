@@ -17,5 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 mod agent;
+mod types;
 
 pub use agent::*;
+pub use types::*;

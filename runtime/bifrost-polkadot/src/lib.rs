@@ -36,8 +36,7 @@ pub use frame_support::{
 	match_types, parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
-		Imbalance, InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing,
-		OnUnbalanced, Randomness,
+		Imbalance, InstanceFilter, IsInVec, LockIdentifier, Nothing, OnUnbalanced, Randomness,
 	},
 	weights::{
 		constants::{
@@ -85,7 +84,7 @@ use frame_support::{
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{Currency, EitherOfDiverse, Get},
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::{
@@ -131,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 984,
+	spec_version: 986,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -791,6 +790,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -800,7 +800,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = NeverEnsureOrigin<Balance>;
+	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1709,8 +1709,10 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
+	use super::*;
+
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = bifrost_slp::migrations::v3::SlpMigration3<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
