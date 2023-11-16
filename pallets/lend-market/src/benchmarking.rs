@@ -2,13 +2,13 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 pub use crate::{AccountBorrows, Pallet as LendMarket, *};
+use bifrost_primitives::{currency::PHA, Balance, CurrencyId, DOT, DOT_U, KSM, VKSM, VSKSM};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
 	assert_ok,
 	traits::tokens::{Fortitude, Precision},
 };
 use frame_system::{self, RawOrigin as SystemOrigin};
-use node_primitives::{currency::PHA, Balance, CurrencyId, DOT, DOT_U, KSM, VKSM, VSKSM};
 use rate_model::{InterestRateModel, JumpModel};
 use sp_std::prelude::*;
 

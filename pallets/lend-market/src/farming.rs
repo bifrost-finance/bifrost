@@ -29,7 +29,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn calculate_reward_delta_index(
-		delta_block: T::BlockNumber,
+		delta_block: BlockNumberFor<T>,
 		reward_speed: BalanceOf<T>,
 		total_share: BalanceOf<T>,
 	) -> Result<u128, sp_runtime::DispatchError> {

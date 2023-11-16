@@ -19,8 +19,6 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 
-extern crate sp_runtime;
-
 pub use pallet::*;
 
 #[cfg(test)]
@@ -32,19 +30,15 @@ mod tests;
 pub mod weights;
 
 pub use crate::traits::StableAsset;
-use frame_support::{
-	codec::{Decode, Encode},
-	dispatch::{DispatchError, DispatchResult},
-	ensure,
-	traits::Get,
-	weights::Weight,
-};
+use codec::{Decode, Encode};
+use frame_support::{dispatch::DispatchResult, ensure, traits::Get, weights::Weight};
+use frame_system::pallet_prelude::BlockNumberFor;
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_core::{U256, U512};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-	SaturatedConversion,
+	DispatchError, SaturatedConversion,
 };
 use sp_std::prelude::*;
 
@@ -91,7 +85,8 @@ pub mod traits {
 	use crate::{
 		MintResult, PoolTokenIndex, RedeemProportionResult, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
 	};
-	use frame_support::dispatch::{DispatchError, DispatchResult};
+	use frame_support::dispatch::DispatchResult;
+	use sp_runtime::DispatchError;
 	use sp_std::prelude::*;
 
 	pub trait ValidateAssetId<AssetId> {
@@ -336,12 +331,8 @@ pub mod pallet {
 	use super::{PoolTokenIndex, StableAssetPoolId, StableAssetPoolInfo};
 	use crate::traits::{StableAsset, ValidateAssetId};
 	use crate::WeightInfo;
-	use frame_support::{
-		dispatch::{Codec, DispatchResult},
-		pallet_prelude::*,
-		traits::EnsureOrigin,
-		transactional, PalletId,
-	};
+	use codec::Codec;
+	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::EnsureOrigin, transactional, PalletId};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::MultiCurrency;
 	use sp_runtime::{
@@ -368,7 +359,7 @@ pub mod pallet {
 			+ From<Self::Balance>
 			+ From<u8>
 			+ From<u128>
-			+ From<Self::BlockNumber>
+			+ From<BlockNumberFor<Self>>
 			+ TryFrom<usize>
 			+ Zero
 			+ One
@@ -404,7 +395,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		StableAssetPoolId,
-		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, BlockNumberFor<T>>,
 	>;
 
 	#[pallet::storage]
@@ -510,7 +501,7 @@ pub mod pallet {
 		AModified {
 			pool_id: StableAssetPoolId,
 			value: T::AtLeast64BitUnsigned,
-			time: T::BlockNumber,
+			time: BlockNumberFor<T>,
 		},
 		FeeModified {
 			pool_id: StableAssetPoolId,
@@ -711,7 +702,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			a: T::AtLeast64BitUnsigned,
-			future_a_block: T::BlockNumber,
+			future_a_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			T::ListingOrigin::ensure_origin(origin)?;
 			<Self as StableAsset>::modify_a(pool_id, a, future_a_block)
@@ -788,9 +779,9 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_a(
 		a0: T::AtLeast64BitUnsigned,
-		t0: T::BlockNumber,
+		t0: BlockNumberFor<T>,
 		a1: T::AtLeast64BitUnsigned,
-		t1: T::BlockNumber,
+		t1: BlockNumberFor<T>,
 	) -> Option<T::AtLeast64BitUnsigned> {
 		let current_block = frame_system::Pallet::<T>::block_number();
 		if current_block < t1 {
@@ -927,7 +918,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_mint_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		amounts_bal: &[T::Balance],
 	) -> Result<MintResult<T>, Error<T>> {
 		// update pool balances and total supply to avoid stale data
@@ -996,7 +993,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_swap_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		input_index: PoolTokenIndex,
 		output_index: PoolTokenIndex,
 		dx_bal: T::Balance,
@@ -1070,7 +1073,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_swap_amount_exact(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		input_index: PoolTokenIndex,
 		output_index: PoolTokenIndex,
 		dy_bal: T::Balance,
@@ -1137,7 +1146,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_redeem_proportion_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		amount_bal: T::Balance,
 	) -> Result<RedeemProportionResult<T::Balance>, Error<T>> {
 		// update pool balances and total supply to avoid stale data
@@ -1199,7 +1214,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_redeem_single_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		amount_bal: T::Balance,
 		i: PoolTokenIndex,
 	) -> Result<RedeemSingleResult<T>, Error<T>> {
@@ -1268,7 +1289,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_redeem_multi_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 		amounts: &[T::Balance],
 	) -> Result<RedeemMultiResult<T>, Error<T>> {
 		// update pool balances and total supply to avoid stale data
@@ -1333,7 +1360,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_pending_fee_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 	) -> Result<PendingFeeResult<T>, Error<T>> {
 		let mut balances: Vec<T::AtLeast64BitUnsigned> =
 			Self::convert_vec_balance_to_number(pool_info.balances.clone());
@@ -1387,9 +1420,15 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_collect_yield_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 	) -> Result<
-		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, BlockNumberFor<T>>,
 		Error<T>,
 	> {
 		let a: T::AtLeast64BitUnsigned = Self::get_a(
@@ -1407,9 +1446,15 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_balance_update_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
 	) -> Result<
-		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
+		StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, BlockNumberFor<T>>,
 		Error<T>,
 	> {
 		let mut updated_balances = pool_info.balances.clone();
@@ -1443,7 +1488,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 	type AtLeast64BitUnsigned = T::AtLeast64BitUnsigned;
 	type Balance = T::Balance;
 	type AccountId = T::AccountId;
-	type BlockNumber = T::BlockNumber;
+	type BlockNumber = BlockNumberFor<T>;
 	type Config = T;
 
 	fn set_token_rate(
@@ -2054,7 +2099,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 	fn modify_a(
 		pool_id: StableAssetPoolId,
 		a: Self::AtLeast64BitUnsigned,
-		future_a_block: T::BlockNumber,
+		future_a_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 			let pool_info = maybe_pool_info.as_mut().ok_or(Error::<T>::PoolNotFound)?;
@@ -2081,8 +2126,14 @@ impl<T: Config> StableAsset for Pallet<T> {
 	}
 
 	fn get_collect_yield_amount(
-		pool_info: &StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>,
-	) -> Option<StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, T::BlockNumber>> {
+		pool_info: &StableAssetPoolInfo<
+			T::AssetId,
+			T::AtLeast64BitUnsigned,
+			T::Balance,
+			T::AccountId,
+			BlockNumberFor<T>,
+		>,
+	) -> Option<StableAssetPoolInfo<T::AssetId, T::AtLeast64BitUnsigned, T::Balance, T::AccountId, BlockNumberFor<T>>> {
 		Self::get_collect_yield_amount(pool_info).ok()
 	}
 
@@ -2207,9 +2258,9 @@ impl<T: Config> StableAsset for Pallet<T> {
 
 	fn get_a(
 		a0: T::AtLeast64BitUnsigned,
-		t0: T::BlockNumber,
+		t0: BlockNumberFor<T>,
 		a1: T::AtLeast64BitUnsigned,
-		t1: T::BlockNumber,
+		t1: BlockNumberFor<T>,
 	) -> Option<T::AtLeast64BitUnsigned> {
 		Self::get_a(a0, t0, a1, t1)
 	}

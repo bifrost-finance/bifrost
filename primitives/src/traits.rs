@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -26,13 +26,12 @@ use crate::{
 };
 use codec::{Decode, Encode, FullCodec};
 use frame_support::{
-	dispatch::DispatchError,
 	pallet_prelude::{DispatchResultWithPostInfo, Weight},
 	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
 };
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
-	BoundedVec, DispatchResult,
+	BoundedVec, DispatchError, DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
 

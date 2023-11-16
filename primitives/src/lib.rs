@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::MaxEncodedLen;
-use frame_support::dispatch::Weight;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
@@ -151,8 +150,6 @@ pub type Shortfall = FixedU128;
 
 pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 
-pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
-
 pub type DerivativeIndex = u16;
 
 #[derive(
@@ -276,7 +273,7 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 	fn execute(
 		_origin: impl Into<MultiLocation>,
 		_pre: Self::Prepared,
-		_hash: XcmHash,
+		_hash: &mut XcmHash,
 		_weight_credit: Weight,
 	) -> Outcome {
 		Outcome::Complete(Weight::default())

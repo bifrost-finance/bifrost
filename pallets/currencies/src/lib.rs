@@ -144,7 +144,7 @@ pub mod module {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -335,7 +335,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	fn set_lock(
 		lock_id: LockIdentifier,
@@ -777,7 +777,7 @@ where
 	T: Config,
 	GetCurrencyId: Get<CurrencyIdOf<T>>,
 {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	fn set_lock(
 		lock_id: LockIdentifier,
@@ -1027,7 +1027,7 @@ where
 		+ MaybeSerializeDeserialize
 		+ Debug
 		+ Default
-		+ codec::MaxEncodedLen,
+		+ MaxEncodedLen,
 	Currency: PalletCurrency<AccountId>,
 	T: Config,
 {

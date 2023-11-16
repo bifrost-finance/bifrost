@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -69,7 +69,7 @@ benchmarks! {
 		add_locks::<T>(&caller, l as u8);
 		add_vesting_schedule::<T>(&caller)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&caller),
 			Some(100u32.into()),
@@ -118,7 +118,7 @@ benchmarks! {
 		add_locks::<T>(&other, l as u8);
 		add_vesting_schedule::<T>(&other)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&other),
 			Some(100u32.into()),

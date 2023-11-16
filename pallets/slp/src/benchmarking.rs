@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -81,8 +81,8 @@ pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::Runtime
 mod benchmarks {
 	use super::*;
 	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
+	use bifrost_primitives::VKSM;
 	use frame_benchmarking::impl_benchmark_test_suite;
-	use node_primitives::VKSM;
 	use sp_arithmetic::traits::SaturatedConversion;
 
 	#[benchmark]
@@ -488,8 +488,8 @@ mod benchmarks {
 		let origin = <T as Config>::ControlOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Weightless)?;
 
-		OngoingTimeUnitUpdateInterval::<T>::insert(KSM, T::BlockNumber::from(0u32));
-		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, T::BlockNumber::from(0u32));
+		OngoingTimeUnitUpdateInterval::<T>::insert(KSM, BlockNumberFor::<T>::from(0u32));
+		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, BlockNumberFor::<T>::from(0u32));
 
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, TimeUnit::Era(0));
@@ -780,7 +780,7 @@ mod benchmarks {
 		_(
 			origin as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
-			Some(T::BlockNumber::from(100u32)),
+			Some(BlockNumberFor::<T>::from(100u32)),
 		);
 
 		Ok(())
@@ -866,7 +866,7 @@ mod benchmarks {
 						validators: vec![],
 					},
 				),
-				T::BlockNumber::from(10u32),
+				BlockNumberFor::<T>::from(10u32),
 			),
 		);
 		#[extrinsic_call]
@@ -904,7 +904,7 @@ mod benchmarks {
 						validators: vec![],
 					},
 				),
-				T::BlockNumber::from(10u32),
+				BlockNumberFor::<T>::from(10u32),
 			),
 		);
 		#[extrinsic_call]

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,8 @@
 
 use crate::*;
 use frame_support::{storage_alias, traits::OnRuntimeUpgrade};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::TryRuntimeError;
 
 const LOG_TARGET: &str = "flexible-fee::migration";
 
@@ -52,7 +54,7 @@ impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		let cnt = UserFeeChargeOrderList::<T>::iter().count();
 
 		// print out the pre-migrate storage count
@@ -65,7 +67,7 @@ impl<T: Config> OnRuntimeUpgrade for FlexibleFeeMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_cnt: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_cnt: Vec<u8>) -> Result<(), TryRuntimeError> {
 		let new_count = UserFeeChargeOrderList::<T>::iter().count();
 
 		// print out the post-migrate storage count

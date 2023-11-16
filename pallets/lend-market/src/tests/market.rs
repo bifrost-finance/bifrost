@@ -5,8 +5,8 @@ use crate::{
 	},
 	Error, InterestRateModel, MarketState,
 };
+use bifrost_primitives::{Rate, Ratio};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
-use node_primitives::{Rate, Ratio};
 use sp_runtime::{traits::Zero, FixedPointNumber};
 
 macro_rules! rate_model_sanity_check {

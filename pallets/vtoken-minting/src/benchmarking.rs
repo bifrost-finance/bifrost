@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,10 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as VtokenMinting, *};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 
 benchmarks! {
 	set_minimum_mint {
@@ -126,7 +126,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller), KSM, unlock_id)
 
 	on_initialize {
-		let block_num = T::BlockNumber::from(10u32);
+		let block_num =BlockNumberFor::<T>::from(10u32);
 	}:{VtokenMinting::<T>::on_initialize(block_num);}
 
 	impl_benchmark_test_suite!(

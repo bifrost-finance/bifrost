@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{CurrencyId, PriceDetail};
 use num_bigint::{BigUint, ToBigUint};
-use primitives::{CurrencyId, PriceDetail};
 
 pub mod lend_market;
 pub use lend_market::*;

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -31,17 +31,17 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_primitives::{
+	currency::{BNC, KSM, MANTA, MOVR, PHA},
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
+	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+};
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
-};
-use node_primitives::{
-	currency::{BNC, KSM, MANTA, MOVR, PHA},
-	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
@@ -92,7 +92,7 @@ const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
 pub mod pallet {
 	use super::*;
 	use crate::agents::{AstarAgent, FilecoinAgent, ParachainStakingAgent, PhalaAgent};
-	use node_primitives::{RedeemType, SlpxOperator};
+	use bifrost_primitives::{RedeemType, SlpxOperator};
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
 	use xcm::v3::{MaybeErrorCode, Response};
@@ -2081,7 +2081,7 @@ pub mod pallet {
 			let current_block_number = <frame_system::Pallet<T>>::block_number();
 			// get the due block number
 			let due_block_number = current_block_number
-				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 				.ok_or(Error::<T>::OverFlow)?;
 
 			let mut validator_boost_list: Vec<(MultiLocation, BlockNumberFor<T>)> = vec![];
@@ -2154,7 +2154,7 @@ pub mod pallet {
 
 			// get the due block number if the validator is not in the validator boost list
 			let mut due_block_number = current_block_number
-				.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+				.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 				.ok_or(Error::<T>::OverFlow)?;
 
 			let validator_boost_list_op = ValidatorBoostList::<T>::get(currency_id);
@@ -2170,7 +2170,7 @@ pub mod pallet {
 					let original_due_block = validator_boost_vec[index].1;
 					// get the due block number
 					due_block_number = original_due_block
-						.checked_add(&T::BlockNumber::from(SIX_MONTHS))
+						.checked_add(&BlockNumberFor::<T>::from(SIX_MONTHS))
 						.ok_or(Error::<T>::OverFlow)?;
 
 					validator_boost_vec[index].1 = due_block_number;
