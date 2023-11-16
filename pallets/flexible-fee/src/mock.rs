@@ -404,7 +404,7 @@ impl bifrost_salp::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type PalletId = BifrostCrowdloanId;
 	type RelayChainToken = RelayCurrencyId;
 	type ReleaseCycle = ReleaseCycle;

@@ -1482,3 +1482,84 @@ fn edit_fund_should_work() {
 		assert_eq!(fund.status, FundStatus::Ongoing);
 	});
 }
+
+#[test]
+fn reserve_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
+
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 100);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
+
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free,
+			100
+		);
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).frozen,
+			0
+		);
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).reserved,
+			0
+		);
+
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
+
+		// Mock the BlockNumber
+		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
+		System::set_block_number(block_begin_redeem);
+
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
+		assert_noop!(
+			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
+			Error::<Test>::InvalidFundStatus,
+		);
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+
+		let vs_token =
+			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
+				.unwrap();
+		let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+			RelayCurrencyId::get(),
+			3_000,
+			1,
+			SlotLength::get(),
+		)
+		.unwrap();
+
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
+
+		assert_ok!(Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000));
+		// assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
+
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
+
+		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 50));
+
+		assert_eq!(Tokens::accounts(CATHI, vs_token).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_token).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
+	});
+}

@@ -20,6 +20,7 @@
 
 #![cfg(test)]
 
+use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
@@ -449,6 +450,10 @@ impl bifrost_vtoken_minting::Config for Test {
 	type HydradxParachainId = ConstU32<2034>;
 }
 
+parameter_types! {
+	pub const SalpLockId: LockIdentifier = *b"salplock";
+}
+
 impl salp::Config for Test {
 	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
@@ -475,6 +480,7 @@ impl salp::Config for Test {
 	type ParachainId = ParaInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
+	type LockId = SalpLockId;
 }
 
 parameter_types! {
