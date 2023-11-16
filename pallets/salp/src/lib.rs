@@ -244,6 +244,22 @@ pub mod pallet {
 			currency_id_in: CurrencyId,
 			value: BalanceOf<T>,
 		},
+		Reserved {
+			who: AccountIdOf<T>,
+			para_id: ParaId,
+			value: BalanceOf<T>,
+			if_mint: bool,
+		},
+		ReservationCancelled {
+			who: AccountIdOf<T>,
+			para_id: ParaId,
+		},
+		ReservationFullyHandled {
+			para_id: ParaId,
+		},
+		ReservationHandled {
+			para_id: ParaId,
+		},
 	}
 
 	#[pallet::error]
@@ -1354,50 +1370,113 @@ pub mod pallet {
 				info.value = info.value.saturating_add(value);
 				info.if_mint = if_mint;
 			});
+
+			Self::deposit_event(Event::<T>::Reserved { who, para_id: index, value, if_mint });
 			Ok(())
 		}
 
 		#[pallet::call_index(23)]
 		#[pallet::weight(T::WeightInfo::confirm_contribute())]
 		pub fn batch_handle_reserve(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
-			let who = ensure_signed(origin.clone())?;
+			let _who = ensure_signed(origin.clone())?;
+
+			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			// ensure!(
+			// 	fund.status == FundStatus::RefundWithdrew ||
+			// 		fund.status == FundStatus::RedeemWithdrew,
+			// 	Error::<T>::InvalidFundStatus
+			// );
+
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			match fund.status {
+				FundStatus::RedeemWithdrew => {
+					ReserveInfos::<T>::iter_prefix(index)
+						.take(T::RemoveKeysLimit::get() as usize) // TODO
+						.try_for_each(|(contributer, info)| -> DispatchResult {
+							T::MultiCurrency::remove_lock(
+								T::LockId::get(),
+								vs_token,
+								&contributer,
+							)?;
+							T::MultiCurrency::remove_lock(T::LockId::get(), vs_bond, &contributer)?;
+							Self::redeem_for_reserve(
+								contributer,
+								index,
+								info.value,
+								&mut fund,
+								vs_token,
+								vs_bond,
+							)?;
+							Ok(())
+						})?;
+				},
+				FundStatus::RefundWithdrew => {
+					ReserveInfos::<T>::iter_prefix(index)
+						.take(T::RemoveKeysLimit::get() as usize)
+						.try_for_each(|(contributer, info)| -> DispatchResult {
+							T::MultiCurrency::remove_lock(
+								T::LockId::get(),
+								vs_token,
+								&contributer,
+							)?;
+							T::MultiCurrency::remove_lock(T::LockId::get(), vs_bond, &contributer)?;
+							Self::refund_for_reserve(
+								contributer,
+								index,
+								fund.first_slot,
+								fund.last_slot,
+								info.value,
+								&mut fund,
+								vs_token,
+								vs_bond,
+							)?;
+							Ok(())
+						})?;
+				},
+				_ => return Err(Error::<T>::InvalidFundStatus.into()),
+			}
+
+			Self::deposit_event(Event::<T>::ReservationHandled { para_id: index });
+			Ok(())
+		}
+
+		#[pallet::call_index(24)]
+		#[pallet::weight(T::WeightInfo::confirm_contribute())]
+		pub fn cancel_reservation(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			ensure!(
-				fund.status == FundStatus::RefundWithdrew ||
-					fund.status == FundStatus::RedeemWithdrew,
+				fund.status != FundStatus::RefundWithdrew &&
+					fund.status != FundStatus::RedeemWithdrew,
 				Error::<T>::InvalidFundStatus
-			);
+			); // TODO
 
-			match fund.status {
-				FundStatus::RedeemWithdrew => {
-					let vs_token =
-						T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
-							.map_err(|_| Error::<T>::NotSupportTokenType)?;
-					let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
-						T::RelayChainToken::get(),
-						index,
-						fund.first_slot,
-						fund.last_slot,
-					)
-					.map_err(|_| Error::<T>::NotSupportTokenType)?;
-					ReserveInfos::<T>::iter_prefix(index)
-						.take(T::RemoveKeysLimit::get() as usize) // TODO
-						.try_for_each(|(contributer, info)| -> DispatchResult {
-							T::MultiCurrency::remove_lock(T::LockId::get(), vs_token, &who)?;
-							T::MultiCurrency::remove_lock(T::LockId::get(), vs_bond, &who)?;
-							Self::redeem_for_reserve(contributer, index, info.value)?;
-							Ok(())
-						})?;
+			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
+				T::RelayChainToken::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			)
+			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			T::MultiCurrency::remove_lock(T::LockId::get(), vs_token, &who)?;
+			T::MultiCurrency::remove_lock(T::LockId::get(), vs_bond, &who)?;
+			ReserveInfos::<T>::remove(index, &who);
 
-					// },
-				},
-				// TODO
-				// FundStatus::RefundWithdrew => {},
-				_ => (),
-			}
-
+			Self::deposit_event(Event::<T>::ReservationCancelled { who, para_id: index });
 			Ok(())
 		}
 	}
@@ -1551,20 +1630,13 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			index: ParaId,
 			value: BalanceOf<T>,
+			fund: &mut FundInfo<BalanceOf<T>, LeasePeriod>,
+			vs_token: CurrencyId,
+			vs_bond: CurrencyId,
 		) -> DispatchResult {
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
+			// let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			// ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
-
-			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
-				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
-				T::RelayChainToken::get(),
-				index,
-				fund.first_slot,
-				fund.last_slot,
-			)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 			let cur_block = <frame_system::Pallet<T>>::block_number();
@@ -1589,6 +1661,70 @@ pub mod pallet {
 				value,
 			)?;
 			Self::deposit_event(Event::Redeemed(
+				who,
+				index,
+				fund.first_slot,
+				fund.last_slot,
+				value,
+			));
+
+			Ok(())
+		}
+
+		pub fn refund_for_reserve(
+			who: AccountIdOf<T>,
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+			value: BalanceOf<T>,
+			fund: &mut FundInfo<BalanceOf<T>, LeasePeriod>,  // TODO
+			vs_token: CurrencyId,
+			vs_bond: CurrencyId,
+		) -> DispatchResult {
+			// let who = ensure_signed(origin.clone())?;
+
+			// let mut fund = Self::find_fund(index, first_slot, last_slot)
+			// 	.map_err(|_| Error::<T>::InvalidFundNotExist)?;
+			// ensure!(
+			// 	fund.status == FundStatus::FailedToContinue ||
+			// 		fund.status == FundStatus::RefundWithdrew,
+			// 	Error::<T>::InvalidRefund
+			// );
+			// ensure!(
+			// 	fund.first_slot == first_slot && fund.last_slot == last_slot,
+			// 	Error::<T>::InvalidRefund
+			// );
+			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
+			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRefundPool);
+
+			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+
+			T::MultiCurrency::withdraw(vs_token, &who, value)?;
+			T::MultiCurrency::withdraw(vs_bond, &who, value)?;
+
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
+			let mut fund_new = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			fund_new.raised = fund_new.raised.saturating_sub(value);
+			Funds::<T>::insert(index, Some(fund_new));
+			if fund.status == FundStatus::FailedToContinue {
+				fund.raised = fund.raised.saturating_sub(value);
+				FailedFundsToRefund::<T>::insert(
+					(index, first_slot, last_slot),
+					Some(fund.clone()),
+				);
+			}
+
+			T::MultiCurrency::transfer(
+				T::RelayChainToken::get(),
+				&Self::fund_account_id(index),
+				&who,
+				value,
+			)?;
+
+			Self::deposit_event(Event::Refunded(
 				who,
 				index,
 				fund.first_slot,

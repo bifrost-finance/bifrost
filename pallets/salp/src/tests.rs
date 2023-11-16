@@ -1515,6 +1515,8 @@ fn reserve_should_work() {
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
 		System::set_block_number(block_begin_redeem);
 
+		// assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
+		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 50, false));
 		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
 		assert_noop!(
 			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
@@ -1550,7 +1552,7 @@ fn reserve_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
-		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 50));
+		// assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 50));
 
 		assert_eq!(Tokens::accounts(CATHI, vs_token).free, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 0);
