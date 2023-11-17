@@ -1615,10 +1615,14 @@ pub mod pallet {
 
 			if currency_id == PHA {
 				if let &MultiLocation {
-					parents: 1,
+					parents: vault_or_stake_pool,
 					interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
 				} = who.as_ref()
 				{
+					ensure!(
+						vault_or_stake_pool == 0 || vault_or_stake_pool == 1,
+						Error::<T>::ValidatorMultilocationNotvalid
+					);
 					Pallet::<T>::inner_add_validator(&who, currency_id)?;
 				} else {
 					Err(Error::<T>::ValidatorMultilocationNotvalid)?;
