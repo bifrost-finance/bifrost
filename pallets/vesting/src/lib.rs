@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -126,7 +126,7 @@ pub mod pallet {
 		type Currency: LockableCurrency<Self::AccountId>;
 
 		/// Convert the block number into a balance.
-		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
 		/// The minimum amount transferred to call `vested_transfer`.
 		#[pallet::constant]
@@ -139,38 +139,32 @@ pub mod pallet {
 	/// Start at
 	#[pallet::storage]
 	#[pallet::getter(fn vesting_start_at)]
-	pub(super) type VestingStartAt<T: Config> = StorageValue<_, T::BlockNumber>;
+	pub(super) type VestingStartAt<T: Config> = StorageValue<_, BlockNumberFor<T>>;
 
 	/// Cliff vesting
 	#[pallet::storage]
 	#[pallet::getter(fn cliffs)]
 	pub(super) type Cliff<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>>;
 
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
 	#[pallet::getter(fn vesting)]
 	pub type Vesting<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, VestingInfo<BalanceOf<T>, T::BlockNumber>>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub vesting: Vec<(T::AccountId, T::BlockNumber, T::BlockNumber, BalanceOf<T>)>,
-	}
-
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			GenesisConfig { vesting: Default::default() }
-		}
+		pub vesting: Vec<(T::AccountId, BlockNumberFor<T>, BlockNumberFor<T>, BalanceOf<T>)>,
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			use sp_runtime::traits::Saturating;
 
@@ -302,7 +296,7 @@ pub mod pallet {
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			let transactor = ensure_signed(origin)?;
 			ensure!(schedule.locked >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
@@ -351,7 +345,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			source: <T::Lookup as StaticLookup>::Source,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(schedule.locked >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
@@ -384,7 +378,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			source: <T::Lookup as StaticLookup>::Source,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(schedule.locked >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
@@ -413,7 +407,7 @@ pub mod pallet {
 		#[pallet::weight({0})]
 		pub fn init_vesting_start_at(
 			origin: OriginFor<T>,
-			vesting_start_at: T::BlockNumber,
+			vesting_start_at: BlockNumberFor<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -470,7 +464,7 @@ pub mod pallet {
 		pub fn force_set_cliff(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
-			cliff_block: T::BlockNumber,
+			cliff_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -521,7 +515,7 @@ where
 	BalanceOf<T>: MaybeSerializeDeserialize + Debug,
 {
 	type Currency = T::Currency;
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	/// Get the amount that is currently being vested and cannot be transferred out of this account.
 	fn vesting_balance(who: &T::AccountId) -> Option<BalanceOf<T>> {
@@ -551,7 +545,7 @@ where
 		who: &T::AccountId,
 		locked: BalanceOf<T>,
 		per_block: BalanceOf<T>,
-		starting_block: T::BlockNumber,
+		starting_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		if locked.is_zero() {
 			return Ok(());
@@ -573,7 +567,7 @@ where
 		_who: &T::AccountId,
 		_locked: BalanceOf<T>,
 		_per_block: BalanceOf<T>,
-		_starting_block: T::BlockNumber,
+		_starting_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		Ok(())
 	}
@@ -592,8 +586,8 @@ mod tests {
 	use frame_system::RawOrigin;
 	use sp_core::H256;
 	use sp_runtime::{
-		testing::Header,
 		traits::{BadOrigin, BlakeTwo256, Identity, IdentityLookup},
+		BuildStorage,
 		DispatchError::Token,
 		ModuleError,
 		TokenError::Frozen,
@@ -602,18 +596,13 @@ mod tests {
 	use super::*;
 	use crate as pallet_vesting;
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::mocking::MockBlock<Test>;
 
 	frame_support::construct_runtime!(
-		pub enum Test where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
-			System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-			Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-			Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
+		pub enum Test {
+			System: frame_system,
+			Balances: pallet_balances,
+			Vesting: pallet_vesting,
 		}
 	);
 
@@ -626,15 +615,14 @@ mod tests {
 		type BaseCallFilter = frame_support::traits::Everything;
 		type BlockHashCount = BlockHashCount;
 		type BlockLength = ();
-		type BlockNumber = u64;
 		type BlockWeights = ();
 		type RuntimeCall = RuntimeCall;
 		type DbWeight = ();
 		type RuntimeEvent = RuntimeEvent;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
-		type Header = Header;
-		type Index = u64;
+		type Nonce = u32;
+		type Block = Block;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type OnKilledAccount = ();
 		type OnNewAccount = ();
@@ -659,7 +647,7 @@ mod tests {
 		type MaxReserves = ();
 		type ReserveIdentifier = [u8; 8];
 		type WeightInfo = ();
-		type HoldIdentifier = ();
+		type RuntimeHoldReason = ();
 		type FreezeIdentifier = ();
 		type MaxHolds = ConstU32<0>;
 		type MaxFreezes = ConstU32<0>;
@@ -692,7 +680,7 @@ mod tests {
 
 		pub fn build(self) -> sp_io::TestExternalities {
 			EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
-			let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+			let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 			pallet_balances::GenesisConfig::<Test> {
 				balances: vec![
 					(1, 10 * self.existential_deposit),

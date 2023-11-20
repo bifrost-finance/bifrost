@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -33,6 +33,10 @@ pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
+	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -42,10 +46,7 @@ use frame_support::{
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
-	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
-};
+use log;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
@@ -65,8 +66,8 @@ pub type UnlockId = u32;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::{currency::BNC, FIL};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-	use node_primitives::{currency::BNC, FIL};
 	use orml_traits::XcmTransfer;
 	use xcm::{prelude::*, v3::MultiLocation};
 
@@ -322,8 +323,8 @@ pub mod pallet {
 	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			Self::handle_on_initialize()
 				.map_err(|err| {
 					Self::deposit_event(Event::FastRedeemFailed { err });
@@ -667,10 +668,11 @@ pub mod pallet {
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						T::CurrencyIdRegister::register_vtoken_metadata(token_symbol)?;
 					},
-				CurrencyId::Token2(token_id) =>
+				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						T::CurrencyIdRegister::register_vtoken2_metadata(token_id)?;
-					},
+					}
+				},
 				_ => (),
 			}
 

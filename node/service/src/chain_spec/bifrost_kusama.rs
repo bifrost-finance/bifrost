@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -24,16 +24,16 @@ use std::{
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
-	GenesisConfig, IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
-	ParachainStakingConfig, PolkadotXcmConfig, Range, SS58Prefix, SalpConfig, SessionConfig,
-	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, Range, RuntimeGenesisConfig, SS58Prefix, SalpConfig,
+	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
@@ -51,7 +51,7 @@ const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 use sp_runtime::Perbill;
 
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -130,10 +130,11 @@ pub fn bifrost_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> GenesisConfig {
-	GenesisConfig {
+) -> RuntimeGenesisConfig {
+	RuntimeGenesisConfig {
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
+			_config: Default::default(),
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
@@ -157,7 +158,7 @@ pub fn bifrost_genesis(
 		},
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id },
+		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
 		session: SessionConfig {
 			keys: candidates
 				.iter()
@@ -182,7 +183,7 @@ pub fn bifrost_genesis(
 			vsbond: asset_registry.2,
 			phantom: Default::default(),
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 		parachain_staking: ParachainStakingConfig {
 			candidates: candidates
@@ -193,10 +194,13 @@ pub fn bifrost_genesis(
 			delegations,
 			inflation_config: inflation_config(),
 		},
+		vtoken_voting: Default::default(),
+		transaction_payment: Default::default(),
+		zenlink_protocol: Default::default(),
 	}
 }
 
-fn development_config_genesis(id: ParaId) -> GenesisConfig {
+fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
@@ -261,7 +265,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn local_config_genesis(id: ParaId) -> GenesisConfig {
+fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -398,7 +402,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn rococo_testnet_config_genesis(id: ParaId) -> GenesisConfig {
+fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
@@ -497,7 +501,7 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn rococo_local_config_genesis(id: ParaId) -> GenesisConfig {
+fn rococo_local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts: Vec<AccountId> = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -576,7 +580,7 @@ pub fn chainspec_config() -> ChainSpec {
 	)
 }
 
-fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
+fn bifrost_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_primitives::DerivativeIndex;
 use codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*, traits::Get, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
-use node_primitives::DerivativeIndex;
 use pallet_conviction_voting::{Conviction, Delegations, Vote};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -100,21 +100,21 @@ impl TryFrom<u8> for VoteRole {
 	type Error = ();
 	fn try_from(i: u8) -> Result<VoteRole, ()> {
 		Ok(match i {
-			0 => VoteRole::Standard { aye: true, conviction: Conviction::None }, // TODO remove
+			0 => VoteRole::Standard { aye: true, conviction: Conviction::None },
 			1 => VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
 			2 => VoteRole::Standard { aye: true, conviction: Conviction::Locked2x },
 			3 => VoteRole::Standard { aye: true, conviction: Conviction::Locked3x },
 			4 => VoteRole::Standard { aye: true, conviction: Conviction::Locked4x },
 			5 => VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
 			6 => VoteRole::Standard { aye: true, conviction: Conviction::Locked6x },
-			10 => VoteRole::Standard { aye: false, conviction: Conviction::None }, // TODO remove
+			10 => VoteRole::Standard { aye: false, conviction: Conviction::None },
 			11 => VoteRole::Standard { aye: false, conviction: Conviction::Locked1x },
 			12 => VoteRole::Standard { aye: false, conviction: Conviction::Locked2x },
 			13 => VoteRole::Standard { aye: false, conviction: Conviction::Locked3x },
 			14 => VoteRole::Standard { aye: false, conviction: Conviction::Locked4x },
 			15 => VoteRole::Standard { aye: false, conviction: Conviction::Locked5x },
 			16 => VoteRole::Standard { aye: false, conviction: Conviction::Locked6x },
-			20 => VoteRole::Split, // TODO remove
+			20 => VoteRole::Split,
 			21 => VoteRole::SplitAbstain,
 			_ => return Err(()),
 		})
@@ -125,6 +125,7 @@ pub enum PollStatus<Tally, Moment> {
 	None,
 	Ongoing(Tally),
 	Completed(Moment, bool),
+	Killed(Moment),
 }
 
 impl<Tally, Moment> PollStatus<Tally, Moment> {
@@ -153,11 +154,11 @@ pub enum AccountVote<Balance> {
 impl<Balance: Saturating> AccountVote<Balance> {
 	/// Returns `Some` of the lock periods that the account is locked for, assuming that the
 	/// referendum passed iff `approved` is `true`.
-	pub fn locked_if(self, approved: bool) -> Option<(u32, Balance)> {
+	pub fn locked_if(self, _approved: bool) -> Option<(u32, Balance)> {
 		// winning side: can only be removed after the lock period ends.
 		match self {
 			AccountVote::Standard { vote: Vote { conviction: Conviction::None, .. }, .. } => None,
-			AccountVote::Standard { vote, balance } if vote.aye == approved =>
+			AccountVote::Standard { vote, balance } /* if vote.aye == _approved */ =>
 				Some((vote.conviction.lock_periods(), balance)),
 			_ => None,
 		}

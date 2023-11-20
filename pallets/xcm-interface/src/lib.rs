@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,9 @@
 
 pub mod calls;
 pub mod traits;
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{traits::XcmDestWeightAndFeeHandler, CurrencyIdMapping, XcmOperationType};
 pub use calls::*;
-use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
@@ -69,13 +70,6 @@ pub mod pallet {
 	use super::*;
 	use crate::traits::*;
 
-	// DEPRECATED
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-	pub enum XcmInterfaceOperation {
-		UmpContributeTransact,
-		StatemineTransfer,
-	}
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -108,6 +102,13 @@ pub mod pallet {
 			BalanceOf<Self>,
 		>;
 
+		/// Convert MultiLocation to `T::CurrencyId`.
+		type CurrencyIdConvert: CurrencyIdMapping<
+			CurrencyIdOf<Self>,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
+
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
 
@@ -115,7 +116,7 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		#[pallet::constant]
-		type CallBackTimeOut: Get<Self::BlockNumber>;
+		type CallBackTimeOut: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::error]
@@ -124,6 +125,7 @@ pub mod pallet {
 		XcmExecutionFailed,
 		XcmSendFailed,
 		OperationWeightAndFeeNotExist,
+		FailToConvert,
 	}
 
 	#[pallet::event]
@@ -137,12 +139,6 @@ pub mod pallet {
 	/// XcmWeightAndFee from SLP module).
 	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-
-	// DEPRECATED: This storage is deprecated, we use XcmWeightAndFee instead.
-	#[pallet::storage]
-	#[pallet::getter(fn xcm_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
 
 	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
@@ -171,7 +167,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -217,10 +213,26 @@ pub mod pallet {
 				Some(account) => account,
 				None => who.clone(),
 			};
-			let origin_location = T::AccountIdToMultiLocation::convert(who.clone());
-			let dst_location = T::AccountIdToMultiLocation::convert(dest.clone());
+
 			let amount_u128 =
 				TryInto::<u128>::try_into(amount).map_err(|_| Error::<T>::FeeConvertFailed)?;
+
+			// get currency_id from asset_id
+			let asset_location = MultiLocation::new(
+				1,
+				X3(
+					Parachain(parachains::Statemine::ID),
+					PalletInstance(parachains::Statemine::PALLET_ID),
+					GeneralIndex(asset_id.into()),
+				),
+			);
+			let currency_id = T::CurrencyIdConvert::get_currency_id(asset_location)
+				.ok_or(Error::<T>::FailToConvert)?;
+
+			// first, we need to withdraw the statemine asset from the user's account
+			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+
+			let dst_location = T::AccountIdToMultiLocation::convert(dest.clone());
 
 			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
 				T::RelaychainCurrencyId::get(),
@@ -234,9 +246,8 @@ pub mod pallet {
 			let mut assets = MultiAssets::new();
 			let statemine_asset = MultiAsset {
 				id: Concrete(MultiLocation::new(
-					1,
-					X3(
-						Parachain(parachains::Statemine::ID),
+					0,
+					X2(
 						PalletInstance(parachains::Statemine::PALLET_ID),
 						GeneralIndex(asset_id.into()),
 					),
@@ -247,28 +258,22 @@ pub mod pallet {
 				id: Concrete(MultiLocation::new(1, Junctions::Here)),
 				fun: Fungible(xcm_fee_u128),
 			};
-			assets.push(statemine_asset);
+			assets.push(statemine_asset.clone());
 			assets.push(fee_asset.clone());
 			let msg = Xcm(vec![
 				WithdrawAsset(assets),
-				InitiateReserveWithdraw {
-					assets: All.into(),
-					reserve: MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
-					xcm: Xcm(vec![
-						BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-						DepositAsset { assets: AllCounted(2).into(), beneficiary: dst_location },
-					]),
+				BuyExecution {
+					fees: fee_asset,
+					weight_limit: cumulus_primitives_core::Limited(dest_weight),
 				},
+				DepositAsset { assets: AllCounted(2).into(), beneficiary: dst_location },
 			]);
-			let hash = msg.using_encoded(sp_io::hashing::blake2_256);
-			<T as pallet_xcm::Config>::XcmExecutor::execute_xcm_in_credit(
-				origin_location,
+
+			pallet_xcm::Pallet::<T>::send_xcm(
+				Here,
+				MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
 				msg,
-				hash,
-				dest_weight,
-				dest_weight,
 			)
-			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
 
 			Self::deposit_event(Event::<T>::TransferredStatemineMultiAsset(dest, amount));

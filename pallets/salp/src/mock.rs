@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,32 +21,32 @@
 #![cfg(test)]
 
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
+	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
+};
+use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
-	sp_std::marker::PhantomData,
-	traits::{ConstU128, EnsureOrigin, Everything, GenesisBuild, Get, Nothing},
+	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, Nothing},
 	weights::Weight,
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
-use node_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
-	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
-};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_arithmetic::Percent;
 use sp_core::{ConstU32, H256};
 pub use sp_runtime::Perbill;
 use sp_runtime::{
-	generic,
 	traits::{BlakeTwo256, Convert, IdentityLookup, UniqueSaturatedInto},
+	BuildStorage,
 };
+use sp_std::marker::PhantomData;
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
-use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -56,31 +56,25 @@ use crate as salp;
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
 pub(crate) type BlockNumber = u32;
-pub(crate) type Index = u32;
 pub(crate) type Signature = sp_runtime::MultiSignature;
-pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
-		Salp: salp::{Pallet, Call, Storage, Event<T>},
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call,Config<T>, Event<T>, Storage},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
-		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
-		StablePool: bifrost_stable_pool::{Pallet, Call, Storage},
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
-		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Sudo: pallet_sudo,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Tokens: orml_tokens,
+		XTokens: orml_xtokens,
+		Multisig: pallet_multisig,
+		Salp: salp,
+		ZenlinkProtocol: zenlink_protocol,
+		AssetRegistry: bifrost_asset_registry,
+		PolkadotXcm: pallet_xcm,
+		StableAsset: nutsfinance_stable_asset,
+		StablePool: bifrost_stable_pool,
+		VtokenMinting: bifrost_vtoken_minting,
+		XcmInterface: bifrost_xcm_interface,
 	}
 );
 
@@ -100,15 +94,14 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = Index;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -142,7 +135,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -167,6 +160,7 @@ impl pallet_multisig::Config for Test {
 impl pallet_sudo::Config for Test {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
 }
 
 orml_traits::parameter_type_with_key! {
@@ -516,6 +510,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -547,6 +542,8 @@ impl pallet_xcm::Config for Test {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct BifrostAccountIdToMultiLocation;
@@ -556,7 +553,7 @@ impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	}
 }
 
-impl xcm_interface::Config for Test {
+impl bifrost_xcm_interface::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type MultiCurrency = Currencies;
@@ -567,7 +564,8 @@ impl xcm_interface::Config for Test {
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 	type SalpHelper = Salp;
 	type ParachainId = ParaInfo;
-	type CallBackTimeOut = ConstU32<10>;
+	type CallBackTimeOut = ConstU64<10>;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
 }
 
 pub struct ParaInfo;
@@ -578,7 +576,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	pub const DOLLARS: Balance = 1_000_000_000_000;
 
 	let currency = vec![

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,9 +20,9 @@
 
 use super::*;
 use crate::Pallet as AssetRegistry;
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::{benchmarks, v1::BenchmarkError};
-use frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
-use primitives::{CurrencyId, TokenSymbol};
+use frame_support::{assert_ok, traits::UnfilteredDispatchable};
 use sp_runtime::traits::UniqueSaturatedFrom;
 use xcm::v3::prelude::*;
 

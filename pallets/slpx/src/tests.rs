@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,11 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, sp_io};
+use bifrost_primitives::TokenSymbol;
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use hex_literal::hex;
-use node_primitives::TokenSymbol;
 use sp_core::{bounded::BoundedVec, ConstU32};
+use sp_io;
 use zenlink_protocol::AssetId;
 
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
@@ -102,25 +103,41 @@ fn test_whitelist_work() {
 #[test]
 fn test_execution_fee_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Currencies::deposit(CurrencyId::Token2(0), &ALICE, 50));
+		assert_ok!(Currencies::deposit(CurrencyId::Token2(0), &ALICE, 50 * 1_000_000_000));
 
-		assert_ok!(Slpx::set_execution_fee(RuntimeOrigin::root(), CurrencyId::Token2(0), 10));
-		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10));
+		assert_ok!(Slpx::set_execution_fee(
+			RuntimeOrigin::root(),
+			CurrencyId::Token2(0),
+			10 * 1_000_000_000
+		));
+		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10 * 1_000_000_000));
 
 		let balance_exclude_fee =
 			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
-		assert_eq!(balance_exclude_fee, 40);
+		assert_eq!(balance_exclude_fee, 40 * 1_000_000_000);
 
-		assert_ok!(Slpx::set_transfer_to_fee(RuntimeOrigin::root(), SupportChain::Moonbeam, 10));
-		assert_eq!(Slpx::transfer_to_fee(SupportChain::Moonbeam), Some(10));
+		assert_ok!(Slpx::set_transfer_to_fee(
+			RuntimeOrigin::root(),
+			SupportChain::Moonbeam,
+			10 * 1_000_000_000
+		));
+		assert_eq!(Slpx::transfer_to_fee(SupportChain::Moonbeam), Some(10 * 1_000_000_000));
 	});
 }
 
 #[test]
 fn test_zenlink() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::BNC), &ALICE, 50));
-		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 50));
+		assert_ok!(Currencies::deposit(
+			CurrencyId::Native(TokenSymbol::BNC),
+			&ALICE,
+			50 * 1_000_000_000
+		));
+		assert_ok!(Currencies::deposit(
+			CurrencyId::Token(TokenSymbol::KSM),
+			&ALICE,
+			50 * 1_000_000_000
+		));
 
 		let bnc_token: AssetId =
 			AssetId::try_convert_from(CurrencyId::Native(TokenSymbol::BNC), 2001).unwrap();
@@ -132,14 +149,20 @@ fn test_zenlink() {
 			RawOrigin::Signed(ALICE).into(),
 			bnc_token,
 			ksm_token,
-			20u128,
-			20u128,
+			20u128 * 1_000_000_000,
+			20u128 * 1_000_000_000,
 			0,
 			0,
 			100
 		));
-		assert_eq!(Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE), 30u128);
-		assert_eq!(Currencies::free_balance(CurrencyId::Token(TokenSymbol::KSM), &ALICE), 30u128);
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE),
+			30u128 * 1_000_000_000
+		);
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Token(TokenSymbol::KSM), &ALICE),
+			30u128 * 1_000_000_000
+		);
 
 		let path = vec![bnc_token, ksm_token];
 		let balance = Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE);
@@ -169,5 +192,43 @@ fn test_get_default_fee() {
 			Slpx::get_default_fee(CurrencyId::VToken(TokenSymbol::MOVR)),
 			10_000_000_000_000_000u128
 		);
+	});
+}
+
+#[test]
+fn test_ed() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Currencies::deposit(
+			CurrencyId::Native(TokenSymbol::BNC),
+			&ALICE,
+			50 * 1_000_000_000
+		));
+		assert_ok!(Currencies::deposit(
+			CurrencyId::Token(TokenSymbol::KSM),
+			&ALICE,
+			50 * 1_000_000_000
+		));
+
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE),
+			50 * 1_000_000_000
+		);
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Token(TokenSymbol::KSM), &ALICE),
+			50 * 1_000_000_000
+		);
+
+		assert_ok!(Currencies::transfer(
+			RawOrigin::Signed(ALICE).into(),
+			BOB,
+			CurrencyId::Native(TokenSymbol::BNC),
+			50 * 1_000_000_000
+		));
+		assert_ok!(Currencies::transfer(
+			RawOrigin::Signed(ALICE).into(),
+			BOB,
+			CurrencyId::Token(TokenSymbol::KSM),
+			50 * 1_000_000_000
+		));
 	});
 }

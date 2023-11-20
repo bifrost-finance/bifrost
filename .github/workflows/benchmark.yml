@@ -19,14 +19,14 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-11-15
+          toolchain: nightly-2023-05-22
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
       - name: Generate WeightInfo Files
         run: make generate-bifrost-weights
       - name: Commit Automatically
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 🤖 ($WEIGHT) Generate weightInfo files automatically
           file_pattern: runtime/**/*.rs

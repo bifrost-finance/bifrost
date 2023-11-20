@@ -25,9 +25,10 @@
 use core::cmp::max;
 
 pub use crate::rate_model::*;
-
+use bifrost_primitives::{
+	Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp,
+};
 use frame_support::{
-	log,
 	pallet_prelude::*,
 	require_transactional,
 	traits::{
@@ -38,7 +39,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp};
 use num_traits::cast::ToPrimitive;
 pub use pallet::*;
 use pallet_traits::{
@@ -54,6 +54,7 @@ use sp_runtime::{
 };
 use sp_std::{result::Result, vec::Vec};
 
+use log;
 use sp_io::hashing::blake2_256;
 pub use types::{BorrowSnapshot, Deposits, EarnedSnapshot, Market, MarketState, RewardMarketState};
 pub use weights::WeightInfo;
@@ -397,7 +398,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AssetIdOf<T>,
-		RewardMarketState<T::BlockNumber, BalanceOf<T>>,
+		RewardMarketState<BlockNumberFor<T>, BalanceOf<T>>,
 		ValueQuery,
 	>;
 
@@ -408,7 +409,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AssetIdOf<T>,
-		RewardMarketState<T::BlockNumber, BalanceOf<T>>,
+		RewardMarketState<BlockNumberFor<T>, BalanceOf<T>>,
 		ValueQuery,
 	>;
 
@@ -447,14 +448,14 @@ pub mod pallet {
 
 	/// DefaultVersion is using for initialize the StorageVersion
 	#[pallet::type_value]
-	pub(super) fn DefaultVersion<T: Config>() -> Versions {
+	pub(super) fn DefaultVersion() -> Versions {
 		Versions::V0
 	}
 
 	/// Storage version of the pallet.
 	#[pallet::storage]
 	pub(crate) type StorageVersion<T: Config> =
-		StorageValue<_, Versions, ValueQuery, DefaultVersion<T>>;
+		StorageValue<_, Versions, ValueQuery, DefaultVersion>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]

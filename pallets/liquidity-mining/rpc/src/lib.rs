@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
+use bifrost_primitives::{Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;

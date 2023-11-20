@@ -15,7 +15,7 @@ use sp_std::{
 use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result, Weight};
 use xcm_builder::TakeRevenue;
 use xcm_executor::{
-	traits::{Convert as MoreConvert, DropAssets, MatchesFungible, TransactAsset},
+	traits::{ConvertLocation, DropAssets, MatchesFungible, TransactAsset},
 	Assets,
 };
 
@@ -132,7 +132,7 @@ impl<
 		UnknownAsset: UnknownAssetT,
 		Match: MatchesFungible<MultiCurrency::Balance>,
 		AccountId: sp_std::fmt::Debug + Clone,
-		AccountIdConvert: MoreConvert<MultiLocation, AccountId>,
+		AccountIdConvert: ConvertLocation<AccountId>,
 		CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
 		CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
 		DepositFailureHandler: OnDepositFail<CurrencyId, AccountId, MultiCurrency::Balance>,
@@ -154,17 +154,17 @@ impl<
 		_context: &XcmContext,
 	) -> Result {
 		match (
-			AccountIdConvert::convert_ref(location),
+			AccountIdConvert::convert_location(location),
 			CurrencyIdConvert::convert(asset.clone()),
 			Match::matches_fungible(asset),
 		) {
 			// known asset
-			(Ok(who), Some(currency_id), Some(amount)) =>
+			(Some(who), Some(currency_id), Some(amount)) =>
 				MultiCurrency::deposit(currency_id, &who, amount).or_else(|err| {
 					DepositFailureHandler::on_deposit_currency_fail(err, currency_id, &who, amount)
 				}),
 			// bad beneficiary
-			(Err(_), Some(currency_id), Some(amount)) =>
+			(None, Some(currency_id), Some(amount)) =>
 				DepositFailureHandler::on_account_id_convert_fail(currency_id, amount),
 			// unknown asset
 			_ => UnknownAsset::deposit(asset, location).or_else(|err| {
@@ -179,8 +179,8 @@ impl<
 		_maybe_context: Option<&XcmContext>,
 	) -> result::Result<Assets, XcmError> {
 		UnknownAsset::withdraw(asset, location).or_else(|_| {
-			let who = AccountIdConvert::convert_ref(location)
-				.map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
+			let who = AccountIdConvert::convert_location(location)
+				.ok_or(XcmError::from(Error::AccountIdConversionFailed))?;
 			let currency_id = CurrencyIdConvert::convert(asset.clone())
 				.ok_or_else(|| XcmError::from(Error::CurrencyIdConversionFailed))?;
 			let amount: MultiCurrency::Balance = Match::matches_fungible(asset)
@@ -199,10 +199,10 @@ impl<
 		to: &MultiLocation,
 		_context: &XcmContext,
 	) -> result::Result<Assets, XcmError> {
-		let from_account = AccountIdConvert::convert_ref(from)
-			.map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
-		let to_account = AccountIdConvert::convert_ref(to)
-			.map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
+		let from_account = AccountIdConvert::convert_location(from)
+			.ok_or(XcmError::from(Error::AccountIdConversionFailed))?;
+		let to_account = AccountIdConvert::convert_location(to)
+			.ok_or(XcmError::from(Error::AccountIdConversionFailed))?;
 		let currency_id = CurrencyIdConvert::convert(asset.clone())
 			.ok_or_else(|| XcmError::from(Error::CurrencyIdConversionFailed))?;
 		let amount: MultiCurrency::Balance = Match::matches_fungible(asset)

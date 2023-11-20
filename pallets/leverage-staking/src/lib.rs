@@ -28,6 +28,7 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 
+use bifrost_primitives::{CurrencyIdConversion, Rate, VtokenMintingInterface};
 pub use codec::{Decode, Encode};
 use frame_support::{
 	pallet_prelude::*,
@@ -38,7 +39,6 @@ use frame_support::{
 	BoundedVec,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use node_primitives::{CurrencyIdConversion, Rate, VtokenMintingInterface};
 pub use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,

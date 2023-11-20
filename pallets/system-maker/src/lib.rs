@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,9 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -37,7 +40,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
-use orml_traits::{LockIdentifier, MultiLockableCurrency};
-
 use crate::{mock::*, *};
+use frame_support::{assert_noop, assert_ok};
+use orml_traits::{LockIdentifier, MultiLockableCurrency};
+use sp_runtime::DispatchError;
 
 #[test]
 fn create_sell_order_should_work() {

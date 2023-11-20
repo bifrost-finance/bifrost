@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,12 +30,12 @@ pub mod weights;
 pub use weights::*;
 pub mod traits;
 
-use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
-use frame_system::pallet_prelude::*;
-use node_primitives::{
+use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, TimeUnit,
 	VtokenMintingOperator,
 };
+use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
+use frame_system::pallet_prelude::*;
 pub use nutsfinance_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
@@ -88,7 +88,7 @@ pub mod pallet {
 			AccountId = AccountIdOf<Self>,
 			AtLeast64BitUnsigned = Self::AtLeast64BitUnsigned,
 			Config = Self,
-			BlockNumber = Self::BlockNumber,
+			BlockNumber = BlockNumberFor<Self>,
 		>;
 
 		type VtokenMinting: VtokenMintingOperator<
@@ -224,7 +224,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pool_id: StableAssetPoolId,
 			a: T::AtLeast64BitUnsigned,
-			future_a_block: T::BlockNumber,
+			future_a_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			T::StableAsset::modify_a(pool_id, a, future_a_block)
@@ -240,6 +240,13 @@ pub mod pallet {
 			redeem_fee: Option<T::AtLeast64BitUnsigned>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
+			ensure!(
+				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
+				nutsfinance_stable_asset::Error::<T>::ArgumentsError
+			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
@@ -614,14 +621,6 @@ impl<T: Config> Pallet<T> {
 		}
 		T::MultiCurrency::transfer(pool_info.assets[i_usize], &pool_info.account_id, who, dy)?;
 		T::MultiCurrency::withdraw(pool_info.pool_asset, who, redeem_amount)?;
-		let mut amounts: Vec<T::Balance> = Vec::new();
-		for idx in 0..pool_size {
-			if idx == i_usize {
-				amounts.push(dy);
-			} else {
-				amounts.push(Zero::zero());
-			}
-		}
 
 		pool_info.total_supply = total_supply;
 		pool_info.balances = balances;

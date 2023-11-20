@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,26 +19,22 @@
 //! The Bifrost Node runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit = "256"]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
+#![recursion_limit = "512"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod migration;
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
-use frame_support::pallet_prelude::StorageVersion;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
-	construct_runtime,
-	inherent::Vec,
-	match_types, parameter_types,
+	construct_runtime, match_types, parameter_types,
 	traits::{
-		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
-		Imbalance, InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing,
+		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly,
+		Everything, Imbalance, InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing,
 		OnUnbalanced, Randomness,
 	},
 	weights::{
@@ -47,7 +43,7 @@ pub use frame_support::{
 		},
 		ConstantMultiplier, IdentityFee, Weight,
 	},
-	PalletId, RuntimeDebug, StorageValue,
+	PalletId, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
@@ -56,13 +52,11 @@ pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
 use sp_core::{OpaqueMetadata, U256};
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -73,6 +67,16 @@ use sp_version::RuntimeVersion;
 pub mod constants;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+pub use bifrost_primitives::{
+	traits::{
+		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		XcmDestWeightAndFeeHandler,
+	},
+	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
+	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
+	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
+	GLMR_TOKEN_ID,
+};
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
@@ -88,26 +92,15 @@ use frame_support::{
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{Currency, EitherOfDiverse, Get},
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
-pub use node_primitives::{
-	traits::{
-		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
-		XcmDestWeightAndFeeHandler,
-	},
-	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
-	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
-	GLMR_TOKEN_ID,
-};
 // zenlink imports
-use bifrost_salp::remove_storage::RemoveUnusedQueryIdContributionInfo;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	PairLpGenerate, ZenlinkMultiAssets,
 };
 // xcm config
-mod xcm_config;
+pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use static_assertions::const_assert;
@@ -115,10 +108,16 @@ use xcm::v3::prelude::*;
 use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
 };
-use xcm_executor::XcmExecutor;
+use xcm_executor::{
+	traits::{Properties, QueryHandler},
+	XcmExecutor,
+};
 
 pub mod governance;
-use governance::{custom_origins, CoreAdmin, TechAdmin};
+use governance::{
+	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
+	TechAdminOrCouncil, ValidatorElection,
+};
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -132,7 +131,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 982,
+	spec_version: 986,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -156,6 +155,14 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
 	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
+/// into the relay chain.
+const UNINCLUDED_SEGMENT_CAPACITY: u32 = 1;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the
+/// number of blocks authored per slot.
+const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
@@ -322,7 +329,7 @@ impl frame_system::Config for Runtime {
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = RuntimeBlockLength;
 	/// The index type for blocks.
-	type BlockNumber = BlockNumber;
+	type Nonce = Nonce;
 	type BlockWeights = RuntimeBlockWeights;
 	/// The aggregated dispatch type that is available for extrinsics.
 	type RuntimeCall = RuntimeCall;
@@ -333,10 +340,7 @@ impl frame_system::Config for Runtime {
 	type Hash = Hash;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
-	/// The header type.
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
+	type Block = Block;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = Indices;
 	type OnKilledAccount = ();
@@ -437,8 +441,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Treasury(..) |
 				RuntimeCall::Bounties(..) |
 				RuntimeCall::Tips(..) |
-				RuntimeCall::Vesting(pallet_vesting::Call::vest{..}) |
-				RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..}) |
+				RuntimeCall::Vesting(bifrost_vesting::Call::vest{..}) |
+				RuntimeCall::Vesting(bifrost_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
 				RuntimeCall::Utility(..) |
 				RuntimeCall::Proxy(..) |
@@ -605,11 +609,11 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+	type RuntimeHoldReason = ();
 }
 
 parameter_types! {
@@ -685,7 +689,7 @@ parameter_types! {
 	pub const VotingBondFactor: Balance = deposit(0, 32);
 	/// Daily council elections
 	pub const TermDuration: BlockNumber = 7 * DAYS;
-	pub const DesiredMembers: u32 = 13;
+	pub const DesiredMembers: u32 = 3;
 	pub const DesiredRunnersUp: u32 = 20;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
 	pub const MaxVoters: u32 = 512;
@@ -700,7 +704,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type CandidacyBond = CandidacyBond;
 	type ChangeMembers = Council;
 	type Currency = Balances;
-	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+	type CurrencyToVote = sp_staking::currency_to_vote::U128CurrencyToVote;
 	type DesiredMembers = DesiredMembers;
 	type DesiredRunnersUp = DesiredRunnersUp;
 	type RuntimeEvent = RuntimeEvent;
@@ -792,6 +796,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -801,7 +806,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = NeverEnsureOrigin<Balance>;
+	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -880,6 +885,12 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
+		Runtime,
+		RELAY_CHAIN_SLOT_DURATION_MILLIS,
+		BLOCK_PROCESSING_VELOCITY,
+		UNINCLUDED_SEGMENT_CAPACITY,
+	>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -914,11 +925,11 @@ impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
+	type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;
 }
@@ -930,23 +941,23 @@ impl pallet_collator_selection::Config for Runtime {
 	type KickThreshold = Period;
 	type MaxCandidates = MaxCandidates;
 	type MaxInvulnerables = MaxInvulnerables;
-	type MinCandidates = MinCandidates;
 	type PotId = PotId;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
+	type MinEligibleCollators = ConstU32<5>;
 }
 
 // culumus runtime end
 
-impl pallet_vesting::Config for Runtime {
+impl bifrost_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
 }
 
 // Bifrost modules start
@@ -959,7 +970,7 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::SalpContribute,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::XcmInterface(xcm_interface::Call::transfer_statemine_assets {
+			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_statemine_assets {
 				..
 			}) => ExtraFeeInfo {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
@@ -997,7 +1008,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = weights::bifrost_flexible_fee::BifrostWeight<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
 }
 
@@ -1115,10 +1126,7 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = weights::bifrost_salp::BifrostWeight<Runtime>;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<
-		TechAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type EnsureConfirmAsGovernance = EitherOfDiverse<TechAdminOrCouncil, SALPAdmin>;
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
@@ -1132,10 +1140,7 @@ impl bifrost_salp::Config for Runtime {
 
 impl bifrost_call_switchgear::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = EitherOfDiverse<
-		CoreAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type UpdateOrigin = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_call_switchgear::BifrostWeight<Runtime>;
 }
 
@@ -1199,10 +1204,7 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<
-		TechAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, ValidatorElection>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = Slpx;
@@ -1227,10 +1229,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = EitherOfDiverse<
-		CoreAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = CoreAdminOrCouncil;
 	type VsbondAccount = BifrostVsbondPalletId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = weights::bifrost_vstoken_conversion::BifrostWeight<Runtime>;
@@ -1243,10 +1242,7 @@ parameter_types! {
 impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<
-		TechAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
@@ -1266,10 +1262,7 @@ parameter_types! {
 impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<
-		CoreAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type EnsureConfirmAsGovernance = EitherOfDiverse<CoreAdminOrCouncil, SystemStakingAdmin>;
 	type WeightInfo = weights::bifrost_system_staking::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1297,7 +1290,7 @@ impl bifrost_system_maker::Config for Runtime {
 impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_fee_share::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
 }
@@ -1305,7 +1298,7 @@ impl bifrost_fee_share::Config for Runtime {
 impl bifrost_cross_in_out::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type EntrancePalletId = SlpEntrancePalletId;
 	type WeightInfo = weights::bifrost_cross_in_out::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
@@ -1313,7 +1306,7 @@ impl bifrost_cross_in_out::Config for Runtime {
 
 impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1354,7 +1347,7 @@ impl nutsfinance_stable_asset::Config for Runtime {
 
 impl bifrost_stable_pool::Config for Runtime {
 	type WeightInfo = weights::bifrost_stable_pool::BifrostWeight<Runtime>;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type StableAsset = StableAsset;
@@ -1365,6 +1358,7 @@ impl bifrost_stable_pool::Config for Runtime {
 
 parameter_types! {
 	pub const QueryTimeout: BlockNumber = 100;
+	pub const ReferendumCheckInterval: BlockNumber = 300;
 }
 
 pub struct DerivativeAccountTokenFilter;
@@ -1388,6 +1382,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type ParachainId = SelfParaChainId;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
+	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;
 }
 
@@ -1454,10 +1449,7 @@ parameter_types! {
 impl bifrost_vtoken_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<
-		TechAdmin,
-		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>,
-	>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
 	type EntranceAccount = SlpEntrancePalletId;
@@ -1519,6 +1511,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type MaxHasDispatchedSize = MaxHasDispatchedSize;
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
 	type Members = OracleMembership;
+	type MaxFeedValues = ConstU32<100>;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
@@ -1540,7 +1533,7 @@ impl DataProviderExtended<CurrencyId, TimeStampedPrice> for AggregatedDataProvid
 }
 
 impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for AggregatedDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: TimeStampedPrice) -> DispatchResult {
+	fn feed_value(_: Option<AccountId>, _: CurrencyId, _: TimeStampedPrice) -> DispatchResult {
 		Err("Not supported".into())
 	}
 }
@@ -1681,96 +1674,92 @@ where
 // zenlink runtime end
 
 construct_runtime! {
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
+	pub enum Runtime {
 		// Basic stuff
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
-		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
+		System: frame_system = 0,
+		Timestamp: pallet_timestamp = 1,
+		Indices: pallet_indices = 2,
+		ParachainSystem: cumulus_pallet_parachain_system = 5,
+		ParachainInfo: parachain_info = 6,
 
 		// Monetary stuff
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		Balances: pallet_balances = 10,
+		TransactionPayment: pallet_transaction_payment = 11,
 
 		// Collator support. the order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Authorship: pallet_authorship = 20,
+		CollatorSelection: pallet_collator_selection = 21,
+		Session: pallet_session = 22,
+		Aura: pallet_aura = 23,
+		AuraExt: cumulus_pallet_aura_ext = 24,
 
 		// Governance stuff
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
-		PhragmenElection: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
-		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
-		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
-		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 36,
-		Referenda: pallet_referenda::{Pallet, Call, Storage, Event<T>} = 37,
-		Origins: custom_origins::{Origin} = 38,
-		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 39,
+		Democracy: pallet_democracy = 30,
+		Council: pallet_collective::<Instance1> = 31,
+		TechnicalCommittee: pallet_collective::<Instance2> = 32,
+		PhragmenElection: pallet_elections_phragmen = 33,
+		CouncilMembership: pallet_membership::<Instance1> = 34,
+		TechnicalMembership: pallet_membership::<Instance2> = 35,
+		ConvictionVoting: pallet_conviction_voting = 36,
+		Referenda: pallet_referenda = 37,
+		Origins: custom_origins = 38,
+		Whitelist: pallet_whitelist = 39,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config} = 41,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
+		XcmpQueue: cumulus_pallet_xcmp_queue = 40,
+		PolkadotXcm: pallet_xcm = 41,
+		CumulusXcm: cumulus_pallet_xcm = 42,
+		DmpQueue: cumulus_pallet_dmp_queue = 43,
 
 		// utilities
-		Utility: pallet_utility::{Pallet, Call, Event} = 50,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
-		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 52,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 54,
+		Utility: pallet_utility = 50,
+		Scheduler: pallet_scheduler = 51,
+		Proxy: pallet_proxy = 52,
+		Multisig: pallet_multisig = 53,
+		Identity: pallet_identity = 54,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
-		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
+		Vesting: bifrost_vesting = 60,
 
 		// Treasury stuff
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 61,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
-		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 64,
+		Treasury: pallet_treasury = 61,
+		Bounties: pallet_bounties = 62,
+		Tips: pallet_tips = 63,
+		Preimage: pallet_preimage = 64,
 
 		// Third party modules
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
-		Currencies: bifrost_currencies::{Pallet, Call} = 72,
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
-		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
-		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
+		XTokens: orml_xtokens = 70,
+		Tokens: orml_tokens = 71,
+		Currencies: bifrost_currencies = 72,
+		UnknownTokens: orml_unknown_tokens = 73,
+		OrmlXcm: orml_xcm = 74,
+		ZenlinkProtocol: zenlink_protocol = 80,
+		MerkleDistributor: merkle_distributor = 81,
 
 		// Bifrost modules
-		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
-		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>} = 114,
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
-		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
-		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
-		TokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
-		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>} = 119,
-		SystemStaking: bifrost_system_staking::{Pallet, Call, Storage, Event<T>} = 120,
-		SystemMaker: bifrost_system_maker::{Pallet, Call, Storage, Event<T>} = 121,
-		FeeShare: bifrost_fee_share::{Pallet, Call, Storage, Event<T>} = 122,
-		CrossInOut: bifrost_cross_in_out::{Pallet, Call, Storage, Event<T>} = 123,
-		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 124,
-		Slpx: bifrost_slpx::{Pallet, Call, Storage, Event<T>} = 125,
-		FellowshipCollective: pallet_ranked_collective::<Instance1>::{Pallet, Call, Storage, Event<T>} = 126,
-		FellowshipReferenda: pallet_referenda::<Instance2>::{Pallet, Call, Storage, Event<T>} = 127,
+		FlexibleFee: bifrost_flexible_fee = 100,
+		Salp: bifrost_salp = 105,
+		CallSwitchgear: bifrost_call_switchgear = 112,
+		AssetRegistry: bifrost_asset_registry = 114,
+		VtokenMinting: bifrost_vtoken_minting = 115,
+		Slp: bifrost_slp = 116,
+		XcmInterface: bifrost_xcm_interface = 117,
+		TokenConversion: bifrost_vstoken_conversion = 118,
+		Farming: bifrost_farming = 119,
+		SystemStaking: bifrost_system_staking = 120,
+		SystemMaker: bifrost_system_maker = 121,
+		FeeShare: bifrost_fee_share = 122,
+		CrossInOut: bifrost_cross_in_out = 123,
+		VeMinting: bifrost_ve_minting = 124,
+		Slpx: bifrost_slpx = 125,
+		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
+		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
 		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
-		StablePool: bifrost_stable_pool::{Pallet, Call, Storage} = 129,
-		VtokenVoting: bifrost_vtoken_voting::{Pallet, Call, Storage, Event<T>} = 130,
-		LendMarket: lend_market::{Pallet, Call, Storage, Event<T>} = 131,
-		Prices: pallet_prices::{Pallet, Call, Storage, Event<T>} = 132,
-		Oracle: orml_oracle::<Instance1>::{Pallet, Storage, Call, Event<T>} = 133,
+		StablePool: bifrost_stable_pool = 129,
+		VtokenVoting: bifrost_vtoken_voting = 130,
+		LendMarket: lend_market = 131,
+		Prices: pallet_prices = 132,
+		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
 	}
 }
@@ -1812,8 +1801,16 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
-parameter_types! {
-	pub const XcmActionStr: &'static str = "XcmAction";
+/// All migrations that will run on the next runtime upgrade.
+///
+/// This contains the combined migrations of the last 10 releases. It allows to skip runtime
+/// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
+pub type Migrations = migrations::Unreleased;
+
+/// The runtime migrations per release.
+pub mod migrations {
+	/// Unreleased migrations. Add new ones here:
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -1823,7 +1820,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(RemoveUnusedQueryIdContributionInfo<Runtime>, migration::XcmInterfaceMigration),
+	Migrations,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -2052,19 +2049,19 @@ impl_runtime_apis! {
 	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
 		fn balance_of(
 			who: AccountId,
-			t: Option<node_primitives::BlockNumber>,
+			t: Option<bifrost_primitives::BlockNumber>,
 		) -> Balance{
 			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
 		}
 
 		fn total_supply(
-			t: node_primitives::BlockNumber,
+			t: bifrost_primitives::BlockNumber,
 		) -> Balance{
 			VeMinting::total_supply(t).unwrap_or(Zero::zero())
 		}
 
 		fn find_block_epoch(
-			block: node_primitives::BlockNumber,
+			block: bifrost_primitives::BlockNumber,
 			max_epoch: U256,
 		) -> U256{
 			VeMinting::find_block_epoch(block, max_epoch)
@@ -2122,7 +2119,8 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+			use frame_support::traits::TrackedStorageKey;
 
 			impl frame_system_benchmarking::Config for Runtime {}
 
@@ -2159,31 +2157,7 @@ impl_runtime_apis! {
 	}
 }
 
-struct CheckInherents;
-
-impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
-	fn check_inherents(
-		block: &Block,
-		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
-	) -> sp_inherents::CheckInherentsResult {
-		let relay_chain_slot = relay_state_proof
-			.read_slot()
-			.expect("Could not read the relay chain slot from the proof");
-
-		let inherent_data =
-			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-				relay_chain_slot,
-				sp_std::time::Duration::from_secs(6),
-			)
-			.create_inherent_data()
-			.expect("Could not create the timestamp inherent data");
-
-		inherent_data.check_extrinsics(&block)
-	}
-}
-
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
-	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
-	CheckInherents = CheckInherents,
+	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>
 }

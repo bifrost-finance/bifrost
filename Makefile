@@ -35,23 +35,23 @@ test-all: integration-test test-runtimes test-benchmarks
 
 .PHONY: test-runtimes
 test-runtimes:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
+	cargo test --features "with-all-runtime" --lib
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*-integration-tests" --exclude "node-*" --exclude "*-runtime"
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "node-*" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
-	SKIP_WASM_BUILD= cargo test  -p *-integration-tests
+	cargo test  -p *-integration-tests
 
 .PHONY: kusama-integration-test # integration test
 kusama-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-kusama-integration-tests
+	cargo test -p bifrost-kusama-integration-tests
 
 .PHONY: polkadot-integration-test # integration test
 polkadot-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-polkadot-integration-tests
+	cargo test -p bifrost-polkadot-integration-tests
 
 .PHONY: clean # cargo clean
 clean:
@@ -68,7 +68,7 @@ format:
 
 .PHONY: clippy # cargo clippy
 clippy:
-	cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
+	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:

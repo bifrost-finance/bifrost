@@ -17,7 +17,7 @@
 
 use crate as stable_asset;
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	parameter_types,
 	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, Nothing, OnUnbalanced},
 	PalletId,
@@ -25,25 +25,18 @@ use frame_support::{
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
+use sp_runtime::{BuildStorage, DispatchError};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		StableAsset: stable_asset::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Tokens: orml_tokens,
+		Currencies: bifrost_currencies,
+		StableAsset: stable_asset,
 	}
 );
 
@@ -56,13 +49,12 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
@@ -86,7 +78,7 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ();
 	type MaxFreezes = ();
@@ -303,8 +295,8 @@ impl stable_asset::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
+	frame_system::GenesisConfig::<Test>::default()
+		.build_storage()
 		.unwrap()
 		.into()
 }

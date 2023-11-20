@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,8 +21,8 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_primitives::{TimeUnit, VtokenMintingOperator};
 use frame_support::assert_ok;
-use node_primitives::{TimeUnit, VtokenMintingOperator};
 use sp_arithmetic::per_things::Permill;
 
 #[test]
@@ -80,8 +80,8 @@ fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
 		asset_0_currency_id,
 		asset_1_currency_id
 	));
-	let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() +
-		<Runtime as frame_system::Config>::BlockNumber::from(100u32);
+	let deadline: BlockNumberFor<Runtime> =
+		<frame_system::Pallet<Runtime>>::block_number() + BlockNumberFor::<Runtime>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(ALICE),
 		asset_0_currency_id,

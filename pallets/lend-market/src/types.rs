@@ -1,6 +1,6 @@
 use crate::InterestRateModel;
+use bifrost_primitives::{CurrencyId, Rate, Ratio};
 use frame_support::pallet_prelude::*;
-use node_primitives::{CurrencyId, Rate, Ratio};
 use scale_info::TypeInfo;
 
 /// Container for borrow balance information

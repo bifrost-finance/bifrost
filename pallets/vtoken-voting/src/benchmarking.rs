@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 
 use crate::*;
 use assert_matches::assert_matches;
+use bifrost_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{currency::VKSM, XcmOperationType as XcmOperation};
 use pallet_conviction_voting::{Conviction, Vote};
 use sp_runtime::traits::UniqueSaturatedFrom;
 
@@ -83,7 +83,7 @@ mod benchmarks {
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
-			Pallet::<T>::on_initialize(Zero::zero());
+			Pallet::<T>::on_idle(Zero::zero(), Weight::MAX);
 			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
@@ -165,6 +165,12 @@ mod benchmarks {
 			ReferendumInfo::Completed(0u32.into()),
 		)?;
 		Pallet::<T>::set_vote_locking_period(RawOrigin::Root.into(), vtoken, 0u32.into())?;
+
+		let notify_origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let query_id = 0u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		Pallet::<T>::notify_vote(notify_origin, query_id, response)?;
 
 		#[extrinsic_call]
 		_(origin, vtoken, poll_index);

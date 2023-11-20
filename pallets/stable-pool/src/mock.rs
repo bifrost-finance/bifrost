@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,22 +17,23 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate as bifrost_stable_pool;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_runtime_common::milli;
-use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything, GenesisBuild, Nothing},
-	PalletId,
-};
-use frame_system::{EnsureRoot, EnsureSignedBy};
-pub use node_primitives::{
+pub use bifrost_primitives::{
+	currency::{MOVR, VMOVR},
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
 };
+use bifrost_runtime_common::milli;
+use frame_support::{
+	ord_parameter_types, parameter_types,
+	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything, Nothing},
+	PalletId,
+};
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
 };
 use xcm::{
 	prelude::*,
@@ -41,26 +42,21 @@ use xcm::{
 use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
+	pub enum Test {
 		System: frame_system,
 		Tokens: orml_tokens,
-		Currencies: bifrost_currencies::{Pallet, Call},
+		Currencies: bifrost_currencies,
 		Balances: pallet_balances,
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+		XTokens: orml_xtokens,
+		PolkadotXcm: pallet_xcm,
 		AssetRegistry: bifrost_asset_registry,
-		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>},
+		StableAsset: nutsfinance_stable_asset,
 		StablePool: bifrost_stable_pool,
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting,
 	}
 );
 
@@ -71,13 +67,12 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
@@ -174,6 +169,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 parameter_type_with_key! {
@@ -225,7 +221,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -356,6 +352,8 @@ impl pallet_xcm::Config for Test {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureSignedBy<One, u128>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct ExtBuilder {
@@ -368,6 +366,14 @@ impl Default for ExtBuilder {
 	}
 }
 
+pub fn million_unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(18))
+}
+
+pub fn unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(12))
+}
+
 impl ExtBuilder {
 	pub fn balances(mut self, endowed_accounts: Vec<(u128, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
@@ -376,10 +382,11 @@ impl ExtBuilder {
 
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
+			(0, BNC, unit(1000)),
+			(0, MOVR, million_unit(1_000_000)),
+			(0, VMOVR, million_unit(1_000_000)),
 			(1, BNC, 1_000_000_000_000),
-			// (1, VDOT, 100_000_000),
 			(1, DOT, 100_000_000_000_000),
-			// (2, VDOT, 100_000_000_000_000),
 			(3, DOT, 200_000_000),
 			(4, DOT, 100_000_000),
 			(6, BNC, 100_000_000_000_000),
@@ -388,7 +395,7 @@ impl ExtBuilder {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![
@@ -398,8 +405,9 @@ impl ExtBuilder {
 				(DOT, 1_000_000, None),
 				(ASTR, 10_000_000, None),
 				(GLMR, 10_000_000, None),
+				(MOVR, 10_000_000, None),
 			],
-			vcurrency: vec![VDOT],
+			vcurrency: vec![VDOT, VMOVR],
 			vsbond: vec![],
 			phantom: Default::default(),
 		}

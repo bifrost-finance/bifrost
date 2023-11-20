@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,13 +20,12 @@
 
 extern crate alloc;
 
+use bifrost_primitives::CurrencyId;
 use frame_support::{
-	dispatch::{CallMetadata, GetCallMetadata},
 	pallet_prelude::*,
-	traits::{Contains, PalletInfoAccess},
+	traits::{CallMetadata, Contains, GetCallMetadata, PalletInfoAccess},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
 
@@ -100,7 +99,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

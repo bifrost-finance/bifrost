@@ -16,14 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{Pallet, *};
+pub use bifrost_primitives::{
+	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
+	GLMR, KSM, VKSM, *,
+};
 use frame_benchmarking::{account, v2::*};
 use frame_support::assert_ok;
 use frame_system::RawOrigin as SystemOrigin;
 use lend_market::{self, InterestRateModel, JumpModel, Market, MarketState};
-pub use node_primitives::{
-	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
-	GLMR, KSM, VKSM, *,
-};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
 	traits::{StaticLookup, UniqueSaturatedFrom},

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{
+	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -25,20 +29,15 @@ use frame_support::{
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::Get,
-	RuntimeDebug,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::{
-	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
-};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
 use sp_runtime::{
 	traits::{BlakeTwo256, CheckedSub},
-	DispatchError, Saturating,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};
@@ -103,9 +102,9 @@ pub enum TargetChain<AccountId> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::RedeemType;
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::pallet_prelude::{ValueQuery, *};
-	use node_primitives::RedeemType;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -656,16 +655,16 @@ impl<T: Config> Pallet<T> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
 		let execution_fee =
 			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
-		let minimum_balance = T::MultiCurrency::minimum_balance(currency_id);
+
 		T::MultiCurrency::transfer(
 			currency_id,
 			evm_caller_account_id,
 			&T::TreasuryAccount::get(),
 			execution_fee,
 		)?;
-		let balance_exclude_fee = free_balance
-			.checked_sub(&execution_fee.saturating_add(minimum_balance))
-			.ok_or(Error::<T>::FreeBalanceTooLow)?;
+
+		let balance_exclude_fee =
+			free_balance.checked_sub(&execution_fee).ok_or(Error::<T>::FreeBalanceTooLow)?;
 		Ok(balance_exclude_fee)
 	}
 

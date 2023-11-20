@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,16 +18,16 @@
 
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, GenesisConfig, IndicesConfig,
-	OracleMembershipConfig, ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig,
-	SessionConfig, SystemConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, IndicesConfig,
+	OracleMembershipConfig, ParachainInfoConfig, PolkadotXcmConfig, RuntimeGenesisConfig,
+	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TechnicalMembershipConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -40,7 +40,7 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
 /// Specialized `ChainSpec` for the bifrost-polkadot runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -85,10 +85,11 @@ pub fn bifrost_polkadot_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> GenesisConfig {
-	GenesisConfig {
+) -> RuntimeGenesisConfig {
+	RuntimeGenesisConfig {
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
+			_config: Default::default(),
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
@@ -109,7 +110,7 @@ pub fn bifrost_polkadot_genesis(
 		technical_committee: Default::default(),
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id },
+		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: Zero::zero(),
@@ -139,12 +140,15 @@ pub fn bifrost_polkadot_genesis(
 			vsbond: asset_registry.2,
 			phantom: Default::default(),
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
+		vtoken_voting: Default::default(),
+		transaction_payment: Default::default(),
+		zenlink_protocol: Default::default(),
 	}
 }
 
-fn development_config_genesis(id: ParaId) -> GenesisConfig {
+fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
@@ -198,7 +202,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn local_config_genesis(id: ParaId) -> GenesisConfig {
+fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -290,7 +294,7 @@ pub fn chainspec_config() -> ChainSpec {
 	)
 }
 
-fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
+fn bifrost_polkadot_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
 			// dpEZwz5nHxEjQXcm3sjy6NTz83EGcBRXMBSyuuWSguiVGJB

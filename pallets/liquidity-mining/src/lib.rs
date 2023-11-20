@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -35,12 +35,13 @@ use frame_support::{
 		vec::Vec,
 	},
 	traits::EnsureOrigin,
-	PalletId, RuntimeDebug,
+	PalletId
 };
+use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use frame_support::{Deserialize, Serialize};
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
+use bifrost_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -655,20 +656,14 @@ pub mod pallet {
 		StorageValue<_, StorageVersion, ValueQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
 		pub pallet_version: StorageVersion,
 		pub _phantom: PhantomData<(T, I)>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
-		fn default() -> Self {
-			GenesisConfig { pallet_version: Default::default(), _phantom: PhantomData }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
 			PalletVersion::<T, I>::put(self.pallet_version);
 		}

@@ -11,9 +11,8 @@ use frame_support::{
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{AccountIdConversion, IdentityLookup},
-	AccountId32,
+	AccountId32, BuildStorage,
 };
 
 use crate as currencies;
@@ -24,13 +23,12 @@ pub type AccountId = AccountId32;
 impl frame_system::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type BlockWeights = ();
@@ -61,10 +59,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<2>;
 	type ReserveIdentifier = ReserveIdentifier;
 	type WeightInfo = ();
-	type HoldIdentifier = [u8; 8];
 	type FreezeIdentifier = [u8; 8];
 	type MaxHolds = ();
 	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
 }
 
 parameter_type_with_key! {
@@ -123,19 +121,14 @@ impl Config for Runtime {
 pub type NativeCurrency = NativeCurrencyOf<Runtime>;
 pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, PalletBalances, i64, u64>;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Currencies: currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
-		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+	pub enum Runtime {
+		System: frame_system,
+		Currencies: currencies,
+		Tokens: orml_tokens,
+		PalletBalances: pallet_balances,
 	}
 );
 
@@ -167,7 +160,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self
