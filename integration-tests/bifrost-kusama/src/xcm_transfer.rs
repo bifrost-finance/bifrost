@@ -16,7 +16,64 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::*;
+use frame_support::{
+	pallet_prelude::Weight,
+	sp_runtime::{AccountId32, DispatchResult},
+};
+use integration_tests_common::{
+	constants::asset_hub_kusama::ED as ASSET_HUB_KUSAMA_ED, AssetHubKusama, AssetHubKusamaPallet,
+	AssetHubKusamaSender, BifrostKusama, BifrostKusamaReceiver,
+};
+use parachains_common::Balance;
+use xcm::prelude::{AccountId32 as AccountId32Junction, *};
+use xcm_emulator::{
+	assert_expected_events, bx, Chain, Parachain as Para, Test, TestArgs, TestContext,
+};
+
+pub const ASSET_ID: u32 = 1;
+pub const ASSET_MIN_BALANCE: u128 = 1000;
+// `Assets` pallet index
+pub const ASSETS_PALLET_ID: u8 = 50;
+
+// pub type RelayToSystemParaTest = Test<Kusama, BifrostKusama>;
+// pub type SystemParaToRelayTest = Test<AssetHubKusama, Kusama>;
+pub type SystemParaToParaTest = Test<AssetHubKusama, BifrostKusama>;
+
+/// Returns a `TestArgs` instance to de used for the Relay Chain accross integraton tests
+// pub fn relay_test_args(amount: Balance) -> TestArgs {
+// 	TestArgs {
+// 		dest: Kusama::child_location_of(AssetHubKusama::para_id()),
+// 		beneficiary: AccountId32Junction {
+// 			network: None,
+// 			id: AssetHubKusamaReceiver::get().into(),
+// 		}
+// 		.into(),
+// 		amount,
+// 		assets: (Here, amount).into(),
+// 		asset_id: None,
+// 		fee_asset_item: 0,
+// 		weight_limit: WeightLimit::Unlimited,
+// 	}
+// }
+
+/// Returns a `TestArgs` instance to de used for the System Parachain accross integraton tests
+pub fn system_para_test_args(
+	dest: MultiLocation,
+	beneficiary_id: AccountId32,
+	amount: Balance,
+	assets: MultiAssets,
+	asset_id: Option<u32>,
+) -> TestArgs {
+	TestArgs {
+		dest,
+		beneficiary: AccountId32Junction { network: None, id: beneficiary_id.into() }.into(),
+		amount,
+		assets,
+		asset_id,
+		fee_asset_item: 0,
+		weight_limit: WeightLimit::Unlimited,
+	}
+}
 
 fn system_para_to_para_assertions(t: SystemParaToParaTest) {
 	type RuntimeEvent = <AssetHubKusama as Chain>::RuntimeEvent;

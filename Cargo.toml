@@ -4,6 +4,7 @@ cargo-features = ["resolver"]
 members = [
 	"integration-tests/bifrost-kusama",
 	"integration-tests/bifrost-polkadot",
+	"integration-tests/common",
 	"node/cli",
 	"node/rpc",
 	"node/service",
