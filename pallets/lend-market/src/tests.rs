@@ -18,12 +18,12 @@ mod lend_tokens;
 mod liquidate_borrow;
 mod market;
 
+use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::{
 	traits::{CheckedDiv, One, Saturating},
 	FixedU128, Permill,
 };
-use crate::mock::*;
 
 #[test]
 fn init_minting_ok() {
