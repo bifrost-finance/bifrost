@@ -362,3 +362,73 @@ fn u64_to_currency_id_should_work() {
 	assert_eq!(eb5, CurrencyId::try_from(0x07d5_004f_005f_0b05).unwrap());
 	assert_eq!(eb6, CurrencyId::try_from(0x07d6_005f_006f_0b06).unwrap());
 }
+
+#[test]
+fn to_vtoken_should_work() {
+	let native_bnc = CurrencyId::Native(TokenSymbol::BNC);
+	let native_asg = CurrencyId::Native(TokenSymbol::ASG);
+	let vtoken_ksm = CurrencyId::VToken(TokenSymbol::KSM);
+	let token_ksm = CurrencyId::Token(TokenSymbol::KSM);
+	let stable_kusd = CurrencyId::Stable(TokenSymbol::KUSD);
+	let vstoken_eth = CurrencyId::VSToken(TokenSymbol::ETH);
+	let vsbond_ksm = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 0, 1000);
+	let token2_dot = CurrencyId::Token2(DOT_TOKEN_ID);
+	let vtoken2_dot = CurrencyId::VToken2(DOT_TOKEN_ID);
+	let vstoken2_dot = CurrencyId::VSToken2(DOT_TOKEN_ID);
+	let vsbond2_dot = CurrencyId::VSBond2(DOT_TOKEN_ID, 2030, 0, 1000);
+	let foreign_asset = CurrencyId::ForeignAsset(1984);
+	let blp = CurrencyId::BLP(100);
+	let stable_lp_token = CurrencyId::StableLpToken(100);
+	let lp_token = CurrencyId::LPToken(TokenSymbol::BNC, 0, TokenSymbol::KSM, 2);
+
+	assert_eq!(native_bnc.to_vtoken(), Ok(CurrencyId::VToken(TokenSymbol::BNC)));
+	assert_eq!(native_asg.to_vtoken(), Err(()));
+	assert_eq!(vtoken_ksm.to_vtoken(), Err(()));
+	assert_eq!(token_ksm.to_vtoken(), Ok(CurrencyId::VToken(TokenSymbol::KSM)));
+	assert_eq!(stable_kusd.to_vtoken(), Err(()));
+	assert_eq!(vstoken_eth.to_vtoken(), Err(()));
+	assert_eq!(vsbond_ksm.to_vtoken(), Err(()));
+	assert_eq!(token2_dot.to_vtoken(), Ok(CurrencyId::VToken2(DOT_TOKEN_ID)));
+	assert_eq!(vtoken2_dot.to_vtoken(), Err(()));
+	assert_eq!(vstoken2_dot.to_vtoken(), Err(()));
+	assert_eq!(vsbond2_dot.to_vtoken(), Err(()));
+	assert_eq!(foreign_asset.to_vtoken(), Err(()));
+	assert_eq!(blp.to_vtoken(), Err(()));
+	assert_eq!(stable_lp_token.to_vtoken(), Err(()));
+	assert_eq!(lp_token.to_vtoken(), Err(()));
+}
+
+#[test]
+fn to_token_should_work() {
+	let native_bnc = CurrencyId::Native(TokenSymbol::BNC);
+	let vtoken_bnc = CurrencyId::VToken(TokenSymbol::BNC);
+	let vtoken_ksm = CurrencyId::VToken(TokenSymbol::KSM);
+	let token_ksm = CurrencyId::Token(TokenSymbol::KSM);
+	let stable_kusd = CurrencyId::Stable(TokenSymbol::KUSD);
+	let vstoken_eth = CurrencyId::VSToken(TokenSymbol::ETH);
+	let vsbond_ksm = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 0, 1000);
+	let token2_dot = CurrencyId::Token2(DOT_TOKEN_ID);
+	let vtoken2_dot = CurrencyId::VToken2(DOT_TOKEN_ID);
+	let vstoken2_dot = CurrencyId::VSToken2(DOT_TOKEN_ID);
+	let vsbond2_dot = CurrencyId::VSBond2(DOT_TOKEN_ID, 2030, 0, 1000);
+	let foreign_asset = CurrencyId::ForeignAsset(1984);
+	let blp = CurrencyId::BLP(100);
+	let stable_lp_token = CurrencyId::StableLpToken(100);
+	let lp_token = CurrencyId::LPToken(TokenSymbol::BNC, 0, TokenSymbol::KSM, 2);
+
+	assert_eq!(native_bnc.to_token(), Err(()));
+	assert_eq!(vtoken_bnc.to_token(), Ok(CurrencyId::Native(TokenSymbol::BNC)));
+	assert_eq!(vtoken_ksm.to_token(), Ok(CurrencyId::Token(TokenSymbol::KSM)));
+	assert_eq!(token_ksm.to_token(), Err(()));
+	assert_eq!(stable_kusd.to_token(), Err(()));
+	assert_eq!(vstoken_eth.to_token(), Err(()));
+	assert_eq!(vsbond_ksm.to_token(), Err(()));
+	assert_eq!(token2_dot.to_token(), Err(()));
+	assert_eq!(vtoken2_dot.to_token(), Ok(CurrencyId::Token2(DOT_TOKEN_ID)));
+	assert_eq!(vstoken2_dot.to_token(), Err(()));
+	assert_eq!(vsbond2_dot.to_token(), Err(()));
+	assert_eq!(foreign_asset.to_token(), Err(()));
+	assert_eq!(blp.to_token(), Err(()));
+	assert_eq!(stable_lp_token.to_token(), Err(()));
+	assert_eq!(lp_token.to_token(), Err(()));
+}

@@ -133,7 +133,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 986,
+	spec_version: 987,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1905,10 +1905,11 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
+	#[allow(unused)]
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = bifrost_slp::migrations::v3::SlpMigration3<Runtime>;
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.
