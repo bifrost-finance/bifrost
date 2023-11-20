@@ -6740,6 +6740,7 @@ dependencies = [
  "orml-oracle",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-prices",
  "pallet-timestamp",

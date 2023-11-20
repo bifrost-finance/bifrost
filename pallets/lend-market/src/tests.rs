@@ -23,7 +23,6 @@ use sp_runtime::{
 	traits::{CheckedDiv, One, Saturating},
 	FixedU128, Permill,
 };
-
 use crate::mock::*;
 
 #[test]
