@@ -44,7 +44,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let total_supply = Self::total_supply(current_block_number)?;
 		if total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
