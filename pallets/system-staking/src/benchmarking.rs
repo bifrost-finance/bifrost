@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,14 +18,15 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 use crate::{Pallet as SystemStaking, *};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
+use bifrost_primitives::{CurrencyId, PoolId, TokenSymbol};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
 	assert_ok,
 	sp_runtime::{traits::UniqueSaturatedFrom, Perbill, Permill},
 	traits::OnInitialize,
 };
 use frame_system::{Pallet as System, RawOrigin};
-use node_primitives::{CurrencyId, PoolId, TokenSymbol};
+use sp_std::vec;
 
 benchmarks! {
 	on_initialize {

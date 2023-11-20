@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_kusama_runtime::Runtime;
+use bifrost_primitives::{CurrencyId, TokenSymbol::*};
 use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
-use node_primitives::{CurrencyId, TokenSymbol::*};
 
 const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
 const DECIMAL_12: u128 = 1_000_000_000_000;

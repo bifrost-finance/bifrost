@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -81,9 +81,9 @@ delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
 
 #![cfg(test)]
 use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
+use bifrost_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use bifrost_slp::{primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger};
 use frame_support::{assert_ok, BoundedVec};
-use node_primitives::{TimeUnit, XcmOperationType as XcmOperation};
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use sp_runtime::Permill;

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -22,31 +22,31 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{
+	AssetIds, CurrencyId,
+	CurrencyId::{Native, Token, Token2},
+	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
+	ParaId, PoolId, TokenId, TokenInfo, TokenSymbol,
+};
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	pallet_prelude::*,
 	traits::{Currency, EnsureOrigin},
 	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
-	RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
-use primitives::{
-	AssetIds, CurrencyId,
-	CurrencyId::{Native, Token, Token2},
-	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
-	ParaId, PoolId, TokenId, TokenInfo, TokenSymbol,
-};
-use scale_info::TypeInfo;
+use scale_info::{prelude::string::String, TypeInfo};
 use sp_runtime::{
 	traits::{One, UniqueSaturatedFrom},
-	ArithmeticError, FixedPointNumber, FixedU128,
+	ArithmeticError, FixedPointNumber, FixedU128, RuntimeDebug,
 };
 use sp_std::{boxed::Box, vec::Vec};
-// NOTE:v1::MultiLocation is used in storages, we would need to do migration if upgrade the
-// MultiLocation in the future.
 use xcm::{
-	opaque::v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
+	opaque::{
+		lts::XcmContext,
+		v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
+	},
 	v3::MultiLocation,
 	VersionedMultiLocation,
 };
@@ -177,6 +177,7 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyId, AssetMetadata<BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub currency: Vec<(CurrencyId, BalanceOf<T>, Option<(String, String, u8)>)>,
 		pub vcurrency: Vec<CurrencyId>,
@@ -184,20 +185,8 @@ pub mod pallet {
 		pub phantom: PhantomData<T>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			GenesisConfig {
-				currency: Default::default(),
-				vcurrency: Default::default(),
-				vsbond: Default::default(),
-				phantom: PhantomData,
-			}
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for (currency_id, metadata) in
 				self.currency.iter().map(|(currency_id, minimal_balance, metadata)| {
@@ -883,7 +872,12 @@ where
 		}
 	}
 
-	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(
+		&mut self,
+		weight: Weight,
+		payment: Assets,
+		_context: &XcmContext,
+	) -> Result<Assets, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -934,7 +928,7 @@ where
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<MultiAsset> {
 		log::trace!(
 			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
 			weight, self.weight, self.amount, self.ed_ratio, self.multi_location

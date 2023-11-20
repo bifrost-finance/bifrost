@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -33,6 +33,7 @@ pub mod traits;
 pub mod weights;
 
 use crate::traits::Incentive;
+use bifrost_primitives::CurrencyId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -46,7 +47,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
-use node_primitives::CurrencyId;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::{U256, U512};
@@ -112,13 +112,13 @@ pub mod pallet {
 		type IncentivePalletId: Get<PalletId>;
 
 		/// Convert the block number into a balance.
-		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type Week: Get<Self::BlockNumber>;
+		type Week: Get<BlockNumberFor<Self>>;
 
 		#[pallet::constant]
-		type MaxBlock: Get<Self::BlockNumber>;
+		type MaxBlock: Get<BlockNumberFor<Self>>;
 
 		#[pallet::constant]
 		type Multiplier: Get<BalanceOf<Self>>;
@@ -131,13 +131,13 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		ConfigSet {
-			config: VeConfig<BalanceOf<T>, T::BlockNumber>,
+			config: VeConfig<BalanceOf<T>, BlockNumberFor<T>>,
 		},
 		Minted {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
-			end: T::BlockNumber,
-			now: T::BlockNumber,
+			end: BlockNumberFor<T>,
+			now: BlockNumberFor<T>,
 		},
 		Supply {
 			supply_before: BalanceOf<T>,
@@ -146,11 +146,11 @@ pub mod pallet {
 		LockCreated {
 			addr: AccountIdOf<T>,
 			value: BalanceOf<T>,
-			unlock_time: T::BlockNumber,
+			unlock_time: BlockNumberFor<T>,
 		},
 		UnlockTimeIncreased {
 			addr: AccountIdOf<T>,
-			unlock_time: T::BlockNumber,
+			unlock_time: BlockNumberFor<T>,
 		},
 		AmountIncreased {
 			addr: AccountIdOf<T>,
@@ -161,7 +161,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		},
 		IncentiveSet {
-			rewards_duration: T::BlockNumber,
+			rewards_duration: BlockNumberFor<T>,
 		},
 		RewardAdded {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
@@ -189,7 +189,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn ve_configs)]
 	pub type VeConfigs<T: Config> =
-		StorageValue<_, VeConfig<BalanceOf<T>, T::BlockNumber>, ValueQuery>;
+		StorageValue<_, VeConfig<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn epoch)]
@@ -201,7 +201,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AccountIdOf<T>,
-		LockedBalance<BalanceOf<T>, T::BlockNumber>,
+		LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		ValueQuery,
 	>;
 
@@ -209,7 +209,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn point_history)]
 	pub type PointHistory<T: Config> =
-		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, T::BlockNumber>, ValueQuery>;
+		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_point_history)]
@@ -219,7 +219,7 @@ pub mod pallet {
 		AccountIdOf<T>,
 		Blake2_128Concat,
 		U256,
-		Point<BalanceOf<T>, T::BlockNumber>,
+		Point<BalanceOf<T>, BlockNumberFor<T>>,
 		ValueQuery,
 	>;
 
@@ -231,13 +231,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn slope_changes)]
 	pub type SlopeChanges<T: Config> =
-		StorageMap<_, Twox64Concat, T::BlockNumber, i128, ValueQuery>;
+		StorageMap<_, Twox64Concat, BlockNumberFor<T>, i128, ValueQuery>;
 
 	// Incentive
 	#[pallet::storage]
 	#[pallet::getter(fn incentive_configs)]
-	pub type IncentiveConfigs<T: Config> =
-		StorageValue<_, IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>, ValueQuery>;
+	pub type IncentiveConfigs<T: Config> = StorageValue<
+		_,
+		IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_reward_per_token_paid)]
@@ -260,8 +263,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			min_mint: Option<BalanceOf<T>>,    // Minimum mint balance
-			min_block: Option<T::BlockNumber>, // Minimum lockup time
+			min_mint: Option<BalanceOf<T>>,       // Minimum mint balance
+			min_block: Option<BlockNumberFor<T>>, // Minimum lockup time
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -283,7 +286,7 @@ pub mod pallet {
 		pub fn create_lock(
 			origin: OriginFor<T>,
 			value: BalanceOf<T>,
-			unlock_time: T::BlockNumber,
+			unlock_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			let exchanger: AccountIdOf<T> = ensure_signed(origin)?;
 			Self::create_lock_inner(&exchanger, value, unlock_time)
@@ -298,7 +301,10 @@ pub mod pallet {
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::increase_unlock_time())]
-		pub fn increase_unlock_time(origin: OriginFor<T>, time: T::BlockNumber) -> DispatchResult {
+		pub fn increase_unlock_time(
+			origin: OriginFor<T>,
+			time: BlockNumberFor<T>,
+		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			Self::increase_unlock_time_inner(&exchanger, time)
 		}
@@ -315,7 +321,7 @@ pub mod pallet {
 		pub fn notify_rewards(
 			origin: OriginFor<T>,
 			incentive_from: AccountIdOf<T>,
-			rewards_duration: Option<T::BlockNumber>,
+			rewards_duration: Option<BlockNumberFor<T>>,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -334,16 +340,16 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn _checkpoint(
 			addr: &AccountIdOf<T>,
-			old_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
-			new_locked: LockedBalance<BalanceOf<T>, T::BlockNumber>,
+			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
+			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			Self::update_reward(Some(addr))?;
 
-			let mut u_old = Point::<BalanceOf<T>, T::BlockNumber>::default();
-			let mut u_new = Point::<BalanceOf<T>, T::BlockNumber>::default();
+			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
+			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut new_dslope = 0_i128;
 			let mut g_epoch: U256 = Self::epoch();
-			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
 				u_old.slope = U256::from(old_locked.amount.saturated_into::<u128>())
@@ -384,7 +390,7 @@ pub mod pallet {
 				}
 			}
 
-			let mut last_point: Point<BalanceOf<T>, T::BlockNumber> = Point {
+			let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> = Point {
 				bias: 0_i128,
 				slope: 0_i128,
 				block: current_block_number,
@@ -399,7 +405,7 @@ pub mod pallet {
 				);
 			}
 			let mut last_checkpoint = last_point.block;
-			let mut t_i: T::BlockNumber = last_checkpoint
+			let mut t_i: BlockNumberFor<T> = last_checkpoint
 				.checked_div(&T::Week::get())
 				.ok_or(ArithmeticError::Overflow)?
 				.checked_mul(&T::Week::get())
@@ -510,10 +516,10 @@ pub mod pallet {
 		pub fn _deposit_for(
 			addr: &AccountIdOf<T>,
 			value: BalanceOf<T>,
-			unlock_time: T::BlockNumber,
-			locked_balance: LockedBalance<BalanceOf<T>, T::BlockNumber>,
+			unlock_time: BlockNumberFor<T>,
+			locked_balance: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
-			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();
 			Supply::<T>::set(supply_before.checked_add(&value).ok_or(ArithmeticError::Overflow)?);
@@ -552,12 +558,12 @@ pub mod pallet {
 		pub(crate) fn balance_of_current_block(
 			addr: &AccountIdOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
-			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let u_epoch = Self::user_point_epoch(addr);
 			if u_epoch == U256::zero() {
 				return Ok(Zero::zero());
 			} else {
-				let mut last_point: Point<BalanceOf<T>, T::BlockNumber> =
+				let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
 					Self::user_point_history(addr, u_epoch);
 
 				last_point.bias = last_point
@@ -592,9 +598,9 @@ pub mod pallet {
 		// Measure voting power of `addr` at block height `block`
 		pub(crate) fn balance_of_at(
 			addr: &AccountIdOf<T>,
-			block: T::BlockNumber,
+			block: BlockNumberFor<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
-			let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			ensure!(block <= current_block_number, Error::<T>::Expired);
 
 			// Binary search
@@ -619,7 +625,7 @@ pub mod pallet {
 				}
 			}
 
-			let mut upoint: Point<BalanceOf<T>, T::BlockNumber> =
+			let mut upoint: Point<BalanceOf<T>, BlockNumberFor<T>> =
 				Self::user_point_history(addr, _min);
 			upoint.bias = upoint
 				.bias

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,6 @@
 use bstringify::bstringify;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{
@@ -59,6 +58,9 @@ pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
+pub const MANTA_TOKEN_ID: u8 = 8u8;
+pub const MANTA: CurrencyId = CurrencyId::Token2(MANTA_TOKEN_ID);
+pub const VMANTA: CurrencyId = CurrencyId::VToken2(MANTA_TOKEN_ID);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
@@ -317,8 +319,7 @@ create_currency_id! {
 	// Bit 8 : 0 for Pokladot Ecosystem, 1 for Kusama Ecosystem
 	// Bit 7 : Reserved
 	// Bit 6 - 1 : The token ID
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo, MaxEncodedLen)]
-	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo, MaxEncodedLen, Serialize, Deserialize)]
 	#[repr(u8)]
 	pub enum TokenSymbol {
 		ASG("Asgard", 12) = 0,
@@ -357,8 +358,9 @@ pub type TokenId = u8;
 	PartialOrd,
 	Ord,
 	TypeInfo,
+	Serialize,
+	Deserialize,
 )]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
 	Native(TokenSymbol),

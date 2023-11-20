@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,8 @@
 
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
+pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -25,7 +27,6 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
@@ -36,7 +37,6 @@ pub use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
-pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
 use bifrost_currencies::BasicCurrencyAdapter;
@@ -53,7 +53,8 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
+use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -203,11 +204,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
 					if (id == parachains::Statemine::ID &&
 						index == parachains::Statemine::PALLET_ID) =>
+				{
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(RMRK))
 					} else {
 						None
-					},
+					}
+				},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
@@ -254,6 +257,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	// TODO: Generate remote accounts according to polkadot standards
 	// Derives a private `Account32` by hashing `("multiloc", received multilocation)`
 	Account32Hash<RelayNetwork, AccountId>,
 );
@@ -304,7 +308,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		origin: &MultiLocation,
 		message: &mut [Instruction<Call>],
 		max_weight: Weight,
-		_weight_credit: &mut Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
@@ -352,7 +356,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = (
+pub type Barrier = TrailingSetTopicAsId<(
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -363,7 +367,7 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
@@ -624,7 +628,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::redeem { .. }
 			) |
 			RuntimeCall::XcmInterface(
-				xcm_interface::Call::transfer_statemine_assets { .. }
+				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -670,6 +674,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = ();
 	type MessageExporter = ();
+	type Aliasers = Nothing;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -697,12 +702,12 @@ impl pallet_xcm::Config for Runtime {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmRouter = node_primitives::DoNothingRouter;
+	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
 	type XcmTeleportFilter = Nothing;
@@ -719,6 +724,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -878,7 +885,7 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
@@ -903,7 +910,7 @@ parameter_types! {
 
 }
 
-impl xcm_interface::Config for Runtime {
+impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
@@ -911,7 +918,7 @@ impl xcm_interface::Config for Runtime {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = ParachainAccount;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;

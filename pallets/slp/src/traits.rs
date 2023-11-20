@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -15,11 +15,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit, Xcm};
-use node_primitives::CurrencyId;
+
+use crate::{primitives::QueryId, Box, MultiLocation, TimeUnit};
+use bifrost_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
-use xcm::v3::Weight as XcmWeight;
 
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<
@@ -205,20 +205,6 @@ pub trait StakingAgent<
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 
 	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
-}
-
-/// Helper to build xcm message
-//【For xcm v3】
-// pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
-pub trait XcmBuilder<Balance, ChainCallType, Error> {
-	fn construct_xcm_message(
-		call: ChainCallType,
-		extra_fee: Balance,
-		weight: XcmWeight,
-		currency_id: CurrencyId,
-		query_id: Option<QueryId>,
-		// response_back_location: AccountId
-	) -> Result<Xcm<()>, Error>;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.

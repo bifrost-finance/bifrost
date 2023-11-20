@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -104,7 +104,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		Self::send_boost_rewards(&boost_pool_info)?;
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.round_length = round_length;
 		boost_pool_info.end_round = current_block_number.saturating_add(round_length);
@@ -150,7 +150,7 @@ impl<T: Config> Pallet<T> {
 				Self::deposit_event(Event::RoundStartError { info: e });
 			})
 			.ok();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.end_round =
 			current_block_number.saturating_add(boost_pool_info.round_length);

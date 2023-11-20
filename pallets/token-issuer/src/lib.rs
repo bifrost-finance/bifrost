@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -22,9 +22,9 @@
 extern crate alloc;
 
 use alloc::{vec, vec::Vec};
+use bifrost_primitives::CurrencyId;
 use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 use sp_core::bounded::BoundedVec;
 pub use weights::WeightInfo;
@@ -116,7 +116,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

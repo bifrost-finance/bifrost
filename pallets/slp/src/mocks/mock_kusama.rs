@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -23,37 +23,36 @@
 use crate as bifrost_slp;
 use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	currency::{BNC, KSM, VKSM},
+	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
+	XcmDestWeightAndFeeHandler, XcmOperationType,
+};
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{Everything, GenesisBuild, Nothing, ProcessMessageError},
+	traits::{Everything, Nothing, ProcessMessageError},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use node_primitives::{
-	currency::{BNC, KSM, VKSM},
-	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
-	XcmDestWeightAndFeeHandler, XcmOperationType,
-};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, TrailingZeroInput},
-	AccountId32, Percent,
+	AccountId32, BuildStorage, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
 use xcm_builder::FixedWeightBounds;
-use xcm_executor::traits::ShouldExecute;
+use xcm_executor::traits::{Properties, ShouldExecute};
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
-pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
@@ -62,23 +61,19 @@ pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
 pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 2,
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		Currencies: bifrost_currencies::{Pallet, Call} = 72,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
-		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
-		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 116,
-		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage} = 114,
-		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>} = 25,
-		Utility: pallet_utility::{Pallet, Call, Event} = 50,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
+	pub enum Runtime {
+		System: frame_system,
+		Indices: pallet_indices,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Tokens: orml_tokens,
+		XTokens: orml_xtokens,
+		Slp: bifrost_slp,
+		VtokenMinting: bifrost_vtoken_minting,
+		AssetRegistry: bifrost_asset_registry,
+		ParachainStaking: parachain_staking,
+		Utility: pallet_utility,
+		PolkadotXcm: pallet_xcm,
 	}
 );
 
@@ -100,14 +95,13 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = Indices;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type BlockWeights = ();
@@ -155,7 +149,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -206,7 +200,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = ();
+	type CurrencyIdConvert = BifrostCurrencyIdConvert;
 	type AccountIdToMultiLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
@@ -516,7 +510,7 @@ impl ShouldExecute for Barrier {
 		_origin: &MultiLocation,
 		_message: &mut [Instruction<Call>],
 		_max_weight: Weight,
-		_weight_credit: &mut Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		Ok(())
 	}
@@ -547,6 +541,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -578,6 +573,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct ExtBuilder {
@@ -601,7 +598,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

@@ -52,7 +52,7 @@ pub mod v1 {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 			log::info!(
 				"vtoken-voting before migration: version: {:?}",
 				StorageVersion::get::<Pallet<T>>(),
@@ -70,7 +70,7 @@ pub mod v1 {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+		fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 			log::info!(
 				"vtoken-voting after migration: version: {:?}",
 				StorageVersion::get::<Pallet<T>>(),

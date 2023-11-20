@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,46 +16,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	agents::{
-		PhalaCall, PhalaSystemCall, PhalaUtilityCall, VaultCall, WrappedBalancesCall, XtransferCall,
-	},
+	agents::{PhalaCall, VaultCall, WrappedBalancesCall, XtransferCall},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
-		TIMEOUT_BLOCKS,
 	},
-	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, CurrencyId, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegatorUpdateEntry, XcmWeight,
+	traits::{QueryResponseManager, StakingAgent},
+	AccountIdOf, BalanceOf, Config, CurrencyId, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators, ValidatorsByDelegatorUpdateEntry,
 };
+use bifrost_primitives::{TokenSymbol, VtokenMintingOperator, XcmOperationType};
 use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	TokenSymbol, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
-};
-use polkadot_parachain::primitives::Sibling;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedFrom,
-		UniqueSaturatedInto, Zero,
-	},
+	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	DispatchResult, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use xcm::{
-	opaque::v3::{
-		Junction::{GeneralIndex, Parachain},
-		Junctions::X1,
-		MultiLocation,
-	},
+	opaque::v3::{Junction::GeneralIndex, MultiLocation},
 	v3::prelude::*,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Phala
 pub struct PhalaAgent<T>(PhantomData<T>);
@@ -126,12 +112,13 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Bond,
-			calls,
-			who,
-			currency_id,
-		)?;
+		let (query_id, timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Bond,
+				calls.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Calculate how many shares we can get by the amount at current price
 		let shares = if let Some(MultiLocation {
@@ -155,7 +142,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_pha_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -228,12 +215,13 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Unbond,
-			calls,
-			who,
-			currency_id,
-		)?;
+		let (query_id, timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Unbond,
+				calls.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -246,7 +234,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_pha_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -439,15 +427,16 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Payout,
-			calls,
-			who,
-			currency_id,
-		)?;
+		let (query_id, _timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Payout,
+				calls.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_pha_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -520,21 +509,20 @@ impl<T: Config>
 			T::ParachainId::get().into(),
 		)?;
 
+		let locat = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		// Prepare parameter assets.
-		let asset = MultiAsset {
-			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(Self::get_pha_multilocation()),
-		};
+		let asset =
+			MultiAsset { fun: Fungible(amount.unique_saturated_into()), id: Concrete(locat) };
 
 		// Construct xcm message.
-		let call =
+		let call: PhalaCall<T> =
 			PhalaCall::Xtransfer(XtransferCall::Transfer(Box::new(asset), Box::new(dest), None));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
-			call,
+			call.encode(),
 			from,
 			currency_id,
 		)?;
@@ -562,7 +550,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -596,15 +584,16 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, _timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::ConvertAsset,
-			calls,
-			who,
-			currency_id,
-		)?;
+		let (query_id, _timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::ConvertAsset,
+				calls.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_pha_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -676,7 +665,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -739,160 +728,8 @@ impl<T: Config>
 	}
 }
 
-/// Trait XcmBuilder implementation for Phala
-impl<T: Config>
-	XcmBuilder<
-		BalanceOf<T>,
-		PhalaCall<T>,
-		Error<T>,
-		// , MultiLocation,
-	> for PhalaAgent<T>
-{
-	fn construct_xcm_message(
-		call: PhalaCall<T>,
-		extra_fee: BalanceOf<T>,
-		weight: XcmWeight,
-		_currency_id: CurrencyId,
-		_query_id: Option<QueryId>,
-	) -> Result<Xcm<()>, Error<T>> {
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
-		};
-
-		let self_sibling_parachain_account: [u8; 32] =
-			Sibling::from(T::ParachainId::get()).into_account_truncating();
-
-		Ok(Xcm(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: call.encode().into(),
-			},
-			RefundSurplus,
-			DepositAsset {
-				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
-				},
-			},
-		]))
-	}
-}
-
 /// Internal functions.
 impl<T: Config> PhalaAgent<T> {
-	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperationType,
-		calls: Vec<Box<PhalaCall<T>>>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
-		// prepare the query_id for reporting back transact status
-		let responder = Self::get_pha_multilocation();
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(&responder, None, timeout);
-
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_with_query_id(
-				operation,
-				calls,
-				who,
-				query_id,
-				currency_id,
-			)?;
-
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
-
-		Ok((query_id, timeout, xcm_message))
-	}
-
-	fn prepare_send_as_subaccount_call_params_with_query_id(
-		operation: XcmOperationType,
-		calls: Vec<Box<PhalaCall<T>>>,
-		who: &MultiLocation,
-		query_id: QueryId,
-		currency_id: CurrencyId,
-	) -> Result<(PhalaCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		let call_as_subaccount = {
-			// Temporary wrapping remark event in Kusama for ease use of backend service.
-			let remark_call =
-				PhalaCall::System(PhalaSystemCall::RemarkWithEvent(Box::new(query_id.encode())));
-
-			let mut all_calls = Vec::new();
-			all_calls.extend(calls.into_iter());
-			all_calls.push(Box::new(remark_call));
-
-			let call_batched_with_remark =
-				PhalaCall::Utility(Box::new(PhalaUtilityCall::BatchAll(Box::new(all_calls))));
-
-			PhalaCall::Utility(Box::new(PhalaUtilityCall::AsDerivative(
-				sub_account_index,
-				Box::new(call_batched_with_remark),
-			)))
-		};
-
-		let (weight, fee) =
-			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
-	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperationType,
-		call: PhalaCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params_without_query_id(
-				operation,
-				call,
-				who,
-				currency_id,
-			)?;
-
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
-
-		let dest = Self::get_pha_multilocation();
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(())
-	}
-
-	fn prepare_send_as_subaccount_call_params_without_query_id(
-		operation: XcmOperationType,
-		call: PhalaCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(PhalaCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		let call_as_subaccount = PhalaCall::Utility(Box::new(PhalaUtilityCall::AsDerivative(
-			sub_account_index,
-			Box::new(call),
-		)));
-
-		let (weight, fee) =
-			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
 		update_operation: SubstrateLedgerUpdateOperation,
@@ -904,7 +741,7 @@ impl<T: Config> PhalaAgent<T> {
 		use crate::primitives::SubstrateLedgerUpdateOperation::Unlock;
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = match &update_operation {
-			Unlock => Self::get_unlocking_era_from_current(currency_id)?,
+			Unlock => Pallet::<T>::get_unlocking_time_unit_from_current(false, currency_id)?,
 			_ => None,
 		};
 
@@ -918,51 +755,6 @@ impl<T: Config> PhalaAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
 
 		Ok(())
-	}
-
-	fn get_unlocking_era_from_current(
-		currency_id: CurrencyId,
-	) -> Result<Option<TimeUnit>, Error<T>> {
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
-
-		let unlock_hour = if let TimeUnit::Hour(current_hour) = current_time_unit {
-			if let TimeUnit::Hour(delay_hour) = delays.unlock_delay {
-				current_hour.checked_add(delay_hour).ok_or(Error::<T>::OverFlow)
-			} else {
-				Err(Error::<T>::InvalidTimeUnit)
-			}
-		} else {
-			Err(Error::<T>::InvalidTimeUnit)
-		}?;
-
-		let unlock_time_unit = TimeUnit::Hour(unlock_hour);
-		Ok(Some(unlock_time_unit))
-	}
-
-	fn get_pha_multilocation() -> MultiLocation {
-		MultiLocation { parents: 1, interior: Junctions::X1(Parachain(parachains::phala::ID)) }
-	}
-
-	fn do_transfer_to(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		let dest = Self::get_pha_multilocation();
-
-		// Prepare parameter assets.
-		let assets = {
-			let asset = MultiAsset {
-				fun: Fungible(amount.unique_saturated_into()),
-				id: Concrete(Self::get_pha_multilocation()),
-			};
-			MultiAssets::from(asset)
-		};
-
-		Pallet::<T>::inner_do_transfer_to(from, to, amount, currency_id, assets, &dest)
 	}
 
 	fn update_ledger_query_response_storage(

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,37 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
-	construct_runtime, ord_parameter_types, parameter_types,
-	traits::{Contains, GenesisBuild},
-	PalletId,
+	construct_runtime, ord_parameter_types, parameter_types, traits::Contains, PalletId,
 };
 use frame_system::EnsureSignedBy;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	generic,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	BuildStorage,
 };
 
 use crate as vsbond_auction;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type AccountId = u64;
 type BlockNumber = u32;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Auction: vsbond_auction::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Auction: vsbond_auction,
 	}
 );
 
@@ -60,15 +53,14 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -142,7 +134,7 @@ impl vsbond_auction::Config for Test {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut fs_gc = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut fs_gc = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	#[cfg(feature = "runtime-benchmarks")]
 	let whitelist_caller: AccountId = whitelisted_caller();
 	#[cfg(feature = "runtime-benchmarks")]

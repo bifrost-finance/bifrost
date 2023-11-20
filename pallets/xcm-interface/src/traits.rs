@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -132,6 +132,11 @@ pub mod parachains {
 	pub mod astar {
 		pub const ID: u32 = 2006;
 		pub const PALLET_ID: u8 = 34;
+	}
+
+	pub mod manta {
+		pub const ID: u32 = 2104;
+		pub const PALLET_ID: u8 = 10;
 	}
 }
 
