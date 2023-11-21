@@ -19,8 +19,8 @@
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SudoConfig,
+	SystemConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -46,7 +46,7 @@ pub fn ENDOWMENT() -> u128 {
 	1_000_000 * DOLLARS
 }
 
-pub const PARA_ID: u32 = 2030;
+pub const PARA_ID: u32 = 3356;
 
 fn bifrost_polkadot_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -87,6 +87,11 @@ pub fn bifrost_polkadot_genesis(
 	GenesisConfig {
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
+		},
+		sudo: SudoConfig {
+			key: Some(
+				hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+			),
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
@@ -191,21 +196,23 @@ pub fn development_config() -> Result<ChainSpec, String> {
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
-	let endowed_accounts = vec![
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		get_account_id_from_seed::<sr25519::Public>("Bob"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie"),
-		get_account_id_from_seed::<sr25519::Public>("Dave"),
-		get_account_id_from_seed::<sr25519::Public>("Eve"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-		whitelisted_caller(), // Benchmarking whitelist_account
-		account("bechmarking_account_1", 0, 0),
+	let endowed_accounts: Vec<AccountId> = vec![
+		// get_account_id_from_seed::<sr25519::Public>("Alice"),
+		// get_account_id_from_seed::<sr25519::Public>("Bob"),
+		// get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		// get_account_id_from_seed::<sr25519::Public>("Dave"),
+		// get_account_id_from_seed::<sr25519::Public>("Eve"),
+		// get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		// get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		// whitelisted_caller(), // Benchmarking whitelist_account
+		// account("bechmarking_account_1", 0, 0),
+		hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+		hex!["7ae247b6328d6cb9d11d49d76766568070ad56bb75ba1aa42c7b7df7cf703765"].into()
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
@@ -217,10 +224,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.flat_map(|x| vec![(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
 		.collect();
-	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let council_membership = vec![];
+	let technical_committee_membership = vec![];
 	let salp_multisig: AccountId =
-		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+		hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into();
 	let currency = vec![
 		(Native(TokenSymbol::BNC), DOLLARS / 100, None),
 		(
@@ -234,10 +241,15 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	bifrost_polkadot_genesis(
 		vec![
 			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_from_seed::<AuraId>("Alice"),
+				hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+				hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"]
+					.unchecked_into(),
 			),
-			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+			(
+				hex!["7ae247b6328d6cb9d11d49d76766568070ad56bb75ba1aa42c7b7df7cf703765"].into(),
+				hex!["7ae247b6328d6cb9d11d49d76766568070ad56bb75ba1aa42c7b7df7cf703765"]
+					.unchecked_into(),
+			),
 		],
 		balances,
 		vestings,
@@ -254,14 +266,14 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Polkadot Local Testnet",
 		"bifrost_polkadot_local_testnet",
-		ChainType::Local,
+		ChainType::Live,
 		move || local_config_genesis(PARA_ID.into()),
 		vec![],
-		None,
+		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
 	))
 }
 
