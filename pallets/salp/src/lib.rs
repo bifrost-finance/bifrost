@@ -1359,13 +1359,16 @@ pub mod pallet {
 				fund.last_slot,
 			)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			T::MultiCurrency::extend_lock(T::LockId::get(), vs_token, &who, value)?;
-			T::MultiCurrency::extend_lock(T::LockId::get(), vs_bond, &who, value)?;
 
-			ReserveInfos::<T>::mutate(index, &who, |mut info| {
-				info.value = info.value.saturating_add(value);
-				info.if_mint = if_mint;
-			});
+			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)?;
+			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)?;
+			let mut info = ReserveInfos::<T>::get(index, &who);
+			info.value = info.value.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			info.if_mint = if_mint;
+			T::MultiCurrency::extend_lock(T::LockId::get(), vs_token, &who, info.value)?;
+			T::MultiCurrency::extend_lock(T::LockId::get(), vs_bond, &who, info.value)?;
+
+			ReserveInfos::<T>::insert(index, &who, info);
 
 			Self::deposit_event(Event::<T>::Reserved { who, para_id: index, value, if_mint });
 			Ok(())
@@ -1390,7 +1393,7 @@ pub mod pallet {
 			match fund.status {
 				FundStatus::RedeemWithdrew => {
 					ReserveInfos::<T>::iter_prefix(index)
-						.take(T::RemoveKeysLimit::get() as usize) // TODO
+						.take(T::RemoveKeysLimit::get() as usize)
 						.try_for_each(|(contributer, info)| -> DispatchResult {
 							T::MultiCurrency::remove_lock(
 								T::LockId::get(),
@@ -1406,6 +1409,7 @@ pub mod pallet {
 								vs_token,
 								vs_bond,
 							)?;
+							ReserveInfos::<T>::remove(index, &contributer);
 							if info.if_mint {
 								T::VtokenMinting::mint(
 									contributer,
@@ -1429,7 +1433,7 @@ pub mod pallet {
 							)?;
 							T::MultiCurrency::remove_lock(T::LockId::get(), vs_bond, &contributer)?;
 							Self::refund_for_reserve(
-								contributer,
+								contributer.clone(),
 								index,
 								fund.first_slot,
 								fund.last_slot,
@@ -1437,6 +1441,7 @@ pub mod pallet {
 								vs_token,
 								vs_bond,
 							)?;
+							ReserveInfos::<T>::remove(index, &contributer);
 							if info.if_mint {
 								T::VtokenMinting::mint(
 									contributer,
@@ -1462,12 +1467,6 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			ensure!(
-				fund.status != FundStatus::RefundWithdrew &&
-					fund.status != FundStatus::RedeemWithdrew,
-				Error::<T>::InvalidFundStatus
-			); // TODO
 
 			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;

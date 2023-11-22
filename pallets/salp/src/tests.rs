@@ -1515,17 +1515,6 @@ fn reserve_should_work() {
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
 		System::set_block_number(block_begin_redeem);
 
-		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 50, false));
-		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 100, false));
-		assert_ok!(Salp::cancel_reservation(Some(BRUCE).into(), 3_000));
-		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
-		assert_noop!(
-			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus,
-		);
-		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
 				.unwrap();
@@ -1537,10 +1526,41 @@ fn reserve_should_work() {
 		)
 		.unwrap();
 
+		assert_noop!(
+			Salp::reserve(Some(CATHI).into(), 3_000, 10, false),
+			orml_tokens::Error::<Test>::BalanceTooLow,
+		);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 100, false));
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
+		assert_ok!(Salp::cancel_reservation(Some(BRUCE).into(), 3_000));
+		assert_ok!(Salp::cancel_reservation(Some(BRUCE).into(), 3_000));
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
+		assert_eq!(ReserveInfos::<Test>::get(3_000, BRUCE).value, 50);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 50);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
+		assert_noop!(
+			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
+			Error::<Test>::InvalidFundStatus,
+		);
+		assert_noop!(
+			<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 51),
+			orml_tokens::Error::<Test>::LiquidityRestrictions,
+		);
+
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
+		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 10, false));
+		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 40, false));
+		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 50);
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 50);
 		assert_ok!(Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000));
+		assert_eq!(ReserveInfos::<Test>::get(3_000, BRUCE).value, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
