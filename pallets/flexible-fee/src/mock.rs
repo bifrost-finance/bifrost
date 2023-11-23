@@ -32,7 +32,6 @@ use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
-	sp_std::marker::PhantomData,
 	traits::{Everything, Get, LockIdentifier, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,

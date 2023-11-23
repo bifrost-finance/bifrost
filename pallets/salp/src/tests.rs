@@ -1513,7 +1513,7 @@ fn reserve_should_work() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
