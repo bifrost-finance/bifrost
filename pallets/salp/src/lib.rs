@@ -1335,7 +1335,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(22)]
-		#[pallet::weight(T::WeightInfo::confirm_contribute())]
+		#[pallet::weight(T::WeightInfo::reserve())]
 		pub fn reserve(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -1375,7 +1375,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(23)]
-		#[pallet::weight(T::WeightInfo::confirm_contribute())]
+		#[pallet::weight(T::WeightInfo::batch_handle_reserve())]
 		pub fn batch_handle_reserve(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
 			let _who = ensure_signed(origin.clone())?;
 
@@ -1462,7 +1462,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(24)]
-		#[pallet::weight(T::WeightInfo::confirm_contribute())]
+		#[pallet::weight(T::WeightInfo::cancel_reservation())]
 		pub fn cancel_reservation(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 

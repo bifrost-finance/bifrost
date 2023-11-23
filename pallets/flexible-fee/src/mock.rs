@@ -32,7 +32,8 @@ use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
-	traits::{Everything, Get, Nothing},
+	sp_std::marker::PhantomData,
+	traits::{Everything, Get, LockIdentifier, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
@@ -397,6 +398,7 @@ parameter_types! {
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
+	pub const SalpLockId: LockIdentifier = *b"salplock";
 }
 
 impl bifrost_salp::Config for Test {
@@ -425,6 +427,7 @@ impl bifrost_salp::Config for Test {
 	type RuntimeCall = RuntimeCall;
 	type StablePool = ();
 	type VtokenMinting = ();
+	type LockId = SalpLockId;
 }
 
 parameter_types! {
