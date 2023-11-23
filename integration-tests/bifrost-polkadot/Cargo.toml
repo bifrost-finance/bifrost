@@ -9,6 +9,7 @@ codec = { package = "parity-scale-codec", version = "3.4.0", default-features = 
 
 # Substrate
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}

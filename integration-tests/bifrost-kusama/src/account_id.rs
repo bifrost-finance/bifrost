@@ -1,7 +1,11 @@
-use crate::kusama_integration_tests::*;
 use frame_support::PalletId;
-use polkadot_parachain::primitives::{Id as ParaId, Sibling};
+use integration_tests_common::{
+	impls::{AccountId, ParaId},
+	BifrostKusama,
+};
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::{app_crypto::Ss58Codec, traits::AccountIdConversion};
+use xcm_emulator::TestExt;
 
 pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"bf/trsry");
 pub const BIFROST_CROWDLOAN_ID: PalletId = PalletId(*b"bf/salp#");
@@ -24,7 +28,7 @@ pub const SYSTEM_MAKER_PALLET_ID: PalletId = PalletId(*b"bf/sysmk");
 
 #[test]
 fn parachain_account_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(
 			<ParaId as AccountIdConversion<AccountId>>::into_account_truncating(&ParaId::from(
 				2001
@@ -48,7 +52,7 @@ fn parachain_account_should_work() {
 
 #[test]
 fn pallet_id_account_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(
 			<PalletId as AccountIdConversion<AccountId>>::into_account_truncating(
 				&TREASURY_PALLET_ID

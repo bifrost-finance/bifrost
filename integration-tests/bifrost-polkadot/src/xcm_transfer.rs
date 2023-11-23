@@ -16,7 +16,64 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::*;
+use frame_support::{
+	pallet_prelude::Weight,
+	sp_runtime::{AccountId32, DispatchResult},
+};
+use integration_tests_common::{
+	constants::asset_hub_polkadot::ED as ASSET_HUB_POLKADOT_ED, AssetHubPolkadot,
+	AssetHubPolkadotPallet, AssetHubPolkadotSender, BifrostPolkadot, BifrostPolkadotReceiver,
+};
+use parachains_common::Balance;
+use xcm::prelude::{AccountId32 as AccountId32Junction, *};
+use xcm_emulator::{
+	assert_expected_events, bx, Chain, Parachain as Para, Test, TestArgs, TestContext,
+};
+
+pub const ASSET_ID: u32 = 1;
+pub const ASSET_MIN_BALANCE: u128 = 1000;
+// `Assets` pallet index
+pub const ASSETS_PALLET_ID: u8 = 50;
+
+// pub type RelayToSystemParaTest = Test<Polkadot, BifrostPolkadot>;
+// pub type SystemParaToRelayTest = Test<AssetHubPolkadot, Polkadot>;
+pub type SystemParaToParaTest = Test<AssetHubPolkadot, BifrostPolkadot>;
+
+/// Returns a `TestArgs` instance to de used for the Relay Chain accross integraton tests
+// pub fn relay_test_args(amount: Balance) -> TestArgs {
+// 	TestArgs {
+// 		dest: Polkadot::child_location_of(BifrostPolkadot::para_id()),
+// 		beneficiary: AccountId32Junction {
+// 			network: None,
+// 			id: BifrostPolkadotReceiver::get().into(),
+// 		}
+// 		.into(),
+// 		amount,
+// 		assets: (Here, amount).into(),
+// 		asset_id: None,
+// 		fee_asset_item: 0,
+// 		weight_limit: WeightLimit::Unlimited,
+// 	}
+// }
+
+/// Returns a `TestArgs` instance to de used for the System Parachain accross integraton tests
+pub fn system_para_test_args(
+	dest: MultiLocation,
+	beneficiary_id: AccountId32,
+	amount: Balance,
+	assets: MultiAssets,
+	asset_id: Option<u32>,
+) -> TestArgs {
+	TestArgs {
+		dest,
+		beneficiary: AccountId32Junction { network: None, id: beneficiary_id.into() }.into(),
+		amount,
+		assets,
+		asset_id,
+		fee_asset_item: 0,
+		weight_limit: WeightLimit::Unlimited,
+	}
+}
 
 fn system_para_to_para_assertions(t: SystemParaToParaTest) {
 	type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
@@ -90,9 +147,9 @@ fn system_para_to_para_reserve_transfer_assets(t: SystemParaToParaTest) -> Dispa
 	)
 }
 
-/// Limited Reserve Transfers of native asset from AssetHub to BifrostPolkadot should work
+/// Reserve Transfers of native asset from AssetHub to BifrostPolkadot should work
 #[test]
-fn limited_reserve_transfer_native_asset_from_asset_hub_to_bifrost_polkadot() {
+fn reserve_transfer_native_asset_from_polkadot_to_bifrost_polkadot() {
 	// Init values for System Parachain
 	let destination = AssetHubPolkadot::sibling_location_of(BifrostPolkadot::para_id());
 	let beneficiary_id = BifrostPolkadotReceiver::get();
@@ -101,7 +158,7 @@ fn limited_reserve_transfer_native_asset_from_asset_hub_to_bifrost_polkadot() {
 
 	let test_args = TestContext {
 		sender: AssetHubPolkadotSender::get(),
-		receiver: PenpalPolkadotAReceiver::get(),
+		receiver: BifrostPolkadotReceiver::get(),
 		args: system_para_test_args(destination, beneficiary_id, amount_to_send, assets, None),
 	};
 
@@ -168,7 +225,7 @@ fn limited_reserve_transfer_asset_from_asset_hub_to_bifrost_polkadot() {
 
 	let system_para_test_args = TestContext {
 		sender: AssetHubPolkadotSender::get(),
-		receiver: PenpalPolkadotAReceiver::get(),
+		receiver: BifrostPolkadotReceiver::get(),
 		args: system_para_test_args(destination, beneficiary_id, amount_to_send, assets, None),
 	};
 
@@ -193,7 +250,7 @@ fn reserve_transfer_asset_from_asset_hub_to_bifrost_polkadot() {
 	);
 
 	// Init values for System Parachain
-	let destination = AssetHubPolkadot::sibling_location_of(PenpalPolkadotA::para_id());
+	let destination = AssetHubPolkadot::sibling_location_of(BifrostPolkadot::para_id());
 	let beneficiary_id = BifrostPolkadotReceiver::get();
 	let amount_to_send = ASSET_MIN_BALANCE * 1000;
 	let assets =

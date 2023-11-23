@@ -6,6 +6,8 @@ edition = "2021"
 
 [dependencies]
 env_logger = "0.10.0"
+log = { version = "0.4.17" }
+hex-literal = "0.3.1"
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
 
 # Substrate
@@ -18,6 +20,7 @@ pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "
 pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 pallet-conviction-voting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 pallet-referenda = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+pallet-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 
 # Polkadot
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
@@ -40,3 +43,6 @@ bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting" }
 bifrost-primitives = { path = "../../primitives" }
 bifrost-asset-registry = { path = "../../pallets/asset-registry" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
+bifrost-runtime-common = { path = "../../runtime/common" }
+orml-traits = "0.4.1-dev"
+orml-tokens = "0.4.1-dev"
