@@ -26,5 +26,3 @@ mod slp;
 mod total_issuance;
 mod vtoken_minting;
 mod vtoken_voting;
-mod xcm_interface;
-mod xcm_transfer;
