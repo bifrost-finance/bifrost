@@ -29,6 +29,8 @@ mod tests;
 
 pub mod weights;
 
+pub mod migration;
+
 pub use crate::traits::StableAsset;
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get, weights::Weight};

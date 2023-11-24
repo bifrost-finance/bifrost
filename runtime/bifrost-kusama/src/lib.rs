@@ -1913,8 +1913,10 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
+	use crate::Runtime;
+	use nutsfinance_stable_asset::migration::StableAssetOnRuntimeUpgrade;
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = StableAssetOnRuntimeUpgrade<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
