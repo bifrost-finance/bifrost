@@ -25,9 +25,9 @@ use crate::{
 	},
 	BNC, *,
 };
+use bifrost_primitives::VBNC;
 use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::VBNC;
 use parachain_staking::RoundInfo;
 use sp_runtime::traits::AccountIdConversion;
 
