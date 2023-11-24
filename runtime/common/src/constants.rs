@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 /// Time.
 pub mod time {
-	use node_primitives::{BlockNumber, Moment};
+	use bifrost_primitives::{BlockNumber, Moment};
 	pub const MILLISECS_PER_BLOCK: Moment = 12000;
 	pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 

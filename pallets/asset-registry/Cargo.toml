@@ -7,22 +7,22 @@ edition = "2021"
 [dependencies]
 log = { version = "0.4.17", default-features = false }
 serde = { version = "1.0.160", optional = true }
-scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false  }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, optional = true }
-primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false  }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false }
+xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 [dev-dependencies]
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 [features]
 default = ["std"]
@@ -36,7 +36,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking?/std",
-	"primitives/std",
+	"bifrost-primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,11 +18,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::{AssetIdMaps, Config};
+use bifrost_primitives::{
+	AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo,
+};
 use frame_support::{
 	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EitherOfDiverse,
 };
 use frame_system::EnsureRoot;
-use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{traits::Bounded, FixedPointNumber, Perquintill};

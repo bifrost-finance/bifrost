@@ -31,11 +31,12 @@ extern crate alloc;
 #[cfg(feature = "try-runtime")]
 use alloc::{format, string::ToString};
 
+use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::string::String;
 use sp_runtime::{
 	traits::{AccountIdConversion, Saturating, Zero},
-	Perbill,
+	Perbill, TryRuntimeError,
 };
 use sp_std::{convert::TryInto, vec::Vec};
 
@@ -109,7 +110,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 		// Choose top TotalSelected collator candidates
 		<Pallet<T>>::select_top_candidates(1u32);
 		// Start Round 1 at Block 0
-		let round: RoundInfo<T::BlockNumber> =
+		let round: RoundInfo<BlockNumberFor<T>> =
 			RoundInfo::new(1u32, 0u32.into(), T::DefaultBlocksPerRound::get());
 		<Round<T>>::put(round);
 		// Snapshot total stake
@@ -119,7 +120,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		log::info!(target: "Staking", "pre-init migraion");
 		let candidates = <CandidatePool<T>>::get();
 		let old_count = candidates.0.len() as u32;
@@ -128,7 +129,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
 		log::info!(target: "Staking", "post-init migraion");
 		let candidates = <CandidatePool<T>>::get();
 		let new_count = candidates.0.len();
@@ -243,7 +244,7 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		use sp_std::collections::btree_map::BTreeMap;
 
 		let mut expected_delegator_state_entries = 0u64;
@@ -293,7 +294,7 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
 		use sp_std::collections::btree_map::BTreeMap;
 
 		let (
@@ -420,7 +421,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 		Weight::from_parts(top.saturating_add(bottom).saturating_add(100_000_000_000), 0)
 	}
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		use sp_std::collections::btree_map::BTreeMap;
 
 		let mut candidate_total_counted_map: BTreeMap<String, BalanceOf<T>> = BTreeMap::new();
@@ -435,7 +436,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
 		use sp_std::collections::btree_map::BTreeMap;
 
 		let candidate_total_counted_map: BTreeMap<String, BalanceOf<T>> =
@@ -492,13 +493,13 @@ impl<T: Config> OnRuntimeUpgrade for PurgeStaleStorage<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		// trivial migration
 		Ok(Vec::new())
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
 		// expect only the storage items for the last 2 rounds to be stored
 		let staked_count = Staked::<T>::iter().count() as u32;
 		let points_count = Points::<T>::iter().count() as u32;

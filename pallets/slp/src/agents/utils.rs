@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,11 @@ use crate::{
 	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, ASTR, DOT, GLMR, H160,
 	KSM, MANTA, MOVR, PHA,
 };
+use bifrost_primitives::CurrencyId;
+use bifrost_xcm_interface::traits::parachains;
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::CurrencyId;
 use sp_core::Get;
 use sp_std::prelude::*;
 use xcm::{
@@ -34,7 +35,6 @@ use xcm::{
 	},
 	v3::prelude::*,
 };
-use xcm_interface::traits::parachains;
 
 // Some untilities.
 impl<T: Config> Pallet<T> {

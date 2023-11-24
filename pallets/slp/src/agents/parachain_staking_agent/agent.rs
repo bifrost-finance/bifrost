@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -32,14 +32,14 @@ use crate::{
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	Validators, ValidatorsByDelegatorUpdateEntry, BNC,
 };
+use bifrost_primitives::{
+	currency::{GLMR, MANTA, MOVR},
+	CurrencyId, VtokenMintingOperator, XcmOperationType,
+};
 use codec::alloc::collections::BTreeMap;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
-use node_primitives::{
-	currency::{GLMR, MANTA, MOVR},
-	CurrencyId, VtokenMintingOperator, XcmOperationType,
-};
 use orml_traits::MultiCurrency;
 use parachain_staking::ParachainStakingInterface;
 use sp_arithmetic::Percent;

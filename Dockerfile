@@ -1,4 +1,4 @@
-# Copyright 2019-2022 Liebi Technologies.
+# Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 # This file is part of Bifrost.
 
 # Bifrost is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 FROM rust:buster as builder
 
 RUN apt-get update && apt-get install time cmake clang libclang-dev llvm protobuf-compiler -y
-RUN rustup toolchain install nightly-2022-11-15
-RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2022-11-15
+RUN rustup toolchain install nightly-2023-05-22
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2023-05-22
 
 WORKDIR /app
 COPY . /app

@@ -16,9 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{BalanceOf, Config, Decode, Encode};
-use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 

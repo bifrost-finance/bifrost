@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,12 +21,12 @@
 /// Money matters.
 pub mod currency {
 	use crate::Runtime;
+	use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::{Balance, CurrencyId, TokenSymbol};
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
@@ -79,7 +79,7 @@ pub mod currency {
 
 /// Time.
 pub mod time {
-	use node_primitives::{BlockNumber, Moment};
+	use bifrost_primitives::{BlockNumber, Moment};
 
 	/// Since BABE is probabilistic this is the average expected block time that
 	/// we are targetting. Blocks will be produced at a minimum duration defined

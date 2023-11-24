@@ -14,8 +14,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{CurrencyId, Liquidity, Rate, Ratio, Shortfall};
 use codec::Codec;
-use node_primitives::{CurrencyId, Liquidity, Rate, Ratio, Shortfall};
 use sp_runtime::{DispatchError, FixedU128};
 
 sp_api::decl_runtime_apis! {

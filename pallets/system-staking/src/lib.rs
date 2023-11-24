@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,15 +20,16 @@ pub mod types;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 pub use frame_support::weights::Weight;
-use frame_support::{dispatch::DispatchResultWithPostInfo, inherent::Vec, traits::Get, PalletId};
-use node_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
+use frame_support::{dispatch::DispatchResultWithPostInfo, traits::Get, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_runtime::{
 	traits::{AccountIdConversion, Saturating, Zero},
 	BoundedVec,
 };
+use sp_std::vec::Vec;
 pub use types::*;
 pub use RoundIndex;
 #[cfg(test)]
@@ -109,7 +110,7 @@ pub mod pallet {
 	/// Current Round Information
 	#[pallet::storage]
 	#[pallet::getter(fn round)]
-	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<T::BlockNumber>, OptionQuery>;
+	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<BlockNumberFor<T>>, OptionQuery>;
 
 	/// The tokenInfo for each currency
 	#[pallet::storage]
@@ -128,7 +129,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		NewRound {
 			current: RoundIndex,
-			first: T::BlockNumber,
+			first: BlockNumberFor<T>,
 			length: u32,
 		},
 		TokenConfigChanged {
@@ -230,7 +231,7 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// Get token list
 			let token_list = Self::token_list();
 

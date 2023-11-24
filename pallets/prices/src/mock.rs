@@ -21,13 +21,14 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, FixedPointNumber};
+use sp_runtime::{traits::IdentityLookup, FixedPointNumber};
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use node_primitives::{
+pub use bifrost_primitives::{
 	currency::{FIL, VFIL},
 	DOT, KSM, VDOT, VKSM,
 };
+use sp_runtime::BuildStorage;
 
 pub type AccountId = u128;
 pub type BlockNumber = u64;
@@ -42,14 +43,13 @@ parameter_types! {
 
 impl frame_system::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
+	type Nonce = u32;
+	type Block = Block;
 	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type BlockWeights = ();
@@ -110,7 +110,11 @@ impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
 }
 
 impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
-	fn feed_value(_: AccountId, _: CurrencyId, _: TimeStampedPrice) -> sp_runtime::DispatchResult {
+	fn feed_value(
+		_: Option<AccountId>,
+		_: CurrencyId,
+		_: TimeStampedPrice,
+	) -> sp_runtime::DispatchResult {
 		Ok(())
 	}
 }
@@ -135,7 +139,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -235,27 +239,22 @@ impl orml_tokens::Config for Test {
 	type CurrencyHooks = ();
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		Prices: crate::{Pallet, Storage, Call, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Storage, Call, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Assets: pallet_assets,
+		Tokens: orml_tokens,
+		Currencies: bifrost_currencies,
+		Prices: crate,
+		AssetRegistry: bifrost_asset_registry,
 	}
 );
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![

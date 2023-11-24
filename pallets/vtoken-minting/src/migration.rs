@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config, TokenUnlockLedger};
-use frame_support::{log, pallet_prelude::*, traits::OnRuntimeUpgrade};
-use node_primitives::{RedeemType, TimeUnit};
+use bifrost_primitives::{RedeemType, TimeUnit};
+use frame_support::{pallet_prelude::*, traits::OnRuntimeUpgrade};
 use sp_std::marker::PhantomData;
 
 /// Migrate TokenUnlockLedger

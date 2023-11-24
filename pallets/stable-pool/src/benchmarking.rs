@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,13 +18,14 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as StablePool, *};
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
-use frame_support::assert_ok;
-use frame_system::RawOrigin;
-pub use node_primitives::{
+pub use bifrost_primitives::{
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
 	DOT, DOT_TOKEN_ID, GLMR, KSM, VDOT,
 };
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_support::assert_ok;
+use frame_system::RawOrigin;
+use sp_std::vec;
 
 benchmarks! {
 	create_pool {

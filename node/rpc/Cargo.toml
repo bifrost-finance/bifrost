@@ -9,17 +9,17 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 jsonrpsee = { version = "0.16.2", features = ["server"] }
-node-primitives = { path = "../primitives" }
-sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+bifrost-primitives = { path = "../../primitives" }
+sc-client-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sc-rpc-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sc-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
