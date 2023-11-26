@@ -19,13 +19,13 @@
 use crate::vtoken_voting::set_balance_proposal_bounded;
 use bifrost_kusama_runtime::{Runtime, RuntimeCall, RuntimeEvent, System};
 use bifrost_primitives::Balance;
-use codec::Encode;
 use frame_support::{
 	assert_ok,
 	dispatch::{GetDispatchInfo, RawOrigin},
 };
 use integration_tests_common::{BifrostKusama, Kusama, KusamaAlice};
 use pallet_conviction_voting::{AccountVote, Vote};
+use parity_scale_codec::Encode;
 use xcm::v3::{prelude::*, Weight};
 use xcm_emulator::{bx, Parachain, RelayChain, TestExt};
 

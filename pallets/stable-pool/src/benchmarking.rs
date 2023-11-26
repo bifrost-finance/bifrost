@@ -70,14 +70,14 @@ benchmarks! {
 		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
 		)?;
 		T::MultiCurrency::deposit(
 			KSM.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into())
 		)?;
-		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(10_000_000_000u128.into())];
+		let amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(10_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(10_000_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
 		vec![coin0.into(), coin1.into()],
@@ -90,7 +90,7 @@ benchmarks! {
 		fee_account.clone(),
 		1000000000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into())), (KSM.into(), (1u128.into(), 1u128.into()))]));
-		}: _(RawOrigin::Signed(fee_account), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero())
+		}: _(RawOrigin::Signed(fee_account), 0, amounts, <T as bifrost_stable_asset::Config>::Balance::zero())
 
 	swap {
 		let test_account: T::AccountId = whitelisted_caller();
@@ -100,9 +100,9 @@ benchmarks! {
 		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
 		)?;
-		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
+		let amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
 		vec![coin0.into(), coin1.into()],
@@ -115,8 +115,8 @@ benchmarks! {
 		fee_account.clone(),
 		1000000000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
-		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-	}: _(RawOrigin::Signed(fee_account), 0, 0, 1, <T as nutsfinance_stable_asset::Config>::Balance::from(50_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::zero())
+		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as bifrost_stable_asset::Config>::Balance::zero()));
+	}: _(RawOrigin::Signed(fee_account), 0, 0, 1, <T as bifrost_stable_asset::Config>::Balance::from(50_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::zero())
 
 	redeem_proportion {
 		let test_account: T::AccountId = whitelisted_caller();
@@ -126,9 +126,9 @@ benchmarks! {
 		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
 		)?;
-		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
+		let amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
 		vec![coin0.into(), coin1.into()],
@@ -141,9 +141,9 @@ benchmarks! {
 		fee_account.clone(),
 		1000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
-		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-		// assert_ok!(StablePool::<T>::swap(RawOrigin::Signed(fee_account.clone()).into(), 0, 0, 1, <T as nutsfinance_stable_asset::Config>::Balance::from(50_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-	}: _(RawOrigin::Signed(fee_account), 0, <T as nutsfinance_stable_asset::Config>::Balance::from(5_000_000u128.into()), vec![<T as nutsfinance_stable_asset::Config>::Balance::zero(), <T as nutsfinance_stable_asset::Config>::Balance::zero()])
+		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as bifrost_stable_asset::Config>::Balance::zero()));
+		// assert_ok!(StablePool::<T>::swap(RawOrigin::Signed(fee_account.clone()).into(), 0, 0, 1, <T as bifrost_stable_asset::Config>::Balance::from(50_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::zero()));
+	}: _(RawOrigin::Signed(fee_account), 0, <T as bifrost_stable_asset::Config>::Balance::from(5_000_000u128.into()), vec![<T as bifrost_stable_asset::Config>::Balance::zero(), <T as bifrost_stable_asset::Config>::Balance::zero()])
 
 	redeem_single {
 		let test_account: T::AccountId = whitelisted_caller();
@@ -153,9 +153,9 @@ benchmarks! {
 		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
 		)?;
-		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000u128.into())];
+		let amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(100_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
 		vec![coin0.into(), coin1.into()],
@@ -168,8 +168,8 @@ benchmarks! {
 		fee_account.clone(),
 		1000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
-		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-	}: _(RawOrigin::Signed(fee_account), 0, <T as nutsfinance_stable_asset::Config>::Balance::from(5_000_000u128.into()), 0, <T as nutsfinance_stable_asset::Config>::Balance::zero(), 2)
+		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as bifrost_stable_asset::Config>::Balance::zero()));
+	}: _(RawOrigin::Signed(fee_account), 0, <T as bifrost_stable_asset::Config>::Balance::from(5_000_000u128.into()), 0, <T as bifrost_stable_asset::Config>::Balance::zero(), 2)
 
 	redeem_multi {
 		let test_account: T::AccountId = whitelisted_caller();
@@ -179,9 +179,9 @@ benchmarks! {
 		T::MultiCurrency::deposit(
 			BNC.into(),
 			&fee_account,
-			<T as nutsfinance_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
+			<T as bifrost_stable_asset::Config>::Balance::from(1000_000_000_000u128.into())
 		)?;
-		let amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(100_000_000_000u128.into())];
+		let amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(100_000_000_000u128.into())];
 		assert_ok!(StablePool::<T>::create_pool(
 		RawOrigin::Root.into(),
 		vec![coin0.into(), coin1.into()],
@@ -194,9 +194,9 @@ benchmarks! {
 		fee_account.clone(),
 		1000000000000u128.into()));
 		assert_ok!(StablePool::<T>::edit_token_rate(RawOrigin::Root.into(), 0, vec![(BNC.into(), (9u128.into(), 10u128.into()))]));
-		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as nutsfinance_stable_asset::Config>::Balance::zero()));
-		let redeem_amounts = vec![<T as nutsfinance_stable_asset::Config>::Balance::from(90_000_000u128.into()), <T as nutsfinance_stable_asset::Config>::Balance::from(90_000_000u128.into())];
-	}: _(RawOrigin::Signed(fee_account), 0, redeem_amounts, <T as nutsfinance_stable_asset::Config>::Balance::from(200_000_000_000u128.into()))
+		assert_ok!(StablePool::<T>::add_liquidity(RawOrigin::Signed(fee_account.clone()).into(), 0, amounts, <T as bifrost_stable_asset::Config>::Balance::zero()));
+		let redeem_amounts = vec![<T as bifrost_stable_asset::Config>::Balance::from(90_000_000u128.into()), <T as bifrost_stable_asset::Config>::Balance::from(90_000_000u128.into())];
+	}: _(RawOrigin::Signed(fee_account), 0, redeem_amounts, <T as bifrost_stable_asset::Config>::Balance::from(200_000_000_000u128.into()))
 
 	modify_a {
 		let test_account: T::AccountId = whitelisted_caller();

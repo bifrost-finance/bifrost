@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_service::{self as service, IdentifyVariant};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use node_service::{self as service, IdentifyVariant};
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, SharedParams, SubstrateCli,
@@ -463,7 +463,7 @@ pub fn run() -> Result<()> {
 					.flatten();
 
 				let para_id =
-					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
+					bifrost_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
 						.ok_or("Could not find parachain ID in chain-spec.")?;
 

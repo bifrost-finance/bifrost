@@ -15,22 +15,22 @@ init:
 
 .PHONY: build-bifrost-kusama-release # build bifrost kusama release
 build-bifrost-kusama-release: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
+	cargo build -p bifrost-cli --locked --features "with-bifrost-kusama-runtime" --release
 
 .PHONY: build-bifrost-polkadot-release # build bifrost polkadot release
 build-bifrost-polkadot-release:
-	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release
+	cargo build -p bifrost-cli --locked --features "with-bifrost-polkadot-runtime" --release
 
 .PHONY: build-all-release # build all runtime release
 build-all-release: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-all-runtime" --release
+	cargo build -p bifrost-cli --locked --features "with-all-runtime" --release
 
 .PHONY: check-all # cargo check all runtime
 check-all: format
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
+	SKIP_WASM_BUILD= cargo check -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: test-all # cargo test all
-test-all: integration-test test-runtimes test-benchmarks
+test-all: test-runtimes test-benchmarks
 
 
 .PHONY: test-runtimes
@@ -39,7 +39,7 @@ test-runtimes:
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "node-*" --exclude "*-runtime"
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
@@ -72,16 +72,16 @@ clippy:
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
-	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
+	cargo run -p bifrost-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
 			-- benchmark --chain=bifrost-local --steps=50 \
 			--repeat=20 \
-            --pallet=parachain_staking \
+            --pallet=bifrost_parachain_staking \
             --extrinsic="*" \
             --execution=wasm \
             --wasm-execution=compiled \
             --heap-pages=4096 \
             --header=./HEADER-GPL3 \
-			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
+			--output="./runtime/bifrost-kusama/src/weights/bifrost_parachain_staking.rs"
 
 .PHONY: generate-bifrost-kusama-weights # generate bifrost-kusama weights
 generate-bifrost-kusama-weights:
@@ -96,7 +96,7 @@ generate-all-weights: generate-bifrost-kusama-weights generate-bifrost-polkadot-
 
 .PHONY: build-all-release-with-bench # build all release with benchmarking
 build-all-release-with-bench: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
+	cargo build -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
 
 # Build docker image
 .PHONY: build-docker-image # build docker image
@@ -163,7 +163,7 @@ copy-genesis-config-production:
 
 .PHONY: production-release # build release for production
 production-release:
-	cargo build -p node-cli --locked --features "with-all-runtime" --profile production
+	cargo build -p bifrost-cli --locked --features "with-all-runtime" --profile production
 
 .PHONY: help # generate list of targets with descriptions
 help:
