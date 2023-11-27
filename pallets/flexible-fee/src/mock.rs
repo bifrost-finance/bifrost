@@ -20,7 +20,6 @@
 
 use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
-use balances::Call as BalancesCall;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
@@ -39,6 +38,7 @@ use frame_support::{
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use orml_traits::MultiCurrency;
+use pallet_balances::Call as BalancesCall;
 use pallet_xcm::EnsureResponse;
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -72,7 +72,7 @@ frame_support::construct_runtime!(
 	pub enum Test {
 		System: system,
 		Tokens: orml_tokens,
-		Balances: balances,
+		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		FlexibleFee: flexible_fee,
 		ZenlinkProtocol: zenlink_protocol,
@@ -109,7 +109,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-	type AccountData = balances::AccountData<u128>;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type AccountId = AccountId;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
@@ -153,7 +153,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-impl balances::Config for Test {
+impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type Balance = u128;
 	type DustRemoval = ();

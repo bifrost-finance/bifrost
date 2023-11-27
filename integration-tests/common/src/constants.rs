@@ -17,11 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Substrate
-use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
-use grandpa::AuthorityId as GrandpaId;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use sc_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
+use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_core::{sr25519, storage::Storage, Pair, Public};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -141,7 +141,9 @@ pub mod collators {
 
 	pub fn inflation_config() -> InflationInfo<Balance> {
 		fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
-			use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
+			use bifrost_parachain_staking::inflation::{
+				perbill_annual_to_perbill_round, BLOCKS_PER_YEAR,
+			};
 			perbill_annual_to_perbill_round(
 				annual,
 				// rounds per year
@@ -529,7 +531,7 @@ pub mod bifrost_kusama {
 					})
 					.collect(),
 			},
-			// parachain_staking: bifrost_kusama_runtime::ParachainStakingConfig {
+			// bifrost_parachain_staking: bifrost_kusama_runtime::ParachainStakingConfig {
 			// 	candidates: collators::candidates(),
 			// 	delegations: collators::delegations(),
 			// 	inflation_config: collators::inflation_config(),

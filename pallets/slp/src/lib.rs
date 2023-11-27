@@ -31,6 +31,7 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
@@ -44,7 +45,6 @@ use frame_system::{
 	RawOrigin,
 };
 use orml_traits::MultiCurrency;
-use parachain_staking::ParachainStakingInterface;
 pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_core::{bounded::BoundedVec, H160};

@@ -18,7 +18,7 @@
 
 use crate::MultiLocation;
 use bifrost_primitives::{CurrencyId, TimeUnit};
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;

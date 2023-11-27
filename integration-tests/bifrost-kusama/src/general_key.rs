@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_primitives::{CurrencyId, TokenSymbol};
-use codec::Encode;
 use integration_tests_common::BifrostKusama;
+use parity_scale_codec::Encode;
 use sp_runtime::BoundedVec;
 use xcm::prelude::*;
 use xcm_emulator::TestExt;

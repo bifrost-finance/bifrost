@@ -30,9 +30,9 @@ use crate::{
 	*,
 };
 use bifrost_primitives::{currency::VMOVR, Balance};
-use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use polkadot_parachain::primitives::Sibling;
+use parity_scale_codec::alloc::collections::BTreeMap;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
 const VALIDATOR_0_ACCOUNT_ID_20: [u8; 20] =

@@ -5,44 +5,44 @@ authors = ["hqwangningbo <2536935847@qq.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
-paste = "1.0.14"
+parity-scale-codec = { workspace = true }
+paste = { workspace = true }
 
 # Substrate
-grandpa = { package = "sc-consensus-grandpa", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-authority-discovery = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-sp-consensus-babe = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-im-online = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-beefy-primitives = { package = "sp-consensus-beefy", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sc-consensus-grandpa = { workspace = true }
+sp-authority-discovery = { workspace = true }
+sp-runtime = { workspace = true }
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-consensus-babe = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-staking = { workspace = true }
+pallet-message-queue = { workspace = true }
+pallet-im-online = { workspace = true }
+sp-consensus-beefy = { workspace = true }
 
 # Polkadot
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, features = ["full-node"] }
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-polkadot-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-kusama-runtime = { package = "staging-kusama-runtime", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-kusama-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+polkadot-core-primitives = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
+polkadot-service = { workspace = true }
+polkadot-primitives = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
+polkadot-runtime = { workspace = true }
+polkadot-runtime-constants = { workspace = true }
+kusama-runtime = { workspace = true }
+kusama-runtime-constants = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
 
 # Cumulus
-parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+parachains-common = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+xcm-emulator = { workspace = true }
+cumulus-pallet-dmp-queue = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-pallet-parachain-system = { workspace = true }
 
-bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
-parachain-staking = { path = "../../pallets/parachain-staking" }
-bifrost-primitives = { path = "../../primitives" }
+bifrost-polkadot-runtime = { workspace = true }
+bifrost-kusama-runtime = { workspace = true }
+bifrost-parachain-staking = { workspace = true }
+bifrost-primitives = { workspace = true }
