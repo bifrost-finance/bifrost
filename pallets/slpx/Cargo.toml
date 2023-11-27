@@ -40,7 +40,7 @@ bifrost-vtoken-minting = { workspace = true }
 bifrost-slp = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 bifrost-currencies = { workspace = true }
-xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+xcm-executor = { workspace = true }
 xcm-builder = { workspace = true }
 pallet-xcm  = { workspace = true }
 xcm-simulator  = { workspace = true }
