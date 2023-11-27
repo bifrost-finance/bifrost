@@ -19,8 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use super::{Config, Weight, *};
-use frame_support::traits::Get;
-use frame_support::PalletId;
+use frame_support::{traits::Get, PalletId};
 
 pub fn update_pallet_id<T: Config>() -> Weight {
 	let pool_count: u32 = PoolCount::<T>::get();
@@ -85,16 +84,7 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 				let old_account_id: T::AccountId = old_pallet_id.into_sub_account_truncating(pool_id);
 				for (_, &asset_id) in pool_info.assets.iter().enumerate() {
 					let old_balance = T::Assets::free_balance(asset_id, &old_account_id);
-					if old_balance == Zero::zero() {
-						continue;
-					} else {
-						log::info!(
-							"Old pool {:?} asset_id {:?} free_balance is {:?}",
-							pool_id,
-							asset_id,
-							old_balance
-						);
-					}
+					assert_eq!(old_balance, Zero::zero());
 
 					let balance = T::Assets::free_balance(asset_id, &pool_info.account_id);
 					if balance != Zero::zero() {
@@ -102,23 +92,6 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 					} else {
 						log::info!("New pool {:?} asset_id {:?} free_balance is zero.", pool_id, asset_id);
 					}
-				}
-				let old_pool_asset_balance = T::Assets::free_balance(pool_info.pool_asset, &old_account_id);
-				if old_pool_asset_balance == Zero::zero() {
-					continue;
-				} else {
-					log::info!(
-						"Old pool {:?} pool_asset_balance is {:?}",
-						pool_id,
-						old_pool_asset_balance
-					);
-				}
-
-				let pool_asset_balance = T::Assets::free_balance(pool_info.pool_asset, &pool_info.account_id);
-				if pool_asset_balance != Zero::zero() {
-					continue;
-				} else {
-					log::info!("New pool {:?} pool_asset_balance is zero", pool_id,);
 				}
 			} else {
 				log::info!("Pool {:?} not found", pool_id);

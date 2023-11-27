@@ -317,6 +317,7 @@ parameter_types! {
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
+	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 }
 
 impl frame_system::Config for Runtime {
@@ -1322,9 +1323,6 @@ impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoo
 	fn validate(_: CurrencyId) -> bool {
 		true
 	}
-}
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
 }
 
 /// Configure the pallet nutsfinance_stable_asset in pallets/nutsfinance_stable_asset.
