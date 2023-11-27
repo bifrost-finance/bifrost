@@ -88,7 +88,7 @@ construct_runtime!(
 	Slpx: slpx,
 	  PolkadotXcm: pallet_xcm,
 	  ParachainInfo: parachain_info,
-	  StableAsset: nutsfinance_stable_asset,
+	  StableAsset: bifrost_stable_asset,
 	  StablePool: bifrost_stable_pool
   }
 );
@@ -528,7 +528,7 @@ impl pallet_xcm::Config for Test {
 }
 
 pub struct EnsurePoolAssetId;
-impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
 	fn validate(_: CurrencyId) -> bool {
 		true
 	}
@@ -537,7 +537,7 @@ parameter_types! {
 	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
 }
 
-impl nutsfinance_stable_asset::Config for Test {
+impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;

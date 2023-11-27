@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, AssetIdOf, AtLeast64BitUnsignedOf, Error};
+use bifrost_stable_asset::StableAssetPoolInfo;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
-use nutsfinance_stable_asset::StableAssetPoolInfo;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 
@@ -91,7 +91,7 @@ fn modify_a_argument_error_failed() {
 
 		assert_noop!(
 			StableAsset::modify_a(RuntimeOrigin::signed(1), 0, 100, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 	});
 }
@@ -104,7 +104,7 @@ fn calc() {
 
 		assert_noop!(
 			StableAsset::modify_a(RuntimeOrigin::signed(1), 0, 100, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 	});
 }
@@ -172,7 +172,7 @@ fn mint_successful_equal_amounts() {
 				amounts.clone(),
 				2000000000000000000000000u128
 			),
-			nutsfinance_stable_asset::Error::<Test>::MintUnderMin
+			bifrost_stable_asset::Error::<Test>::MintUnderMin
 		);
 		assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
 		// assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts.clone(), 0));
@@ -285,23 +285,23 @@ fn get_swap_output_amount() {
 		assert_eq!(StablePool::get_swap_output(0, 0, 1, 5000000u128).ok(), Some(4980724));
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 1, 1, 5000000u128, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 3, 0, 1, 5000000u128, 0),
-			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+			bifrost_stable_asset::Error::<Test>::PoolNotFound
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 2, 1, 5000000u128, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 2, 5000000u128, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 1, 0u128, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 1, 500000000u128, 0u128),
@@ -362,7 +362,7 @@ fn mint_swap_redeem1() {
 		assert_ok!(StablePool::on_swap(&1u128, 0, 0, 1, 500_000_000u128, 0));
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 15_000_000_000_000u128, vec![0, 0]));
 	});
@@ -397,15 +397,15 @@ fn mint_swap_redeem2() {
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 0u128, vec![0u128, 0u128]),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0, 0, 0]),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(
@@ -414,11 +414,11 @@ fn mint_swap_redeem2() {
 				15_000_000u128,
 				vec![100000000000000000u128, 0]
 			),
-			nutsfinance_stable_asset::Error::<Test>::RedeemUnderMin
+			bifrost_stable_asset::Error::<Test>::RedeemUnderMin
 		);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 3, 15_000_000u128, vec![0, 0]),
-			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+			bifrost_stable_asset::Error::<Test>::PoolNotFound
 		);
 		let pool_account: u128 = StableAssetPalletId::get().into_account_truncating();
 		assert_eq!(Tokens::free_balance(coin0, &pool_account), 15000000);
@@ -450,7 +450,7 @@ fn mint_swap_redeem_for_precisions() {
 		assert_eq!(Tokens::free_balance(coin0, &3), 85000000u128 - BALANCE_OFF);
 		assert_noop!(
 			StablePool::redeem_proportion_inner(&3, 0, 15_000_000u128, vec![0]),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_ok!(StablePool::redeem_proportion_inner(&3, 0, 32176560, vec![0, 0]));
 	});
@@ -507,7 +507,7 @@ fn redeem_single() {
 		));
 		assert_noop!(
 			StablePool::redeem_single(RuntimeOrigin::signed(6), 0, 0u128, 0, 0u128, 2),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::redeem_single(
@@ -518,7 +518,7 @@ fn redeem_single() {
 				0u128,
 				2
 			),
-			nutsfinance_stable_asset::Error::<Test>::Math
+			bifrost_stable_asset::Error::<Test>::Math
 		);
 		assert_noop!(
 			StablePool::redeem_single(
@@ -529,7 +529,7 @@ fn redeem_single() {
 				6_000_000_000u128,
 				2
 			),
-			nutsfinance_stable_asset::Error::<Test>::RedeemUnderMin
+			bifrost_stable_asset::Error::<Test>::RedeemUnderMin
 		);
 		assert_noop!(
 			StablePool::redeem_single(
@@ -540,7 +540,7 @@ fn redeem_single() {
 				0u128,
 				2
 			),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_noop!(
 			StablePool::redeem_single(
@@ -551,7 +551,7 @@ fn redeem_single() {
 				0u128,
 				2
 			),
-			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+			bifrost_stable_asset::Error::<Test>::PoolNotFound
 		);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 204_955_833_377);
 		assert_eq!(Tokens::free_balance(coin0, &6), 904_942_938_280);
@@ -573,7 +573,7 @@ fn redeem_single() {
 				Some(10_000_000_000),
 				Some(10_000_000_000)
 			),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_ok!(StablePool::modify_fees(
 			RuntimeOrigin::root(),
@@ -660,16 +660,16 @@ fn redeem_multi() {
 		let amounts2 = vec![10000000u128, 20000000u128, 20000000u128];
 		assert_noop!(
 			StablePool::add_liquidity(RuntimeOrigin::signed(1), 0, amounts2.clone(), 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_noop!(
 			StablePool::add_liquidity(RuntimeOrigin::signed(1), 3, amounts2, 0),
-			nutsfinance_stable_asset::Error::<Test>::PoolNotFound
+			bifrost_stable_asset::Error::<Test>::PoolNotFound
 		);
 		let amounts_has_zero = vec![0u128, 20000000u128];
 		assert_noop!(
 			StablePool::add_liquidity(RuntimeOrigin::signed(1), 0, amounts_has_zero, 0),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
 		assert_eq!(Tokens::free_balance(coin0, &6), 900_000_000_000u128);
@@ -683,7 +683,7 @@ fn redeem_multi() {
 				vec![200_000_000_000u128, 200_000_000_000u128],
 				1100000000000000000u128,
 			),
-			nutsfinance_stable_asset::Error::<Test>::Math
+			bifrost_stable_asset::Error::<Test>::Math
 		);
 		assert_noop!(
 			StablePool::redeem_multi(
@@ -760,7 +760,7 @@ fn edit_token_rate() {
 				0,
 				vec![(BNC, (1, 1)), (VBNC, (10, 11))]
 			),
-			nutsfinance_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
 		);
 		let (_coin0, _coin1, _pool_asset, _swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
@@ -769,7 +769,7 @@ fn edit_token_rate() {
 			vec![(BNC, (1, 1)), (VBNC, (10, 11))]
 		));
 		assert_eq!(
-			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
 				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
 			)>>(),
@@ -778,7 +778,7 @@ fn edit_token_rate() {
 
 		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![(VBNC, (10, 12))]));
 		assert_eq!(
-			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
 				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
 			)>>(),
@@ -787,7 +787,7 @@ fn edit_token_rate() {
 
 		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![]));
 		assert_eq!(
-			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
 				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
 			)>>(),
@@ -795,7 +795,7 @@ fn edit_token_rate() {
 		);
 		assert_ok!(StablePool::edit_token_rate(RuntimeOrigin::root(), 0, vec![(VBNC, (10, 12))]));
 		assert_eq!(
-			nutsfinance_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
 				AssetIdOf<Test>,
 				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
 			)>>(),

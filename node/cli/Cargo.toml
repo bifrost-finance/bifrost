@@ -1,6 +1,6 @@
 [package]
-name = "node-cli"
-version = "0.9.86"
+name = "bifrost-cli"
+version = "0.9.87"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -17,46 +17,46 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # third-party dependencies
-clap = { version = "4.2.7", features = ["derive"] }
-codec = { package = "parity-scale-codec", version = "3.0.0" }
-log = "0.4.17"
+clap = {  workspace = true, features = ["derive"] }
+parity-scale-codec = { workspace = true }
+log = { workspace = true }
 
 # primitives
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sp-io = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 
 # client dependencies
-sc-executor = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-sc-sysinfo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-tracing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+sc-executor  = { workspace = true }
+sc-service  = { workspace = true, optional = true }
+sc-sysinfo = { workspace = true }
+sc-telemetry = { workspace = true }
+sc-tracing = { workspace = true }
+sc-offchain = { workspace = true }
 
 # node-specific dependencies
-node-service = { path = "../service", default-features = false }
-bifrost-primitives = { path = "../../primitives" }
+bifrost-service = { workspace = true }
+bifrost-primitives = { workspace = true }
 
 # CLI-specific dependencies
-sc-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-try-runtime-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-node-inspect = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
+sc-cli = { workspace = true, optional = true }
+try-runtime-cli = { workspace = true, optional = true }
+frame-try-runtime = { workspace = true, optional = true }
+frame-benchmarking-cli = { workspace = true, optional = true }
+node-inspect = { workspace = true, optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-cumulus-client-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+cumulus-client-cli = { workspace = true }
+cumulus-client-service = { workspace = true }
+cumulus-primitives-core = { workspace = true }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-polkadot-parachain = { package = "polkadot-parachain-primitives", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+polkadot-primitives = { workspace = true }
+polkadot-cli = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
+substrate-build-script-utils = { workspace = true, optional = true }
 
 [features]
 default = ["cli"]
@@ -68,13 +68,13 @@ cli = [
 	"sc-service",
 	"substrate-build-script-utils",
 ]
-runtime-benchmarks = ["node-service/runtime-benchmarks"]
+runtime-benchmarks = ["bifrost-service/runtime-benchmarks"]
 with-bifrost-runtime = [
-	"node-service/with-bifrost-kusama-runtime",
-	"node-service/with-bifrost-polkadot-runtime",
+	"bifrost-service/with-bifrost-kusama-runtime",
+	"bifrost-service/with-bifrost-polkadot-runtime",
 ]
-with-bifrost-kusama-runtime = ["node-service/with-bifrost-kusama-runtime"]
-with-bifrost-polkadot-runtime = ["node-service/with-bifrost-polkadot-runtime"]
+with-bifrost-kusama-runtime = ["bifrost-service/with-bifrost-kusama-runtime"]
+with-bifrost-polkadot-runtime = ["bifrost-service/with-bifrost-polkadot-runtime"]
 with-all-runtime = ["with-bifrost-runtime"]
-try-runtime = ["node-service/try-runtime", "try-runtime-cli/try-runtime"]
-fast-runtime = ["node-service/fast-runtime"]
+try-runtime = ["bifrost-service/try-runtime", "try-runtime-cli/try-runtime"]
+fast-runtime = ["bifrost-service/fast-runtime"]

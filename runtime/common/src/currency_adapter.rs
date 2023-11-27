@@ -1,6 +1,6 @@
-use codec::FullCodec;
 use frame_support::traits::Get;
 use orml_xcm_support::UnknownAsset as UnknownAssetT;
+use parity_scale_codec::FullCodec;
 use sp_runtime::{
 	traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion},
 	DispatchError,

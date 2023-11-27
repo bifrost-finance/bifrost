@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use codec::HasCompact;
 use frame_support::pallet_prelude::*;
+use parity_scale_codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{

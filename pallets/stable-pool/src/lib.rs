@@ -34,12 +34,12 @@ use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, TimeUnit,
 	VtokenMintingOperator,
 };
-use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
-use frame_system::pallet_prelude::*;
-pub use nutsfinance_stable_asset::{
+pub use bifrost_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, SwapResult,
 };
+use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
+use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::SaturatedConversion;
@@ -52,7 +52,7 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type AssetIdOf<T> = <T as Config>::CurrencyId;
 
 #[allow(type_alias_bounds)]
-pub type AtLeast64BitUnsignedOf<T> = <T as nutsfinance_stable_asset::Config>::AtLeast64BitUnsigned;
+pub type AtLeast64BitUnsignedOf<T> = <T as bifrost_stable_asset::Config>::AtLeast64BitUnsigned;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -63,7 +63,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config + nutsfinance_stable_asset::Config<AssetId = AssetIdOf<Self>>
+		frame_system::Config + bifrost_stable_asset::Config<AssetId = AssetIdOf<Self>>
 	{
 		type WeightInfo: WeightInfo;
 
@@ -82,7 +82,7 @@ pub mod pallet {
 			+ From<CurrencyId>
 			+ Into<CurrencyId>;
 
-		type StableAsset: nutsfinance_stable_asset::StableAsset<
+		type StableAsset: bifrost_stable_asset::StableAsset<
 			AssetId = AssetIdOf<Self>,
 			Balance = Self::Balance,
 			AccountId = AccountIdOf<Self>,
@@ -136,7 +136,7 @@ pub mod pallet {
 				precision
 					.saturated_into::<u128>()
 					.checked_ilog10()
-					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?
+					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?
 					.saturated_into::<u8>(),
 			)?;
 			T::StableAsset::create_pool(
@@ -245,12 +245,12 @@ pub mod pallet {
 				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
 					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
 					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
-				nutsfinance_stable_asset::Error::<T>::ArgumentsError
+				bifrost_stable_asset::Error::<T>::ArgumentsError
 			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
-					.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+					.ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 				if let Some(fee) = mint_fee {
 					pool_info.mint_fee = fee;
 				}
@@ -260,8 +260,8 @@ pub mod pallet {
 				if let Some(fee) = redeem_fee {
 					pool_info.redeem_fee = fee;
 				}
-				nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-					nutsfinance_stable_asset::Event::<T>::FeeModified {
+				bifrost_stable_asset::Pallet::<T>::deposit_event(
+					bifrost_stable_asset::Event::<T>::FeeModified {
 						pool_id,
 						mint_fee: pool_info.mint_fee,
 						swap_fee: pool_info.swap_fee,
@@ -284,15 +284,15 @@ pub mod pallet {
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
-					.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+					.ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 				if let Some(recipient) = fee_recipient {
 					pool_info.fee_recipient = recipient;
 				}
 				if let Some(recipient) = yield_recipient {
 					pool_info.yield_recipient = recipient;
 				}
-				nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-					nutsfinance_stable_asset::Event::<T>::RecipientModified {
+				bifrost_stable_asset::Pallet::<T>::deposit_event(
+					bifrost_stable_asset::Event::<T>::RecipientModified {
 						pool_id,
 						fee_recipient: pool_info.fee_recipient.clone(),
 						yield_recipient: pool_info.yield_recipient.clone(),
@@ -313,7 +313,7 @@ pub mod pallet {
 			)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			nutsfinance_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
+			bifrost_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
 	}
 }
@@ -326,8 +326,8 @@ impl<T: Config> Pallet<T> {
 		mut amounts: Vec<T::Balance>,
 		min_mint_amount: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let mut pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		let amounts_old = amounts.clone();
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
@@ -336,19 +336,19 @@ impl<T: Config> Pallet<T> {
 				*pool_info
 					.assets
 					.get(i as usize)
-					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let MintResult { mint_amount, fee_amount, balances, total_supply } =
-			nutsfinance_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
+			bifrost_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 		let a = T::StableAsset::get_a(
 			pool_info.a,
 			pool_info.a_block,
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
+		.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
 		ensure!(mint_amount >= min_mint_amount, Error::<T>::MintUnderMin);
 		for (i, amount) in amounts.iter().enumerate() {
 			if *amount == Zero::zero() {
@@ -362,7 +362,7 @@ impl<T: Config> Pallet<T> {
 						*pool_info
 							.assets
 							.get(i as usize)
-							.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+							.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 					)?,
 				Error::<T>::CantMint
 			);
@@ -374,13 +374,13 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 		if fee_amount > Zero::zero() {
-			<T as nutsfinance_stable_asset::Config>::Assets::deposit(
+			<T as bifrost_stable_asset::Config>::Assets::deposit(
 				pool_info.pool_asset,
 				&pool_info.fee_recipient,
 				fee_amount,
 			)?;
 		}
-		<T as nutsfinance_stable_asset::Config>::Assets::deposit(
+		<T as bifrost_stable_asset::Config>::Assets::deposit(
 			pool_info.pool_asset,
 			who,
 			mint_amount.into(),
@@ -389,8 +389,8 @@ impl<T: Config> Pallet<T> {
 		pool_info.balances = balances;
 		T::StableAsset::collect_fee(pool_id, &mut pool_info)?;
 		T::StableAsset::insert_pool(pool_id, &pool_info);
-		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::LiquidityAdded {
+		bifrost_stable_asset::Pallet::<T>::deposit_event(
+			bifrost_stable_asset::Event::<T>::LiquidityAdded {
 				minter: who.clone(),
 				pool_id,
 				a,
@@ -412,12 +412,12 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		min_redeem_amounts: Vec<T::Balance>,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let mut pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		ensure!(
 			min_redeem_amounts.len() == pool_info.assets.len(),
-			nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch
+			bifrost_stable_asset::Error::<T>::ArgumentsMismatch
 		);
 		let RedeemProportionResult {
 			mut amounts,
@@ -425,7 +425,7 @@ impl<T: Config> Pallet<T> {
 			fee_amount,
 			total_supply,
 			redeem_amount,
-		} = nutsfinance_stable_asset::Pallet::<T>::get_redeem_proportion_amount(&pool_info, amount)?;
+		} = bifrost_stable_asset::Pallet::<T>::get_redeem_proportion_amount(&pool_info, amount)?;
 
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::downscale(
@@ -434,7 +434,7 @@ impl<T: Config> Pallet<T> {
 				*pool_info
 					.assets
 					.get(i as usize)
-					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 
@@ -444,10 +444,10 @@ impl<T: Config> Pallet<T> {
 				amounts[i] >=
 					*min_redeem_amounts
 						.get(i as usize)
-						.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
-				nutsfinance_stable_asset::Error::<T>::RedeemUnderMin
+						.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				bifrost_stable_asset::Error::<T>::RedeemUnderMin
 			);
-			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+			<T as bifrost_stable_asset::Config>::Assets::transfer(
 				pool_info.assets[i],
 				&pool_info.account_id,
 				who,
@@ -455,14 +455,14 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 		if fee_amount > zero {
-			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+			<T as bifrost_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
 				who,
 				&pool_info.fee_recipient,
 				fee_amount,
 			)?;
 		}
-		<T as nutsfinance_stable_asset::Config>::Assets::withdraw(
+		<T as bifrost_stable_asset::Config>::Assets::withdraw(
 			pool_info.pool_asset,
 			who,
 			redeem_amount,
@@ -480,9 +480,9 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
-		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::RedeemedProportion {
+		.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
+		bifrost_stable_asset::Pallet::<T>::deposit_event(
+			bifrost_stable_asset::Event::<T>::RedeemedProportion {
 				redeemer: who.clone(),
 				pool_id,
 				a,
@@ -504,8 +504,8 @@ impl<T: Config> Pallet<T> {
 		amounts: Vec<T::Balance>,
 		max_redeem_amount: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let mut pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let mut new_amounts = amounts.clone();
 		for (i, amount) in new_amounts.iter_mut().enumerate() {
@@ -515,18 +515,18 @@ impl<T: Config> Pallet<T> {
 				*pool_info
 					.assets
 					.get(i as usize)
-					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 		let RedeemMultiResult { redeem_amount, fee_amount, balances, total_supply, burn_amount } =
-			nutsfinance_stable_asset::Pallet::<T>::get_redeem_multi_amount(
+			bifrost_stable_asset::Pallet::<T>::get_redeem_multi_amount(
 				&mut pool_info,
 				&new_amounts,
 			)?;
 		let zero: T::Balance = Zero::zero();
 		ensure!(redeem_amount <= max_redeem_amount, Error::<T>::RedeemOverMax);
 		if fee_amount > zero {
-			<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+			<T as bifrost_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
 				who,
 				&pool_info.fee_recipient,
@@ -535,7 +535,7 @@ impl<T: Config> Pallet<T> {
 		}
 		for (idx, amount) in amounts.iter().enumerate() {
 			if *amount > zero {
-				<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+				<T as bifrost_stable_asset::Config>::Assets::transfer(
 					pool_info.assets[idx],
 					&pool_info.account_id,
 					who,
@@ -543,7 +543,7 @@ impl<T: Config> Pallet<T> {
 				)?;
 			}
 		}
-		<T as nutsfinance_stable_asset::Config>::Assets::withdraw(
+		<T as bifrost_stable_asset::Config>::Assets::withdraw(
 			pool_info.pool_asset,
 			who,
 			burn_amount,
@@ -559,9 +559,9 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
-		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::RedeemedMulti {
+		.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
+		bifrost_stable_asset::Pallet::<T>::deposit_event(
+			bifrost_stable_asset::Event::<T>::RedeemedMulti {
 				redeemer: who.clone(),
 				pool_id,
 				a,
@@ -585,32 +585,25 @@ impl<T: Config> Pallet<T> {
 		min_redeem_amount: T::Balance,
 		asset_length: u32,
 	) -> Result<(T::Balance, T::Balance), DispatchError> {
-		let mut pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let mut pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let RedeemSingleResult { mut dy, fee_amount, total_supply, balances, redeem_amount } =
-			nutsfinance_stable_asset::Pallet::<T>::get_redeem_single_amount(
-				&mut pool_info,
-				amount,
-				i,
-			)?;
+			bifrost_stable_asset::Pallet::<T>::get_redeem_single_amount(&mut pool_info, amount, i)?;
 		dy = Self::downscale(
 			dy,
 			pool_id,
 			*pool_info
 				.assets
 				.get(i as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		let i_usize = i as usize;
 		let pool_size = pool_info.assets.len();
 		let asset_length_usize = asset_length as usize;
-		ensure!(
-			asset_length_usize == pool_size,
-			nutsfinance_stable_asset::Error::<T>::ArgumentsError
-		);
-		ensure!(dy >= min_redeem_amount, nutsfinance_stable_asset::Error::<T>::RedeemUnderMin);
+		ensure!(asset_length_usize == pool_size, bifrost_stable_asset::Error::<T>::ArgumentsError);
+		ensure!(dy >= min_redeem_amount, bifrost_stable_asset::Error::<T>::RedeemUnderMin);
 		if fee_amount > Zero::zero() {
 			T::MultiCurrency::transfer(
 				pool_info.pool_asset,
@@ -634,9 +627,9 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
-		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::RedeemedSingle {
+		.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
+		bifrost_stable_asset::Pallet::<T>::deposit_event(
+			bifrost_stable_asset::Event::<T>::RedeemedSingle {
 				redeemer: who.clone(),
 				pool_id,
 				a,
@@ -661,8 +654,8 @@ impl<T: Config> Pallet<T> {
 		amount: T::Balance,
 		min_dy: T::Balance,
 	) -> DispatchResult {
-		let mut pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let mut pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let dx = Self::upscale(
 			amount,
@@ -670,10 +663,10 @@ impl<T: Config> Pallet<T> {
 			*pool_info
 				.assets
 				.get(currency_id_in as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		let SwapResult { dx: _, dy, y, balance_i } =
-			nutsfinance_stable_asset::Pallet::<T>::get_swap_amount(
+			bifrost_stable_asset::Pallet::<T>::get_swap_amount(
 				&pool_info,
 				currency_id_in,
 				currency_id_out,
@@ -686,7 +679,7 @@ impl<T: Config> Pallet<T> {
 			*pool_info
 				.assets
 				.get(currency_id_out as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
@@ -695,13 +688,13 @@ impl<T: Config> Pallet<T> {
 		let j_usize = currency_id_out as usize;
 		balances[i_usize] = balance_i;
 		balances[j_usize] = y;
-		<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+		<T as bifrost_stable_asset::Config>::Assets::transfer(
 			pool_info.assets[i_usize],
 			who,
 			&pool_info.account_id,
 			amount,
 		)?;
-		<T as nutsfinance_stable_asset::Config>::Assets::transfer(
+		<T as bifrost_stable_asset::Config>::Assets::transfer(
 			pool_info.assets[j_usize],
 			&pool_info.account_id,
 			who,
@@ -717,9 +710,9 @@ impl<T: Config> Pallet<T> {
 			pool_info.future_a,
 			pool_info.future_a_block,
 		)
-		.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
-		nutsfinance_stable_asset::Pallet::<T>::deposit_event(
-			nutsfinance_stable_asset::Event::<T>::TokenSwapped {
+		.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
+		bifrost_stable_asset::Pallet::<T>::deposit_event(
+			bifrost_stable_asset::Event::<T>::TokenSwapped {
 				swapper: who.clone(),
 				pool_id,
 				a,
@@ -741,7 +734,7 @@ impl<T: Config> Pallet<T> {
 		currency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
 		if let Some((demoninator, numerator)) =
-			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
+			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
 		{
 			return Ok(Self::calculate_scaling(
 				amount.into(),
@@ -757,7 +750,7 @@ impl<T: Config> Pallet<T> {
 		currency_id: AssetIdOf<T>,
 	) -> Result<T::Balance, DispatchError> {
 		if let Some((numerator, demoninator)) =
-			nutsfinance_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
+			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, currency_id)
 		{
 			return Ok(Self::calculate_scaling(
 				amount.into(),
@@ -800,9 +793,9 @@ impl<T: Config> Pallet<T> {
 			*pool_info
 				.assets
 				.get(currency_id_in as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
-		let SwapResult { dx: _, dy, .. } = nutsfinance_stable_asset::Pallet::<T>::get_swap_amount(
+		let SwapResult { dx: _, dy, .. } = bifrost_stable_asset::Pallet::<T>::get_swap_amount(
 			&pool_info,
 			currency_id_in,
 			currency_id_out,
@@ -814,7 +807,7 @@ impl<T: Config> Pallet<T> {
 			*pool_info
 				.assets
 				.get(currency_id_out as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 
 		Ok(downscale_out)
@@ -833,11 +826,11 @@ impl<T: Config> Pallet<T> {
 				*pool_info
 					.assets
 					.get(i as usize)
-					.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
 		let MintResult { mint_amount, .. } =
-			nutsfinance_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
+			bifrost_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 
 		Ok(mint_amount)
 	}

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{agents::BalancesCall, BalanceOf, Config, MultiLocation};
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::MultiAsset, v3::Weight as XCMWeight};
