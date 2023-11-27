@@ -545,6 +545,8 @@ fn bond_works() {
 			DOT,
 			Box::new(SUBACCOUNT_0_LOCATION),
 			1_000_000_000_000,
+			None,
+			None,
 			None
 		));
 	});

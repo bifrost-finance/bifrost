@@ -60,8 +60,14 @@ fn delegate_setup() {
 	initialize_delegator_setup();
 
 	let _ = Slp::add_validator(RuntimeOrigin::signed(ALICE), FIL, Box::new(owner_location));
-	let _ =
-		Slp::delegate(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), vec![owner_location]);
+	let _ = Slp::delegate(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Box::new(location),
+		vec![owner_location],
+		None,
+		None,
+	);
 }
 
 fn bond_setup() {
@@ -70,8 +76,15 @@ fn bond_setup() {
 
 	delegate_setup();
 
-	let _ =
-		Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), 1_000_000_000_000, None);
+	let _ = Slp::bond(
+		RuntimeOrigin::signed(ALICE),
+		FIL,
+		Box::new(location),
+		1_000_000_000_000,
+		None,
+		None,
+		None,
+	);
 }
 
 #[test]
@@ -109,6 +122,8 @@ fn bond_should_work() {
 				FIL,
 				Box::new(location),
 				1_000_000_000_000,
+				None,
+				None,
 				None
 			),
 			Error::<Runtime>::NotExist
@@ -117,7 +132,15 @@ fn bond_should_work() {
 		delegate_setup();
 
 		assert_noop!(
-			Slp::bond(RuntimeOrigin::signed(ALICE), FIL, Box::new(location), 1_000, None),
+			Slp::bond(
+				RuntimeOrigin::signed(ALICE),
+				FIL,
+				Box::new(location),
+				1_000,
+				None,
+				None,
+				None
+			),
 			Error::<Runtime>::LowerThanMinimum
 		);
 
@@ -127,6 +150,8 @@ fn bond_should_work() {
 				FIL,
 				Box::new(location),
 				300_000_000_000_000,
+				None,
+				None,
 				None
 			),
 			Error::<Runtime>::ExceedActiveMaximum
@@ -137,6 +162,8 @@ fn bond_should_work() {
 			FIL,
 			Box::new(location),
 			1_000_000_000_000,
+			None,
+			None,
 			None
 		));
 
@@ -151,6 +178,8 @@ fn bond_should_work() {
 				FIL,
 				Box::new(location),
 				1_000_000_000_000,
+				None,
+				None,
 				None
 			),
 			Error::<Runtime>::AlreadyBonded
@@ -180,7 +209,9 @@ fn delegate_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location),
-			vec![owner_location]
+			vec![owner_location],
+			None,
+			None
 		));
 
 		assert_eq!(
@@ -203,6 +234,8 @@ fn bond_extra_should_work() {
 				Box::new(location),
 				None,
 				1_000_000_000_000,
+				None,
+				None
 			),
 			Error::<Runtime>::DelegatorNotBonded
 		);
@@ -215,6 +248,8 @@ fn bond_extra_should_work() {
 			Box::new(location),
 			None,
 			1_000_000_000_000,
+			None,
+			None
 		));
 
 		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 2000000000000 };
@@ -237,6 +272,8 @@ fn unbond_should_work() {
 				Box::new(location),
 				None,
 				500_000_000_000,
+				None,
+				None
 			),
 			Error::<Runtime>::DelegatorNotBonded
 		);
@@ -249,6 +286,8 @@ fn unbond_should_work() {
 			Box::new(location),
 			None,
 			500_000_000_000,
+			None,
+			None
 		));
 
 		let fil_ledger = FilecoinLedger { account: location, initial_pledge: 500000000000 };
@@ -275,7 +314,9 @@ fn undelegate_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location),
-				vec![owner_location]
+				vec![owner_location],
+				None,
+				None
 			),
 			Error::<Runtime>::DelegatorNotBonded
 		);
@@ -290,7 +331,9 @@ fn undelegate_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location),
-				vec!(owner_location)
+				vec!(owner_location),
+				None,
+				None
 			),
 			Error::<Runtime>::AmountNotZero
 		);
@@ -305,7 +348,9 @@ fn undelegate_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				FIL,
 				Box::new(location),
-				vec![other_location]
+				vec![other_location],
+				None,
+				None
 			),
 			Error::<Runtime>::ValidatorError
 		);
@@ -314,7 +359,9 @@ fn undelegate_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location),
-			vec![owner_location]
+			vec![owner_location],
+			None,
+			None
 		));
 
 		assert_eq!(ValidatorsByDelegator::<Runtime>::get(FIL, location), None);
@@ -459,7 +506,9 @@ fn remove_validator_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			FIL,
 			Box::new(location),
-			vec![owner_location]
+			vec![owner_location],
+			None,
+			None
 		));
 
 		assert_ok!(Slp::remove_validator(

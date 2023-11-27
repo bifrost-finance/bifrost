@@ -88,6 +88,8 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		transact_weight: Option<Weight>,
+		withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		let contract_multilocation = validator.ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -135,6 +137,8 @@ impl<T: Config>
 				call.encode(),
 				who,
 				currency_id,
+				transact_weight,
+				withdraw_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -161,6 +165,8 @@ impl<T: Config>
 		_amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -172,6 +178,8 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		transact_weight: Option<Weight>,
+		withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if the unbonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -205,12 +213,14 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, _, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
 				call.encode(),
 				who,
 				currency_id,
+				transact_weight,
+				withdraw_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -235,6 +245,8 @@ impl<T: Config>
 		&self,
 		_who: &MultiLocation,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -246,6 +258,8 @@ impl<T: Config>
 		_amount: Option<BalanceOf<T>>,
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unexpected)
 	}
@@ -256,6 +270,8 @@ impl<T: Config>
 		_who: &MultiLocation,
 		_targets: &Vec<MultiLocation>,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -266,6 +282,8 @@ impl<T: Config>
 		_who: &MultiLocation,
 		_targets: &Vec<MultiLocation>,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -276,6 +294,8 @@ impl<T: Config>
 		_who: &MultiLocation,
 		_targets: &Option<Vec<MultiLocation>>,
 		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -287,6 +307,8 @@ impl<T: Config>
 		validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
+		transact_weight: Option<Weight>,
+		withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Get the validator account
 		let contract_h160 = Pallet::<T>::multilocation_to_h160_account(&validator)?;
@@ -302,6 +324,8 @@ impl<T: Config>
 			call.encode(),
 			who,
 			currency_id,
+			transact_weight,
+			withdraw_fee,
 		)?;
 
 		Ok(Zero::zero())
@@ -315,6 +339,8 @@ impl<T: Config>
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 		_amount: Option<BalanceOf<T>>,
+		transact_weight: Option<Weight>,
+		withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
@@ -333,6 +359,8 @@ impl<T: Config>
 				call.encode(),
 				who,
 				currency_id,
+				transact_weight,
+				withdraw_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -355,7 +383,13 @@ impl<T: Config>
 	/// Chill self. Cancel the identity of delegator in the Relay chain side.
 	/// Unbonding all the active amount should be done before or after chill,
 	/// so that we can collect back all the bonded amount.
-	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(
+		&self,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -366,6 +400,8 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
+		transact_weight: Option<Weight>,
+		withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
@@ -420,6 +456,8 @@ impl<T: Config>
 			call.encode(),
 			from,
 			currency_id,
+			transact_weight,
+			withdraw_fee,
 		)?;
 
 		Ok(())
@@ -457,6 +495,8 @@ impl<T: Config>
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
 		_if_from_currency: bool,
+		_transact_weight: Option<Weight>,
+		_withdraw_fee: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
