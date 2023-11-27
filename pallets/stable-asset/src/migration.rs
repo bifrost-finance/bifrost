@@ -19,7 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use super::{Config, Weight, *};
-use frame_support::{traits::Get, PalletId};
+use frame_support::traits::Get;
 
 pub fn update_pallet_id<T: Config>() -> Weight {
 	let pool_count: u32 = PoolCount::<T>::get();
@@ -55,7 +55,7 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, sp_runtime::DispatchError> {
 		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
+		use frame_support::PalletId;
 		log::info!("Bifrost `pre_upgrade`...");
 
 		Ok(vec![])
@@ -74,7 +74,7 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
+		use frame_support::PalletId;
 		log::info!("Bifrost `post_upgrade`...");
 		let old_pallet_id: PalletId = PalletId(*b"nuts/sta");
 
