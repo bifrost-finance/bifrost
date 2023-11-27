@@ -785,8 +785,8 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
-		let pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		let dx = Self::upscale(
 			amount,
 			pool_id,
@@ -817,8 +817,8 @@ impl<T: Config> Pallet<T> {
 		pool_id: StableAssetPoolId,
 		mut amounts: Vec<T::Balance>,
 	) -> Result<T::Balance, DispatchError> {
-		let pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
 				*amount,
