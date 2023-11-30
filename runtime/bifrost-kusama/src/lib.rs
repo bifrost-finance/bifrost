@@ -93,8 +93,8 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 // zenlink imports
 use zenlink_protocol::{

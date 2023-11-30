@@ -820,31 +820,31 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
-		let pool_info = T::StableAsset::pool(pool_id)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::PoolNotFound)?;
+		let pool_info =
+			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		let dy = Self::upscale(
 			amount,
 			pool_id,
 			*pool_info
 				.assets
 				.get(currency_id_out as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 		let SwapResult { dx, dy: _, .. } =
-			nutsfinance_stable_asset::Pallet::<T>::get_swap_amount_exact(
+			bifrost_stable_asset::Pallet::<T>::get_swap_amount_exact(
 				&pool_info,
 				currency_id_in,
 				currency_id_out,
 				dy,
 			)
-			.ok_or(nutsfinance_stable_asset::Error::<T>::Math)?;
+			.ok_or(bifrost_stable_asset::Error::<T>::Math)?;
 		let downscale_out = Self::downscale(
 			dx,
 			pool_id,
 			*pool_info
 				.assets
 				.get(currency_id_in as usize)
-				.ok_or(nutsfinance_stable_asset::Error::<T>::ArgumentsMismatch)?,
+				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
 
 		Ok(downscale_out)

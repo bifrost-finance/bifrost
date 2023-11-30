@@ -1463,6 +1463,8 @@ dependencies = [
  "bifrost-ve-minting-rpc",
  "bifrost-ve-minting-rpc-runtime-api",
  "jsonrpsee",
+ "lend-market-rpc",
+ "lend-market-rpc-runtime-api",
  "pallet-transaction-payment-rpc",
  "sc-client-api",
  "sc-rpc",
@@ -6086,6 +6088,22 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-xcm-builder",
+]
+
+[[package]]
+name = "lend-market-rpc"
+version = "0.8.0"
+dependencies = [
+ "bifrost-primitives",
+ "jsonrpsee",
+ "lend-market-rpc-runtime-api",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
 ]
 
 [[package]]

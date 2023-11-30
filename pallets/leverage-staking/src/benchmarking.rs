@@ -75,12 +75,12 @@ fn init<
 	<T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
 		KSM.into(),
 		&caller,
-		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
+		<T as bifrost_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
 	)?;
 	<T as bifrost_stable_pool::Config>::MultiCurrency::deposit(
 		VKSM.into(),
 		&caller,
-		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
+		<T as bifrost_stable_asset::Config>::Balance::from(unit(1_000_000).into()),
 	)?;
 	let fee_account: AccountIdOf<T> = account("caller", 2, 2);
 	pallet_balances::Pallet::<T>::force_set_balance(
@@ -117,8 +117,8 @@ fn init<
 	let coin0 = KSM;
 	let coin1 = VKSM;
 	let amounts = vec![
-		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(100u128).into()),
-		<T as nutsfinance_stable_asset::Config>::Balance::from(unit(100u128).into()),
+		<T as bifrost_stable_asset::Config>::Balance::from(unit(100u128).into()),
+		<T as bifrost_stable_asset::Config>::Balance::from(unit(100u128).into()),
 	];
 	assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
 		SystemOrigin::Root.into(),
@@ -144,7 +144,7 @@ fn init<
 		SystemOrigin::Signed(caller.clone()).into(),
 		0,
 		amounts,
-		<T as nutsfinance_stable_asset::Config>::Balance::zero()
+		<T as bifrost_stable_asset::Config>::Balance::zero()
 	));
 
 	assert_ok!(bifrost_vtoken_minting::Pallet::<T>::mint(
@@ -159,7 +159,7 @@ fn init<
 
 const SEED: u32 = 1;
 
-#[benchmarks(where T: Config + bifrost_stable_pool::Config + bifrost_vtoken_minting::Config + nutsfinance_stable_asset::pallet::Config + pallet_prices::Config + pallet_balances::Config<Balance = Balance> )]
+#[benchmarks(where T: Config + bifrost_stable_pool::Config + bifrost_vtoken_minting::Config + bifrost_stable_asset::pallet::Config + pallet_prices::Config + pallet_balances::Config<Balance = Balance> )]
 mod benchmarks {
 	use lend_market::AccountIdOf;
 

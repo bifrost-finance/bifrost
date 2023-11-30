@@ -49,6 +49,7 @@ bifrost-rpc              = { path = "node/rpc" }
 bifrost-salp-rpc         = { path = "pallets/salp/rpc" }
 bifrost-stable-pool-rpc  = { path = "pallets/stable-pool/rpc" }
 bifrost-ve-minting-rpc   = { path = "pallets/ve-minting/rpc" }
+lend-market-rpc          = { path = "pallets/lend-market/rpc" }
 
 # Bifrost Runtime
 bifrost-kusama-runtime   = { path = "runtime/bifrost-kusama" }
@@ -86,6 +87,7 @@ bifrost-vstoken-conversion           = { path = "pallets/vstoken-conversion", de
 bifrost-vtoken-minting               = { path = "pallets/vtoken-minting", default-features = false }
 bifrost-vtoken-voting                = { path = "pallets/vtoken-voting", default-features = false }
 bifrost-xcm-interface                = { path = "pallets/xcm-interface", default-features = false }
+lend-market-rpc-runtime-api          = { path = "pallets/lend-market/rpc/runtime-api", default-features = false }
 
 # Zenlink
 merkle-distributor             = { git = "https://github.com/bifrost-finance/merkle-distributor", branch = "release-polkadot-v1.1.0", default-features = false }
