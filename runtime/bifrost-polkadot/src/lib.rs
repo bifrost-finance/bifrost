@@ -1704,11 +1704,9 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	#[allow(unused)]
-	use super::*;
-
+	use crate::Runtime;
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
