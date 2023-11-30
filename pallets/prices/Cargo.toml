@@ -10,8 +10,8 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 num-traits = { version = '0.2.15', default-features = false }
-orml-oracle = { version = "0.4.1-dev", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-oracle = { workspace = true }
+orml-traits = { workspace = true }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/polkadot-sdk.git', branch = 'release-polkadot-v1.1.0', default-features = false }
 pallet-traits = { path = '../traits', default-features = false }
@@ -29,7 +29,7 @@ bifrost-asset-registry = { path = "../asset-registry", default-features = false 
 bifrost-currencies = { path = "../currencies", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { workspace = true }
 
 [features]
 default = ['std']

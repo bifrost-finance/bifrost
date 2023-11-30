@@ -20,12 +20,12 @@ use std::{marker::PhantomData, sync::Arc};
 
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
 use bifrost_primitives::{Balance, CurrencyId};
-use codec::Codec;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
+use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;

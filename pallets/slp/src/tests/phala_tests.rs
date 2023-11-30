@@ -27,7 +27,7 @@ use crate::{
 };
 use bifrost_primitives::currency::VPHA;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use polkadot_parachain::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
 const VALIDATOR_0_LOCATION: MultiLocation =

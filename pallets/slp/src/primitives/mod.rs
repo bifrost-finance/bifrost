@@ -27,7 +27,7 @@ pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
 use bifrost_primitives::TimeUnit;
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 

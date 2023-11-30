@@ -22,7 +22,6 @@ use bifrost_primitives::{
 	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
 	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
 };
-use codec::{Decode, Encode, MaxEncodedLen};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
@@ -33,6 +32,7 @@ use frame_support::{
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
 use sp_runtime::{

@@ -19,8 +19,8 @@ frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "r
 lend-market = { package = "lend-market", path = "../../pallets/lend-market", default-features = false }
 log = { version = "0.4.17", default-features = false }
 bifrost-primitives = { path = "../../primitives", default-features = false }
-nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
+bifrost-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
+orml-traits = { workspace = true }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-prices = { path = "../prices", default-features = false }
@@ -37,11 +37,10 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-currencies = { workspace = true }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
-# nutsfinance-stable-asset = { path = "../../pallets/stable-asset", default-features = false }
 env_logger = "0.10.0"
-orml-oracle = "0.4.1-dev"
-orml-tokens = "0.4.1-dev"
-orml-xtokens = "0.4.1-dev"
+orml-oracle = { workspace = true }
+orml-tokens = { workspace = true }
+orml-xtokens = { workspace = true }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
@@ -65,7 +64,7 @@ std = [
 	"scale-info/std",
 	"pallet-balances/std",
 	"pallet-timestamp/std",
-	"nutsfinance-stable-asset/std",
+	"bifrost-stable-asset/std",
 	"orml-traits/std",
 	"bifrost-primitives/std",
 	"pallet-traits/std",
@@ -77,7 +76,6 @@ std = [
 	"bifrost-stable-pool/std",
 	"pallet-prices/std",
 	"log/std",
-	# "env_logger/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 

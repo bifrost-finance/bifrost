@@ -22,14 +22,14 @@ use bifrost_primitives::{
 	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
-use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{ContainsPair, Get, ProcessMessageError},
 };
-pub use polkadot_parachain::primitives::Sibling;
+use parity_scale_codec::{Decode, Encode};
+pub use polkadot_parachain_primitives::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,

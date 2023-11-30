@@ -48,7 +48,6 @@
 mod benchmarking;
 pub mod weights;
 
-use codec::{Decode, Encode};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -59,6 +58,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 pub use pallet::*;
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{

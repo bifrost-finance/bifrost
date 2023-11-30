@@ -27,11 +27,11 @@ use crate::{
 	Validators, ValidatorsByDelegatorUpdateEntry,
 };
 use bifrost_primitives::{TokenSymbol, VtokenMintingOperator, XcmOperationType};
-use codec::Encode;
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
+use parity_scale_codec::Encode;
 use sp_core::U256;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},

@@ -14,7 +14,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branc
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 num-traits = { version = '0.2.15', default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-traits = { workspace = true }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-assets = { git = 'https://github.com/paritytech/polkadot-sdk.git', branch = 'release-polkadot-v1.1.0', default-features = false }
 pallet-prices = { path = "../prices", default-features = false }
@@ -31,8 +31,8 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release
 xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 
 [dev-dependencies]
-orml-oracle = "0.4.1-dev"
-orml-tokens = "0.4.1-dev"
+orml-oracle = { workspace = true }
+orml-tokens = { workspace = true }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 bifrost-asset-registry = { path = "../asset-registry", default-features = false }
 bifrost-currencies = { path = "../currencies", default-features = false }

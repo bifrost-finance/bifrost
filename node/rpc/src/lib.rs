@@ -33,16 +33,16 @@
 
 use std::sync::Arc;
 
-use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
+use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use bifrost_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
-use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
+use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
-use bifrost_stable_pool_rpc_api::{StablePoolRpc, StablePoolRpcApiServer};
+use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
-use bifrost_ve_minting_rpc_api::{VeMintingRpc, VeMintingRpcApiServer};
+use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
 use lend_market_rpc::{LendMarket, LendMarketApiServer};
 use lend_market_rpc_runtime_api::LendMarketApi;
