@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	agents::{PhalaCall, StakePoolv2Call, VaultCall, WrappedBalancesCall, XtransferCall},
+	agents::{
+		PhalaCall, PhalaUtilityCall, StakePoolv2Call, VaultCall, WrappedBalancesCall, XtransferCall,
+	},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
@@ -115,13 +117,19 @@ impl<T: Config>
 				let contribute_call =
 					PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
 				let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
-				calls.encode()
+				let batched_calls = PhalaCall::Utility(Box::new(
+					PhalaUtilityCall::<PhalaCall<T>>::BatchAll(Box::new(calls)),
+				));
+				batched_calls.encode()
 			} else {
 				let contribute_call = PhalaCall::PhalaStakePoolv2(
 					StakePoolv2Call::<T>::Contribute(pool_id, amount, None),
 				);
 				let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
-				calls.encode()
+				let batched_calls = PhalaCall::Utility(Box::new(
+					PhalaUtilityCall::<PhalaCall<T>>::BatchAll(Box::new(calls)),
+				));
+				batched_calls.encode()
 			}
 		};
 
@@ -225,19 +233,17 @@ impl<T: Config>
 		// Check if the remaining active shares is enough for withdrawing.
 		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
 
-		let calls = {
+		let call = {
 			if is_vault {
 				// Construct xcm message.
 				let withdraw_call =
 					PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
-				let calls = vec![Box::new(withdraw_call)];
-				calls.encode()
+				withdraw_call.encode()
 			} else {
 				let withdraw_call = PhalaCall::PhalaStakePoolv2(StakePoolv2Call::<T>::Withdraw(
 					pool_id, shares, None,
 				));
-				let calls = vec![Box::new(withdraw_call)];
-				calls.encode()
+				withdraw_call.encode()
 			}
 		};
 
@@ -246,7 +252,7 @@ impl<T: Config>
 		let (query_id, timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
-				calls,
+				call,
 				who,
 				currency_id,
 			)?;
@@ -457,17 +463,15 @@ impl<T: Config>
 			};
 
 		// Construct xcm message.
-		let calls = if is_vault {
+		let call = if is_vault {
 			let check_and_maybe_force_withdraw_call =
 				PhalaCall::PhalaVault(VaultCall::<T>::CheckAndMaybeForceWithdraw(pool_id));
-			let calls = vec![Box::new(check_and_maybe_force_withdraw_call)];
-			calls.encode()
+			check_and_maybe_force_withdraw_call.encode()
 		} else {
 			let check_and_maybe_force_withdraw_call = PhalaCall::PhalaStakePoolv2(
 				StakePoolv2Call::<T>::CheckAndMaybeForceWithdraw(pool_id),
 			);
-			let calls = vec![Box::new(check_and_maybe_force_withdraw_call)];
-			calls.encode()
+			check_and_maybe_force_withdraw_call.encode()
 		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
@@ -475,7 +479,7 @@ impl<T: Config>
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Payout,
-				calls,
+				call,
 				who,
 				currency_id,
 			)?;
@@ -625,14 +629,13 @@ impl<T: Config>
 		} else {
 			PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Unwrap(amount))
 		};
-		let calls = vec![Box::new(call)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::ConvertAsset,
-				calls.encode(),
+				call.encode(),
 				who,
 				currency_id,
 			)?;
