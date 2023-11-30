@@ -1,5 +1,5 @@
 #### P2P protocol for EOS
-Basicly, we have developed a customized EOS([bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay)) node which is capable of p2p communication already.
+Basically, we have developed a customized EOS([bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay)) node which is capable of p2p communication already.
 We add a plugin named [bridge-plugin](https://github.com/bifrost-finance/bifrost-eos-relay/tree/master/plugins/bridge_plugin).
 And you have tested it as well, start two EOS nodes, one is for producing blocks, and another one as relay node to synchronize blocks and send block headers and transactions 
 to Bifrost node to verify and map transactions to to Bifrost node.
