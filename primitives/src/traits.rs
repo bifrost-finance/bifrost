@@ -333,12 +333,12 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		token_amount: Balance,
-	) -> Option<Balance>;
+	) -> Result<Balance, DispatchError>;
 	fn vtoken_to_token(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
-	) -> Option<Balance>;
+	) -> Result<Balance, DispatchError>;
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
@@ -380,16 +380,16 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_token_amount: Balance,
-	) -> Option<Balance> {
-		Some(Zero::zero())
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn vtoken_to_token(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_vtoken_amount: Balance,
-	) -> Option<Balance> {
-		Some(Zero::zero())
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {

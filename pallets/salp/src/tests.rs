@@ -1448,7 +1448,7 @@ fn refund_meanwhile_issue_should_work() {
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
 		let token_value = VtokenMinting::token_to_vtoken(KSM, VKSM, 100);
-		assert_eq!(token_value, Some(100));
+		assert_eq!(token_value, Ok(100));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 95000);
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), buyback_account, KSM, 100, 0));
 
