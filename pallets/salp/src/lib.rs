@@ -36,10 +36,7 @@ use bifrost_primitives::{
 use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
 use bifrost_xcm_interface::ChainId;
 use cumulus_primitives_core::{QueryId, Response};
-use frame_support::{
-	pallet_prelude::*,
-	sp_runtime::{ArithmeticError, SaturatedConversion},
-};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_xcm::ensure_response;
