@@ -406,7 +406,6 @@ impl<T: Config> Pallet<T> {
 		let responder = Self::get_para_multilocation_by_currency_id(currency_id)?;
 
 		let callback_option = match (currency_id, operation) {
-			(PHA, _) => None,
 			(DOT, &XcmOperationType::Delegate) |
 			(DOT, &XcmOperationType::Undelegate) |
 			(KSM, &XcmOperationType::Delegate) |
