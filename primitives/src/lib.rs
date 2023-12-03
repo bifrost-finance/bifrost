@@ -236,6 +236,8 @@ pub enum RedeemType<AccountId> {
 	Moonbeam(H160),
 	/// Hydradx chain.
 	Hydradx(AccountId),
+	/// Interlay chain.
+	Interlay(AccountId),
 }
 
 impl<AccountId> Default for RedeemType<AccountId> {
