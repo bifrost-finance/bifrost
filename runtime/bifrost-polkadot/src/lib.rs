@@ -83,7 +83,6 @@ use bifrost_runtime_common::{
 };
 use bifrost_slp::QueryId;
 use bifrost_ve_minting::traits::VeMintingInterface;
-use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
@@ -93,6 +92,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -1011,8 +1011,10 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
-						polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
-							.into_account_truncating(),
+						polkadot_parachain_primitives::primitives::Sibling::from(
+							ParachainInfo::get(),
+						)
+						.into_account_truncating(),
 						index,
 					)
 					.into(),
@@ -1037,7 +1039,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			X1(AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
-					polkadot_parachain::primitives::Sibling::from(ParachainInfo::get())
+					polkadot_parachain_primitives::primitives::Sibling::from(ParachainInfo::get())
 						.into_account_truncating(),
 					index,
 				)
@@ -1058,7 +1060,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 							AccountId32 {
 								network: None,
 								id: Utility::derivative_account_id(
-									polkadot_parachain::primitives::Sibling::from(
+									polkadot_parachain_primitives::primitives::Sibling::from(
 										ParachainInfo::get(),
 									)
 									.into_account_truncating(),
@@ -1305,14 +1307,14 @@ impl bifrost_slpx::Config for Runtime {
 }
 
 pub struct EnsurePoolAssetId;
-impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
 	fn validate(_: CurrencyId) -> bool {
 		true
 	}
 }
 
-/// Configure the pallet nutsfinance_stable_asset in pallets/nutsfinance_stable_asset.
-impl nutsfinance_stable_asset::Config for Runtime {
+/// Configure the pallet bifrost_stable_asset in pallets/bifrost_stable_asset.
+impl bifrost_stable_asset::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;
@@ -1649,7 +1651,7 @@ construct_runtime! {
 		Slpx: bifrost_slpx = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
-		StableAsset: nutsfinance_stable_asset::{Pallet, Storage, Event<T>} = 128,
+		StableAsset: bifrost_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool = 129,
 		VtokenVoting: bifrost_vtoken_voting = 130,
 	}
@@ -1700,12 +1702,13 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	#[allow(unused)]
-	use super::*;
-	use nutsfinance_stable_asset::migration::StableAssetOnRuntimeUpgrade;
-
+	use crate::Runtime;
+	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = StableAssetOnRuntimeUpgrade<Runtime>;
+	pub type Unreleased = (
+		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
+		StableAssetOnRuntimeUpgrade<Runtime>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.

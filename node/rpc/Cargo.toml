@@ -1,5 +1,5 @@
 [package]
-name = "node-rpc"
+name = "bifrost-rpc"
 version = "0.8.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2021"
@@ -8,32 +8,31 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-jsonrpsee = { version = "0.16.2", features = ["server"] }
-bifrost-primitives = { path = "../../primitives" }
-sc-client-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-rpc-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
-bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
-bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
-bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
-bifrost-farming-rpc-api = { path = "../../pallets/farming/rpc" }
-bifrost-farming-rpc-runtime-api = { path = "../../pallets/farming/rpc/runtime-api" }
-bifrost-ve-minting-rpc-api = { path = "../../pallets/ve-minting/rpc" }
-bifrost-ve-minting-rpc-runtime-api = { path = "../../pallets/ve-minting/rpc/runtime-api" }
-bifrost-stable-pool-rpc-api = { path = "../../pallets/stable-pool/rpc" }
-bifrost-stable-pool-rpc-runtime-api = { path = "../../pallets/stable-pool/rpc/runtime-api" }
-lend-market-rpc = { path = "../../pallets/lend-market/rpc" }
-lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api" }
-zenlink-protocol = "*"
-zenlink-protocol-rpc = "*"
-zenlink-protocol-runtime-api = "*"
-zenlink-stable-amm-rpc = "*"
-zenlink-stable-amm-runtime-api = "*"
+jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+bifrost-primitives = { workspace = true }
+sc-client-api = { workspace = true }
+sc-rpc-api = { workspace = true }
+sc-rpc = { workspace = true }
+sc-transaction-pool-api = { workspace = true }
+sp-api = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-runtime = { workspace = true }
+pallet-transaction-payment-rpc = { workspace = true }
+substrate-frame-rpc-system = { workspace = true }
+bifrost-flexible-fee-rpc = { workspace = true }
+bifrost-flexible-fee-rpc-runtime-api = { workspace = true }
+bifrost-salp-rpc = { workspace = true }
+bifrost-salp-rpc-runtime-api = { workspace = true }
+bifrost-farming-rpc = { workspace = true }
+bifrost-farming-rpc-runtime-api = { workspace = true }
+bifrost-ve-minting-rpc = { workspace = true }
+bifrost-ve-minting-rpc-runtime-api = { workspace = true }
+bifrost-stable-pool-rpc = { workspace = true }
+bifrost-stable-pool-rpc-runtime-api = { workspace = true }
+zenlink-protocol = { workspace = true }
+zenlink-protocol-rpc = { workspace = true }
+zenlink-protocol-runtime-api = { workspace = true }
+zenlink-stable-amm-rpc = { workspace = true }
+zenlink-stable-amm-runtime-api = { workspace = true }
+

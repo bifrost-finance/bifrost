@@ -25,10 +25,10 @@ use crate::{
 	},
 	BNC, *,
 };
+use bifrost_parachain_staking::RoundInfo;
 use bifrost_primitives::VBNC;
-use codec::alloc::collections::BTreeMap;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use parachain_staking::RoundInfo;
+use parity_scale_codec::alloc::collections::BTreeMap;
 use sp_runtime::traits::AccountIdConversion;
 
 #[test]
@@ -275,7 +275,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			BNC,
 			TimeUnit::Round(48)
 		));
-		parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
+		bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
 		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 

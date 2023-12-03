@@ -28,7 +28,6 @@ use bifrost_primitives::{
 	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
 	XcmDestWeightAndFeeHandler, XcmOperationType,
 };
-use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types,
@@ -40,6 +39,7 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
@@ -71,7 +71,7 @@ construct_runtime!(
 		Slp: bifrost_slp,
 		VtokenMinting: bifrost_vtoken_minting,
 		AssetRegistry: bifrost_asset_registry,
-		ParachainStaking: parachain_staking,
+		ParachainStaking: bifrost_parachain_staking,
 		Utility: pallet_utility,
 		PolkadotXcm: pallet_xcm,
 	}
@@ -274,7 +274,7 @@ parameter_types! {
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![AccountId32::new([1u8; 32])];
 	pub InitSeedStk: u128 = 10;
 }
-impl parachain_staking::Config for Runtime {
+impl bifrost_parachain_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
@@ -361,7 +361,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				X1(Junction::AccountId32 {
 					network: None,
 					id: Self::derivative_account_id(
-						polkadot_parachain::primitives::Sibling::from(2001u32)
+						polkadot_parachain_primitives::primitives::Sibling::from(2001u32)
 							.into_account_truncating(),
 						sub_account_index,
 					)
@@ -380,8 +380,10 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 								Junction::AccountId32 {
 									network: None,
 									id: Self::derivative_account_id(
-										polkadot_parachain::primitives::Sibling::from(2001u32)
-											.into_account_truncating(),
+										polkadot_parachain_primitives::primitives::Sibling::from(
+											2001u32,
+										)
+										.into_account_truncating(),
 										sub_account_index,
 									)
 									.into(),

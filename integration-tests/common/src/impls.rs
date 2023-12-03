@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use codec::{Decode, Encode};
+pub use parity_scale_codec::{Decode, Encode};
 pub use paste;
 
 pub use crate::{

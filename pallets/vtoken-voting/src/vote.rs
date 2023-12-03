@@ -17,11 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_primitives::DerivativeIndex;
-use codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*, traits::Get, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 use pallet_conviction_voting::{Conviction, Delegations, Vote};
+use parity_scale_codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, EnsureDivAssign, EnsureMulAssign, One, Zero},

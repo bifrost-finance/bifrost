@@ -36,8 +36,14 @@ pub fn update_pallet_id<T: Config>() -> Weight {
 				}
 				T::Assets::transfer(asset_id, &pool_info.account_id, &to, balance)?;
 			}
-			let pool_asset_balance = T::Assets::free_balance(pool_info.pool_asset, &pool_info.account_id);
-			T::Assets::transfer(pool_info.pool_asset, &pool_info.account_id, &to, pool_asset_balance)?;
+			let pool_asset_balance =
+				T::Assets::free_balance(pool_info.pool_asset, &pool_info.account_id);
+			T::Assets::transfer(
+				pool_info.pool_asset,
+				&pool_info.account_id,
+				&to,
+				pool_asset_balance,
+			)?;
 
 			pool_info.account_id = to;
 			Ok(())
@@ -81,7 +87,8 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 		let pool_count: u32 = PoolCount::<T>::get();
 		for pool_id in 0..pool_count {
 			if let Some(pool_info) = Pools::<T>::get(pool_id) {
-				let old_account_id: T::AccountId = old_pallet_id.into_sub_account_truncating(pool_id);
+				let old_account_id: T::AccountId =
+					old_pallet_id.into_sub_account_truncating(pool_id);
 				for (_, &asset_id) in pool_info.assets.iter().enumerate() {
 					let old_balance = T::Assets::free_balance(asset_id, &old_account_id);
 					assert_eq!(old_balance, Zero::zero());
@@ -90,7 +97,11 @@ impl<T: super::Config> OnRuntimeUpgrade for StableAssetOnRuntimeUpgrade<T> {
 					if balance != Zero::zero() {
 						continue;
 					} else {
-						log::info!("New pool {:?} asset_id {:?} free_balance is zero.", pool_id, asset_id);
+						log::info!(
+							"New pool {:?} asset_id {:?} free_balance is zero.",
+							pool_id,
+							asset_id
+						);
 					}
 				}
 			} else {

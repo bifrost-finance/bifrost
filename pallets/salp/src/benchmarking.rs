@@ -76,7 +76,7 @@ where
 }
 
 #[benchmarks(
-where T: Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + bifrost_xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
+where T: Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + bifrost_xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
 <<T as bifrost_xcm_interface::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId: From<CurrencyId>
 )]
 mod benchmarks {
@@ -409,7 +409,7 @@ mod benchmarks {
 		let buyback_account: T::AccountId = T::BuybackPalletId::get().into_account_truncating();
 
 		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
-		let amounts: <T as nutsfinance_stable_asset::pallet::Config>::Balance = amounts1.into();
+		let amounts: <T as bifrost_stable_asset::pallet::Config>::Balance = amounts1.into();
 		assert_ok!(bifrost_stable_pool::Pallet::<T>::create_pool(
 			RawOrigin::Root.into(),
 			vec![KSM.into(), VSKSM.into()],

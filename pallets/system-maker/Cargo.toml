@@ -8,42 +8,42 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-frame-benchmarking = {  git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
-bifrost-primitives = { path = "../../primitives", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-hex-literal = { version = "0.4.1" }
-pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
-zenlink-protocol = { version = "*", default-features = false }
-bifrost-slp = { path = "../../pallets/slp", default-features = false }
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+sp-std = { workspace = true }
+sp-runtime = { workspace = true }
+hex-literal = { workspace = true }
+pallet-balances = { workspace = true }
+sp-arithmetic = { workspace = true }
+sp-core = { workspace = true }
+xcm = { workspace = true }
+bifrost-vtoken-minting = { workspace = true }
+zenlink-protocol = { workspace = true }
+bifrost-slp = { workspace = true }
+cumulus-primitives-core = { workspace = true }
 
 [dev-dependencies]
-orml-tokens = "0.4.1-dev"
-orml-xtokens = "0.4.1-dev"
-orml-traits = "0.4.1-dev"
-bifrost-currencies = { path = "../../pallets/currencies", default-features = false}
-xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-bifrost-asset-registry = { path = "../asset-registry", default-features = false }
+orml-tokens = { workspace = true }
+orml-xtokens = { workspace = true }
+orml-traits = { workspace = true }
+bifrost-currencies = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+pallet-xcm = { workspace = true }
+sp-io = { workspace = true }
+sp-core = { workspace = true }
+bifrost-asset-registry = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"sp-runtime/std",
 	"frame-support/std",

@@ -5,14 +5,14 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-bifrost-primitives = { path = "../../../../primitives", default-features = false }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+sp-api = { workspace = true }
+bifrost-primitives = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"sp-api/std",
 	"bifrost-primitives/std",
 ]
