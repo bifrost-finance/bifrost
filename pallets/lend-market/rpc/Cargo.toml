@@ -15,7 +15,7 @@ sp-core = { workspace = true, features = ['std'] }
 sp-rpc = { workspace = true }
 sp-runtime = { workspace = true }
 
-lend-market-rpc-runtime-api = { path = 'runtime-api', default-features = false }
+lend-market-rpc-runtime-api = { workspace = true }
 
 [lib]
 doctest = false
