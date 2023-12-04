@@ -1089,3 +1089,16 @@ fn vote_cap_works() {
 		assert_eq!(VtokenVoting::vote_cap(vtoken), Ok((u64::MAX / 10) as Balance));
 	});
 }
+
+#[test]
+fn vote_to_capital_works() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::None, 300), 3000);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked1x, 300), 300);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked2x, 300), 150);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked3x, 300), 100);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked4x, 300), 75);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked5x, 300), 60);
+		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked6x, 300), 50);
+	});
+}

@@ -1244,5 +1244,14 @@ pub mod pallet {
 
 			Ok(vote_cap_ratio * token_supply)
 		}
+
+		pub(crate) fn vote_to_capital(conviction: Conviction, vote: BalanceOf<T>) -> BalanceOf<T> {
+			let capital = match conviction {
+				Conviction::None =>
+					vote.checked_mul(&10u8.into()).unwrap_or_else(BalanceOf::<T>::max_value),
+				x => vote.checked_div(&u8::from(x).into()).unwrap_or_else(Zero::zero),
+			};
+			capital
+		}
 	}
 }
