@@ -32,6 +32,8 @@ pub enum PhalaCall<T: Config> {
 	Balances(BalancesCall<T>),
 	#[codec(index = 82)]
 	Xtransfer(XtransferCall),
+	#[codec(index = 93)]
+	PhalaStakePoolv2(StakePoolv2Call<T>),
 	#[codec(index = 94)]
 	PhalaVault(VaultCall<T>),
 	#[codec(index = 95)]
@@ -76,4 +78,14 @@ pub enum PhalaUtilityCall<PhalaCall> {
 pub enum PhalaSystemCall {
 	#[codec(index = 8)]
 	RemarkWithEvent(Box<Vec<u8>>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum StakePoolv2Call<T: Config> {
+	#[codec(index = 8)]
+	CheckAndMaybeForceWithdraw(u64),
+	#[codec(index = 9)]
+	Contribute(u64, BalanceOf<T>, Option<u64>),
+	#[codec(index = 10)]
+	Withdraw(u64, BalanceOf<T>, Option<u64>),
 }

@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	agents::{PhalaCall, VaultCall, WrappedBalancesCall, XtransferCall},
+	agents::{
+		PhalaCall, PhalaUtilityCall, StakePoolv2Call, VaultCall, WrappedBalancesCall, XtransferCall,
+	},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
@@ -88,12 +90,14 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let pool_id =
+		let (pool_id, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-				ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
+				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
+				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				(pool_id, is_vault)
 			} else {
-				Err(Error::<T>::DelegatorNotExist)
-			}?;
+				Err(Error::<T>::DelegatorNotExist)?
+			};
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -107,15 +111,34 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let wrap_call = PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Wrap(amount));
-		let contribute_call = PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
-		let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
+
+		let calls = {
+			if is_vault {
+				let contribute_call =
+					PhalaCall::PhalaVault(VaultCall::<T>::Contribute(pool_id, amount));
+				let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
+				let batched_calls = PhalaCall::Utility(Box::new(
+					PhalaUtilityCall::<PhalaCall<T>>::BatchAll(Box::new(calls)),
+				));
+				batched_calls.encode()
+			} else {
+				let contribute_call = PhalaCall::PhalaStakePoolv2(
+					StakePoolv2Call::<T>::Contribute(pool_id, amount, None),
+				);
+				let calls = vec![Box::new(wrap_call), Box::new(contribute_call)];
+				let batched_calls = PhalaCall::Utility(Box::new(
+					PhalaUtilityCall::<PhalaCall<T>>::BatchAll(Box::new(calls)),
+				));
+				batched_calls.encode()
+			}
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
-				calls.encode(),
+				calls,
 				who,
 				currency_id,
 			)?;
@@ -170,12 +193,13 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let (pool_id, active_shares, unlocking_shares) =
+		let (pool_id, active_shares, unlocking_shares, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
 				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
 				let active_shares = ledger.active_shares;
 				let unlocking_shares = ledger.unlocking_shares;
-				Ok((pool_id, active_shares, unlocking_shares))
+				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				Ok((pool_id, active_shares, unlocking_shares, is_vault))
 			} else {
 				Err(Error::<T>::DelegatorNotExist)
 			}?;
@@ -209,16 +233,26 @@ impl<T: Config>
 		// Check if the remaining active shares is enough for withdrawing.
 		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
 
-		// Construct xcm message.
-		let withdraw_call = PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
-		let calls = vec![Box::new(withdraw_call)];
+		let call = {
+			if is_vault {
+				// Construct xcm message.
+				let withdraw_call =
+					PhalaCall::PhalaVault(VaultCall::<T>::Withdraw(pool_id, shares));
+				withdraw_call.encode()
+			} else {
+				let withdraw_call = PhalaCall::PhalaStakePoolv2(StakePoolv2Call::<T>::Withdraw(
+					pool_id, shares, None,
+				));
+				withdraw_call.encode()
+			}
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
-				calls.encode(),
+				call,
 				who,
 				currency_id,
 			)?;
@@ -285,8 +319,9 @@ impl<T: Config>
 		// Get the first item of the vec
 		let candidate = &targets[0];
 
+		// if parents is 0, it is vault. Otherwise, it is stake pool.
 		if let &MultiLocation {
-			parents: 1,
+			parents: vault_or_stake_pool,
 			interior: X2(GeneralIndex(pool_id), GeneralIndex(collection_id)),
 		} = candidate
 		{
@@ -306,6 +341,7 @@ impl<T: Config>
 					unlocking_time_unit: None,
 					bonded_pool_id: None,
 					bonded_pool_collection_id: None,
+					bonded_is_vault: None,
 				};
 				let phala_ledger = Ledger::<BalanceOf<T>>::Phala(ledger);
 
@@ -324,6 +360,9 @@ impl<T: Config>
 						ledger.bonded_pool_id = Some(u64::unique_saturated_from(pool_id));
 						ledger.bonded_pool_collection_id =
 							Some(u32::unique_saturated_from(collection_id));
+
+						let is_vault = vault_or_stake_pool == 0;
+						ledger.bonded_is_vault = Some(is_vault);
 					} else {
 						Err(Error::<T>::Unexpected)?;
 					}
@@ -370,6 +409,7 @@ impl<T: Config>
 					// undelegate the validator
 					ledger.bonded_pool_id = None;
 					ledger.bonded_pool_collection_id = None;
+					ledger.bonded_is_vault = None;
 
 					// Emit event
 					Pallet::<T>::deposit_event(Event::Undelegated {
@@ -413,24 +453,33 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
-		let pool_id =
+		let (pool_id, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-				ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)
+				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
+				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				(pool_id, is_vault)
 			} else {
-				Err(Error::<T>::DelegatorNotExist)
-			}?;
+				Err(Error::<T>::DelegatorNotExist)?
+			};
 
 		// Construct xcm message.
-		let check_and_maybe_force_withdraw_call =
-			PhalaCall::PhalaVault(VaultCall::<T>::CheckAndMaybeForceWithdraw(pool_id));
-		let calls = vec![Box::new(check_and_maybe_force_withdraw_call)];
+		let call = if is_vault {
+			let check_and_maybe_force_withdraw_call =
+				PhalaCall::PhalaVault(VaultCall::<T>::CheckAndMaybeForceWithdraw(pool_id));
+			check_and_maybe_force_withdraw_call.encode()
+		} else {
+			let check_and_maybe_force_withdraw_call = PhalaCall::PhalaStakePoolv2(
+				StakePoolv2Call::<T>::CheckAndMaybeForceWithdraw(pool_id),
+			);
+			check_and_maybe_force_withdraw_call.encode()
+		};
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Payout,
-				calls.encode(),
+				call,
 				who,
 				currency_id,
 			)?;
@@ -580,14 +629,13 @@ impl<T: Config>
 		} else {
 			PhalaCall::PhalaWrappedBalances(WrappedBalancesCall::<T>::Unwrap(amount))
 		};
-		let calls = vec![Box::new(call)];
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let (query_id, _timeout, _fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::ConvertAsset,
-				calls.encode(),
+				call.encode(),
 				who,
 				currency_id,
 			)?;
