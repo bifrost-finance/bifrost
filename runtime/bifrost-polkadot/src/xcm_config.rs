@@ -306,7 +306,32 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = (
+/// Sets the message ID to `t` using a `SetTopic(t)` in the last position if present.
+///
+/// Requires some inner barrier to pass on the rest of the message.
+pub struct TrailingSetTopicAsId<InnerBarrier>(PhantomData<InnerBarrier>);
+impl<InnerBarrier: ShouldExecute> ShouldExecute for TrailingSetTopicAsId<InnerBarrier> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		instructions: &mut [Instruction<Call>],
+		max_weight: Weight,
+		weight_credit: &mut Weight,
+	) -> Result<(), ProcessMessageError> {
+		log::trace!(
+			target: "xcm::barriers",
+			"TrailingSetTopicAsId origin: {:?}, instructions: {:?}, max_weight: {:?}",
+			origin, instructions, max_weight,
+		);
+		let until = if let Some(SetTopic(_)) = instructions.last() {
+			instructions.len() - 1
+		} else {
+			instructions.len()
+		};
+		InnerBarrier::should_execute(&origin, &mut instructions[..until], max_weight, weight_credit)
+	}
+}
+
+pub type Barrier = TrailingSetTopicAsId<(
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -317,7 +342,7 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
