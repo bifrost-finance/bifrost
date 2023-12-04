@@ -240,6 +240,7 @@ std = [
 	"lend-market/std",
 	"lend-market-rpc-runtime-api/std",
 	"pallet-prices/std",
+	"leverage-staking/std",
 	"bifrost-xcm-interface/std",
 
 	"substrate-wasm-builder"
@@ -345,6 +346,7 @@ try-runtime = [
 	"bifrost-vtoken-voting/try-runtime",
 	"lend-market/try-runtime",
 	"pallet-prices/try-runtime",
+	"leverage-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
