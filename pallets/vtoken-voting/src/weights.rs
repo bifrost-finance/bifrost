@@ -64,6 +64,7 @@ pub trait WeightInfo {
 	fn set_vote_locking_period() -> Weight;
 	fn notify_vote() -> Weight;
 	fn notify_remove_delegator_vote() -> Weight;
+	fn set_vote_cap_ratio() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -272,6 +273,15 @@ impl WeightInfo for () {
 	/// Storage: VtokenVoting PendingRemoveDelegatorVote (r:1 w:0)
 	/// Proof: VtokenVoting PendingRemoveDelegatorVote (max_values: None, max_size: Some(36), added: 2511, mode: MaxEncodedLen)
 	fn notify_remove_delegator_vote() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `329`
+		//  Estimated: `3501`
+		// Minimum execution time: 38_747_000 picoseconds.
+		Weight::from_parts(39_364_000, 3501)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+	}
+
+	fn set_vote_cap_ratio() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `329`
 		//  Estimated: `3501`

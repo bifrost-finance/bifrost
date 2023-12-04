@@ -197,6 +197,10 @@ pub mod pallet {
 			query_id: QueryId,
 			response: Response,
 		},
+		VoteCapRatioSet {
+			vtoken: CurrencyIdOf<T>,
+			vote_cap_ratio: Perbill,
+		},
 	}
 
 	#[pallet::error]
@@ -305,6 +309,10 @@ pub mod pallet {
 		StorageDoubleMap<_, Twox64Concat, CurrencyIdOf<T>, Twox64Concat, DerivativeIndex, VoteRole>;
 
 	#[pallet::storage]
+	pub type VoteCapRatio<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Perbill, ValueQuery>;
+
+	#[pallet::storage]
 	pub type DelegatorVote<T: Config> = StorageNMap<
 		_,
 		(
@@ -340,6 +348,7 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		pub delegator_vote_roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
+		pub vote_cap_ratio: (CurrencyIdOf<T>, Perbill),
 	}
 
 	#[pallet::genesis_build]
@@ -352,6 +361,7 @@ pub mod pallet {
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
+			VoteCapRatio::<T>::insert(self.vote_cap_ratio.0, self.vote_cap_ratio.1);
 		}
 	}
 
@@ -783,6 +793,21 @@ pub mod pallet {
 				});
 			}
 			Self::deposit_event(Event::<T>::ResponseReceived { responder, query_id, response });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_vote_cap_ratio())]
+		pub fn set_vote_cap_ratio(
+			origin: OriginFor<T>,
+			vtoken: CurrencyIdOf<T>,
+			vote_cap_ratio: Perbill,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_vtoken(&vtoken)?;
+			VoteCapRatio::<T>::insert(vtoken, vote_cap_ratio);
+			Self::deposit_event(Event::<T>::VoteCapRatioSet { vtoken, vote_cap_ratio });
 
 			Ok(())
 		}

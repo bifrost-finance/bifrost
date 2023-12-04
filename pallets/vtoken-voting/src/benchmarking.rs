@@ -353,6 +353,19 @@ mod benchmarks {
 		Ok(())
 	}
 
+	#[benchmark]
+	pub fn set_vote_cap_ratio() -> Result<(), BenchmarkError> {
+		let origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken = VKSM;
+		let vote_cap_ratio = Perbill::from_percent(10);
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, vote_cap_ratio);
+
+		Ok(())
+	}
+
 	// This line generates test cases for benchmarking, and could be run by:
 	//   `cargo test -p pallet-example-basic --all-features`, you will see one line per case:
 	//   `test benchmarking::bench_sort_vector ... ok`

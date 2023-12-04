@@ -38,7 +38,7 @@ use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
-	BuildStorage,
+	BuildStorage, Perbill,
 };
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
@@ -367,6 +367,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(VKSM, 21, 21),
 		],
 		undeciding_timeouts: vec![(VKSM, 100)],
+		vote_cap_ratio: (VKSM, Perbill::from_percent(10)),
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

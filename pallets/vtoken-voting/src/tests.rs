@@ -1053,3 +1053,31 @@ fn on_idle_works() {
 		assert_eq!(actual_count, count);
 	});
 }
+
+#[test]
+fn set_vote_cap_ratio_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		assert_ok!(VtokenVoting::set_vote_cap_ratio(
+			RuntimeOrigin::root(),
+			vtoken,
+			Perbill::from_percent(0)
+		));
+		assert_eq!(VoteCapRatio::<Runtime>::get(vtoken), Perbill::from_percent(0));
+
+		assert_ok!(VtokenVoting::set_vote_cap_ratio(
+			RuntimeOrigin::root(),
+			vtoken,
+			Perbill::from_percent(10)
+		));
+		assert_eq!(VoteCapRatio::<Runtime>::get(vtoken), Perbill::from_percent(10));
+
+		assert_ok!(VtokenVoting::set_vote_cap_ratio(
+			RuntimeOrigin::root(),
+			vtoken,
+			Perbill::from_percent(100)
+		));
+		assert_eq!(VoteCapRatio::<Runtime>::get(vtoken), Perbill::from_percent(100));
+	});
+}
