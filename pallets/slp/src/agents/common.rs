@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,10 +30,10 @@ use crate::{
 	Vec, Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR,
 	PHA,
 };
+use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use frame_support::{ensure, traits::Len};
-use node_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use orml_traits::{MultiCurrency, XcmTransfer};
-use polkadot_parachain::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::{Get, U256};
 use sp_runtime::{
 	traits::{AccountIdConversion, UniqueSaturatedFrom, UniqueSaturatedInto},
@@ -380,7 +380,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = Self::get_query_id(currency_id, &operation)?;
 
 		let (call_as_subaccount, fee, weight) =
@@ -402,7 +402,7 @@ impl<T: Config> Pallet<T> {
 		operation: &XcmOperationType,
 	) -> Result<QueryId, Error<T>> {
 		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let responder = Self::get_para_multilocation_by_currency_id(currency_id)?;
 
 		let callback_option = match (currency_id, operation) {

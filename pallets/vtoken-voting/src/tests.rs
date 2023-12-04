@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 
 use super::*;
 use crate::mock::*;
+use bifrost_primitives::currency::{VBNC, VKSM};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{
@@ -28,7 +29,6 @@ use frame_support::{
 	},
 	weights::RuntimeDbWeight,
 };
-use node_primitives::currency::{VBNC, VKSM};
 use pallet_conviction_voting::Vote;
 use pallet_xcm::Origin as XcmOrigin;
 

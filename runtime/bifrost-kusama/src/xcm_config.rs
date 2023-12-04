@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,15 +18,16 @@
 
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use codec::{Decode, Encode};
+use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
+pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure, parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
-use node_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
-pub use polkadot_parachain::primitives::Sibling;
+use parity_scale_codec::{Decode, Encode};
+pub use polkadot_parachain_primitives::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -36,7 +37,6 @@ pub use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
-pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 
 // orml imports
 use bifrost_currencies::BasicCurrencyAdapter;
@@ -53,7 +53,8 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
+use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -203,11 +204,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
 					if (id == parachains::Statemine::ID &&
 						index == parachains::Statemine::PALLET_ID) =>
+				{
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(RMRK))
 					} else {
 						None
-					},
+					}
+				},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
@@ -305,7 +308,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		origin: &MultiLocation,
 		message: &mut [Instruction<Call>],
 		max_weight: Weight,
-		_weight_credit: &mut Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		log::trace!(
 			target: "xcm::barriers",
@@ -350,31 +353,6 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 			},
 			_ => Err(ProcessMessageError::Unsupported),
 		}
-	}
-}
-
-/// Sets the message ID to `t` using a `SetTopic(t)` in the last position if present.
-///
-/// Requires some inner barrier to pass on the rest of the message.
-pub struct TrailingSetTopicAsId<InnerBarrier>(PhantomData<InnerBarrier>);
-impl<InnerBarrier: ShouldExecute> ShouldExecute for TrailingSetTopicAsId<InnerBarrier> {
-	fn should_execute<Call>(
-		origin: &MultiLocation,
-		instructions: &mut [Instruction<Call>],
-		max_weight: Weight,
-		weight_credit: &mut Weight,
-	) -> Result<(), ProcessMessageError> {
-		log::trace!(
-			target: "xcm::barriers",
-			"TrailingSetTopicAsId origin: {:?}, instructions: {:?}, max_weight: {:?}",
-			origin, instructions, max_weight,
-		);
-		let until = if let Some(SetTopic(_)) = instructions.last() {
-			instructions.len() - 1
-		} else {
-			instructions.len()
-		};
-		InnerBarrier::should_execute(&origin, &mut instructions[..until], max_weight, weight_credit)
 	}
 }
 
@@ -650,7 +628,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::redeem { .. }
 			) |
 			RuntimeCall::XcmInterface(
-				xcm_interface::Call::transfer_statemine_assets { .. }
+				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -696,6 +674,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = ();
 	type MessageExporter = ();
+	type Aliasers = Nothing;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -723,12 +702,12 @@ impl pallet_xcm::Config for Runtime {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmRouter = node_primitives::DoNothingRouter;
+	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
 	type XcmTeleportFilter = Nothing;
@@ -745,6 +724,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -904,7 +885,7 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
@@ -929,7 +910,7 @@ parameter_types! {
 
 }
 
-impl xcm_interface::Config for Runtime {
+impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
@@ -937,7 +918,7 @@ impl xcm_interface::Config for Runtime {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = ParachainAccount;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = node_primitives::DoNothingExecuteXcm;
+	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;

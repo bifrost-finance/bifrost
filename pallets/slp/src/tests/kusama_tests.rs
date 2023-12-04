@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,11 +19,11 @@
 #![cfg(test)]
 
 use crate::{mocks::mock_kusama::*, *};
-use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::{
+use bifrost_primitives::{
 	currency::{BNC, KSM, VKSM},
 	RedeemType,
 };
+use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 

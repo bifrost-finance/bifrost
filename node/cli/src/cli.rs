@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -73,6 +73,7 @@ pub enum Subcommand {
 	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
 	/// testing.
 	#[cfg(feature = "try-runtime")]
+	#[allow(deprecated)]
 	TryRuntime(try_runtime_cli::TryRuntimeCmd),
 
 	/// Errors since the binary was not build with `--features try-runtime`.
@@ -133,9 +134,9 @@ impl RelayChainCli {
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
 		let extension =
-			node_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
+			bifrost_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
-		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
-		Self { base_path, chain_id, base: Parser::parse_from(relay_chain_args) }
+		let base_path = para_config.base_path.path().join("polkadot");
+		Self { base_path: Some(base_path), chain_id, base: Parser::parse_from(relay_chain_args) }
 	}
 }

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,13 +21,13 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{BalanceOf, Call, Config, Info, Pallet as SystemMaker, Pallet, *};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, BenchmarkError};
 use frame_support::{
 	assert_ok,
 	traits::{EnsureOrigin, Hooks},
 };
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_core::Get;
 use sp_runtime::traits::{AccountIdConversion, UniqueSaturatedFrom};

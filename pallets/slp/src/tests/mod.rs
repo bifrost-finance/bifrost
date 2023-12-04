@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -28,12 +28,12 @@ mod parachain_staking_tests;
 mod phala_tests;
 
 #[cfg(test)]
+pub use filecoin_tests::*;
+#[cfg(test)]
 pub use kusama_tests::*;
 #[cfg(test)]
 pub use moonriver_tests::*;
-// #[cfg(test)]
-// pub use parachain_staking_tests::*;
 #[cfg(test)]
-pub use filecoin_tests::*;
+pub use parachain_staking_tests::*;
 #[cfg(test)]
 pub use phala_tests::*;

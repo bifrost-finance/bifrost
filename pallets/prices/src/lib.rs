@@ -23,16 +23,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
-use frame_support::{dispatch::DispatchClass, log, pallet_prelude::*, transactional};
+use bifrost_primitives::*;
+use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
-use node_primitives::*;
+use log;
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
+pub use pallet::*;
+use pallet_traits::*;
 use sp_runtime::{traits::CheckedDiv, FixedU128};
 use sp_std::vec::Vec;
 use xcm::v3::MultiLocation;
-
-pub use pallet::*;
-use pallet_traits::*;
 
 #[cfg(test)]
 mod mock;

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -33,8 +33,8 @@ pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn last_time_reward_applicable() -> T::BlockNumber {
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+	pub fn last_time_reward_applicable() -> BlockNumberFor<T> {
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		if current_block_number < Self::incentive_configs().period_finish {
 			current_block_number
 		} else {
@@ -44,7 +44,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let mut conf = Self::incentive_configs();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let _total_supply = Self::total_supply(current_block_number)?;
 		if _total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
@@ -160,7 +160,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		Self::update_reward(None)?;
 		let mut conf = Self::incentive_configs();
-		let current_block_number: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 		if current_block_number >= conf.period_finish {
 			Self::add_reward(addr, &mut conf, &rewards, Zero::zero())?;

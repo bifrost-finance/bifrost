@@ -5,26 +5,26 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, optional = true }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
-scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+sp-std = { workspace = true }
+sp-io = { workspace = true }
+bifrost-primitives = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-orml-traits = "0.4.1-dev"
-orml-tokens = "0.4.1-dev"
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+orml-traits = { workspace = true }
+orml-tokens = { workspace = true }
+sp-core = { workspace = true }
+pallet-balances = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"sp-runtime/std",
 	"frame-support/std",
 	"frame-system/std",
@@ -32,7 +32,7 @@ std = [
 	"sp-io/std",
 	"sp-std/std",
 	"scale-info/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
 
