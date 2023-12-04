@@ -29,7 +29,6 @@ mod benchmarking;
 pub mod weights;
 
 use bifrost_primitives::{CurrencyIdConversion, Rate, VtokenMintingInterface};
-pub use codec::{Decode, Encode};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -43,6 +42,7 @@ pub use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
 };
+pub use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 	ArithmeticError, FixedU128, Permill, RuntimeDebug,

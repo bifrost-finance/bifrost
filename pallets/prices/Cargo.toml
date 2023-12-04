@@ -5,19 +5,19 @@ name = 'pallet-prices'
 version = "0.8.0"
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-num-traits = { version = '0.2.15', default-features = false }
+num-traits = { workspace = true }
 orml-oracle = { workspace = true }
 orml-traits = { workspace = true }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm = { workspace = true }
 pallet-assets = { workspace = true }
-pallet-traits = { path = '../traits', default-features = false }
+pallet-traits = { workspace = true }
 bifrost-primitives = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
-serde = { version = "1.0.160", optional = true, features = ["derive"] }
+serde = { workspace = true, optional = true, features = ["derive"] }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
@@ -33,7 +33,7 @@ orml-tokens = { workspace = true }
 default = ['std']
 std = [
 	'serde',
-	'codec/std',
+	'parity-scale-codec/std',
 	'sp-runtime/std',
 	'frame-support/std',
 	'frame-system/std',

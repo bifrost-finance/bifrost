@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use bifrost_primitives::{Rate, Ratio};
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, FixedU128, RuntimeDebug};
 use sp_std::prelude::*;
