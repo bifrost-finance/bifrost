@@ -22,6 +22,7 @@ use crate::*;
 pub trait StablePoolHandler {
 	type Balance;
 	type AccountId;
+	type CurrencyId;
 
 	fn add_liquidity(
 		who: Self::AccountId,
@@ -66,11 +67,31 @@ pub trait StablePoolHandler {
 		pool_id: StableAssetPoolId,
 		currency_id: CurrencyId,
 	) -> Option<PoolTokenIndex>;
+
+	fn get_swap_output(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError>;
+
+	fn get_swap_input(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError>;
+
+	fn get_pool_id(
+		currency_id_in: &Self::CurrencyId,
+		currency_id_out: &Self::CurrencyId,
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)>;
 }
 
 impl<T: Config> StablePoolHandler for Pallet<T> {
 	type Balance = T::Balance;
 	type AccountId = T::AccountId;
+	type CurrencyId = T::CurrencyId;
 
 	fn add_liquidity(
 		who: Self::AccountId,
@@ -132,11 +153,37 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 			.position(|&x| x == currency_id.into())
 			.map(|value| value as u32)
 	}
+
+	fn get_swap_output(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Self::get_swap_output(pool_id, currency_id_in, currency_id_out, amount)
+	}
+
+	fn get_swap_input(
+		pool_id: StableAssetPoolId,
+		currency_id_in: PoolTokenIndex,
+		currency_id_out: PoolTokenIndex,
+		amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Self::get_swap_input(pool_id, currency_id_in, currency_id_out, amount)
+	}
+
+	fn get_pool_id(
+		currency_id_in: &Self::CurrencyId,
+		currency_id_out: &Self::CurrencyId,
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
+		Self::get_pool_id(currency_id_in, currency_id_out)
+	}
 }
 
 impl StablePoolHandler for () {
 	type Balance = u128;
 	type AccountId = sp_runtime::AccountId32;
+	type CurrencyId = CurrencyId;
 
 	fn add_liquidity(
 		_who: Self::AccountId,
@@ -191,6 +238,31 @@ impl StablePoolHandler for () {
 		_pool_id: StableAssetPoolId,
 		_currency_id: CurrencyId,
 	) -> Option<PoolTokenIndex> {
+		None
+	}
+
+	fn get_swap_output(
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Ok(0)
+	}
+
+	fn get_swap_input(
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Ok(0)
+	}
+
+	fn get_pool_id(
+		_currency_id_in: &Self::CurrencyId,
+		_currency_id_out: &Self::CurrencyId,
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
 		None
 	}
 }

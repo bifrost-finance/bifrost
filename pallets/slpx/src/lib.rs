@@ -131,6 +131,7 @@ pub mod pallet {
 		type StablePoolHandler: StablePoolHandler<
 			Balance = BalanceOf<Self>,
 			AccountId = AccountIdOf<Self>,
+			CurrencyId = CurrencyIdOf<Self>,
 		>;
 
 		/// xtokens xcm transfer interface

@@ -30,6 +30,9 @@ members = [
 	"pallets/parachain-staking",
 	"pallets/ve-minting",
 	"pallets/stable-pool",
+	"pallets/lend-market",
+	"pallets/prices",
+	"pallets/leverage-staking",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
@@ -46,6 +49,7 @@ bifrost-rpc              = { path = "node/rpc" }
 bifrost-salp-rpc         = { path = "pallets/salp/rpc" }
 bifrost-stable-pool-rpc  = { path = "pallets/stable-pool/rpc" }
 bifrost-ve-minting-rpc   = { path = "pallets/ve-minting/rpc" }
+lend-market-rpc          = { path = "pallets/lend-market/rpc" }
 
 # Bifrost Runtime
 bifrost-kusama-runtime   = { path = "runtime/bifrost-kusama" }
@@ -83,6 +87,11 @@ bifrost-vstoken-conversion           = { path = "pallets/vstoken-conversion", de
 bifrost-vtoken-minting               = { path = "pallets/vtoken-minting", default-features = false }
 bifrost-vtoken-voting                = { path = "pallets/vtoken-voting", default-features = false }
 bifrost-xcm-interface                = { path = "pallets/xcm-interface", default-features = false }
+lend-market                          = { path = "pallets/lend-market", default-features = false }
+lend-market-rpc-runtime-api          = { path = "pallets/lend-market/rpc/runtime-api", default-features = false }
+pallet-prices                        = { path = "pallets/prices", default-features = false }
+pallet-traits                        = { path = "pallets/traits", default-features = false }
+leverage-staking                     = { path = "pallets/leverage-staking", default-features = false }
 
 # Zenlink
 merkle-distributor             = { git = "https://github.com/bifrost-finance/merkle-distributor", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -102,6 +111,7 @@ orml-utilities      = { git = "https://github.com/open-web3-stack/open-runtime-m
 orml-xcm            = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4", default-features = false }
 orml-xcm-support    = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4", default-features = false }
 orml-xtokens        = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4", default-features = false }
+orml-oracle         = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b3694e631df7f1ca16b1973122937753fcdee9d4", default-features = false }
 
 # Substrate Client
 frame-benchmarking-cli         = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
@@ -283,18 +293,21 @@ scale-info            = { version = "2.10.0", default-features = false }
 serde_json            = { version = "1.0.105", default-features = false }
 serde                 = { version = "1.0.188", default-features = false }
 strum                 = { version = "0.24.1", default-features = false, features = ["derive"] }
+num-traits            = { version = "0.2.15", default-features = false }
+num-bigint            = { version = "0.4.3", default-features = false }
+impl-trait-for-tuples = { version = "0.2.2" }
 
 [profile.dev]
 split-debuginfo = "unpacked"
 
 [profile.release]
-panic = "unwind"
 opt-level = 3
+panic = "unwind"
 
 [profile.production]
+codegen-units = 1
 inherits = "release"
 lto = true
-codegen-units = 1
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of

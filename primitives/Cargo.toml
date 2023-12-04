@@ -17,6 +17,7 @@ sp-std = { workspace = true }
 xcm = { workspace = true }
 
 zenlink-protocol = { workspace = true }
+orml-oracle = { workspace = true }
 
 [features]
 default = ["std"]
@@ -33,6 +34,7 @@ std = [
 	"xcm/std",
 
 	"zenlink-protocol/std",
+	"orml-oracle/std",
 ]
 
 with-bifrost-runtime = [

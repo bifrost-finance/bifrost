@@ -46,6 +46,7 @@ pub use frame_support::{
 	PalletId, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
@@ -1477,6 +1478,104 @@ impl bifrost_ve_minting::Config for Runtime {
 	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
+parameter_types! {
+	pub const MinimumCount: u32 = 3;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
+	pub const MaxHasDispatchedSize: u32 = 100;
+	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
+}
+
+type BifrostDataProvider = orml_oracle::Instance1;
+impl orml_oracle::Config<BifrostDataProvider> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OnNewData = ();
+	type CombineData =
+		orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BifrostDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = CurrencyId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = OracleRootOperatorAccountId;
+	type MaxHasDispatchedSize = MaxHasDispatchedSize;
+	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
+	type Members = OracleMembership;
+	type MaxFeedValues = ConstU32<100>;
+}
+
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+pub struct AggregatedDataProvider;
+impl DataProvider<CurrencyId, TimeStampedPrice> for AggregatedDataProvider {
+	fn get(key: &CurrencyId) -> Option<TimeStampedPrice> {
+		Oracle::get(key)
+	}
+}
+
+impl DataProviderExtended<CurrencyId, TimeStampedPrice> for AggregatedDataProvider {
+	fn get_no_op(key: &CurrencyId) -> Option<TimeStampedPrice> {
+		Oracle::get_no_op(key)
+	}
+
+	fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+		Oracle::get_all_values()
+	}
+}
+
+impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for AggregatedDataProvider {
+	fn feed_value(_: Option<AccountId>, _: CurrencyId, _: TimeStampedPrice) -> DispatchResult {
+		Err("Not supported".into())
+	}
+}
+
+impl pallet_prices::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Source = AggregatedDataProvider;
+	type FeederOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type RelayCurrency = RelayCurrencyId;
+	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type Assets = Currencies;
+	type WeightInfo = pallet_prices::weights::SubstrateWeight<Runtime>;
+}
+
+impl lend_market::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type PalletId = LendMarketPalletId;
+	type PriceFeeder = Prices;
+	type ReserveOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
+	type UnixTime = Timestamp;
+	type Assets = Currencies;
+	type RewardAssetId = NativeCurrencyId;
+	type LiquidationFreeAssetId = RelayCurrencyId;
+}
+
+parameter_types! {
+	pub const OracleMaxMembers: u32 = 100;
+}
+
+impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxMembers = OracleMaxMembers;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
+impl leverage_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = leverage_staking::weights::SubstrateWeight<Runtime>;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type VtokenMinting = VtokenMinting;
+	type LendMarket = LendMarket;
+	type StablePoolHandler = StablePool;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1655,6 +1754,11 @@ construct_runtime! {
 		StableAsset: bifrost_stable_asset::{Pallet, Storage, Event<T>} = 128,
 		StablePool: bifrost_stable_pool = 129,
 		VtokenVoting: bifrost_vtoken_voting = 130,
+		LendMarket: lend_market = 131,
+		Prices: pallet_prices = 132,
+		Oracle: orml_oracle::<Instance1> = 133,
+		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
+		LeverageStaking: leverage_staking = 135,
 	}
 }
 
@@ -1964,6 +2068,20 @@ impl_runtime_apis! {
 			max_epoch: U256,
 		) -> U256{
 			VeMinting::find_block_epoch(block, max_epoch)
+		}
+	}
+
+	impl lend_market_rpc_runtime_api::LendMarketApi<Block, AccountId, Balance> for Runtime {
+		fn get_account_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidity(&account)
+		}
+
+		fn get_market_status(asset_id: CurrencyId) -> Result<(Rate, Rate, Rate, Ratio, Balance, Balance, sp_runtime::FixedU128), DispatchError> {
+			LendMarket::get_market_status(asset_id)
+		}
+
+		fn get_liquidation_threshold_liquidity(account: AccountId) -> Result<(Liquidity, Shortfall, Liquidity, Shortfall), DispatchError> {
+			LendMarket::get_account_liquidation_threshold_liquidity(&account)
 		}
 	}
 
