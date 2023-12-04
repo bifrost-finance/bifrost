@@ -325,6 +325,7 @@ parameter_types! {
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
+	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 }
 
 impl frame_system::Config for Runtime {
@@ -1640,9 +1641,6 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 		true
 	}
 }
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
-}
 
 /// Configure the pallet bifrost_stable_asset in pallets/bifrost_stable_asset.
 impl bifrost_stable_asset::Config for Runtime {
@@ -1901,11 +1899,11 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	#[allow(unused)]
-	use super::*;
+	use crate::Runtime;
+	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = StableAssetOnRuntimeUpgrade<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.
