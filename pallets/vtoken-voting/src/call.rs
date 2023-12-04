@@ -83,14 +83,22 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 pub enum Utility<Call> {
 	#[codec(index = 1)]
 	AsDerivative(DerivativeIndex, Box<Call>),
+	#[codec(index = 2)]
+	BatchAll(Vec<Call>),
 }
 
 pub trait UtilityCall<Call> {
 	fn as_derivative(derivative_index: DerivativeIndex, call: Call) -> Call;
+
+	fn batch_all(calls: Vec<Call>) -> Call;
 }
 
 impl<T: Config> UtilityCall<RelayCall<T>> for RelayCall<T> {
 	fn as_derivative(derivative_index: DerivativeIndex, call: Self) -> Self {
 		Self::Utility(Utility::AsDerivative(derivative_index, Box::new(call)))
+	}
+
+	fn batch_all(calls: Vec<Self>) -> Self {
+		Self::Utility(Utility::BatchAll(calls))
 	}
 }
