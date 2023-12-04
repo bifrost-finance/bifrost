@@ -1215,7 +1215,8 @@ pub mod pallet {
 								RedeemType::Native => {},
 								RedeemType::Astar(_) |
 								RedeemType::Moonbeam(_) |
-								RedeemType::Hydradx(_) => break,
+								RedeemType::Hydradx(_) |
+								RedeemType::Interlay(_) => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
@@ -1253,6 +1254,25 @@ pub mod pallet {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: receiver.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Interlay(receiver) => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_interlay_parachain_id()),
 										AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),
@@ -1615,10 +1635,14 @@ pub mod pallet {
 
 			if currency_id == PHA {
 				if let &MultiLocation {
-					parents: 1,
+					parents: vault_or_stake_pool,
 					interior: X2(GeneralIndex(_pool_id), GeneralIndex(_collection_id)),
 				} = who.as_ref()
 				{
+					ensure!(
+						vault_or_stake_pool == 0 || vault_or_stake_pool == 1,
+						Error::<T>::ValidatorMultilocationNotvalid
+					);
 					Pallet::<T>::inner_add_validator(&who, currency_id)?;
 				} else {
 					Err(Error::<T>::ValidatorMultilocationNotvalid)?;

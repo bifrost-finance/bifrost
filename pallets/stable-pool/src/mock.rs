@@ -313,6 +313,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type BifrostSlpx = SlpxInterface;
 	type HydradxParachainId = ConstU32<2034>;
+	type InterlayParachainId = ConstU32<2032>;
 }
 
 pub struct Slp;
