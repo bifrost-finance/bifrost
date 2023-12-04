@@ -1235,5 +1235,14 @@ pub mod pallet {
 
 			Ok(new_vote)
 		}
+
+		pub(crate) fn vote_cap(vtoken: CurrencyIdOf<T>) -> Result<BalanceOf<T>, DispatchError> {
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+			let token_supply =
+				T::VTokenSupplyProvider::get_token_supply(token).ok_or(Error::<T>::NoData)?;
+			let vote_cap_ratio = VoteCapRatio::<T>::get(vtoken);
+
+			Ok(vote_cap_ratio * token_supply)
+		}
 	}
 }

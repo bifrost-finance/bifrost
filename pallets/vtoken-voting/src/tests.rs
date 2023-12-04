@@ -1081,3 +1081,11 @@ fn set_vote_cap_ratio_works() {
 		assert_eq!(VoteCapRatio::<Runtime>::get(vtoken), Perbill::from_percent(100));
 	});
 }
+
+#[test]
+fn vote_cap_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		assert_eq!(VtokenVoting::vote_cap(vtoken), Ok((u64::MAX / 10) as Balance));
+	});
+}
