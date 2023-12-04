@@ -35,7 +35,6 @@ use xcm::{
 	},
 	v3::prelude::*,
 };
-use xcm_interface::traits::parachains;
 
 // Some untilities.
 impl<T: Config> Pallet<T> {
