@@ -216,7 +216,7 @@ $ cleos get currency balance eosio.token bifrostcross
 
 ### Bifrost to EOS
 
-Before testing, you have to setup some necessary steps.
+Before testing, you have to set up some necessary steps.
 
 - Multisignature Configuration
 
