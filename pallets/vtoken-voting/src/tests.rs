@@ -1102,3 +1102,34 @@ fn vote_to_capital_works() {
 		assert_eq!(VtokenVoting::vote_to_capital(Conviction::Locked6x, 300), 50);
 	});
 }
+
+#[test]
+fn compute_delegator_total_vote_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(10, 0)), Ok(aye(10, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 1)), Ok(aye(20, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 2)), Ok(aye(40, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 3)), Ok(aye(60, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 4)), Ok(aye(80, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 5)), Ok(aye(100, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(2, 6)), Ok(aye(120, 0)));
+
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(10, 0)), Ok(nay(10, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 1)), Ok(nay(20, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 2)), Ok(nay(40, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 3)), Ok(nay(60, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 4)), Ok(nay(80, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 5)), Ok(nay(100, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 6)), Ok(nay(120, 0)));
+	});
+}
+
+#[test]
+fn compute_delegator_total_vote_with_low_value_will_loss() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, aye(9, 0)), Ok(aye(0, 0)));
+		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(9, 0)), Ok(nay(0, 0)));
+	});
+}

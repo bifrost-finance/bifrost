@@ -243,6 +243,10 @@ pub mod pallet {
 		ChangeDelegator,
 		/// DelegatorVoteRole mismatch.
 		DelegatorVoteRoleMismatch,
+		/// The given vote is not Standard vote.
+		NotStandardVote,
+		/// The given conviction is not valid.
+		InvalidConviction,
 	}
 
 	/// Information concerning any given referendum.
@@ -1252,6 +1256,30 @@ pub mod pallet {
 				x => vote.checked_div(&u8::from(x).into()).unwrap_or_else(Zero::zero),
 			};
 			capital
+		}
+
+		pub(crate) fn compute_delegator_total_vote(
+			vtoken: CurrencyIdOf<T>,
+			vote: AccountVote<BalanceOf<T>>,
+		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
+			let aye = vote.as_standard().ok_or(Error::<T>::NotStandardVote)?;
+			let vote_cap = Self::vote_cap(vtoken)?;
+			for i in 0..=6 {
+				let conviction =
+					Conviction::try_from(i).map_err(|_| Error::<T>::InvalidConviction)?;
+				let conviction_votes = vote
+					.as_standard_vote()
+					.ok_or(Error::<T>::NotStandardVote)?
+					.conviction
+					.votes(vote.balance())
+					.votes;
+				let capital = Self::vote_to_capital(conviction, conviction_votes);
+				if capital <= vote_cap {
+					return Ok(AccountVote::new_standard(Vote { aye, conviction }, capital));
+				}
+			}
+
+			Err(Error::<T>::InsufficientFunds.into())
 		}
 	}
 }
