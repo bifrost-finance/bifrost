@@ -1567,6 +1567,16 @@ impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
+impl leverage_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = leverage_staking::weights::SubstrateWeight<Runtime>;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type VtokenMinting = VtokenMinting;
+	type LendMarket = LendMarket;
+	type StablePoolHandler = StablePool;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1749,6 +1759,7 @@ construct_runtime! {
 		Prices: pallet_prices = 132,
 		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
+		LeverageStaking: leverage_staking = 135,
 	}
 }
 

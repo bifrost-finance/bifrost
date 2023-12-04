@@ -132,10 +132,10 @@ bifrost-vtoken-minting = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = [ "kusama" ] }
 bifrost-xcm-interface = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
-lend-market = { path = "../../pallets/lend-market", default-features = false }
-lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
-pallet-prices = { path = "../../pallets/prices", default-features = false }
-leverage-staking = { path = "../../pallets/leverage-staking", default-features = false }
+lend-market = { workspace = true }
+lend-market-rpc-runtime-api = { workspace = true }
+pallet-prices = { workspace = true }
+leverage-staking = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }

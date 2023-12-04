@@ -1362,6 +1362,7 @@ dependencies = [
  "hex-literal 0.4.1",
  "lend-market",
  "lend-market-rpc-runtime-api",
+ "leverage-staking",
  "log",
  "merkle-distributor",
  "orml-oracle",

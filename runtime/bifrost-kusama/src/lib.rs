@@ -1763,7 +1763,7 @@ impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
 
 impl leverage_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = leverage_staking::weights::SubstrateWeight<Runtime>;
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type VtokenMinting = VtokenMinting;
 	type LendMarket = LendMarket;

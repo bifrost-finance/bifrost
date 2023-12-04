@@ -127,10 +127,11 @@ bifrost-vesting = { workspace = true }
 bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = [ "polkadot" ] }
-lend-market = { path = "../../pallets/lend-market", default-features = false }
-lend-market-rpc-runtime-api = { path = "../../pallets/lend-market/rpc/runtime-api", default-features = false }
-pallet-prices = { path = "../../pallets/prices", default-features = false }
 bifrost-xcm-interface = { workspace = true }
+lend-market = { workspace = true }
+lend-market-rpc-runtime-api = { workspace = true }
+pallet-prices = { workspace = true }
+leverage-staking = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
