@@ -361,7 +361,7 @@ impl<T: Config>
 						ledger.bonded_pool_collection_id =
 							Some(u32::unique_saturated_from(collection_id));
 
-						let is_vault = if vault_or_stake_pool == 0 { true } else { false };
+						let is_vault = vault_or_stake_pool == 0;
 						ledger.bonded_is_vault = Some(is_vault);
 					} else {
 						Err(Error::<T>::Unexpected)?;
