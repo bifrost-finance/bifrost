@@ -52,10 +52,13 @@ use frame_support::{
 use frame_system::pallet_prelude::{BlockNumberFor, *};
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
-use pallet_conviction_voting::UnvoteScope;
+use pallet_conviction_voting::{Conviction, UnvoteScope, Vote};
 use sp_runtime::{
-	traits::{BlockNumberProvider, CheckedSub, Saturating, UniqueSaturatedInto, Zero},
-	ArithmeticError,
+	traits::{
+		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, CheckedSub, Saturating,
+		UniqueSaturatedInto, Zero,
+	},
+	ArithmeticError, Perbill,
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
