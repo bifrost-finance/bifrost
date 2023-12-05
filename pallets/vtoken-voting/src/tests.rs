@@ -959,7 +959,7 @@ fn notify_remove_delegator_vote_fail_works() {
 		));
 		assert_ok!(VtokenVoting::set_vote_locking_period(RuntimeOrigin::root(), vtoken, 10));
 
-		RelaychainDataProvider::set_block_number(15);
+		RelaychainDataProvider::set_block_number(3 + 10 * 16);
 		assert_ok!(VtokenVoting::remove_delegator_vote(
 			RuntimeOrigin::signed(ALICE),
 			vtoken,
