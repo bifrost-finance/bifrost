@@ -258,7 +258,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Started new round.
 		NewRound {
-			starting_block: T::BlockNumber,
+			starting_block: BlockNumberFor<T>,
 			round: RoundIndex,
 			selected_collators_number: u32,
 			total_balance: BalanceOf<T>,
@@ -417,7 +417,7 @@ pub mod pallet {
 		/// Set blocks per round
 		BlocksPerRoundSet {
 			current_round: RoundIndex,
-			first_block: T::BlockNumber,
+			first_block: BlockNumberFor<T>,
 			old: u32,
 			new: u32,
 			new_per_round_inflation_min: Perbill,
@@ -428,7 +428,7 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			let mut weight = T::WeightInfo::base_on_initialize();
 
 			let mut round = <Round<T>>::get();
@@ -483,7 +483,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn round)]
 	/// Current round index and next round scheduled transition
-	pub type Round<T: Config> = StorageValue<_, RoundInfo<T::BlockNumber>, ValueQuery>;
+	pub type Round<T: Config> = StorageValue<_, RoundInfo<BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn delegator_state)]
@@ -609,6 +609,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub candidates: Vec<(AccountIdOf<T>, BalanceOf<T>)>,
 		/// Vec of tuples of the format (delegator AccountId, collator AccountId, delegation
@@ -617,15 +618,8 @@ pub mod pallet {
 		pub inflation_config: InflationInfo<BalanceOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { candidates: vec![], delegations: vec![], inflation_config: Default::default() }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			<InflationConfig<T>>::put(self.inflation_config.clone());
 			let mut candidate_count = 0u32;
@@ -696,13 +690,13 @@ pub mod pallet {
 			// Choose top TotalSelected collator candidates
 			let (v_count, _, total_staked) = <Pallet<T>>::select_top_candidates(1u32);
 			// Start Round 1 at Block 0
-			let round: RoundInfo<T::BlockNumber> =
+			let round: RoundInfo<BlockNumberFor<T>> =
 				RoundInfo::new(1u32, 0u32.into(), T::DefaultBlocksPerRound::get());
 			<Round<T>>::put(round);
 			// Snapshot total stake
 			<Staked<T>>::insert(1u32, <Total<T>>::get());
 			<Pallet<T>>::deposit_event(Event::NewRound {
-				starting_block: T::BlockNumber::zero(),
+				starting_block: BlockNumberFor::<T>::zero(),
 				round: 1u32,
 				selected_collators_number: v_count,
 				total_balance: total_staked,
@@ -1875,7 +1869,7 @@ pub mod pallet {
 		}
 	}
 
-	impl<T> pallet_authorship::EventHandler<AccountIdOf<T>, T::BlockNumber> for Pallet<T>
+	impl<T> pallet_authorship::EventHandler<AccountIdOf<T>, BlockNumberFor<T>> for Pallet<T>
 	where
 		T: Config + pallet_authorship::Config + pallet_session::Config,
 	{
@@ -1920,33 +1914,36 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> ShouldEndSession<T::BlockNumber> for Pallet<T> {
-		fn should_end_session(now: T::BlockNumber) -> bool {
+	impl<T: Config> ShouldEndSession<BlockNumberFor<T>> for Pallet<T> {
+		fn should_end_session(now: BlockNumberFor<T>) -> bool {
 			let round = <Round<T>>::get();
 			// always update when a new round should start
 			round.should_update(now)
 		}
 	}
 
-	impl<T: Config> EstimateNextSessionRotation<T::BlockNumber> for Pallet<T> {
-		fn average_session_length() -> T::BlockNumber {
-			T::BlockNumber::from(<Round<T>>::get().length)
+	impl<T: Config> EstimateNextSessionRotation<BlockNumberFor<T>> for Pallet<T> {
+		fn average_session_length() -> BlockNumberFor<T> {
+			BlockNumberFor::<T>::from(<Round<T>>::get().length)
 		}
 
-		fn estimate_current_session_progress(now: T::BlockNumber) -> (Option<Permill>, Weight) {
+		fn estimate_current_session_progress(now: BlockNumberFor<T>) -> (Option<Permill>, Weight) {
 			let round = <Round<T>>::get();
 			let passed_blocks = now.saturating_sub(round.first);
 
 			(
-				Some(Permill::from_rational(passed_blocks, T::BlockNumber::from(round.length))),
+				Some(Permill::from_rational(
+					passed_blocks,
+					BlockNumberFor::<T>::from(round.length),
+				)),
 				// One read for the round info, blocknumber is read free
 				T::DbWeight::get().reads(1),
 			)
 		}
 
 		fn estimate_next_session_rotation(
-			_now: T::BlockNumber,
-		) -> (Option<T::BlockNumber>, Weight) {
+			_now: BlockNumberFor<T>,
+		) -> (Option<BlockNumberFor<T>>, Weight) {
 			let round = <Round<T>>::get();
 
 			(

@@ -1,0 +1,79 @@
+[package]
+authors = ["yooml <ymlll0508@gmail.com>"]
+edition = "2021"
+name = "leverage-staking"
+version = "0.8.0"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+bifrost-primitives = { workspace = true }
+bifrost-stable-asset = { workspace = true }
+bifrost-stable-pool = { workspace = true }
+bifrost-vtoken-minting = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+lend-market = { workspace = true }
+log = { workspace = true }
+orml-traits = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-collective = { workspace = true }
+pallet-prices = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+[dev-dependencies]
+bifrost-asset-registry = { workspace = true }
+bifrost-currencies = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+env_logger = { workspace = true }
+orml-oracle = { workspace = true }
+orml-tokens = { workspace = true }
+orml-xtokens = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-xcm = { workspace = true }
+sp-io = { workspace = true }
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
+
+[features]
+default = ['std']
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+]
+std = [
+	"parity-scale-codec/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"scale-info/std",
+	"pallet-balances/std",
+	"pallet-timestamp/std",
+	"bifrost-stable-asset/std",
+	"orml-traits/std",
+	"bifrost-primitives/std",
+	"pallet-traits/std",
+	"bifrost-asset-registry/std",
+	"bifrost-runtime-common/std",
+	"bifrost-asset-registry/std",
+	"xcm-builder/std",
+	"lend-market/std",
+	"bifrost-stable-pool/std",
+	"pallet-prices/std",
+	"log/std",
+]
+try-runtime = ['frame-support/try-runtime']
+
+[lib]
+doctest = false

@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use codec::{Decode, Encode};
-use frame_support::dispatch::DispatchError;
-use primitives::{Rate, Ratio};
+use bifrost_primitives::{Rate, Ratio};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_runtime::{FixedU128, RuntimeDebug};
+use sp_runtime::{DispatchError, FixedU128, RuntimeDebug};
 use sp_std::prelude::*;
 
 pub trait LendMarket<CurrencyId, AccountId, Balance> {

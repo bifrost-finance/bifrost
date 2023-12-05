@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,18 +20,18 @@
 
 #![cfg(test)]
 
-use node_primitives::TryConvertFrom;
+use bifrost_primitives::TryConvertFrom;
 // use balances::Call as BalancesCall;
 use crate::{
 	mock::*, BlockNumberFor, BoundedVec, Config, DispatchError::BadOrigin, UserDefaultFeeCurrency,
 };
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
 	traits::WithdrawReasons,
 	weights::Weight,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::{testing::TestXt, AccountId32};
@@ -110,8 +110,8 @@ fn basic_setup() {
 		asset_4_currency_id
 	));
 
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	let mut deadline: BlockNumberFor<Test> =
+		<frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -124,8 +124,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 2
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -138,8 +137,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 3
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,
@@ -152,8 +150,7 @@ fn basic_setup() {
 	));
 
 	// pool 0 4
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		RuntimeOrigin::signed(DICK),
 		asset_0_currency_id,

@@ -5,51 +5,46 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.3.1", default-features = false, features = [
-	"derive",
-] }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
-zenlink-protocol = { version = "*", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-impl-trait-for-tuples = "0.2.1"
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42", default-features = false }
-bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
-log = { version = "0.4.17", default-features = false }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-transaction-payment = { workspace = true }
+sp-arithmetic = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+bifrost-primitives = { workspace = true }
+zenlink-protocol = { workspace = true }
+orml-traits = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
-orml-tokens = "0.4.1-dev"
+orml-tokens = { workspace = true }
 bifrost-currencies = { workspace = true }
-balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
-bifrost-salp = { path = "../salp" }
-bifrost-asset-registry = { path = "../asset-registry" }
-xcm-interface = { path = "../xcm-interface" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-bifrost-vtoken-voting = { path = "../vtoken-voting", features = ["kusama"] }
+pallet-balances = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+bifrost-salp = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-xcm-interface = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+bifrost-vtoken-voting = { workspace = true, features = ["kusama"] }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"frame-support/std",
 	"frame-system/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"sp-runtime/std",
 	"sp-std/std",
 	"pallet-transaction-payment/std",

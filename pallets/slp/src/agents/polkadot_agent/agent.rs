@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -29,14 +29,14 @@ use crate::{
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 };
+use bifrost_primitives::{
+	currency::KSM, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
+	DOT,
+};
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	currency::KSM, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
-	DOT,
-};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero},
 	DispatchResult,

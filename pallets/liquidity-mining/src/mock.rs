@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ use frame_support::{
 	traits::Contains,
 	PalletId,
 };
-use node_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, TokenSymbol};
+use bifrost_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 
 use crate as lm;
@@ -41,17 +41,13 @@ pub(crate) type Signature = MultiSignature;
 pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
-		Collective: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		LM: lm::{Pallet, Call, Storage, Event<T>, Config<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Tokens: orml_tokens,
+		Collective: pallet_collective::<Instance1>,
+		LM: lm,
 	}
 );
 
@@ -70,15 +66,14 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = BlockNumber;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Index = Index;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();

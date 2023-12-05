@@ -5,8 +5,8 @@ use crate::{
 	tests::unit,
 	Error, MarketState,
 };
+use bifrost_primitives::Rate;
 use frame_support::{assert_err, assert_noop, assert_ok};
-use node_primitives::Rate;
 use sp_runtime::FixedPointNumber;
 
 #[test]

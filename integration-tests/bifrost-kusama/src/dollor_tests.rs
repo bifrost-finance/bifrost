@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_kusama_runtime::Runtime;
+use bifrost_primitives::{CurrencyId, TokenSymbol::*};
 use bifrost_runtime_common::{cent, dollar, micro, microcent, milli, millicent};
-use node_primitives::{CurrencyId, TokenSymbol::*};
+use integration_tests_common::BifrostKusama;
+use xcm_emulator::TestExt;
 
 const DECIMAL_18: u128 = 1_000_000_000_000_000_000;
 const DECIMAL_12: u128 = 1_000_000_000_000;
@@ -26,7 +28,7 @@ const DOT_DECIMALS: u128 = 10_000_000_000;
 
 #[test]
 fn dollar_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(dollar::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12);
 		assert_eq!(dollar::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12);
 		assert_eq!(dollar::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12);
@@ -43,7 +45,7 @@ fn dollar_should_work() {
 
 #[test]
 fn milli_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(milli::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12 / 1000);
 		assert_eq!(milli::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12 / 1000);
 		assert_eq!(milli::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12 / 1000);
@@ -60,7 +62,7 @@ fn milli_should_work() {
 
 #[test]
 fn micro_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(micro::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12 / 1_000_000);
 		assert_eq!(micro::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12 / 1_000_000);
 		assert_eq!(micro::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12 / 1_000_000);
@@ -77,7 +79,7 @@ fn micro_should_work() {
 
 #[test]
 fn cent_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(cent::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12 / 100);
 		assert_eq!(cent::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12 / 100);
 		assert_eq!(cent::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12 / 100);
@@ -94,7 +96,7 @@ fn cent_should_work() {
 
 #[test]
 fn millicent_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(millicent::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12 / 100_000);
 		assert_eq!(millicent::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12 / 100_000);
 		assert_eq!(millicent::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12 / 100_000);
@@ -111,7 +113,7 @@ fn millicent_should_work() {
 
 #[test]
 fn microcent_should_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_eq!(microcent::<Runtime>(CurrencyId::Token(ASG)), DECIMAL_12 / 100_000_000);
 		assert_eq!(microcent::<Runtime>(CurrencyId::Token(BNC)), DECIMAL_12 / 100_000_000);
 		assert_eq!(microcent::<Runtime>(CurrencyId::Token(KUSD)), DECIMAL_12 / 100_000_000);

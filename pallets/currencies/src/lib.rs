@@ -38,7 +38,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use codec::Codec;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -62,6 +61,7 @@ use orml_traits::{
 	NamedMultiReservableCurrency,
 };
 use orml_utilities::with_transaction_result;
+use parity_scale_codec::Codec;
 use sp_runtime::{
 	traits::{CheckedSub, MaybeSerializeDeserialize, StaticLookup, Zero},
 	DispatchError, DispatchResult,
@@ -144,7 +144,7 @@ pub mod module {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -335,7 +335,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	fn set_lock(
 		lock_id: LockIdentifier,
@@ -777,7 +777,7 @@ where
 	T: Config,
 	GetCurrencyId: Get<CurrencyIdOf<T>>,
 {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	fn set_lock(
 		lock_id: LockIdentifier,
@@ -1027,7 +1027,7 @@ where
 		+ MaybeSerializeDeserialize
 		+ Debug
 		+ Default
-		+ codec::MaxEncodedLen,
+		+ MaxEncodedLen,
 	Currency: PalletCurrency<AccountId>,
 	T: Config,
 {

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::{
+	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
+	CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
+};
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -28,10 +32,6 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{
-	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
-};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
@@ -54,7 +54,7 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use node_primitives::XcmDestWeightAndFeeHandler;
+	use bifrost_primitives::XcmDestWeightAndFeeHandler;
 
 	use super::*;
 

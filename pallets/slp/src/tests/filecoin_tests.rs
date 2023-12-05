@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 #![cfg(test)]
 
 use crate::{mocks::mock::*, primitives::FilecoinLedger, *};
+use bifrost_primitives::currency::{FIL, VFIL};
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::currency::{FIL, VFIL};
 use sp_runtime::traits::AccountIdConversion;
 
 fn mins_maxs_setup() {

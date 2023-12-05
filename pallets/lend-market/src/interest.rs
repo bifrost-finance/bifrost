@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use node_primitives::{Timestamp, SECONDS_PER_YEAR};
+use bifrost_primitives::{Timestamp, SECONDS_PER_YEAR};
 use sp_runtime::{traits::Zero, DispatchResult};
 
 use crate::*;

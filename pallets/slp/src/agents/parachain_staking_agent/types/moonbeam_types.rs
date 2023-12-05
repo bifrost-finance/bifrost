@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,14 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config};
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_arithmetic::Percent;
 use sp_core::H160;
-use sp_runtime::traits::{IdentityLookup, StaticLookup};
+use sp_runtime::{
+	traits::{IdentityLookup, StaticLookup},
+	RuntimeDebug,
+};
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
 

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -25,10 +25,10 @@ use crate::{
 	},
 	BNC, *,
 };
-use codec::alloc::collections::BTreeMap;
+use bifrost_parachain_staking::RoundInfo;
+use bifrost_primitives::VBNC;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::VBNC;
-use parachain_staking::RoundInfo;
+use parity_scale_codec::alloc::collections::BTreeMap;
 use sp_runtime::traits::AccountIdConversion;
 
 #[test]
@@ -275,7 +275,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			BNC,
 			TimeUnit::Round(48)
 		));
-		parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
+		bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
 		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 
