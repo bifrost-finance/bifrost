@@ -562,11 +562,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			Self::ensure_referendum_expired(vtoken, poll_index)?;
 			ensure!(
 				DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)),
 				Error::<T>::NoData
 			);
+			Self::ensure_referendum_expired(vtoken, poll_index, derivative_index)?;
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
@@ -1098,9 +1098,9 @@ pub mod pallet {
 		fn ensure_referendum_completed(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-		) -> Result<BlockNumberFor<T>, DispatchError> {
+		) -> DispatchResult {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
-				Some(ReferendumInfo::Completed(moment)) => Ok(moment),
+				Some(ReferendumInfo::Completed(_)) => Ok(()),
 				_ => Err(Error::<T>::NotCompleted.into()),
 			}
 		}
@@ -1108,17 +1108,23 @@ pub mod pallet {
 		fn ensure_referendum_expired(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-		) -> Result<BlockNumberFor<T>, DispatchError> {
-			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
-				Some(ReferendumInfo::Completed(moment)) => {
+			derivative_index: DerivativeIndex,
+		) -> DispatchResult {
+			let delegator_vote = DelegatorVote::<T>::get((vtoken, poll_index, derivative_index))
+				.ok_or(Error::<T>::NoData)?;
+			match (ReferendumInfoFor::<T>::get(vtoken, poll_index), delegator_vote.locked_if(true))
+			{
+				(Some(ReferendumInfo::Completed(moment)), Some((lock_periods, _balance))) => {
 					let locking_period =
 						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
 					ensure!(
 						T::RelaychainBlockNumberProvider::current_block_number() >=
-							moment.saturating_add(locking_period),
+							moment.saturating_add(
+								locking_period.saturating_mul(lock_periods.into())
+							),
 						Error::<T>::NotExpired
 					);
-					Ok(moment.saturating_add(locking_period))
+					Ok(())
 				},
 				_ => Err(Error::<T>::NotExpired.into()),
 			}
@@ -1127,9 +1133,9 @@ pub mod pallet {
 		fn ensure_referendum_killed(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-		) -> Result<BlockNumberFor<T>, DispatchError> {
+		) -> DispatchResult {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
-				Some(ReferendumInfo::Killed(moment)) => Ok(moment),
+				Some(ReferendumInfo::Killed(_)) => Ok(()),
 				_ => Err(Error::<T>::NotKilled.into()),
 			}
 		}
