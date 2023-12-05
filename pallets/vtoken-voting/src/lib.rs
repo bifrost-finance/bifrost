@@ -364,7 +364,6 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub delegator_vote_roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
 		pub delegators: (CurrencyIdOf<T>, Vec<DerivativeIndex>),
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 		pub vote_cap_ratio: (CurrencyIdOf<T>, Perbill),
@@ -373,10 +372,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			self.delegator_vote_roles.iter().for_each(|(vtoken, role, derivative_index)| {
-				let vote_role = VoteRole::try_from(*role).unwrap();
-				DelegatorVoteRole::<T>::insert(vtoken, derivative_index, vote_role);
-			});
 			let (vtoken, delegators) = &self.delegators;
 			Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
