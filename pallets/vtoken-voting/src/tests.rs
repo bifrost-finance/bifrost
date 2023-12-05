@@ -1133,3 +1133,25 @@ fn compute_delegator_total_vote_with_low_value_will_loss() {
 		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(9, 0)), Ok(nay(0, 0)));
 	});
 }
+
+#[test]
+fn allocate_delegator_votes_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+		let poll_index = 3;
+		let vote = aye(5e9 as Balance, 2);
+
+		let delegator_votes = VtokenVoting::allocate_delegator_votes(vtoken, poll_index, vote);
+		assert_eq!(delegator_votes, Ok(vec![(0, aye(4294967295, 2)), (1, aye(705032705, 2))]));
+		assert_eq!(
+			delegator_votes.unwrap().into_iter().map(|(derivative_index, vote)| vote).fold(
+				aye(0, 2),
+				|mut acc, vote| {
+					let _ = acc.checked_add(vote);
+					acc
+				},
+			),
+			vote
+		);
+	});
+}

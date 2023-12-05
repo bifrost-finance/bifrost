@@ -366,6 +366,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(VKSM, 20, 20),
 			(VKSM, 21, 21),
 		],
+		delegators: (VKSM, vec![0, 1, 2, 3, 4, 5, 10, 11, 15, 20, 21]),
 		undeciding_timeouts: vec![(VKSM, 100)],
 		vote_cap_ratio: (VKSM, Perbill::from_percent(10)),
 	}

@@ -250,6 +250,8 @@ pub mod pallet {
 		NotStandardVote,
 		/// The given conviction is not valid.
 		InvalidConviction,
+		/// The given value is out of range.
+		OutOfRange,
 	}
 
 	/// Information concerning any given referendum.
@@ -316,6 +318,15 @@ pub mod pallet {
 		StorageDoubleMap<_, Twox64Concat, CurrencyIdOf<T>, Twox64Concat, DerivativeIndex, VoteRole>;
 
 	#[pallet::storage]
+	pub type Delegators<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		BoundedVec<DerivativeIndex, ConstU32<100>>,
+		ValueQuery,
+	>;
+
+	#[pallet::storage]
 	pub type VoteCapRatio<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Perbill, ValueQuery>;
 
@@ -354,6 +365,7 @@ pub mod pallet {
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub delegator_vote_roles: Vec<(CurrencyIdOf<T>, u8, DerivativeIndex)>,
+		pub delegators: (CurrencyIdOf<T>, Vec<DerivativeIndex>),
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
 		pub vote_cap_ratio: (CurrencyIdOf<T>, Perbill),
 	}
@@ -365,6 +377,8 @@ pub mod pallet {
 				let vote_role = VoteRole::try_from(*role).unwrap();
 				DelegatorVoteRole::<T>::insert(vtoken, derivative_index, vote_role);
 			});
+			let (vtoken, delegators) = &self.delegators;
+			Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
@@ -1283,6 +1297,59 @@ pub mod pallet {
 			}
 
 			Err(Error::<T>::InsufficientFunds.into())
+		}
+
+		pub(crate) fn allocate_delegator_votes(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+			delegator_total_vote: AccountVote<BalanceOf<T>>,
+		) -> Result<Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>, DispatchError> {
+			let vote_role: VoteRole = delegator_total_vote.into();
+			let mut delegator_total_vote = delegator_total_vote;
+
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+			let delegators = Delegators::<T>::get(vtoken);
+			let mut delegator_votes =
+				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
+			let delegator_vote_keys =
+				delegator_votes.iter().map(|(index, _)| *index).collect::<Vec<_>>();
+			for derivative_index in delegators {
+				if !delegator_vote_keys.contains(&derivative_index) {
+					delegator_votes
+						.push((derivative_index, AccountVote::<BalanceOf<T>>::from(vote_role)));
+				}
+			}
+			let data = delegator_votes
+				.into_iter()
+				.map(|(derivative_index, _)| {
+					let (_, available_vote) =
+						T::DerivativeAccount::get_stake_info(token, derivative_index)
+							.unwrap_or_default();
+					(derivative_index, available_vote)
+				})
+				.collect::<Vec<_>>();
+
+			let mut delegator_votes = Vec::new();
+			for (derivative_index, available_vote) in data {
+				if available_vote >= delegator_total_vote.balance() {
+					delegator_votes.push((derivative_index, delegator_total_vote));
+					return Ok(delegator_votes);
+				} else {
+					let account_vote = AccountVote::new_standard(
+						delegator_total_vote.as_standard_vote().unwrap(),
+						available_vote,
+					);
+					delegator_votes.push((derivative_index, account_vote));
+					delegator_total_vote
+						.checked_sub(account_vote)
+						.map_err(|_| ArithmeticError::Underflow)?
+				}
+			}
+			if delegator_total_vote.balance() != Zero::zero() {
+				return Err(Error::<T>::OutOfRange.into());
+			}
+
+			Ok(delegator_votes)
 		}
 	}
 }
