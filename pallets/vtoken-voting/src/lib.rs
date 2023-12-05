@@ -1118,6 +1118,13 @@ pub mod pallet {
 					);
 					Ok(())
 				},
+				(Some(ReferendumInfo::Completed(moment)), None) => {
+					ensure!(
+						T::RelaychainBlockNumberProvider::current_block_number() >= moment,
+						Error::<T>::NotExpired
+					);
+					Ok(())
+				},
 				_ => Err(Error::<T>::NotExpired.into()),
 			}
 		}
