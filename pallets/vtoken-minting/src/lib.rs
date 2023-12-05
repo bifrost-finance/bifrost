@@ -40,7 +40,9 @@ use bifrost_primitives::{
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
+		},
 		ArithmeticError, DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
@@ -858,9 +860,10 @@ pub mod pallet {
 				vtoken_amount = U256::from(token_amount_excluding_fee.saturated_into::<u128>())
 					.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 					.checked_div(token_pool_amount.saturated_into::<u128>().into())
+					.map(|x| u128::try_from(x))
 					.ok_or(Error::<T>::CalculationOverflow)?
-					.as_u128()
-					.saturated_into();
+					.map_err(|_| Error::<T>::CalculationOverflow)?
+					.unique_saturated_into();
 			}
 
 			// Charging fees
@@ -1281,12 +1284,13 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
+			let token_amount: BalanceOf<T> = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
+				.map(|x| u128::try_from(x))
 				.ok_or(Error::<T>::CalculationOverflow)?
-				.as_u128()
-				.saturated_into();
+				.map_err(|_| Error::<T>::CalculationOverflow)?
+				.unique_saturated_into();
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
@@ -1409,32 +1413,36 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(token_amount.saturated_into::<u128>())
+			let value = U256::from(token_amount.saturated_into::<u128>())
 				.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 				.checked_div(token_pool_amount.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_to_token_inner(
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(vtoken_amount.saturated_into::<u128>())
+			let value = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
@@ -1644,7 +1652,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::token_to_vtoken_inner(token_id, vtoken_id, token_amount)
 	}
 
@@ -1652,7 +1660,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
 	}
 

@@ -785,9 +785,8 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: T::Balance,
 	) -> Result<T::Balance, DispatchError> {
-		let mut pool_info =
+		let pool_info =
 			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
-		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let dx = Self::upscale(
 			amount,
 			pool_id,
@@ -854,7 +853,7 @@ impl<T: Config> Pallet<T> {
 		pool_id: StableAssetPoolId,
 		mut amounts: Vec<T::Balance>,
 	) -> Result<T::Balance, DispatchError> {
-		let mut pool_info =
+		let pool_info =
 			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 		for (i, amount) in amounts.iter_mut().enumerate() {
 			*amount = Self::upscale(
@@ -866,7 +865,6 @@ impl<T: Config> Pallet<T> {
 					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
-		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
 		let MintResult { mint_amount, .. } =
 			bifrost_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 
