@@ -55,12 +55,7 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 	T::DerivativeAccount::add_delegator(token, derivative_index, Parent.into());
 	T::DerivativeAccount::new_delegator_ledger(token, Parent.into());
 	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, Zero::zero())?;
-	Pallet::<T>::set_delegator_role(
-		RawOrigin::Root.into(),
-		vtoken,
-		derivative_index,
-		VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
-	)?;
+	Pallet::<T>::add_delegator(RawOrigin::Root.into(), vtoken, derivative_index)?;
 
 	Ok(())
 }
@@ -237,12 +232,11 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	pub fn set_delegator_role() -> Result<(), BenchmarkError> {
+	pub fn add_delegator() -> Result<(), BenchmarkError> {
 		let origin =
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let vtoken = VKSM;
 		let derivative_index = 10;
-		let vote_role = VoteRole::SplitAbstain;
 
 		init_vote::<T>(vtoken)?;
 		T::DerivativeAccount::add_delegator(
@@ -252,12 +246,7 @@ mod benchmarks {
 		);
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			vtoken,
-			derivative_index,
-			vote_role,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, derivative_index);
 
 		Ok(())
 	}

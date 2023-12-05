@@ -58,7 +58,7 @@ pub trait WeightInfo {
 	fn unlock() -> Weight;
 	fn remove_delegator_vote() -> Weight;
 	fn kill_referendum() -> Weight;
-	fn set_delegator_role() -> Weight;
+	fn add_delegator() -> Weight;
 	fn set_referendum_status() -> Weight;
 	fn set_undeciding_timeout() -> Weight;
 	fn set_vote_locking_period() -> Weight;
@@ -218,7 +218,7 @@ impl WeightInfo for () {
 	/// Proof Skipped: Slp DelegatorsIndex2Multilocation (max_values: None, max_size: None, mode: Measured)
 	/// Storage: VtokenVoting DelegatorVote (r:1 w:1)
 	/// Proof: VtokenVoting DelegatorVote (max_values: None, max_size: Some(81), added: 2556, mode: MaxEncodedLen)
-	fn set_delegator_role() -> Weight {
+	fn add_delegator() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `372`
 		//  Estimated: `3837`

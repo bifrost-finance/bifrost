@@ -158,9 +158,8 @@ pub mod pallet {
 			vtoken: CurrencyIdOf<T>,
 			derivative_index: DerivativeIndex,
 		},
-		DelegatorRoleSet {
+		DelegatorAdded {
 			vtoken: CurrencyIdOf<T>,
-			role: VoteRole,
 			derivative_index: DerivativeIndex,
 		},
 		ReferendumInfoCreated {
@@ -616,12 +615,11 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_delegator_role())]
-		pub fn set_delegator_role(
+		#[pallet::weight(<T as Config>::WeightInfo::add_delegator())]
+		pub fn add_delegator(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
 			#[pallet::compact] derivative_index: DerivativeIndex,
-			vote_role: VoteRole,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -631,17 +629,16 @@ pub mod pallet {
 				Error::<T>::NoData
 			);
 			ensure!(
-				!DelegatorVoteRole::<T>::contains_key(vtoken, derivative_index),
+				!Delegators::<T>::get(vtoken).contains(&derivative_index),
 				Error::<T>::DerivativeIndexOccupied
 			);
 
-			DelegatorVoteRole::<T>::insert(vtoken, derivative_index, vote_role);
+			Delegators::<T>::try_mutate(vtoken, |vec| -> DispatchResult {
+				vec.try_push(derivative_index).map_err(|_| Error::<T>::TooMany)?;
+				Ok(())
+			})?;
 
-			Self::deposit_event(Event::<T>::DelegatorRoleSet {
-				vtoken,
-				role: vote_role,
-				derivative_index,
-			});
+			Self::deposit_event(Event::<T>::DelegatorAdded { vtoken, derivative_index });
 
 			Ok(())
 		}
