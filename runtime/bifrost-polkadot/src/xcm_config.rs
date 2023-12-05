@@ -49,7 +49,7 @@ use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -303,31 +303,6 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 			},
 			_ => Err(ProcessMessageError::Unsupported),
 		}
-	}
-}
-
-/// Sets the message ID to `t` using a `SetTopic(t)` in the last position if present.
-///
-/// Requires some inner barrier to pass on the rest of the message.
-pub struct TrailingSetTopicAsId<InnerBarrier>(PhantomData<InnerBarrier>);
-impl<InnerBarrier: ShouldExecute> ShouldExecute for TrailingSetTopicAsId<InnerBarrier> {
-	fn should_execute<Call>(
-		origin: &MultiLocation,
-		instructions: &mut [Instruction<Call>],
-		max_weight: Weight,
-		weight_credit: &mut Weight,
-	) -> Result<(), ProcessMessageError> {
-		log::trace!(
-			target: "xcm::barriers",
-			"TrailingSetTopicAsId origin: {:?}, instructions: {:?}, max_weight: {:?}",
-			origin, instructions, max_weight,
-		);
-		let until = if let Some(SetTopic(_)) = instructions.last() {
-			instructions.len() - 1
-		} else {
-			instructions.len()
-		};
-		InnerBarrier::should_execute(&origin, &mut instructions[..until], max_weight, weight_credit)
 	}
 }
 
