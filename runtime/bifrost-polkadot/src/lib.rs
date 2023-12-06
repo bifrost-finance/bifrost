@@ -1098,6 +1098,7 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const SalpLockId: LockIdentifier = *b"salplock";
+	pub const BatchLimit: u32 = 50;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -1127,6 +1128,7 @@ impl bifrost_salp::Config for Runtime {
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
 	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {

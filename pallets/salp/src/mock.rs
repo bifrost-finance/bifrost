@@ -300,6 +300,7 @@ parameter_types! {
 	],2);
 	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
+	pub const BatchLimit: u32 = 50;
 }
 
 pub struct EnsureConfirmAsGovernance;
@@ -482,6 +483,7 @@ impl salp::Config for Test {
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
 	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {

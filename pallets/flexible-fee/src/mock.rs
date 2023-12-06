@@ -398,6 +398,7 @@ parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const SalpLockId: LockIdentifier = *b"salplock";
+	pub const BatchLimit: u32 = 50;
 }
 
 impl bifrost_salp::Config for Test {
@@ -427,6 +428,7 @@ impl bifrost_salp::Config for Test {
 	type StablePool = ();
 	type VtokenMinting = ();
 	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {

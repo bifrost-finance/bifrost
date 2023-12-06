@@ -196,8 +196,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type LockId: Get<LockIdentifier>;
 
-		// #[pallet::constant]
-		// type BatchCount: Get<u32>;
+		#[pallet::constant]
+		type BatchLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -1393,7 +1393,7 @@ pub mod pallet {
 			match fund.status {
 				FundStatus::RedeemWithdrew => {
 					ReserveInfos::<T>::iter_prefix(index)
-						.take(T::RemoveKeysLimit::get() as usize)
+						.take(T::BatchLimit::get() as usize)
 						.try_for_each(|(contributer, info)| -> DispatchResult {
 							T::MultiCurrency::remove_lock(
 								T::LockId::get(),
@@ -1424,7 +1424,7 @@ pub mod pallet {
 				},
 				FundStatus::RefundWithdrew => {
 					ReserveInfos::<T>::iter_prefix(index)
-						.take(T::RemoveKeysLimit::get() as usize)
+						.take(T::BatchLimit::get() as usize)
 						.try_for_each(|(contributer, info)| -> DispatchResult {
 							T::MultiCurrency::remove_lock(
 								T::LockId::get(),
