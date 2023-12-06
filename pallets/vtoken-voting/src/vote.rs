@@ -152,6 +152,17 @@ pub enum AccountVote<Balance> {
 }
 
 impl<Balance: Saturating> AccountVote<Balance> {
+	pub fn new_standard(vote: Vote, balance: Balance) -> Self {
+		AccountVote::Standard { vote, balance }
+	}
+
+	pub fn as_standard_vote(&self) -> Option<Vote> {
+		match self {
+			AccountVote::Standard { vote, .. } => Some(*vote),
+			_ => None,
+		}
+	}
+
 	/// Returns `Some` of the lock periods that the account is locked for, assuming that the
 	/// referendum passed iff `approved` is `true`.
 	pub fn locked_if(self, _approved: bool) -> Option<(u32, Balance)> {
