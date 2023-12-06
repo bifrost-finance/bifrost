@@ -19,14 +19,14 @@ jobs:
     runs-on: [self-hosted, normal]
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-07-24
+          toolchain: nightly-2023-05-22
           components: rustfmt,clippy
           target: wasm32-unknown-unknown
           override: true
@@ -36,10 +36,8 @@ jobs:
         run: make check-all
 
       - name: Cargo clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --features=with-all-runtime -- -D warnings
+        run: |
+          make clippy
 
       - name: Test All
         run: |

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,23 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, DelegatorLedgerXcmUpdateQueue, Hash,
-	LedgerUpdateEntry, Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry,
-	ValidatorsByDelegatorXcmUpdateQueue, H160,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
+	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, ASTR, DOT, GLMR, H160,
+	KSM, MANTA, MOVR, PHA,
 };
-use codec::Encode;
-use cumulus_primitives_core::relay_chain::HashT;
+use bifrost_primitives::CurrencyId;
+use bifrost_xcm_interface::traits::parachains;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get};
-use node_primitives::CurrencyId;
+use frame_support::ensure;
+use parity_scale_codec::Encode;
+use sp_core::Get;
 use sp_std::prelude::*;
 use xcm::{
-	latest::prelude::*,
-	opaque::latest::{
+	opaque::v3::{
 		Junction::{AccountId32, Parachain},
 		Junctions::X1,
 		MultiLocation,
 	},
+	v3::prelude::*,
 };
 
 // Some untilities.
@@ -56,30 +57,50 @@ impl<T: Config> Pallet<T> {
 		Ok(account)
 	}
 
-	pub fn sort_validators_and_remove_duplicates(
+	pub fn remove_validators_duplicates(
 		currency_id: CurrencyId,
 		validators: &Vec<MultiLocation>,
-	) -> Result<Vec<(MultiLocation, Hash<T>)>, Error<T>> {
+	) -> Result<Vec<MultiLocation>, Error<T>> {
 		let validators_set =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let mut validators_list: Vec<(MultiLocation, Hash<T>)> = vec![];
+		let mut validators_list: Vec<MultiLocation> = vec![];
 		for validator in validators.iter() {
 			// Check if the validator is in the validator whitelist
-			let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
-			ensure!(
-				validators_set.contains(&(validator.clone(), multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
-
-			// sort the validators and remove duplicates
-			let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-			if let Err(index) = rs {
-				validators_list.insert(index, (validator.clone(), multi_hash));
+			ensure!(validators_set.contains(&validator), Error::<T>::ValidatorNotExist);
+			if !validators_list.contains(&validator) {
+				validators_list.push(*validator);
 			}
 		}
 
 		Ok(validators_list)
+	}
+
+	pub fn check_length_and_deduplicate(
+		currency_id: CurrencyId,
+		validator_list: Vec<MultiLocation>,
+	) -> Result<Vec<MultiLocation>, Error<T>> {
+		ensure!(!validator_list.is_empty(), Error::<T>::ValidatorNotProvided);
+
+		// Ensure validator candidates in the whitelist is not greater than maximum.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+
+		// ensure validator candidates in the whitelist does not exceed MaxLengthLimit.
+		ensure!(
+			validator_list.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
+		);
+
+		ensure!(
+			validator_list.len() as u16 <= mins_maxs.validators_maximum,
+			Error::<T>::GreaterThanMaximum
+		);
+
+		// deduplicate validator list.
+		let mut validator_set = validator_list.clone();
+		validator_set.sort();
+		validator_set.dedup();
+
+		Ok(validator_set)
 	}
 
 	pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
@@ -97,6 +118,10 @@ impl<T: Config> Pallet<T> {
 				parents: _,
 				interior: X1(AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
+			MultiLocation {
+				parents: _,
+				interior: X2(_, AccountId32 { network: _network_id, id: account_id }),
+			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
 		Ok(*account_32)
@@ -113,7 +138,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_local_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let local_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Any, id: account_32 }),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(local_location)
@@ -125,16 +150,16 @@ impl<T: Config> Pallet<T> {
 		let inside: Junction = match location {
 			MultiLocation {
 				parents: _p,
-				interior: X2(Parachain(_para_id), AccountId32 { network: Any, id: account_32 }),
-			} => AccountId32 { network: Any, id: *account_32 },
+				interior: X2(Parachain(_para_id), AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			MultiLocation {
 				parents: _p,
-				interior: X2(Parachain(_para_id), AccountKey20 { network: Any, key: account_20 }),
-			} => AccountKey20 { network: Any, key: *account_20 },
+				interior: X2(Parachain(_para_id), AccountKey20 { network: None, key: account_20 }),
+			} => AccountKey20 { network: None, key: *account_20 },
 			MultiLocation {
 				parents: _p,
-				interior: X1(AccountId32 { network: Any, id: account_32 }),
-			} => AccountId32 { network: Any, id: *account_32 },
+				interior: X1(AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			_ => Err(Error::<T>::Unsupported)?,
 		};
 
@@ -146,7 +171,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_parent_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let parent_location = MultiLocation {
 			parents: 1,
-			interior: X1(AccountId32 { network: Any, id: account_32 }),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parent_location)
@@ -158,7 +183,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<MultiLocation, Error<T>> {
 		let parachain_location = MultiLocation {
 			parents: 1,
-			interior: X2(Parachain(chain_id), AccountId32 { network: Any, id: account_32 }),
+			interior: X2(Parachain(chain_id), AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parachain_location)
@@ -184,40 +209,9 @@ impl<T: Config> Pallet<T> {
 		Ok(account_h160)
 	}
 
-	/// **************************************/
-	/// ****** XCM confirming Functions ******/
-	/// **************************************/
-	pub fn process_query_entry_records() -> Result<u32, Error<T>> {
-		let mut counter = 0u32;
-
-		// Deal with DelegatorLedgerXcmUpdateQueue storage
-		for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
-			if counter >= T::MaxTypeEntryPerBlock::get() {
-				break;
-			}
-
-			let updated = Self::get_ledger_update_agent_then_process(query_id, false)?;
-			if updated {
-				counter = counter.saturating_add(1);
-			}
-		}
-
-		// Deal with ValidatorsByDelegator storage
-		for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
-			if counter >= T::MaxTypeEntryPerBlock::get() {
-				break;
-			}
-			let updated =
-				Self::get_validators_by_delegator_update_agent_then_process(query_id, false)?;
-
-			if updated {
-				counter = counter.saturating_add(1);
-			}
-		}
-
-		Ok(counter)
-	}
-
+	/// **************************************
+	/// ****** XCM confirming Functions ******
+	/// **************************************
 	pub fn get_ledger_update_agent_then_process(
 		query_id: QueryId,
 		manual_mode: bool,
@@ -232,9 +226,9 @@ impl<T: Config> Pallet<T> {
 		if now <= timeout {
 			let currency_id = match entry.clone() {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-				LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-					Some(parachain_staking_entry.currency_id),
+				LedgerUpdateEntry::ParachainStaking(moonbeam_entry) =>
+					Some(moonbeam_entry.currency_id),
+				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -291,9 +285,8 @@ impl<T: Config> Pallet<T> {
 			Self::get_delegator_ledger_update_entry(query_id).ok_or(Error::<T>::QueryNotExist)?;
 		let currency_id = match entry {
 			LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-			LedgerUpdateEntry::Moonbeam(moonbeam_entry) => Some(moonbeam_entry.currency_id),
-			LedgerUpdateEntry::ParachainStaking(parachain_staking_entry) =>
-				Some(parachain_staking_entry.currency_id),
+			LedgerUpdateEntry::ParachainStaking(moonbeam_entry) => Some(moonbeam_entry.currency_id),
+			_ => None,
 		}
 		.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -328,5 +321,62 @@ impl<T: Config> Pallet<T> {
 			.expect("infinite length input; no invalid inputs for type; qed");
 
 		H160::from_slice(sub_id.as_slice())
+	}
+
+	pub fn get_para_multilocation_by_currency_id(
+		currency_id: CurrencyId,
+	) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			KSM | DOT => Ok(MultiLocation::parent()),
+			MOVR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
+			GLMR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
+			ASTR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+			PHA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::phala::ID)) }),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
+	}
+
+	pub fn get_currency_full_multilocation(
+		currency_id: CurrencyId,
+	) -> Result<MultiLocation, Error<T>> {
+		match currency_id {
+			MOVR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonriver::ID),
+					PalletInstance(parachains::moonriver::PALLET_ID),
+				),
+			}),
+			GLMR => Ok(MultiLocation {
+				parents: 1,
+				interior: X2(
+					Parachain(parachains::moonbeam::ID),
+					PalletInstance(parachains::moonbeam::PALLET_ID),
+				),
+			}),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+			_ => Err(Error::<T>::NotSupportedCurrencyId),
+		}
+	}
+
+	pub fn get_currency_local_multilocation(currency_id: CurrencyId) -> MultiLocation {
+		match currency_id {
+			KSM | DOT | PHA | MANTA | ASTR => MultiLocation::here(),
+			MOVR => MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
+			},
+			GLMR => MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
+			},
+			_ => MultiLocation::here(),
+		}
 	}
 }

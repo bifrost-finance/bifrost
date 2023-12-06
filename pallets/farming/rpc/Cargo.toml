@@ -1,17 +1,17 @@
 [package]
-name = "bifrost-farming-rpc-api"
+name = "bifrost-farming-rpc"
 version = "0.8.0"
 authors = ["Kadokura <ymlll0508@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.140", features = ["derive"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-node-primitives = { path = "../../../node/primitives", default-features = false }
-bifrost-farming-rpc-runtime-api = { path = "./runtime-api" }
+serde = { workspace = true, features = ["derive"] }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+jsonrpsee = { workspace = true, features = ["server", "macros"] }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-core = { workspace = true }
+sp-rpc = { workspace = true }
+bifrost-primitives = { workspace = true }
+bifrost-farming-rpc-runtime-api = { workspace = true }

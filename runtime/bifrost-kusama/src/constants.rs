@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -22,17 +22,19 @@
 pub mod currency {
 	use crate::Runtime;
 	use bifrost_asset_registry::Config;
+	use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
-		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::{Balance, CurrencyId, TokenSymbol};
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
 	pub const BNCS: Balance = 1_000_000_000_000;
 	pub const DOLLARS: Balance = BNCS;
+	pub const MILLIBNC: Balance = 1_000_000_000;
+	pub const MICROBNC: Balance = 1_000_000;
 
 	pub fn deposit<Runtime: Config>(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) +
@@ -44,8 +46,8 @@ pub mod currency {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
-			let p = base_tx_fee::<Runtime>();
-			let q = Balance::from(ExtrinsicBaseWeight::get());
+			let p = base_tx_fee::<Runtime>() * 580;
+			let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
 				negative: false,
@@ -64,8 +66,8 @@ pub mod currency {
 	}
 
 	pub fn ksm_per_second<Runtime: bifrost_asset_registry::Config>() -> u128 {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		let base_tx_per_second = (WEIGHT_REF_TIME_PER_SECOND as u128) / base_weight;
 		let fee_per_second = base_tx_per_second * xcm_base_tx_fee::<Runtime>();
 		fee_per_second / 100
 	}

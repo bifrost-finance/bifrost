@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -28,18 +28,16 @@
 
 use core::fmt::Debug;
 
+use bifrost_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{
-			AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero,
-		},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Zero},
 		FixedPointNumber, FixedU128,
 	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -108,23 +106,20 @@ pub enum OrderType {
 
 type OrderId = u64;
 
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 #[allow(type_alias_bounds)]
 type BalanceOf<T: Config<I>, I: 'static = ()> =
 	<<T as Config<I>>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-#[allow(type_alias_bounds)]
-type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> {
-		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
+	pub trait Config<I: 'static = ()>: frame_system::Config {
+		type RuntimeEvent: From<Event<Self, I>>
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The currency type that buyer to pay
 		#[pallet::constant]
@@ -153,7 +148,7 @@ pub mod pallet {
 		type TreasuryAccount: Get<Self::AccountId>;
 
 		/// The only origin that can modify transaction fee rate
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::error]
@@ -263,13 +258,14 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a sell order or buy order to sell `vsbond`.
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_order())]
 		pub fn create_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			token_symbol: TokenSymbol,
-			#[pallet::compact] first_slot: LeasePeriodOf<T>,
-			#[pallet::compact] last_slot: LeasePeriodOf<T>,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
 			#[pallet::compact] amount: BalanceOf<T, I>,
 			#[pallet::compact] total_price: BalanceOf<T, I>,
 			order_type: OrderType,
@@ -381,6 +377,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a sell or buy order in trade by the order creator.
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::revoke_order())]
 		pub fn revoke_order(
 			origin: OriginFor<T>,
@@ -401,6 +398,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a sell or buy order in trade by the order creator.
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::revoke_order())]
 		pub fn force_revoke(
 			origin: OriginFor<T>,
@@ -415,6 +413,7 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buy the remaining `vsbond` of a sell order.
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::clinch_order())]
 		pub fn clinch_order(
 			origin: OriginFor<T>,
@@ -428,6 +427,7 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell or buy order.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::partial_clinch_order())]
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
@@ -605,6 +605,7 @@ pub mod pallet {
 
 		// edit token release start and end block
 		// input number used as perthousand rate, so it should be less or equal than 1000.
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_buy_and_sell_transaction_fee_rate())]
 		pub fn set_buy_and_sell_transaction_fee_rate(
 			origin: OriginFor<T>,

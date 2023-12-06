@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,25 +18,30 @@
 
 #![cfg(test)]
 
+use bifrost_primitives::currency::KSM;
 use frame_support::{assert_noop, assert_ok};
-use mock::{Event, *};
+use mock::{RuntimeEvent, *};
 use sp_runtime::traits::BadOrigin;
 
 use super::*;
 
-const BALANCE_TRANSFER: &<Runtime as frame_system::Config>::Call =
-	&mock::Call::Balances(pallet_balances::Call::transfer { dest: ALICE, value: 10 });
-const TOKENS_TRANSFER: &<Runtime as frame_system::Config>::Call =
-	&mock::Call::Tokens(orml_tokens::Call::transfer { dest: ALICE, currency_id: KSM, amount: 10 });
+const BALANCE_TRANSFER: &<Runtime as frame_system::Config>::RuntimeCall =
+	&mock::RuntimeCall::Balances(pallet_balances::Call::transfer { dest: ALICE, value: 10 });
+const TOKENS_TRANSFER: &<Runtime as frame_system::Config>::RuntimeCall =
+	&mock::RuntimeCall::Tokens(orml_tokens::Call::transfer {
+		dest: ALICE,
+		currency_id: KSM,
+		amount: 10,
+	});
 
 #[test]
 fn switchoff_transaction_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		System::set_block_number(1);
 
 		assert_noop!(
 			CallSwitchgear::switchoff_transaction(
-				Origin::signed(5),
+				RuntimeOrigin::signed(5),
 				b"Balances".to_vec(),
 				b"transfer".to_vec()
 			),
@@ -51,14 +56,13 @@ fn switchoff_transaction_should_work() {
 			None
 		);
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
 			b"transfer".to_vec()
 		));
-		System::assert_last_event(Event::CallSwitchgear(crate::Event::TransactionSwitchedoff(
-			b"Balances".to_vec(),
-			b"transfer".to_vec(),
-		)));
+		System::assert_last_event(RuntimeEvent::CallSwitchgear(
+			crate::Event::TransactionSwitchedoff(b"Balances".to_vec(), b"transfer".to_vec()),
+		));
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
@@ -69,7 +73,7 @@ fn switchoff_transaction_should_work() {
 
 		assert_noop!(
 			CallSwitchgear::switchoff_transaction(
-				Origin::signed(1),
+				RuntimeOrigin::signed(1),
 				b"CallSwitchgear".to_vec(),
 				b"switchoff_transaction".to_vec()
 			),
@@ -77,14 +81,14 @@ fn switchoff_transaction_should_work() {
 		);
 		assert_noop!(
 			CallSwitchgear::switchoff_transaction(
-				Origin::signed(1),
+				RuntimeOrigin::signed(1),
 				b"CallSwitchgear".to_vec(),
 				b"some_other_call".to_vec()
 			),
 			Error::<Runtime>::CannotSwitchOff
 		);
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"OtherPallet".to_vec(),
 			b"switchoff_transaction".to_vec()
 		));
@@ -93,11 +97,11 @@ fn switchoff_transaction_should_work() {
 
 #[test]
 fn switchon_transaction_transaction_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		System::set_block_number(1);
 
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
 			b"transfer".to_vec()
 		));
@@ -111,7 +115,7 @@ fn switchon_transaction_transaction_should_work() {
 
 		assert_noop!(
 			CallSwitchgear::switchoff_transaction(
-				Origin::signed(5),
+				RuntimeOrigin::signed(5),
 				b"Balances".to_vec(),
 				b"transfer".to_vec()
 			),
@@ -119,14 +123,13 @@ fn switchon_transaction_transaction_should_work() {
 		);
 
 		assert_ok!(CallSwitchgear::switchon_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
 			b"transfer".to_vec()
 		));
-		System::assert_last_event(Event::CallSwitchgear(crate::Event::TransactionSwitchedOn(
-			b"Balances".to_vec(),
-			b"transfer".to_vec(),
-		)));
+		System::assert_last_event(RuntimeEvent::CallSwitchgear(
+			crate::Event::TransactionSwitchedOn(b"Balances".to_vec(), b"transfer".to_vec()),
+		));
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
@@ -138,7 +141,7 @@ fn switchon_transaction_transaction_should_work() {
 		assert_eq!(CallSwitchgear::get_overall_indicator(), false);
 
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"All".to_vec(),
 			b"transfer".to_vec()
 		));
@@ -146,7 +149,7 @@ fn switchon_transaction_transaction_should_work() {
 		assert_eq!(CallSwitchgear::get_overall_indicator(), true);
 
 		assert_ok!(CallSwitchgear::switchon_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"All".to_vec(),
 			b"transfer".to_vec()
 		));
@@ -157,28 +160,28 @@ fn switchon_transaction_transaction_should_work() {
 
 #[test]
 fn switchoff_transaction_filter_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
 			b"transfer".to_vec()
 		));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
 		assert!(SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
 		assert!(SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 		assert_ok!(CallSwitchgear::switchon_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
 			b"transfer".to_vec()
 		));
 		assert_ok!(CallSwitchgear::switchon_transaction(
-			Origin::signed(1),
+			RuntimeOrigin::signed(1),
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
@@ -189,11 +192,11 @@ fn switchoff_transaction_filter_work() {
 
 #[test]
 fn disable_transfers_filter_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder.build().execute_with(|| {
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::disable_transfers(Origin::signed(1), KSM));
+		assert_ok!(CallSwitchgear::disable_transfers(RuntimeOrigin::signed(1), KSM));
 		assert!(DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::enable_transfers(Origin::signed(1), KSM));
+		assert_ok!(CallSwitchgear::enable_transfers(RuntimeOrigin::signed(1), KSM));
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
 	});
 }

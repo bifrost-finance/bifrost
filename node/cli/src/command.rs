@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,24 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::net::SocketAddr;
-
-use codec::Encode;
-use cumulus_client_cli::generate_genesis_block;
+use bifrost_service::{self as service, IdentifyVariant};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use node_primitives::Block;
-use node_service::{self as service, IdentifyVariant};
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+	NetworkParams, Result, SharedParams, SubstrateCli,
 };
+use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
 use sc_service::config::{BasePath, PrometheusConfig};
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-use service::collator_polkadot::BifrostPolkadotExecutor;
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
+use sp_runtime::traits::AccountIdConversion;
 
 use crate::{Cli, RelayChainCli, Subcommand};
 
@@ -161,35 +154,6 @@ impl SubstrateCli for Cli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		load_spec(id)
 	}
-
-	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_bifrost_kusama() || spec.is_dev() {
-			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-			{
-				&bifrost_kusama_runtime::VERSION
-			}
-			#[cfg(not(any(
-				feature = "with-bifrost-kusama-runtime",
-				feature = "with-bifrost-runtime"
-			)))]
-			panic!("{}", service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE);
-		} else if spec.is_bifrost_polkadot() {
-			#[cfg(any(
-				feature = "with-bifrost-polkadot-runtime",
-				feature = "with-bifrost-runtime"
-			))]
-			{
-				&bifrost_polkadot_runtime::VERSION
-			}
-			#[cfg(not(any(
-				feature = "with-bifrost-polkadot-runtime",
-				feature = "with-bifrost-runtime"
-			)))]
-			panic!("{}", service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE);
-		} else {
-			panic!("{}", "unknown runtime!");
-		}
-	}
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -224,35 +188,14 @@ impl SubstrateCli for RelayChainCli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
 	}
-
-	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		polkadot_cli::Cli::native_runtime_version(chain_spec)
-	}
 }
-
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-use service::collator_polkadot::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
 		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-			use bifrost_kusama_runtime::{Block, RuntimeApi};
-			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use BifrostExecutor as Executor;
-			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_kusama::start_node;
-			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_kusama::new_chain_ops;
-			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_kusama::new_partial;
+			use service::collator_kusama::{bifrost_kusama_runtime::{Block, RuntimeApi},BifrostExecutor as Executor,start_node,new_partial};
 
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			$( $code )*
@@ -262,19 +205,7 @@ macro_rules! with_runtime_or_err {
 		} else if $chain_spec.is_bifrost_polkadot() {
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-			use bifrost_polkadot_runtime::{Block, RuntimeApi};
-			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use BifrostPolkadotExecutor as Executor;
-			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_polkadot::start_node;
-			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_polkadot::new_chain_ops;
-			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-			#[allow(unused_imports)]
-			use service::collator_polkadot::new_partial;
+			use service::collator_polkadot::{bifrost_polkadot_runtime::{Block, RuntimeApi},BifrostPolkadotExecutor as Executor,start_node,new_partial};
 
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			$( $code )*
@@ -305,127 +236,6 @@ pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
 
 	match &cli.subcommand {
-		None => {
-			let runner = cli.create_runner(&cli.run.normalize())?;
-			let collator_options = cli.run.collator_options();
-
-			runner.run_node_until_exit(|config| async move {
-				let hwbench = if !cli.no_hardware_benchmarks {
-					config.database.path().map(|database_path| {
-						let _ = std::fs::create_dir_all(&database_path);
-						sc_sysinfo::gather_hwbench(Some(database_path))
-					})
-				} else {
-					None
-				};
-
-				let para_id =
-					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
-						.map(|e| e.para_id)
-						.ok_or("Could not find parachain ID in chain-spec.")?;
-
-				let polkadot_cli = RelayChainCli::new(
-					&config,
-					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
-				);
-
-				let id = ParaId::from(para_id);
-
-				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
-
-				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
-
-				let block: node_primitives::Block =
-					generate_genesis_block(&*config.chain_spec, state_version)
-						.map_err(|e| format!("{:?}", e))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
-
-				let polkadot_config = SubstrateCli::create_configuration(
-					&polkadot_cli,
-					&polkadot_cli,
-					config.tokio_handle.clone(),
-				)
-				.map_err(|err| format!("Relay chain argument error: {}", err))?;
-
-				info!("Parachain id: {:?}", id);
-				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
-
-				with_runtime_or_err!(config.chain_spec, {
-					{
-						start_node::<RuntimeApi>(
-							config,
-							polkadot_config,
-							collator_options,
-							id,
-							hwbench,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
-					}
-				})
-			})
-		},
-		Some(Subcommand::Inspect(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-			set_default_ss58_version(chain_spec);
-
-			with_runtime_or_err!(chain_spec, {
-				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config));
-			})
-		},
-		Some(Subcommand::Benchmark(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-			set_default_ss58_version(chain_spec);
-
-			// Switch on the concrete benchmark sub-command-
-			match cmd {
-				BenchmarkCmd::Pallet(cmd) =>
-					if cfg!(feature = "runtime-benchmarks") {
-						with_runtime_or_err!(chain_spec, {
-							return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
-						})
-					} else {
-						Err("Benchmarking wasn't enabled when building the node. \
-						You can enable it with `--features runtime-benchmarks`."
-							.into())
-					},
-				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-					with_runtime_or_err!(config.chain_spec, {
-						{
-							let partials = new_partial::<RuntimeApi>(&config, false)?;
-							cmd.run(partials.client)
-						}
-					})
-				}),
-				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					with_runtime_or_err!(config.chain_spec, {
-						{
-							let partials = new_partial::<RuntimeApi>(&config, false)?;
-							let db = partials.backend.expose_db();
-							let storage = partials.backend.expose_storage();
-							cmd.run(config, partials.client.clone(), db, storage)
-						}
-					})
-				}),
-				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
-				BenchmarkCmd::Machine(cmd) =>
-					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
-				// NOTE: this allows the Client to leniently implement
-				// new benchmark commands without requiring a companion MR.
-				#[allow(unreachable_patterns)]
-				_ => Err("Benchmarking sub-command unsupported".into()),
-			}
-		},
-		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
-		Some(Subcommand::Sign(cmd)) => cmd.run(),
-		Some(Subcommand::Verify(cmd)) => cmd.run(),
-		Some(Subcommand::Vanity(cmd)) => cmd.run(),
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -437,9 +247,12 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, import_queue), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.import_queue),
+						components.task_manager,
+					))
 				});
 			})
 		},
@@ -450,9 +263,9 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, config.database), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((cmd.run(components.client, config.database), components.task_manager))
 				});
 			})
 		},
@@ -463,10 +276,37 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, config.chain_spec), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((cmd.run(components.client, config.chain_spec), components.task_manager))
 				});
+			})
+		},
+		Some(Subcommand::ExportGenesisState(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			with_runtime_or_err!(chain_spec, {
+				return runner.sync_run(|config| {
+					let partials = new_partial(&config, false)?;
+					cmd.run(&*config.chain_spec, &*partials.client)
+				});
+			})
+		},
+		Some(Subcommand::ExportGenesisWasm(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				cmd.run(&*spec)
+			})
+		},
+		Some(Subcommand::Inspect(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+			set_default_ss58_version(chain_spec);
+
+			with_runtime_or_err!(chain_spec, {
+				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config));
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
@@ -474,11 +314,13 @@ pub fn run() -> Result<()> {
 			let chain_spec = &runner.config().chain_spec;
 
 			set_default_ss58_version(chain_spec);
-
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, import_queue), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.import_queue),
+						components.task_manager,
+					))
 				});
 			})
 		},
@@ -488,7 +330,7 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(
@@ -507,26 +349,76 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|mut config| {
-					let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
-					Ok((cmd.run(client, backend, None), task_manager))
+				return runner.async_run(|config| {
+					let components = new_partial(&config, false)?;
+					Ok((
+						cmd.run(components.client, components.backend, None),
+						components.task_manager,
+					))
 				});
 			})
 		},
-		Some(Subcommand::ExportGenesisState(cmd)) => {
+		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
+		Some(Subcommand::Sign(cmd)) => cmd.run(),
+		Some(Subcommand::Verify(cmd)) => cmd.run(),
+		Some(Subcommand::Vanity(cmd)) => cmd.run(),
+		Some(Subcommand::Benchmark(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|_config| {
-				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
-				let state_version = Cli::native_runtime_version(&spec).state_version();
-				cmd.run::<Block>(&*spec, state_version)
-			})
-		},
-		Some(Subcommand::ExportGenesisWasm(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|_config| {
-				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
-				cmd.run(&*spec)
-			})
+			let chain_spec = &runner.config().chain_spec;
+			set_default_ss58_version(chain_spec);
+
+			// Switch on the concrete benchmark sub-command-
+			match cmd {
+				BenchmarkCmd::Pallet(cmd) =>
+					if cfg!(feature = "runtime-benchmarks") {
+						with_runtime_or_err!(chain_spec, {
+							return runner.sync_run(|config| {
+								cmd.run::<Block, ExtendedHostFunctions<
+									sp_io::SubstrateHostFunctions,
+									<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
+								>>(config)
+							});
+						})
+					} else {
+						Err("Benchmarking wasn't enabled when building the node. \
+						You can enable it with `--features runtime-benchmarks`."
+							.into())
+					},
+				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+					with_runtime_or_err!(config.chain_spec, {
+						{
+							let partials = new_partial(&config, false)?;
+							cmd.run(partials.client)
+						}
+					})
+				}),
+				#[cfg(not(feature = "runtime-benchmarks"))]
+				BenchmarkCmd::Storage(_) =>
+					return Err(sc_cli::Error::Input(
+						"Compile with --features=runtime-benchmarks \
+						to enable storage benchmarks."
+							.into(),
+					)
+					.into()),
+				#[cfg(feature = "runtime-benchmarks")]
+				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+					with_runtime_or_err!(config.chain_spec, {
+						{
+							let partials = new_partial(&config, false)?;
+							let db = partials.backend.expose_db();
+							let storage = partials.backend.expose_storage();
+							cmd.run(config, partials.client.clone(), db, storage)
+						}
+					})
+				}),
+				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
+				// NOTE: this allows the Client to leniently implement
+				// new benchmark commands without requiring a companion MR.
+				#[allow(unreachable_patterns)]
+				_ => Err("Benchmarking sub-command unsupported".into()),
+			}
 		},
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
@@ -543,8 +435,69 @@ pub fn run() -> Result<()> {
 							.map_err(|e| {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
-					Ok((cmd.run::<Block, Executor>(config), task_manager))
+					let info_provider = try_runtime_cli::block_building_info::substrate_info(12000);
+					Ok((
+						cmd.run::<Block, ExtendedHostFunctions<
+							sp_io::SubstrateHostFunctions,
+							<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
+						>, _>(Some(info_provider)),
+						task_manager,
+					))
 				});
+			})
+		},
+		#[cfg(not(feature = "try-runtime"))]
+		Some(Subcommand::TryRuntime) => Err("Try-runtime was not enabled when building the node. \
+			You can enable it with `--features try-runtime`."
+			.into()),
+		None => {
+			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
+
+			runner.run_node_until_exit(|config| async move {
+				let hwbench = (!cli.no_hardware_benchmarks)
+					.then_some(config.database.path().map(|database_path| {
+						let _ = std::fs::create_dir_all(database_path);
+						sc_sysinfo::gather_hwbench(Some(database_path))
+					}))
+					.flatten();
+
+				let para_id =
+					bifrost_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
+						.map(|e| e.para_id)
+						.ok_or("Could not find parachain ID in chain-spec.")?;
+
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+				);
+
+				let id = ParaId::from(para_id);
+
+				let parachain_account =
+					AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
+						&id,
+					);
+
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.tokio_handle.clone(),
+				)
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				info!("Parachain id: {:?}", id);
+				info!("Parachain Account: {}", parachain_account);
+				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+
+				with_runtime_or_err!(config.chain_spec, {
+					{
+						start_node(config, polkadot_config, collator_options, id, hwbench)
+							.await
+							.map(|r| r.0)
+							.map_err(Into::into)
+					}
+				})
 			})
 		},
 	}
@@ -553,14 +506,6 @@ pub fn run() -> Result<()> {
 impl DefaultConfigurationValues for RelayChainCli {
 	fn p2p_listen_port() -> u16 {
 		30334
-	}
-
-	fn rpc_ws_listen_port() -> u16 {
-		9945
-	}
-
-	fn rpc_http_listen_port() -> u16 {
-		9934
 	}
 
 	fn prometheus_listen_port() -> u16 {
@@ -588,20 +533,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn base_path(&self) -> Result<Option<BasePath>> {
 		Ok(self
 			.shared_params()
-			.base_path()
+			.base_path()?
 			.or_else(|| self.base_path.clone().map(Into::into)))
-	}
-
-	fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_http(default_listen_port)
-	}
-
-	fn rpc_ipc(&self) -> Result<Option<String>> {
-		self.base.base.rpc_ipc()
-	}
-
-	fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_ws(default_listen_port)
 	}
 
 	fn prometheus_config(
@@ -639,16 +572,12 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.transaction_pool(is_dev)
 	}
 
-	fn state_cache_child_ratio(&self) -> Result<Option<usize>> {
-		self.base.base.state_cache_child_ratio()
+	fn trie_cache_maximum_size(&self) -> Result<Option<usize>> {
+		self.base.base.trie_cache_maximum_size()
 	}
 
 	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
 		self.base.base.rpc_methods()
-	}
-
-	fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-		self.base.base.rpc_ws_max_connections()
 	}
 
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {

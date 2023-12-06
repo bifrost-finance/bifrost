@@ -1,0 +1,17 @@
+[package]
+name = "bifrost-stable-pool-rpc"
+version = "0.8.0"
+authors = ["Sora Yu <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+jsonrpsee = { workspace = true }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-core = { workspace = true }
+sp-rpc = { workspace = true }
+bifrost-primitives = { workspace = true }
+bifrost-stable-pool-rpc-runtime-api = { workspace = true }

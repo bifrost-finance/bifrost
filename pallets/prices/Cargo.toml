@@ -1,0 +1,54 @@
+[package]
+authors = ["Parallel Team", "Liebi Technologies <bifrost@liebi.com>"]
+edition = '2021'
+name = 'pallet-prices'
+version = "0.8.0"
+
+[dependencies]
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+num-traits = { workspace = true }
+orml-oracle = { workspace = true }
+orml-traits = { workspace = true }
+xcm = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-traits = { workspace = true }
+bifrost-primitives = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, optional = true, features = ["derive"] }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+
+[dev-dependencies]
+bifrost-currencies = { workspace = true }
+pallet-balances = { workspace = true }
+sp-io = { workspace = true }
+orml-tokens = { workspace = true }
+
+[features]
+default = ['std']
+std = [
+	'serde',
+	'parity-scale-codec/std',
+	'sp-runtime/std',
+	'frame-support/std',
+	'frame-system/std',
+	'sp-std/std',
+	'sp-core/std',
+	'orml-traits/std',
+	'orml-oracle/std',
+	'bifrost-primitives/std',
+	'scale-info/std',
+	'num-traits/std',
+	'pallet-traits/std',
+	'pallet-assets/std',
+	'bifrost-asset-registry/std',
+]
+try-runtime = ['frame-support/try-runtime']
+
+[lib]
+doctest = false

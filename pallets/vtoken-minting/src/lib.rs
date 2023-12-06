@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -28,61 +28,63 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod migration;
 pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
+	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
+		},
 		ArithmeticError, DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdRegister, SlpOperator, TimeUnit,
-	VtokenMintingInterface, VtokenMintingOperator,
-};
+use log;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 pub use traits::*;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 pub type UnlockId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::{currency::BNC, FIL};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+	use orml_traits::XcmTransfer;
+	use xcm::{prelude::*, v3::MultiLocation};
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		// + MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		/// The only origin that can edit token issuer list
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Handler to notify the runtime when redeem success
 		/// If you don't need it, you can specify the type `()`.
@@ -91,6 +93,9 @@ pub mod pallet {
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
 		>;
+
+		/// xtokens xcm transfer interface
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		/// The amount of mint
 		#[pallet::constant]
@@ -111,7 +116,21 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayChainToken: Get<CurrencyId>;
 
+		#[pallet::constant]
+		type AstarParachainId: Get<u32>;
+
+		#[pallet::constant]
+		type MoonbeamParachainId: Get<u32>;
+
+		#[pallet::constant]
+		type HydradxParachainId: Get<u32>;
+
+		#[pallet::constant]
+		type InterlayParachainId: Get<u32>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
+
+		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
@@ -130,6 +149,7 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
+			remark: BoundedVec<u8, ConstU32<32>>,
 		},
 		Redeemed {
 			address: AccountIdOf<T>,
@@ -192,6 +212,9 @@ pub mod pallet {
 		MinTimeUnitSet {
 			token_id: CurrencyIdOf<T>,
 			time_unit: TimeUnit,
+		},
+		FastRedeemFailed {
+			err: DispatchError,
 		},
 	}
 
@@ -258,7 +281,7 @@ pub mod pallet {
 		CurrencyIdOf<T>,
 		Blake2_128Concat,
 		UnlockId,
-		(T::AccountId, BalanceOf<T>, TimeUnit),
+		(T::AccountId, BalanceOf<T>, TimeUnit, RedeemType<AccountIdOf<T>>),
 		OptionQuery,
 	>;
 
@@ -305,16 +328,17 @@ pub mod pallet {
 	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			Self::handle_on_initialize()
-				.map_err(|e| {
+				.map_err(|err| {
+					Self::deposit_event(Event::FastRedeemFailed { err });
 					log::error!(
 						target: "runtime::vtoken-minting",
 						"Received invalid justification for {:?}",
-						e,
+						err,
 					);
-					e
+					err
 				})
 				.ok();
 
@@ -324,17 +348,20 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+			remark: BoundedVec<u8, ConstU32<32>>,
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			Self::mint_inner(exchanger, token_id, token_amount)
+			Self::mint_inner(exchanger, token_id, token_amount, remark).map(|_| ())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -342,9 +369,10 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let exchanger = ensure_signed(origin)?;
-			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
+			Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -365,87 +393,95 @@ pub mod pallet {
 				ledger_list =
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_rev)
 						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
-				ledger_list.retain(|index| {
-					if let Some((_, unlock_amount, time_unit)) =
-						Self::token_unlock_ledger(token_id, index)
-					{
-						if tmp_amount >= unlock_amount {
-							if let Some((_, _, time_unit)) =
-								TokenUnlockLedger::<T>::take(&token_id, &index)
-							{
-								TimeUnitUnlockLedger::<T>::mutate_exists(
-									&time_unit,
+				let mut tmp = ledger_list
+					.iter()
+					.map(|&index| -> Result<(UnlockId, bool), Error<T>> {
+						if let Some((_, unlock_amount, time_unit, _)) =
+							Self::token_unlock_ledger(token_id, index)
+						{
+							if tmp_amount >= unlock_amount {
+								if let Some((_, _, time_unit, _)) =
+									TokenUnlockLedger::<T>::take(&token_id, &index)
+								{
+									TimeUnitUnlockLedger::<T>::mutate_exists(
+										&time_unit,
+										&token_id,
+										|value| -> Result<(), Error<T>> {
+											if let Some((
+												total_locked_origin,
+												ledger_list_origin,
+												_,
+											)) = value
+											{
+												if total_locked_origin == &unlock_amount {
+													*value = None;
+													return Ok(());
+												}
+												*total_locked_origin = total_locked_origin
+													.checked_sub(&unlock_amount)
+													.ok_or(Error::<T>::CalculationOverflow)?;
+												ledger_list_origin.retain(|&x| x != index);
+											} else {
+												return Err(
+													Error::<T>::TimeUnitUnlockLedgerNotFound,
+												);
+											}
+											Ok(())
+										},
+									)?;
+									tmp_amount = tmp_amount.saturating_sub(unlock_amount);
+								} else {
+									return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+								}
+								Ok((index, false))
+							} else {
+								TokenUnlockLedger::<T>::mutate_exists(
 									&token_id,
+									&index,
 									|value| -> Result<(), Error<T>> {
-										if let Some((total_locked_origin, ledger_list_origin, _)) =
-											value
-										{
-											if total_locked_origin == &unlock_amount {
+										if let Some((_, total_locked_origin, _, _)) = value {
+											if total_locked_origin == &tmp_amount {
 												*value = None;
 												return Ok(());
 											}
 											*total_locked_origin = total_locked_origin
-												.checked_sub(&unlock_amount)
+												.checked_sub(&tmp_amount)
 												.ok_or(Error::<T>::CalculationOverflow)?;
-											ledger_list_origin.retain(|x| x != index);
+										} else {
+											return Err(Error::<T>::TokenUnlockLedgerNotFound);
+										}
+										Ok(())
+									},
+								)?;
+								TimeUnitUnlockLedger::<T>::mutate_exists(
+									&time_unit,
+									&token_id,
+									|value| -> Result<(), Error<T>> {
+										if let Some((total_locked_origin, _, _)) = value {
+											if total_locked_origin == &tmp_amount {
+												*value = None;
+												return Ok(());
+											}
+											*total_locked_origin = total_locked_origin
+												.checked_sub(&tmp_amount)
+												.ok_or(Error::<T>::CalculationOverflow)?;
 										} else {
 											return Err(Error::<T>::TimeUnitUnlockLedgerNotFound);
 										}
 										Ok(())
 									},
-								)
-								.ok();
-								tmp_amount = tmp_amount.saturating_sub(unlock_amount);
-								// } else {
-								// 	return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+								)?;
+								Ok((index, true))
 							}
-							false
 						} else {
-							TokenUnlockLedger::<T>::mutate_exists(
-								&token_id,
-								&index,
-								|value| -> Result<(), Error<T>> {
-									if let Some((_, total_locked_origin, _)) = value {
-										if total_locked_origin == &tmp_amount {
-											*value = None;
-											return Ok(());
-										}
-										*total_locked_origin = total_locked_origin
-											.checked_sub(&tmp_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-									} else {
-										return Err(Error::<T>::TokenUnlockLedgerNotFound);
-									}
-									Ok(())
-								},
-							)
-							.ok();
-							TimeUnitUnlockLedger::<T>::mutate_exists(
-								&time_unit,
-								&token_id,
-								|value| -> Result<(), Error<T>> {
-									if let Some((total_locked_origin, _, _)) = value {
-										if total_locked_origin == &tmp_amount {
-											*value = None;
-											return Ok(());
-										}
-										*total_locked_origin = total_locked_origin
-											.checked_sub(&tmp_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-									} else {
-										return Err(Error::<T>::TimeUnitUnlockLedgerNotFound);
-									}
-									Ok(())
-								},
-							)
-							.ok();
-							true
+							Ok((index, true))
 						}
-					} else {
-						true
-					}
-				});
-				let ledger_list_tmp: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
+					})
+					.collect::<Result<Vec<(UnlockId, bool)>, Error<T>>>()?;
+				tmp.retain(|(_index, result)| *result);
+
+				let ledger_list_tmp: Vec<UnlockId> =
+					tmp.into_iter().map(|(index, _)| index).rev().collect();
 
 				ledger_list =
 					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_tmp)
@@ -503,6 +539,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::rebond_by_unlock_id())]
 		pub fn rebond_by_unlock_id(
 			origin: OriginFor<T>,
@@ -517,7 +554,7 @@ pub mod pallet {
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 
 			let unlock_amount = match Self::token_unlock_ledger(token_id, unlock_id) {
-				Some((who, unlock_amount, time_unit)) => {
+				Some((who, unlock_amount, time_unit, _)) => {
 					ensure!(who == exchanger, Error::<T>::CanNotRebond);
 					TimeUnitUnlockLedger::<T>::mutate_exists(
 						&time_unit,
@@ -595,6 +632,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::set_unlock_duration())]
 		pub fn set_unlock_duration(
 			origin: OriginFor<T>,
@@ -612,6 +650,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_minimum_mint())]
 		pub fn set_minimum_mint(
 			origin: OriginFor<T>,
@@ -634,10 +673,11 @@ pub mod pallet {
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						T::CurrencyIdRegister::register_vtoken_metadata(token_symbol)?;
 					},
-				CurrencyId::Token2(token_id) =>
+				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						T::CurrencyIdRegister::register_vtoken2_metadata(token_id)?;
-					},
+					}
+				},
 				_ => (),
 			}
 
@@ -646,6 +686,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::set_minimum_redeem())]
 		pub fn set_minimum_redeem(
 			origin: OriginFor<T>,
@@ -662,6 +703,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::add_support_rebond_token())]
 		pub fn add_support_rebond_token(
 			origin: OriginFor<T>,
@@ -677,6 +719,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::remove_support_rebond_token())]
 		pub fn remove_support_rebond_token(
 			origin: OriginFor<T>,
@@ -698,6 +741,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::set_fees())]
 		pub fn set_fees(
 			origin: OriginFor<T>,
@@ -712,6 +756,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::set_hook_iteration_limit())]
 		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -724,7 +769,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(11)]
+		#[pallet::weight({0})]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -738,7 +784,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(12)]
+		#[pallet::weight({0})]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -758,20 +805,35 @@ pub mod pallet {
 		pub fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
-					TimeUnit::Era(era_b) => TimeUnit::Era(era_a + era_b),
+					TimeUnit::Era(era_b) => TimeUnit::Era(
+						era_a.checked_add(era_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Round(round_a) => match b {
-					TimeUnit::Round(round_b) => TimeUnit::Round(round_a + round_b),
+					TimeUnit::Round(round_b) => TimeUnit::Round(
+						round_a.checked_add(round_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
-					TimeUnit::SlashingSpan(slashing_span_b) =>
-						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
+					TimeUnit::SlashingSpan(slashing_span_b) => TimeUnit::SlashingSpan(
+						slashing_span_a
+							.checked_add(slashing_span_b)
+							.ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::Kblock(kblock_a) => match b {
-					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(kblock_a + kblock_b),
+					TimeUnit::Kblock(kblock_b) => TimeUnit::Kblock(
+						kblock_a.checked_add(kblock_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
+				TimeUnit::Hour(hour_a) => match b {
+					TimeUnit::Hour(hour_b) => TimeUnit::Hour(
+						hour_a.checked_add(hour_b).ok_or(Error::<T>::CalculationOverflow)?,
+					),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				// _ => return Err(Error::<T>::Unexpected.into()),
@@ -798,9 +860,10 @@ pub mod pallet {
 				vtoken_amount = U256::from(token_amount_excluding_fee.saturated_into::<u128>())
 					.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 					.checked_div(token_pool_amount.saturated_into::<u128>().into())
+					.map(|x| u128::try_from(x))
 					.ok_or(Error::<T>::CalculationOverflow)?
-					.as_u128()
-					.saturated_into();
+					.map_err(|_| Error::<T>::CalculationOverflow)?
+					.unique_saturated_into();
 			}
 
 			// Charging fees
@@ -824,6 +887,7 @@ pub mod pallet {
 			mut unlock_amount: BalanceOf<T>,
 			entrance_account_balance: BalanceOf<T>,
 			time_unit: TimeUnit,
+			redeem_type: RedeemType<AccountIdOf<T>>,
 		) -> DispatchResult {
 			let ed = T::MultiCurrency::minimum_balance(token_id);
 			let mut account_to_send = account.clone();
@@ -886,7 +950,107 @@ pub mod pallet {
 						Ok(())
 					},
 				)?;
+				match redeem_type {
+					RedeemType::Native => {},
+					RedeemType::Astar(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::AstarParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: receiver.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Hydradx(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::HydradxParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: receiver.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Interlay(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::InterlayParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: receiver.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
+					RedeemType::Moonbeam(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::MoonbeamParachainId::get()),
+								AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
+							),
+						};
+						if token_id == FIL {
+							let assets = vec![
+								(token_id, unlock_amount),
+								(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
+							];
+
+							T::XcmTransfer::transfer_multicurrencies(
+								account.clone(),
+								assets,
+								1,
+								dest,
+								Unlimited,
+							)?;
+						} else {
+							T::XcmTransfer::transfer(
+								account.clone(),
+								token_id,
+								unlock_amount,
+								dest,
+								Unlimited,
+							)?;
+						}
+					},
+				};
 			} else {
+				match redeem_type {
+					RedeemType::Astar(_) |
+					RedeemType::Moonbeam(_) |
+					RedeemType::Hydradx(_) |
+					RedeemType::Interlay(_) => {
+						return Ok(());
+					},
+					RedeemType::Native => {},
+				};
 				unlock_amount = entrance_account_balance;
 				T::MultiCurrency::transfer(
 					token_id,
@@ -898,7 +1062,7 @@ pub mod pallet {
 					&token_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
-						if let Some((_, total_locked_origin, _)) = value {
+						if let Some((_, total_locked_origin, _, _)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -986,18 +1150,22 @@ pub mod pallet {
 			let unlock_duration_elem = match UnlockDuration::<T>::get(currency) {
 				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
 				Some(TimeUnit::Round(unlock_duration_round)) => unlock_duration_round,
+				Some(TimeUnit::Kblock(unlock_duration_kblock)) => unlock_duration_kblock,
+				Some(TimeUnit::Hour(unlock_duration_hour)) => unlock_duration_hour,
 				_ => 0,
 			};
 			let ongoing_elem = match OngoingTimeUnit::<T>::get(currency) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
 				Some(TimeUnit::Round(ongoing_round)) => ongoing_round,
+				Some(TimeUnit::Kblock(ongoing_kblock)) => ongoing_kblock,
+				Some(TimeUnit::Hour(ongoing_hour)) => ongoing_hour,
 				_ => 0,
 			};
 			if let Some((_total_locked, ledger_list, token_id)) =
 				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
 			{
 				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
-					if let Some((account, unlock_amount, time_unit)) =
+					if let Some((account, unlock_amount, time_unit, redeem_type)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
 						let entrance_account_balance = T::MultiCurrency::free_balance(
@@ -1012,6 +1180,7 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
+								redeem_type,
 							)
 							.ok();
 						}
@@ -1033,6 +1202,20 @@ pub mod pallet {
 							}
 							Ok(())
 						},
+						TimeUnit::Kblock(kblock) => {
+							if ongoing_elem + unlock_duration_elem > *kblock {
+								*kblock =
+									kblock.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
+						TimeUnit::Hour(hour) => {
+							if ongoing_elem + unlock_duration_elem > *hour {
+								*hour =
+									hour.checked_add(1).ok_or(Error::<T>::CalculationOverflow)?;
+							}
+							Ok(())
+						},
 						_ => Ok(()),
 					}
 				})?;
@@ -1046,7 +1229,8 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+			remark: BoundedVec<u8, ConstU32<32>>,
+		) -> Result<BalanceOf<T>, DispatchError> {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
@@ -1067,8 +1251,9 @@ pub mod pallet {
 				token_amount,
 				vtoken_amount,
 				fee,
+				remark,
 			});
-			Ok(().into())
+			Ok(vtoken_amount.into())
 		}
 
 		#[transactional]
@@ -1076,6 +1261,7 @@ pub mod pallet {
 			exchanger: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
+			redeem_type: RedeemType<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let token_id = T::CurrencyIdConversion::convert_to_token(vtoken_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
@@ -1098,15 +1284,17 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
+			let token_amount: BalanceOf<T> = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
+				.map(|x| u128::try_from(x))
 				.ok_or(Error::<T>::CalculationOverflow)?
-				.as_u128()
-				.saturated_into();
+				.map_err(|_| Error::<T>::CalculationOverflow)?
+				.unique_saturated_into();
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
+					// Calculate the time to be locked
 					let result_time_unit = Self::add_time_unit(
 						Self::unlock_duration(token_id)
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
@@ -1130,7 +1318,7 @@ pub mod pallet {
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
-						(&exchanger, token_amount, &result_time_unit),
+						(&exchanger, token_amount, &result_time_unit, redeem_type),
 					);
 
 					if UserUnlockLedger::<T>::get(&exchanger, &token_id).is_some() {
@@ -1225,32 +1413,36 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(token_amount.saturated_into::<u128>())
+			let value = U256::from(token_amount.saturated_into::<u128>())
 				.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 				.checked_div(token_pool_amount.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_to_token_inner(
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(vtoken_amount.saturated_into::<u128>())
+			let value = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
@@ -1319,7 +1511,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		index: u32,
 		deduct_amount: BalanceOf<T>,
 	) -> DispatchResult {
-		if let Some((who, unlock_amount, time_unit)) = Self::token_unlock_ledger(currency_id, index)
+		if let Some((who, unlock_amount, time_unit, _)) =
+			Self::token_unlock_ledger(currency_id, index)
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
@@ -1379,7 +1572,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 					&currency_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
-						if let Some((_, total_locked_origin, _)) = value {
+						if let Some((_, total_locked_origin, _, _)) = value {
 							if total_locked_origin == &deduct_amount {
 								*value = None;
 								return Ok(());
@@ -1408,8 +1601,21 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_token_unlock_ledger(
 		currency_id: CurrencyId,
 		index: u32,
-	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit)> {
+	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType<AccountIdOf<T>>)> {
 		Self::token_unlock_ledger(currency_id, index)
+	}
+
+	fn get_astar_parachain_id() -> u32 {
+		T::AstarParachainId::get()
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		T::MoonbeamParachainId::get()
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
+	}
+	fn get_interlay_parachain_id() -> u32 {
+		T::InterlayParachainId::get()
 	}
 }
 
@@ -1420,8 +1626,9 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		exchanger: AccountIdOf<T>,
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-	) -> DispatchResultWithPostInfo {
-		Self::mint_inner(exchanger, token_id, token_amount)
+		remark: BoundedVec<u8, ConstU32<32>>,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		Self::mint_inner(exchanger, token_id, token_amount, remark)
 	}
 
 	fn redeem(
@@ -1429,14 +1636,23 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
 	) -> DispatchResultWithPostInfo {
-		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount)
+		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, RedeemType::Native)
+	}
+
+	fn slpx_redeem(
+		exchanger: AccountIdOf<T>,
+		vtoken_id: CurrencyIdOf<T>,
+		vtoken_amount: BalanceOf<T>,
+		redeem_type: RedeemType<AccountIdOf<T>>,
+	) -> DispatchResultWithPostInfo {
+		Self::redeem_inner(exchanger, vtoken_id, vtoken_amount, redeem_type)
 	}
 
 	fn token_to_vtoken(
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::token_to_vtoken_inner(token_id, vtoken_id, token_amount)
 	}
 
@@ -1444,7 +1660,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
 	}
 
@@ -1458,5 +1674,36 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 
 	fn get_minimums_redeem(vtoken_id: CurrencyIdOf<T>) -> BalanceOf<T> {
 		MinimumRedeem::<T>::get(vtoken_id)
+	}
+
+	fn get_astar_parachain_id() -> u32 {
+		T::AstarParachainId::get()
+	}
+	fn get_moonbeam_parachain_id() -> u32 {
+		T::MoonbeamParachainId::get()
+	}
+	fn get_hydradx_parachain_id() -> u32 {
+		T::HydradxParachainId::get()
+	}
+	fn get_interlay_parachain_id() -> u32 {
+		T::InterlayParachainId::get()
+	}
+}
+
+impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T> {
+	fn get_vtoken_supply(vtoken: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
+		if CurrencyId::is_vtoken(&vtoken) {
+			Some(T::MultiCurrency::total_issuance(vtoken))
+		} else {
+			None
+		}
+	}
+
+	fn get_token_supply(token: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
+		if CurrencyId::is_token(&token) {
+			Some(Self::token_pool(token))
+		} else {
+			None
+		}
 	}
 }

@@ -1,0 +1,66 @@
+[package]
+authors = ["Parallel Team", "Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+name = "lend-market"
+version = "0.8.0"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+bifrost-primitives = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+log = { workspace = true }
+num-traits = { workspace = true }
+orml-traits = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-prices = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ['derive'], optional = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+xcm-builder = { workspace = true }
+
+[dev-dependencies]
+bifrost-asset-registry = { workspace = true }
+bifrost-currencies = { workspace = true }
+orml-oracle = { workspace = true }
+orml-tokens = { workspace = true }
+sp-core = { workspace = true }
+
+[features]
+default = ['std']
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+]
+std = [
+	'log/std',
+	'parity-scale-codec/std',
+	'frame-support/std',
+	'frame-system/std',
+	'frame-benchmarking/std',
+	'orml-traits/std',
+	'bifrost-primitives/std',
+	'sp-runtime/std',
+	'sp-std/std',
+	'sp-io/std',
+	'pallet-prices/std',
+	'pallet-assets/std',
+	'pallet-balances/std',
+	'pallet-timestamp/std',
+	'serde',
+	'scale-info/std',
+	'num-traits/std',
+	'pallet-traits/std',
+	"bifrost-asset-registry/std",
+	"xcm-builder/std",
+]
+try-runtime = ['frame-support/try-runtime']

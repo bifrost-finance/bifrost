@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_system::{Pallet as System, RawOrigin};
 use sp_runtime::traits::Bounded;
 
@@ -69,7 +69,7 @@ benchmarks! {
 		add_locks::<T>(&caller, l as u8);
 		add_vesting_schedule::<T>(&caller)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&caller),
 			Some(100u32.into()),
@@ -118,7 +118,7 @@ benchmarks! {
 		add_locks::<T>(&other, l as u8);
 		add_vesting_schedule::<T>(&other)?;
 		// At block zero, everything is vested.
-		System::<T>::set_block_number(T::BlockNumber::zero());
+		System::<T>::set_block_number(BlockNumberFor::<T>::zero());
 		assert_eq!(
 			Vesting::<T>::vesting_balance(&other),
 			Some(100u32.into()),
@@ -170,8 +170,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 
@@ -202,8 +200,6 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&source, BalanceOf::<T>::max_value());
 		let target: T::AccountId = account("target", 0, SEED);
 		let target_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(target.clone());
-		// Give target existing locks
-		add_locks::<T>(&target, l as u8);
 
 		let transfer_amount = T::MinVestedTransfer::get();
 
@@ -225,10 +221,7 @@ benchmarks! {
 			"Lock not created",
 		);
 	}
-}
 
-impl_benchmark_test_suite!(
-	Vesting,
-	crate::tests::ExtBuilder::default().existential_deposit(256).build(),
-	crate::tests::Test,
+	impl_benchmark_test_suite!(Vesting,crate::tests::ExtBuilder::default().existential_deposit(256).build(),crate::tests::Test,
 );
+}

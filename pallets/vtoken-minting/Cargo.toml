@@ -8,49 +8,57 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.2", default-features = false, features = [
-	"derive",
-] }
-log = { version = "0.4.17", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
-node-primitives = { path = "../../node/primitives", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-hex-literal = { version = "0.3.1" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.28", default-features = false }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.28", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+sp-std = { workspace = true }
+hex-literal = { workspace = true }
+pallet-balances = { workspace = true }
+xcm = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+sp-core = { workspace = true }
 
 [dev-dependencies]
-orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-bifrost-slp = { path = "../../pallets/slp", default-features = false }
-bifrost-asset-registry = { path = "../asset-registry", default-features = false }
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../runtime/common", default-features = false }
-env_logger = "0.9.0"
+orml-tokens = { workspace = true }
+bifrost-currencies = { workspace = true }
+orml-xtokens = { workspace = true }
+orml-traits = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+pallet-collective = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+pallet-xcm = { workspace = true }
+xcm = { workspace = true }
+bifrost-slp = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+env_logger = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"orml-traits/std",
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+]
 try-runtime = ["frame-support/try-runtime"]

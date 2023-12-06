@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,10 +21,13 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
+	traits::{Nothing, OnFinalize, OnInitialize},
 	PalletId,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
+use bifrost_primitives::{
+	currency::{BNC, KSM, VSKSM},
+	CurrencyId, TokenSymbol,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -38,24 +41,18 @@ pub type BlockNumber = u64;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+
 pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>}
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Council: pallet_collective::<Instance1>,
+		LighteningRedeem: bifrost_lightening_redeem
 	}
 );
 
@@ -64,8 +61,6 @@ type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
 	type AccountData = ();
@@ -73,20 +68,19 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
@@ -108,15 +102,13 @@ impl orml_tokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type DustRemovalWhitelist = Nothing;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
-	type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type CurrencyHooks = ();
 }
 
 parameter_types! {
@@ -128,12 +120,12 @@ parameter_types! {
 type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MaxMembers = CouncilMaxMembers;
 	type MaxProposals = CouncilMaxProposals;
 	type MotionDuration = CouncilMotionDuration;
-	type Origin = Origin;
-	type Proposal = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type Proposal = RuntimeCall;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
@@ -142,7 +134,7 @@ parameter_types! {
 }
 
 impl bifrost_lightening_redeem::Config for Runtime {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;
 	type ControlOrigin =
 		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
@@ -170,9 +162,9 @@ impl ExtBuilder {
 		self.balances(vec![
 			(ALICE, KSM, 100),
 			(ALICE, vsBond, 100),
-			(ALICE, vsKSM, 100),
+			(ALICE, VSKSM, 100),
 			(BOB, vsBond, 100),
-			(BOB, vsKSM, 100),
+			(BOB, VSKSM, 100),
 		])
 	}
 
@@ -185,14 +177,14 @@ impl ExtBuilder {
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
-			(whitelist_caller.clone(), vsKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), VSKSM, 100_000_000_000_000),
 			(whitelist_caller.clone(), vsBond, 100_000_000_000_000),
 			(pool_account.clone(), KSM, 100_000_000_000_000),
 		])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
 			balances: self

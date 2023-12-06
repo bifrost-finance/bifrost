@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 // #![cfg_attr(not(feature = "std"), no_std)]
 pub mod v2 {
 
-	use frame_support::traits::{OnRuntimeUpgrade, PalletInfo};
+	use frame_support::traits::{Get, OnRuntimeUpgrade, PalletInfo};
 
 	use crate::*;
 
@@ -197,17 +197,15 @@ pub mod v2 {
 				log::info!(" >>> migration completed!");
 
 				let total_nums = tp_nums + td_nums;
-				T::DbWeight::get().reads_writes(total_nums as Weight + 1, total_nums as Weight + 1)
+				T::DbWeight::get().reads_writes(total_nums as u64 + 1, total_nums as u64 + 1)
 			} else {
 				log::info!(" >>> unused migration!");
-				0
+				Weight::zero()
 			}
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<(), &'static str> {
-			use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-
+		fn pre_upgrade() -> Result<Vec<u8>,TryRuntimeError> {
 			let pallet_name = T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none");
 
 			ensure!(
@@ -217,24 +215,22 @@ pub mod v2 {
 
 			let tp_nums_old = deprecated::TotalPoolInfos::<T, I>::iter().count() as u32;
 			let td_nums_old = deprecated::TotalDepositData::<T, I>::iter().count() as u32;
-			Self::set_temp_storage((tp_nums_old, td_nums_old), pallet_name);
 
 			log::info!(
 				"✅ liquidity-mining({}) upgrade to V2_0_0: pass PRE migrate checks",
 				pallet_name
 			);
 
-			Ok(())
+			Ok((tp_nums_old, td_nums_old).encode())
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade() -> Result<(), &'static str> {
-			use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+		fn post_upgrade(state: Vec<u8>) -> Result<(),TryRuntimeError> {
+			let (tp_nums_old, td_nums_old): (u32, u32) =
+				Decode::decode(&mut &state[..]).expect("pre_upgrade provides a valid state; qed");
 
 			let pallet_name = T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none");
 
-			let (tp_nums_old, td_nums_old) =
-				Self::get_temp_storage::<(u32, u32)>(pallet_name).unwrap();
 			let (tp_nums_new, td_nums_new) = (
 				TotalPoolInfos::<T, I>::iter().count() as u32,
 				TotalDepositData::<T, I>::iter().count() as u32,

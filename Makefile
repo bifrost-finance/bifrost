@@ -15,40 +15,43 @@ init:
 
 .PHONY: build-bifrost-kusama-release # build bifrost kusama release
 build-bifrost-kusama-release: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
+	cargo build -p bifrost-cli --locked --features "with-bifrost-kusama-runtime" --release
 
 .PHONY: build-bifrost-polkadot-release # build bifrost polkadot release
 build-bifrost-polkadot-release:
-	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release
+	cargo build -p bifrost-cli --locked --features "with-bifrost-polkadot-runtime" --release
 
 .PHONY: build-all-release # build all runtime release
 build-all-release: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-all-runtime" --release
-
-.PHONY: build-bifrost-rococo-fast-release # build bifrost rococo fast release
-build-bifrost-rococo-fast-release:
-	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime,fast-runtime" --release
-
+	cargo build -p bifrost-cli --locked --features "with-all-runtime" --release
 
 .PHONY: check-all # cargo check all runtime
 check-all: format
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo check -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
-.PHONY: test-all # cargo test all runtime
-test-all:
-	SKIP_WASM_BUILD= cargo test --features "with-all-runtime"
+.PHONY: test-all # cargo test all
+test-all: test-runtimes test-benchmarks
+
+
+.PHONY: test-runtimes
+test-runtimes:
+	cargo test --features "with-all-runtime" --lib
+
+.PHONY: test-benchmarks
+test-benchmarks:
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
-	SKIP_WASM_BUILD= cargo test  -p *-integration-tests
+	cargo test  -p *-integration-tests
 
 .PHONY: kusama-integration-test # integration test
 kusama-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-kusama-integration-tests
+	cargo test -p bifrost-kusama-integration-tests
 
 .PHONY: polkadot-integration-test # integration test
 polkadot-integration-test:
-	SKIP_WASM_BUILD= cargo test -p bifrost-polkadot-integration-tests
+	cargo test -p bifrost-polkadot-integration-tests
 
 .PHONY: clean # cargo clean
 clean:
@@ -65,24 +68,20 @@ format:
 
 .PHONY: clippy # cargo clippy
 clippy:
-	cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
-
-.PHONY: test-benchmarking # test with benchmarking
-test-benchmarking:
-	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
+	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
-	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
+	cargo run -p bifrost-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
 			-- benchmark --chain=bifrost-local --steps=50 \
 			--repeat=20 \
-            --pallet=parachain_staking \
+            --pallet=bifrost_parachain_staking \
             --extrinsic="*" \
             --execution=wasm \
             --wasm-execution=compiled \
             --heap-pages=4096 \
             --header=./HEADER-GPL3 \
-			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
+			--output="./runtime/bifrost-kusama/src/weights/bifrost_parachain_staking.rs"
 
 .PHONY: generate-bifrost-kusama-weights # generate bifrost-kusama weights
 generate-bifrost-kusama-weights:
@@ -97,12 +96,7 @@ generate-all-weights: generate-bifrost-kusama-weights generate-bifrost-polkadot-
 
 .PHONY: build-all-release-with-bench # build all release with benchmarking
 build-all-release-with-bench: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
-
-# Run dev chain
-.PHONY: run-dev-manual-seal # run dev manual seal
-run-dev:
-	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
+	cargo build -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
 
 # Build docker image
 .PHONY: build-docker-image # build docker image
@@ -122,13 +116,23 @@ build-bifrost-polkadot-wasm:
 build-bifrost-rococo-fast-wasm:
 	.maintain/build-wasm.sh bifrost-kusama fast
 
-.PHONY: check-try-runtime # check try runtime
-check-try-runtime:
-	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
+.PHONY: try-kusama-runtime-upgrade # try kusama runtime upgrade
+try-kusama-runtime-upgrade:
+	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
+ 			  -- try-runtime \
+ 			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
+ 			  --chain=bifrost-kusama on-runtime-upgrade \
+ 			  --checks=all live \
+ 			  --uri=wss://bifrost-rpc.liebi.com:443/ws
 
-.PHONY: try-bifrost-runtime-upgrade # try bifrost runtime upgrade
-try-bifrost-runtime-upgrade:
-	./scripts/try-runtime.sh bifrost-kusama
+.PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
+try-polkadot-runtime-upgrade:
+	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
+ 			  -- try-runtime \
+ 			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm -lruntime=debug \
+ 			  --chain=bifrost-polkadot on-runtime-upgrade \
+ 			  --checks=all live \
+ 			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: resources # export genesis resources
 resources:
@@ -159,7 +163,7 @@ copy-genesis-config-production:
 
 .PHONY: production-release # build release for production
 production-release:
-	cargo build -p node-cli --locked --features "with-all-runtime" --profile production
+	cargo build -p bifrost-cli --locked --features "with-all-runtime" --profile production
 
 .PHONY: help # generate list of targets with descriptions
 help:

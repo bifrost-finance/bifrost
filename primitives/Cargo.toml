@@ -1,0 +1,47 @@
+[package]
+name = "bifrost-primitives"
+version = "0.8.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+bstringify = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
+
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+xcm = { workspace = true }
+
+zenlink-protocol = { workspace = true }
+orml-oracle = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"serde/std",
+	"scale-info/std",
+
+	"frame-support/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-std/std",
+
+	"xcm/std",
+
+	"zenlink-protocol/std",
+	"orml-oracle/std",
+]
+
+with-bifrost-runtime = [
+	"with-bifrost-kusama-runtime",
+	"with-bifrost-polkadot-runtime",
+]
+with-bifrost-kusama-runtime = []
+with-bifrost-polkadot-runtime = []
+with-all-runtime = ["with-bifrost-runtime"]
+runtime-benchmarks = []

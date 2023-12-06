@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -54,7 +54,6 @@ mod tests;
 mod vesting_info;
 pub mod weights;
 
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -65,6 +64,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 pub use pallet::*;
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
@@ -122,8 +122,8 @@ impl VestingAction {
 	/// Pick the schedules that this action dictates should continue vesting undisturbed.
 	fn pick_schedules<'a, T: Config>(
 		&'a self,
-		schedules: Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>,
-	) -> impl Iterator<Item = VestingInfo<BalanceOf<T>, T::BlockNumber>> + 'a {
+		schedules: Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>,
+	) -> impl Iterator<Item = VestingInfo<BalanceOf<T>, BlockNumberFor<T>>> + 'a {
 		schedules.into_iter().enumerate().filter_map(move |(index, schedule)| {
 			if self.should_remove(index) {
 				None
@@ -149,13 +149,13 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The currency trait.
 		type Currency: LockableCurrency<Self::AccountId>;
 
 		/// Convert the block number into a balance.
-		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
 		/// The minimum amount transferred to call `vested_transfer`.
 		#[pallet::constant]
@@ -180,13 +180,13 @@ pub mod pallet {
 	/// Start at
 	#[pallet::storage]
 	#[pallet::getter(fn vesting_start_at)]
-	pub(super) type VestingStartAt<T: Config> = StorageValue<_, T::BlockNumber>;
+	pub(super) type VestingStartAt<T: Config> = StorageValue<_, BlockNumberFor<T>>;
 
 	/// Cliff vesting
 	#[pallet::storage]
 	#[pallet::getter(fn cliffs)]
 	pub(super) type Cliff<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>>;
 
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
@@ -195,7 +195,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		BoundedVec<VestingInfo<BalanceOf<T>, T::BlockNumber>, MaxVestingSchedulesGet<T>>,
+		BoundedVec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>, MaxVestingSchedulesGet<T>>,
 	>;
 
 	/// Storage version of the pallet.
@@ -206,22 +206,17 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info] // TODO: remove after
 	pub struct Pallet<T>(_);
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub vesting: Vec<(T::AccountId, T::BlockNumber, T::BlockNumber, BalanceOf<T>)>,
-	}
-
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			GenesisConfig { vesting: Default::default() }
-		}
+		pub vesting: Vec<(T::AccountId, BlockNumberFor<T>, BlockNumberFor<T>, BalanceOf<T>)>,
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			use sp_runtime::traits::Saturating;
 
@@ -332,8 +327,9 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, [Sender Account]
 		///     - Writes: Vesting Storage, Balances Locks, [Sender Account]
 		/// # </weight>
-		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get())
-		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get()))
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get(),10u32)
+		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get(),10u32))
 		)]
 		pub fn vest(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -356,8 +352,9 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account
 		///     - Writes: Vesting Storage, Balances Locks, Target Account
 		/// # </weight>
-		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get())
-		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get()))
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get(),10u32)
+		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get(),10u32))
 		)]
 		pub fn vest_other(
 			origin: OriginFor<T>,
@@ -385,11 +382,12 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account, [Sender Account]
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, [Sender Account]
 		/// # </weight>
-		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get()))]
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get(),10u32))]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			let transactor = ensure_signed(origin)?;
 			let transactor = <T::Lookup as StaticLookup>::unlookup(transactor);
@@ -413,21 +411,23 @@ pub mod pallet {
 		///     - Reads: Vesting Storage, Balances Locks, Target Account, Source Account
 		///     - Writes: Vesting Storage, Balances Locks, Target Account, Source Account
 		/// # </weight>
-		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get()))]
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get(),10u32))]
 		pub fn force_vested_transfer(
 			origin: OriginFor<T>,
 			source: <T::Lookup as StaticLookup>::Source,
 			target: <T::Lookup as StaticLookup>::Source,
-			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::do_vested_transfer(source, target, schedule)
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(5)]
+		#[pallet::weight({0})]
 		pub fn init_vesting_start_at(
 			origin: OriginFor<T>,
-			vesting_start_at: T::BlockNumber,
+			vesting_start_at: BlockNumberFor<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -436,7 +436,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(6)]
+		#[pallet::weight({0})]
 		pub fn set_vesting_per_block(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
@@ -478,11 +479,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(7)]
+		#[pallet::weight({0})]
 		pub fn force_set_cliff(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
-			cliff_block: T::BlockNumber,
+			cliff_block: BlockNumberFor<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -556,10 +558,10 @@ impl<T: Config> Pallet<T> {
 	// Create a new `VestingInfo`, based off of two other `VestingInfo`s.
 	// NOTE: We assume both schedules have had funds unlocked up through the current block.
 	fn merge_vesting_info(
-		now: T::BlockNumber,
-		schedule1: VestingInfo<BalanceOf<T>, T::BlockNumber>,
-		schedule2: VestingInfo<BalanceOf<T>, T::BlockNumber>,
-	) -> Option<VestingInfo<BalanceOf<T>, T::BlockNumber>> {
+		now: BlockNumberFor<T>,
+		schedule1: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+		schedule2: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+	) -> Option<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>> {
 		let schedule1_start_at =
 			Self::vesting_start_at().map(|st| st.saturating_add(schedule1.starting_block()));
 		let schedule2_start_at =
@@ -612,7 +614,7 @@ impl<T: Config> Pallet<T> {
 	fn do_vested_transfer(
 		source: <T::Lookup as StaticLookup>::Source,
 		target: <T::Lookup as StaticLookup>::Source,
-		schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+		schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
 		// Validate user inputs.
 		ensure!(schedule.locked() >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
@@ -660,9 +662,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// NOTE: the amount locked does not include any schedules that are filtered out via `action`.
 	fn report_schedule_updates(
-		schedules: Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>,
+		schedules: Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>,
 		action: VestingAction,
-	) -> (Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>, BalanceOf<T>) {
+	) -> (Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>, BalanceOf<T>) {
 		let now = <frame_system::Pallet<T>>::block_number();
 
 		let mut total_locked_now: BalanceOf<T> = Zero::zero();
@@ -698,10 +700,10 @@ impl<T: Config> Pallet<T> {
 	/// Write an accounts updated vesting schedules to storage.
 	fn write_vesting(
 		who: &T::AccountId,
-		schedules: Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>,
+		schedules: Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>,
 	) -> Result<(), DispatchError> {
 		let schedules: BoundedVec<
-			VestingInfo<BalanceOf<T>, T::BlockNumber>,
+			VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 			MaxVestingSchedulesGet<T>,
 		> = schedules.try_into().map_err(|_| Error::<T>::AtMaxVestingSchedules)?;
 
@@ -730,9 +732,9 @@ impl<T: Config> Pallet<T> {
 	/// Execute a `VestingAction` against the given `schedules`. Returns the updated schedules
 	/// and locked amount.
 	fn exec_action(
-		schedules: Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>,
+		schedules: Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>,
 		action: VestingAction,
-	) -> Result<(Vec<VestingInfo<BalanceOf<T>, T::BlockNumber>>, BalanceOf<T>), DispatchError> {
+	) -> Result<(Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>, BalanceOf<T>), DispatchError> {
 		let (schedules, locked_now) = match action {
 			VestingAction::Merge(idx1, idx2) => {
 				// The schedule index is based off of the schedule ordering prior to filtering out
@@ -779,7 +781,7 @@ where
 	BalanceOf<T>: MaybeSerializeDeserialize + Debug,
 {
 	type Currency = T::Currency;
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	/// Get the amount that is currently being vested and cannot be transferred out of this account.
 	fn vesting_balance(who: &T::AccountId) -> Option<BalanceOf<T>> {
@@ -814,7 +816,7 @@ where
 		who: &T::AccountId,
 		locked: BalanceOf<T>,
 		per_block: BalanceOf<T>,
-		starting_block: T::BlockNumber,
+		starting_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		if locked.is_zero() {
 			return Ok(());
@@ -847,7 +849,7 @@ where
 		who: &T::AccountId,
 		locked: BalanceOf<T>,
 		per_block: BalanceOf<T>,
-		starting_block: T::BlockNumber,
+		starting_block: BlockNumberFor<T>,
 	) -> DispatchResult {
 		// Check for `per_block` or `locked` of 0.
 		if !VestingInfo::new(locked, per_block, starting_block).is_valid() {

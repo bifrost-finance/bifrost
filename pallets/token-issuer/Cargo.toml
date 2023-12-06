@@ -5,29 +5,31 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+sp-std = { workspace = true }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+orml-tokens = { workspace = true }
+pallet-balances = { workspace = true }
+sp-io = { workspace = true }
+pallet-collective = { workspace = true }
+log = { workspace = true }
 
+[dev-dependencies]
+bifrost-currencies = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
-	"node-primitives/std",
+	"bifrost-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
 	"sp-std/std",
@@ -36,10 +38,9 @@ std = [
 	"sp-io/std",
 	"pallet-collective/std",
 	"orml-tokens/std",
-	"orml-currencies/std",
 	"pallet-balances/std",
 	"pallet-balances/std",
-	"sp-core/std"
+	"sp-core/std",
 ]
 
 runtime-benchmarks = [
@@ -47,3 +48,4 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 ]
+try-runtime = ["frame-support/try-runtime"]

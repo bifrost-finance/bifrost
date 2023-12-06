@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,22 +17,23 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 mod filecoin_primitives;
-mod moonbeam_primitives;
+mod parachain_staking_primitives;
+mod phala_primitives;
 mod polkadot_primitives;
 
 pub use filecoin_primitives::*;
-pub use moonbeam_primitives::*;
+pub use parachain_staking_primitives::*;
+pub use phala_primitives::*;
 pub use polkadot_primitives::*;
 
-use crate::Weight;
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use node_primitives::TimeUnit;
+use bifrost_primitives::TimeUnit;
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 pub type QueryId = u64;
 pub const TIMEOUT_BLOCKS: u32 = 1000;
-pub const BASE_WEIGHT: Weight = 1000;
+pub const BASE_WEIGHT: u64 = 1000;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum Ledger<Balance> {
@@ -40,6 +41,7 @@ pub enum Ledger<Balance> {
 	Moonbeam(OneToManyLedger<Balance>),
 	ParachainStaking(OneToManyLedger<Balance>),
 	Filecoin(FilecoinLedger<Balance>),
+	Phala(PhalaLedger<Balance>),
 }
 
 /// A type for accommodating delegator update entries for different kinds of currencies.
@@ -47,16 +49,16 @@ pub enum Ledger<Balance> {
 pub enum LedgerUpdateEntry<Balance> {
 	/// A type for substrate ledger updating entries
 	Substrate(SubstrateLedgerUpdateEntry<Balance>),
-	Moonbeam(MoonbeamLedgerUpdateEntry<Balance>),
-	ParachainStaking(MoonbeamLedgerUpdateEntry<Balance>),
+	Moonbeam(ParachainStakingLedgerUpdateEntry<Balance>),
+	ParachainStaking(ParachainStakingLedgerUpdateEntry<Balance>),
 }
 
 /// A type for accommodating validators by delegator update entries for different kinds of
 /// currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<HashT> {
+pub enum ValidatorsByDelegatorUpdateEntry {
 	/// A type for substrate validators by delegator updating entries
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<HashT>),
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry),
 }
 
 /// Different minimum and maximum requirements for different chain
@@ -104,26 +106,4 @@ pub struct Delays {
 	pub unlock_delay: TimeUnit,
 	/// Leave from delegator set delay.
 	pub leave_delegators_delay: TimeUnit,
-}
-
-/// XCM operations list
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-pub enum XcmOperation {
-	// XTokens
-	XtokensTransfer,
-	Bond,
-	WithdrawUnbonded,
-	BondExtra,
-	Unbond,
-	Rebond,
-	Delegate,
-	Payout,
-	Liquidize,
-	TransferBack,
-	TransferTo,
-	Chill,
-	Undelegate,
-	CancelLeave,
-	XtokensTransferBack,
-	ExecuteLeave,
 }

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,15 +18,16 @@
 
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, IndicesConfig,
+	OracleMembershipConfig, ParachainInfoConfig, PolkadotXcmConfig, RuntimeGenesisConfig,
+	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TechnicalMembershipConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -39,7 +40,7 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
 /// Specialized `ChainSpec` for the bifrost-polkadot runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -78,11 +79,17 @@ pub fn bifrost_polkadot_genesis(
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
-	asset_registry: (Vec<(CurrencyId, Balance)>, Vec<CurrencyId>, Vec<(CurrencyId, u32, u32, u32)>),
-) -> GenesisConfig {
-	GenesisConfig {
+	asset_registry: (
+		Vec<(CurrencyId, Balance, Option<(String, String, u8)>)>,
+		Vec<CurrencyId>,
+		Vec<(CurrencyId, u32, u32, u32)>,
+	),
+	oracle_membership: Vec<AccountId>,
+) -> RuntimeGenesisConfig {
+	RuntimeGenesisConfig {
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
+			_config: Default::default(),
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
@@ -95,11 +102,15 @@ pub fn bifrost_polkadot_genesis(
 			members: technical_committee_membership.try_into().expect("convert error!"),
 			phantom: Default::default(),
 		},
+		oracle_membership: OracleMembershipConfig {
+			members: oracle_membership.try_into().expect("convert error!"),
+			phantom: Default::default(),
+		},
 		council: Default::default(),
 		technical_committee: Default::default(),
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id },
+		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: Zero::zero(),
@@ -129,12 +140,15 @@ pub fn bifrost_polkadot_genesis(
 			vsbond: asset_registry.2,
 			phantom: Default::default(),
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
+		vtoken_voting: Default::default(),
+		transaction_payment: Default::default(),
+		zenlink_protocol: Default::default(),
 	}
 }
 
-fn development_config_genesis(id: ParaId) -> GenesisConfig {
+fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
@@ -147,11 +161,12 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT())])
+		.flat_map(|x| vec![(x.clone(), Token(TokenSymbol::DOT), ENDOWMENT())])
 		.collect();
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
@@ -168,6 +183,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		(vec![], vec![], vec![]),
+		oracle_membership,
 	)
 }
 
@@ -186,7 +202,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	))
 }
 
-fn local_config_genesis(id: ParaId) -> GenesisConfig {
+fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -201,8 +217,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
-		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
-		                       * with whitelistted_caller */
+		account("bechmarking_account_1", 0, 0),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
@@ -212,14 +227,21 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), CurrencyId::Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
+		.flat_map(|x| vec![(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
 		.collect();
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-	let currency =
-		vec![(Native(TokenSymbol::BNC), DOLLARS / 100), (Token2(DOT_TOKEN_ID), DOLLARS / 1000_000)];
+	let currency = vec![
+		(Native(TokenSymbol::BNC), DOLLARS / 100, None),
+		(
+			Token2(DOT_TOKEN_ID),
+			DOLLARS / 1000_000,
+			Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
+		),
+	];
 	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 
 	bifrost_polkadot_genesis(
@@ -238,6 +260,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		technical_committee_membership,
 		salp_multisig,
 		(currency, vcurrency, vec![]),
+		oracle_membership,
 	)
 }
 
@@ -271,7 +294,7 @@ pub fn chainspec_config() -> ChainSpec {
 	)
 }
 
-fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
+fn bifrost_polkadot_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
 			// dpEZwz5nHxEjQXcm3sjy6NTz83EGcBRXMBSyuuWSguiVGJB
@@ -312,5 +335,6 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![],
 		salp_multisig,
 		(vec![], vec![], vec![]),
+		vec![],
 	)
 }

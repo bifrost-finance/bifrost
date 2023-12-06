@@ -1,0 +1,59 @@
+[package]
+name = "bifrost-stable-pool"
+version = "0.8.0"
+description = "FRAME pallet template for defining custom runtime logic."
+authors = ["Sora Yu <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+sp-std = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+bifrost-stable-asset = { workspace = true }
+log = { workspace = true }
+bifrost-vtoken-minting = { workspace = true }
+
+[dev-dependencies]
+sp-io = { workspace = true }
+pallet-balances = { workspace = true }
+orml-tokens = { workspace = true }
+bifrost-currencies = { workspace = true }
+orml-xtokens = { workspace = true }
+env_logger = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+xcm = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+pallet-xcm = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"scale-info/std",
+	"pallet-balances/std",
+	"bifrost-stable-asset/std",
+	"orml-traits/std",
+	"bifrost-primitives/std",
+	"bifrost-asset-registry/std",
+	"bifrost-runtime-common/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]

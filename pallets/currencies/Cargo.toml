@@ -1,0 +1,48 @@
+[package]
+name = "bifrost-currencies"
+description = "Provide `MultiCurrency` implementation using `pallet-balances` and `orml-tokens` module."
+repository = "https://github.com/open-web3-stack/open-runtime-module-library/tree/master/currencies"
+license = "Apache-2.0"
+version = "0.4.1-dev"
+authors = ["Laminar Developers <hello@laminar.one>", "Sora Yu <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, optional = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+orml-traits = { workspace = true }
+orml-utilities = { workspace = true }
+
+[dev-dependencies]
+pallet-balances = { workspace = true }
+sp-core = { workspace = true }
+
+orml-tokens = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+
+	"parity-scale-codec/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-traits/std",
+	"orml-utilities/std",
+	"scale-info/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+]

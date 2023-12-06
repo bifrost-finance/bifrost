@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{CurrencyId, DistributionId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -39,16 +40,13 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, DistributionId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 pub use weights::WeightInfo;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
@@ -63,11 +61,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
@@ -157,12 +155,13 @@ pub mod pallet {
 				let next_era = next_era.saturating_add(era_length);
 				AutoEra::<T>::put((era_length, next_era));
 			}
-			0
+			Weight::zero()
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_distribution())]
 		pub fn create_distribution(
 			origin: OriginFor<T>,
@@ -201,6 +200,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::edit_distribution())]
 		pub fn edit_distribution(
 			origin: OriginFor<T>,
@@ -239,6 +239,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::set_era_length())]
 		pub fn set_era_length(
 			origin: OriginFor<T>,
@@ -255,6 +256,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::execute_distribute())]
 		pub fn execute_distribute(
 			origin: OriginFor<T>,
@@ -270,6 +272,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::delete_distribution())]
 		pub fn delete_distribution(
 			origin: OriginFor<T>,

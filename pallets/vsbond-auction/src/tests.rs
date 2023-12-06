@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
-use orml_traits::{LockIdentifier, MultiLockableCurrency};
-
 use crate::{mock::*, *};
+use frame_support::{assert_noop, assert_ok};
+use orml_traits::{LockIdentifier, MultiLockableCurrency};
+use sp_runtime::DispatchError;
 
 #[test]
 fn create_sell_order_should_work() {
@@ -132,7 +132,7 @@ fn create_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			Auction::create_order(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				3000,
 				TOKEN_SYMBOL,
 				13,
@@ -145,7 +145,7 @@ fn create_order_by_origin_illegal_should_fail() {
 		);
 		assert_noop!(
 			Auction::create_order(
-				Origin::none(),
+				RuntimeOrigin::none(),
 				3000,
 				TOKEN_SYMBOL,
 				13,
@@ -516,11 +516,11 @@ fn revoke_order_by_origin_illegal_should_fail() {
 			Error::<Test>::ForbidRevokeOrderWithoutOwnership
 		);
 
-		assert_noop!(Auction::revoke_order(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(Auction::revoke_order(Origin::root(), 1), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::root(), 1), DispatchError::BadOrigin);
 
-		assert_noop!(Auction::revoke_order(Origin::none(), 0), DispatchError::BadOrigin);
-		assert_noop!(Auction::revoke_order(Origin::none(), 1), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::none(), 1), DispatchError::BadOrigin);
 	});
 }
 
@@ -728,11 +728,11 @@ fn clinch_order_by_origin_illegal_should_fail() {
 		);
 
 		assert_noop!(
-			Auction::partial_clinch_order(Origin::root(), 0, 50),
+			Auction::partial_clinch_order(RuntimeOrigin::root(), 0, 50),
 			DispatchError::BadOrigin,
 		);
 		assert_noop!(
-			Auction::partial_clinch_order(Origin::none(), 0, 50),
+			Auction::partial_clinch_order(RuntimeOrigin::none(), 0, 50),
 			DispatchError::BadOrigin,
 		);
 	});

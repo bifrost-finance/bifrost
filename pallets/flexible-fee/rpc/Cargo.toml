@@ -5,25 +5,25 @@ authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0" }
-jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-bifrost-flexible-fee-rpc-runtime-api = { path = "./runtime-api" }
-node-primitives = { path = "../../../node/primitives", default-features = false }
+parity-scale-codec = { workspace = true }
+jsonrpsee = { workspace = true, features = ["server", "macros"] }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-core = { workspace = true }
+sp-rpc = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+bifrost-flexible-fee-rpc-runtime-api = { workspace = true }
+bifrost-primitives = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
+    "parity-scale-codec/std",
     "sp-api/std",
     "sp-runtime/std",
     "sp-core/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
     "bifrost-flexible-fee-rpc-runtime-api/std",
-    "node-primitives/std",
+    "bifrost-primitives/std",
 ]

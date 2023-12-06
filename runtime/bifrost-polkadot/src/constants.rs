@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,11 +20,13 @@
 
 /// Money matters.
 pub mod currency {
+	use crate::Runtime;
+	use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
+	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
-		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+		constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::Balance;
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
@@ -45,8 +47,9 @@ pub mod currency {
 	impl WeightToFeePolynomial for WeightToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			let p = super::currency::RELAY_CENTS;
-			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
+			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			let p = base_tx_fee::<Runtime>() * 580;
+			let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
 				negative: false,
@@ -56,23 +59,27 @@ pub mod currency {
 		}
 	}
 
-	fn base_tx_fee() -> Balance {
-		CENTS / 10
+	fn base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
+		milli::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) / 3
+	}
+
+	fn xcm_base_tx_fee<Runtime: bifrost_asset_registry::Config>() -> Balance {
+		cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) / 10
 	}
 
 	// 1 KSM = 10 DOT
 	// DOT precision is 1/100 of KSM and BNC
-	pub fn dot_per_second() -> u128 {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-		let fee_per_second = base_tx_per_second * base_tx_fee();
+	pub fn dot_per_second<Runtime: bifrost_asset_registry::Config>() -> u128 {
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		let base_tx_per_second = (WEIGHT_REF_TIME_PER_SECOND as u128) / base_weight;
+		let fee_per_second = base_tx_per_second * xcm_base_tx_fee::<Runtime>();
 		fee_per_second / 100 * 10 / 100
 	}
 }
 
 /// Time.
 pub mod time {
-	use node_primitives::{BlockNumber, Moment};
+	use bifrost_primitives::{BlockNumber, Moment};
 
 	/// Since BABE is probabilistic this is the average expected block time that
 	/// we are targetting. Blocks will be produced at a minimum duration defined

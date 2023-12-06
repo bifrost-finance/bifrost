@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,22 +19,19 @@
 use std::{convert::TryInto, marker::PhantomData, sync::Arc};
 
 pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use codec::{Codec, Decode};
+use bifrost_primitives::{Balance, CurrencyId};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
 pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
+use parity_scale_codec::{Codec, Decode};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{Block as BlockT, Zero},
-};
+use sp_runtime::traits::{Block as BlockT, Zero};
 
 pub struct FlexibleFeeRpc<Client, Block> {
 	client: Arc<Client>,
@@ -99,7 +96,7 @@ where
 		// ))
 
 		let api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let encoded_len = encoded_xt.len() as u32;
 
 		let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(|e| {
@@ -110,7 +107,7 @@ where
 			))
 		})?;
 
-		let fee_details = api.query_fee_details(&at, uxt, encoded_len).map_err(|e| {
+		let fee_details = api.query_fee_details(at, uxt.clone(), encoded_len).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to query fee details.",
@@ -130,7 +127,7 @@ where
 			}
 		};
 
-		let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
+		let rs = api.get_fee_token_and_amount(at, who, total_inclusion_fee, uxt);
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {

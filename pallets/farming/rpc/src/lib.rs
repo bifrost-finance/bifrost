@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,17 +19,17 @@
 use std::{marker::PhantomData, sync::Arc};
 
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
-use codec::Codec;
+use bifrost_primitives::{Balance, CurrencyId};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use node_primitives::{Balance, CurrencyId};
+use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::traits::Block as BlockT;
 
 #[rpc(client, server)]
 pub trait FarmingRpcApi<BlockHash, AccountId, PoolId> {
@@ -81,10 +81,10 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		let rs: Result<Vec<(CurrencyId, Balance)>, _> =
-			lm_rpc_api.get_farming_rewards(&at, who, pid);
+			lm_rpc_api.get_farming_rewards(at, who, pid);
 
 		match rs {
 			Ok(rewards) => Ok(rewards
@@ -107,9 +107,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_gauge_rewards(&at, who, pid);
+		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_gauge_rewards(at, who, pid);
 
 		match rs {
 			Ok(rewards) => Ok(rewards

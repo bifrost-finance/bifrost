@@ -7,32 +7,32 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-log = { version = "0.4.17", default-features = false }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-std = { workspace = true }
+frame-system = { workspace = true }
+frame-support = { workspace = true }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+sp-arithmetic = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
-orml-tokens = "0.4.1-dev"
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+orml-tokens = { workspace = true }
+sp-io = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime  = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
+    "parity-scale-codec/std",
     "scale-info/std",
     "sp-std/std",
     "frame-system/std",
     "frame-support/std",
-    "node-primitives/std",
+    "bifrost-primitives/std",
     "orml-traits/std",
     "frame-benchmarking/std",
     "sp-arithmetic/std",

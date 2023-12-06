@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::traits::{AccountIdConversion, Saturating, UniqueSaturatedFrom, Zero};
@@ -48,11 +48,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Currency operations handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The only origin that can modify bootstrap params
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
@@ -127,8 +127,8 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			let (start, end) = Self::get_start_and_end_release_block();
 			// relsease fixed amount every day if within release interval and has enough balance in
 			// the pool account
@@ -149,6 +149,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Anyone can add KSM to the pool.
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::add_ksm_to_pool())]
 		pub fn add_ksm_to_pool(origin: OriginFor<T>, token_amount: BalanceOf<T>) -> DispatchResult {
 			let adder = ensure_signed(origin)?;
@@ -166,6 +167,7 @@ pub mod pallet {
 		}
 
 		// exchange vsksm and vsbond for ksm
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::exchange_for_ksm())]
 		pub fn exchange_for_ksm(
 			origin: OriginFor<T>,
@@ -207,12 +209,9 @@ pub mod pallet {
 		}
 
 		// edit exchange discount price
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::edit_exchange_price())]
-		pub fn edit_exchange_price(
-			origin: OriginFor<T>,
-			price: BalanceOf<T>, /* the mumber of ksm we can get by giving out 100 vsksm and 100
-			                      * vsbond */
-		) -> DispatchResult {
+		pub fn edit_exchange_price(origin: OriginFor<T>, price: BalanceOf<T>) -> DispatchResult {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			ensure!(price <= BalanceOf::<T>::unique_saturated_from(100u128), Error::<T>::Overflow);
@@ -230,6 +229,7 @@ pub mod pallet {
 		}
 
 		// edit token release amount per day
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::edit_release_per_day())]
 		pub fn edit_release_per_day(
 			origin: OriginFor<T>,
@@ -251,6 +251,7 @@ pub mod pallet {
 		}
 
 		// edit token release start and end block
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::edit_release_start_and_end_block())]
 		pub fn edit_release_start_and_end_block(
 			origin: OriginFor<T>,

@@ -1,12 +1,13 @@
 name: Release
 
 env:
-  SUBWASM_VERSION: 0.17.0
+  SUBWASM_VERSION: 0.20.0
 
 on:
   push:
     tags:
       - 'bifrost-*'
+  workflow_dispatch:
 
 jobs:
   srtool:
@@ -17,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-07-24
+          toolchain: nightly-2023-05-22
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
@@ -43,6 +44,7 @@ jobs:
       - name: Build bifrost
         working-directory: ${{ github.workspace }}
         run: |
+          sudo apt-get install -y protobuf-compiler
           make production-release
           mkdir -p ${{ github.workspace }}/artifacts
           mv ${{ github.workspace }}/target/production/bifrost ${{ github.workspace }}/artifacts/
@@ -91,7 +93,7 @@ jobs:
             ${{ github.workspace }}/artifacts/bifrost_polkadot_runtime.compact.compressed.wasm
 
       - uses: 8398a7/action-slack@v3
-        if: failure()
+        if: always()
         with:
           status: ${{ job.status }}
           fields: repo,author,eventName,workflow,ref,commit

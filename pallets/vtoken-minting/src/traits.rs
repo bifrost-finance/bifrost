@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
+
+use frame_support::pallet_prelude::Weight;
 
 pub trait OnRedeemSuccess<AccountId, CurrencyId, Balance> {
 	fn on_redeem_success(
@@ -35,12 +37,8 @@ pub trait OnRedeemSuccess<AccountId, CurrencyId, Balance> {
 }
 
 impl<AccountId, CurrencyId, Balance> OnRedeemSuccess<AccountId, CurrencyId, Balance> for () {
-	fn on_redeem_success(
-		_token_id: CurrencyId,
-		_to: AccountId,
-		_token_amount: Balance,
-	) -> frame_support::pallet_prelude::Weight {
-		0
+	fn on_redeem_success(_token_id: CurrencyId, _to: AccountId, _token_amount: Balance) -> Weight {
+		Weight::zero()
 	}
 
 	fn on_redeemed(
@@ -49,7 +47,7 @@ impl<AccountId, CurrencyId, Balance> OnRedeemSuccess<AccountId, CurrencyId, Bala
 		_token_amount: Balance,
 		_vtoken_amount: Balance,
 		_fee: Balance,
-	) -> frame_support::pallet_prelude::Weight {
-		0
+	) -> Weight {
+		Weight::zero()
 	}
 }

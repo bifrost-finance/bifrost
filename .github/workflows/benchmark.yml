@@ -12,21 +12,21 @@ jobs:
     runs-on: [self-hosted, bench]
     steps:
       - name: Check to latest commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-07-24
+          toolchain: nightly-2023-05-22
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
       - name: Generate WeightInfo Files
         run: make generate-bifrost-weights
       - name: Commit Automatically
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 🤖 ($WEIGHT) Generate weightInfo files automatically
           file_pattern: runtime/**/*.rs

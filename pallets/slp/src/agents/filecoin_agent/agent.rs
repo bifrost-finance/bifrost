@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,23 +19,22 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
-	AccountIdOf, BalanceOf, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
-	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation,
-	Pallet, TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
+	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
+	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
-use codec::Encode;
+use bifrost_primitives::{CurrencyId, VtokenMintingOperator};
 use core::marker::PhantomData;
-use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
-use node_primitives::{CurrencyId, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
+use sp_core::Get;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::latest::prelude::*;
+use xcm::v3::prelude::*;
 
 /// StakingAgent implementation for Filecoin
 pub struct FilecoinAgent<T>(PhantomData<T>);
@@ -51,11 +50,11 @@ impl<T: Config>
 		BalanceOf<T>,
 		AccountIdOf<T>,
 		LedgerUpdateEntry<BalanceOf<T>>,
-		ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		ValidatorsByDelegatorUpdateEntry,
 		Error<T>,
 	> for FilecoinAgent<T>
 {
-	// In filecoin world, delegator means miner. Validator is used to store owner info.
+	// In filecoin world, delegator means miner. Validator is used to store worker info.
 	fn initialize_delegator(
 		&self,
 		currency_id: CurrencyId,
@@ -66,7 +65,7 @@ impl<T: Config>
 		let new_delegator_id = Pallet::<T>::inner_initialize_delegator(currency_id)?;
 
 		// Add the new delegator into storage
-		Self::add_delegator(self, new_delegator_id, &delegator_multilocation, currency_id)
+		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
 			.map_err(|_| Error::<T>::FailToAddDelegator)?;
 
 		Ok(*delegator_multilocation)
@@ -94,14 +93,13 @@ impl<T: Config>
 			Error::<T>::ExceedActiveMaximum
 		);
 
-		// Check if the delegator(miner) has bonded an owner.
+		// Check if the delegator(miner) has bonded an worker.
 		let miners = ValidatorsByDelegator::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::ValidatorNotBonded)?;
 		ensure!(miners.len() == 1, Error::<T>::VectorTooLong);
 
 		// Create a new delegator ledger
-		let ledger =
-			FilecoinLedger::<BalanceOf<T>> { account: who.clone(), initial_pledge: amount };
+		let ledger = FilecoinLedger::<BalanceOf<T>> { account: *who, initial_pledge: amount };
 		let filecoin_ledger = Ledger::<BalanceOf<T>>::Filecoin(ledger);
 
 		DelegatorLedgers::<T>::insert(currency_id, who, filecoin_ledger);
@@ -228,7 +226,7 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// One delegator(miner) can only map to a validator(owner), so targets vec can only contains 1
+	/// One delegator(miner) can only map to a validator(worker), so targets vec can only contains 1
 	/// item.
 	fn delegate(
 		&self,
@@ -237,20 +235,24 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		ensure!(targets.len() == 1, Error::<T>::VectorTooLong);
-		let owner = &targets[0];
+		let worker = &targets[0];
 
 		// Need to check whether this validator is in the whitelist.
 		let validators_vec =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let multi_hash = T::Hashing::hash(&owner.encode());
+		ensure!(validators_vec.contains(worker), Error::<T>::ValidatorNotExist);
+
+		// ensure the length of validators_vec does not exceed the MaxLengthLimit.
 		ensure!(
-			validators_vec.contains(&(owner.clone(), multi_hash)),
-			Error::<T>::ValidatorNotExist
+			validators_vec.len() <= T::MaxLengthLimit::get() as usize,
+			Error::<T>::ExceedMaxLengthLimit
 		);
 
-		let validators_list = vec![(owner.clone(), multi_hash)];
+		let validators_list =
+			BoundedVec::try_from(vec![*worker]).map_err(|_| Error::<T>::FailToConvert)?;
+
 		// update ledger
-		ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+		ValidatorsByDelegator::<T>::insert(currency_id, *who, validators_list.clone());
 
 		// query_id is nonsense for filecoin.
 		let query_id = Zero::zero();
@@ -258,8 +260,8 @@ impl<T: Config>
 		// Deposit event.
 		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 			currency_id,
-			validators_list,
-			delegator_id: who.clone(),
+			validators_list: validators_list.to_vec(),
+			delegator_id: *who,
 		});
 
 		Ok(query_id)
@@ -289,7 +291,7 @@ impl<T: Config>
 
 			let validators_by_delegator_vec = ValidatorsByDelegator::<T>::get(currency_id, who)
 				.ok_or(Error::<T>::ValidatorNotBonded)?;
-			ensure!(targets[0] == validators_by_delegator_vec[0].0, Error::<T>::ValidatorError);
+			ensure!(targets[0] == validators_by_delegator_vec[0], Error::<T>::ValidatorError);
 
 			// remove entry.
 			ValidatorsByDelegator::<T>::remove(currency_id, who);
@@ -300,7 +302,7 @@ impl<T: Config>
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
 				currency_id,
 				validators_list: vec![],
-				delegator_id: who.clone(),
+				delegator_id: *who,
 			});
 
 			Ok(query_id)
@@ -327,7 +329,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -337,6 +339,7 @@ impl<T: Config>
 		_when: &Option<TimeUnit>,
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
+		_amount: Option<BalanceOf<T>>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -356,7 +359,7 @@ impl<T: Config>
 		Err(Error::<T>::Unsupported)
 	}
 
-	/// For filecoin, transfer_to means transfering newly minted amount to miner
+	/// For filecoin, transfer_to means transfering newly minted amount to worker
 	/// accounts. It actually burn/withdraw the corresponding amount from entrance_account.
 	fn transfer_to(
 		&self,
@@ -370,11 +373,10 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account == entrance_account, Error::<T>::InvalidAccount);
 
-		// "to" account must be one of the delegators(miners) accounts
-		ensure!(
-			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, to),
-			Error::<T>::DelegatorNotExist
-		);
+		// "to" account must be one of the validator(worker) accounts
+		let validator_vec =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorNotExist)?;
+		ensure!(validator_vec.contains(to), Error::<T>::ValidatorNotExist);
 
 		// burn the amount
 		T::MultiCurrency::withdraw(currency_id, &entrance_account, amount)
@@ -383,8 +385,19 @@ impl<T: Config>
 		Ok(())
 	}
 
+	// Convert token to another token.
+	fn convert_asset(
+		&self,
+		_who: &MultiLocation,
+		_amount: BalanceOf<T>,
+		_currency_id: CurrencyId,
+		_if_from_currency: bool,
+	) -> Result<QueryId, Error<T>> {
+		Err(Error::<T>::Unsupported)
+	}
+
 	/// For filecoin, instead of delegator(miner) account, "who" should be a
-	/// validator(owner) account, since we tune extrange rate once per owner by
+	/// validator(worker) account, since we tune extrange rate once per worker by
 	/// aggregating all its miner accounts' interests.
 	// Filecoin use TimeUnit::Kblock, which means 1000 blocks. Filecoin produces
 	// one block per 30 seconds . Kblock takes around 8.33 hours.
@@ -395,18 +408,12 @@ impl<T: Config>
 		_vtoken_amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		let who = who.as_ref().ok_or(Error::<T>::DelegatorNotExist)?;
-		let multi_hash = T::Hashing::hash(&who.encode());
+		let who = who.as_ref().ok_or(Error::<T>::ValidatorNotExist)?;
 
 		// ensure "who" is a valid validator
-		if let Some(validator_vec) = Validators::<T>::get(currency_id) {
-			ensure!(
-				validator_vec.contains(&(who.clone(), multi_hash)),
-				Error::<T>::ValidatorNotExist
-			);
-		} else {
-			Err(Error::<T>::ValidatorNotExist)?;
-		}
+		let validator_vec =
+			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorNotExist)?;
+		ensure!(validator_vec.contains(who), Error::<T>::ValidatorNotExist);
 
 		// Get current TimeUnit.
 		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
@@ -446,16 +453,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		&self,
-		index: u16,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> DispatchResult {
-		Pallet::<T>::inner_add_delegator(index, who, currency_id)
-	}
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
 		// Get the delegator ledger
@@ -472,25 +469,6 @@ impl<T: Config>
 		}
 
 		Pallet::<T>::inner_remove_delegator(who, currency_id)
-	}
-
-	/// Add a new owner for a particular currency.
-	fn add_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		Pallet::<T>::inner_add_validator(who, currency_id)
-	}
-
-	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult {
-		let multi_hash = T::Hashing::hash(&who.encode());
-
-		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
-		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(currency_id) {
-			if validator_list.contains(&(who.clone(), multi_hash)) {
-				Err(Error::<T>::ValidatorStillInUse)?;
-			}
-		}
-		// Update corresponding storage.
-		Pallet::<T>::inner_remove_validator(who, currency_id)
 	}
 
 	/// Charge hosting fee.
@@ -528,7 +506,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		_query_id: QueryId,
-		_entry: ValidatorsByDelegatorUpdateEntry<Hash<T>>,
+		_entry: ValidatorsByDelegatorUpdateEntry,
 		_manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		Err(Error::<T>::Unsupported)

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,18 +17,15 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
-#![allow(deprecated)] // TODO: clean transactional
 
 extern crate alloc;
 
+use bifrost_primitives::CurrencyId;
 use frame_support::{
-	dispatch::{CallMetadata, GetCallMetadata},
 	pallet_prelude::*,
-	traits::{Contains, PalletInfoAccess},
+	traits::{CallMetadata, Contains, GetCallMetadata, PalletInfoAccess},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
 
@@ -48,10 +45,10 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The origin which may set filter.
-		type UpdateOrigin: EnsureOrigin<Self::Origin>;
+		type UpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -102,10 +99,11 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::switchoff_transaction())]
 		pub fn switchoff_transaction(
 			origin: OriginFor<T>,
@@ -140,6 +138,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::switchon_transaction())]
 		pub fn switchon_transaction(
 			origin: OriginFor<T>,
@@ -162,6 +161,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::disable_transfers())]
 		pub fn disable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
@@ -175,6 +175,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::enable_transfers())]
 		pub fn enable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
@@ -188,11 +189,11 @@ pub mod pallet {
 }
 
 pub struct SwitchOffTransactionFilter<T>(sp_std::marker::PhantomData<T>);
-impl<T: Config> Contains<T::Call> for SwitchOffTransactionFilter<T>
+impl<T: Config> Contains<T::RuntimeCall> for SwitchOffTransactionFilter<T>
 where
-	<T as frame_system::Config>::Call: GetCallMetadata,
+	<T as frame_system::Config>::RuntimeCall: GetCallMetadata,
 {
-	fn contains(call: &T::Call) -> bool {
+	fn contains(call: &T::RuntimeCall) -> bool {
 		let CallMetadata { function_name, pallet_name } = call.get_call_metadata();
 		SwitchedOffTransactions::<T>::contains_key((
 			pallet_name.as_bytes(),
@@ -210,7 +211,6 @@ impl<T: Config> Contains<CurrencyId> for DisableTransfersFilter<T> {
 
 pub struct OverallToggleFilter<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OverallToggleFilter<T> {
-	#[allow(dead_code)]
 	pub fn get_overall_toggle_status() -> bool {
 		OverallToggle::<T>::get()
 	}

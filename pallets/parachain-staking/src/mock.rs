@@ -18,15 +18,12 @@
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
-		Everything, GenesisBuild, LockIdentifier, LockableCurrency, OnFinalize, OnInitialize,
-		ReservableCurrency,
+		Everything, LockIdentifier, LockableCurrency, OnFinalize, OnInitialize, ReservableCurrency,
 	},
-	weights::Weight,
 	PalletId,
 };
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill, Percent,
 };
@@ -37,30 +34,24 @@ use crate::{
 	DelegatorReserveToLockMigrations, DelegatorState, InflationInfo, Points, Range,
 	COLLATOR_LOCK_ID, DELEGATOR_LOCK_ID,
 };
+use sp_runtime::BuildStorage;
 
 pub type AccountId = u64;
 pub type Balance = u128;
-pub type BlockNumber = u64;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		ParachainStaking: pallet_parachain_staking::{Pallet, Call, Storage, Config<T>, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		ParachainStaking: pallet_parachain_staking,
 	}
 );
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -68,16 +59,15 @@ parameter_types! {
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type Nonce = u32;
+	type Block = Block;
+	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -99,11 +89,15 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 4];
 	type MaxLocks = ();
 	type Balance = Balance;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type RuntimeHoldReason = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 parameter_types! {
 	pub const MinBlocksPerRound: u32 = 3;
@@ -132,7 +126,7 @@ parameter_types! {
 	pub InitSeedStk: u128 = 10;
 }
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
@@ -225,8 +219,8 @@ impl ExtBuilder {
 	}
 
 	pub(crate) fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Test>()
+		let mut t = frame_system::GenesisConfig::<Test>::default()
+			.build_storage()
 			.expect("Frame system builds valid default genesis config");
 
 		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
@@ -284,15 +278,17 @@ pub(crate) fn roll_to_round_end(round: u64) -> u64 {
 	roll_to(block)
 }
 
-pub(crate) fn last_event() -> Event {
-	System::events().pop().expect("Event expected").event
+pub(crate) fn last_event() -> RuntimeEvent {
+	System::events().pop().expect("RuntimeEvent expected").event
 }
 
 pub(crate) fn events() -> Vec<pallet::Event<Test>> {
 	System::events()
 		.into_iter()
 		.map(|r| r.event)
-		.filter_map(|e| if let Event::ParachainStaking(inner) = e { Some(inner) } else { None })
+		.filter_map(
+			|e| if let RuntimeEvent::ParachainStaking(inner) = e { Some(inner) } else { None },
+		)
 		.collect::<Vec<_>>()
 }
 
@@ -381,7 +377,7 @@ macro_rules! assert_event_emitted {
 			e => {
 				assert!(
 					$crate::mock::events().iter().find(|x| *x == e).is_some(),
-					"Event {:?} was not found in events: \n {:?}",
+					"RuntimeEvent {:?} was not found in events: \n {:?}",
 					e,
 					$crate::mock::events()
 				);
@@ -398,7 +394,7 @@ macro_rules! assert_event_not_emitted {
 			e => {
 				assert!(
 					$crate::mock::events().iter().find(|x| *x == e).is_none(),
-					"Event {:?} was found in events: \n {:?}",
+					"RuntimeEvent {:?} was found in events: \n {:?}",
 					e,
 					$crate::mock::events()
 				);

@@ -6,10 +6,12 @@
 
 Welcome,
 
-Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message (XCM) it can provide cross-chain liquid staking services for polkadot relay chains, parachains, and heterogeneous chains bridged with polkadot.
+Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message ([XCM](https://wiki.polkadot.network/docs/learn-xcm)) it can provide cross-chain liquid staking services for multiple chains.
 
-👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*  
-👉 *Learn to use the Bifrost network with our [wiki](https://wiki.bifrost.finance/network).*  
+[Our mission](https://bifrost-finance.notion.site/7df6abf2acb54b398df75230e157c7da?v=02ecfe941c5242c3b5f8c77654512b80) is to provide standardized cross-chain interest-bearing derivatives for [Polkadot](https://polkadot.network) relay chains, parachains, and heterogeneous chains bridged with Polkadot.
+
+👉 _Discover the Bifrost at [bifrost.finance](https://bifrost.finance/)._  
+👉 _Learn to use the Bifrost with our [wiki](https://wiki.bifrost.finance/)._
 
 <h4>🐣 Supported by</h4>
 
@@ -19,14 +21,14 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
   <a href="https://bootcamp.web3.foundation/"><img src="docs/res/readme/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
-[![master-build](https://img.shields.io/github/workflow/status/bifrost-finance/bifrost/master-build/master)](https://github.com/bifrost-finance/bifrost/actions)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bifrost-finance/bifrost&amp;utm_campaign=Badge_Grade)
-[![Substrate Version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
-[![Docker](https://img.shields.io/badge/Docker-v0.4.0-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
+[![master-build](https://img.shields.io/github/actions/workflow/status/bifrost-finance/bifrost/ci-build.yml?logo=Buddy)](https://github.com/bifrost-finance/bifrost/actions/workflows/ci-build.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-finance/bifrost&utm_campaign=Badge_Grade)
+[![Substrate Version](https://img.shields.io/badge/Substrate-latest-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
+[![Dapp](https://img.shields.io/badge/Dapp-5c5c5c?logo=Icinga)](https://bifrost.app)
+[![Analytics](https://img.shields.io/badge/-Analytics-5c5c5c?logo=Google%20Analytics)](https://stats.bifrost.app)
 [![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
-[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
-[![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
+[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/BifrostFinance)
 
 ## Get Build Help
 
@@ -78,7 +80,11 @@ make generate-all-weights
 If modify the storage, should test the data migration before production upgrade.
 
 ```bash
-make try-bifrost-runtime-upgrade
+# bifrost kusama
+make try-kusama-runtime-upgrade
+
+# bifrost polkadot
+make try-polkadot-runtime-upgrade
 ```
 
 ## Run development chain
@@ -99,11 +105,8 @@ cd -
 ### Build polkadot
 
 ```bash
-git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
-cd /tmp/polkadot
-git checkout release-v0.9.22
-cargo build --release
-cd -
+# replace version with your target polkadot version
+cargo install --git https://github.com/paritytech/polkadot --tag <version> polkadot --locked
 ```
 
 ### Launch Polkadot and the parachain
@@ -169,6 +172,55 @@ bifrostnetwork/bifrost:latest \
   --rpc-external \
   --ws-external \
   --rpc-cors all \
-  --state-cache-size 0 \
+  --trie-cache-size 0 \
   --execution wasm
 ```
+
+### snapshot
+
+There are also some snapshots you can use to quickly get started, these are provided by the community.
+
+-   Pre-req .
+
+    zstd and aria2
+
+    ```sh
+
+    sudo apt install zstd
+    sudo apt install aria2
+    ```
+
+#### bifrost-kusama snapshots
+
+-   relay-chain data
+
+```sh
+# download dict
+wget https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/relay.dict
+
+# download zst data
+aria2c -x10 https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/relay.tar.zst
+
+# decompress: node is basepath, you can replace any dicrectory you like
+mkdir node
+tar -I 'zstd -vd -T0 -D relay.dict' -xvf relay.tar.zst -C node/.
+```
+
+-   parachain data
+
+```sh
+wget https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/para.dict
+aria2c -x10  https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/para.tar.zst
+
+tar -I 'zstd -vd -T0 -D para.dict' -xvf para.tar.zst -C node/.
+```
+
+#### bifrost-polkadot snapshots
+
+link:
+
+-   [relay chain dict](https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-polkadot/relay.dict)
+-   [relay chain zst data](https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-polkadot/relay.tar.zst)
+
+-   [para chain dict](https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-polkadot/para.dict)
+-   [para chain zst data](https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-polkadot/para.tar.zst)

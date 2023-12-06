@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use codec::HasCompact;
 use frame_support::pallet_prelude::*;
+use parity_scale_codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
@@ -57,6 +57,7 @@ where
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct PoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	pub tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
+	pub basic_token: (CurrencyIdOf, Perbill),
 	/// Total shares amount
 	pub total_shares: BalanceOf,
 	pub basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -85,6 +86,7 @@ where
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
 		tokens_proportion: BTreeMap<CurrencyIdOf, Perbill>,
+		basic_token: (CurrencyIdOf, Perbill),
 		basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
 		gauge: Option<PoolId>,
 		min_deposit_to_start: BalanceOf,
@@ -95,6 +97,7 @@ where
 	) -> Self {
 		Self {
 			tokens_proportion,
+			basic_token,
 			total_shares: Default::default(),
 			basic_rewards,
 			rewards: BTreeMap::new(),
@@ -165,14 +168,19 @@ impl<T: Config> Pallet<T> {
 				let reward_inflation = if initial_total_shares.is_zero() {
 					Zero::zero()
 				} else {
-					U256::from(add_amount.to_owned().saturated_into::<u128>())
-						.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
-						.checked_div(
-							initial_total_shares.to_owned().saturated_into::<u128>().into(),
-						)
-						.unwrap_or_default()
-						.as_u128()
-						.saturated_into()
+					// If the total shares is zero or reward amount overflow, the reward inflation
+					// is zero.
+					u128::try_from(
+						U256::from(add_amount.to_owned().saturated_into::<u128>())
+							.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
+							.checked_div(
+								initial_total_shares.to_owned().saturated_into::<u128>().into(),
+							)
+							.unwrap_or_default(),
+					)
+					.ok()
+					.unwrap_or_default()
+					.saturated_into()
 				};
 				*total_reward = total_reward.saturating_add(reward_inflation);
 				*total_withdrawn_reward = total_withdrawn_reward.saturating_add(reward_inflation);
@@ -243,15 +251,16 @@ impl<T: Config> Pallet<T> {
 					// update withdrawn rewards for each reward currency
 					share_info.withdrawn_rewards.iter_mut().try_for_each(
 						|(reward_currency, withdrawn_reward)| -> DispatchResult {
-							let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
-								.saturating_mul(
-									withdrawn_reward.to_owned().saturated_into::<u128>().into(),
-								)
-								.checked_div(share_info.share.saturated_into::<u128>().into())
-								.unwrap_or_default()
-								.as_u128()
-								.saturated_into();
-
+							let withdrawn_reward_to_remove: BalanceOf<T> = u128::try_from(
+								removing_share
+									.saturating_mul(
+										withdrawn_reward.to_owned().saturated_into::<u128>().into(),
+									)
+									.checked_div(share_info.share.saturated_into::<u128>().into())
+									.unwrap_or_default(),
+							)
+							.map_err(|_| ArithmeticError::Overflow)?
+							.unique_saturated_into();
 							if let Some((total_reward, total_withdrawn_reward)) =
 								pool_info.rewards.get_mut(reward_currency)
 							{
@@ -307,15 +316,15 @@ impl<T: Config> Pallet<T> {
 									.copied()
 									.unwrap_or_default();
 
-								let total_reward_proportion: BalanceOf<T> = U256::from(
-									share_info.share.to_owned().saturated_into::<u128>(),
+								let total_reward_proportion: BalanceOf<T> = u128::try_from(
+									U256::from(share_info.share.to_owned().saturated_into::<u128>())
+										.saturating_mul(U256::from(
+											total_reward.to_owned().saturated_into::<u128>(),
+										))
+										.checked_div(total_shares)
+										.unwrap_or_default(),
 								)
-								.saturating_mul(U256::from(
-									total_reward.to_owned().saturated_into::<u128>(),
-								))
-								.checked_div(total_shares)
-								.unwrap_or_default()
-								.as_u128()
+								.map_err(|_| ArithmeticError::Overflow)?
 								.unique_saturated_into();
 
 								let reward_to_withdraw = total_reward_proportion
@@ -364,7 +373,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn process_withraw_list(
+	pub fn process_withdraw_list(
 		who: &T::AccountId,
 		pool: PoolId,
 		pool_info: &PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
@@ -378,12 +387,12 @@ impl<T: Config> Pallet<T> {
 					let current_block_number: BlockNumberFor<T> =
 						frame_system::Pallet::<T>::block_number();
 					let mut tmp: Vec<(BlockNumberFor<T>, BalanceOf<T>)> = Default::default();
-					let tokens_proportion_values: Vec<Perbill> =
-						pool_info.tokens_proportion.values().cloned().collect();
 					share_info.withdraw_list.iter().try_for_each(
 						|(dest_block, remove_value)| -> DispatchResult {
 							if *dest_block <= current_block_number {
-								let native_amount = tokens_proportion_values[0]
+								let native_amount = pool_info
+									.basic_token
+									.1
 									.saturating_reciprocal_mul(*remove_value);
 								pool_info.tokens_proportion.iter().try_for_each(
 									|(token, &proportion)| -> DispatchResult {

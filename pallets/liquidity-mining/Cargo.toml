@@ -8,22 +8,22 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false, optional = true }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+bifrost-primitives = { path = "../../primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 log = { version = "0.4.17", default-features = false }
-serde = { version = "1.0.143", optional = true, features = ["derive"] }
+serde = { version = "1.0.160", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
-pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.28" }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 orml-tokens = "0.4.1-dev"
-orml-currencies = "0.4.1-dev"
+bifrost-currencies = { path = "../../pallets/currencies", default-features = false}
 
 [features]
 default = ["std"]
@@ -34,7 +34,7 @@ std = [
     "frame-system/std",
     "frame-support/std",
 	"sp-std/std",
-    "node-primitives/std",
+    "bifrost-primitives/std",
     "orml-traits/std",
     "log/std",
     "serde/std",
@@ -44,6 +44,7 @@ runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
 ]
 
 local-benchmarks = [

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,28 +21,24 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{GenesisBuild, Nothing},
-	PalletId,
-};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
+use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
-use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-	AccountId32,
+	traits::{BlakeTwo256, ConvertInto, IdentityLookup},
+	AccountId32, BuildStorage,
 };
 
 use crate as bifrost_farming;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u64;
+pub type Balance = u128;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -54,26 +50,21 @@ pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call, Storage},
-		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>}
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Farming: bifrost_farming,
+		VeMinting: bifrost_ve_minting,
+		AssetRegistry: bifrost_asset_registry,
 	}
 );
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
@@ -81,20 +72,19 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
@@ -107,9 +97,9 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for Runtime {
+impl bifrost_currencies::Config for Runtime {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
@@ -124,12 +114,16 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = frame_system::Pallet<Runtime>;
 	type Balance = Balance;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+	type RuntimeHoldReason = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -142,21 +136,21 @@ impl orml_tokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type DustRemovalWhitelist = Nothing;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
 	type MaxReserves = ();
-	type OnDust = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type CurrencyHooks = ();
 }
 
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 ord_parameter_types! {
@@ -164,12 +158,51 @@ ord_parameter_types! {
 }
 
 impl bifrost_farming::Config for Runtime {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type TreasuryAccount = TreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type FarmingBoost = FarmingBoostPalletId;
+	type WeightInfo = ();
+	type VeMinting = VeMinting;
+	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+}
+
+parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TokenType = VeMintingTokenType;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
+}
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 	type WeightInfo = ();
 }
 
@@ -193,7 +226,9 @@ impl ExtBuilder {
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
-			(CHARLIE, BNC, 100),
+			(CHARLIE, BNC, 1_000_000_000_000),
+			(CHARLIE, vBNC, 1_000_000_000_000_000),
+			(CHARLIE, KSM, 1_000_000_000_000),
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 100),
 			(ALICE, KSM, 3000),
@@ -203,15 +238,8 @@ impl ExtBuilder {
 		])
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
-		use frame_benchmarking::whitelisted_caller;
-		let whitelist_caller: AccountId = whitelisted_caller();
-		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

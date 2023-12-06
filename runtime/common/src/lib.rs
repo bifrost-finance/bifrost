@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,16 +18,19 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::{AssetIdMaps, Config};
+use bifrost_primitives::{
+	AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo,
+};
 use frame_support::{
 	parameter_types, sp_runtime::traits::BlockNumberProvider, traits::EitherOfDiverse,
 };
 use frame_system::EnsureRoot;
-use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, CurrencyIdMapping, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::{FixedPointNumber, Perquintill};
+use sp_runtime::{traits::Bounded, FixedPointNumber, Perquintill};
 
 pub mod constants;
+pub mod currency_adapter;
 
 #[cfg(test)]
 mod tests;
@@ -57,10 +60,17 @@ parameter_types! {
 	/// that combined with `AdjustmentVariable`, we can recover from the minimum.
 	/// See `multiplier_can_grow_from_zero`.
 	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
+	/// The maximum amount of the multiplier.
+	pub MaximumMultiplier: Multiplier = Bounded::max_value();
 }
 
-pub type SlowAdjustingFeeUpdate<R> =
-	TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+pub type SlowAdjustingFeeUpdate<R> = TargetedFeeAdjustment<
+	R,
+	TargetBlockFullness,
+	AdjustmentVariable,
+	MinimumMultiplier,
+	MaximumMultiplier,
+>;
 
 pub type CouncilCollective = pallet_collective::Instance1;
 

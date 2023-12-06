@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,11 @@
 
 use core::ops::{Add, Mul};
 
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 use sp_std::prelude::*;
+use xcm::v3::QueryId;
 
 pub type MessageId = [u8; 32];
 
@@ -95,9 +96,9 @@ pub enum ParachainDerivedProxyAccountType {
 
 #[allow(non_snake_case)]
 pub mod parachains {
-	/******************* */
-	/* Kusama parachains */
-	/******************* */
+	// *********************
+	// Kusama parachains**
+	// *********************
 
 	pub mod karura {
 		pub const ID: u32 = 2000;
@@ -120,15 +121,39 @@ pub mod parachains {
 		pub const PALLET_ID: u8 = 10;
 	}
 
-	/********************* */
-	/* Polkadot parachains */
-	/********************* */
+	//*********************
+	// Polkadot parachains
+	//*********************
 	pub mod moonbeam {
 		pub const ID: u32 = 2004;
+		pub const PALLET_ID: u8 = 10;
+	}
+
+	pub mod astar {
+		pub const ID: u32 = 2006;
+		pub const PALLET_ID: u8 = 34;
+	}
+
+	pub mod manta {
+		pub const ID: u32 = 2104;
 		pub const PALLET_ID: u8 = 10;
 	}
 }
 
 pub trait XcmHelper<AccountId, Balance> {
-	fn contribute(index: ChainId, value: Balance) -> Result<MessageId, DispatchError>;
+	fn contribute(
+		contributer: AccountId,
+		index: ChainId,
+		value: Balance,
+	) -> Result<MessageId, DispatchError>;
+}
+
+pub trait SalpHelper<AccountId, RuntimeCall, Balance> {
+	fn confirm_contribute_call() -> RuntimeCall;
+	fn bind_query_id_and_contribution(
+		query_id: QueryId,
+		index: ChainId,
+		contributer: AccountId,
+		amount: Balance,
+	);
 }

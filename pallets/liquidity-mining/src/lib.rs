@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -35,12 +35,13 @@ use frame_support::{
 		vec::Vec,
 	},
 	traits::EnsureOrigin,
-	PalletId, RuntimeDebug,
+	PalletId
 };
+use sp_runtime::RuntimeDebug;
 #[cfg(feature = "std")]
 use frame_support::{Deserialize, Serialize};
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
+use bifrost_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -451,10 +452,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self, I>>
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Origin for anyone able to create/kill/force_retire the liquidity-pool.
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -654,20 +656,14 @@ pub mod pallet {
 		StorageValue<_, StorageVersion, ValueQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
 		pub pallet_version: StorageVersion,
 		pub _phantom: PhantomData<(T, I)>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
-		fn default() -> Self {
-			GenesisConfig { pallet_version: Default::default(), _phantom: PhantomData }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
 			PalletVersion::<T, I>::put(self.pallet_version);
 		}
@@ -681,11 +677,8 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a liquidity-pool which type is `PoolType::SingleToken`, accepts any token as
 		/// deposit.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::create_single_token_pool())]
 		pub fn create_single_token_pool(
 			origin: OriginFor<T>,
 			token: CurrencyId,
@@ -716,11 +709,8 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Mining`, Only accepts `lpToken` as
 		/// deposit.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::create_mining_pool())]
 		pub fn create_mining_pool(
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
@@ -758,11 +748,8 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts free `vsToken`
 		/// and free `vsBond` as deposit.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -797,11 +784,8 @@ pub mod pallet {
 
 		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts reserved
 		/// `vsToken` and reserved `vsBond` as deposit.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::create_eb_farming_pool())]
 		pub fn create_eb_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -837,6 +821,7 @@ pub mod pallet {
 		/// _NOTE_: The extrinsic is only applied to the liquidity-pool at `PoolState::UnCharged`;
 		/// 	When the extrinsic was executed successfully, the liquidity-pool would be at
 		/// 	`PoolState::Charged`.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -874,11 +859,8 @@ pub mod pallet {
 		}
 
 		/// Kill a liquidity-pool at `PoolState::Uncharged`.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::kill_pool())]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -906,11 +888,8 @@ pub mod pallet {
 		///
 		/// 2. If the pool is at `PoolState::Charged` and has some deposit, or `PoolState::Ongoing`,
 		/// 	the field `block_retired` of the pool would be set to the current block height.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::force_retire_pool())]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -952,11 +931,8 @@ pub mod pallet {
 		/// Edit the parameters of a liquidity-pool.
 		///
 		/// __NOTE__: Forbid editing the liquidity-pool which type is `PoolType::EBFarming`;
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(7)]
+		#[pallet::weight(T::WeightInfo::edit_pool())]
 		pub fn edit_pool(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -991,6 +967,7 @@ pub mod pallet {
 		/// - The deposit caller was contributed to the pool should be bigger than
 		///   `T::MinimumDeposit`;
 		/// - The pool is at `PoolState::Charged` or `PoolState::Ongoing`;
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -1094,6 +1071,7 @@ pub mod pallet {
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
 
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -1127,6 +1105,7 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::redeem_all())]
 		pub fn redeem_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1147,6 +1126,7 @@ pub mod pallet {
 		///
 		/// The condition to redeem:
 		/// - The pool is at `PoolState::Retired`.
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::volunteer_to_redeem())]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
@@ -1180,6 +1160,7 @@ pub mod pallet {
 		/// The conditions to claim:
 		/// - There is enough deposit owned by the caller in the pool.
 		/// - The pool is at `PoolState::Ongoing`.
+		#[pallet::call_index(12)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1213,6 +1194,7 @@ pub mod pallet {
 		/// - The pool type is not `PoolType::EBFarming`.
 		/// - There are pending-unlocks in the deposit_data.
 		/// - The current block-height exceeded the unlock-height;
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			ensure!(Self::storage_version() == StorageVersion::V2_0_0, Error::<T, I>::OnMigration);
@@ -1318,6 +1300,7 @@ pub mod pallet {
 		/// The conditions to cancel:
 		/// - The pool state is `PoolState::Ongoing`.
 		/// - There is a `pending-unlock` that is specific by the parameter `index`;
+		#[pallet::call_index(14)]
 		#[pallet::weight(T::WeightInfo::cancel_unlock())]
 		pub fn cancel_unlock(
 			origin: OriginFor<T>,
@@ -1376,7 +1359,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::call_index(15)]
+		#[pallet::weight({1_000_000})]
 		pub fn lazy_migration_v2_0_0(
 			_origin: OriginFor<T>,
 			max_nums: u32,

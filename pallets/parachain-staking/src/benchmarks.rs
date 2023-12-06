@@ -17,12 +17,11 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 //! Benchmarking
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::{Currency, Get, OnFinalize, OnInitialize, ReservableCurrency};
-use frame_system::RawOrigin;
-// use nimbus_primitives::EventHandler;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::{Perbill, Percent};
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
 
 use crate::{
 	AccountIdOf, BalanceOf, Call, CandidateBondLessRequest, Config, DelegationAction, Pallet,
@@ -94,7 +93,7 @@ fn create_funded_collator<T: Config>(
 /// Run to end block and author
 fn roll_to_and_author<T: Config>(round_delay: u32, author: AccountIdOf<T>) {
 	let total_rounds = round_delay + 1u32;
-	let round_length: T::BlockNumber = Pallet::<T>::round().length.into();
+	let round_length: BlockNumberFor<T> = Pallet::<T>::round().length.into();
 	let mut now = <frame_system::Pallet<T>>::block_number() + 1u32.into();
 	let end = Pallet::<T>::round().first + (round_length * total_rounds.into());
 	while now < end {
@@ -911,7 +910,7 @@ benchmarks! {
 		)> = delegators.iter().map(|x| (x.clone(), T::Currency::free_balance(x))).collect();
 		// PREPARE RUN_TO_BLOCK LOOP
 		let before_running_round_index = Pallet::<T>::round().current;
-		let round_length: T::BlockNumber = Pallet::<T>::round().length.into();
+		let round_length: BlockNumberFor<T> = Pallet::<T>::round().length.into();
 		let reward_delay = <<T as Config>::RewardPaymentDelay as Get<u32>>::get() + 2u32;
 		let mut now = <frame_system::Pallet<T>>::block_number() + 1u32.into();
 		let mut counter = 0usize;
@@ -1067,11 +1066,12 @@ benchmarks! {
 mod tests {
 	use frame_support::assert_ok;
 	use sp_io::TestExternalities;
+	use sp_runtime::BuildStorage;
 
 	use crate::{benchmarks::*, mock::Test};
 
 	pub fn new_test_ext() -> TestExternalities {
-		let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		TestExternalities::new(t)
 	}
 

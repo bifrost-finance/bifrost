@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -15,9 +15,6 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-// Ensure we're `no_std` when compiling for Wasm.
-// #![cfg_attr(not(feature = "std"), no_std)]
 
 use super::*;
 use crate::{Pallet, TotalOrderInfos};
@@ -79,10 +76,10 @@ pub fn migrate_orders<T: Config<I>, I: 'static>() -> Weight {
 	}
 
 	// one storage read + two account balance changes
-	let ok_weight =
-		ok_count.saturating_mul(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(2));
-	let err_weight =
-		err_count.saturating_mul(T::DbWeight::get().reads(1) + T::WeightInfo::revoke_order());
+	let ok_weight = (T::DbWeight::get().reads(1) + T::DbWeight::get().writes(2))
+		.saturating_mul(ok_count as u64);
+	let err_weight = (T::DbWeight::get().reads(1) + T::WeightInfo::revoke_order())
+		.saturating_mul(err_count as u64);
 
 	ok_weight + err_weight
 }

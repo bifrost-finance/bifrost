@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,20 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use scale_info::TypeInfo;
-use sp_runtime::traits::StaticLookup;
-use sp_std::{boxed::Box, vec::Vec};
-use xcm::{VersionedMultiAssets, VersionedMultiLocation};
-
 use crate::{BalanceOf, Config};
-
-#[derive(Encode, Decode, RuntimeDebug)]
-pub enum SubstrateCall<T: Config> {
-	Kusama(KusamaCall<T>),
-	Polkadot(PolkadotCall<T>),
-}
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_runtime::{traits::StaticLookup, RuntimeDebug};
+use sp_std::{boxed::Box, vec::Vec};
+use xcm::{v3::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
@@ -43,6 +35,12 @@ pub enum KusamaCall<T: Config> {
 	Utility(Box<KusamaUtilityCall<Self>>),
 	#[codec(index = 99)]
 	Xcm(Box<XcmCall>),
+}
+
+impl<T: Config> KusamaCall<T> {
+	pub fn encode(&self) -> Vec<u8> {
+		self.using_encoded(|x| x.to_vec())
+	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
@@ -59,9 +57,15 @@ pub enum PolkadotCall<T: Config> {
 	Xcm(Box<XcmCall>),
 }
 
+impl<T: Config> PolkadotCall<T> {
+	pub fn encode(&self) -> Vec<u8> {
+		self.using_encoded(|x| x.to_vec())
+	}
+}
+
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum SystemCall {
-	#[codec(index = 8)]
+	#[codec(index = 7)]
 	RemarkWithEvent(Box<Vec<u8>>),
 }
 
@@ -91,11 +95,7 @@ pub enum PolkadotUtilityCall<PolkadotCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama/Polkadot has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(
-		<T::Lookup as StaticLookup>::Source,
-		#[codec(compact)] BalanceOf<T>,
-		RewardDestination<T::AccountId>,
-	),
+	Bond(#[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]
@@ -114,12 +114,13 @@ pub enum StakingCall<T: Config> {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum XcmCall {
-	#[codec(index = 2)]
-	ReserveTransferAssets(
+	#[codec(index = 8)]
+	LimitedReserveTransferAssets(
 		Box<VersionedMultiLocation>,
 		Box<VersionedMultiLocation>,
 		Box<VersionedMultiAssets>,
 		u32,
+		WeightLimit,
 	),
 }
 

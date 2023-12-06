@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -31,49 +31,44 @@ mod benchmarking;
 pub mod primitives;
 pub mod weights;
 
+use bifrost_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{AccountIdConversion, CheckedSub},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 use sp_arithmetic::per_things::Percent;
 pub use weights::WeightInfo;
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		#[pallet::constant]
 		type RelayCurrencyId: Get<CurrencyId>;
 
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
@@ -165,7 +160,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10000)]
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::vsbond_convert_to_vstoken())]
 		pub fn vsbond_convert_to_vstoken(
 			origin: OriginFor<T>,
 			vs_bond_currency_id: CurrencyIdOf<T>,
@@ -239,7 +235,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10000)]
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::vstoken_convert_to_vsbond())]
 		pub fn vstoken_convert_to_vsbond(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
@@ -318,7 +315,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::set_exchange_fee())]
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
@@ -333,7 +331,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::set_exchange_rate())]
 		pub fn set_exchange_rate(
 			origin: OriginFor<T>,
 			lease: i32,
@@ -349,7 +348,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::set_relaychain_lease())]
 		pub fn set_relaychain_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 

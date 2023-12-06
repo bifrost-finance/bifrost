@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -25,37 +25,16 @@ use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 #[derive(Debug, Parser)]
 pub enum Subcommand {
 	/// Key management cli utilities
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	Key(KeySubcommand),
-
-	/// The custom inspect subcommmand for decoding blocks and extrinsics.
-	#[clap(
-		name = "inspect",
-		about = "Decode given block or extrinsic using current native runtime."
-	)]
-	Inspect(node_inspect::cli::InspectCmd),
-
-	/// Sub-commands concerned with benchmarking.
-	/// The pallet benchmarking moved to the `pallet` sub-command.
-	#[clap(subcommand)]
-	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
-
-	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
-	/// testing.
-	#[cfg(feature = "try-runtime")]
-	TryRuntime(try_runtime_cli::TryRuntimeCmd),
-
-	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
-	Verify(VerifyCmd),
-
-	/// Generate a seed that provides a vanity address.
-	Vanity(VanityCmd),
-
-	/// Sign a message, with a given (secret) key.
-	Sign(SignCmd),
 
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
+
+	/// Sub-commands concerned with benchmarking.
+	/// The pallet benchmarking moved to the `pallet` sub-command.
+	#[command(subcommand)]
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
 	/// Validate blocks.
 	CheckBlock(sc_cli::CheckBlockCmd),
@@ -66,8 +45,21 @@ pub enum Subcommand {
 	/// Export the state of a given block into a chain spec.
 	ExportState(sc_cli::ExportStateCmd),
 
+	/// Export the genesis state of the parachain.
+	ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
+
+	/// Export the genesis wasm of the parachain.
+	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
+
 	/// Import blocks.
 	ImportBlocks(sc_cli::ImportBlocksCmd),
+
+	/// The custom inspect subcommmand for decoding blocks and extrinsics.
+	#[command(
+		name = "inspect",
+		about = "Decode given block or extrinsic using current native runtime."
+	)]
+	Inspect(node_inspect::cli::InspectCmd),
 
 	/// Remove the whole chain.
 	PurgeChain(cumulus_client_cli::PurgeChainCmd),
@@ -75,28 +67,38 @@ pub enum Subcommand {
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
 
-	/// Export the genesis state of the parachain.
-	ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
+	/// Sign a message, with a given (secret) key.
+	Sign(SignCmd),
 
-	/// Export the genesis wasm of the parachain.
-	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
+	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
+	/// testing.
+	#[cfg(feature = "try-runtime")]
+	#[allow(deprecated)]
+	TryRuntime(try_runtime_cli::TryRuntimeCmd),
+
+	/// Errors since the binary was not build with `--features try-runtime`.
+	#[cfg(not(feature = "try-runtime"))]
+	TryRuntime,
+
+	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
+	Verify(VerifyCmd),
+
+	/// Generate a seed that provides a vanity address.
+	Vanity(VanityCmd),
 }
 
 #[derive(Debug, Parser)]
-#[clap(
+#[command(
 	propagate_version = true,
 	args_conflicts_with_subcommands = true,
 	subcommand_negates_reqs = true
 )]
 pub struct Cli {
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	pub subcommand: Option<Subcommand>,
 
-	#[clap(flatten)]
+	#[command(flatten)]
 	pub run: cumulus_client_cli::RunCmd,
-
-	#[clap(long)]
-	pub sealing: Option<String>,
 
 	/// Disable automatic hardware benchmarks.
 	///
@@ -105,12 +107,12 @@ pub struct Cli {
 	///
 	/// The results are then printed out in the logs, and also sent as part of
 	/// telemetry, if telemetry is enabled.
-	#[clap(long)]
+	#[arg(long)]
 	pub no_hardware_benchmarks: bool,
 
 	/// Relay chain arguments
-	#[clap(raw = true, conflicts_with = "relay-chain-rpc-url")]
-	pub relaychain_args: Vec<String>,
+	#[arg(raw = true)]
+	pub relay_chain_args: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -132,9 +134,9 @@ impl RelayChainCli {
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
 		let extension =
-			node_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
+			bifrost_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
-		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
-		Self { base_path, chain_id, base: Parser::parse_from(relay_chain_args) }
+		let base_path = para_config.base_path.path().join("polkadot");
+		Self { base_path: Some(base_path), chain_id, base: Parser::parse_from(relay_chain_args) }
 	}
 }

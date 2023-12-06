@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -33,26 +33,31 @@
 
 use std::sync::Arc;
 
-use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
+use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpc, LiquidityMiningRpcApiServer};
-use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
-use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
+use bifrost_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
+use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
-use node_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
+use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
+use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
+use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
+use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use lend_market_rpc::{LendMarket, LendMarketApiServer};
+use lend_market_rpc_runtime_api::LendMarketApi;
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use sp_runtime::traits::BlockIdTo;
 use substrate_frame_rpc_system::{System, SystemApiServer};
+use zenlink_protocol::AssetId;
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 use zenlink_stable_amm_rpc::{StableAmm, StableAmmApiServer};
-
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
 	/// The client instance to use.
@@ -82,8 +87,9 @@ where
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api: StablePoolRuntimeApi<Block>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
 	C::Api: BlockBuilder<Block>,
@@ -98,9 +104,10 @@ where
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
-	module.merge(LiquidityMiningRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
-	module.merge(StableAmm::new(client).into_rpc())?;
+	module.merge(StableAmm::new(client.clone()).into_rpc())?;
+	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -115,13 +122,17 @@ where
 		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
-		+ 'static,
+		+ 'static
+		+ BlockIdTo<Block>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
+	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -134,7 +145,10 @@ where
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
-	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
+	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
+	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client).into_rpc())?;
 
 	Ok(module)
 }

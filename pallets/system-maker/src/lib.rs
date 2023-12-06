@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,9 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -37,7 +40,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
@@ -45,17 +47,13 @@ use sp_std::{borrow::ToOwned, vec};
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
-#[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-#[allow(type_alias_bounds)]
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -67,15 +65,15 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 
-		type DexOperator: ExportZenlink<Self::AccountId>;
+		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
@@ -146,12 +144,13 @@ pub mod pallet {
 					Self::handle_redeem_by_currency_id(&system_maker, &info, redeem_amount);
 				}
 			}
-			0
+			T::WeightInfo::on_idle()
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
@@ -172,6 +171,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
 			origin: OriginFor<T>,
@@ -192,6 +192,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::close())]
 		pub fn close(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -203,6 +204,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
@@ -247,8 +249,9 @@ pub mod pallet {
 			let amount_out_min: u128 = U256::from(info.granularity.saturated_into::<u128>())
 				.saturating_mul(U256::from(1_000_000u32))
 				.checked_div(denominator)
+				.map(|x| u128::try_from(x))
 				.ok_or(ArithmeticError::Overflow)?
-				.as_u128();
+				.map_err(|_| ArithmeticError::Overflow)?;
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				system_maker,

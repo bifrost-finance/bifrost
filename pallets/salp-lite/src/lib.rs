@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::pallet_prelude::*;
-use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
+use bifrost_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -93,7 +93,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, ParaId};
+	use bifrost_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, ParaId};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
@@ -102,7 +102,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
 		/// ```ModuleId(*b"py/cfund")```
@@ -141,7 +141,7 @@ pub mod pallet {
 
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
-		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -263,19 +263,13 @@ pub mod pallet {
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub initial_multisig_account: Option<AccountIdOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { initial_multisig_account: None }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			if let Some(ref key) = self.initial_multisig_account {
 				MultisigConfirmAccount::<T>::put(key)
@@ -285,11 +279,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::set_multisig_confirm_account())]
 		pub fn set_multisig_confirm_account(
 			origin: OriginFor<T>,
 			account: AccountIdOf<T>,
@@ -301,11 +292,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::fund_success())]
 		pub fn fund_success(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -322,11 +310,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::fund_fail())]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -342,11 +327,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::fund_retire())]
 		pub fn fund_retire(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -364,11 +346,8 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -407,11 +386,8 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::issue())]
 		pub fn issue(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -462,11 +438,8 @@ pub mod pallet {
 
 		/// Withdraw full balance of the parachain.
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin.clone())?;
 
@@ -491,6 +464,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -530,11 +504,8 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::dissolve())]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
@@ -569,11 +540,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::continue_fund())]
 		pub fn continue_fund(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -607,6 +575,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::refund())]
 		pub fn refund(
 			origin: OriginFor<T>,
@@ -665,11 +634,8 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::call_index(11)]
+		#[pallet::weight(T::WeightInfo::dissolve_refunded())]
 		pub fn dissolve_refunded(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -693,11 +659,8 @@ pub mod pallet {
 		/// Edit the configuration for an in-progress crowdloan.
 		///
 		/// Can only be called by Root origin.
-		#[pallet::weight((
-			0,
-			DispatchClass::Normal,
-			Pays::No
-			))]
+		#[pallet::call_index(12)]
+		#[pallet::weight(T::WeightInfo::edit())]
 		pub fn edit(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,

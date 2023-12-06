@@ -1,0 +1,85 @@
+[package]
+name = "bifrost-slpx"
+description = "A pallet to manage the execution of XCM messages"
+authors = ["hqwangningbo <2536935847@qq.com>"]
+edition = "2021"
+version = "0.8.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+hex-literal = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true,  features = ["derive"] }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+sp-std = { workspace = true }
+cumulus-pallet-xcm = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+xcm = { workspace = true }
+orml-traits = { workspace = true }
+orml-xtokens = { workspace = true }
+zenlink-protocol = { workspace = true }
+
+bifrost-primitives = { workspace = true }
+bifrost-xcm-interface = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-stable-pool = { workspace = true }
+bifrost-stable-asset = { workspace = true }
+orml-tokens = { workspace = true }
+
+[dev-dependencies]
+sp-io = { workspace = true }
+pallet-balances = { workspace = true }
+bifrost-vtoken-minting = { workspace = true }
+bifrost-slp = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+bifrost-currencies = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+pallet-xcm  = { workspace = true }
+xcm-simulator  = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+pallet-collective = { workspace = true }
+parachain-info = { workspace = true }
+
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"scale-info/std",
+	"serde/std",
+	"zenlink-protocol/std",
+	"orml-traits/std",
+	"orml-xtokens/std",
+	"bifrost-primitives/std",
+	"cumulus-primitives-core/std",
+	"sp-std/std",
+	"bifrost-slp/std",
+	"bifrost-runtime-common/std",
+	"cumulus-pallet-xcm/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"bifrost-asset-registry/std",
+	"bifrost-stable-pool/std",
+	"bifrost-stable-asset/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]
+with-bifrost-polkadot-runtime = []

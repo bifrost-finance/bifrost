@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+use bifrost_primitives::currency::ZLK;
 use frame_support::{assert_noop, assert_ok};
 
 use crate::{mock::*, *};
@@ -30,7 +31,7 @@ fn initialize_charlie_as_issue_whitelist_member() {
 		CHARLIE
 	));
 	// Issue some ZLK to Charlie's account
-	assert_ok!(TokenIssuer::issue(Origin::signed(CHARLIE), CHARLIE, ZLK, 1000));
+	assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), CHARLIE, ZLK, 1000));
 }
 
 #[test]
@@ -38,7 +39,7 @@ fn add_to_issue_whitelist_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		// Charlie is not allowed to issue ZLK.
 		assert_noop!(
-			TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800),
+			TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
 			Error::<Runtime>::NotAllowed
 		);
 		// Chalie is added to the issue whitelist to have the ability of issuing ZLK.
@@ -47,9 +48,11 @@ fn add_to_issue_whitelist_should_work() {
 			ZLK,
 			CHARLIE
 		));
-		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(vec![CHARLIE]));
+
+		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_list));
 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800));
+		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 	});
 }
@@ -74,7 +77,7 @@ fn remove_from_issue_whitelist_should_work() {
 		));
 
 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800));
+		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 
 		// Successfully remove Charlie
@@ -85,7 +88,7 @@ fn remove_from_issue_whitelist_should_work() {
 		));
 		// Charlie is no longer able to issue token to any account
 		assert_noop!(
-			TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800),
+			TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
 			Error::<Runtime>::NotAllowed
 		);
 	});
@@ -98,7 +101,7 @@ fn add_to_transfer_whitelist_should_work() {
 
 		// Charlie is not allowed to transfer ZLK.
 		assert_noop!(
-			TokenIssuer::transfer(Origin::signed(CHARLIE), ALICE, ZLK, 800),
+			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
 			Error::<Runtime>::NotAllowed
 		);
 		// Chalie is added to the transfer whitelist to have the ability of transferring ZLK.
@@ -107,13 +110,15 @@ fn add_to_transfer_whitelist_should_work() {
 			ZLK,
 			CHARLIE
 		));
-		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(vec![CHARLIE]));
+
+		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_list));
 		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::transfer(Origin::signed(CHARLIE), ALICE, ZLK, 800));
+		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 		// exceed balance
 		assert_noop!(
-			TokenIssuer::transfer(Origin::signed(CHARLIE), ALICE, ZLK, 300),
+			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 300),
 			Error::<Runtime>::NotEnoughBalance
 		);
 	});
@@ -141,7 +146,7 @@ fn remove_from_transfer_whitelist_should_work() {
 		));
 
 		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::transfer(Origin::signed(CHARLIE), ALICE, ZLK, 800));
+		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 
 		// Successfully remove Charlie
@@ -152,7 +157,7 @@ fn remove_from_transfer_whitelist_should_work() {
 		));
 		// Charlie is no longer able to transfer token to any account
 		assert_noop!(
-			TokenIssuer::transfer(Origin::signed(CHARLIE), ALICE, ZLK, 800),
+			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
 			Error::<Runtime>::NotAllowed
 		);
 	});
