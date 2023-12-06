@@ -24,7 +24,7 @@ use bifrost_primitives::{
 	KSM,
 };
 use bifrost_slp::{Ledger, MinimumsMaximums, SubstrateLedger};
-use bifrost_vtoken_voting::{AccountVote, TallyOf, VoteRole};
+use bifrost_vtoken_voting::{AccountVote, TallyOf};
 use frame_support::{
 	assert_ok,
 	dispatch::RawOrigin,
@@ -32,7 +32,8 @@ use frame_support::{
 	weights::Weight,
 };
 use integration_tests_common::{BifrostKusama, BifrostKusamaAlice, Kusama, KusamaAlice};
-use pallet_conviction_voting::{Conviction, Vote};
+use pallet_conviction_voting::Vote;
+use sp_runtime::Perbill;
 use xcm::v3::Parent;
 use xcm_emulator::{Parachain, RelayChain, TestExt};
 
@@ -138,12 +139,12 @@ fn vote_works() {
 			})))
 		));
 
-		assert_ok!(VtokenVoting::set_delegator_role(
+		assert_ok!(VtokenVoting::set_vote_cap_ratio(
 			RuntimeOrigin::root(),
 			vtoken,
-			5,
-			VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
+			Perbill::from_percent(90)
 		));
+		assert_ok!(VtokenVoting::add_delegator(RuntimeOrigin::root(), vtoken, 5));
 		assert_ok!(VtokenVoting::set_vote_locking_period(RuntimeOrigin::root(), vtoken, 0));
 		assert_ok!(VtokenVoting::set_undeciding_timeout(RuntimeOrigin::root(), vtoken, 100));
 
