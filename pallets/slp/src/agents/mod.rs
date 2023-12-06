@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,6 @@
 mod astar_agent;
 mod common;
 mod filecoin_agent;
-mod moonbeam_agent;
 mod parachain_staking_agent;
 mod phala_agent;
 mod polkadot_agent;
@@ -28,7 +27,6 @@ mod utils;
 pub use astar_agent::*;
 pub use common::*;
 pub use filecoin_agent::*;
-pub use moonbeam_agent::*;
 pub use parachain_staking_agent::*;
 pub use phala_agent::*;
 pub use polkadot_agent::*;

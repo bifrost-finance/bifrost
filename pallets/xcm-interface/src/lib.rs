@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,8 +21,8 @@
 pub mod calls;
 pub mod traits;
 use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{traits::XcmDestWeightAndFeeHandler, CurrencyIdMapping, XcmOperationType};
 pub use calls::*;
-use node_primitives::{traits::XcmDestWeightAndFeeHandler, CurrencyIdMapping, XcmOperationType};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
@@ -70,13 +70,6 @@ pub mod pallet {
 	use super::*;
 	use crate::traits::*;
 
-	// DEPRECATED
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
-	pub enum XcmInterfaceOperation {
-		UmpContributeTransact,
-		StatemineTransfer,
-	}
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -123,7 +116,7 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		#[pallet::constant]
-		type CallBackTimeOut: Get<Self::BlockNumber>;
+		type CallBackTimeOut: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::error]
@@ -146,12 +139,6 @@ pub mod pallet {
 	/// XcmWeightAndFee from SLP module).
 	#[allow(unused)]
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-
-	// DEPRECATED: This storage is deprecated, we use XcmWeightAndFee instead.
-	#[pallet::storage]
-	#[pallet::getter(fn xcm_weight_and_fee)]
-	pub type XcmDestWeightAndFee<T: Config> =
-		StorageMap<_, Twox64Concat, XcmInterfaceOperation, (Weight, BalanceOf<T>), OptionQuery>;
 
 	/// The dest weight limit and fee for execution XCM msg sent by XcmInterface. Must be
 	/// sufficient, otherwise the execution of XCM msg on relaychain will fail.
@@ -180,7 +167,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

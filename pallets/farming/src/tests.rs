@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -22,10 +22,10 @@
 
 use crate::{mock::*, *};
 use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::TokenInfo;
 use bifrost_runtime_common::milli;
 use bifrost_ve_minting::VeMintingInterface;
 use frame_support::{assert_err, assert_noop, assert_ok};
-use node_primitives::TokenInfo;
 
 fn asset_registry() {
 	let items = vec![(KSM, 10 * milli::<Runtime>(KSM)), (BNC, 10 * milli::<Runtime>(BNC))];
@@ -47,7 +47,6 @@ fn asset_registry() {
 #[test]
 fn boost() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		env_logger::try_init().unwrap_or(());
 		asset_registry();
 		System::set_block_number(System::block_number() + 20);
 		assert_ok!(VeMinting::set_config(

@@ -1,49 +1,48 @@
-// This file is part of NUTS Finance.
+// This file is part of Bifrost.
 
-// Copyright (C) 2017-2021 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright (C) Liebi Technologies PTE. LTD.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// 	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as stable_asset;
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	parameter_types,
-	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, Nothing, OnUnbalanced},
+	traits::{
+		ConstU128, ConstU16, ConstU32, ConstU64, Currency, EnsureOrigin, Everything, Nothing,
+		OnUnbalanced,
+	},
 	PalletId,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage, DispatchError,
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call},
-		StableAsset: stable_asset::{Pallet, Call, Storage, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Balances: pallet_balances,
+		Tokens: orml_tokens,
+		Currencies: bifrost_currencies,
+		StableAsset: stable_asset,
 	}
 );
 
@@ -56,13 +55,12 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
@@ -86,7 +84,7 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ();
 	type MaxFreezes = ();
@@ -117,7 +115,8 @@ parameter_types! {
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type AdaptedBasicCurrency = bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+pub type AdaptedBasicCurrency =
+	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -131,8 +130,7 @@ type AtLeast64BitUnsigned = u128;
 
 pub type AssetId = i64;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 pub struct Asset {
 	total: Balance,
@@ -152,11 +150,9 @@ impl CreateAssets<AssetId> for TestAssets {
 	fn create_asset() -> Result<AssetId, DispatchError> {
 		ASSETS.with(|d| -> Result<AssetId, DispatchError> {
 			let mut d = d.borrow_mut();
-			let id = AssetId::try_from(d.len()).map_err(|_| DispatchError::Other("Too large id"))?;
-			d.push(Asset {
-				total: 0,
-				balances: HashMap::new(),
-			});
+			let id =
+				AssetId::try_from(d.len()).map_err(|_| DispatchError::Other("Too large id"))?;
+			d.push(Asset { total: 0, balances: HashMap::new() });
 
 			Ok(id)
 		})
@@ -191,7 +187,11 @@ impl MultiCurrency<AccountId> for TestAssets {
 			.unwrap_or(0)
 	}
 
-	fn ensure_can_withdraw(_currency_id: Self::CurrencyId, _who: &AccountId, _amount: Self::Balance) -> DispatchResult {
+	fn ensure_can_withdraw(
+		_currency_id: Self::CurrencyId,
+		_who: &AccountId,
+		_amount: Self::Balance,
+	) -> DispatchResult {
 		todo!()
 	}
 
@@ -208,7 +208,8 @@ impl MultiCurrency<AccountId> for TestAssets {
 
 	fn deposit(asset: Self::CurrencyId, dest: &AccountId, amount: Self::Balance) -> DispatchResult {
 		ASSETS.with(|d| -> DispatchResult {
-			let i = usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
+			let i =
+				usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
 			let mut d = d.borrow_mut();
 			let a = d.get_mut(i).ok_or(DispatchError::Other("Index out of range"))?;
 
@@ -224,9 +225,14 @@ impl MultiCurrency<AccountId> for TestAssets {
 		})
 	}
 
-	fn withdraw(asset: Self::CurrencyId, dest: &AccountId, amount: Self::Balance) -> DispatchResult {
+	fn withdraw(
+		asset: Self::CurrencyId,
+		dest: &AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
 		ASSETS.with(|d| -> DispatchResult {
-			let i = usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
+			let i =
+				usize::try_from(asset).map_err(|_| DispatchError::Other("Index out of range"))?;
 			let mut d = d.borrow_mut();
 			let a = d.get_mut(i).ok_or(DispatchError::Other("Index out of range"))?;
 
@@ -244,7 +250,11 @@ impl MultiCurrency<AccountId> for TestAssets {
 		todo!()
 	}
 
-	fn slash(_currency_id: Self::CurrencyId, _who: &AccountId, _amount: Self::Balance) -> Self::Balance {
+	fn slash(
+		_currency_id: Self::CurrencyId,
+		_who: &AccountId,
+		_amount: Self::Balance,
+	) -> Self::Balance {
 		todo!()
 	}
 }
@@ -303,8 +313,5 @@ impl stable_asset::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into()
+	frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }

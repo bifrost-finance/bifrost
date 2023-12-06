@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,27 +18,26 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use bifrost_asset_registry::AssetMetadata;
-use codec::{Decode, Encode, MaxEncodedLen};
+use bifrost_primitives::{
+	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::Get,
-	RuntimeDebug,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::{
-	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
-};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::{Hasher, H160};
 use sp_runtime::{
 	traits::{BlakeTwo256, CheckedSub},
-	DispatchError,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::vec;
 use xcm::{latest::prelude::*, v3::MultiLocation};
@@ -79,6 +78,7 @@ pub enum SupportChain {
 	Astar,
 	Moonbeam,
 	Hydradx,
+	Interlay,
 }
 
 #[derive(
@@ -98,14 +98,15 @@ pub enum TargetChain<AccountId> {
 	Astar(H160),
 	Moonbeam(H160),
 	Hydradx(AccountId),
+	Interlay(AccountId),
 }
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::RedeemType;
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::pallet_prelude::{ValueQuery, *};
-	use node_primitives::RedeemType;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -130,6 +131,7 @@ pub mod pallet {
 		type StablePoolHandler: StablePoolHandler<
 			Balance = BalanceOf<Self>,
 			AccountId = AccountIdOf<Self>,
+			CurrencyId = CurrencyIdOf<Self>,
 		>;
 
 		/// xtokens xcm transfer interface
@@ -425,6 +427,7 @@ pub mod pallet {
 				},
 				TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
 				TargetChain::Hydradx(receiver) => RedeemType::Hydradx(receiver),
+				TargetChain::Interlay(receiver) => RedeemType::Interlay(receiver),
 			};
 
 			if vtoken_id == VFIL {
@@ -638,6 +641,10 @@ impl<T: Config> Pallet<T> {
 				evm_caller_account_id = evm_contract_account_id.clone();
 				SupportChain::Hydradx
 			},
+			TargetChain::Interlay(_) => {
+				evm_caller_account_id = evm_contract_account_id.clone();
+				SupportChain::Interlay
+			},
 		};
 		let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
 		ensure!(
@@ -693,6 +700,17 @@ impl<T: Config> Pallet<T> {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
+					),
+				};
+
+				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+			},
+			TargetChain::Interlay(receiver) => {
+				let dest = MultiLocation {
+					parents: 1,
+					interior: X2(
+						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};

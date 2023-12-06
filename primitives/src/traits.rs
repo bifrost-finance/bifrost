@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -24,15 +24,13 @@ use crate::{
 	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
 	TokenSymbol, XcmOperationType,
 };
-use codec::{Decode, Encode, FullCodec};
-use frame_support::{
-	dispatch::DispatchError,
-	pallet_prelude::{DispatchResultWithPostInfo, Weight},
-	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
-};
+use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
+use parity_scale_codec::{Decode, Encode, FullCodec};
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero},
-	BoundedVec, DispatchResult,
+	traits::{
+		AccountIdConversion, AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero,
+	},
+	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
@@ -151,6 +149,7 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
+	fn get_interlay_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
@@ -319,7 +318,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		token_id: CurrencyId,
 		token_amount: Balance,
 		remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo;
+	) -> Result<Balance, DispatchError>;
 	fn redeem(
 		exchanger: AccountId,
 		vtoken_id: CurrencyId,
@@ -335,18 +334,19 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		token_amount: Balance,
-	) -> Balance;
+	) -> Result<Balance, DispatchError>;
 	fn vtoken_to_token(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
-	) -> Balance;
+	) -> Result<Balance, DispatchError>;
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
+	fn get_interlay_parachain_id() -> u32;
 }
 
 impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, CurrencyId, Balance>
@@ -357,8 +357,8 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_token_amount: Balance,
 		_remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo {
-		Ok(().into())
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn redeem(
@@ -382,16 +382,16 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_token_amount: Balance,
-	) -> Balance {
-		Zero::zero()
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn vtoken_to_token(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_vtoken_amount: Balance,
-	) -> Balance {
-		Zero::zero()
+	) -> Result<Balance, DispatchError> {
+		Ok(Zero::zero())
 	}
 
 	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {
@@ -413,6 +413,9 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		0
 	}
 	fn get_hydradx_parachain_id() -> u32 {
+		0
+	}
+	fn get_interlay_parachain_id() -> u32 {
 		0
 	}
 }

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,15 +19,16 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{benchmarks, vec, whitelisted_caller};
-use frame_support::{assert_ok, dispatch::Weight};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, TokenSymbol};
+use sp_std::vec;
 
 use crate::{Pallet as FeeShare, *};
 
 benchmarks! {
-	on_initialize {}:{FeeShare::<T>::on_idle(T::BlockNumber::from(10u32),Weight::from_parts(0, 0));}
+	on_initialize {}:{FeeShare::<T>::on_idle(BlockNumberFor::<T>::from(10u32),Weight::from_parts(0, 0));}
 
 	create_distribution {
 		let caller: T::AccountId = whitelisted_caller();
@@ -55,7 +56,7 @@ benchmarks! {
 		None,
 		Some(tokens_proportion.clone()),
 		Some(true))
-	set_era_length {}: _(RawOrigin::Root,T::BlockNumber::from(10u32))
+	set_era_length {}: _(RawOrigin::Root,BlockNumberFor::<T>::from(10u32))
 	execute_distribute {
 		let caller: T::AccountId = whitelisted_caller();
 		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];

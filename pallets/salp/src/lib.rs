@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -23,25 +23,25 @@
 pub mod benchmarking;
 #[cfg(test)]
 pub mod mock;
-pub mod remove_storage;
 #[cfg(test)]
 mod tests;
 pub mod weights;
 pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
-use cumulus_primitives_core::{QueryId, Response};
-use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
-use node_primitives::{
+use bifrost_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
 	VtokenMintingInterface,
 };
+use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
+use bifrost_xcm_interface::ChainId;
+use cumulus_primitives_core::{QueryId, Response};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_xcm::ensure_response;
 use scale_info::TypeInfo;
-use xcm_interface::ChainId;
+use sp_runtime::traits::One;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -91,27 +91,26 @@ pub struct FundInfo<Balance, LeasePeriod> {
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
+	use bifrost_primitives::{
+		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
+	};
+	use bifrost_xcm_interface::traits::XcmHelper;
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
-		sp_std::convert::TryInto,
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{
-		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
-	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
-	use sp_std::prelude::*;
+	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v3::{MaybeErrorCode, MultiLocation};
-	use xcm_interface::traits::XcmHelper;
 
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
+	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
 			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
@@ -337,19 +336,13 @@ pub mod pallet {
 	>;
 
 	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub initial_multisig_account: Option<AccountIdOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { initial_multisig_account: None }
-		}
-	}
-
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			if let Some(ref key) = self.initial_multisig_account {
 				MultisigConfirmAccount::<T>::put(key)
@@ -1277,7 +1270,7 @@ pub mod pallet {
 						relay_currency_id,
 						relay_vtoken_id,
 						value,
-					);
+					)?;
 					T::StablePool::swap(
 						&T::BuybackPalletId::get().into_account_truncating(),
 						pool_id,
@@ -1303,7 +1296,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
-			if n != 0 && (n % T::ReleaseCycle::get()) == 0 {
+			if n != Zero::zero() && (n % T::ReleaseCycle::get()) == Zero::zero() {
 				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
 					// Calculate the release amount
 					let release_amount = T::ReleaseRatio::get() * rp_balance;
@@ -1337,7 +1330,7 @@ pub mod pallet {
 			block: BlockNumberFor<T>,
 			last_slot: LeasePeriod,
 		) -> Result<bool, Error<T>> {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			Ok(block >= block_end_redeem)
@@ -1349,19 +1342,14 @@ pub mod pallet {
 			block: BlockNumberFor<T>,
 			last_slot: LeasePeriod,
 		) -> Result<bool, Error<T>> {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot)?;
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			Ok(block >= block_begin_redeem && block < block_end_redeem)
 		}
 
-		pub(crate) fn block_end_of_lease_period_index(
-			slot: LeasePeriod,
-		) -> Result<BlockNumberFor<T>, Error<T>> {
-			let end_block =
-				(slot + 1).checked_mul(T::LeasePeriod::get()).ok_or(Error::<T>::Overflow)?;
-
-			Ok(end_block)
+		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			(BlockNumberFor::<T>::from(slot) + One::one()).saturating_mul(T::LeasePeriod::get())
 		}
 
 		pub fn find_fund(
@@ -1451,7 +1439,8 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
+impl<T: Config>
+	bifrost_xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
 	for Pallet<T>
 {
 	fn confirm_contribute_call() -> <T as Config>::RuntimeCall {

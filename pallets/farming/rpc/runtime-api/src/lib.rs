@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Codec;
-use node_primitives::Balance;
+use bifrost_primitives::{Balance, CurrencyId};
+use parity_scale_codec::Codec;
 use sp_api::decl_runtime_apis;
 use sp_std::vec::Vec;
 

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::MultiLocation;
-use codec::{alloc::collections::BTreeMap, Decode, Encode};
-use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TimeUnit};
+use bifrost_primitives::{CurrencyId, TimeUnit};
+use parity_scale_codec::{alloc::collections::BTreeMap, Decode, Encode};
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -55,9 +55,9 @@ pub enum OneToManyDelegationAction<Balance> {
 	Decrease(Balance),
 }
 
-/// A type for Moonbeam ledger updating entries
+/// A type for ParachainStaking ledger updating entries
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct MoonbeamLedgerUpdateEntry<Balance> {
+pub struct ParachainStakingLedgerUpdateEntry<Balance> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
@@ -65,7 +65,7 @@ pub struct MoonbeamLedgerUpdateEntry<Balance> {
 	/// The validator id that needs to be update
 	pub validator_id: Option<MultiLocation>,
 	/// Update operation type
-	pub update_operation: MoonbeamLedgerUpdateOperation,
+	pub update_operation: ParachainStakingLedgerUpdateOperation,
 	#[codec(compact)]
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
@@ -75,7 +75,7 @@ pub struct MoonbeamLedgerUpdateEntry<Balance> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum MoonbeamLedgerUpdateOperation {
+pub enum ParachainStakingLedgerUpdateOperation {
 	Bond,
 	BondLess,
 	Revoke,

@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,12 +19,12 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate::{mock::*, Error, FundStatus, *};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use bifrost_primitives::{ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
+use bifrost_xcm_interface::SalpHelper;
+use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::traits::AccountIdConversion;
-use xcm_interface::SalpHelper;
+use sp_runtime::{traits::AccountIdConversion, DispatchError};
 use zenlink_protocol::AssetId;
 
 #[test]
@@ -901,7 +901,7 @@ fn redeem_should_work() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -970,7 +970,7 @@ fn redeem_with_speical_vsbond_should_work() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 2001));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 2001));
@@ -1027,7 +1027,7 @@ fn redeem_with_wrong_origin_should_fail() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -1049,7 +1049,7 @@ fn redeem_with_not_redeemable_vsbond_should_fail() {
 
 		// Mock the BlockNumber
 		let block_not_redeemable = LeasePeriod::get();
-		System::set_block_number(block_not_redeemable);
+		System::set_block_number(block_not_redeemable.into());
 
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
@@ -1083,7 +1083,7 @@ fn redeem_without_enough_vsassets_should_fail() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -1126,7 +1126,7 @@ fn redeem_without_enough_balance_in_pool_should_fail() {
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-		System::set_block_number(block_begin_redeem);
+		System::set_block_number(block_begin_redeem.into());
 
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -1148,7 +1148,7 @@ fn redeem_with_when_ump_wrong_should_fail() {
 fn release_from_redeem_to_bancor_should_work() {
 	fn run_to_block(n: BlockNumber) {
 		use frame_support::traits::Hooks;
-		while System::block_number() <= n {
+		while System::block_number() <= n.into() {
 			Salp::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 			System::set_block_number(System::block_number() + 1);
@@ -1348,8 +1348,8 @@ fn refund_meanwhile_issue_should_work() {
 			asset_0_currency_id,
 			asset_1_currency_id
 		));
-		let deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
-			<Test as frame_system::Config>::BlockNumber::from(100u32);
+		let deadline: BlockNumberFor<Test> =
+			<frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);
 		assert_ok!(ZenlinkProtocol::add_liquidity(
 			RuntimeOrigin::signed(ALICE),
 			asset_0_currency_id,
@@ -1448,7 +1448,7 @@ fn refund_meanwhile_issue_should_work() {
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
 		let token_value = VtokenMinting::token_to_vtoken(KSM, VKSM, 100);
-		assert_eq!(token_value, 100);
+		assert_eq!(token_value, Ok(100));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 95000);
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), buyback_account, KSM, 100, 0));
 

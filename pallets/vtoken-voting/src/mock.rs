@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,25 +20,25 @@
 
 use crate as vtoken_voting;
 use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult};
+use bifrost_primitives::{
+	currency::{KSM, VBNC, VKSM},
+	traits::XcmDestWeightAndFeeHandler,
+	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
 	pallet_prelude::Weight,
 	parameter_types,
-	traits::{Everything, GenesisBuild, Get, Nothing},
+	traits::{Everything, Get, Nothing},
 	weights::RuntimeDbWeight,
 };
 use frame_system::EnsureRoot;
-use node_primitives::{
-	currency::{KSM, VBNC, VKSM},
-	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
-};
 use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
+	BuildStorage,
 };
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
@@ -49,7 +49,6 @@ pub type Amount = i128;
 pub type Balance = u128;
 pub type AccountId = u64;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 pub const ALICE: u64 = 1;
@@ -58,17 +57,13 @@ pub const CHARLIE: u64 = 3;
 pub const CONTROLLER: u64 = 1000;
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
-		VtokenVoting: vtoken_voting::{Pallet, Call, Storage, Event<T>},
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		PolkadotXcm: pallet_xcm,
+		VtokenVoting: vtoken_voting,
 	}
 );
 
@@ -82,15 +77,14 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
+	type Nonce = u64;
+	type Block = Block;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = DbWeight;
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -131,7 +125,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -193,6 +187,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
+	type Aliasers = Nothing;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -224,6 +219,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 ord_parameter_types! {
@@ -342,7 +339,7 @@ impl vtoken_voting::Config for Runtime {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![(ALICE, 10), (BOB, 20), (CHARLIE, 30)],
 	}
@@ -381,8 +378,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 #[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext_benchmark() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<Runtime>()
+	frame_system::GenesisConfig::<Runtime>::default()
+		.build_storage()
 		.unwrap()
 		.into()
 }

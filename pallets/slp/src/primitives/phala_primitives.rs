@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{MultiLocation, TimeUnit};
-use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TokenSymbol};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 
@@ -42,4 +42,7 @@ pub struct PhalaLedger<Balance> {
 	pub bonded_pool_id: Option<u64>,
 	/// If the delegator is bonded, it should record the bonded pool NFT collection id.
 	pub bonded_pool_collection_id: Option<u32>,
+	/// if the bonded pool is a vault, it is true. if the bonded pool is a stake pool, it is false.
+	/// If not bonded, it is None.
+	pub bonded_is_vault: Option<bool>,
 }

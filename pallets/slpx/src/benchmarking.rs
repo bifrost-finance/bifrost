@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,10 +19,10 @@
 
 use crate::*;
 use bifrost_asset_registry::CurrencyIdToLocations;
+use bifrost_primitives::{CurrencyId, KSM};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;
-use node_primitives::{CurrencyId, KSM};
 
 fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId, H160) {
 	let caller: T::AccountId = whitelisted_caller();
@@ -52,7 +52,7 @@ fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId
 	(caller, receiver)
 }
 
-#[benchmarks(where  T: Config + bifrost_asset_registry::Config + bifrost_stable_pool::Config + nutsfinance_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
+#[benchmarks(where  T: Config + bifrost_asset_registry::Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
 mod benchmarks {
 	use super::*;
 	use bifrost_stable_pool::AtLeast64BitUnsignedOf;
@@ -163,7 +163,7 @@ mod benchmarks {
 		));
 
 		let amounts1: AtLeast64BitUnsignedOf<T> = 1_000_000_000_000u128.into();
-		let amounts: <T as nutsfinance_stable_asset::pallet::Config>::Balance = amounts1.into();
+		let amounts: <T as bifrost_stable_asset::pallet::Config>::Balance = amounts1.into();
 		assert_ok!(bifrost_stable_pool::Pallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
 			0,

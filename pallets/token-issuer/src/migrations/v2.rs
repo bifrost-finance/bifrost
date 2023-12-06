@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,8 @@
 
 use crate::*;
 use frame_support::traits::OnRuntimeUpgrade;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::TryRuntimeError;
 
 const LOG_TARGET: &str = "token-issuer::migration";
 
@@ -79,7 +81,7 @@ impl<T: Config> OnRuntimeUpgrade for TokenIssuerMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 		let issue_white_list_cnt = IssueWhiteList::<T>::iter().count();
 		// print out the pre-migrate storage count
 		log::info!(target: LOG_TARGET, "IssueWhiteList storage count: {:?}", issue_white_list_cnt);
@@ -96,7 +98,7 @@ impl<T: Config> OnRuntimeUpgrade for TokenIssuerMigration<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(cnt: Vec<u8>) -> Result<(), TryRuntimeError> {
 		let (issue_white_list_cnt_old, transfer_white_list_cnt_old): (u32, u32) = Decode::decode(
 			&mut cnt.as_slice(),
 		)

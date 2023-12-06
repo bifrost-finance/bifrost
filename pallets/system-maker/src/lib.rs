@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,9 @@ mod benchmarking;
 
 pub mod weights;
 
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -37,7 +40,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_core::U256;
@@ -247,8 +249,9 @@ pub mod pallet {
 			let amount_out_min: u128 = U256::from(info.granularity.saturated_into::<u128>())
 				.saturating_mul(U256::from(1_000_000u32))
 				.checked_div(denominator)
+				.map(|x| u128::try_from(x))
 				.ok_or(ArithmeticError::Overflow)?
-				.as_u128();
+				.map_err(|_| ArithmeticError::Overflow)?;
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				system_maker,

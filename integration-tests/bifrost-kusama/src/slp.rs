@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,80 +18,28 @@
 
 //! Cross-chain transfer tests within Kusama network.
 
-/*
-
-fail_validators_by_delegator_query_response
-confirm_validators_by_delegator_query_response
-fail_delegator_ledger_query_response
-confirm_delegator_ledger_query_response
-
-remove_supplement_fee_account_from_whitelist
-add_supplement_fee_account_to_whitelist
-supplement_fee_reserve
-
-set_ongoing_time_unit_update_interval
-update_ongoing_time_unit
-
-set_currency_tune_exchange_rate_limit
-set_hosting_fees
-set_currency_delays
-set_minimums_and_maximums
-
-set_delegator_ledger
-set_validators_by_delegator
-set_fee_source
-set_operate_origin
-set_xcm_dest_weight_and_fee
-
-remove_validator
-add_validator
-
-initialize_delegator
-remove_delegator
-add_delegator
-
-charge_host_fee_and_tune_vtoken_exchange_rate
-refund_currency_due_unbond
-
-decrease_token_pool
-increase_token_pool
-
-transfer_to
-transfer_back
-
-chill
-liquidize
-payout
-
-redelegate
-undelegate
-delegate
-
-rebond
-unbond_all
-unbond
-bond_extra
-bond
-
-
-bond/unbond/bond_extra/unbond_all/rebond/chill/liquidize  confirm_delegator_ledger_query_response
-delegate/undelegate/redelegate  confirm_validators_by_delegator_query_response
-
-*/
-
-#![cfg(test)]
-use bifrost_kusama_runtime::{NativeCurrencyId, VtokenMinting};
+use bifrost_kusama_runtime::{
+	Balances, Currencies, NativeCurrencyId, RelayCurrencyId, Runtime, RuntimeOrigin, Slp,
+	VtokenMinting, XcmDestWeightAndFeeHandler,
+};
+use bifrost_primitives::{TimeUnit, XcmOperationType as XcmOperation, KSM, VKSM};
 use bifrost_slp::{primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger};
 use frame_support::{assert_ok, BoundedVec};
-use node_primitives::{TimeUnit, XcmOperationType as XcmOperation};
+use integration_tests_common::{impls::AccountId, BifrostKusama, Kusama};
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
 use sp_runtime::Permill;
 use xcm::{prelude::*, v3::Weight, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
-use crate::{kusama_integration_tests::*, kusama_test_net::*};
-
+pub const ALICE: [u8; 32] =
+	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
+pub const BOB: [u8; 32] =
+	hex_literal::hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"];
+pub const KUSAMA_ALICE_STASH_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"];
+pub const KUSAMA_BOB_STASH_ACCOUNT: [u8; 32] =
+	hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"];
 const ENTRANCE_ACCOUNT: [u8; 32] =
 	hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"];
 const BIFROST_TREASURY_ACCOUNT: [u8; 32] =
@@ -128,6 +76,9 @@ const KUSAMA_BOB_STASH_MULTILOCATION: MultiLocation = MultiLocation {
 	interior: X1(AccountId32 { network: None, id: KUSAMA_BOB_STASH_ACCOUNT }),
 };
 
+const KSM_DECIMALS: u128 = 1_000_000_000_000;
+const BNC_DECIMALS: u128 = 1_000_000_000_000;
+
 /// ****************************************************
 /// *********  Preparation section  ********************
 /// ****************************************************
@@ -139,7 +90,7 @@ fn slp_setup() {
 	cross_ksm_to_bifrost(ALICE, 10000 * KSM_DECIMALS);
 	cross_ksm_to_bifrost(BOB, 10000 * KSM_DECIMALS);
 
-	KusamaNet::execute_with(|| {
+	Kusama::execute_with(|| {
 		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
@@ -147,7 +98,7 @@ fn slp_setup() {
 		));
 	});
 
-	Bifrost::execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		assert_ok!(Balances::force_set_balance(
 			RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(BIFROST_TREASURY_ACCOUNT)),
@@ -157,7 +108,7 @@ fn slp_setup() {
 
 	vksm_vtoken_minting_setup();
 
-	Bifrost::execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		// set operate origin to be ALICE for vksm
 		assert_ok!(Slp::set_operate_origin(
 			RuntimeOrigin::root(),
@@ -337,7 +288,7 @@ fn slp_setup() {
 }
 
 fn vksm_vtoken_minting_setup() {
-	Bifrost::execute_with(|| {
+	BifrostKusama::execute_with(|| {
 		// Set the vtoken-minting mint and redeem fee rate to 0.1% with origin root. This is for all
 		// tokens, not just vksm.
 		assert_ok!(VtokenMinting::set_fees(
@@ -381,7 +332,7 @@ fn vksm_vtoken_minting_setup() {
 }
 
 fn cross_ksm_to_bifrost(to: [u8; 32], amount: u128) {
-	KusamaNet::execute_with(|| {
+	Kusama::execute_with(|| {
 		assert_ok!(kusama_runtime::Balances::force_set_balance(
 			kusama_runtime::RuntimeOrigin::root(),
 			sp_runtime::MultiAddress::Id(AccountId::from(to)),
@@ -403,40 +354,19 @@ fn cross_ksm_to_bifrost(to: [u8; 32], amount: u128) {
 fn vtoken_minting() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		slp_setup();
-		Bifrost::execute_with(|| {
-			println!(
-				"{:?}",
-				Currencies::free_balance(
-					CurrencyId::VToken(TokenSymbol::KSM),
-					&AccountId::from(ALICE)
-				)
-			);
-			println!(
-				"{:?}",
-				Currencies::free_balance(
-					CurrencyId::Token(TokenSymbol::KSM),
-					&AccountId::from(ALICE)
-				)
-			);
+		BifrostKusama::execute_with(|| {
+			println!("{:?}", Currencies::free_balance(VKSM, &AccountId::from(ALICE)));
+			println!("{:?}", Currencies::free_balance(KSM, &AccountId::from(ALICE)));
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				CurrencyId::Token(TokenSymbol::KSM),
+				KSM,
 				100 * KSM_DECIMALS,
 				BoundedVec::default()
 			));
 			// alice account should have 99.9 vKSM
+			assert_eq!(Currencies::free_balance(VKSM, &AccountId::from(ALICE)), 99900000000000);
 			assert_eq!(
-				Currencies::free_balance(
-					CurrencyId::VToken(TokenSymbol::KSM),
-					&AccountId::from(ALICE)
-				),
-				99900000000000
-			);
-			assert_eq!(
-				Currencies::free_balance(
-					CurrencyId::Token(TokenSymbol::KSM),
-					&AccountId::from(ENTRANCE_ACCOUNT)
-				),
+				Currencies::free_balance(KSM, &AccountId::from(ENTRANCE_ACCOUNT)),
 				99900000000000
 			)
 		})
@@ -445,101 +375,79 @@ fn vtoken_minting() {
 
 #[test]
 fn transfer_to() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				10000 * KSM_DECIMALS
-			);
-		});
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			10000 * KSM_DECIMALS
+		);
+	});
 
-		Bifrost::execute_with(|| {
-			// Bond 50 ksm for sub-account index 0
-			assert_ok!(VtokenMinting::mint(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				CurrencyId::Token(TokenSymbol::KSM),
-				100 * KSM_DECIMALS,
-				BoundedVec::default()
-			));
+	BifrostKusama::execute_with(|| {
+		// Bond 50 ksm for sub-account index 0
+		assert_ok!(VtokenMinting::mint(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			KSM,
+			100 * KSM_DECIMALS,
+			BoundedVec::default()
+		));
 
-			assert_ok!(Slp::transfer_to(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(ENTRANCE_ACCOUNT_MULTILOCATION),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-			));
+		assert_ok!(Slp::transfer_to(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(ENTRANCE_ACCOUNT_MULTILOCATION),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+		));
 
-			assert_eq!(
-				Currencies::free_balance(
-					CurrencyId::Token(TokenSymbol::KSM),
-					&AccountId::from(ENTRANCE_ACCOUNT)
-				),
-				49900000000000
-			);
-		});
+		assert_eq!(
+			Currencies::free_balance(KSM, &AccountId::from(ENTRANCE_ACCOUNT)),
+			49900000000000
+		);
+	});
 
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				10049999909994200
-			);
-		});
-	})
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			10049999918220455
+		);
+	});
 }
 
 #[test]
 fn transfer_back() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			10000 * KSM_DECIMALS
+		);
+	});
 
-		KusamaNet::execute_with(|| {
-			use kusama_runtime::System;
-			System::reset_events();
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				10000 * KSM_DECIMALS
-			);
-		});
+	BifrostKusama::execute_with(|| {
+		// Bond 50 ksm for sub-account index 0
+		assert_eq!(Currencies::free_balance(KSM, &AccountId::from(EXIT_ACCOUNT)), 0);
 
-		Bifrost::execute_with(|| {
-			// Bond 50 ksm for sub-account index 0
-			assert_eq!(
-				Currencies::free_balance(
-					CurrencyId::Token(TokenSymbol::KSM),
-					&AccountId::from(EXIT_ACCOUNT)
-				),
-				0
-			);
+		assert_ok!(Slp::transfer_back(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			Box::new(EXIT_ACCOUNT_MULTILOCATION),
+			50 * KSM_DECIMALS,
+		));
+	});
 
-			assert_ok!(Slp::transfer_back(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				Box::new(EXIT_ACCOUNT_MULTILOCATION),
-				50 * KSM_DECIMALS,
-			));
-		});
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			9950 * KSM_DECIMALS
+		);
+	});
 
-		Bifrost::execute_with(|| {
-			assert_eq!(
-				Currencies::free_balance(
-					CurrencyId::Token(TokenSymbol::KSM),
-					&AccountId::from(EXIT_ACCOUNT)
-				),
-				49999929608000
-			);
-		});
-
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				9950 * KSM_DECIMALS
-			);
-		});
-	})
+	BifrostKusama::execute_with(|| {
+		assert_eq!(Currencies::free_balance(KSM, &AccountId::from(EXIT_ACCOUNT)), 49999919630000);
+	});
 }
 
 #[test]
@@ -547,7 +455,7 @@ fn bond_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		slp_setup();
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// Bond 50 ksm for sub-account index 0
 			assert_ok!(Slp::bond(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
@@ -558,7 +466,7 @@ fn bond_works() {
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(StakingLedger {
@@ -571,7 +479,7 @@ fn bond_works() {
 			);
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// Bond 50 ksm and auto confirm
 			assert_eq!(
 				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
@@ -591,12 +499,12 @@ fn bond_extra_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		slp_setup();
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			use kusama_runtime::System;
 			System::reset_events();
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			assert_ok!(Slp::bond(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
@@ -605,7 +513,7 @@ fn bond_extra_works() {
 				None
 			));
 		});
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// Bond_extra 20 ksm for sub-account index 0
 			assert_ok!(Slp::bond_extra(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
@@ -616,7 +524,7 @@ fn bond_extra_works() {
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				Some(StakingLedger {
@@ -629,7 +537,7 @@ fn bond_extra_works() {
 			);
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// Bond 70 ksm and auto confirm
 			assert_eq!(
 				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
@@ -646,182 +554,182 @@ fn bond_extra_works() {
 
 #[test]
 fn unbond_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::unbond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				None,
-				20 * KSM_DECIMALS,
-			));
-		});
-		// KusamaNet::execute_with(|| {
-		// 	use kusama_runtime::System;
-		// 	assert_eq!(
-		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-		// 		Some(StakingLedger {
-		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
-		// 			total: 50 * KSM_DECIMALS,
-		// 			active: 30 * KSM_DECIMALS,
-		// 			unlocking: _,
-		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-		// 		})
-		// 	);
-		// });
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			Some(StakingLedger {
+				stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
+				total: 50 * KSM_DECIMALS,
+				active: 50 * KSM_DECIMALS,
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
+				claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
+			})
+		);
+	});
 
-		Bifrost::execute_with(|| {
-			// Bond 70 ksm and auto confirm
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: KSM_DELEGATOR_0_MULTILOCATION,
-					total: 50 * KSM_DECIMALS,
-					active: 30 * KSM_DECIMALS,
-					unlocking: vec![UnlockChunk {
-						value: 20 * KSM_DECIMALS,
-						unlock_time: TimeUnit::Era(0)
-					}],
-				}))
-			);
-		});
-	})
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::unbond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			None,
+			20 * KSM_DECIMALS,
+		));
+	});
+
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+		println!(
+			"{:?}",
+			kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
+		);
+	});
+
+	BifrostKusama::execute_with(|| {
+		// Bond 70 ksm and auto confirm
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: KSM_DELEGATOR_0_MULTILOCATION,
+				total: 50 * KSM_DECIMALS,
+				active: 30 * KSM_DECIMALS,
+				unlocking: vec![UnlockChunk {
+					value: 20 * KSM_DECIMALS,
+					unlock_time: TimeUnit::Era(0)
+				}],
+			}))
+		);
+	});
 }
 
 #[test]
 fn unbond_all_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			// Unbond 0.5 ksm, 0.5 ksm left.
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		// Unbond 0.5 ksm, 0.5 ksm left.
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::unbond_all(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+		println!(
+			"{:?}",
+			kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
+		);
+	});
 
-		// KusamaNet::execute_with(|| {
-		// 	use kusama_runtime::System;
-		// 	println!("{:?}", System::events());
-		// 	assert_eq!(
-		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-		// 		Some(StakingLedger {
-		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
-		// 			total: 50 * KSM_DECIMALS,
-		// 			active: 0,
-		// 			unlocking: BoundedVec::try_from(vec![]).unwrap(),
-		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-		// 		})
-		// 	);
-		// });
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::unbond_all(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			// Bond 70 ksm and auto confirm
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: KSM_DELEGATOR_0_MULTILOCATION,
-					total: 50 * KSM_DECIMALS,
-					active: 0,
-					unlocking: vec![UnlockChunk {
-						value: 50 * KSM_DECIMALS,
-						unlock_time: TimeUnit::Era(0)
-					}],
-				}))
-			);
-		});
-	})
+	Kusama::execute_with(|| {
+		use kusama_runtime::System;
+		println!("{:?}", System::events());
+	});
+
+	BifrostKusama::execute_with(|| {
+		// Bond 70 ksm and auto confirm
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: KSM_DELEGATOR_0_MULTILOCATION,
+				total: 50 * KSM_DECIMALS,
+				active: 0,
+				unlocking: vec![UnlockChunk {
+					value: 50 * KSM_DECIMALS,
+					unlock_time: TimeUnit::Era(0)
+				}],
+			}))
+		);
+	});
 }
 
 #[test]
 fn rebond_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::unbond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				None,
-				30 * KSM_DECIMALS
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		Bifrost::execute_with(|| {
-			// rebond 0.5 ksm.
-			assert_ok!(Slp::rebond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				None,
-				Some(20 * KSM_DECIMALS),
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::unbond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			None,
+			30 * KSM_DECIMALS
+		));
+	});
 
-		// So the bonded amount should be 1 ksm
-		// KusamaNet::execute_with(|| {
-		// 	assert_eq!(
-		// 		kusama_runtime::Staking::ledger(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-		// 		Some(StakingLedger {
-		// 			stash: AccountId::from(KSM_DELEGATOR_0_ACCOUNT),
-		// 			total: 50 * KSM_DECIMALS,
-		// 			active: 40 * KSM_DECIMALS,
-		// 			unlocking: BoundedVec::try_from(vec![]).unwrap(),
-		// 			claimed_rewards: BoundedVec::try_from(vec![]).unwrap(),
-		// 		})
-		// 	);
-		// });
-		Bifrost::execute_with(|| {
-			// Bond 70 ksm and auto confirm
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: KSM_DELEGATOR_0_MULTILOCATION,
-					total: 50 * KSM_DECIMALS,
-					active: 40 * KSM_DECIMALS,
-					unlocking: vec![UnlockChunk {
-						value: 10 * KSM_DECIMALS,
-						unlock_time: TimeUnit::Era(0)
-					}],
-				}))
-			);
-		});
-	})
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		// rebond 0.5 ksm.
+		assert_ok!(Slp::rebond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			None,
+			Some(20 * KSM_DECIMALS),
+		));
+	});
+
+	// So the bonded amount should be 1 ksm
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		// Bond 70 ksm and auto confirm
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: KSM_DELEGATOR_0_MULTILOCATION,
+				total: 50 * KSM_DECIMALS,
+				active: 40 * KSM_DECIMALS,
+				unlocking: vec![UnlockChunk {
+					value: 10 * KSM_DECIMALS,
+					unlock_time: TimeUnit::Era(0)
+				}],
+			}))
+		);
+	});
 }
 
 #[test]
@@ -830,16 +738,16 @@ fn delegate_works() {
 		// bond 1 ksm for sub-account index 0
 		slp_setup();
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			use kusama_runtime::System;
 			System::reset_events();
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// Unbond 0.5 ksm, 0.5 ksm left.
 			assert_ok!(VtokenMinting::mint(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				CurrencyId::Token(TokenSymbol::KSM),
+				KSM,
 				100 * KSM_DECIMALS,
 				BoundedVec::default()
 			));
@@ -853,13 +761,13 @@ fn delegate_works() {
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			use kusama_runtime::System;
 			println!("{:?}", System::events());
 			System::reset_events();
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			// delegate
 			assert_ok!(Slp::delegate(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
@@ -869,7 +777,7 @@ fn delegate_works() {
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			use kusama_runtime::System;
 			println!("{:?}", System::events());
 			assert_eq!(
@@ -890,201 +798,229 @@ fn delegate_works() {
 
 #[test]
 fn undelegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		Bifrost::execute_with(|| {
-			// Undelegate validator 0. Only validator 1 left.
-			assert_ok!(Slp::undelegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				vec![KUSAMA_ALICE_STASH_MULTILOCATION],
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::delegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+		));
+	});
 
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				Some(Nominations {
-					targets: BoundedVec::try_from(vec![KUSAMA_BOB_STASH_ACCOUNT.into()]).unwrap(),
-					submitted_in: 0,
-					suppressed: false
-				},)
-			);
-		});
-	})
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		// Undelegate validator 0. Only validator 1 left.
+		assert_ok!(Slp::undelegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			vec![KUSAMA_ALICE_STASH_MULTILOCATION],
+		));
+	});
+
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			Some(Nominations {
+				targets: BoundedVec::try_from(vec![KUSAMA_BOB_STASH_ACCOUNT.into()]).unwrap(),
+				submitted_in: 0,
+				suppressed: false
+			},)
+		);
+	});
 }
 
 #[test]
 fn redelegate_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		Bifrost::execute_with(|| {
-			// Undelegate validator 0. Only validator 1 left.
-			assert_ok!(Slp::undelegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				vec![KUSAMA_ALICE_STASH_MULTILOCATION],
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::delegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::redelegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				Some(vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION])
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		KusamaNet::execute_with(|| {
-			assert_eq!(
-				kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-				Some(Nominations {
-					targets: BoundedVec::try_from(vec![
-						KUSAMA_ALICE_STASH_ACCOUNT.into(),
-						KUSAMA_BOB_STASH_ACCOUNT.into(),
-					])
-					.unwrap(),
-					submitted_in: 0,
-					suppressed: false
-				})
-			);
-		});
-	})
+	BifrostKusama::execute_with(|| {
+		// Undelegate validator 0. Only validator 1 left.
+		assert_ok!(Slp::undelegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			vec![KUSAMA_ALICE_STASH_MULTILOCATION],
+		));
+	});
+
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::redelegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			Some(vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION])
+		));
+	});
+
+	Kusama::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::nominators(AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
+			Some(Nominations {
+				targets: BoundedVec::try_from(vec![
+					KUSAMA_ALICE_STASH_ACCOUNT.into(),
+					KUSAMA_BOB_STASH_ACCOUNT.into(),
+				])
+				.unwrap(),
+				submitted_in: 0,
+				suppressed: false
+			})
+		);
+	});
 }
 
 #[test]
 fn payout_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
-		Bifrost::execute_with(|| {
-			// Bond 1 ksm for sub-account index 0
-			assert_ok!(Slp::payout(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				Box::new(KUSAMA_ALICE_STASH_MULTILOCATION),
-				Some(TimeUnit::Era(27))
-			));
-		});
-	})
+	slp_setup();
+	BifrostKusama::execute_with(|| {
+		// Bond 1 ksm for sub-account index 0
+		assert_ok!(Slp::payout(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			Box::new(KUSAMA_ALICE_STASH_MULTILOCATION),
+			Some(TimeUnit::Era(27))
+		));
+	});
 }
 
 #[test]
 fn liquidize_works() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		slp_setup();
+	slp_setup();
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::bond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				50 * KSM_DECIMALS,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::bond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			50 * KSM_DECIMALS,
+			None
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::delegate(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			));
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::unbond(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				None,
-				20 * KSM_DECIMALS
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::delegate(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			// Bond 70 ksm and auto confirm
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: KSM_DELEGATOR_0_MULTILOCATION,
-					total: 50 * KSM_DECIMALS,
-					active: 30 * KSM_DECIMALS,
-					unlocking: vec![UnlockChunk {
-						value: 20 * KSM_DECIMALS,
-						unlock_time: TimeUnit::Era(0)
-					}],
-				}))
-			);
-		});
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
 
-		Bifrost::execute_with(|| {
-			assert_ok!(Slp::liquidize(
-				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				RelayCurrencyId::get(),
-				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				Some(TimeUnit::SlashingSpan(5)),
-				None,
-				None
-			));
-		});
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::unbond(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			None,
+			20 * KSM_DECIMALS
+		));
+	});
 
-		Bifrost::execute_with(|| {
-			assert_eq!(
-				Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
-				Some(Ledger::Substrate(SubstrateLedger {
-					account: KSM_DELEGATOR_0_MULTILOCATION,
-					total: 30 * KSM_DECIMALS,
-					active: 30 * KSM_DECIMALS,
-					unlocking: vec![],
-				}))
-			);
-		});
-	})
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		// Bond 70 ksm and auto confirm
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: KSM_DELEGATOR_0_MULTILOCATION,
+				total: 50 * KSM_DECIMALS,
+				active: 30 * KSM_DECIMALS,
+				unlocking: vec![UnlockChunk {
+					value: 20 * KSM_DECIMALS,
+					unlock_time: TimeUnit::Era(0)
+				}],
+			}))
+		);
+	});
+
+	BifrostKusama::execute_with(|| {
+		assert_ok!(Slp::liquidize(
+			RuntimeOrigin::signed(AccountId::from(ALICE)),
+			RelayCurrencyId::get(),
+			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
+			Some(TimeUnit::SlashingSpan(5)),
+			None,
+			None
+		));
+	});
+
+	Kusama::execute_with(|| {
+		// TODO: Assert events;
+	});
+
+	BifrostKusama::execute_with(|| {
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), KSM_DELEGATOR_0_MULTILOCATION),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: KSM_DELEGATOR_0_MULTILOCATION,
+				total: 30 * KSM_DECIMALS,
+				active: 30 * KSM_DECIMALS,
+				unlocking: vec![],
+			}))
+		);
+	});
 }
 
 #[test]
@@ -1092,7 +1028,7 @@ fn chill_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		slp_setup();
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			assert_ok!(Slp::bond(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
@@ -1102,7 +1038,7 @@ fn chill_works() {
 			));
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			assert_ok!(Slp::delegate(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
@@ -1112,7 +1048,7 @@ fn chill_works() {
 		});
 
 		// check if sub-account index 0 belongs to the group of nominators
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
 					.is_some(),
@@ -1125,7 +1061,7 @@ fn chill_works() {
 			);
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			assert_ok!(Slp::chill(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
@@ -1134,7 +1070,7 @@ fn chill_works() {
 		});
 
 		// check if sub-account index 0 belongs to the group of nominators
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Staking::nominators(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT))
 					.is_some(),
@@ -1148,14 +1084,14 @@ fn chill_works() {
 fn supplement_fee_reserve_works() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		slp_setup();
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				10000 * KSM_DECIMALS
 			);
 		});
 
-		Bifrost::execute_with(|| {
+		BifrostKusama::execute_with(|| {
 			assert_ok!(Slp::supplement_fee_reserve(
 				RuntimeOrigin::root(),
 				RelayCurrencyId::get(),
@@ -1163,7 +1099,7 @@ fn supplement_fee_reserve_works() {
 			));
 		});
 
-		KusamaNet::execute_with(|| {
+		Kusama::execute_with(|| {
 			assert_eq!(
 				kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
 				10000 * KSM_DECIMALS

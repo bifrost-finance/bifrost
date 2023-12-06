@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,42 +16,34 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::types::{AstarCall, AstarDappsStakingCall, AstarUtilityCall, SmartContract, XcmCall};
+use super::types::{AstarCall, AstarDappsStakingCall, SmartContract, XcmCall};
 use crate::{
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, QueryId, SubstrateLedger, SubstrateLedgerUpdateEntry,
 		SubstrateLedgerUpdateOperation, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
-		TIMEOUT_BLOCKS,
 	},
-	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
-	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
-	DelegatorLedgers, DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TimeUnit, Validators, XcmWeight,
+	traits::{QueryResponseManager, StakingAgent},
+	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
+	Validators,
 };
-use codec::Encode;
+use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmOperationType, ASTR_TOKEN_ID};
 use core::marker::PhantomData;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::{
-	CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType, ASTR_TOKEN_ID,
-};
-use orml_traits::XcmTransfer;
-use polkadot_parachain::primitives::Sibling;
+use parity_scale_codec::Encode;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, Convert, Saturating, UniqueSaturatedInto, Zero,
-	},
+	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
 use xcm::{
-	opaque::v3::{Instruction, Junction::Parachain, Junctions::X1, MultiLocation},
-	v3::{prelude::*, Weight},
+	opaque::v3::{Junction::Parachain, Junctions::X1, MultiLocation},
+	v3::prelude::*,
 	VersionedMultiAssets, VersionedMultiLocation,
 };
-use xcm_interface::traits::parachains;
 
 /// StakingAgent implementation for Astar
 pub struct AstarAgent<T>(PhantomData<T>);
@@ -132,16 +124,18 @@ impl<T: Config>
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
 
 		// Construct xcm message.
-		let call = AstarCall::Staking(AstarDappsStakingCall::BondAndStake(smart_contract, amount));
+		let call =
+			AstarCall::Staking(AstarDappsStakingCall::<T>::BondAndStake(smart_contract, amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Bond,
-			call,
-			who,
-			currency_id,
-		)?;
+		let (query_id, timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Bond,
+				call.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -154,7 +148,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_astar_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -204,17 +198,20 @@ impl<T: Config>
 		// Construct xcm message.
 		let contract_h160 = Pallet::<T>::multilocation_to_h160_account(&contract_multilocation)?;
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
-		let call =
-			AstarCall::Staking(AstarDappsStakingCall::UnbondAndUnstake(smart_contract, amount));
+		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::UnbondAndUnstake(
+			smart_contract,
+			amount,
+		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Unbond,
-			call,
-			who,
-			currency_id,
-		)?;
+		let (query_id, timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Unbond,
+				call.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -227,7 +224,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_astar_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -296,13 +293,13 @@ impl<T: Config>
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
 
 		// Construct xcm message.
-		let call = AstarCall::Staking(AstarDappsStakingCall::ClaimStaker(smart_contract));
+		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::ClaimStaker(smart_contract));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
-			call,
+			call.encode(),
 			who,
 			currency_id,
 		)?;
@@ -326,16 +323,17 @@ impl<T: Config>
 		);
 
 		// Construct xcm message.
-		let call = AstarCall::Staking(AstarDappsStakingCall::WithdrawUnbonded);
+		let call = AstarCall::<T>::Staking(AstarDappsStakingCall::WithdrawUnbonded);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperationType::Liquidize,
-			call,
-			who,
-			currency_id,
-		)?;
+		let (query_id, timeout, _fee, xcm_message) =
+			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Liquidize,
+				call.encode(),
+				who,
+				currency_id,
+			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -348,7 +346,7 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Self::get_astar_multilocation();
+		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -407,7 +405,7 @@ impl<T: Config>
 		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = AstarCall::Xcm(Box::new(XcmCall::LimitedReserveTransferAssets(
+		let call: AstarCall<T> = AstarCall::Xcm(Box::new(XcmCall::LimitedReserveTransferAssets(
 			dest,
 			beneficiary,
 			assets,
@@ -417,9 +415,9 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
-			call,
+			call.encode(),
 			from,
 			currency_id,
 		)?;
@@ -447,7 +445,7 @@ impl<T: Config>
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -539,7 +537,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		currency_id: CurrencyId,
 	) -> Result<(), Error<T>> {
-		Self::do_transfer_to(from, to, amount, currency_id)?;
+		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
 		Ok(())
 	}
@@ -602,117 +600,8 @@ impl<T: Config>
 	}
 }
 
-/// Trait XcmBuilder implementation for ASTAR
-impl<T: Config> XcmBuilder<BalanceOf<T>, AstarCall<T>, Error<T>> for AstarAgent<T> {
-	fn construct_xcm_message(
-		call: AstarCall<T>,
-		extra_fee: BalanceOf<T>,
-		weight: XcmWeight,
-		_currency_id: CurrencyId,
-		query_id: Option<QueryId>,
-	) -> Result<Xcm<()>, Error<T>> {
-		let mut xcm_message = Self::inner_construct_xcm_message(extra_fee);
-		let transact_instruct = Transact {
-			origin_kind: OriginKind::SovereignAccount,
-			require_weight_at_most: weight,
-			call: call.encode().into(),
-		};
-		xcm_message.insert(2, transact_instruct);
-		if let Some(query_id) = query_id {
-			let report_transact_status_instruct =
-				Self::get_report_transact_status_instruct(query_id, weight);
-			xcm_message.insert(3, report_transact_status_instruct);
-		}
-		Ok(Xcm(xcm_message))
-	}
-}
-
 /// Internal functions.
 impl<T: Config> AstarAgent<T> {
-	fn get_astar_multilocation() -> MultiLocation {
-		MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }
-	}
-
-	fn prepare_send_as_subaccount_call(
-		operation: XcmOperationType,
-		call: AstarCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(AstarCall<T>, BalanceOf<T>, XcmWeight), Error<T>> {
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		let call_as_subaccount = AstarCall::Utility(Box::new(AstarUtilityCall::AsDerivative(
-			sub_account_index,
-			Box::new(call),
-		)));
-
-		let (weight, fee) =
-			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
-	}
-
-	fn construct_xcm_as_subaccount_with_query_id(
-		operation: XcmOperationType,
-		call: AstarCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
-		// prepare the query_id for reporting back transact status
-		let responder = Self::get_astar_multilocation();
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-
-		// Generate query_id need( responder,callback, timeout)
-		let query_id = match operation {
-			XcmOperationType::Bond | XcmOperationType::Unbond | XcmOperationType::Liquidize =>
-				T::SubstrateResponseManager::create_query_record(
-					&responder,
-					Some(Pallet::<T>::confirm_delegator_ledger_call()),
-					timeout,
-				),
-			_ => {
-				ensure!(false, Error::<T>::Unsupported);
-				0
-			},
-		};
-
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
-
-		let xcm_message = Self::construct_xcm_message(
-			call_as_subaccount,
-			fee,
-			weight,
-			currency_id,
-			Some(query_id),
-		)?;
-
-		Ok((query_id, timeout, xcm_message))
-	}
-
-	fn construct_xcm_and_send_as_subaccount_without_query_id(
-		operation: XcmOperationType,
-		call: AstarCall<T>,
-		who: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
-
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
-
-		let dest = Self::get_astar_multilocation();
-
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(())
-	}
-
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry<BalanceOf<T>>,
@@ -831,27 +720,6 @@ impl<T: Config> AstarAgent<T> {
 		Ok(())
 	}
 
-	fn get_unlocking_era_from_current(
-		currency_id: CurrencyId,
-	) -> Result<Option<TimeUnit>, Error<T>> {
-		let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-			.ok_or(Error::<T>::TimeUnitNotExist)?;
-		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
-
-		let unlock_era = if let TimeUnit::Era(current_era) = current_time_unit {
-			if let TimeUnit::Era(delay_era) = delays.unlock_delay {
-				current_era.checked_add(delay_era).ok_or(Error::<T>::OverFlow)
-			} else {
-				Err(Error::<T>::InvalidTimeUnit)
-			}
-		} else {
-			Err(Error::<T>::InvalidTimeUnit)
-		}?;
-
-		let unlock_time_unit = TimeUnit::Era(unlock_era);
-		Ok(Some(unlock_time_unit))
-	}
-
 	/// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 	fn insert_delegator_ledger_update_entry(
 		who: &MultiLocation,
@@ -864,7 +732,7 @@ impl<T: Config> AstarAgent<T> {
 		use crate::primitives::SubstrateLedgerUpdateOperation::{Liquidize, Unlock};
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = match &update_operation {
-			Unlock => Self::get_unlocking_era_from_current(currency_id)?,
+			Unlock => Pallet::<T>::get_unlocking_time_unit_from_current(false, currency_id)?,
 			Liquidize => T::VtokenMinting::get_ongoing_time_unit(currency_id),
 			_ => None,
 		};
@@ -879,64 +747,5 @@ impl<T: Config> AstarAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
 
 		Ok(())
-	}
-
-	fn do_transfer_to(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		amount: BalanceOf<T>,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		// Ensure amount is greater than zero.
-		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-
-		// Prepare parameter dest and beneficiary.
-		let entrance_account = Pallet::<T>::multilocation_to_account(from)?;
-
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-
-		let dest = MultiLocation {
-			parents: 1,
-			interior: X2(
-				Parachain(parachains::astar::ID),
-				AccountId32 { network: None, id: to_32 },
-			),
-		};
-
-		T::XcmTransfer::transfer(entrance_account, currency_id, amount, dest, Unlimited)
-			.map_err(|_| Error::<T>::TransferToError)?;
-
-		Ok(())
-	}
-
-	fn inner_construct_xcm_message(extra_fee: BalanceOf<T>) -> Vec<Instruction> {
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation::here()),
-			fun: Fungible(extra_fee.unique_saturated_into()),
-		};
-
-		let self_sibling_parachain_account: [u8; 32] =
-			Sibling::from(T::ParachainId::get()).into_account_truncating();
-
-		vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			RefundSurplus,
-			DepositAsset {
-				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(AccountId32 { network: None, id: self_sibling_parachain_account }),
-				},
-			},
-		]
-	}
-
-	fn get_report_transact_status_instruct(query_id: QueryId, max_weight: Weight) -> Instruction {
-		ReportTransactStatus(QueryResponseInfo {
-			destination: MultiLocation::new(1, X1(Parachain(u32::from(T::ParachainId::get())))),
-			query_id,
-			max_weight,
-		})
 	}
 }

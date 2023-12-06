@@ -5,87 +5,40 @@ authors = ["Ron Yang <yrong1997@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-# third-party dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-log = { version = "0.4.17" }
-serde = { version = "1.0.160", optional = true }
-static_assertions = "1.1.0"
-hex = { version = "0.4", optional = true }
-hex-literal = { version = "0.3.4" }
+env_logger = { workspace = true }
+log = { workspace = true }
+hex-literal = { workspace = true }
+parity-scale-codec = { workspace = true }
 
-# primitives
-node-primitives = { default-features = false, path = "../../node/primitives" }
+# Substrate
+sp-runtime = { workspace = true }
+sp-io = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-conviction-voting = { workspace = true }
+pallet-referenda = { workspace = true }
+pallet-staking = { workspace = true }
 
-# frame dependencies
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-conviction-voting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-referenda = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+# Polkadot
+polkadot-parachain-primitives = { workspace = true }
+kusama-runtime = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+pallet-message-queue = { workspace = true }
 
-# Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
+# Cumulus
+parachains-common = { workspace = true }
+xcm-emulator = { workspace = true }
 
-# Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-
-# bifrost pallets
-bifrost-asset-registry = { path = "../../pallets/asset-registry" }
-bifrost-flexible-fee = { path = "../../pallets/flexible-fee" }
-bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
-bifrost-salp = { path = "../../pallets/salp" }
-bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
-bifrost-slp = { path = "../../pallets/slp" }
-bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction" }
-bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting" }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting",  features = [ "kusama" ] }
-pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting" }
-bifrost-runtime-common = { path = "../../runtime/common" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
-
-# orml
-orml-tokens = { version = "0.4.1-dev" }
-orml-traits = { version = "0.4.1-dev" }
-orml-xtokens = { version = "0.4.1-dev" }
-orml-unknown-tokens = { version = "0.4.1-dev" }
-orml-xcm-support = { version = "0.4.1-dev" }
-
-zenlink-protocol = { version = "*" }
-zenlink-protocol-runtime-api = { version = "*" }
-
-[dev-dependencies]
-env_logger = "0.10.0"
-hex = "0.4.0"
-
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-
-cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
-statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-xcm-emulator = { version = "*" }
+# Local
+integration-tests-common = { path = "../common", default-features = false}
+bifrost-slp = { workspace = true }
+bifrost-vtoken-voting = { workspace = true }
+bifrost-primitives = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-kusama-runtime = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+orml-traits = { workspace = true }
+orml-tokens = { workspace = true }

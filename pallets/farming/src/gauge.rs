@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::HasCompact;
 use frame_support::pallet_prelude::*;
+use parity_scale_codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
@@ -322,15 +322,16 @@ where
 						let gauge_reward = gauge_rate * reward;
 						// reward_to_claim = farming rate * gauge rate * gauge rewards *
 						// existing rewards in the gauge pool
-						let reward_to_claim: BalanceOf<T> =
+						let reward_to_claim: BalanceOf<T> = u128::try_from(
 							U256::from(share_info.share.to_owned().saturated_into::<u128>())
 								.saturating_mul(U256::from(
 									gauge_reward.to_owned().saturated_into::<u128>(),
 								))
 								.checked_div(total_shares)
-								.unwrap_or_default()
-								.as_u128()
-								.unique_saturated_into();
+								.unwrap_or_default(),
+						)
+						.map_err(|_| ArithmeticError::Overflow)?
+						.unique_saturated_into();
 						*total_gauged_reward = total_gauged_reward
 							.checked_add(&gauge_reward)
 							.ok_or(ArithmeticError::Overflow)?;
@@ -416,15 +417,16 @@ where
 				let withdrawn_reward =
 					share_info.withdrawn_rewards.get(reward_currency).copied().unwrap_or_default();
 
-				let total_reward_proportion: BalanceOf<T> =
+				let total_reward_proportion: BalanceOf<T> = u128::try_from(
 					U256::from(share_info.share.to_owned().saturated_into::<u128>())
 						.saturating_mul(U256::from(
 							total_reward.to_owned().saturated_into::<u128>(),
 						))
 						.checked_div(total_shares)
-						.unwrap_or_default()
-						.as_u128()
-						.unique_saturated_into();
+						.unwrap_or_default(),
+				)
+				.map_err(|_| ArithmeticError::Overflow)?
+				.unique_saturated_into();
 
 				let reward_to_withdraw = total_reward_proportion
 					.saturating_sub(withdrawn_reward)
@@ -498,15 +500,16 @@ where
 						let gauge_reward = gauge_rate * reward;
 						// reward_to_claim = farming rate * gauge rate * gauge rewards *
 						// existing rewards in the gauge pool
-						let reward_to_claim: BalanceOf<T> =
+						let reward_to_claim: BalanceOf<T> = u128::try_from(
 							U256::from(share_info.share.to_owned().saturated_into::<u128>())
 								.saturating_mul(U256::from(
 									gauge_reward.to_owned().saturated_into::<u128>(),
 								))
 								.checked_div(total_shares)
-								.unwrap_or_default()
-								.as_u128()
-								.unique_saturated_into();
+								.unwrap_or_default(),
+						)
+						.map_err(|_| ArithmeticError::Overflow)?
+						.unique_saturated_into();
 						result_vec.push((*reward_currency, reward_to_claim));
 						Ok(())
 					},

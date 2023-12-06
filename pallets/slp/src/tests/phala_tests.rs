@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -25,13 +25,14 @@ use crate::{
 	Junctions::X2,
 	*,
 };
+use bifrost_primitives::currency::VPHA;
 use frame_support::{assert_noop, assert_ok, PalletId};
-use node_primitives::currency::VPHA;
-use polkadot_parachain::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
+// parents 0 means vault, parents 1 means stake_pool
 const VALIDATOR_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
+	MultiLocation { parents: 0, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
 const VALIDATOR_0_ACCOUNT_ID_32: [u8; 32] =
 	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
 const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
@@ -40,7 +41,7 @@ const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
 };
 
 const VALIDATOR_1_LOCATION: MultiLocation =
-	MultiLocation { parents: 1, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
+	MultiLocation { parents: 0, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
 
 #[test]
 fn initialize_phala_delegator_works() {
@@ -255,6 +256,7 @@ fn phala_delegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -550,6 +552,7 @@ fn phala_unbond_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -573,6 +576,7 @@ fn phala_unbond_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -640,6 +644,7 @@ fn phala_unbond_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -741,6 +746,7 @@ fn phala_undelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -763,6 +769,7 @@ fn phala_undelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -785,6 +792,7 @@ fn phala_undelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -804,6 +812,7 @@ fn phala_undelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: None,
 			bonded_pool_collection_id: None,
+			bonded_is_vault: None,
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -838,6 +847,7 @@ fn phala_redelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -874,6 +884,7 @@ fn phala_redelegate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(1),
 			bonded_pool_collection_id: Some(1),
+			bonded_is_vault: Some(true),
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -908,6 +919,7 @@ fn phala_liquidize_works() {
 			unlocking_time_unit: Some(TimeUnit::Hour(100)),
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -941,6 +953,7 @@ fn phala_liquidize_works() {
 			unlocking_time_unit: Some(TimeUnit::Hour(100)),
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -963,6 +976,7 @@ fn phala_liquidize_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		assert_eq!(
 			DelegatorLedgers::<Runtime>::get(PHA, subaccount_0_location),
@@ -998,6 +1012,7 @@ fn phala_bond_confirm_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -1039,6 +1054,7 @@ fn phala_bond_confirm_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 
 		assert_eq!(
@@ -1075,6 +1091,7 @@ fn phala_unbond_confirm_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 
@@ -1115,6 +1132,7 @@ fn phala_unbond_confirm_works() {
 			unlocking_time_unit: Some(TimeUnit::Hour(200)),
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 
 		assert_eq!(
@@ -1230,7 +1248,7 @@ fn phala_transfer_to_works() {
 				Box::new(subaccount_0_location),
 				5_000_000_000_000_000_000,
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 	});
 }
@@ -1281,7 +1299,7 @@ fn supplement_fee_account_whitelist_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		assert_noop!(
@@ -1306,7 +1324,7 @@ fn supplement_fee_account_whitelist_works() {
 				PHA,
 				Box::new(entrance_account_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		assert_noop!(
@@ -1331,7 +1349,7 @@ fn supplement_fee_account_whitelist_works() {
 				PHA,
 				Box::new(exit_account_location),
 			),
-			Error::<Runtime>::XcmFailure
+			Error::<Runtime>::TransferToError
 		);
 
 		// remove exit_account_location from whitelist
@@ -1382,6 +1400,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			unlocking_time_unit: None,
 			bonded_pool_id: Some(0),
 			bonded_pool_collection_id: Some(0),
+			bonded_is_vault: Some(true),
 		};
 		let phala_ledger = Ledger::<BalanceOf<Runtime>>::Phala(ledger);
 

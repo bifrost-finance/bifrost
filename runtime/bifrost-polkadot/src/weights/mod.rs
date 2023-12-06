@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -37,5 +37,6 @@ pub mod bifrost_ve_minting;
 pub mod bifrost_vstoken_conversion;
 pub mod bifrost_vtoken_minting;
 pub mod bifrost_vtoken_voting;
+pub mod orml_oracle;
 pub mod orml_tokens;
 pub mod pallet_xcm;

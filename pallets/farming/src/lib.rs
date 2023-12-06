@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 use crate::boost::*;
+use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -47,7 +48,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use gauge::*;
-use node_primitives::{ FarmingInfo, PoolId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use rewards::*;
@@ -112,10 +112,10 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
-			Self::BlockNumber,
+			BlockNumberFor<Self>,
 		>;
 
-		type BlockNumberToBalance: Convert<Self::BlockNumber, BalanceOf<Self>>;
+		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type WhitelistMaximumLimit: Get<u32>;

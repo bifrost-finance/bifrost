@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,18 +21,13 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{GenesisBuild, Nothing},
-	PalletId,
-};
+use bifrost_primitives::{CurrencyId, TokenSymbol};
+use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, ConvertInto, IdentityLookup},
-	AccountId32,
+	AccountId32, BuildStorage,
 };
 
 use crate as bifrost_farming;
@@ -55,22 +50,17 @@ pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Currencies: bifrost_currencies::{Pallet, Call, Storage},
-		Farming: bifrost_farming::{Pallet, Call, Storage, Event<T>},
-		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>},
-		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Event<T>, Storage},
+	pub enum Runtime {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: bifrost_currencies,
+		Farming: bifrost_farming,
+		VeMinting: bifrost_ve_minting,
+		AssetRegistry: bifrost_asset_registry,
 	}
 );
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
@@ -82,15 +72,14 @@ impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
 	type BlockWeights = ();
 	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
 	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
-	type Index = u64;
+	type Nonce = u32;
+	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
@@ -131,7 +120,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type HoldIdentifier = ();
+	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -251,7 +240,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

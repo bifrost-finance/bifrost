@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+// Copyright (C) Liebi Technologies PTE. LTD.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,18 +19,16 @@
 #![cfg(test)]
 use crate::{
 	mocks::mock::*,
-	primitives::{OneToManyDelegationAction, OneToManyScheduledRequest},
-	*,
+	primitives::{
+		OneToManyDelegationAction, OneToManyDelegatorStatus, OneToManyLedger,
+		OneToManyScheduledRequest,
+	},
+	BNC, *,
 };
-use frame_support::{assert_noop, assert_ok};
-use parachain_staking::RoundInfo;
-
-use crate::{
-	primitives::{OneToManyDelegatorStatus, OneToManyLedger},
-	BNC,
-};
-use codec::alloc::collections::BTreeMap;
-use frame_support::PalletId;
+use bifrost_parachain_staking::RoundInfo;
+use bifrost_primitives::VBNC;
+use frame_support::{assert_noop, assert_ok, PalletId};
+use parity_scale_codec::alloc::collections::BTreeMap;
 use sp_runtime::traits::AccountIdConversion;
 
 #[test]
@@ -277,7 +275,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			BNC,
 			TimeUnit::Round(48)
 		));
-		parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
+		bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
 		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 
@@ -325,7 +323,7 @@ fn parachain_staking_bond_extra_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -338,7 +336,7 @@ fn parachain_staking_bond_extra_works() {
 				Some(validator_0_location),
 				5_000_000_000_000,
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -373,7 +371,7 @@ fn parachain_staking_unbond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -386,7 +384,7 @@ fn parachain_staking_unbond_works() {
 				Some(validator_0_location),
 				2_000_000_000_000,
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -421,14 +419,14 @@ fn parachain_staking_unbond_all_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
 
 		assert_noop!(
 			Slp::unbond_all(RuntimeOrigin::signed(ALICE), BNC, Box::new(subaccount_0_location),),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -472,7 +470,7 @@ fn parachain_staking_rebond_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -485,7 +483,7 @@ fn parachain_staking_rebond_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -524,7 +522,7 @@ fn parachain_staking_undelegate_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -536,7 +534,7 @@ fn parachain_staking_undelegate_works() {
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -580,7 +578,7 @@ fn parachain_staking_redelegate_works() {
 			status: OneToManyDelegatorStatus::Leaving(TimeUnit::Round(24)),
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, Box::new(subaccount_0_location), ledger);
@@ -592,7 +590,7 @@ fn parachain_staking_redelegate_works() {
 				Box::new(subaccount_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 	});
 }
@@ -638,7 +636,7 @@ fn parachain_staking_liquidize_works() {
 			status: OneToManyDelegatorStatus::Active,
 		};
 
-		let ledger = Ledger::Moonbeam(parachain_staking_ledger);
+		let ledger = Ledger::ParachainStaking(parachain_staking_ledger);
 
 		// Set delegator ledger
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
@@ -652,7 +650,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::RequestNotDue
 		);
 
 		System::set_block_number(500);
@@ -672,7 +670,7 @@ fn parachain_staking_liquidize_works() {
 				Some(validator_0_location),
 				None
 			),
-			Error::<Runtime>::DelegatorNotExist
+			Error::<Runtime>::Unexpected
 		);
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
@@ -701,7 +699,7 @@ fn parachain_staking_liquidize_works() {
 				5_000_000_000_000,
 				Some(validator_0_location)
 			),
-			Error::<Runtime>::Unexpected
+			Error::<Runtime>::AlreadyBonded
 		);
 
 		// set delegator_0 ledger
@@ -968,5 +966,54 @@ fn add_validator_and_remove_validator_works() {
 
 		let empty_bounded_vec = BoundedVec::default();
 		assert_eq!(Slp::get_validators(BNC), Some(empty_bounded_vec));
+	});
+}
+
+#[test]
+fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
+	let subaccount_0_location =
+		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: ALICE.into() }) };
+
+	ExtBuilder::default().build().execute_with(|| {
+		// environment setup
+		parachain_staking_setup();
+
+		// First set base vtoken exchange rate. Should be 1:1.
+		assert_ok!(Currencies::deposit(VBNC, &ALICE, 1000));
+		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), BNC, 1000));
+
+		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
+		let pct = Permill::from_percent(20);
+		let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
+		let treasury_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
+		};
+
+		assert_ok!(Slp::set_hosting_fees(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Some((pct, treasury_location))
+		));
+
+		let pct_100 = Permill::from_percent(100);
+		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Some((1, pct_100))
+		));
+
+		// call the charge_host_fee_and_tune_vtoken_exchange_rate
+		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			1000,
+			Some(subaccount_0_location)
+		));
+
+		// check token pool, should be 1000 + 1000 = 2000
+		assert_eq!(<Runtime as Config>::VtokenMinting::get_token_pool(BNC), 2000);
+		// check vBNC issuance, should be 1000 + 20% * 1000 = 1200
+		assert_eq!(Currencies::total_issuance(VBNC), 1200);
 	});
 }
