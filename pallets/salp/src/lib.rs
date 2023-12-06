@@ -1457,7 +1457,11 @@ pub mod pallet {
 				_ => return Err(Error::<T>::InvalidFundStatus.into()),
 			}
 
-			Self::deposit_event(Event::<T>::ReservationHandled { para_id: index });
+			if ReserveInfos::<T>::iter_prefix(index).count() != 0 {
+				Self::deposit_event(Event::<T>::ReservationHandled { para_id: index });
+			} else {
+				Self::deposit_event(Event::<T>::ReservationFullyHandled { para_id: index });
+			}
 			Ok(())
 		}
 
