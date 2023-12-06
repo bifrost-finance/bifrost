@@ -62,7 +62,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-use codec::FullCodec;
+use parity_scale_codec::FullCodec;
 use sp_std::fmt::Debug;
 
 #[frame_support::pallet]
