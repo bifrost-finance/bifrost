@@ -18,7 +18,7 @@
 
 use crate::{MultiLocation, TimeUnit};
 use bifrost_primitives::{CurrencyId, TokenSymbol};
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
@@ -42,4 +42,7 @@ pub struct PhalaLedger<Balance> {
 	pub bonded_pool_id: Option<u64>,
 	/// If the delegator is bonded, it should record the bonded pool NFT collection id.
 	pub bonded_pool_collection_id: Option<u32>,
+	/// if the bonded pool is a vault, it is true. if the bonded pool is a stake pool, it is false.
+	/// If not bonded, it is None.
+	pub bonded_is_vault: Option<bool>,
 }

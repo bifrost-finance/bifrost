@@ -16,9 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::{AssetMetadata, Config, CurrencyMetadatas, Weight};
-use bifrost_primitives::CurrencyId;
-use frame_support::traits::Get;
+use crate::*;
+use bifrost_primitives::{CurrencyId, BNC};
+use frame_support::traits::{Get, OnRuntimeUpgrade};
+#[cfg(feature = "try-runtime")]
+use sp_runtime::TryRuntimeError;
+use xcm::prelude::{GeneralKey, X1};
+
+const LOG_TARGET: &str = "asset-registry::migration";
 
 pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 	for pool_id in 0..pool_count {
@@ -35,4 +40,85 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 	}
 
 	T::DbWeight::get().reads(pool_count.into()) + T::DbWeight::get().writes(pool_count.into())
+}
+
+pub struct InsertBNCMetadata<T>(PhantomData<T>);
+impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
+	fn on_runtime_upgrade() -> Weight {
+		log::info!(target: LOG_TARGET, "Start to insert BNC Metadata...");
+		CurrencyMetadatas::<T>::insert(
+			BNC,
+			&AssetMetadata {
+				name: b"Bifrost Native Token".to_vec(),
+				symbol: b"BNC".to_vec(),
+				decimals: 12,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128),
+			},
+		);
+
+		CurrencyIdToLocations::<T>::insert(
+			BNC,
+			MultiLocation {
+				parents: 0,
+				interior: X1(GeneralKey {
+					length: 2,
+					data: [
+						0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+						0, 0, 0, 0, 0, 0, 0,
+					],
+				}),
+			},
+		);
+		Weight::from(T::DbWeight::get().reads_writes(2 as u64 + 1, 2 as u64 + 1))
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+		assert!(CurrencyMetadatas::<T>::get(BNC).is_none());
+		assert!(CurrencyIdToLocations::<T>::get(BNC).is_none());
+
+		Ok(sp_std::vec![])
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_cnt: Vec<u8>) -> Result<(), TryRuntimeError> {
+		let metadata = CurrencyMetadatas::<T>::get(BNC);
+		assert_eq!(
+			metadata,
+			Some(AssetMetadata {
+				name: b"Bifrost Native Token".to_vec(),
+				symbol: b"BNC".to_vec(),
+				decimals: 12,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(10_000_000_000u128),
+			})
+		);
+		log::info!(
+			target: LOG_TARGET,
+			"InsertBNCMetadata post-migrate storage: {:?}",
+			metadata
+		);
+
+		let location = CurrencyIdToLocations::<T>::get(BNC);
+		assert_eq!(
+			location,
+			Some(MultiLocation {
+				parents: 0,
+				interior: X1(GeneralKey {
+					length: 2,
+					data: [
+						0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+						0, 0, 0, 0, 0, 0, 0
+					]
+				}),
+			})
+		);
+
+		log::info!(
+			target: LOG_TARGET,
+			"InsertBNCMetadata post-migrate storage: {:?}",
+			location
+		);
+
+		Ok(())
+	}
 }

@@ -17,11 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Substrate
-use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
-use grandpa::AuthorityId as GrandpaId;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use sc_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
+use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_core::{sr25519, storage::Storage, Pair, Public};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -141,7 +141,9 @@ pub mod collators {
 
 	pub fn inflation_config() -> InflationInfo<Balance> {
 		fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
-			use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
+			use bifrost_parachain_staking::inflation::{
+				perbill_annual_to_perbill_round, BLOCKS_PER_YEAR,
+			};
 			perbill_annual_to_perbill_round(
 				annual,
 				// rounds per year
@@ -285,11 +287,11 @@ pub mod polkadot {
 			configuration: polkadot_runtime::ConfigurationConfig { config: get_host_config() },
 			paras: polkadot_runtime::ParasConfig {
 				paras: vec![(
-					asset_hub_polkadot::PARA_ID.into(),
+					bifrost_polkadot::PARA_ID.into(),
 					ParaGenesisArgs {
 						genesis_head: HeadData::default(),
 						validation_code: ValidationCode(
-							asset_hub_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
+							bifrost_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
 						),
 						para_kind: ParaKind::Parachain,
 					},
@@ -406,11 +408,11 @@ pub mod kusama {
 			configuration: kusama_runtime::ConfigurationConfig { config: get_host_config() },
 			paras: kusama_runtime::ParasConfig {
 				paras: vec![(
-					asset_hub_kusama::PARA_ID.into(),
+					bifrost_kusama::PARA_ID.into(),
 					ParaGenesisArgs {
 						genesis_head: HeadData::default(),
 						validation_code: ValidationCode(
-							asset_hub_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
+							bifrost_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
 						),
 						para_kind: ParaKind::Parachain,
 					},
@@ -529,7 +531,7 @@ pub mod bifrost_kusama {
 					})
 					.collect(),
 			},
-			// parachain_staking: bifrost_kusama_runtime::ParachainStakingConfig {
+			// bifrost_parachain_staking: bifrost_kusama_runtime::ParachainStakingConfig {
 			// 	candidates: collators::candidates(),
 			// 	delegations: collators::delegations(),
 			// 	inflation_config: collators::inflation_config(),
@@ -550,292 +552,6 @@ pub mod bifrost_kusama {
 				vcurrency: vec![],
 				vsbond: vec![],
 				phantom: Default::default(),
-			},
-			..Default::default()
-		};
-
-		genesis_config.build_storage().unwrap()
-	}
-}
-
-// Asset Hub Polkadot
-pub mod asset_hub_polkadot {
-	use super::*;
-	pub const PARA_ID: u32 = 1000;
-	pub const ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
-	pub const DOT_DECIMALS: Balance = parachains_common::polkadot::currency::DOLLARS;
-
-	pub fn genesis() -> Storage {
-		let genesis_config = asset_hub_polkadot_runtime::RuntimeGenesisConfig {
-			system: asset_hub_polkadot_runtime::SystemConfig {
-				code: asset_hub_polkadot_runtime::WASM_BINARY
-					.expect("WASM binary was not build, please build it!")
-					.to_vec(),
-				..Default::default()
-			},
-			balances: asset_hub_polkadot_runtime::BalancesConfig {
-				balances: accounts::init_balances()
-					.iter()
-					.cloned()
-					.map(|k| (k, ED * 4096))
-					.collect(),
-			},
-			parachain_info: asset_hub_polkadot_runtime::ParachainInfoConfig {
-				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: asset_hub_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables_asset_hub_polkadot()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
-			session: asset_hub_polkadot_runtime::SessionConfig {
-				keys: collators::invulnerables_asset_hub_polkadot()
-					.into_iter()
-					.map(|(acc, aura)| {
-						(
-							acc.clone(),                                      // account id
-							acc,                                              // validator id
-							asset_hub_polkadot_runtime::SessionKeys { aura }, // session keys
-						)
-					})
-					.collect(),
-			},
-			polkadot_xcm: asset_hub_polkadot_runtime::PolkadotXcmConfig {
-				safe_xcm_version: Some(SAFE_XCM_VERSION),
-				..Default::default()
-			},
-			..Default::default()
-		};
-
-		genesis_config.build_storage().unwrap()
-	}
-}
-
-// Asset Hub Kusama
-pub mod asset_hub_kusama {
-	use super::*;
-	pub const PARA_ID: u32 = 1000;
-	pub const ED: Balance = parachains_common::kusama::currency::EXISTENTIAL_DEPOSIT;
-
-	pub fn genesis() -> Storage {
-		let genesis_config = asset_hub_kusama_runtime::RuntimeGenesisConfig {
-			system: asset_hub_kusama_runtime::SystemConfig {
-				code: asset_hub_kusama_runtime::WASM_BINARY
-					.expect("WASM binary was not build, please build it!")
-					.to_vec(),
-				..Default::default()
-			},
-			balances: asset_hub_kusama_runtime::BalancesConfig {
-				balances: accounts::init_balances()
-					.iter()
-					.cloned()
-					.map(|k| (k, ED * 4096))
-					.collect(),
-			},
-			parachain_info: asset_hub_kusama_runtime::ParachainInfoConfig {
-				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: asset_hub_kusama_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
-			session: asset_hub_kusama_runtime::SessionConfig {
-				keys: collators::invulnerables()
-					.into_iter()
-					.map(|(acc, aura)| {
-						(
-							acc.clone(),                                    // account id
-							acc,                                            // validator id
-							asset_hub_kusama_runtime::SessionKeys { aura }, // session keys
-						)
-					})
-					.collect(),
-			},
-			polkadot_xcm: asset_hub_kusama_runtime::PolkadotXcmConfig {
-				safe_xcm_version: Some(SAFE_XCM_VERSION),
-				..Default::default()
-			},
-			..Default::default()
-		};
-
-		genesis_config.build_storage().unwrap()
-	}
-}
-
-// Collectives
-pub mod collectives {
-	use super::*;
-	pub const PARA_ID: u32 = 1001;
-	pub const ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
-
-	pub fn genesis() -> Storage {
-		let genesis_config = collectives_polkadot_runtime::RuntimeGenesisConfig {
-			system: collectives_polkadot_runtime::SystemConfig {
-				code: collectives_polkadot_runtime::WASM_BINARY
-					.expect("WASM binary was not build, please build it!")
-					.to_vec(),
-				..Default::default()
-			},
-			balances: collectives_polkadot_runtime::BalancesConfig {
-				balances: accounts::init_balances()
-					.iter()
-					.cloned()
-					.map(|k| (k, ED * 4096))
-					.collect(),
-			},
-			parachain_info: collectives_polkadot_runtime::ParachainInfoConfig {
-				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: collectives_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
-			session: collectives_polkadot_runtime::SessionConfig {
-				keys: collators::invulnerables()
-					.into_iter()
-					.map(|(acc, aura)| {
-						(
-							acc.clone(),                                        // account id
-							acc,                                                // validator id
-							collectives_polkadot_runtime::SessionKeys { aura }, // session keys
-						)
-					})
-					.collect(),
-			},
-			polkadot_xcm: collectives_polkadot_runtime::PolkadotXcmConfig {
-				safe_xcm_version: Some(SAFE_XCM_VERSION),
-				..Default::default()
-			},
-			..Default::default()
-		};
-
-		genesis_config.build_storage().unwrap()
-	}
-}
-
-// Bridge Hub Kusama
-pub mod bridge_hub_kusama {
-	use super::*;
-	pub const PARA_ID: u32 = 1002;
-	pub const ED: Balance = parachains_common::kusama::currency::EXISTENTIAL_DEPOSIT;
-
-	pub fn genesis() -> Storage {
-		let genesis_config = bridge_hub_kusama_runtime::RuntimeGenesisConfig {
-			system: bridge_hub_kusama_runtime::SystemConfig {
-				code: bridge_hub_kusama_runtime::WASM_BINARY
-					.expect("WASM binary was not build, please build it!")
-					.to_vec(),
-				..Default::default()
-			},
-			balances: bridge_hub_kusama_runtime::BalancesConfig {
-				balances: accounts::init_balances()
-					.iter()
-					.cloned()
-					.map(|k| (k, ED * 4096))
-					.collect(),
-			},
-			parachain_info: bridge_hub_kusama_runtime::ParachainInfoConfig {
-				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: bridge_hub_kusama_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
-			session: bridge_hub_kusama_runtime::SessionConfig {
-				keys: collators::invulnerables()
-					.into_iter()
-					.map(|(acc, aura)| {
-						(
-							acc.clone(),                                     // account id
-							acc,                                             // validator id
-							bridge_hub_kusama_runtime::SessionKeys { aura }, // session keys
-						)
-					})
-					.collect(),
-			},
-			polkadot_xcm: bridge_hub_kusama_runtime::PolkadotXcmConfig {
-				safe_xcm_version: Some(SAFE_XCM_VERSION),
-				..Default::default()
-			},
-			..Default::default()
-		};
-
-		genesis_config.build_storage().unwrap()
-	}
-}
-
-// Bridge Hub Polkadot
-pub mod bridge_hub_polkadot {
-	use super::*;
-	pub const PARA_ID: u32 = 1002;
-	pub const ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
-
-	pub fn genesis() -> Storage {
-		let genesis_config = bridge_hub_polkadot_runtime::RuntimeGenesisConfig {
-			system: bridge_hub_polkadot_runtime::SystemConfig {
-				code: bridge_hub_polkadot_runtime::WASM_BINARY
-					.expect("WASM binary was not build, please build it!")
-					.to_vec(),
-				..Default::default()
-			},
-			balances: bridge_hub_polkadot_runtime::BalancesConfig {
-				balances: accounts::init_balances()
-					.iter()
-					.cloned()
-					.map(|k| (k, ED * 4096))
-					.collect(),
-			},
-			parachain_info: bridge_hub_polkadot_runtime::ParachainInfoConfig {
-				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: bridge_hub_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
-			session: bridge_hub_polkadot_runtime::SessionConfig {
-				keys: collators::invulnerables()
-					.into_iter()
-					.map(|(acc, aura)| {
-						(
-							acc.clone(),                                       // account id
-							acc,                                               // validator id
-							bridge_hub_polkadot_runtime::SessionKeys { aura }, // session keys
-						)
-					})
-					.collect(),
-			},
-			polkadot_xcm: bridge_hub_polkadot_runtime::PolkadotXcmConfig {
-				safe_xcm_version: Some(SAFE_XCM_VERSION),
-				..Default::default()
 			},
 			..Default::default()
 		};

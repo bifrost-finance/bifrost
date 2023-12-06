@@ -5,23 +5,24 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-bstringify = "0.1.2"
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
-serde = { version = "1.0.160", default-features = false, features = ["derive"] }
+bstringify = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+xcm = { workspace = true }
 
-zenlink-protocol = { version = "*", default-features = false }
+zenlink-protocol = { workspace = true }
+orml-oracle = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"serde/std",
 	"scale-info/std",
 
@@ -33,6 +34,7 @@ std = [
 	"xcm/std",
 
 	"zenlink-protocol/std",
+	"orml-oracle/std",
 ]
 
 with-bifrost-runtime = [

@@ -19,7 +19,7 @@
 //! Low-level types used throughout the Bifrost code.
 
 use bstringify::bstringify;
-use codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
@@ -413,6 +413,7 @@ impl CurrencyId {
 
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
+			Self::VToken(TokenSymbol::BNC) => Ok(Self::Native(TokenSymbol::BNC)),
 			Self::VToken(symbol) => Ok(Self::Token(*symbol)),
 			Self::VToken2(id) => Ok(Self::Token2(*id)),
 			_ => Err(()),
@@ -423,6 +424,7 @@ impl CurrencyId {
 		match self {
 			Self::Token(symbol) => Ok(Self::VToken(*symbol)),
 			Self::Token2(id) => Ok(Self::VToken2(*id)),
+			Self::Native(TokenSymbol::BNC) => Ok(Self::VToken(TokenSymbol::BNC)),
 			_ => Err(()),
 		}
 	}

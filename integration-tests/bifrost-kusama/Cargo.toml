@@ -5,44 +5,40 @@ authors = ["Ron Yang <yrong1997@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-env_logger = "0.10.0"
-log = { version = "0.4.17" }
-hex-literal = "0.3.1"
-codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
+env_logger = { workspace = true }
+log = { workspace = true }
+hex-literal = { workspace = true }
+parity-scale-codec = { workspace = true }
 
 # Substrate
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-conviction-voting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-referenda = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+sp-runtime = { workspace = true }
+sp-io = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-conviction-voting = { workspace = true }
+pallet-referenda = { workspace = true }
+pallet-staking = { workspace = true }
 
 # Polkadot
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-kusama-runtime = { package = "staging-kusama-runtime", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
-pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+polkadot-parachain-primitives = { workspace = true }
+kusama-runtime = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+pallet-message-queue = { workspace = true }
 
 # Cumulus
-parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-asset-hub-kusama-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+parachains-common = { workspace = true }
+xcm-emulator = { workspace = true }
 
 # Local
-xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
 integration-tests-common = { path = "../common", default-features = false}
-bifrost-slp = { path = "../../pallets/slp" }
-bifrost-vtoken-voting = { path = "../../pallets/vtoken-voting" }
-bifrost-primitives = { path = "../../primitives" }
-bifrost-asset-registry = { path = "../../pallets/asset-registry" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
-bifrost-runtime-common = { path = "../../runtime/common" }
-orml-traits = "0.4.1-dev"
-orml-tokens = "0.4.1-dev"
+bifrost-slp = { workspace = true }
+bifrost-vtoken-voting = { workspace = true }
+bifrost-primitives = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-kusama-runtime = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+orml-traits = { workspace = true }
+orml-tokens = { workspace = true }

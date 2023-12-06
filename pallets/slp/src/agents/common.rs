@@ -33,7 +33,7 @@ use crate::{
 use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
 use frame_support::{ensure, traits::Len};
 use orml_traits::{MultiCurrency, XcmTransfer};
-use polkadot_parachain::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::{Get, U256};
 use sp_runtime::{
 	traits::{AccountIdConversion, UniqueSaturatedFrom, UniqueSaturatedInto},
@@ -406,7 +406,6 @@ impl<T: Config> Pallet<T> {
 		let responder = Self::get_para_multilocation_by_currency_id(currency_id)?;
 
 		let callback_option = match (currency_id, operation) {
-			(PHA, _) => None,
 			(DOT, &XcmOperationType::Delegate) |
 			(DOT, &XcmOperationType::Undelegate) |
 			(KSM, &XcmOperationType::Delegate) |

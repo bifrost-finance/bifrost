@@ -72,7 +72,7 @@ construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol,
 		AssetRegistry: bifrost_asset_registry,
 		PolkadotXcm: pallet_xcm,
-		StableAsset: nutsfinance_stable_asset,
+		StableAsset: bifrost_stable_asset,
 		StablePool: bifrost_stable_pool,
 		VtokenMinting: bifrost_vtoken_minting,
 		XcmInterface: bifrost_xcm_interface,
@@ -342,7 +342,7 @@ impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExec
 }
 
 pub struct EnsurePoolAssetId;
-impl nutsfinance_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
 	fn validate(_: CurrencyId) -> bool {
 		true
 	}
@@ -351,7 +351,7 @@ parameter_types! {
 	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
 }
 
-impl nutsfinance_stable_asset::Config for Test {
+impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type Balance = Balance;
@@ -448,6 +448,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type BifrostSlpx = SlpxInterface;
 	type HydradxParachainId = ConstU32<2034>;
+	type InterlayParachainId = ConstU32<2032>;
 }
 
 parameter_types! {

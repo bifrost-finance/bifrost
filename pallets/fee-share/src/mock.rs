@@ -24,7 +24,6 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
-use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ord_parameter_types,
@@ -37,6 +36,7 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{hashing::blake2_256, ConstU32, H256};
 use sp_runtime::{
 	traits::{
@@ -365,6 +365,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type InterlayParachainId = ConstU32<2032>;
 }
 
 parameter_types! {

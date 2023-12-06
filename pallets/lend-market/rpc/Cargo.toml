@@ -5,25 +5,17 @@ name = 'lend-market-rpc'
 version = "0.8.0"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
-bifrost-primitives = { path = "../../../primitives", default-features = false }
-serde = { version = "1.0.160", features = ["derive"] }
-sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", features = [
-	'std',
-] }
-sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", features = [
-	'std',
-] }
-sp-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", features = [
-	'std',
-] }
+bifrost-primitives = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+jsonrpsee = { workspace = true, features = ["server", "macros"] }
+serde = { workspace = true, features = ["derive"] }
+sp-api = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-core = { workspace = true, features = ['std'] }
+sp-rpc = { workspace = true }
+sp-runtime = { workspace = true }
 
-lend-market-rpc-runtime-api = { path = 'runtime-api', default-features = false }
+lend-market-rpc-runtime-api = { workspace = true }
 
 [lib]
 doctest = false

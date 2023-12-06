@@ -33,17 +33,19 @@
 
 use std::sync::Arc;
 
-use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
+use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use bifrost_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
-use bifrost_salp_rpc_api::{SalpRpc, SalpRpcApiServer};
+use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
-use bifrost_stable_pool_rpc_api::{StablePoolRpc, StablePoolRpcApiServer};
+use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
-use bifrost_ve_minting_rpc_api::{VeMintingRpc, VeMintingRpcApiServer};
+use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use lend_market_rpc::{LendMarket, LendMarketApiServer};
+use lend_market_rpc_runtime_api::LendMarketApi;
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
@@ -86,6 +88,7 @@ where
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: StablePoolRuntimeApi<Block>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -103,7 +106,8 @@ where
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
-	module.merge(StablePoolRpc::new(client).into_rpc())?;
+	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -126,6 +130,7 @@ where
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
@@ -142,7 +147,8 @@ where
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
-	module.merge(StablePoolRpc::new(client).into_rpc())?;
+	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client).into_rpc())?;
 
 	Ok(module)
 }

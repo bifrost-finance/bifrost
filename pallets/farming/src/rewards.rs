@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use codec::HasCompact;
 use frame_support::pallet_prelude::*;
+use parity_scale_codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
@@ -168,14 +168,19 @@ impl<T: Config> Pallet<T> {
 				let reward_inflation = if initial_total_shares.is_zero() {
 					Zero::zero()
 				} else {
-					U256::from(add_amount.to_owned().saturated_into::<u128>())
-						.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
-						.checked_div(
-							initial_total_shares.to_owned().saturated_into::<u128>().into(),
-						)
-						.unwrap_or_default()
-						.as_u128()
-						.saturated_into()
+					// If the total shares is zero or reward amount overflow, the reward inflation
+					// is zero.
+					u128::try_from(
+						U256::from(add_amount.to_owned().saturated_into::<u128>())
+							.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
+							.checked_div(
+								initial_total_shares.to_owned().saturated_into::<u128>().into(),
+							)
+							.unwrap_or_default(),
+					)
+					.ok()
+					.unwrap_or_default()
+					.saturated_into()
 				};
 				*total_reward = total_reward.saturating_add(reward_inflation);
 				*total_withdrawn_reward = total_withdrawn_reward.saturating_add(reward_inflation);
@@ -246,15 +251,16 @@ impl<T: Config> Pallet<T> {
 					// update withdrawn rewards for each reward currency
 					share_info.withdrawn_rewards.iter_mut().try_for_each(
 						|(reward_currency, withdrawn_reward)| -> DispatchResult {
-							let withdrawn_reward_to_remove: BalanceOf<T> = removing_share
-								.saturating_mul(
-									withdrawn_reward.to_owned().saturated_into::<u128>().into(),
-								)
-								.checked_div(share_info.share.saturated_into::<u128>().into())
-								.unwrap_or_default()
-								.as_u128()
-								.saturated_into();
-
+							let withdrawn_reward_to_remove: BalanceOf<T> = u128::try_from(
+								removing_share
+									.saturating_mul(
+										withdrawn_reward.to_owned().saturated_into::<u128>().into(),
+									)
+									.checked_div(share_info.share.saturated_into::<u128>().into())
+									.unwrap_or_default(),
+							)
+							.map_err(|_| ArithmeticError::Overflow)?
+							.unique_saturated_into();
 							if let Some((total_reward, total_withdrawn_reward)) =
 								pool_info.rewards.get_mut(reward_currency)
 							{
@@ -310,15 +316,15 @@ impl<T: Config> Pallet<T> {
 									.copied()
 									.unwrap_or_default();
 
-								let total_reward_proportion: BalanceOf<T> = U256::from(
-									share_info.share.to_owned().saturated_into::<u128>(),
+								let total_reward_proportion: BalanceOf<T> = u128::try_from(
+									U256::from(share_info.share.to_owned().saturated_into::<u128>())
+										.saturating_mul(U256::from(
+											total_reward.to_owned().saturated_into::<u128>(),
+										))
+										.checked_div(total_shares)
+										.unwrap_or_default(),
 								)
-								.saturating_mul(U256::from(
-									total_reward.to_owned().saturated_into::<u128>(),
-								))
-								.checked_div(total_shares)
-								.unwrap_or_default()
-								.as_u128()
+								.map_err(|_| ArithmeticError::Overflow)?
 								.unique_saturated_into();
 
 								let reward_to_withdraw = total_reward_proportion

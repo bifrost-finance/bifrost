@@ -22,14 +22,14 @@ use bifrost_primitives::{
 	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
-use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{ContainsPair, Get, ProcessMessageError},
 };
-pub use polkadot_parachain::primitives::Sibling;
+use parity_scale_codec::{Decode, Encode};
+pub use polkadot_parachain_primitives::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -49,7 +49,7 @@ use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -306,7 +306,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = (
+pub type Barrier = TrailingSetTopicAsId<(
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -317,7 +317,7 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
