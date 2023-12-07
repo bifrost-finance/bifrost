@@ -23,10 +23,9 @@ use super::*;
 // Migration from single schedule to multiple schedules.
 pub(crate) mod v1 {
 	use super::*;
-	use frame_support::log;
 
 	#[cfg(feature = "try-runtime")]
-	pub(crate) fn pre_migrate<T: Config>() -> Result<(), &'static str> {
+	pub(crate) fn pre_migrate<T: Config>() -> Result<(), sp_runtime::DispatchError> {
 		assert!(
 			super::pallet::StorageVersion::<T>::get() == Releases::V0,
 			"Storage version too high."
@@ -70,7 +69,7 @@ pub(crate) mod v1 {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	pub(crate) fn post_migrate<T: Config>() -> Result<(), &'static str> {
+	pub(crate) fn post_migrate<T: Config>() -> Result<(), sp_runtime::DispatchError> {
 		assert_eq!(super::pallet::StorageVersion::<T>::get(), Releases::V1);
 
 		for (_key, schedules) in Vesting::<T>::iter() {

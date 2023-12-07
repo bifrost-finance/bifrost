@@ -205,8 +205,6 @@ pub mod pallet {
 	pub(crate) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info] // TODO: remove after
 	pub struct Pallet<T>(_);
 
 	#[pallet::genesis_config]
@@ -289,8 +287,9 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<(), &'static str> {
-			migrations::v1::pre_migrate::<T>()
+		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+			migrations::v1::pre_migrate::<T>()?;
+			Ok(Vec::new())
 		}
 
 		fn on_runtime_upgrade() -> Weight {
@@ -303,8 +302,11 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade() -> Result<(), &'static str> {
-			migrations::v1::post_migrate::<T>()
+		fn post_upgrade(
+			_number_of_invulnerables: Vec<u8>,
+		) -> Result<(), sp_runtime::DispatchError> {
+			migrations::v1::post_migrate::<T>()?;
+			Ok(())
 		}
 
 		fn integrity_test() {
@@ -515,6 +517,7 @@ pub mod pallet {
 		///
 		/// - `schedule1_index`: index of the first schedule to merge.
 		/// - `schedule2_index`: index of the second schedule to merge.
+		#[pallet::call_index(4)]
 		#[pallet::weight(
 		T::WeightInfo::not_unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
 		.max(T::WeightInfo::unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES))
