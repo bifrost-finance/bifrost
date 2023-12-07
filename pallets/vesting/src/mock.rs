@@ -83,7 +83,7 @@ impl pallet_balances::Config for Test {
 }
 parameter_types! {
 	pub const MinVestedTransfer: u64 = 256 * 2;
-	pub static ExistentialDeposit: u64 = 0;
+	pub static ExistentialDeposit: u64 = 1;
 }
 impl Config for Test {
 	type BlockNumberToBalance = Identity;
