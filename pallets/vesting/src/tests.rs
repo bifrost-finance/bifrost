@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{assert_noop, assert_ok, assert_storage_noop, dispatch::EncodeLike};
+use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
-use sp_runtime::traits::{BadOrigin, Identity};
 
-use super::{Vesting as VestingStorage, *};
+use super::*;
 use crate::mock::{Balances, ExtBuilder, System, Test, Vesting};
 
 const ED: u64 = 1000;
@@ -41,7 +40,6 @@ const CHAR_INIT_LOCKED: u64 = ED * 30 - 5 * ED;
 const CHAR_PER_BLOCK: u64 = 1250;
 
 const DAVE: u64 = 4;
-const DAVE_INIT_BALANCE: u64 = ED * 40;
 
 #[test]
 fn check_vesting_status() {
@@ -534,4 +532,17 @@ fn merge_finished_schedules_should_work() {
 		assert_eq!(Vesting::vesting(&BOB), None);
 		assert_eq!(0, Balances::locks(BOB).to_vec().len());
 	})
+}
+
+#[test]
+#[should_panic]
+fn multiple_schedules_from_genesis_config_errors() {
+	// MaxVestingSchedules is 3, but this config has 4 for account 12 so we panic when building
+	// from genesis.
+	let vesting_config =
+		vec![(12, 10, 20, ED), (12, 10, 20, ED), (12, 10, 20, ED), (12, 10, 20, ED)];
+	ExtBuilder::default()
+		.existential_deposit(ED)
+		.vesting_genesis_config(vesting_config)
+		.build();
 }
