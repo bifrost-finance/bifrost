@@ -17,11 +17,16 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(test)]
 
-use crate::{mock::*, *};
+use crate::{
+	mock::*,
+	types::{EthereumXcmCall, EthereumXcmTransaction, EthereumXcmTransactionV2, MoonbeamCall},
+	*,
+};
 use bifrost_primitives::TokenSymbol;
+use ethereum::TransactionAction;
 use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use hex_literal::hex;
-use sp_core::{bounded::BoundedVec, ConstU32};
+use sp_core::{bounded::BoundedVec, ConstU32, U256};
 use sp_io;
 use zenlink_protocol::AssetId;
 
@@ -231,4 +236,80 @@ fn test_ed() {
 			50 * 1_000_000_000
 		));
 	});
+}
+
+#[test]
+fn test_ethereum_call() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		// b"setTokenAmount(bytes2,uint256,uint256)"
+		assert_eq!("9a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c8", hex::encode(Slpx::ethereum_call(BNC, 123u128, 456u128)));
+
+		let addr: [u8; 20] = hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"];
+		let r = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
+			gas_limit: U256::from(720000),
+			action: TransactionAction::Call(H160::from(addr)),
+			value: U256::zero(),
+			input: BoundedVec::try_from(Slpx::ethereum_call(BNC, 123u128, 456u128)).unwrap(),
+			access_list: None,
+		});
+		let call = MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(r));
+		println!("{}", hex::encode(call.encode()));
+	})
+}
+
+#[test]
+fn test_set_currency_ethereum_call_switch() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, true));
+		assert_eq!(Slpx::currency_id_list().to_vec(), vec![BNC]);
+
+		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), KSM, true));
+		assert_eq!(Slpx::currency_id_list().to_vec(), vec![BNC, KSM]);
+
+		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, false));
+		assert_eq!(Slpx::currency_id_list().to_vec(), vec![KSM]);
+	})
+}
+
+#[test]
+fn test_set_ethereum_call_configration() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::set_ethereum_call_configration(
+			RuntimeOrigin::root(),
+			1_000_000_000_000_000_000u128,
+			Weight::default(),
+			5u32.into(),
+			H160::from(hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"])
+		));
+
+		assert_eq!(
+			Slpx::xcm_ethereum_call_configuration().unwrap(),
+			EthereumCallConfiguration {
+				xcm_fee: 1_000_000_000_000_000_000u128,
+				xcm_weight: Weight::default(),
+				period: 5u32.into(),
+				last_block: 0u32.into(),
+				contract: H160::from(hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"]),
+			}
+		);
+
+		assert_ok!(Slpx::set_ethereum_call_configration(
+			RuntimeOrigin::root(),
+			1u128,
+			Weight::default(),
+			10u32.into(),
+			H160::from(hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"])
+		));
+
+		assert_eq!(
+			Slpx::xcm_ethereum_call_configuration().unwrap(),
+			EthereumCallConfiguration {
+				xcm_fee: 1u128,
+				xcm_weight: Weight::default(),
+				period: 10u32.into(),
+				last_block: 0u32.into(),
+				contract: H160::from(hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"]),
+			}
+		);
+	})
 }

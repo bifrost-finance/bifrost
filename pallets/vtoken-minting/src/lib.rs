@@ -1668,6 +1668,10 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		MinimumRedeem::<T>::get(vtoken_id)
 	}
 
+	fn get_token_pool(currency_id: CurrencyId) -> BalanceOf<T> {
+		Self::token_pool(currency_id)
+	}
+
 	fn get_astar_parachain_id() -> u32 {
 		T::AstarParachainId::get()
 	}
