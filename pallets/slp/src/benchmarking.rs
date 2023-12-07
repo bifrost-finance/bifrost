@@ -480,6 +480,7 @@ mod benchmarks {
 				unlocking_time_unit: None,
 				bonded_pool_id: None,
 				bonded_pool_collection_id: None,
+				bonded_is_vault: None,
 			}),
 		);
 

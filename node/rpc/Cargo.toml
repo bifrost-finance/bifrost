@@ -30,6 +30,8 @@ bifrost-ve-minting-rpc = { workspace = true }
 bifrost-ve-minting-rpc-runtime-api = { workspace = true }
 bifrost-stable-pool-rpc = { workspace = true }
 bifrost-stable-pool-rpc-runtime-api = { workspace = true }
+lend-market-rpc = { workspace = true }
+lend-market-rpc-runtime-api = { workspace = true }
 zenlink-protocol = { workspace = true }
 zenlink-protocol-rpc = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }

@@ -40,7 +40,9 @@ use bifrost_primitives::{
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
+		},
 		ArithmeticError, DispatchError, Permill, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
@@ -122,6 +124,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type HydradxParachainId: Get<u32>;
+
+		#[pallet::constant]
+		type InterlayParachainId: Get<u32>;
 
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
@@ -350,10 +355,10 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			Self::mint_inner(exchanger, token_id, token_amount, remark)
+			Self::mint_inner(exchanger, token_id, token_amount, remark).map(|_| ())
 		}
 
 		#[pallet::call_index(1)]
@@ -855,9 +860,10 @@ pub mod pallet {
 				vtoken_amount = U256::from(token_amount_excluding_fee.saturated_into::<u128>())
 					.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 					.checked_div(token_pool_amount.saturated_into::<u128>().into())
+					.map(|x| u128::try_from(x))
 					.ok_or(Error::<T>::CalculationOverflow)?
-					.as_u128()
-					.saturated_into();
+					.map_err(|_| Error::<T>::CalculationOverflow)?
+					.unique_saturated_into();
 			}
 
 			// Charging fees
@@ -984,6 +990,25 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
+					RedeemType::Interlay(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::InterlayParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: receiver.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
 					RedeemType::Moonbeam(receiver) => {
 						let dest = MultiLocation {
 							parents: 1,
@@ -1018,7 +1043,10 @@ pub mod pallet {
 				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar(_) | RedeemType::Moonbeam(_) | RedeemType::Hydradx(_) => {
+					RedeemType::Astar(_) |
+					RedeemType::Moonbeam(_) |
+					RedeemType::Hydradx(_) |
+					RedeemType::Interlay(_) => {
 						return Ok(());
 					},
 					RedeemType::Native => {},
@@ -1202,7 +1230,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-		) -> DispatchResultWithPostInfo {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
@@ -1225,7 +1253,7 @@ pub mod pallet {
 				fee,
 				remark,
 			});
-			Ok(().into())
+			Ok(vtoken_amount.into())
 		}
 
 		#[transactional]
@@ -1256,12 +1284,13 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_amount = U256::from(vtoken_amount.saturated_into::<u128>())
+			let token_amount: BalanceOf<T> = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
+				.map(|x| u128::try_from(x))
 				.ok_or(Error::<T>::CalculationOverflow)?
-				.as_u128()
-				.saturated_into();
+				.map_err(|_| Error::<T>::CalculationOverflow)?
+				.unique_saturated_into();
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
@@ -1384,32 +1413,36 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(token_amount.saturated_into::<u128>())
+			let value = U256::from(token_amount.saturated_into::<u128>())
 				.saturating_mul(vtoken_total_issuance.saturated_into::<u128>().into())
 				.checked_div(token_pool_amount.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_to_token_inner(
 			token_id: CurrencyIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
-		) -> BalanceOf<T> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			U256::from(vtoken_amount.saturated_into::<u128>())
+			let value = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
 				.checked_div(vtoken_total_issuance.saturated_into::<u128>().into())
-				.unwrap_or(U256::zero())
-				.as_u128()
-				.saturated_into()
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			Ok(u128::try_from(value)
+				.map(|x| x.unique_saturated_into())
+				.map_err(|_| Error::<T>::CalculationOverflow)?)
 		}
 
 		pub fn vtoken_id_inner(token_id: CurrencyIdOf<T>) -> Option<CurrencyIdOf<T>> {
@@ -1581,6 +1614,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_hydradx_parachain_id() -> u32 {
 		T::HydradxParachainId::get()
 	}
+	fn get_interlay_parachain_id() -> u32 {
+		T::InterlayParachainId::get()
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1591,7 +1627,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
 		remark: BoundedVec<u8, ConstU32<32>>,
-	) -> DispatchResultWithPostInfo {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::mint_inner(exchanger, token_id, token_amount, remark)
 	}
 
@@ -1616,7 +1652,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::token_to_vtoken_inner(token_id, vtoken_id, token_amount)
 	}
 
@@ -1624,7 +1660,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		vtoken_id: CurrencyIdOf<T>,
 		vtoken_amount: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		Self::vtoken_to_token_inner(token_id, vtoken_id, vtoken_amount)
 	}
 
@@ -1648,6 +1684,9 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 	fn get_hydradx_parachain_id() -> u32 {
 		T::HydradxParachainId::get()
+	}
+	fn get_interlay_parachain_id() -> u32 {
+		T::InterlayParachainId::get()
 	}
 }
 

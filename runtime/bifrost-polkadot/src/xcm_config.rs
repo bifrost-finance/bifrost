@@ -49,7 +49,7 @@ use orml_traits::location::Reserve;
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
 use sp_core::bounded::BoundedVec;
-use xcm_builder::Account32Hash;
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -306,7 +306,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = (
+pub type Barrier = TrailingSetTopicAsId<(
 	// Weight that is paid for may be consumed.
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -317,7 +317,7 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 	// Barrier allowing a top level paid message with DescendOrigin instruction
 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-);
+)>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,

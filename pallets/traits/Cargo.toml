@@ -8,38 +8,32 @@ version = "0.8.0"
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
-	"derive",
-] }
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-log = { version = "0.4.17", default-features = false }
-num-bigint = { version = '0.4.3', default-features = false }
-num-traits = { version = '0.2.15', default-features = false }
-impl-trait-for-tuples = "0.2.2"
-bifrost-primitives = { path = "../../primitives", default-features = false }
-scale-info = { version = "2.9.0", default-features = false, features = [
-	"derive",
-] }
-serde = { version = "1.0.160", features = ['derive'], optional = true }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+log = { workspace = true }
+num-bigint = { workspace = true }
+num-traits = { workspace = true }
+impl-trait-for-tuples = { workspace = true }
+bifrost-primitives = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ['derive'], optional = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, features = [
-	'std',
-] }
+sp-core = { workspace = true }
 
 [features]
 default = ['std']
 std = [
 	'serde',
-	'codec/std',
+	'parity-scale-codec/std',
 	'frame-support/std',
 	'frame-system/std',
 	'sp-runtime/std',

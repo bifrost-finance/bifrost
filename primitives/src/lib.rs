@@ -152,6 +152,8 @@ pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 
 pub type DerivativeIndex = u16;
 
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
 )]
@@ -236,6 +238,8 @@ pub enum RedeemType<AccountId> {
 	Moonbeam(H160),
 	/// Hydradx chain.
 	Hydradx(AccountId),
+	/// Interlay chain.
+	Interlay(AccountId),
 }
 
 impl<AccountId> Default for RedeemType<AccountId> {

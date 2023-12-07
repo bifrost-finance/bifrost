@@ -30,6 +30,8 @@ mod tests;
 
 pub mod weights;
 
+pub mod migration;
+
 pub use crate::traits::StableAsset;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
