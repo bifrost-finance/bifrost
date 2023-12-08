@@ -125,6 +125,8 @@ impl ExtBuilder {
 				(2, 20 * self.existential_deposit),
 				(3, 30 * self.existential_deposit),
 				(4, 40 * self.existential_deposit),
+				(12, 30 * self.existential_deposit),
+				(13, 9999 * self.existential_deposit),
 			],
 		}
 		.assimilate_storage(&mut t)
@@ -136,7 +138,7 @@ impl ExtBuilder {
 			vec![
 				(1, 0, 10, 5 * self.existential_deposit),
 				(2, 10, 20, 0),
-				(3, 10, 20, 5 * self.existential_deposit),
+				(12, 10, 20, 5 * self.existential_deposit),
 			]
 		};
 
