@@ -42,14 +42,6 @@ fn nay(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 	AccountVote::Standard { vote, balance: amount }
 }
 
-fn split(aye: Balance, nay: Balance) -> AccountVote<Balance> {
-	AccountVote::Split { aye, nay }
-}
-
-fn split_abstain(aye: Balance, nay: Balance, abstain: Balance) -> AccountVote<Balance> {
-	AccountVote::SplitAbstain { aye, nay, abstain }
-}
-
 fn tally(vtoken: CurrencyId, poll_index: u32) -> TallyOf<Runtime> {
 	VtokenVoting::ensure_referendum_ongoing(vtoken, poll_index)
 		.expect("No poll")

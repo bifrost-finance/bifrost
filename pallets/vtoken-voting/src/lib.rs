@@ -144,7 +144,7 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			new_vote: AccountVote<BalanceOf<T>>,
+			token_vote: AccountVote<BalanceOf<T>>,
 			delegator_vote: AccountVote<BalanceOf<T>>,
 		},
 		Unlocked {
@@ -429,18 +429,14 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
 			#[pallet::compact] poll_index: PollIndex,
-			vote: AccountVote<BalanceOf<T>>,
+			vtoken_vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
 			ensure!(UndecidingTimeout::<T>::contains_key(vtoken), Error::<T>::NoData);
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
-			let new_vote = Self::compute_new_vote(vtoken, vote)?;
-			let derivative_index = Self::try_select_derivative_index(vtoken, poll_index, new_vote)?;
-			if let Some(d) = VoteDelegatorFor::<T>::get((&who, vtoken, poll_index)) {
-				ensure!(d == derivative_index, Error::<T>::ChangeDelegator)
-			}
+			let token_vote = Self::compute_token_vote(vtoken, vtoken_vote)?;
 
 			// create referendum if not exist
 			let mut submitted = false;
@@ -458,36 +454,60 @@ pub mod pallet {
 				submitted = true;
 			}
 
-			if !DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)) {
-				let role = DelegatorVoteRole::<T>::get(vtoken, derivative_index)
-					.ok_or(Error::<T>::NoData)?;
-				let target_role = VoteRole::from(vote);
-				ensure!(role == target_role, Error::<T>::DelegatorVoteRoleMismatch);
-				let default_vote: AccountVote<BalanceOf<T>> = target_role.into();
-				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), default_vote);
-			}
+			// TODO
+			let derivative_index = 0;
 
 			// record vote info
-			let maybe_old_vote = Self::try_vote(
+			let (maybe_old_vote, maybe_total_vote) = Self::try_vote(
 				&who,
 				vtoken,
 				poll_index,
 				derivative_index,
-				new_vote,
-				vote.balance(),
+				token_vote,
+				vtoken_vote.balance(),
 			)?;
 
+			let delegator_total_vote = Self::compute_delegator_total_vote(
+				vtoken,
+				maybe_total_vote.ok_or(Error::<T>::NoData)?,
+			)?;
+			let new_delegator_votes =
+				Self::allocate_delegator_votes(vtoken, poll_index, delegator_total_vote)?;
+			let old_delegator_votes =
+				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
+			for (derivative_index, vote) in new_delegator_votes.iter() {
+				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), *vote);
+			}
+			for (old_derivative_index, _) in old_delegator_votes.iter() {
+				if !new_delegator_votes
+					.iter()
+					.any(|(new_derivative_index, _)| new_derivative_index == old_derivative_index)
+				{
+					DelegatorVote::<T>::remove((vtoken, poll_index, old_derivative_index));
+				}
+			}
+
 			// send XCM message
-			let delegator_vote = DelegatorVote::<T>::get((vtoken, poll_index, derivative_index))
-				.ok_or(Error::<T>::NoData)?;
-			let vote_call =
-				<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, delegator_vote);
+			let vote_calls = new_delegator_votes
+				.iter()
+				.map(|(_derivative_index, vote)| {
+					<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
+				})
+				.collect::<Vec<_>>();
+			let vote_call = if vote_calls.len() == 1 {
+				vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
+			} else {
+				ensure!(false, Error::<T>::NoPermissionYet);
+				<RelayCall<T> as UtilityCall<RelayCall<T>>>::batch_all(vote_calls)
+			};
 			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
 				XcmOperationType::Vote,
 			)
 			.ok_or(Error::<T>::NoData)?;
+
+			let derivative_index = new_delegator_votes[0].0.clone();
 			Self::send_xcm_with_notify(
 				derivative_index,
 				vote_call,
@@ -509,8 +529,8 @@ pub mod pallet {
 				who,
 				vtoken,
 				poll_index,
-				new_vote,
-				delegator_vote,
+				token_vote,
+				delegator_vote: new_delegator_votes[0].1,
 			});
 
 			Ok(())
@@ -829,12 +849,16 @@ pub mod pallet {
 			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
 			vtoken_balance: BalanceOf<T>,
-		) -> Result<Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>, DispatchError> {
+		) -> Result<
+			(Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>, Option<AccountVote<BalanceOf<T>>>),
+			DispatchError,
+		> {
 			ensure!(
 				vtoken_balance <= T::MultiCurrency::total_balance(vtoken, who),
 				Error::<T>::InsufficientFunds
 			);
 			let mut old_vote = None;
+			let mut total_vote = None;
 			Self::try_access_poll(vtoken, poll_index, |poll_status| {
 				let tally = poll_status.ensure_ongoing().ok_or(Error::<T>::NotOngoing)?;
 				VotingFor::<T>::try_mutate(who, |voting| {
@@ -869,13 +893,14 @@ pub mod pallet {
 						if let Some(approve) = vote.as_standard() {
 							tally.increase(approve, *delegations);
 						}
+						total_vote = Some(tally.account_vote(Conviction::Locked1x));
 					} else {
 						return Err(Error::<T>::AlreadyDelegating.into());
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
 					Self::extend_lock(&who, vtoken, &poll_index, vtoken_balance)?;
-					Ok(old_vote)
+					Ok((old_vote, total_vote))
 				})
 			})
 		}
