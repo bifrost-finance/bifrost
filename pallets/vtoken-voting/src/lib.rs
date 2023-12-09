@@ -1313,12 +1313,11 @@ pub mod pallet {
 			let mut delegator_total_vote = delegator_total_vote;
 
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
-			let delegators = Delegators::<T>::get(vtoken);
 			let mut delegator_votes =
 				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
 			let delegator_vote_keys =
 				delegator_votes.iter().map(|(index, _)| *index).collect::<Vec<_>>();
-			for derivative_index in delegators {
+			for derivative_index in Delegators::<T>::get(vtoken) {
 				if !delegator_vote_keys.contains(&derivative_index) {
 					delegator_votes
 						.push((derivative_index, AccountVote::<BalanceOf<T>>::from(vote_role)));
