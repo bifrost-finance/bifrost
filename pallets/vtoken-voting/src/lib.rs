@@ -55,8 +55,7 @@ pub use pallet::*;
 use pallet_conviction_voting::{Conviction, UnvoteScope, Vote};
 use sp_runtime::{
 	traits::{
-		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, CheckedSub, Saturating,
-		UniqueSaturatedInto, Zero,
+		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, Saturating, UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError, Perbill,
 };
@@ -241,10 +240,6 @@ pub mod pallet {
 		MaxVotesReached,
 		/// Maximum number of items reached.
 		TooMany,
-		/// Change delegator is not allowed.
-		ChangeDelegator,
-		/// DelegatorVoteRole mismatch.
-		DelegatorVoteRoleMismatch,
 		/// The given vote is not Standard vote.
 		NotStandardVote,
 		/// The given conviction is not valid.
