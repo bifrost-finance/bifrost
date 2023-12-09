@@ -1285,16 +1285,16 @@ pub mod pallet {
 			vote: AccountVote<BalanceOf<T>>,
 		) -> Result<AccountVote<BalanceOf<T>>, DispatchError> {
 			let aye = vote.as_standard().ok_or(Error::<T>::NotStandardVote)?;
+			let conviction_votes = vote
+				.as_standard_vote()
+				.ok_or(Error::<T>::NotStandardVote)?
+				.conviction
+				.votes(vote.balance())
+				.votes;
 			let vote_cap = Self::vote_cap(vtoken)?;
 			for i in 0..=6 {
 				let conviction =
 					Conviction::try_from(i).map_err(|_| Error::<T>::InvalidConviction)?;
-				let conviction_votes = vote
-					.as_standard_vote()
-					.ok_or(Error::<T>::NotStandardVote)?
-					.conviction
-					.votes(vote.balance())
-					.votes;
 				let capital = Self::vote_to_capital(conviction, conviction_votes);
 				if capital <= vote_cap {
 					return Ok(AccountVote::new_standard(Vote { aye, conviction }, capital));
