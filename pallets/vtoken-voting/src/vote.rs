@@ -489,6 +489,20 @@ impl<
 		}
 	}
 
+	pub fn account_vote(&self, conviction: Conviction) -> AccountVote<Votes> {
+		if self.ayes >= self.nays {
+			AccountVote::Standard {
+				vote: Vote { aye: true, conviction },
+				balance: self.ayes - self.nays,
+			}
+		} else {
+			AccountVote::Standard {
+				vote: Vote { aye: false, conviction },
+				balance: self.nays - self.ayes,
+			}
+		}
+	}
+
 	/// Add an account's vote into the tally.
 	pub fn add(&mut self, vote: AccountVote<Votes>) -> Option<()> {
 		match vote {
