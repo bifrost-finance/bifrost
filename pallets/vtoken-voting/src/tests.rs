@@ -420,22 +420,15 @@ fn kill_referendum_with_origin_signed_fails() {
 }
 
 #[test]
-fn set_delegator_role_works() {
+fn add_delegator_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
 		let derivative_index: DerivativeIndex = 100;
-		let role = aye(10, 3).into();
 
-		assert_ok!(VtokenVoting::set_delegator_role(
-			RuntimeOrigin::root(),
-			vtoken,
-			derivative_index,
-			role,
-		));
+		assert_ok!(VtokenVoting::add_delegator(RuntimeOrigin::root(), vtoken, derivative_index,));
 
-		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::DelegatorRoleSet {
+		System::assert_last_event(RuntimeEvent::VtokenVoting(Event::DelegatorAdded {
 			vtoken,
-			role,
 			derivative_index,
 		}));
 	});
