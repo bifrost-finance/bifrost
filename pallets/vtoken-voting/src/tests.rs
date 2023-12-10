@@ -120,19 +120,30 @@ fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
 		let vtoken = VKSM;
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(1, 1)));
+		assert_eq!(usable_balance(vtoken, &ALICE), 9);
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(BOB), vtoken, poll_index, nay(20, 0)));
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(3, 1)));
+		assert_eq!(usable_balance(vtoken, &ALICE), 7);
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
 
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(BOB), vtoken, poll_index, nay(20, 0)));
+		assert_eq!(usable_balance(vtoken, &BOB), 0);
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response_success()));
+
+		assert_ok!(VtokenVoting::set_vote_locking_period(RuntimeOrigin::root(), vtoken, 10));
 		assert_ok!(VtokenVoting::set_referendum_status(
 			RuntimeOrigin::root(),
 			vtoken,
 			poll_index,
 			ReferendumInfoOf::<Runtime>::Completed(3),
 		));
-		assert_ok!(VtokenVoting::try_remove_vote(&BOB, vtoken, poll_index, UnvoteScope::Any));
-		assert_ok!(VtokenVoting::update_lock(&BOB, vtoken, &poll_index));
+
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(BOB), vtoken, poll_index));
 		assert_eq!(usable_balance(vtoken, &BOB), 20);
+
+		RelaychainDataProvider::set_block_number(13);
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, poll_index));
+		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
 }
 
