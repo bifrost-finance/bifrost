@@ -28,6 +28,7 @@ use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use hex_literal::hex;
 use sp_core::{bounded::BoundedVec, ConstU32, U256};
 use sp_io;
+use tiny_keccak::Hasher;
 use zenlink_protocol::AssetId;
 
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
@@ -239,21 +240,36 @@ fn test_ed() {
 }
 
 #[test]
+fn test_selector() {
+	let mut selector = [0; 4];
+	let mut sha3 = tiny_keccak::Keccak::v256();
+	sha3.update(b"setTokenAmount(bytes2,uint256,uint256)");
+	sha3.finalize(&mut selector);
+
+	assert_eq!([154, 65, 185, 36], selector);
+	println!("{:?}", selector);
+	println!("{:?}", hex::encode(selector));
+	assert_eq!("9a41b924", hex::encode(selector));
+}
+
+#[test]
 fn test_ethereum_call() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		// b"setTokenAmount(bytes2,uint256,uint256)"
-		assert_eq!("9a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c8", hex::encode(Slpx::ethereum_call(BNC, 123u128, 456u128)));
+		// b"setTokenAmount(bytes2,uint256,bytes2,uint256)"
+		assert_eq!("9a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c8", hex::encode(Slpx::encode_ethereum_call(BNC, 123u128, 456u128)));
 
+		println!("{:?}", hex::encode(Slpx::encode_ethereum_call(BNC, 123u128, 456u128)));
 		let addr: [u8; 20] = hex!["ae0daa9bfc50f03ce23d30c796709a58470b5f42"];
 		let r = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
 			gas_limit: U256::from(720000),
 			action: TransactionAction::Call(H160::from(addr)),
 			value: U256::zero(),
-			input: BoundedVec::try_from(Slpx::ethereum_call(BNC, 123u128, 456u128)).unwrap(),
+			input: Slpx::encode_ethereum_call(BNC, 123u128, 456u128).try_into().unwrap(),
 			access_list: None,
 		});
 		let call = MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(r));
 		println!("{}", hex::encode(call.encode()));
+		assert_eq!("6d000180fc0a000000000000000000000000000000000000000000000000000000000000ae0daa9bfc50f03ce23d30c796709a58470b5f42000000000000000000000000000000000000000000000000000000000000000091019a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c800", hex::encode(Slpx::encode_transact_call(H160::from(addr), BNC, 123u128, 456u128)));
 	})
 }
 

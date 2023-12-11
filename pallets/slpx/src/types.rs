@@ -29,6 +29,12 @@ use xcm::prelude::Weight;
 /// Max. allowed size of 65_536 bytes.
 pub const MAX_ETHEREUM_XCM_INPUT_SIZE: u32 = 2u32.pow(16);
 
+/// Max. allowed gas limit of 720_000 gas units. Note that this might change in the future.
+pub const MAX_GAS_LIMIT: u32 = 720_000;
+
+/// EVM function selector: setTokenAmount(bytes2,uint256,uint256)
+pub const EVM_FUNCTION_SELECTOR: [u8; 4] = [154, 65, 185, 36];
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type CurrencyIdOf<T> = <<T as pallet::Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,

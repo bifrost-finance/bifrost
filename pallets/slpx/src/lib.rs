@@ -20,6 +20,7 @@
 use crate::types::{
 	AccountIdOf, BalanceOf, CurrencyIdOf, EthereumCallConfiguration, EthereumXcmCall,
 	EthereumXcmTransaction, EthereumXcmTransactionV2, MoonbeamCall, SupportChain, TargetChain,
+	EVM_FUNCTION_SELECTOR, MAX_GAS_LIMIT,
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
@@ -205,7 +206,7 @@ pub mod pallet {
 			period: BlockNumberFor<T>,
 			contract: H160,
 		},
-		XcmEthereumCallSetTokenAmount {
+		XcmSetTokenAmount {
 			currency_id: CurrencyId,
 			token_amount: BalanceOf<T>,
 			vcurrency_id: CurrencyId,
@@ -288,21 +289,23 @@ pub mod pallet {
 				let configuration = XcmEthereumCallConfiguration::<T>::get();
 				match configuration {
 					Some(mut configuration) => {
-						let currency = currency_list[0];
-						let token_amount = T::VtokenMintingInterface::get_token_pool(currency);
+						let currency_id = currency_list[0];
+						let token_amount = T::VtokenMintingInterface::get_token_pool(currency_id);
 						// It's impossible to go wrong.
-						let vtoken = T::VtokenMintingInterface::vtoken_id(currency)
-							.expect("Error convert vtoken");
-						let vtoken_amount = T::MultiCurrency::total_issuance(vtoken);
+						let vcurrency_id = T::VtokenMintingInterface::vtoken_id(currency_id)
+							.expect("Error convert vcurrency_id");
+						let vtoken_amount = T::MultiCurrency::total_issuance(vcurrency_id);
 
 						if configuration.last_block + configuration.period < n {
-							let ethereum_call: Vec<u8> =
-								Self::ethereum_call(currency, token_amount, vtoken_amount);
-							let transact_call =
-								Self::transact_call(configuration.contract, ethereum_call);
+							let encoded_call = Self::encode_transact_call(
+								configuration.contract,
+								currency_id,
+								token_amount,
+								vtoken_amount,
+							);
 
 							let result = Self::send_xcm_to_set_token_amount(
-								transact_call,
+								encoded_call,
 								configuration.xcm_weight,
 								configuration.xcm_fee,
 							);
@@ -311,10 +314,10 @@ pub mod pallet {
 								return weight
 									.saturating_add(T::DbWeight::get().reads_writes(4, 0));
 							}
-							Self::deposit_event(Event::XcmEthereumCallSetTokenAmount {
-								currency_id: currency,
+							Self::deposit_event(Event::XcmSetTokenAmount {
+								currency_id,
 								token_amount,
-								vcurrency_id: vtoken,
+								vcurrency_id,
 								vtoken_amount,
 							});
 
@@ -794,43 +797,40 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// setTokenAmount(bytes2,uint256,uint256)
-	pub fn ethereum_call(
+	pub fn encode_ethereum_call(
 		currency_id: CurrencyId,
 		token_amount: BalanceOf<T>,
 		vtoken_amount: BalanceOf<T>,
 	) -> Vec<u8> {
-		use tiny_keccak::Hasher;
-
 		let bytes2_currency_id: Vec<u8> = currency_id.encode()[..2].to_vec();
 		let uint256_token_amount = U256::from(token_amount.saturated_into::<u128>());
 		let uint256_vtoken_amount = U256::from(vtoken_amount.saturated_into::<u128>());
-		let mut selector = [0; 4];
-		let mut sha3 = tiny_keccak::Keccak::v256();
-		sha3.update(b"setTokenAmount(bytes2,uint256,uint256)");
-		sha3.finalize(&mut selector);
 
-		let parameters_data = ethabi::encode(&[
+		let mut call = ethabi::encode(&[
 			ethabi::Token::FixedBytes(bytes2_currency_id),
 			ethabi::Token::Uint(uint256_token_amount),
 			ethabi::Token::Uint(uint256_vtoken_amount),
 		]);
 
-		let mut encode_data: Vec<u8> = vec![];
-		encode_data.extend(selector);
-		encode_data.extend(parameters_data);
-
-		return encode_data;
+		call.splice(0..0, EVM_FUNCTION_SELECTOR);
+		call
 	}
 
-	pub fn transact_call(contract: H160, ethereum_call: Vec<u8>) -> Vec<u8> {
-		let r = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
-			gas_limit: U256::from(720000),
+	pub fn encode_transact_call(
+		contract: H160,
+		currency_id: CurrencyId,
+		token_amount: BalanceOf<T>,
+		vtoken_amount: BalanceOf<T>,
+	) -> Vec<u8> {
+		let ethereum_call = Self::encode_ethereum_call(currency_id, token_amount, vtoken_amount);
+		let transaction = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
+			gas_limit: U256::from(MAX_GAS_LIMIT),
 			action: TransactionAction::Call(contract),
 			value: U256::zero(),
 			input: BoundedVec::try_from(ethereum_call).unwrap(),
 			access_list: None,
 		});
-		return MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(r)).encode();
+		return MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(transaction)).encode();
 	}
 
 	/// Check if the signer is in the whitelist
