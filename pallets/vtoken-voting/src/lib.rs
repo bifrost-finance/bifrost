@@ -795,7 +795,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = Self::ensure_xcm_response_or_governance(origin)?;
-			if let Some((vtoken, poll_index, derivative_index)) =
+			if let Some((vtoken, poll_index, _derivative_index)) =
 				PendingRemoveDelegatorVote::<T>::get(query_id)
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
