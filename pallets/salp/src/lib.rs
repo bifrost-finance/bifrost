@@ -1270,7 +1270,7 @@ pub mod pallet {
 						relay_currency_id,
 						relay_vtoken_id,
 						value,
-					);
+					)?;
 					T::StablePool::swap(
 						&T::BuybackPalletId::get().into_account_truncating(),
 						pool_id,

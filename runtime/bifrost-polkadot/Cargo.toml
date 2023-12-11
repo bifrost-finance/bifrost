@@ -91,6 +91,7 @@ orml-xtokens = { workspace = true }
 orml-unknown-tokens = { workspace = true }
 orml-xcm = { workspace = true }
 orml-xcm-support = { workspace = true }
+orml-oracle = { workspace = true }
 
 # zenlink
 merkle-distributor = { workspace = true }
@@ -127,6 +128,10 @@ bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = [ "polkadot" ] }
 bifrost-xcm-interface = { workspace = true }
+lend-market = { workspace = true }
+lend-market-rpc-runtime-api = { workspace = true }
+pallet-prices = { workspace = true }
+leverage-staking = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -201,6 +206,7 @@ std = [
 	"orml-traits/std",
 	"orml-unknown-tokens/std",
 	"orml-xcm-support/std",
+	"orml-oracle/std",
 	"orml-xcm/std",
 	"orml-xtokens/std",
 
@@ -231,6 +237,10 @@ std = [
 	"bifrost-vesting/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-vtoken-voting/std",
+	"lend-market/std",
+	"lend-market-rpc-runtime-api/std",
+	"pallet-prices/std",
+	"leverage-staking/std",
 	"bifrost-xcm-interface/std",
 
 	"substrate-wasm-builder"
@@ -267,6 +277,7 @@ runtime-benchmarks = [
 	"bifrost-stable-pool/runtime-benchmarks",
 	"bifrost-vtoken-voting/runtime-benchmarks",
 	"sp-api/disable-logging",
+	"lend-market/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -312,6 +323,7 @@ try-runtime = [
 	"bifrost-currencies/try-runtime",
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",
+	"orml-oracle/try-runtime",
 	"zenlink-protocol/try-runtime",
 	"merkle-distributor/try-runtime",
 	"bifrost-flexible-fee/try-runtime",
@@ -332,6 +344,9 @@ try-runtime = [
 	"bifrost-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
+	"lend-market/try-runtime",
+	"pallet-prices/try-runtime",
+	"leverage-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

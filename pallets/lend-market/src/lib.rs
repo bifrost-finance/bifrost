@@ -81,10 +81,10 @@ pub const MIN_INTEREST_CALCULATING_INTERVAL: u64 = 100; // 100 seconds
 pub const MAX_EXCHANGE_RATE: u128 = 1_000_000_000_000_000_000; // 1
 pub const MIN_EXCHANGE_RATE: u128 = 20_000_000_000_000_000; // 0.02
 
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type AssetIdOf<T> =
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub type AssetIdOf<T> =
 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
-type BalanceOf<T> =
+pub type BalanceOf<T> =
 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// Utility type for managing upgrades/migrations.
@@ -1875,6 +1875,7 @@ impl<T: Config> Pallet<T> {
 		if !lf_enable && total_liquidity >= lf_liquidity + reduce_amount {
 			return Ok(());
 		}
+
 		Err(Error::<T>::InsufficientLiquidity.into())
 	}
 

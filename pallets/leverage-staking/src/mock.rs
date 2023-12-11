@@ -15,12 +15,13 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use crate as bifrost_stable_pool;
+pub use super::*;
+
+use crate as leverage_staking;
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
-	currency::{MOVR, VMOVR},
 	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
-	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT,
+	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT, *,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -29,11 +30,20 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use lend_market::{InterestRateModel, JumpModel, Market, MarketState};
+use orml_traits::{
+	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
+	DataProviderExtended,
+};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage,
+	BuildStorage, FixedPointNumber,
+};
+use std::{
+	cell::RefCell,
+	collections::HashMap,
+	hash::{Hash, Hasher},
 };
 use xcm::{
 	prelude::*,
@@ -46,17 +56,22 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test {
+	pub enum Test{
 		System: frame_system,
 		Tokens: orml_tokens,
-		Currencies: bifrost_currencies,
+		Currencies: bifrost_currencies::{Pallet, Call},
 		Balances: pallet_balances,
-		XTokens: orml_xtokens,
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>},
 		PolkadotXcm: pallet_xcm,
 		AssetRegistry: bifrost_asset_registry,
-		StableAsset: bifrost_stable_asset,
+		StableAsset: bifrost_stable_asset::{Pallet, Storage, Event<T>},
 		StablePool: bifrost_stable_pool,
-		VtokenMinting: bifrost_vtoken_minting,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
+		LendMarket: lend_market::{Pallet, Storage, Call, Event<T>},
+		TimestampPallet: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		LeverageStaking: leverage_staking::{Pallet, Storage, Call, Event<T>},
+		Prices: pallet_prices::{Pallet, Storage, Call, Event<T>},
+		// PolkadotXcm: pallet_xcm,
 	}
 );
 
@@ -204,11 +219,6 @@ impl orml_xtokens::Config for Test {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 impl pallet_balances::Config for Test {
@@ -221,10 +231,10 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
+	type RuntimeHoldReason = ();
 }
 
 ord_parameter_types! {
@@ -272,6 +282,16 @@ impl bifrost_stable_pool::Config for Test {
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
+}
+
+impl leverage_staking::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<u128>;
+	type VtokenMinting = VtokenMinting;
+	type LendMarket = LendMarket;
+	type StablePoolHandler = StablePool;
+	type CurrencyIdConversion = AssetIdMaps<Test>;
 }
 
 parameter_types! {
@@ -324,6 +344,127 @@ impl SlpOperator<CurrencyId> for Slp {
 	}
 }
 
+parameter_types! {
+	pub const MinimumPeriod: u64 = 5;
+}
+
+impl pallet_timestamp::Config for Test {
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = ();
+}
+
+pub struct MockPriceFeeder;
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
+pub struct CurrencyIdWrap(CurrencyId);
+
+impl Hash for CurrencyIdWrap {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		state.write_u8(1);
+	}
+}
+
+impl PartialEq for CurrencyIdWrap {
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
+	}
+}
+
+impl Eq for CurrencyIdWrap {}
+
+// pallet-price is using for benchmark compilation
+pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+pub struct MockDataProvider;
+impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
+	fn get(_asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
+		Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
+	}
+}
+
+impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
+	fn get_no_op(_key: &CurrencyId) -> Option<TimeStampedPrice> {
+		None
+	}
+
+	fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
+		vec![]
+	}
+}
+
+impl DataFeeder<CurrencyId, TimeStampedPrice, u128> for MockDataProvider {
+	fn feed_value(
+		_: Option<u128>,
+		_: CurrencyId,
+		_: TimeStampedPrice,
+	) -> sp_runtime::DispatchResult {
+		Ok(())
+	}
+}
+
+impl MockPriceFeeder {
+	thread_local! {
+		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
+			RefCell::new(
+				vec![BNC, DOT, KSM, DOT_U, VKSM, VDOT]
+					.iter()
+					.map(|&x| (CurrencyIdWrap(x), Some((Price::saturating_from_integer(1), 1))))
+					.collect()
+			)
+		};
+	}
+
+	pub fn set_price(asset_id: CurrencyId, price: Price) {
+		Self::PRICES.with(|prices| {
+			prices.borrow_mut().insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
+		});
+	}
+
+	pub fn reset() {
+		Self::PRICES.with(|prices| {
+			for (_, val) in prices.borrow_mut().iter_mut() {
+				*val = Some((Price::saturating_from_integer(1), 1u64));
+			}
+		})
+	}
+}
+
+impl PriceFeeder for MockPriceFeeder {
+	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
+		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
+	}
+}
+
+parameter_types! {
+	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
+	pub const RewardAssetId: CurrencyId = BNC;
+	pub const LiquidationFreeAssetId: CurrencyId = DOT;
+}
+
+impl lend_market::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type PriceFeeder = MockPriceFeeder;
+	type PalletId = LendMarketPalletId;
+	type ReserveOrigin = EnsureRoot<u128>;
+	type UpdateOrigin = EnsureRoot<u128>;
+	type WeightInfo = ();
+	type UnixTime = TimestampPallet;
+	type Assets = Currencies;
+	type RewardAssetId = RewardAssetId;
+	type LiquidationFreeAssetId = LiquidationFreeAssetId;
+}
+
+impl pallet_prices::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Source = MockDataProvider;
+	type FeederOrigin = EnsureRoot<u128>;
+	type UpdateOrigin = EnsureRoot<u128>;
+	type RelayCurrency = RelayCurrencyId;
+	type Assets = Currencies;
+	type CurrencyIdConvert = AssetIdMaps<Test>;
+	type WeightInfo = ();
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
 	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
@@ -367,14 +508,6 @@ impl Default for ExtBuilder {
 	}
 }
 
-pub fn million_unit(d: u128) -> u128 {
-	d.saturating_mul(10_u128.pow(18))
-}
-
-pub fn unit(d: u128) -> u128 {
-	d.saturating_mul(10_u128.pow(12))
-}
-
 impl ExtBuilder {
 	pub fn balances(mut self, endowed_accounts: Vec<(u128, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
@@ -383,14 +516,10 @@ impl ExtBuilder {
 
 	pub fn new_test_ext(self) -> Self {
 		self.balances(vec![
-			(0, BNC, unit(1000)),
-			(0, MOVR, million_unit(1_000_000)),
-			(0, VMOVR, million_unit(1_000_000)),
-			(1, BNC, 1_000_000_000_000),
-			(1, DOT, 100_000_000_000_000),
-			(3, DOT, 200_000_000),
-			(4, DOT, 100_000_000),
-			(6, BNC, 100_000_000_000_000),
+			(0, DOT, unit(1_000_000_000_000)),
+			(1, BNC, unit(1)),
+			(1, DOT, unit(1000)),
+			(3, DOT, unit(1000)),
 		])
 	}
 
@@ -400,21 +529,18 @@ impl ExtBuilder {
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![
-				// (CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
 				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
 				(CurrencyId::Native(TokenSymbol::BNC), 10_000_000, None),
 				(DOT, 1_000_000, None),
 				(ASTR, 10_000_000, None),
 				(GLMR, 10_000_000, None),
-				(MOVR, 10_000_000, None),
 			],
-			vcurrency: vec![VDOT, VMOVR],
+			vcurrency: vec![VDOT],
 			vsbond: vec![],
 			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
-		// .into()
 
 		pallet_balances::GenesisConfig::<Test> {
 			balances: self
@@ -440,5 +566,30 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+pub fn unit(d: u128) -> u128 {
+	d.saturating_mul(10_u128.pow(12))
+}
+
+pub const fn market_mock(lend_token_id: CurrencyId) -> Market<Balance> {
+	Market {
+		close_factor: Ratio::from_percent(50),
+		collateral_factor: Ratio::from_percent(50),
+		liquidation_threshold: Ratio::from_percent(55),
+		liquidate_incentive: Rate::from_inner(Rate::DIV / 100 * 110),
+		liquidate_incentive_reserved_factor: Ratio::from_percent(3),
+		state: MarketState::Pending,
+		rate_model: InterestRateModel::Jump(JumpModel {
+			base_rate: Rate::from_inner(Rate::DIV / 100 * 2),
+			jump_rate: Rate::from_inner(Rate::DIV / 100 * 10),
+			full_rate: Rate::from_inner(Rate::DIV / 100 * 32),
+			jump_utilization: Ratio::from_percent(80),
+		}),
+		reserve_factor: Ratio::from_percent(15),
+		supply_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
+		borrow_cap: 1_000_000_000_000_000_000_000u128, // set to 1B
+		lend_token_id,
 	}
 }

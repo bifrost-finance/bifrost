@@ -17,12 +17,12 @@ use std::sync::Arc;
 pub use lend_market_rpc_runtime_api::LendMarketApi as LendMarketRuntimeApi;
 
 use bifrost_primitives::{CurrencyId, Liquidity, Rate, Ratio, Shortfall};
-use codec::Codec;
 use jsonrpsee::{
 	core::{async_trait, Error as JsonRpseeError, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
+use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;

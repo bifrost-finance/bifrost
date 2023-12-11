@@ -118,21 +118,19 @@ build-bifrost-rococo-fast-wasm:
 
 .PHONY: try-kusama-runtime-upgrade # try kusama runtime upgrade
 try-kusama-runtime-upgrade:
-	cargo run --features try-runtime --features with-bifrost-kusama-runtime --release \
- 			  -- try-runtime \
- 			  --runtime target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-kusama on-runtime-upgrade \
- 			  --checks=all live \
- 			  --uri=wss://bifrost-rpc.liebi.com:443/ws
+	try-runtime \
+		--runtime \
+			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
+		on-runtime-upgrade live \
+		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws 
 
 .PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
 try-polkadot-runtime-upgrade:
-	cargo run --features try-runtime --features with-bifrost-polkadot-runtime --release \
- 			  -- try-runtime \
- 			  --runtime target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm -lruntime=debug \
- 			  --chain=bifrost-polkadot on-runtime-upgrade \
- 			  --checks=all live \
- 			  --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
+	try-runtime \
+		--runtime \
+		target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
+		on-runtime-upgrade live \
+		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: resources # export genesis resources
 resources:
