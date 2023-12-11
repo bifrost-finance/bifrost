@@ -945,7 +945,7 @@ impl bifrost_vesting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
-	const MAX_VESTING_SCHEDULES: u32 = 42;
+	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 // Bifrost modules start
