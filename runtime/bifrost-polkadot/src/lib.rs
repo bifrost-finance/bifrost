@@ -1359,7 +1359,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = CoreAdminOrCouncil;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmInterface;
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
