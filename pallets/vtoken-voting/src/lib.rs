@@ -325,14 +325,25 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Perbill, ValueQuery>;
 
 	#[pallet::storage]
-	pub type DelegatorVote<T: Config> = StorageNMap<
+	pub type DelegatorVotes<T: Config> = StorageDoubleMap<
 		_,
-		(
-			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
-			NMapKey<Twox64Concat, PollIndex>,
-			NMapKey<Twox64Concat, DerivativeIndex>,
-		),
-		AccountVote<BalanceOf<T>>,
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		Twox64Concat,
+		PollIndex,
+		BoundedVec<(DerivativeIndex, AccountVote<BalanceOf<T>>), ConstU32<100>>,
+		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	pub type PendingDelegatorVotes<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		Twox64Concat,
+		PollIndex,
+		BoundedVec<(DerivativeIndex, AccountVote<BalanceOf<T>>), ConstU32<100>>,
+		ValueQuery,
 	>;
 
 	#[pallet::storage]
@@ -454,18 +465,9 @@ pub mod pallet {
 				submitted = true;
 			}
 
-			// TODO
-			let derivative_index = 0;
-
 			// record vote info
-			let (maybe_old_vote, maybe_total_vote) = Self::try_vote(
-				&who,
-				vtoken,
-				poll_index,
-				derivative_index,
-				token_vote,
-				vtoken_vote.balance(),
-			)?;
+			let (maybe_old_vote, maybe_total_vote) =
+				Self::try_vote(&who, vtoken, poll_index, token_vote, vtoken_vote.balance())?;
 
 			let delegator_total_vote = Self::compute_delegator_total_vote(
 				vtoken,
@@ -473,19 +475,13 @@ pub mod pallet {
 			)?;
 			let new_delegator_votes =
 				Self::allocate_delegator_votes(vtoken, poll_index, delegator_total_vote)?;
-			let old_delegator_votes =
-				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
-			for (derivative_index, vote) in new_delegator_votes.iter() {
-				DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), *vote);
-			}
-			for (old_derivative_index, _) in old_delegator_votes.iter() {
-				if !new_delegator_votes
-					.iter()
-					.any(|(new_derivative_index, _)| new_derivative_index == old_derivative_index)
-				{
-					DelegatorVote::<T>::remove((vtoken, poll_index, old_derivative_index));
+
+			PendingDelegatorVotes::<T>::try_mutate(vtoken, poll_index, |item| -> DispatchResult {
+				for (derivative_index, vote) in new_delegator_votes.iter() {
+					item.try_push((*derivative_index, *vote)).map_err(|_| Error::<T>::TooMany)?;
 				}
-			}
+				Ok(())
+			})?;
 
 			// send XCM message
 			let vote_calls = new_delegator_votes
@@ -571,11 +567,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
-			ensure!(
-				DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)),
-				Error::<T>::NoData
-			);
-			Self::ensure_referendum_expired(vtoken, poll_index, derivative_index)?;
+			ensure!(DelegatorVotes::<T>::get(vtoken, poll_index).len() > 0, Error::<T>::NoData);
+			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
 			let notify_call = Call::<T>::notify_remove_delegator_vote {
 				query_id: 0,
@@ -722,22 +715,30 @@ pub mod pallet {
 			{
 				if !success {
 					// rollback vote
+					let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
 					Self::update_lock(&who, vtoken, &poll_index)?;
 					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
-						Self::try_vote(
-							&who,
-							vtoken,
-							poll_index,
-							derivative_index,
-							old_vote,
-							vtoken_balance,
-						)?;
+						Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
 					}
 				} else {
 					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
 						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
 					}
+					let _ = DelegatorVotes::<T>::clear(u32::MAX, None);
+					DelegatorVotes::<T>::try_mutate(
+						vtoken,
+						poll_index,
+						|item| -> DispatchResult {
+							for (derivative_index, vote) in
+								PendingDelegatorVotes::<T>::take(vtoken, poll_index).iter()
+							{
+								item.try_push((*derivative_index, *vote))
+									.map_err(|_| Error::<T>::TooMany)?;
+							}
+							Ok(())
+						},
+					)?;
 				}
 				PendingVotingInfo::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
@@ -799,19 +800,7 @@ pub mod pallet {
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
-					DelegatorVote::<T>::try_mutate_exists(
-						(vtoken, poll_index, derivative_index),
-						|maybe_vote| {
-							if let Some(inner_vote) = maybe_vote {
-								inner_vote
-									.checked_sub(*inner_vote)
-									.map_err(|_| Error::<T>::NoData)?;
-								Ok(())
-							} else {
-								Err(Error::<T>::NoData)
-							}
-						},
-					)?;
+					let _ = DelegatorVotes::<T>::clear(u32::MAX, None);
 				}
 				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
@@ -846,7 +835,6 @@ pub mod pallet {
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			derivative_index: DerivativeIndex,
 			vote: AccountVote<BalanceOf<T>>,
 			vtoken_balance: BalanceOf<T>,
 		) -> Result<
@@ -867,29 +855,26 @@ pub mod pallet {
 							Ok(i) => {
 								// Shouldn't be possible to fail, but we handle it gracefully.
 								tally.remove(votes[i].1).ok_or(ArithmeticError::Underflow)?;
-								Self::try_sub_delegator_vote(
-									vtoken, poll_index, votes[i].2, votes[i].1,
-								)?;
 								old_vote = Some((votes[i].1, votes[i].3));
 								if let Some(approve) = votes[i].1.as_standard() {
 									tally.reduce(approve, *delegations);
 								}
 								votes[i].1 = vote;
-								votes[i].2 = derivative_index;
+								votes[i].2 = 0; // Deprecated: derivative_index
 								votes[i].3 = vtoken_balance;
 							},
 							Err(i) => {
 								votes
 									.try_insert(
 										i,
-										(poll_index, vote, derivative_index, vtoken_balance),
+										// Deprecated: derivative_index
+										(poll_index, vote, 0, vtoken_balance),
 									)
 									.map_err(|_| Error::<T>::MaxVotesReached)?;
 							},
 						}
 						// Shouldn't be possible to fail, but we handle it gracefully.
 						tally.add(vote).ok_or(ArithmeticError::Overflow)?;
-						Self::try_add_delegator_vote(vtoken, poll_index, derivative_index, vote)?;
 						if let Some(approve) = vote.as_standard() {
 							tally.increase(approve, *delegations);
 						}
@@ -931,7 +916,6 @@ pub mod pallet {
 							ensure!(matches!(scope, UnvoteScope::Any), Error::<T>::NoPermission);
 							// Shouldn't be possible to fail, but we handle it gracefully.
 							tally.remove(v.1).ok_or(ArithmeticError::Underflow)?;
-							Self::try_sub_delegator_vote(vtoken, poll_index, v.2, v.1)?;
 							if let Some(approve) = v.1.as_standard() {
 								tally.reduce(approve, *delegations);
 							}
@@ -1120,10 +1104,10 @@ pub mod pallet {
 		fn ensure_referendum_expired(
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
-			derivative_index: DerivativeIndex,
 		) -> DispatchResult {
-			let delegator_vote = DelegatorVote::<T>::get((vtoken, poll_index, derivative_index))
-				.ok_or(Error::<T>::NoData)?;
+			let delegator_votes = DelegatorVotes::<T>::get(vtoken, poll_index).into_inner();
+			let (_derivative_index, delegator_vote) =
+				delegator_votes.first().ok_or(Error::<T>::NoData)?;
 			match (ReferendumInfoFor::<T>::get(vtoken, poll_index), delegator_vote.locked_if(true))
 			{
 				(Some(ReferendumInfo::Completed(moment)), Some((lock_periods, _balance))) => {
@@ -1256,8 +1240,7 @@ pub mod pallet {
 			let mut delegator_total_vote = delegator_total_vote;
 
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
-			let mut delegator_votes =
-				DelegatorVote::<T>::iter_prefix((vtoken, poll_index)).collect::<Vec<_>>();
+			let mut delegator_votes = DelegatorVotes::<T>::get(vtoken, poll_index).into_inner();
 			let delegator_vote_keys =
 				delegator_votes.iter().map(|(index, _)| *index).collect::<Vec<_>>();
 			for derivative_index in Delegators::<T>::get(vtoken) {
