@@ -61,6 +61,9 @@ std = [
 	"cumulus-primitives-core/std",
 	"pallet-xcm/std",
 	"xcm/std",
+	"pallet-multisig/std",
+	"pallet-collective/std",
+	"orml-xtokens/std",
 ]
 
 runtime-benchmarks = [
