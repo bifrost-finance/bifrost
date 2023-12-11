@@ -195,7 +195,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			5_000_000_000_000,
 			Some(validator_0_location),
-			None,
 			None
 		));
 		assert_ok!(Slp::bond_extra(
@@ -204,7 +203,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			Some(validator_0_location),
 			5_000_000_000_000,
-			None,
 			None
 		));
 		assert_ok!(Slp::unbond(
@@ -213,7 +211,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			Some(validator_0_location),
 			2_000_000_000_000,
-			None,
 			None
 		));
 
@@ -295,7 +292,6 @@ fn parachain_staking_bond_to_liquidize_works() {
 			None,
 			Some(validator_0_location),
 			None,
-			None,
 			None
 		));
 	});
@@ -343,7 +339,6 @@ fn parachain_staking_bond_extra_works() {
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				5_000_000_000_000,
-				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -393,7 +388,6 @@ fn parachain_staking_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				2_000_000_000_000,
-				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -441,7 +435,6 @@ fn parachain_staking_unbond_all_works() {
 				RuntimeOrigin::signed(ALICE),
 				BNC,
 				Box::new(subaccount_0_location),
-				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -500,7 +493,6 @@ fn parachain_staking_rebond_works() {
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				None,
-				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -553,7 +545,6 @@ fn parachain_staking_undelegate_works() {
 				BNC,
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
-				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -610,7 +601,6 @@ fn parachain_staking_redelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				BNC,
 				Box::new(subaccount_0_location),
-				None,
 				None,
 				None
 			),
@@ -673,7 +663,6 @@ fn parachain_staking_liquidize_works() {
 				None,
 				Some(validator_0_location),
 				None,
-				None,
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -694,7 +683,6 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
-				None,
 				None,
 				None
 			),
@@ -726,7 +714,6 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				5_000_000_000_000,
 				Some(validator_0_location),
-				None,
 				None
 			),
 			Error::<Runtime>::AlreadyBonded
@@ -754,7 +741,6 @@ fn parachain_staking_liquidize_works() {
 				None,
 				Some(validator_0_location),
 				None,
-				None,
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -775,7 +761,6 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
-				None,
 				None,
 				None
 			),
@@ -817,7 +802,6 @@ fn parachain_staking_transfer_back_works() {
 			Box::new(subaccount_0_location),
 			Box::new(exit_account_location),
 			5_000_000_000_000,
-			None,
 			None
 		));
 	});

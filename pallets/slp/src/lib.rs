@@ -714,21 +714,14 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 			validator: Option<MultiLocation>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(
-				&who,
-				amount,
-				&validator,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id =
+				staking_agent.bond(&who, amount, &validator, currency_id, weight_and_fee)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -752,21 +745,14 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond_extra(
-				&who,
-				amount,
-				&validator,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id =
+				staking_agent.bond_extra(&who, amount, &validator, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -791,21 +777,14 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(
-				&who,
-				amount,
-				&validator,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id =
+				staking_agent.unbond(&who, amount, &validator, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -827,15 +806,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id =
-				staking_agent.unbond_all(&who, currency_id, transact_weight, withdraw_fee)?;
+			let query_id = staking_agent.unbond_all(&who, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -857,21 +834,14 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			validator: Option<MultiLocation>,
 			amount: Option<BalanceOf<T>>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(
-				&who,
-				amount,
-				&validator,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id =
+				staking_agent.rebond(&who, amount, &validator, currency_id, weight_and_fee)?;
 			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -894,20 +864,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.delegate(
-				&who,
-				&targets,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id = staking_agent.delegate(&who, &targets, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -929,20 +892,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
 			targets: Vec<MultiLocation>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.undelegate(
-				&who,
-				&targets,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id = staking_agent.undelegate(&who, &targets, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -964,20 +920,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
 			targets: Option<Vec<MultiLocation>>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.redelegate(
-				&who,
-				&targets,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			let query_id = staking_agent.redelegate(&who, &targets, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -1000,21 +949,13 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			validator: Box<MultiLocation>,
 			when: Option<TimeUnit>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.payout(
-				&who,
-				&validator,
-				&when,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			staking_agent.payout(&who, &validator, &when, currency_id, weight_and_fee)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Payout {
@@ -1035,8 +976,7 @@ pub mod pallet {
 			when: Option<TimeUnit>,
 			validator: Option<MultiLocation>,
 			amount: Option<BalanceOf<T>>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1048,8 +988,7 @@ pub mod pallet {
 				&validator,
 				currency_id,
 				amount,
-				transact_weight,
-				withdraw_fee,
+				weight_and_fee,
 			)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
@@ -1072,14 +1011,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: Box<MultiLocation>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.chill(&who, currency_id, transact_weight, withdraw_fee)?;
+			let query_id = staking_agent.chill(&who, currency_id, weight_and_fee)?;
 			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
@@ -1100,21 +1038,13 @@ pub mod pallet {
 			from: Box<MultiLocation>,
 			to: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_back(
-				&from,
-				&to,
-				amount,
-				currency_id,
-				transact_weight,
-				withdraw_fee,
-			)?;
+			staking_agent.transfer_back(&from, &to, amount, currency_id, weight_and_fee)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferBack {
@@ -1165,8 +1095,7 @@ pub mod pallet {
 			who: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 			if_from_currency: bool,
-			transact_weight: Option<Weight>,
-			withdraw_fee: Option<BalanceOf<T>>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1177,8 +1106,7 @@ pub mod pallet {
 				amount,
 				currency_id,
 				if_from_currency,
-				transact_weight,
-				withdraw_fee,
+				weight_and_fee,
 			)?;
 
 			// Deposit event.

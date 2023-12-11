@@ -435,7 +435,6 @@ fn transfer_back() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			Box::new(EXIT_ACCOUNT_MULTILOCATION),
 			50 * KSM_DECIMALS,
-			None,
 			None
 		));
 	});
@@ -464,7 +463,6 @@ fn bond_works() {
 				RelayCurrencyId::get(),
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				50 * KSM_DECIMALS,
-				None,
 				None,
 				None,
 			));
@@ -516,7 +514,6 @@ fn bond_extra_works() {
 				50 * KSM_DECIMALS,
 				None,
 				None,
-				None,
 			));
 		});
 		BifrostKusama::execute_with(|| {
@@ -527,7 +524,6 @@ fn bond_extra_works() {
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				None,
 				20 * KSM_DECIMALS,
-				None,
 				None
 			));
 		});
@@ -572,7 +568,6 @@ fn unbond_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -596,7 +591,6 @@ fn unbond_works() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			None,
 			20 * KSM_DECIMALS,
-			None,
 			None
 		));
 	});
@@ -639,7 +633,6 @@ fn unbond_all_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -656,7 +649,6 @@ fn unbond_all_works() {
 			RuntimeOrigin::signed(AccountId::from(ALICE)),
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-			None,
 			None
 		));
 	});
@@ -695,7 +687,6 @@ fn rebond_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -710,7 +701,6 @@ fn rebond_works() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			None,
 			30 * KSM_DECIMALS,
-			None,
 			None
 		));
 	});
@@ -727,7 +717,6 @@ fn rebond_works() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			None,
 			Some(20 * KSM_DECIMALS),
-			None,
 			None
 		));
 	});
@@ -781,7 +770,6 @@ fn delegate_works() {
 				50 * KSM_DECIMALS,
 				None,
 				None,
-				None,
 			));
 		});
 
@@ -798,7 +786,6 @@ fn delegate_works() {
 				RelayCurrencyId::get(),
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-				None,
 				None
 			));
 		});
@@ -834,7 +821,6 @@ fn undelegate_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -848,7 +834,6 @@ fn undelegate_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			None,
 			None
 		));
 	});
@@ -864,7 +849,6 @@ fn undelegate_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			vec![KUSAMA_ALICE_STASH_MULTILOCATION],
-			None,
 			None
 		));
 	});
@@ -893,7 +877,6 @@ fn redelegate_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -907,7 +890,6 @@ fn redelegate_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			None,
 			None
 		));
 	});
@@ -923,7 +905,6 @@ fn redelegate_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			vec![KUSAMA_ALICE_STASH_MULTILOCATION],
-			None,
 			None
 		));
 	});
@@ -938,7 +919,6 @@ fn redelegate_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			Some(vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION]),
-			None,
 			None
 		));
 	});
@@ -970,7 +950,6 @@ fn payout_works() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			Box::new(KUSAMA_ALICE_STASH_MULTILOCATION),
 			Some(TimeUnit::Era(27)),
-			None,
 			None
 		));
 	});
@@ -988,7 +967,6 @@ fn liquidize_works() {
 			50 * KSM_DECIMALS,
 			None,
 			None,
-			None,
 		));
 	});
 
@@ -1002,7 +980,6 @@ fn liquidize_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-			None,
 			None
 		));
 	});
@@ -1018,7 +995,6 @@ fn liquidize_works() {
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			None,
 			20 * KSM_DECIMALS,
-			None,
 			None
 		));
 	});
@@ -1049,7 +1025,6 @@ fn liquidize_works() {
 			RelayCurrencyId::get(),
 			Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 			Some(TimeUnit::SlashingSpan(5)),
-			None,
 			None,
 			None,
 			None
@@ -1085,8 +1060,7 @@ fn chill_works() {
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				50 * KSM_DECIMALS,
 				None,
-				None,
-				None,
+				None
 			));
 		});
 
@@ -1096,7 +1070,6 @@ fn chill_works() {
 				RelayCurrencyId::get(),
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
 				vec![KUSAMA_ALICE_STASH_MULTILOCATION, KUSAMA_BOB_STASH_MULTILOCATION],
-				None,
 				None
 			));
 		});
@@ -1120,7 +1093,6 @@ fn chill_works() {
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				RelayCurrencyId::get(),
 				Box::new(KSM_DELEGATOR_0_MULTILOCATION),
-				None,
 				None
 			));
 		});

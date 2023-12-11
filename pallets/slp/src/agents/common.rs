@@ -371,8 +371,7 @@ impl<T: Config> Pallet<T> {
 		call: Vec<u8>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<BalanceOf<T>>,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
 		let now = frame_system::Pallet::<T>::block_number();
@@ -380,8 +379,8 @@ impl<T: Config> Pallet<T> {
 		let (query_id, notify_call_weight) =
 			Self::get_query_id_and_notify_call_weight(currency_id, &operation)?;
 
-		let (transact_weight, withdraw_fee) = match (transact_weight, withdraw_fee) {
-			(Some(weight), Some(fee)) => (weight, fee),
+		let (transact_weight, withdraw_fee) = match weight_and_fee {
+			Some((weight, fee)) => (weight, fee),
 			_ => T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?,
 		};
@@ -433,11 +432,10 @@ impl<T: Config> Pallet<T> {
 		call: Vec<u8>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<BalanceOf<T>>,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<BalanceOf<T>, Error<T>> {
-		let (transact_weight, withdraw_fee) = match (transact_weight, withdraw_fee) {
-			(Some(weight), Some(fee)) => (weight, fee),
+		let (transact_weight, withdraw_fee) = match weight_and_fee {
+			Some((weight, fee)) => (weight, fee),
 			_ => T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
 				.ok_or(Error::<T>::WeightAndFeeNotExists)?,
 		};

@@ -45,8 +45,7 @@ pub trait StakingAgent<
 		amount: Balance,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
@@ -56,8 +55,7 @@ pub trait StakingAgent<
 		amount: Balance,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
@@ -67,8 +65,7 @@ pub trait StakingAgent<
 		amount: Balance,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
@@ -76,8 +73,7 @@ pub trait StakingAgent<
 		&self,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
@@ -87,8 +83,7 @@ pub trait StakingAgent<
 		amount: Option<Balance>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
@@ -97,8 +92,7 @@ pub trait StakingAgent<
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Remove delegation relationship with some validators.
@@ -107,8 +101,7 @@ pub trait StakingAgent<
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
@@ -117,8 +110,7 @@ pub trait StakingAgent<
 		who: &MultiLocation,
 		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
@@ -128,8 +120,7 @@ pub trait StakingAgent<
 		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Withdraw the due payout into free balance.
@@ -140,8 +131,7 @@ pub trait StakingAgent<
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 		amount: Option<Balance>,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
@@ -149,8 +139,7 @@ pub trait StakingAgent<
 		&self,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
@@ -160,8 +149,7 @@ pub trait StakingAgent<
 		to: &MultiLocation,
 		amount: Balance,
 		currency_id: CurrencyId,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
@@ -180,8 +168,7 @@ pub trait StakingAgent<
 		amount: Balance,
 		currency_id: CurrencyId,
 		if_from_currency: bool,
-		transact_weight: Option<Weight>,
-		withdraw_fee: Option<Balance>,
+		weight_and_fee: Option<(Weight, Balance)>,
 	) -> Result<QueryId, Error>;
 
 	/// Tune the vtoken exchage rate.
