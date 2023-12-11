@@ -166,7 +166,7 @@ fn vote_works() {
 				who: _,
 				vtoken: VKSM,
 				poll_index: 0,
-				new_vote: _,
+				token_vote: _,
 				delegator_vote: _,
 			})
 		)));
