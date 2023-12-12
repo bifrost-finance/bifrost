@@ -33,6 +33,7 @@ members = [
 	"pallets/lend-market",
 	"pallets/prices",
 	"pallets/leverage-staking",
+	"pallets/channel-commission",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
@@ -92,6 +93,7 @@ lend-market-rpc-runtime-api          = { path = "pallets/lend-market/rpc/runtime
 pallet-prices                        = { path = "pallets/prices", default-features = false }
 pallet-traits                        = { path = "pallets/traits", default-features = false }
 leverage-staking                     = { path = "pallets/leverage-staking", default-features = false }
+channel-commission					 = { path = "pallets/channel-commission", default-features = false }
 
 # Zenlink
 merkle-distributor             = { git = "https://github.com/bifrost-finance/merkle-distributor", branch = "release-polkadot-v1.1.0", default-features = false }
