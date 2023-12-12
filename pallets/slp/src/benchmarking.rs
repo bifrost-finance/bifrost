@@ -59,7 +59,7 @@ pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) 
 	)
 	.unwrap();
 
-	assert_ok!(Pallet::<T>::bond(origin, KSM, Box::new(DELEGATOR1), 10u32.into(), None));
+	assert_ok!(Pallet::<T>::bond(origin, KSM, Box::new(DELEGATOR1), 10u32.into(), None, None));
 }
 
 pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
@@ -117,6 +117,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			None,
+			None,
 		);
 
 		Ok(())
@@ -141,6 +142,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			10u32.into(),
+			None,
 		);
 
 		Ok(())
@@ -166,6 +168,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			0u32.into(),
+			None,
 		);
 
 		Ok(())
@@ -185,7 +188,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
 
 		Ok(())
 	}
@@ -210,6 +213,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			Some(0u32.into()),
+			None,
 		);
 
 		Ok(())
@@ -234,6 +238,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
+			None,
 		);
 
 		Ok(())
@@ -262,6 +267,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
+			None,
 		);
 
 		Ok(())
@@ -286,6 +292,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			Some(vec![DELEGATOR1]),
+			None,
 		);
 
 		Ok(())
@@ -310,6 +317,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(DELEGATOR1),
 			Some(TimeUnit::Era(0)),
+			None,
 		);
 
 		Ok(())
@@ -336,6 +344,7 @@ mod benchmarks {
 			Some(TimeUnit::SlashingSpan(0)),
 			None,
 			None,
+			None,
 		);
 
 		Ok(())
@@ -355,7 +364,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
 
 		Ok(())
 	}
@@ -384,6 +393,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(to),
 			10u32.into(),
+			None,
 		);
 
 		Ok(())
@@ -451,6 +461,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			true,
+			None,
 		);
 
 		Ok(())
@@ -855,7 +866,8 @@ mod benchmarks {
 			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
 			Box::new(DELEGATOR1),
-			vec![DELEGATOR1]
+			vec![DELEGATOR1],
+			None
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
@@ -893,7 +905,8 @@ mod benchmarks {
 			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
 			Box::new(DELEGATOR1),
-			vec![DELEGATOR1]
+			vec![DELEGATOR1],
+			None
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
