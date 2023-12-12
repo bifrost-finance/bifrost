@@ -661,3 +661,92 @@ fn register_subaccount_index_0() {
 		Some((20_000_000_000.into(), 10_000_000_000)),
 	));
 }
+
+#[test]
+fn test_construct_xcm() {
+	ExtBuilder::default().build().execute_with(|| {
+		register_subaccount_index_0();
+
+		// construct_xcm_as_subaccount_with_query_id
+		let weight = Weight::from_parts(20000000000, 20000000000);
+		let (_, _, _, messsage) =
+			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Bond,
+				sp_std::vec![],
+				&SUBACCOUNT_0_LOCATION,
+				DOT,
+				None,
+			)
+			.unwrap();
+
+		assert_eq!(
+			messsage.0[1],
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation { parents: 0, interior: Here }),
+					fun: Fungible(10000000000)
+				},
+				weight_limit: Unlimited
+			}
+		);
+		assert_eq!(
+			messsage.0[2],
+			Transact {
+				origin_kind: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: [26, 1, 0, 0].to_vec().into()
+			}
+		);
+
+		let weight = Weight::from_parts(100, 100);
+		let (_, _, _, messsage) =
+			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
+				XcmOperationType::Bond,
+				sp_std::vec![],
+				&SUBACCOUNT_0_LOCATION,
+				DOT,
+				Some((weight, 100u32.into())),
+			)
+			.unwrap();
+		assert_eq!(
+			messsage.0[1],
+			BuyExecution {
+				fees: MultiAsset {
+					id: Concrete(MultiLocation { parents: 0, interior: Here }),
+					fun: Fungible(100)
+				},
+				weight_limit: Unlimited
+			}
+		);
+		assert_eq!(
+			messsage.0[2],
+			Transact {
+				origin_kind: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: [26, 1, 0, 0].to_vec().into()
+			}
+		);
+
+		// construct_xcm_and_send_as_subaccount_without_query_id
+		let fee = crate::Pallet::<Runtime>::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperationType::Bond,
+			sp_std::vec![],
+			&SUBACCOUNT_0_LOCATION,
+			DOT,
+			None,
+		)
+		.unwrap();
+
+		assert_eq!(fee, BalanceOf::<Runtime>::from(10000000000u128));
+
+		let fee = crate::Pallet::<Runtime>::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperationType::Bond,
+			sp_std::vec![],
+			&SUBACCOUNT_0_LOCATION,
+			DOT,
+			Some((Weight::from_parts(100, 100), 100u32.into())),
+		)
+		.unwrap();
+		assert_eq!(fee, BalanceOf::<Runtime>::from(100u32));
+	});
+}
