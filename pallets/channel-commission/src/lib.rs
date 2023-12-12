@@ -22,11 +22,14 @@
 extern crate alloc;
 
 use alloc::vec;
-use bifrost_primitives::CurrencyId;
+use bifrost_primitives::{CurrencyId, SlpHostingFeeProvider, VTokenMintRedeemProvider};
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
-use sp_runtime::Percent;
+use sp_runtime::{
+	traits::{AccountIdConversion, CheckedAdd, Zero},
+	Percent,
+};
 pub use weights::WeightInfo;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -57,7 +60,10 @@ pub mod pallet {
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Commission master Pallet Id to get the commission master account
-		type CommissionMasterPalletId: Get<PalletId>;
+		type CommissionPalletId: Get<PalletId>;
+
+		/// The receiving account of Bifrost commission
+		type BifrostCommissionReceiver: Get<AccountIdOf<Self>>;
 
 		// /// The interface to call VtokenMinting module functions.
 		// type VtokenMinting: VtokenMintingOperator<
@@ -89,7 +95,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotExist,
+		Overflow,
 	}
 
 	#[pallet::event]
@@ -269,4 +275,92 @@ pub mod pallet {
 	// 		Ok(())
 	// 	}
 	// }
+}
+
+impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T> {
+	fn record_mint_amount(
+		channel_id: ChannelId,
+		vtoken: CurrencyId,
+		amount: BalanceOf<T>,
+	) -> Result<(), DispatchError> {
+		if amount == Zero::zero() {
+			return Ok(());
+		}
+
+		// first add to PeriodVtokenTotalMint (加到周期系统总毛铸造量里)
+		let mut total_mint =
+			PeriodVtokenTotalMint::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
+		let sum_up_amount = total_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+
+		total_mint.1 = sum_up_amount;
+		PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
+
+		// then add to PeriodChannelVtokenMint (加到周期渠道的毛铸造量里)
+		let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
+			.unwrap_or((Zero::zero(), Zero::zero()));
+		let sum_up_amount =
+			channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+
+		channel_vtoken_mint.1 = sum_up_amount;
+		PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
+
+		Ok(())
+	}
+	// record the redeem amount of vtoken
+	fn record_redeem_amount(vtoken: CurrencyId, amount: BalanceOf<T>) -> Result<(), DispatchError> {
+		if amount == Zero::zero() {
+			return Ok(());
+		}
+
+		// first add to PeriodVtokenTotalRedeem (加到周期系统总毛赎回量里)
+		let mut total_redeem =
+			PeriodVtokenTotalRedeem::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
+		let sum_up_amount = total_redeem.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+
+		total_redeem.1 = sum_up_amount;
+		PeriodVtokenTotalRedeem::<T>::insert(vtoken, total_redeem);
+
+		Ok(())
+	}
+}
+
+impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
+	// transfer the hosting fee to the receiver account
+	fn collect_hosting_fee(
+		from: AccountIdOf<T>,
+		commission_token: CurrencyId,
+		amount: BalanceOf<T>,
+	) -> Result<(), DispatchError> {
+		if amount == Zero::zero() {
+			return Ok(());
+		}
+
+		// get the receiver account from CommissionPalletId
+		let receiver_account = T::CommissionPalletId::get().into_account_truncating();
+
+		// transfer the hosting fee to the receiver account
+		T::MultiCurrency::transfer(commission_token, &from, &receiver_account, amount)?;
+
+		Ok(())
+	}
+	// record the hosting fee
+	fn record_hosting_fee(
+		commission_token: CurrencyId,
+		amount: BalanceOf<T>,
+	) -> Result<(), DispatchError> {
+		if amount == Zero::zero() {
+			return Ok(());
+		}
+
+		// add to PeriodTotalCommissions (加到周期系统总佣金里)
+		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token)
+			.unwrap_or((Zero::zero(), Zero::zero()));
+
+		let sum_up_amount = total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+
+		total_commission.1 = sum_up_amount;
+		PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+
+		Ok(())
+	}
 }

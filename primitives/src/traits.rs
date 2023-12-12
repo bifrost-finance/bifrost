@@ -495,3 +495,19 @@ pub trait VTokenSupplyProvider<CurrencyId, Balance> {
 
 	fn get_token_supply(token: CurrencyId) -> Option<Balance>;
 }
+
+
+// traits for pallet channel-commission
+pub trait VTokenMintRedeemProvider<CurrencyId, Balance> {
+	// record the mint amount of vtoken
+	fn record_mint_amount(channel_id: u32, vtoken: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
+	// record the redeem amount of vtoken
+	fn record_redeem_amount(vtoken: CurrencyId, amount: Balance)  -> Result<(), DispatchError>;
+}
+
+pub trait SlpHostingFeeProvider<CurrencyId, Balance, AccountId> {
+	// transfer the hosting fee
+	fn collect_hosting_fee(from: AccountId, commission_token: CurrencyId, amount: Balance)  -> Result<(), DispatchError>;
+	// record the hosting fee
+	fn record_hosting_fee(commission_token: CurrencyId, amount: Balance)  -> Result<(), DispatchError>;
+}
