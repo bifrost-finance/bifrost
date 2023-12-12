@@ -114,6 +114,7 @@ use xcm_executor::{
 };
 
 pub mod governance;
+use crate::xcm_config::XcmRouter;
 use governance::{
 	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
 	TechAdminOrCouncil, ValidatorElection,
@@ -1301,6 +1302,7 @@ impl bifrost_slpx::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
+	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
