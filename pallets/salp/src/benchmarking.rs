@@ -472,6 +472,84 @@ mod benchmarks {
 		_(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
 	}
 
+	#[benchmark]
+	fn reserve() {
+		let fund_index = create_fund::<T>(1);
+		let (caller, contribution) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
+			true
+		));
+
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::unlock(
+			RawOrigin::Signed(caller.clone()).into(),
+			caller.clone(),
+			fund_index
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index, contribution, false);
+	}
+
+	#[benchmark]
+	fn cancel_reservation() {
+		let fund_index = create_fund::<T>(1);
+		let (caller, contribution) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
+			true
+		));
+
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::unlock(
+			RawOrigin::Signed(caller.clone()).into(),
+			caller.clone(),
+			fund_index
+		));
+		assert_ok!(Salp::<T>::reserve(
+			RawOrigin::Signed(caller.clone()).into(),
+			fund_index,
+			contribution,
+			false
+		));
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index);
+	}
+
+	#[benchmark]
+	fn batch_handle_reserve() {
+		let fund_index = create_fund::<T>(1);
+		let (caller, contribution) = contribute_fund::<T>(fund_index);
+		assert_ok!(Pallet::<T>::confirm_contribute(
+			RawOrigin::Signed(caller.clone()).into(),
+			0u64,
+			true
+		));
+
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::unlock(
+			RawOrigin::Signed(caller.clone()).into(),
+			caller.clone(),
+			fund_index
+		));
+		assert_ok!(Salp::<T>::reserve(
+			RawOrigin::Signed(caller.clone()).into(),
+			fund_index,
+			contribution,
+			false
+		));
+		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
+		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(caller.clone()), fund_index);
+	}
+
 	//   `cargo test -p pallet-example-basic --all-features`, you will see one line per case:
 	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 }
