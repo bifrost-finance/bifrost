@@ -30,7 +30,6 @@ mod tests;
 mod call;
 mod vote;
 
-pub mod migration;
 pub mod weights;
 
 use crate::vote::{Casting, Tally, Voting};
