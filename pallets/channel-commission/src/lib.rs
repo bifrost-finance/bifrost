@@ -26,9 +26,10 @@ use bifrost_primitives::{CurrencyId, SlpHostingFeeProvider, VTokenMintRedeemProv
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
+use sp_core::U256;
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedAdd, Zero},
-	Percent,
+	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	Percent, SaturatedConversion,
 };
 pub use weights::WeightInfo;
 
@@ -86,7 +87,7 @@ pub mod pallet {
 
 		// Commission clearing duration, in blocks
 		#[pallet::constant]
-		type ClearingDuration: Get<u32>;
+		type ClearingDuration: Get<BlockNumberFor<Self>>;
 
 		// The maximum bytes length of channel name
 		#[pallet::constant]
@@ -120,7 +121,7 @@ pub mod pallet {
 		(AccountIdOf<T>, BoundedVec<u8, T::NameLengthLimit>),
 	>;
 
-	/// Mapping a staking token to a commission token, 【staking_token => commission_token】
+	/// Mapping a vtoken to a commission token, 【vtoken => commission_token】
 	#[pallet::storage]
 	#[pallet::getter(fn commission_tokens)]
 	pub type CommissionTokens<T> = StorageMap<_, Blake2_128Concat, CurrencyId, CurrencyId>;
@@ -219,7 +220,24 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let channel_count: u32 = ChannelNextId::<T>::get().into();
+
+			// If the current block number is the first block of a new clearing period, we need to
+			// prepare data for clearing.
+			if n % T::ClearingDuration::get() == Zero::zero() {
+				Self::set_clearing_environment();
+			} else if (n % T::ClearingDuration::get()) < (channel_count + 1).into() {
+				let channel_index = n % T::ClearingDuration::get().into() - 1u32.into();
+				Self::clear_channel_commissions(channel_index);
+			} else if (n % T::ClearingDuration::get()) == (channel_count + 1).into() {
+				Self::clear_bifrost_commissions();
+			}
+
+			T::WeightInfo::on_initialize()
+		}
+	}
 
 	// #[pallet::call]
 	// impl<T: Config> Pallet<T> {
@@ -277,6 +295,148 @@ pub mod pallet {
 	// }
 }
 
+impl<T: Config> Pallet<T> {
+	pub(crate) fn set_clearing_environment() {
+		//  Move the vtoken issuance amount from ongoing period to the previous period and clear the
+		// ongoing period issuance amount
+		VtokenIssuanceSnapshots::<T>::iter().for_each(|(vtoken, issuance)| {
+			let mut issuance = issuance;
+			issuance.0 = issuance.1;
+			issuance.1 = Zero::zero();
+			VtokenIssuanceSnapshots::<T>::insert(vtoken, issuance);
+		});
+
+		// Move the total minted amount of the period from ongoing period to the previous period and
+		// clear the ongoing period minted amount
+		PeriodVtokenTotalMint::<T>::iter().for_each(|(vtoken, total_mint)| {
+			let mut total_mint = total_mint;
+			total_mint.0 = total_mint.1;
+			total_mint.1 = Zero::zero();
+			PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
+		});
+
+		// Move the total redeemed amount of the period from ongoing period to the previous period
+		// and clear the ongoing period redeemed amount
+		PeriodVtokenTotalRedeem::<T>::iter().for_each(|(vtoken, total_redeem)| {
+			let mut total_redeem = total_redeem;
+			total_redeem.0 = total_redeem.1;
+			total_redeem.1 = Zero::zero();
+			PeriodVtokenTotalRedeem::<T>::insert(vtoken, total_redeem);
+		});
+
+		// Move the channel minted amount of the period from ongoing period to the previous period
+		// and clear the ongoing period minted amount
+		PeriodChannelVtokenMint::<T>::iter().for_each(
+			|(channel_id, vtoken, channel_vtoken_mint)| {
+				let mut channel_vtoken_mint = channel_vtoken_mint;
+				channel_vtoken_mint.0 = channel_vtoken_mint.1;
+				channel_vtoken_mint.1 = Zero::zero();
+				PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
+			},
+		);
+
+		// Move the total commission amount of the period from ongoing period to the previous period
+		// and clear the ongoing period commission amount
+		PeriodTotalCommissions::<T>::iter().for_each(|(commission_token, total_commission)| {
+			let mut total_commission = total_commission;
+			total_commission.0 = total_commission.1;
+			total_commission.1 = Zero::zero();
+			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+		});
+	}
+
+	pub(crate) fn clear_channel_commissions(channel_index: BlockNumberFor<T>) {
+		let channel_id: ChannelId = BlockNumberFor::<T>::unique_saturated_into(channel_index);
+
+		// check if the channel exists
+		if !Channels::<T>::contains_key(channel_id) {
+			return;
+		}
+
+		// calculate the commission amount for each commission token
+		ChannelVtokenShares::<T>::iter_prefix(channel_id).for_each(
+			|(vtoken, channel_vtoken_share)| {
+				// get the commission_token of the vtoken
+				let commission_token_op = CommissionTokens::<T>::get(vtoken);
+				if commission_token_op.is_none() {
+					return;
+				}
+				let commission_token = commission_token_op.unwrap();
+
+				// get the vtoken issuance amount
+				let vtoken_issuance = VtokenIssuanceSnapshots::<T>::get(vtoken)
+					.unwrap_or((Zero::zero(), Zero::zero()))
+					.0;
+				if vtoken_issuance == Zero::zero() {
+					return;
+				}
+
+				// get the total commission amount
+				let total_commission = PeriodTotalCommissions::<T>::get(commission_token)
+					.unwrap_or((Zero::zero(), Zero::zero()))
+					.0;
+
+				// calculate the channel commission amount
+				let channel_commission = Self::calculate_commission(
+					total_commission,
+					channel_vtoken_share,
+					vtoken_issuance,
+				);
+
+				// update channel_commission to ChannelClaimableCommissions storage
+				ChannelClaimableCommissions::<T>::mutate(
+					channel_id,
+					commission_token,
+					|amount_op| {
+						if let Some(amount) = amount_op {
+							let sum_up_op = amount.checked_add(&channel_commission);
+
+							if let Some(sum_up) = sum_up_op {
+								*amount = sum_up;
+							}
+						} else {
+							*amount_op = Some(channel_commission);
+						}
+					},
+				);
+
+				// add the amount to the PeriodClearedCommissions storage
+				PeriodClearedCommissions::<T>::mutate(commission_token, |amount_op| {
+					if let Some(amount) = amount_op {
+						let sum_up_op = amount.checked_add(&channel_commission);
+
+						if let Some(sum_up) = sum_up_op {
+							*amount = sum_up;
+						}
+					} else {
+						*amount_op = Some(channel_commission);
+					}
+				});
+			},
+		);
+	}
+
+	pub(crate) fn clear_bifrost_commissions() {}
+
+	fn calculate_commission(
+		total_commission: BalanceOf<T>,
+		channel_shares: BalanceOf<T>,
+		total_issuance: BalanceOf<T>,
+	) -> BalanceOf<T> {
+		if total_issuance == Zero::zero() {
+			return Zero::zero();
+		}
+
+		let shares: u128 = U256::from(total_commission.saturated_into::<u128>())
+			.saturating_mul(channel_shares.saturated_into::<u128>().into())
+			.checked_div(total_issuance.saturated_into::<u128>().into())
+			.map(|x| u128::try_from(x).unwrap_or(Zero::zero()))
+			.unwrap_or(Zero::zero());
+
+		BalanceOf::<T>::unique_saturated_from(shares)
+	}
+}
+
 impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T> {
 	fn record_mint_amount(
 		channel_id: ChannelId,
@@ -287,7 +447,7 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 			return Ok(());
 		}
 
-		// first add to PeriodVtokenTotalMint (加到周期系统总毛铸造量里)
+		// first add to PeriodVtokenTotalMint
 		let mut total_mint =
 			PeriodVtokenTotalMint::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
 		let sum_up_amount = total_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
@@ -295,7 +455,7 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 		total_mint.1 = sum_up_amount;
 		PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
 
-		// then add to PeriodChannelVtokenMint (加到周期渠道的毛铸造量里)
+		// then add to PeriodChannelVtokenMint
 		let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
 			.unwrap_or((Zero::zero(), Zero::zero()));
 		let sum_up_amount =
@@ -312,7 +472,7 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 			return Ok(());
 		}
 
-		// first add to PeriodVtokenTotalRedeem (加到周期系统总毛赎回量里)
+		// first add to PeriodVtokenTotalRedeem
 		let mut total_redeem =
 			PeriodVtokenTotalRedeem::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
 		let sum_up_amount = total_redeem.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;

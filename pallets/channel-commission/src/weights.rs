@@ -53,21 +53,15 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_cross_in_out.
 pub trait WeightInfo {
-	// fn register_currency_for_cross_in_out() -> Weight;
+	fn on_initialize() -> Weight;
 
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	// /// Storage: CrossInOut CrossCurrencyRegistry (r:1 w:1)
-	// /// Proof Skipped: CrossInOut CrossCurrencyRegistry (max_values: None, max_size: None, mode: Measured)
-	// fn register_currency_for_cross_in_out() -> Weight {
-	// 	// Proof Size summary in bytes:
-	// 	//  Measured:  `76`
-	// 	//  Estimated: `3541`
-	// 	// Minimum execution time: 29_633_000 picoseconds.
-	// 	Weight::from_parts(30_578_000, 3541)
-	// 		.saturating_add(RocksDbWeight::get().reads(1_u64))
-	// 		.saturating_add(RocksDbWeight::get().writes(1_u64))
-	// }
+	fn on_initialize() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
 }

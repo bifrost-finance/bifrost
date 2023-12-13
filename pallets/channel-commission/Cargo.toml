@@ -15,9 +15,9 @@ frame-benchmarking = { workspace = true, optional = true }
 bifrost-primitives = { workspace = true }
 orml-traits = { workspace = true }
 log = { workspace = true }
+sp-core = { workspace = true }
 
 [dev-dependencies]
-sp-core = { workspace = true }
 orml-tokens = { workspace = true }
 bifrost-currencies = { workspace = true }
 pallet-balances = { workspace = true }
