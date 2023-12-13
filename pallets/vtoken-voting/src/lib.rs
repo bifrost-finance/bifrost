@@ -502,7 +502,7 @@ pub mod pallet {
 			)
 			.ok_or(Error::<T>::NoData)?;
 
-			let derivative_index = new_delegator_votes[0].0.clone();
+			let derivative_index = new_delegator_votes[0].0;
 			Self::send_xcm_with_notify(
 				derivative_index,
 				vote_call,

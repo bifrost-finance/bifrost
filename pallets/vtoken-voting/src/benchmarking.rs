@@ -56,6 +56,7 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 	T::DerivativeAccount::new_delegator_ledger(token, Parent.into());
 	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, Zero::zero())?;
 	Pallet::<T>::add_delegator(RawOrigin::Root.into(), vtoken, derivative_index)?;
+	Pallet::<T>::set_vote_cap_ratio(RawOrigin::Root.into(), vtoken, Perbill::from_percent(10))?;
 
 	Ok(())
 }
@@ -185,6 +186,13 @@ mod benchmarks {
 
 		init_vote::<T>(vtoken)?;
 		Pallet::<T>::vote(origin.clone().into(), vtoken, poll_index, vote)?;
+
+		let notify_origin =
+			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let query_id = 0u64;
+		let response = Response::DispatchResult(MaybeErrorCode::Success);
+		Pallet::<T>::notify_vote(notify_origin, query_id, response)?;
+
 		Pallet::<T>::set_referendum_status(
 			RawOrigin::Root.into(),
 			vtoken,
@@ -345,7 +353,7 @@ mod benchmarks {
 	#[benchmark]
 	pub fn set_vote_cap_ratio() -> Result<(), BenchmarkError> {
 		let origin =
-			T::ResponseOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let vtoken = VKSM;
 		let vote_cap_ratio = Perbill::from_percent(10);
 
