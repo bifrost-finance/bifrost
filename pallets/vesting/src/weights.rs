@@ -52,6 +52,8 @@ pub trait WeightInfo {
 	fn vest_other_unlocked(l: u32, s: u32) -> Weight;
 	fn vested_transfer(l: u32, s: u32) -> Weight;
 	fn force_vested_transfer(l: u32, s: u32) -> Weight;
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight;
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight;
 }
 
 /// Weights for pallet_vesting using the Substrate node and recommended hardware.
@@ -179,6 +181,34 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(4_u64))
 			.saturating_add(T::DbWeight::get().writes(4_u64))
 	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		Weight::from_parts(34_042_000, 12879)
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_parts(83_000, 0))
+			.saturating_mul(l.into())
+			// Standard Error: 2_000
+			.saturating_add(Weight::from_parts(80_000, 0))
+			.saturating_mul(s.into())
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
+
+	// Storage: System Account (r:1 w:1)
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		Weight::from_parts(34_042_000, 12879)
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_parts(83_000, 0))
+			.saturating_mul(l.into())
+			// Standard Error: 2_000
+			.saturating_add(Weight::from_parts(80_000, 0))
+			.saturating_mul(s.into())
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -304,5 +334,35 @@ impl WeightInfo for () {
 			.saturating_add(Weight::from_parts(45_485, 0).saturating_mul(s.into()))
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(4_u64))
+	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		Weight::from_parts(34_042_000, 12879)
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_parts(83_000, 0))
+			.saturating_mul(l.into())
+			// Standard Error: 2_000
+			.saturating_add(Weight::from_parts(80_000, 0))
+			.saturating_mul(s.into())
+			.saturating_add(RocksDbWeight::get().reads(3_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
+	}
+
+	// Storage: Vesting Vesting (r:1 w:1)
+	// Storage: Balances Locks (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
+		Weight::from_parts(34_042_000, 12879)
+			// Standard Error: 1_000
+			.saturating_add(Weight::from_parts(83_000, 0))
+			.saturating_mul(l.into())
+			// Standard Error: 2_000
+			.saturating_add(Weight::from_parts(80_000, 0))
+			.saturating_mul(s.into())
+			.saturating_add(RocksDbWeight::get().reads(3_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
 }

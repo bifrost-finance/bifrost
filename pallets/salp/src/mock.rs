@@ -20,6 +20,7 @@
 
 #![cfg(test)]
 
+use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
@@ -299,6 +300,7 @@ parameter_types! {
 	],2);
 	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
 	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
+	pub const BatchLimit: u32 = 50;
 }
 
 pub struct EnsureConfirmAsGovernance;
@@ -450,6 +452,10 @@ impl bifrost_vtoken_minting::Config for Test {
 	type InterlayParachainId = ConstU32<2032>;
 }
 
+parameter_types! {
+	pub const SalpLockId: LockIdentifier = *b"salplock";
+}
+
 impl salp::Config for Test {
 	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
@@ -476,6 +482,8 @@ impl salp::Config for Test {
 	type ParachainId = ParaInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
+	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {
