@@ -114,6 +114,7 @@ use xcm_executor::{
 };
 
 pub mod governance;
+use crate::xcm_config::XcmRouter;
 use governance::{
 	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
 	TechAdminOrCouncil, ValidatorElection,
@@ -131,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 987,
+	spec_version: 990,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1306,6 +1307,7 @@ impl bifrost_slpx::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
+	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;

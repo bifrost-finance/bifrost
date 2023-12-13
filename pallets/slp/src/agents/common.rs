@@ -27,11 +27,10 @@ use crate::{
 	Junction::{AccountId32, Parachain},
 	Junctions::X1,
 	Ledger, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
-	Vec, Weight, Xcm, XcmOperationType, XcmWeight, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR,
-	PHA,
+	Vec, Weight, Xcm, XcmOperationType, Zero, ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR, PHA,
 };
 use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
-use frame_support::{ensure, traits::Len};
+use frame_support::{dispatch::GetDispatchInfo, ensure, traits::Len};
 use orml_traits::{MultiCurrency, XcmTransfer};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::{Get, U256};
@@ -338,11 +337,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn prepare_send_as_subaccount_call(
-		operation: XcmOperationType,
 		call: Vec<u8>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
-	) -> Result<(Vec<u8>, BalanceOf<T>, XcmWeight), Error<T>> {
+	) -> Result<Vec<u8>, Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -365,11 +363,7 @@ impl<T: Config> Pallet<T> {
 		call_as_subaccount.extend(sub_account_index.encode());
 		call_as_subaccount.extend(call);
 
-		let (weight, fee) =
-			T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
-				.ok_or(Error::<T>::WeightAndFeeNotExists)?;
-
-		Ok((call_as_subaccount, fee, weight))
+		Ok(call_as_subaccount)
 	}
 
 	pub(crate) fn construct_xcm_as_subaccount_with_query_id(
@@ -377,46 +371,60 @@ impl<T: Config> Pallet<T> {
 		call: Vec<u8>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = Self::get_query_id(currency_id, &operation)?;
+		let (query_id, notify_call_weight) =
+			Self::get_query_id_and_notify_call_weight(currency_id, &operation)?;
 
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
+		let (transact_weight, withdraw_fee) = match weight_and_fee {
+			Some((weight, fee)) => (weight, fee),
+			_ => T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?,
+		};
+
+		let call_as_subaccount = Self::prepare_send_as_subaccount_call(call, who, currency_id)?;
 
 		let xcm_message = Self::construct_xcm_message(
 			call_as_subaccount,
-			fee,
-			weight,
+			withdraw_fee,
+			transact_weight,
 			currency_id,
 			Some(query_id),
+			Some(notify_call_weight),
 		)?;
 
-		Ok((query_id, timeout, fee, xcm_message))
+		Ok((query_id, timeout, withdraw_fee, xcm_message))
 	}
 
-	pub(crate) fn get_query_id(
+	pub(crate) fn get_query_id_and_notify_call_weight(
 		currency_id: CurrencyId,
 		operation: &XcmOperationType,
-	) -> Result<QueryId, Error<T>> {
+	) -> Result<(QueryId, Weight), Error<T>> {
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let responder = Self::get_para_multilocation_by_currency_id(currency_id)?;
 
-		let callback_option = match (currency_id, operation) {
+		let (notify_call_weight, callback_option) = match (currency_id, operation) {
 			(DOT, &XcmOperationType::Delegate) |
 			(DOT, &XcmOperationType::Undelegate) |
 			(KSM, &XcmOperationType::Delegate) |
-			(KSM, &XcmOperationType::Undelegate) => Some(Self::confirm_validators_by_delegator_call()),
-			_ => Some(Self::confirm_delegator_ledger_call()),
+			(KSM, &XcmOperationType::Undelegate) => {
+				let notify_call = Self::confirm_validators_by_delegator_call();
+				(notify_call.get_dispatch_info().weight, Some(notify_call))
+			},
+			_ => {
+				let notify_call = Self::confirm_delegator_ledger_call();
+				(notify_call.get_dispatch_info().weight, Some(notify_call))
+			},
 		};
 
 		let query_id =
 			T::SubstrateResponseManager::create_query_record(&responder, callback_option, timeout);
 
-		return Ok(query_id);
+		return Ok((query_id, notify_call_weight));
 	}
 
 	pub(crate) fn construct_xcm_and_send_as_subaccount_without_query_id(
@@ -424,17 +432,29 @@ impl<T: Config> Pallet<T> {
 		call: Vec<u8>,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<BalanceOf<T>, Error<T>> {
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call(operation, call, who, currency_id)?;
+		let (transact_weight, withdraw_fee) = match weight_and_fee {
+			Some((weight, fee)) => (weight, fee),
+			_ => T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(currency_id, operation)
+				.ok_or(Error::<T>::WeightAndFeeNotExists)?,
+		};
 
-		let xcm_message =
-			Self::construct_xcm_message(call_as_subaccount, fee, weight, currency_id, None)?;
+		let call_as_subaccount = Self::prepare_send_as_subaccount_call(call, who, currency_id)?;
+
+		let xcm_message = Self::construct_xcm_message(
+			call_as_subaccount,
+			withdraw_fee,
+			transact_weight,
+			currency_id,
+			None,
+			None,
+		)?;
 
 		let dest = Self::get_para_multilocation_by_currency_id(currency_id)?;
 		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok(fee)
+		Ok(withdraw_fee)
 	}
 
 	pub(crate) fn get_report_transact_status_instruct(
@@ -534,22 +554,29 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn construct_xcm_message(
 		call: Vec<u8>,
 		extra_fee: BalanceOf<T>,
-		weight: XcmWeight,
+		transact_weight: Weight,
 		currency_id: CurrencyId,
 		query_id: Option<QueryId>,
+		notify_call_weight: Option<Weight>,
 	) -> Result<Xcm<()>, Error<T>> {
 		let mut xcm_message = Self::inner_construct_xcm_message(currency_id, extra_fee)?;
 		let transact = Transact {
 			origin_kind: OriginKind::SovereignAccount,
-			require_weight_at_most: weight,
+			require_weight_at_most: transact_weight,
 			call: call.into(),
 		};
 		xcm_message.insert(2, transact);
-		if let Some(query_id) = query_id {
-			let report_transact_status_instruct =
-				Self::get_report_transact_status_instruct(query_id, weight, currency_id);
-			xcm_message.insert(3, report_transact_status_instruct);
-		}
+		match (query_id, notify_call_weight) {
+			(Some(query_id), Some(notify_call_weight)) => {
+				let report_transact_status_instruct = Self::get_report_transact_status_instruct(
+					query_id,
+					notify_call_weight,
+					currency_id,
+				);
+				xcm_message.insert(3, report_transact_status_instruct);
+			},
+			_ => {},
+		};
 		Ok(Xcm(xcm_message))
 	}
 

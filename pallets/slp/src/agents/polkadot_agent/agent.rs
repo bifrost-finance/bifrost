@@ -87,6 +87,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(!DelegatorLedgers::<T>::contains_key(currency_id, who), Error::<T>::AlreadyBonded);
@@ -124,6 +125,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Create a new delegator ledger
@@ -162,6 +164,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -199,6 +202,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -225,6 +229,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -270,6 +275,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -294,6 +300,7 @@ impl<T: Config>
 		&self,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Get the active amount of a delegator.
 		let ledger =
@@ -317,6 +324,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -346,6 +354,7 @@ impl<T: Config>
 		amount: Option<BalanceOf<T>>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let amount = amount.ok_or(Error::<T>::AmountNone)?;
 		// Check if it is bonded already.
@@ -386,6 +395,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -411,6 +421,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(
@@ -452,6 +463,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
@@ -476,6 +488,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(
@@ -524,6 +537,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
@@ -548,9 +562,10 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let query_id = Self::delegate(self, who, targets, currency_id)?;
+		let query_id = Self::delegate(self, who, targets, currency_id, weight_and_fee)?;
 		Ok(query_id)
 	}
 
@@ -561,6 +576,7 @@ impl<T: Config>
 		validator: &MultiLocation,
 		when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Get the validator account
 		let validator_account = Pallet::<T>::multilocation_to_account(validator)?;
@@ -591,6 +607,7 @@ impl<T: Config>
 			call,
 			who,
 			currency_id,
+			weight_and_fee,
 		)?;
 
 		// Both tokenpool increment and delegator ledger update need to be conducted by backend
@@ -607,6 +624,7 @@ impl<T: Config>
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 		_amount: Option<BalanceOf<T>>,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
@@ -638,6 +656,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -660,7 +679,12 @@ impl<T: Config>
 	/// Chill self. Cancel the identity of delegator in the Relay chain side.
 	/// Unbonding all the active amount should be done before or after chill,
 	/// so that we can collect back all the bonded amount.
-	fn chill(&self, who: &MultiLocation, currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(
+		&self,
+		who: &MultiLocation,
+		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
 			DelegatorsMultilocation2Index::<T>::contains_key(currency_id, who),
@@ -682,6 +706,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Get active amount, if not zero, create an update entry.
@@ -718,6 +743,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
@@ -770,6 +796,7 @@ impl<T: Config>
 			call,
 			from,
 			currency_id,
+			weight_and_fee,
 		)?;
 
 		Ok(())
@@ -807,6 +834,7 @@ impl<T: Config>
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
 		_if_from_currency: bool,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}

@@ -101,6 +101,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// First check if the delegator exists.
 		// If not, check if amount is greater than minimum delegator stake. Afterwards, create the
@@ -288,6 +289,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -322,6 +324,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -434,6 +437,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -467,6 +471,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
@@ -596,6 +601,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -628,6 +634,7 @@ impl<T: Config>
 		&self,
 		who: &MultiLocation,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		ensure!(currency_id == BNC, Error::<T>::Unsupported);
 
@@ -697,6 +704,7 @@ impl<T: Config>
 		_amount: Option<BalanceOf<T>>,
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -809,6 +817,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -841,6 +850,7 @@ impl<T: Config>
 		_who: &MultiLocation,
 		_targets: &Vec<MultiLocation>,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -851,6 +861,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let validator = targets.first().ok_or(Error::<T>::ValidatorNotProvided)?;
 
@@ -954,6 +965,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -986,6 +998,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		_targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		ensure!(currency_id == BNC, Error::<T>::Unsupported);
 
@@ -1038,6 +1051,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -1050,6 +1064,7 @@ impl<T: Config>
 		validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 		_amount: Option<BalanceOf<T>>,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -1283,6 +1298,7 @@ impl<T: Config>
 					call,
 					who,
 					currency_id,
+					weight_and_fee,
 				)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -1322,7 +1338,12 @@ impl<T: Config>
 	}
 
 	/// The same as unbondAll, leaving delegator set.
-	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(
+		&self,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -1333,6 +1354,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
@@ -1390,6 +1412,7 @@ impl<T: Config>
 				call,
 				from,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 			// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
@@ -1438,6 +1461,7 @@ impl<T: Config>
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
 		_if_from_currency: bool,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
