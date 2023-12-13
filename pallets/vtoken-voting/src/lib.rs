@@ -1265,7 +1265,7 @@ pub mod pallet {
 					return Ok(delegator_votes);
 				} else {
 					let account_vote = AccountVote::new_standard(
-						delegator_total_vote.as_standard_vote().unwrap(),
+						delegator_total_vote.as_standard_vote().ok_or(Error::<T>::NoData)?,
 						available_vote,
 					);
 					delegator_votes.push((derivative_index, account_vote));
