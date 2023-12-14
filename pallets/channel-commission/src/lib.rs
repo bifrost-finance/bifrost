@@ -31,7 +31,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedAdd, CheckedSub, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 	},
-	Percent, SaturatedConversion,
+	PerThing, Percent, Permill, Rounding, SaturatedConversion,
 };
 pub use weights::WeightInfo;
 
@@ -143,7 +143,7 @@ pub mod pallet {
 		ChannelVtokenSharesUpdated {
 			channel_id: ChannelId,
 			vtoken: CurrencyId,
-			share: BalanceOf<T>,
+			share: Permill,
 		},
 		VtokenIssuanceSnapshotUpdated {
 			vtoken: CurrencyId,
@@ -222,7 +222,7 @@ pub mod pallet {
 		ChannelId,
 		Blake2_128Concat,
 		CurrencyId,
-		BalanceOf<T>,
+		Permill,
 		OptionQuery,
 	>;
 
@@ -506,16 +506,18 @@ impl<T: Config> Pallet<T> {
 		//  Move the vtoken issuance amount from ongoing period to the previous period and clear the
 		// ongoing period issuance amount
 		VtokenIssuanceSnapshots::<T>::iter().for_each(|(vtoken, issuance)| {
-			let info = issuance.clone();
 			let mut issuance = issuance;
 			issuance.0 = issuance.1;
-			issuance.1 = Zero::zero();
+
+			// get the vtoken new issuance amount from Tokens module issuance storage
+			let new_issuance = T::MultiCurrency::total_issuance(vtoken);
+			issuance.1 = new_issuance;
 			VtokenIssuanceSnapshots::<T>::insert(vtoken, issuance);
 
 			Self::deposit_event(Event::VtokenIssuanceSnapshotUpdated {
 				vtoken,
-				old_issuance: info.0,
-				new_issuance: info.1,
+				old_issuance: issuance.0,
+				new_issuance,
 			});
 		});
 
@@ -621,11 +623,7 @@ impl<T: Config> Pallet<T> {
 					.0;
 
 				// calculate the channel commission amount
-				let channel_commission = Self::calculate_mul_div_result(
-					total_commission,
-					channel_vtoken_share,
-					vtoken_issuance,
-				);
+				let channel_commission = channel_vtoken_share.mul_floor(total_commission);
 
 				// update channel_commission to ChannelClaimableCommissions storage
 				ChannelClaimableCommissions::<T>::mutate(
@@ -670,6 +668,11 @@ impl<T: Config> Pallet<T> {
 		// 对于同一个渠道，更新它的所有 vtoken 的 share 占比
 		ChannelVtokenShares::<T>::iter_prefix(channel_id).for_each(
 			|(vtoken, channel_old_share)| {
+				// get the vtoken issuance amount
+				let (old_vtoken_issuance, new_vtoken_issuance) =
+					VtokenIssuanceSnapshots::<T>::get(vtoken)
+						.unwrap_or((Zero::zero(), Zero::zero()));
+
 				// get the total minted amount of the period
 				let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken)
 					.unwrap_or((Zero::zero(), Zero::zero()))
@@ -696,7 +699,15 @@ impl<T: Config> Pallet<T> {
 						Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
 					};
 
-					let channel_new_share = channel_old_share + channel_period_net_mint;
+					let numerator =
+						channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
+					let denominator = new_vtoken_issuance;
+					let channel_new_share: Permill = if denominator == Zero::zero() {
+						Zero::zero()
+					} else {
+						Permill::from_rational_with_rounding(numerator, denominator, Rounding::Down)
+							.unwrap_or(Zero::zero())
+					};
 
 					// update the share to ChannelVtokenShares storage
 					ChannelVtokenShares::<T>::insert(channel_id, vtoken, channel_new_share);
@@ -754,13 +765,13 @@ impl<T: Config> Pallet<T> {
 			return Zero::zero();
 		}
 
-		let shares: u128 = U256::from(multiplier_1.saturated_into::<u128>())
+		let result: u128 = U256::from(multiplier_1.saturated_into::<u128>())
 			.saturating_mul(multiplier_2.saturated_into::<u128>().into())
 			.checked_div(divider.saturated_into::<u128>().into())
 			.map(|x| u128::try_from(x).unwrap_or(Zero::zero()))
 			.unwrap_or(Zero::zero());
 
-		BalanceOf::<T>::unique_saturated_from(shares)
+		BalanceOf::<T>::unique_saturated_from(result)
 	}
 
 	pub(crate) fn account_id() -> AccountIdOf<T> {
