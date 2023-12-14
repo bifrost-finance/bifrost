@@ -318,6 +318,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		token_id: CurrencyId,
 		token_amount: Balance,
 		remark: BoundedVec<u8, ConstU32<32>>,
+		channel_id: Option<u32>,
 	) -> Result<Balance, DispatchError>;
 	fn redeem(
 		exchanger: AccountId,
@@ -357,6 +358,7 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		_token_id: CurrencyId,
 		_token_amount: Balance,
 		_remark: BoundedVec<u8, ConstU32<32>>,
+		_channel_id: Option<u32>,
 	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
 	}
@@ -500,7 +502,7 @@ pub trait VTokenSupplyProvider<CurrencyId, Balance> {
 pub trait VTokenMintRedeemProvider<CurrencyId, Balance> {
 	// record the mint amount of vtoken
 	fn record_mint_amount(
-		channel_id: u32,
+		channel_id: Option<u32>,
 		vtoken: CurrencyId,
 		amount: Balance,
 	) -> Result<(), DispatchError>;
@@ -509,12 +511,6 @@ pub trait VTokenMintRedeemProvider<CurrencyId, Balance> {
 }
 
 pub trait SlpHostingFeeProvider<CurrencyId, Balance, AccountId> {
-	// transfer the hosting fee
-	fn collect_hosting_fee(
-		from: AccountId,
-		commission_token: CurrencyId,
-		amount: Balance,
-	) -> Result<(), DispatchError>;
 	// record the hosting fee
 	fn record_hosting_fee(
 		commission_token: CurrencyId,

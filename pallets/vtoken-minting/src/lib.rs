@@ -35,7 +35,8 @@ pub use weights::WeightInfo;
 
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
-	SlpxOperator, TimeUnit, VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+	SlpxOperator, TimeUnit, VTokenMintRedeemProvider, VTokenSupplyProvider, VtokenMintingInterface,
+	VtokenMintingOperator,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -135,6 +136,8 @@ pub mod pallet {
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
+
+		type ChannelCommission: VTokenMintRedeemProvider<CurrencyId, BalanceOf<Self>>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -355,10 +358,11 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: Option<u32>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			Self::mint_inner(exchanger, token_id, token_amount, remark).map(|_| ())
+			Self::mint_inner(exchanger, token_id, token_amount, remark, channel_id).map(|_| ())
 		}
 
 		#[pallet::call_index(1)]
@@ -1230,6 +1234,7 @@ pub mod pallet {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: Option<u32>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
@@ -1244,6 +1249,9 @@ pub mod pallet {
 				&T::EntranceAccount::get().into_account_truncating(),
 				token_amount_excluding_fee,
 			)?;
+
+			// record the minting information for ChannelCommission module
+			T::ChannelCommission::record_mint_amount(channel_id, vtoken_id, vtoken_amount)?;
 
 			Self::deposit_event(Event::Minted {
 				address: exchanger,
@@ -1398,6 +1406,8 @@ pub mod pallet {
 				vtoken_amount,
 				redeem_fee,
 			);
+
+			T::ChannelCommission::record_redeem_amount(vtoken_id, vtoken_amount)?;
 
 			Self::deposit_event(Event::Redeemed {
 				address: exchanger,
@@ -1627,8 +1637,9 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		token_id: CurrencyIdOf<T>,
 		token_amount: BalanceOf<T>,
 		remark: BoundedVec<u8, ConstU32<32>>,
+		channel_id: Option<u32>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		Self::mint_inner(exchanger, token_id, token_amount, remark)
+		Self::mint_inner(exchanger, token_id, token_amount, remark, channel_id)
 	}
 
 	fn redeem(

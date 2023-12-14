@@ -811,7 +811,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T> {
 	fn record_mint_amount(
-		channel_id: ChannelId,
+		channel_id: Option<ChannelId>,
 		vtoken: CurrencyId,
 		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
@@ -827,14 +827,17 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 		total_mint.1 = sum_up_amount;
 		PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
 
-		// then add to PeriodChannelVtokenMint
-		let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
-			.unwrap_or((Zero::zero(), Zero::zero()));
-		let sum_up_amount =
-			channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+		// only non-bifrost minting needs to record the channel minting amount
+		if let Some(channel_id) = channel_id {
+			// then add to PeriodChannelVtokenMint
+			let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
+				.unwrap_or((Zero::zero(), Zero::zero()));
+			let sum_up_amount =
+				channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
-		channel_vtoken_mint.1 = sum_up_amount;
-		PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
+			channel_vtoken_mint.1 = sum_up_amount;
+			PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
+		}
 
 		Ok(())
 	}
@@ -857,29 +860,18 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 }
 
 impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
-	// transfer the hosting fee to the receiver account
-	fn collect_hosting_fee(
-		from: AccountIdOf<T>,
-		commission_token: CurrencyId,
-		amount: BalanceOf<T>,
-	) -> Result<(), DispatchError> {
-		if amount == Zero::zero() {
-			return Ok(());
-		}
-
-		// transfer the hosting fee to the receiver account
-		T::MultiCurrency::transfer(commission_token, &from, &Self::account_id(), amount)?;
-
-		Ok(())
-	}
 	// record the hosting fee
 	fn record_hosting_fee(
-		commission_token: CurrencyId,
+		staking_token: CurrencyId,
 		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
 		if amount == Zero::zero() {
 			return Ok(());
 		}
+
+		// get the commission token of the staking token
+		let vtoken = staking_token.to_vtoken()?;
+		let commission_token = CommissionTokens::<T>::get(vtoken)?;
 
 		// add to PeriodTotalCommissions (加到周期系统总佣金里)
 		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token)
