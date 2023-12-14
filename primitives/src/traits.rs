@@ -510,10 +510,33 @@ pub trait VTokenMintRedeemProvider<CurrencyId, Balance> {
 	fn record_redeem_amount(vtoken: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
 }
 
+impl<CurrencyId, Balance> VTokenMintRedeemProvider<CurrencyId, Balance> for () {
+	fn record_mint_amount(
+		_channel_id: Option<u32>,
+		_vtoken: CurrencyId,
+		_amount: Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+
+	fn record_redeem_amount(_vtoken: CurrencyId, _amount: Balance) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
 pub trait SlpHostingFeeProvider<CurrencyId, Balance, AccountId> {
 	// record the hosting fee
 	fn record_hosting_fee(
 		commission_token: CurrencyId,
 		amount: Balance,
 	) -> Result<(), DispatchError>;
+}
+
+impl<CurrencyId, Balance, AccountId> SlpHostingFeeProvider<CurrencyId, Balance, AccountId> for () {
+	fn record_hosting_fee(
+		_commission_token: CurrencyId,
+		_amount: Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
 }
