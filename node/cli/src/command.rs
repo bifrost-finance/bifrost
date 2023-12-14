@@ -61,7 +61,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			Box::new(service::chain_spec::bifrost_kusama::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-local" | "bifrost-kusama-local" =>
-			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()?),
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-kusama-rococo" =>
 			Box::new(service::chain_spec::bifrost_kusama::rococo_testnet_config()?),
@@ -78,7 +78,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 		"bifrost-polkadot-genesis" => Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
-			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()),
 		#[cfg(feature = "with-bifrost-kusama-runtime")]
 		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
 		#[cfg(feature = "with-bifrost-polkadot-runtime")]

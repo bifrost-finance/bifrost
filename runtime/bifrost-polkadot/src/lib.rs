@@ -82,15 +82,20 @@ use bifrost_runtime_common::{
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use bifrost_slp::QueryId;
 use bifrost_ve_minting::traits::VeMintingInterface;
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{Currency, EitherOfDiverse, Get},
 };
+use frame_support::genesis_builder_helper::{build_config, create_default_config};
+use frame_support::traits::tokens::{PayFromAccount, UnityAssetBalanceConversion};
+use frame_support::traits::TransformOrigin;
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -102,7 +107,10 @@ use zenlink_protocol::{
 // xcm config
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
+use pallet_identity::legacy::IdentityInfo;
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use sp_runtime::traits::IdentityLookup;
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -118,6 +126,7 @@ use governance::{
 	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
 	TechAdminOrCouncil, ValidatorElection,
 };
+use crate::xcm_config::XcmOriginToTransactDispatchOrigin;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -256,10 +265,10 @@ impl Contains<RuntimeCall> for CallFilter {
 					&currency_id,
 				),
 				// Balances module
-				RuntimeCall::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
-					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-						&NativeCurrencyId::get(),
-					),
+				// RuntimeCall::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+				// 	bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+				// 		&NativeCurrencyId::get(),
+				// 	),
 				RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
 					dest: _,
 					value: _,
@@ -499,8 +508,7 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRoot<AccountId>;
-	type BaseDeposit = PreimageBaseDeposit;
-	type ByteDeposit = PreimageByteDeposit;
+	type Consideration = ();
 }
 
 parameter_types! {
@@ -545,6 +553,7 @@ parameter_types! {
 	// Minimum 4 CENTS/byte
 	pub const BasicDeposit: Balance = deposit(1, 258);
 	pub const FieldDeposit: Balance = deposit(0, 66);
+	pub ByteDeposit: Balance = deposit(1, 0);
 	pub const SubAccountDeposit: Balance = deposit(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
@@ -555,10 +564,10 @@ impl pallet_identity::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
-	type FieldDeposit = FieldDeposit;
+	type ByteDeposit = ByteDeposit;
+	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
-	type MaxAdditionalFields = MaxAdditionalFields;
 	type MaxRegistrars = MaxRegistrars;
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
@@ -607,6 +616,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
@@ -814,6 +824,14 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type AssetKind = ();
+	type Beneficiary = AccountId;
+	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
+	type Paymaster = PayFromAccount<pallet_balances::Pallet<Runtime>, BifrostTreasuryAccount>;
+	type BalanceConverter = UnityAssetBalanceConversion;
+	type PayoutPeriod = SpendPeriod;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 parameter_types! {
@@ -851,6 +869,7 @@ impl pallet_tips::Config for Runtime {
 	type TipReportDepositBase = TipReportDepositBase;
 	type Tippers = PhragmenElection;
 	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
+	type MaxTipAmount = ConstU128<1_000_000>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -863,13 +882,41 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 // culumus runtime start
+
+parameter_types! {
+	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
+}
+
+impl pallet_message_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+		cumulus_primitives_core::AggregateMessageOrigin,
+	>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type MessageProcessor = xcm_builder::ProcessXcmMessage<
+		AggregateMessageOrigin,
+		xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+		RuntimeCall,
+	>;
+	type Size = u32;
+	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+	type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
+	type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+	type HeapSize = ConstU32<{ 64 * 1024 }>;
+	type MaxStale = ConstU32<8>;
+	type ServiceWeight = MessageQueueServiceWeight;
+}
+
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpMessageHandler = DmpQueue;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -878,6 +925,20 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type WeightInfo = ();
+}
+
+impl cumulus_pallet_xcmp_queue::Config for Runtime {
+	type ChannelInfo = ParachainSystem;
+	type RuntimeEvent = RuntimeEvent;
+	type VersionWrapper = PolkadotXcm;
+	// Enqueue XCMP messages from siblings for later processing.
+	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, cumulus_primitives_core::ParaId, ParaIdToSibling>;
+	type MaxInboundSuspended = ConstU32<1_000>;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
+	type PriceForSiblingDelivery = NoPriceForMessageDelivery<cumulus_primitives_core::ParaId>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1711,7 +1772,7 @@ construct_runtime! {
 		XcmpQueue: cumulus_pallet_xcmp_queue = 40,
 		PolkadotXcm: pallet_xcm = 41,
 		CumulusXcm: cumulus_pallet_xcm = 42,
-		DmpQueue: cumulus_pallet_dmp_queue = 43,
+		MessageQueue: pallet_message_queue = 43,
 
 		// utilities
 		Utility: pallet_utility = 50,
@@ -2161,6 +2222,16 @@ impl_runtime_apis! {
 			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
 			// have a backtrace here.
 			Executive::try_execute_block(block, state_root_check,signature_check, select).unwrap()
+		}
+	}
+
+	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+		fn create_default_config() -> Vec<u8> {
+			create_default_config::<RuntimeGenesisConfig>()
+		}
+
+		fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
+			build_config::<RuntimeGenesisConfig>(config)
 		}
 	}
 }

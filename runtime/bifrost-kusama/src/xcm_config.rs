@@ -21,11 +21,14 @@ use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use frame_support::{
 	ensure, parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::Get,
 };
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
+use cumulus_primitives_core::AggregateMessageOrigin;
 use parity_scale_codec::{Decode, Encode};
 pub use polkadot_parachain_primitives::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
@@ -44,7 +47,7 @@ use bifrost_runtime_common::currency_adapter::{
 	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
 };
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{ContainsPair, ProcessMessageError};
+use frame_support::traits::{ContainsPair, ProcessMessageError, TransformOrigin};
 use orml_traits::{
 	currency::MutationHooks,
 	location::{RelativeReserveProvider, Reserve},
@@ -730,24 +733,6 @@ impl pallet_xcm::Config for Runtime {
 
 impl cumulus_pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-}
-
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-	type ChannelInfo = ParachainSystem;
-	type RuntimeEvent = RuntimeEvent;
-	type VersionWrapper = PolkadotXcm;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-	type ControllerOrigin = EnsureRoot<AccountId>;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
-	type PriceForSiblingDelivery = ();
-}
-
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 

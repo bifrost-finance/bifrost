@@ -85,39 +85,29 @@ pub fn bifrost_polkadot_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			_config: Default::default(),
+) -> serde_json::Value {
+	serde_json::json!({
+		"balances": {
+			"balances": balances
 		},
-		balances: BalancesConfig { balances },
-		indices: IndicesConfig { indices: vec![] },
-		democracy: Default::default(),
-		council_membership: CouncilMembershipConfig {
-			members: council_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		// "council_membership": {
+		// 	"members": council_membership
+		// },
+		// "technical_membership": {
+		// 	"members": technical_committee_membership
+		// },
+		// "oracle_membership": {
+		// 	"members": oracle_membership
+		// },
+		"parachainInfo": {
+			"parachainId": id,
 		},
-		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"collatorSelection": {
+			"invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
+			"candidacyBond": 0,
 		},
-		oracle_membership: OracleMembershipConfig {
-			members: oracle_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
-		},
-		council: Default::default(),
-		technical_committee: Default::default(),
-		treasury: Default::default(),
-		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
-		collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
-		},
-		session: SessionConfig {
-			keys: invulnerables
+		"session": {
+			"keys": invulnerables
 				.iter()
 				.cloned()
 				.map(|(acc, aura)| {
@@ -127,28 +117,29 @@ pub fn bifrost_polkadot_genesis(
 						bifrost_polkadot_runtime::SessionKeys { aura }, // session keys
 					)
 				})
-				.collect(),
+				.collect::<Vec<_>>(),
 		},
-		aura: Default::default(),
-		aura_ext: Default::default(),
-		parachain_system: Default::default(),
-		vesting: VestingConfig { vesting: vestings },
-		tokens: TokensConfig { balances: tokens },
-		asset_registry: AssetRegistryConfig {
-			currency: asset_registry.0,
-			vcurrency: asset_registry.1,
-			vsbond: asset_registry.2,
-			phantom: Default::default(),
+		// "vesting": {
+		// 	"vesting": vestings
+		// },
+		// "tokens": {
+		// 	"balances": tokens
+		// },
+		// "asset_registry": {
+		// 	"currency": asset_registry.0,
+		// 	"vcurrency": asset_registry.1,
+		// 	"vsbond": asset_registry.2,
+		// },
+		"polkadotXcm": {
+			"safeXcmVersion": Some(3),
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
-		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
-		vtoken_voting: Default::default(),
-		transaction_payment: Default::default(),
-		zenlink_protocol: Default::default(),
-	}
+		// "salp": {
+		// 	"initial_multisig_account": Some(salp_multisig_key)
+		// },
+	})
 }
 
-fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn development_config_genesis(id: ParaId) -> serde_json::Value {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
@@ -188,21 +179,22 @@ fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Polkadot Development",
-		"bifrost_polkadot_dev",
-		ChainType::Development,
-		move || development_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
+	Ok(ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: PARA_ID },
-	))
+	)
+		.with_name("Bifrost Polkadot Development")
+		.with_id("bifrost_polkadot_dev")
+		.with_chain_type(ChainType::Development)
+		.with_genesis_config_patch(development_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_polkadot_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
+	)
 }
 
-fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn local_config_genesis(id: ParaId) -> serde_json::Value {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -264,37 +256,37 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	)
 }
 
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Polkadot Local Testnet",
-		"bifrost_polkadot_local_testnet",
-		ChainType::Local,
-		move || local_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
+pub fn local_testnet_config() -> ChainSpec {
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
-	))
+	)
+		.with_name("Bifrost Polkadot Local Testnet")
+		.with_id("bifrost_polkadot_local_testnet")
+		.with_chain_type(ChainType::Local)
+		.with_genesis_config_patch(local_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_polkadot_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
 }
 
 pub fn chainspec_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Bifrost Polkadot",
-		"bifrost_polkadot",
-		ChainType::Live,
-		move || bifrost_polkadot_config_genesis(PARA_ID.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "Kusama".into(), para_id: PARA_ID },
 	)
+		.with_name("Bifrost Polkadot")
+		.with_id("bifrost_polkadot")
+		.with_chain_type(ChainType::Live)
+		.with_genesis_config_patch(bifrost_polkadot_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_polkadot_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
 }
 
-fn bifrost_polkadot_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn bifrost_polkadot_config_genesis(id: ParaId) -> serde_json::Value {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
 			// dpEZwz5nHxEjQXcm3sjy6NTz83EGcBRXMBSyuuWSguiVGJB

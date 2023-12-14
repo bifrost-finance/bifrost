@@ -40,7 +40,7 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
 use serde_json as json;
-use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_core::{bounded_vec, ConstU32, crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
@@ -48,10 +48,10 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
-use sp_runtime::Perbill;
+use sp_runtime::{BoundedVec, Perbill};
 
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<(), RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -132,37 +132,25 @@ pub fn bifrost_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			_config: Default::default(),
+) -> serde_json::Value {
+	serde_json::json!({
+		"balances": {
+			"balances": balances
 		},
-		balances: BalancesConfig { balances },
-		indices: IndicesConfig { indices: vec![] },
-		democracy: DemocracyConfig::default(),
-		council_membership: CouncilMembershipConfig {
-			members: council_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		// "council_membership": {
+		// 	"members": council_membership
+		// },
+		// "technical_membership": {
+		// 	"members": technical_committee_membership
+		// },
+		// "oracle_membership": {
+		// 	"members": oracle_membership
+		// },
+		"parachainInfo": {
+			"parachainId": id,
 		},
-		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
-		},
-		oracle_membership: OracleMembershipConfig {
-			members: oracle_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
-		},
-		council: CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
-		},
-		treasury: Default::default(),
-		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
-		session: SessionConfig {
-			keys: candidates
+		"session": {
+			"keys": candidates
 				.iter()
 				.cloned()
 				.map(|(acc, aura, _)| {
@@ -172,37 +160,35 @@ pub fn bifrost_genesis(
 						bifrost_kusama_runtime::SessionKeys { aura }, // session keys
 					)
 				})
-				.collect(),
+				.collect::<Vec<_>>(),
 		},
-		aura: Default::default(),
-		aura_ext: Default::default(),
-		parachain_system: Default::default(),
-		vesting: VestingConfig { vesting: vestings },
-		tokens: TokensConfig { balances: tokens },
-		asset_registry: AssetRegistryConfig {
-			currency: asset_registry.0,
-			vcurrency: asset_registry.1,
-			vsbond: asset_registry.2,
-			phantom: Default::default(),
+		// "vesting": {
+		// 	"vesting": vestings
+		// },
+		// "tokens": {
+		// 	"balances": tokens
+		// },
+		// "asset_registry": {
+		// 	"currency": asset_registry.0,
+		// 	"vcurrency": asset_registry.1,
+		// 	"vsbond": asset_registry.2,
+		// },
+		"polkadotXcm": {
+			"safeXcmVersion": Some(3),
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
-		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
-		parachain_staking: ParachainStakingConfig {
-			candidates: candidates
+		"parachainStaking": {
+			"candidates": candidates
 				.iter()
 				.cloned()
 				.map(|(account, _, bond)| (account, bond))
-				.collect(),
-			delegations,
-			inflation_config: inflation_config(),
-		},
-		vtoken_voting: Default::default(),
-		transaction_payment: Default::default(),
-		zenlink_protocol: Default::default(),
-	}
+				.collect::<Vec<_>>(),
+			"delegations": delegations,
+			"inflationConfig": inflation_config(),
+		}
+	})
 }
 
-fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn development_config_genesis(id: ParaId) -> serde_json::Value {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
@@ -253,21 +239,22 @@ fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Development",
-		"dev",
-		ChainType::Development,
-		move || development_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
-	))
+	Ok(ChainSpec::builder(
+			bifrost_kusama_runtime::WASM_BINARY
+				.expect("WASM binary was not built, please build it!"),
+			RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
+		)
+			.with_name("Bifrost Development")
+			.with_id("dev")
+			.with_chain_type(ChainType::Development)
+			.with_genesis_config_patch(development_config_genesis(PARA_ID.into()))
+			.with_properties(bifrost_kusama_properties())
+			.with_protocol_id(DEFAULT_PROTOCOL_ID)
+			.build()
+	)
 }
 
-fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn local_config_genesis(id: ParaId) -> serde_json::Value {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -389,22 +376,22 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	)
 }
 
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Local Testnet",
-		"bifrost_local_testnet",
-		ChainType::Local,
-		move || local_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
+pub fn local_testnet_config() -> ChainSpec {
+	ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
-	))
+	)
+		.with_name("Bifrost Local Testnet")
+		.with_id("bifrost_local_testnet")
+		.with_chain_type(ChainType::Local)
+		.with_genesis_config_patch(local_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_kusama_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
 }
 
-fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn rococo_testnet_config_genesis(id: ParaId) -> serde_json::Value {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
@@ -489,21 +476,22 @@ fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost K Rococo",
-		"bifrost-k-rococo",
-		ChainType::Live,
-		move || rococo_testnet_config_genesis(2030.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
-	))
+	Ok(ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
+	)
+		.with_name("Bifrost K Rococo")
+		.with_id("bifrost-k-rococo")
+		.with_chain_type(ChainType::Live)
+		.with_genesis_config_patch(rococo_testnet_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_kusama_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
+	)
 }
 
-fn rococo_local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+fn rococo_local_config_genesis(id: ParaId) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -553,36 +541,37 @@ fn rococo_local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn rococo_local_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost K Rococo Local",
-		"bifrost-k-rococo-local",
-		ChainType::Local,
-		move || rococo_local_config_genesis(2030.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
-	))
-}
-
-pub fn chainspec_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Bifrost",
-		"bifrost",
-		ChainType::Live,
-		move || bifrost_config_genesis(PARA_ID.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+	Ok(ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
+	)
+		.with_name("Bifrost K Rococo Local")
+		.with_id("bifrost-k-rococo-local")
+		.with_chain_type(ChainType::Local)
+		.with_genesis_config_patch(rococo_testnet_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_kusama_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
 	)
 }
 
-fn bifrost_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+pub fn chainspec_config() -> ChainSpec {
+	ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "Kusama".into(), para_id: PARA_ID },
+	)
+		.with_name("Bifrost")
+		.with_id("bifrost")
+		.with_chain_type(ChainType::Live)
+		.with_genesis_config_patch(bifrost_config_genesis(PARA_ID.into()))
+		.with_properties(bifrost_kusama_properties())
+		.with_protocol_id(DEFAULT_PROTOCOL_ID)
+		.build()
+}
+
+fn bifrost_config_genesis(id: ParaId) -> serde_json::Value {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh
@@ -661,8 +650,8 @@ fn bifrost_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 		vec![], // tokens
-		vec![], // council membership
-		vec![], // technical committee membership
+		bounded_vec!(), // council membership
+		bounded_vec!(), // technical committee membership
 		salp_multisig,
 		(vec![], vec![], vec![]),
 		vec![],

@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use super::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
@@ -28,6 +29,9 @@ use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{ContainsPair, Get, ProcessMessageError},
 };
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
+use frame_support::traits::TransformOrigin;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use parity_scale_codec::{Decode, Encode};
 pub use polkadot_parachain_primitives::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
@@ -575,24 +579,6 @@ impl pallet_xcm::Config for Runtime {
 
 impl cumulus_pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-}
-
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-	type ChannelInfo = ParachainSystem;
-	type RuntimeEvent = RuntimeEvent;
-	type VersionWrapper = PolkadotXcm;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-	type ControllerOrigin = EnsureRoot<AccountId>;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
-	type PriceForSiblingDelivery = ();
-}
-
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
