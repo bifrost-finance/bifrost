@@ -50,6 +50,7 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type ChannelId = u32;
 
 const REMOVE_TOKEN_LIMIT: u32 = 100;
+const DEFAULT_COMMISSION_RATE: Percent = Percent::from_percent(20);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -101,6 +102,13 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		Overflow,
+		ChannelNameTooLong,
+		ConversionError,
+		ChannelNotExist,
+		TransferError,
+		VtokenNotConfiguredForCommission,
+		InvalidCommissionRate,
+		CommissionTokenAlreadySet,
 	}
 
 	#[pallet::event]
@@ -130,8 +138,8 @@ pub mod pallet {
 	#[pallet::getter(fn commission_tokens)]
 	pub type CommissionTokens<T> = StorageMap<_, Blake2_128Concat, CurrencyId, CurrencyId>;
 
-	/// Mapping a channel + a staking token to corresponding commission rate, 【(channel_id,
-	/// staking_token) => commission rate】
+	/// Mapping a channel + vtoken to corresponding commission rate, 【(channel_id, vtoken) =>
+	/// commission rate】
 	#[pallet::storage]
 	#[pallet::getter(fn channel_commission_token_rates)]
 	pub type ChannelCommissionTokenRates<T> = StorageDoubleMap<
@@ -243,60 +251,170 @@ pub mod pallet {
 		}
 	}
 
-	// #[pallet::call]
-	// impl<T: Config> Pallet<T> {
-	// 	#[pallet::call_index(0)]
-	// 	#[pallet::weight(T::WeightInfo::cross_in())]
-	// 	pub fn cross_in(
-	// 		origin: OriginFor<T>,
-	// 		location: Box<MultiLocation>,
-	// 		currency_id: CurrencyId,
-	// 		#[pallet::compact] amount: BalanceOf<T>,
-	// 		remark: Option<Vec<u8>>,
-	// 	) -> DispatchResult {
-	// 		let issuer = ensure_signed(origin)?;
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::register_channel())]
+		pub fn register_channel(
+			origin: OriginFor<T>,
+			channel_name: Vec<u8>,
+			receive_account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
 
-	// 		ensure!(
-	// 			CrossCurrencyRegistry::<T>::contains_key(currency_id),
-	// 			Error::<T>::CurrencyNotSupportCrossInAndOut
-	// 		);
+			ensure!(
+				channel_name.len() <= T::NameLengthLimit::get() as usize,
+				Error::<T>::ChannelNameTooLong
+			);
 
-	// 		let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
-	// 			.ok_or(Error::<T>::NoCrossingMinimumSet)?;
-	// 		ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
+			// add to Channels storage
+			let channel_id = ChannelNextId::<T>::get();
+			let name =
+				BoundedVec::try_from(channel_name).map_err(|_| Error::<T>::ConversionError)?;
+			Channels::<T>::insert(channel_id, (receive_account, name));
 
-	// 		let issue_whitelist =
-	// 			Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-	// 		ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
+			// increase NextChannelId
+			ChannelNextId::<T>::put(channel_id + 1);
 
-	// 		let entrance_account_mutlilcaition = Box::new(MultiLocation {
-	// 			parents: 0,
-	// 			interior: X1(AccountId32 {
-	// 				network: Any,
-	// 				id: T::EntrancePalletId::get().into_account_truncating(),
-	// 			}),
-	// 		});
+			// for each vtoken, add the (channel_id + vtoken) to ChannelVtokenShares storage
+			CommissionTokens::<T>::iter_keys().for_each(|vtoken| {
+				ChannelCommissionTokenRates::<T>::insert(
+					channel_id,
+					vtoken,
+					DEFAULT_COMMISSION_RATE,
+				);
+			});
 
-	// 		// If the cross_in destination is entrance account, it is not required to be registered.
-	// 		let dest = if entrance_account_mutlilcaition == location {
-	// 			T::EntrancePalletId::get().into_account_truncating()
-	// 		} else {
-	// 			Self::outer_multilocation_to_account(currency_id, location.clone())
-	// 				.ok_or(Error::<T>::NoAccountIdMapping)?
-	// 		};
+			Ok(())
+		}
 
-	// 		T::MultiCurrency::deposit(currency_id, &dest, amount)?;
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::remove_channel())]
+		pub fn remove_channel(origin: OriginFor<T>, channel_id: ChannelId) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
 
-	// 		Self::deposit_event(Event::CrossedIn {
-	// 			dest,
-	// 			currency_id,
-	// 			location: *location,
-	// 			amount,
-	// 			remark,
-	// 		});
-	// 		Ok(())
-	// 	}
-	// }
+			// check if the channel exists
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::ChannelNotExist);
+
+			Self::settle_channel_commission(channel_id)?;
+
+			// remove the channel from Channels storage
+			Channels::<T>::remove(channel_id);
+
+			// remove the channel from ChannelCommissionTokenRates storage
+			let _ = ChannelCommissionTokenRates::<T>::clear_prefix(
+				channel_id,
+				REMOVE_TOKEN_LIMIT,
+				None,
+			);
+
+			// remove the channel from ChannelVtokenShares storage
+			let _ = ChannelVtokenShares::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
+
+			// remove the channel from PeriodChannelVtokenMint storage
+			let _ =
+				PeriodChannelVtokenMint::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::update_channel_receive_account())]
+		pub fn update_channel_receive_account(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			receive_account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// if the receive account is not changed, do nothing
+			let channel_op = Channels::<T>::get(channel_id);
+
+			let old_receive_account = if let Some(channel_info) = channel_op {
+				channel_info.0
+			} else {
+				Err(Error::<T>::ChannelNotExist)?
+			};
+
+			if old_receive_account == receive_account {
+				return Ok(());
+			}
+
+			// update the channel receive account
+			Channels::<T>::mutate(channel_id, |channel_info| {
+				if let Some(channel_info) = channel_info {
+					channel_info.0 = receive_account;
+				}
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::set_channel_commission_token())]
+		pub fn set_channel_commission_token(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			vtoken: CurrencyId,
+			rate: Option<u8>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// check if the channel exists
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::ChannelNotExist);
+			// check if the vtoken exists
+			ensure!(
+				CommissionTokens::<T>::contains_key(vtoken),
+				Error::<T>::VtokenNotConfiguredForCommission
+			);
+			// check if the rate is valid
+			if let Some(rate) = rate {
+				ensure!(rate <= 100, Error::<T>::InvalidCommissionRate);
+			}
+
+			// if rate is None, remove the channel commission rate, if rate is Some, update the
+			// channel commission rate
+			if let Some(rate) = rate {
+				let rate = Percent::from_percent(rate);
+				ChannelCommissionTokenRates::<T>::insert(channel_id, vtoken, rate);
+			} else {
+				ChannelCommissionTokenRates::<T>::remove(channel_id, vtoken);
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::set_commission_tokens())]
+		pub fn set_commission_tokens(
+			origin: OriginFor<T>,
+			vtoken: CurrencyId,
+			commission_token: CurrencyId,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// if old commission token is the same as the new one, do nothing
+			if let Some(old_commission_token) = CommissionTokens::<T>::get(vtoken) {
+				if old_commission_token == commission_token {
+					return Ok(());
+				}
+			}
+
+			// set the commission token
+			CommissionTokens::<T>::insert(vtoken, commission_token);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::claim_commissions())]
+		pub fn claim_commissions(origin: OriginFor<T>, channel_id: ChannelId) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			Self::settle_channel_commission(channel_id)?;
+			Ok(())
+		}
+	}
 }
 
 impl<T: Config> Pallet<T> {
@@ -442,10 +560,9 @@ impl<T: Config> Pallet<T> {
 
 			// transfer the bifrost commission amount from CommissionPalletId account to the bifrost
 			// commission receiver account
-			let commission_account = T::CommissionPalletId::get().into_account_truncating();
 			let _ = T::MultiCurrency::transfer(
 				commission_token,
-				&commission_account,
+				&Self::account_id(),
 				&T::BifrostCommissionReceiver::get(),
 				bifrost_commission,
 			);
@@ -455,7 +572,7 @@ impl<T: Config> Pallet<T> {
 		let _ = PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None);
 	}
 
-	fn calculate_commission(
+	pub(crate) fn calculate_commission(
 		total_commission: BalanceOf<T>,
 		channel_shares: BalanceOf<T>,
 		total_issuance: BalanceOf<T>,
@@ -471,6 +588,38 @@ impl<T: Config> Pallet<T> {
 			.unwrap_or(Zero::zero());
 
 		BalanceOf::<T>::unique_saturated_from(shares)
+	}
+
+	pub(crate) fn account_id() -> AccountIdOf<T> {
+		T::CommissionPalletId::get().into_account_truncating()
+	}
+
+	pub(crate) fn settle_channel_commission(channel_id: ChannelId) -> Result<(), Error<T>> {
+		// get channel receive account
+		let channel_op = Channels::<T>::get(channel_id);
+
+		let receiver_account = if let Some(channel_info) = channel_op {
+			channel_info.0
+		} else {
+			Err(Error::<T>::ChannelNotExist)?
+		};
+
+		// transfer all the claimable commission amount to the channel receive account
+		for (commission_token, amount) in ChannelClaimableCommissions::<T>::iter_prefix(channel_id)
+		{
+			T::MultiCurrency::transfer(
+				commission_token,
+				&Self::account_id(),
+				&receiver_account,
+				amount,
+			)
+			.map_err(|_| Error::<T>::TransferError)?;
+
+			// remove the commission amount from ChannelClaimableCommissions storage
+			ChannelClaimableCommissions::<T>::remove(channel_id, commission_token);
+		}
+
+		Ok(())
 	}
 }
 
@@ -532,11 +681,8 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 			return Ok(());
 		}
 
-		// get the receiver account from CommissionPalletId
-		let receiver_account = T::CommissionPalletId::get().into_account_truncating();
-
 		// transfer the hosting fee to the receiver account
-		T::MultiCurrency::transfer(commission_token, &from, &receiver_account, amount)?;
+		T::MultiCurrency::transfer(commission_token, &from, &Self::account_id(), amount)?;
 
 		Ok(())
 	}

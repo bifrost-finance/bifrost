@@ -54,12 +54,53 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for bifrost_cross_in_out.
 pub trait WeightInfo {
 	fn on_initialize() -> Weight;
-
+	fn register_channel() -> Weight;
+	fn remove_channel() -> Weight;
+	fn update_channel_receive_account() -> Weight;
+	fn set_channel_commission_token() -> Weight;
+	fn set_commission_tokens() -> Weight;
+	fn claim_commissions() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn on_initialize() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn register_channel() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn remove_channel() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn update_channel_receive_account() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn set_channel_commission_token() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn set_commission_tokens() -> Weight {
+		Weight::from_parts(30_578_000, 3541)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn claim_commissions() -> Weight {
 		Weight::from_parts(30_578_000, 3541)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
