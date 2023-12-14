@@ -28,7 +28,9 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	traits::{
+		AccountIdConversion, CheckedAdd, CheckedSub, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+	},
 	Percent, SaturatedConversion,
 };
 pub use weights::WeightInfo;
@@ -46,6 +48,8 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::Balance;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type ChannelId = u32;
+
+const REMOVE_TOKEN_LIMIT: u32 = 100;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -416,7 +420,40 @@ impl<T: Config> Pallet<T> {
 		);
 	}
 
-	pub(crate) fn clear_bifrost_commissions() {}
+	pub(crate) fn clear_bifrost_commissions() {
+		// 对于所有的CommissionTokens，计算Bifrost的佣金金额
+		CommissionTokens::<T>::iter_values().for_each(|commission_token| {
+			// get the total commission amount
+			let total_commission = PeriodTotalCommissions::<T>::get(commission_token)
+				.unwrap_or((Zero::zero(), Zero::zero()))
+				.0;
+
+			// get the cleared amount from the PeriodClearedCommissions storage
+			let cleared_commission =
+				PeriodClearedCommissions::<T>::get(commission_token).unwrap_or(Zero::zero());
+
+			// calculate the bifrost commission amount
+			let bifrost_commission =
+				total_commission.checked_sub(&cleared_commission).unwrap_or(Zero::zero());
+
+			if bifrost_commission == Zero::zero() {
+				return;
+			}
+
+			// transfer the bifrost commission amount from CommissionPalletId account to the bifrost
+			// commission receiver account
+			let commission_account = T::CommissionPalletId::get().into_account_truncating();
+			let _ = T::MultiCurrency::transfer(
+				commission_token,
+				&commission_account,
+				&T::BifrostCommissionReceiver::get(),
+				bifrost_commission,
+			);
+		});
+
+		// clear PeriodClearedComissions
+		let _ = PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None);
+	}
 
 	fn calculate_commission(
 		total_commission: BalanceOf<T>,
