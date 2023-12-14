@@ -140,7 +140,6 @@ pub mod pallet {
 			commission_token: CurrencyId,
 			amount: BalanceOf<T>,
 		},
-
 		ChannelVtokenSharesUpdated {
 			channel_id: ChannelId,
 			vtoken: CurrencyId,
@@ -681,30 +680,33 @@ impl<T: Config> Pallet<T> {
 					.unwrap_or((Zero::zero(), Zero::zero()))
 					.1;
 
-				// 当前周期有效铸造量 = 当前周期总铸造量 - 当前周期总赎回量
-				let net_mint = total_mint.checked_sub(&total_redeem).unwrap_or(Zero::zero());
-				// 渠道当期毛铸造量
-				let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
-					.unwrap_or((Zero::zero(), Zero::zero()))
-					.1;
-				// 计算渠道 A 当前周期的新增有效铸造量： 渠道 A 当前周期的 share *
-				// 当前周期协议的净铸造量
-				let channel_period_net_mint = if total_mint == Zero::zero() {
-					Zero::zero()
-				} else {
-					Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
-				};
+				// only update the share when total_mint > total_redeem
+				if total_redeem < total_mint {
+					// 当前周期有效铸造量 = 当前周期总铸造量 - 当前周期总赎回量
+					let net_mint = total_mint.checked_sub(&total_redeem).unwrap_or(Zero::zero());
+					// 渠道当期毛铸造量
+					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
+						.unwrap_or((Zero::zero(), Zero::zero()))
+						.1;
+					// 计算渠道 A 当前周期的新增有效铸造量： 渠道 A 当前周期的 share *
+					// 当前周期协议的净铸造量
+					let channel_period_net_mint = if total_mint == Zero::zero() {
+						Zero::zero()
+					} else {
+						Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
+					};
 
-				let channel_new_share = channel_old_share + channel_period_net_mint;
+					let channel_new_share = channel_old_share + channel_period_net_mint;
 
-				// update the share to ChannelVtokenShares storage
-				ChannelVtokenShares::<T>::insert(channel_id, vtoken, channel_new_share);
+					// update the share to ChannelVtokenShares storage
+					ChannelVtokenShares::<T>::insert(channel_id, vtoken, channel_new_share);
 
-				Self::deposit_event(Event::ChannelVtokenSharesUpdated {
-					channel_id,
-					vtoken,
-					share: channel_new_share,
-				});
+					Self::deposit_event(Event::ChannelVtokenSharesUpdated {
+						channel_id,
+						vtoken,
+						share: channel_new_share,
+					});
+				}
 			},
 		);
 	}
