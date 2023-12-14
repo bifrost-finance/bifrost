@@ -71,22 +71,6 @@ pub mod pallet {
 		/// The receiving account of Bifrost commission
 		type BifrostCommissionReceiver: Get<AccountIdOf<Self>>;
 
-		// /// The interface to call VtokenMinting module functions.
-		// type VtokenMinting: VtokenMintingOperator<
-		// 	CurrencyId,
-		// 	BalanceOf<Self>,
-		// 	AccountIdOf<Self>,
-		// 	TimeUnit,
-		// >;
-
-		// ///
-		// type SlpOperator: SlpOperator<
-		//     CurrencyId,
-		//     BalanceOf<Self>,
-		//     AccountIdOf<Self>,
-		//     TimeUnit,
-		// >;
-
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
@@ -665,7 +649,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn update_channel_vtoken_shares(channel_id: ChannelId) {
-		// 对于同一个渠道，更新它的所有 vtoken 的 share 占比
+		// for a channel_id，update the share of all vtoken
 		ChannelVtokenShares::<T>::iter_prefix(channel_id).for_each(
 			|(vtoken, channel_old_share)| {
 				// get the vtoken issuance amount
@@ -685,14 +669,13 @@ impl<T: Config> Pallet<T> {
 
 				// only update the share when total_mint > total_redeem
 				if total_redeem < total_mint {
-					// 当前周期有效铸造量 = 当前周期总铸造量 - 当前周期总赎回量
+					// net_mint = total_mint - total_redeem
 					let net_mint = total_mint.checked_sub(&total_redeem).unwrap_or(Zero::zero());
-					// 渠道当期毛铸造量
+					// channel mint
 					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
 						.unwrap_or((Zero::zero(), Zero::zero()))
 						.1;
-					// 计算渠道 A 当前周期的新增有效铸造量： 渠道 A 当前周期的 share *
-					// 当前周期协议的净铸造量
+					// channel_net_mint： channel_share * net_mint
 					let channel_period_net_mint = if total_mint == Zero::zero() {
 						Zero::zero()
 					} else {
@@ -723,7 +706,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn clear_bifrost_commissions() {
-		// 对于所有的CommissionTokens，计算Bifrost的佣金金额
+		// for all CommissionTokens，calculate the commission of Bifrost
 		CommissionTokens::<T>::iter_values().for_each(|commission_token| {
 			// get the total commission amount
 			let total_commission = PeriodTotalCommissions::<T>::get(commission_token)
@@ -752,7 +735,7 @@ impl<T: Config> Pallet<T> {
 			);
 		});
 
-		// clear PeriodClearedComissions
+		// clear PeriodClearedCommissions
 		let _ = PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None);
 	}
 
@@ -873,7 +856,7 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 		let vtoken = staking_token.to_vtoken()?;
 		let commission_token = CommissionTokens::<T>::get(vtoken)?;
 
-		// add to PeriodTotalCommissions (加到周期系统总佣金里)
+		// add to PeriodTotalCommissions
 		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token)
 			.unwrap_or((Zero::zero(), Zero::zero()));
 
