@@ -22,7 +22,9 @@
 extern crate alloc;
 
 use alloc::vec;
-use bifrost_primitives::{CurrencyId, SlpHostingFeeProvider, VTokenMintRedeemProvider};
+use bifrost_primitives::{
+	CurrencyId, CurrencyIdExt, SlpHostingFeeProvider, VTokenMintRedeemProvider,
+};
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
@@ -93,6 +95,7 @@ pub mod pallet {
 		VtokenNotConfiguredForCommission,
 		InvalidCommissionRate,
 		CommissionTokenAlreadySet,
+		InvalidVtoken,
 	}
 
 	#[pallet::event]
@@ -421,6 +424,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			ensure!(vtoken.is_vtoken(), Error::<T>::InvalidVtoken);
+
 			// check if the channel exists
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::ChannelNotExist);
 			// check if the vtoken exists
@@ -455,6 +460,8 @@ pub mod pallet {
 			commission_token: CurrencyId,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+
+			ensure!(vtoken.is_vtoken(), Error::<T>::InvalidVtoken);
 
 			// if old commission token is the same as the new one, do nothing
 			if let Some(old_commission_token) = CommissionTokens::<T>::get(vtoken) {
@@ -853,8 +860,9 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 		}
 
 		// get the commission token of the staking token
-		let vtoken = staking_token.to_vtoken()?;
-		let commission_token = CommissionTokens::<T>::get(vtoken)?;
+		let vtoken = staking_token.to_vtoken().map_err(|_| Error::<T>::ConversionError)?;
+		let commission_token = CommissionTokens::<T>::get(vtoken)
+			.ok_or(Error::<T>::VtokenNotConfiguredForCommission)?;
 
 		// add to PeriodTotalCommissions
 		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token)
