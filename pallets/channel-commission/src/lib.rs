@@ -153,12 +153,12 @@ pub mod pallet {
 			old_mint_amount: BalanceOf<T>,
 			new_mint_amount: BalanceOf<T>,
 		},
-		PeriodTotalComissionsUpdated {
+		PeriodTotalCommissionsUpdated {
 			commission_token: CurrencyId,
 			old_amount: BalanceOf<T>,
 			new_amount: BalanceOf<T>,
 		},
-		ChannelClaimableComissionUpdated {
+		ChannelClaimableCommissionUpdated {
 			channel_id: ChannelId,
 			commission_token: CurrencyId,
 			amount: Option<BalanceOf<T>>,
@@ -502,6 +502,7 @@ impl<T: Config> Pallet<T> {
 
 			// get the vtoken new issuance amount from Tokens module issuance storage
 			let new_issuance = T::MultiCurrency::total_issuance(vtoken);
+
 			issuance.1 = new_issuance;
 			VtokenIssuanceSnapshots::<T>::insert(vtoken, issuance);
 
@@ -576,7 +577,7 @@ impl<T: Config> Pallet<T> {
 			total_commission.1 = Zero::zero();
 			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
 
-			Self::deposit_event(Event::PeriodTotalComissionsUpdated {
+			Self::deposit_event(Event::PeriodTotalCommissionsUpdated {
 				commission_token,
 				old_amount: info.0,
 				new_amount: info.1,
@@ -614,7 +615,15 @@ impl<T: Config> Pallet<T> {
 					.0;
 
 				// calculate the channel commission amount
-				let channel_commission = channel_vtoken_share.mul_floor(total_commission);
+				let raw_channel_commission = channel_vtoken_share.mul_floor(total_commission);
+
+				// get the channel vtoken commission rate
+				let channel_commission_rate =
+					ChannelCommissionTokenRates::<T>::get(channel_id, vtoken)
+						.unwrap_or(DEFAULT_COMMISSION_RATE);
+
+				// calculate the channel commission amount
+				let channel_commission = channel_commission_rate.mul_floor(raw_channel_commission);
 
 				// update channel_commission to ChannelClaimableCommissions storage
 				ChannelClaimableCommissions::<T>::mutate(
@@ -631,7 +640,7 @@ impl<T: Config> Pallet<T> {
 							*amount_op = Some(channel_commission);
 						}
 
-						Self::deposit_event(Event::ChannelClaimableComissionUpdated {
+						Self::deposit_event(Event::ChannelClaimableCommissionUpdated {
 							channel_id,
 							commission_token,
 							amount: *amount_op,
@@ -667,12 +676,12 @@ impl<T: Config> Pallet<T> {
 				// get the total minted amount of the period
 				let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken)
 					.unwrap_or((Zero::zero(), Zero::zero()))
-					.1;
+					.0;
 
 				// get the total redeemed amount of the period
 				let total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken)
 					.unwrap_or((Zero::zero(), Zero::zero()))
-					.1;
+					.0;
 
 				// only update the share when total_mint > total_redeem
 				if total_redeem < total_mint {
@@ -681,7 +690,7 @@ impl<T: Config> Pallet<T> {
 					// channel mint
 					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
 						.unwrap_or((Zero::zero(), Zero::zero()))
-						.1;
+						.0;
 					// channel_net_mint： channel_share * net_mint
 					let channel_period_net_mint = if total_mint == Zero::zero() {
 						Zero::zero()
@@ -692,6 +701,7 @@ impl<T: Config> Pallet<T> {
 					let numerator =
 						channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
 					let denominator = new_vtoken_issuance;
+
 					let channel_new_share: Permill = if denominator == Zero::zero() {
 						Zero::zero()
 					} else {

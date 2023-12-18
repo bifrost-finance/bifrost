@@ -19,8 +19,9 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnInitialize;
 use bifrost_primitives::{
-	currency::{BNC, KSM, VKSM},
+	currency::{BNC, KSM},
 	CurrencyId, TokenSymbol,
 };
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
@@ -147,10 +148,10 @@ ord_parameter_types! {
 
 parameter_types! {
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
-	pub const ClearingDuration: u32 = 50400;
+	pub const ClearingDuration: u32 = 100;
 	pub const NameLengthLimit: u32 = 20;
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
-	pub BifrostCommissionReceiver: AccountId = FeeSharePalletId::get().into_account_truncating();
+	pub BifrostCommissionReceiver: AccountId = AccountId32::new([7u8; 32]);
 }
 
 impl bifrost_channel_commission::Config for Runtime {
@@ -186,9 +187,7 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, KSM, 100),
-			(ALICE, VKSM, 400),
 			(BOB, KSM, 100),
-			(BOB, VKSM, 100),
 		])
 	}
 
@@ -218,5 +217,13 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		System::set_block_number(System::block_number() + 1);
+		ChannelCommission::on_initialize(System::block_number());
 	}
 }
