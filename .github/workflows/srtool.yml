@@ -39,7 +39,7 @@ jobs:
 
       # it takes a while to build the runtime, so let's save the artifact as soon as we have it
       - name: Archive Artifacts for ${{ matrix.chain }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.chain }}-runtime
           path: |
@@ -65,7 +65,7 @@ jobs:
           subwasm --json meta ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-metadata.json
 
       - name: Archive Subwasm results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.chain }}-runtime
           path: |
