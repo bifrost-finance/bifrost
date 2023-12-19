@@ -480,6 +480,7 @@ impl Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+	type ChannelCommission = ();
 }
 
 pub struct XcmDestWeightAndFee;

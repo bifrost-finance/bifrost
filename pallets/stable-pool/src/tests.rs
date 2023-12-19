@@ -156,7 +156,13 @@ fn create_pool_successful() {
 fn mint_successful_equal_amounts() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		System::set_block_number(2);
 		assert_ok!(StablePool::edit_token_rate(
@@ -213,7 +219,13 @@ fn mint_successful_equal_amounts() {
 fn swap_successful() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		System::set_block_number(2);
 
@@ -255,7 +267,13 @@ fn get_swap_output_amount() {
 		env_logger::try_init().unwrap_or(());
 		System::set_block_number(2);
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 
 		let (coin0, coin1, pool_asset, swap_id) = create_pool();
 		assert_ok!(StablePool::edit_token_rate(
@@ -340,7 +358,13 @@ fn get_swap_output_amount() {
 fn mint_swap_redeem1() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 
 		let (coin0, coin1, _pool_asset, swap_id) = create_pool();
@@ -372,7 +396,13 @@ fn mint_swap_redeem1() {
 fn mint_swap_redeem2() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, pool_asset, swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(
@@ -435,7 +465,13 @@ fn mint_swap_redeem2() {
 fn mint_swap_redeem_for_precisions() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), 3, VDOT, 90_000_000, 0));
 		let (coin0, coin1, _pool_asset, _swap_id) = create_pool2();
 		assert_ok!(StablePool::edit_token_rate(

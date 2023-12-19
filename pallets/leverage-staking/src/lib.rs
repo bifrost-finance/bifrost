@@ -164,6 +164,7 @@ pub mod pallet {
 						asset_id,
 						token_value,
 						BoundedVec::default(),
+						None,
 					)?;
 					T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 					let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
@@ -183,6 +184,7 @@ pub mod pallet {
 								asset_id,
 								token_total_value,
 								BoundedVec::default(),
+								None,
 							)?;
 							T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 							let deposits =

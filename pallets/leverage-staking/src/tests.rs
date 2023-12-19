@@ -45,7 +45,7 @@ fn init() {
 		vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 	));
 	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100), BoundedVec::default()));
+	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100), BoundedVec::default(), None));
 	let amounts = vec![unit(100), unit(100)];
 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
 }
@@ -107,7 +107,13 @@ fn flash_loan_repay() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init();
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(3).into(),
+			DOT,
+			100_000_000,
+			BoundedVec::default(),
+			None
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, unit(100)));
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),

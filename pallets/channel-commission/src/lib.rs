@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdExt, SlpHostingFeeProvider, VTokenMintRedeemProvider,
 };
@@ -61,7 +61,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		/// Currecny operation handler
+		/// Currency operation handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		/// The only origin that can edit token issuer list
@@ -73,7 +73,7 @@ pub mod pallet {
 		/// The receiving account of Bifrost commission
 		type BifrostCommissionReceiver: Get<AccountIdOf<Self>>;
 
-		/// Weight information for extrinsics in this module.
+		/// Weight information for extrinsic in this module.
 		type WeightInfo: WeightInfo;
 
 		// Commission clearing duration, in blocks
@@ -314,7 +314,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				channel_name.len() <= T::NameLengthLimit::get() as usize,
+				channel_name.len() as u32 <= T::NameLengthLimit::get(),
 				Error::<T>::ChannelNameTooLong
 			);
 

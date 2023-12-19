@@ -96,7 +96,7 @@ benchmarks! {
 		));
 		let caller: T::AccountId = whitelisted_caller();
 		assert_ok!(T::MultiCurrency::deposit(KSM, &caller, BalanceOf::<T>::unique_saturated_from(1000u128)));
-		assert_ok!(T::VtokenMintingInterface::mint(caller, KSM, BalanceOf::<T>::unique_saturated_from(1000u128), BoundedVec::default(),));
+		assert_ok!(T::VtokenMintingInterface::mint(caller, KSM, BalanceOf::<T>::unique_saturated_from(1000u128), BoundedVec::default(),None));
 	}: _(RawOrigin::Root,KSM)
 
 	on_redeem_success {
