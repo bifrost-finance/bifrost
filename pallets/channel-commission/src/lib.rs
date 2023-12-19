@@ -516,7 +516,7 @@ impl<T: Config> Pallet<T> {
 		// Move the total minted amount of the period from ongoing period to the previous period and
 		// clear the ongoing period minted amount
 		PeriodVtokenTotalMint::<T>::iter().for_each(|(vtoken, total_mint)| {
-			let info = total_mint.clone();
+			let info = total_mint;
 
 			let mut total_mint = total_mint;
 			total_mint.0 = total_mint.1;
@@ -533,7 +533,7 @@ impl<T: Config> Pallet<T> {
 		// Move the total redeemed amount of the period from ongoing period to the previous period
 		// and clear the ongoing period redeemed amount
 		PeriodVtokenTotalRedeem::<T>::iter().for_each(|(vtoken, total_redeem)| {
-			let info = total_redeem.clone();
+			let info = total_redeem;
 
 			let mut total_redeem = total_redeem;
 			total_redeem.0 = total_redeem.1;
@@ -551,7 +551,7 @@ impl<T: Config> Pallet<T> {
 		// and clear the ongoing period minted amount
 		PeriodChannelVtokenMint::<T>::iter().for_each(
 			|(channel_id, vtoken, channel_vtoken_mint)| {
-				let info = channel_vtoken_mint.clone();
+				let info = channel_vtoken_mint;
 
 				let mut channel_vtoken_mint = channel_vtoken_mint;
 				channel_vtoken_mint.0 = channel_vtoken_mint.1;
@@ -570,7 +570,7 @@ impl<T: Config> Pallet<T> {
 		// Move the total commission amount of the period from ongoing period to the previous period
 		// and clear the ongoing period commission amount
 		PeriodTotalCommissions::<T>::iter().for_each(|(commission_token, total_commission)| {
-			let info = total_commission.clone();
+			let info = total_commission;
 
 			let mut total_commission = total_commission;
 			total_commission.0 = total_commission.1;

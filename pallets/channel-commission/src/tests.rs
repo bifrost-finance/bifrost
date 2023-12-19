@@ -20,8 +20,8 @@
 
 use crate::{mock::*, *};
 use bifrost_primitives::{currency::KSM, BNC, VBNC, VKSM};
-use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{AccountId32, DispatchError::BadOrigin};
+use frame_support::assert_ok;
+use sp_runtime::AccountId32;
 
 const CHANNEL_A_NAME: &[u8] = b"channel_a";
 const CHANNEL_B_NAME: &[u8] = b"channel_b";
