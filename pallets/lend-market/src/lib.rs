@@ -1436,6 +1436,14 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
+		log::debug!(
+			target: "lend-market::do_redeem_voucher",
+			"who: {:?}, asset_id: {:?}, voucher_amount: {:?}, redeem_amount: {:?}",
+			who,
+			asset_id,
+			voucher_amount,
+			redeem_amount,
+		);
 		T::Assets::transfer(
 			asset_id,
 			&Self::account_id(),
@@ -1444,6 +1452,7 @@ impl<T: Config> Pallet<T> {
 			Preservation::Expendable,
 		)
 		.map_err(|_| Error::<T>::InsufficientCash)?;
+		log::debug!("test");
 		Ok(redeem_amount)
 	}
 
@@ -1454,6 +1463,13 @@ impl<T: Config> Pallet<T> {
 		borrow_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		Self::ensure_under_borrow_cap(asset_id, borrow_amount)?;
+		log::debug!(
+			target: "lend-market::borrow_allowed",
+			"asset_id: {:?}, borrower: {:?}, borrow_amount: {:?}",
+			asset_id,
+			borrower,
+			borrow_amount,
+		);
 		Self::ensure_enough_cash(asset_id, borrow_amount)?;
 		let borrow_value = Self::get_asset_value(asset_id, borrow_amount)?;
 		Self::ensure_liquidity(
@@ -1837,6 +1853,13 @@ impl<T: Config> Pallet<T> {
 		let reducible_cash = Self::get_total_cash(asset_id)
 			.checked_sub(Self::total_reserves(asset_id))
 			.ok_or(ArithmeticError::Underflow)?;
+		log::debug!(
+			target: "lend-market::ensure_enough_cash",
+			"asset_id: {:?}, amount: {:?}, reducible_cash: {:?}",
+			asset_id,
+			amount,
+			reducible_cash,
+		);
 		if reducible_cash < amount {
 			return Err(Error::<T>::InsufficientCash.into());
 		}
@@ -1901,7 +1924,7 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			&Self::account_id(),
 			Preservation::Expendable,
-			Fortitude::Force,
+			Fortitude::Polite,
 		)
 		// T::Assets::balance(asset_id, &Self::account_id())
 	}
