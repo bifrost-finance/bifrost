@@ -32,9 +32,23 @@ use crate::Pallet as ChannelCommission;
 
 benchmarks! {
 	register_channel {
+		// assume we have 30 vtoken at most
+		let x in 1 .. 30;
+
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let channel_name =  b"Bifrost".to_vec();
 		let receiver = whitelisted_caller();
+
+		// set_commission_tokens
+		for i in 0 .. x {
+			let i: u8 = i.try_into().unwrap();
+			let vtoken = CurrencyId::VToken2(i);
+			let commission_token = CurrencyId::Token2(i);
+			assert_ok!(ChannelCommission::<T>::set_commission_tokens(
+				origin.clone(),
+				vtoken, commission_token
+			));
+		}
 
 	}: _<T::RuntimeOrigin>(origin, channel_name, receiver)
 
@@ -111,6 +125,64 @@ benchmarks! {
 		assert_ok!(T::MultiCurrency::deposit(commission_token, &commission_account, 10000u32.into()));
 
 	}: _<T::RuntimeOrigin>(origin, channel_id)
+
+	on_initialize {
+		// assume we have 30 vtoken at most
+		let x in 1 .. 30;
+
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let channel_name =  b"Bifrost".to_vec();
+		let receiver = whitelisted_caller();
+		let share = Permill::from_percent(20);
+		let commission_account: T::AccountId = T::CommissionPalletId::get().into_account_truncating();
+
+		// token_id
+		for i in 0 .. x {
+			let i: u8 = i.try_into().unwrap();
+			let vtoken = CurrencyId::VToken2(i);
+			let commission_token = CurrencyId::Token2(i);
+
+			// set_commission_tokens
+			assert_ok!(ChannelCommission::<T>::set_commission_tokens(
+				origin.clone(),
+				vtoken, commission_token
+			));
+
+			VtokenIssuanceSnapshots::<T>::insert(vtoken, (9000, 10000));
+			PeriodVtokenTotalMint::<T>::insert(vtoken, (10000, 2000));
+			PeriodVtokenTotalRedeem::<T>::insert(vtoken, (0, 1000));
+			PeriodTotalCommissions::<T>::insert(vtoken, (0, 100));
+
+			// set vtoken issuance to 11000
+			Currencies::update_balance(
+				origin.clone(),
+				commission_account.clone(),
+				vtoken,
+				11000,
+			);
+
+			// set ksm token issuance to 11000
+			Currencies::update_balance(
+				origin.clone(),
+				commission_account.clone(),
+				commission_token,
+				11000,
+			);
+
+			// register_channel
+			assert_ok!(ChannelCommission::<T>::register_channel(
+				origin.clone(),
+				channel_name, receiver
+			));
+
+			// set channel share
+			ChannelVtokenShares::<T>::insert(0, vtoken, share.clone());
+			PeriodChannelVtokenMint::<T>::insert(0, vtoken, (2000, 500));
+		}
+
+		let block_num =BlockNumberFor::<T>::from(101u32);
+	}: _<T::RuntimeOrigin>(block_num)
+
 
 	impl_benchmark_test_suite!(ChannelCommission,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);
 }
