@@ -29,6 +29,7 @@ use sp_runtime::{
 	traits::{StaticLookup, UniqueSaturatedFrom},
 	FixedPointNumber,
 };
+use sp_std::vec;
 
 pub fn unit(d: u128) -> u128 {
 	d.saturating_mul(10_u128.pow(12))

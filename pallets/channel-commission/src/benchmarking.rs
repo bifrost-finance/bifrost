@@ -50,7 +50,7 @@ benchmarks! {
 			));
 		}
 
-	}: _<T::RuntimeOrigin>(origin, channel_name, receiver)
+	}: _<T::RuntimeOrigin>(origin.clone(), channel_name, receiver)
 
 	remove_channel {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -62,7 +62,7 @@ benchmarks! {
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
 			channel_name, receiver
 		));
-	}: _<T::RuntimeOrigin>(origin,channel_id)
+	}: _<T::RuntimeOrigin>(origin.clone(),channel_id)
 
 	update_channel_receive_account {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -75,7 +75,7 @@ benchmarks! {
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
 			channel_name, receiver
 		));
-	}: _<T::RuntimeOrigin>(origin,channel_id, new_receiver)
+	}: _<T::RuntimeOrigin>(origin.clone(),channel_id, new_receiver)
 
 	set_channel_commission_token {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -84,28 +84,36 @@ benchmarks! {
 		let commission_rate = 0;
 		let channel_id = 0;
 		let vtoken = CurrencyId::VToken2(0);
+		let commission_token = CurrencyId::Token2(0);
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
+			origin.clone(),
+			vtoken, commission_token
+		));
 
 		assert_ok!(ChannelCommission::<T>::register_channel(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
+			origin.clone(),
 			channel_name, receiver
 		));
-	}: _<T::RuntimeOrigin>(origin,channel_id, vtoken, Some(commission_rate))
+	}: _<T::RuntimeOrigin>(origin.clone(),channel_id, vtoken, Some(commission_rate))
 
 	set_commission_tokens {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let commission_token = CurrencyId::VToken2(0);
+		let commission_token = CurrencyId::Token2(0);
 		let vtoken = CurrencyId::VToken2(0);
 
-	}: _<T::RuntimeOrigin>(origin, vtoken, commission_token)
+	}: _<T::RuntimeOrigin>(origin.clone(), vtoken, commission_token)
 
 	claim_commissions {
+		let test_account: T::AccountId = account("seed",1,1);
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let channel_name = b"Bifrost".to_vec();
 		let receiver = whitelisted_caller();
 		let channel_id = 0;
 		let vtoken = CurrencyId::VToken2(0);
 		let commission_rate = 0;
-		let commission_token = CurrencyId::VToken2(0);
+		let commission_token = CurrencyId::Token2(0);
 		let commission_account = T::CommissionPalletId::get().into_account_truncating();
 
 		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
@@ -124,7 +132,7 @@ benchmarks! {
 		// deposit some amount into the commission pool
 		assert_ok!(T::MultiCurrency::deposit(commission_token, &commission_account, 10000u32.into()));
 
-	}: _<T::RuntimeOrigin>(origin, channel_id)
+	}: _(RawOrigin::Signed(test_account), channel_id)
 
 	on_initialize {
 		// assume we have 30 vtoken at most
@@ -132,7 +140,7 @@ benchmarks! {
 
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let channel_name =  b"Bifrost".to_vec();
-		let receiver = whitelisted_caller();
+		let receiver: T::AccountId = whitelisted_caller();
 		let share = Permill::from_percent(20);
 		let commission_account: T::AccountId = T::CommissionPalletId::get().into_account_truncating();
 
@@ -148,40 +156,37 @@ benchmarks! {
 				vtoken, commission_token
 			));
 
-			VtokenIssuanceSnapshots::<T>::insert(vtoken, (9000, 10000));
-			PeriodVtokenTotalMint::<T>::insert(vtoken, (10000, 2000));
-			PeriodVtokenTotalRedeem::<T>::insert(vtoken, (0, 1000));
-			PeriodTotalCommissions::<T>::insert(vtoken, (0, 100));
+			let old_amount: BalanceOf<T> = 9000u128.unique_saturated_into();
+			let new_amount: BalanceOf<T> = 10000u128.unique_saturated_into();
+			VtokenIssuanceSnapshots::<T>::insert(vtoken, (old_amount, new_amount));
 
-			// set vtoken issuance to 11000
-			Currencies::update_balance(
-				origin.clone(),
-				commission_account.clone(),
-				vtoken,
-				11000,
-			);
+			let old_amount: BalanceOf<T> = 10000u128.unique_saturated_into();
+			let new_amount: BalanceOf<T> = 2000u128.unique_saturated_into();
+			PeriodVtokenTotalMint::<T>::insert(vtoken, (old_amount,new_amount));
 
-			// set ksm token issuance to 11000
-			Currencies::update_balance(
-				origin.clone(),
-				commission_account.clone(),
-				commission_token,
-				11000,
-			);
+			let old_amount: BalanceOf<T> = 0u128.unique_saturated_into();
+			let new_amount: BalanceOf<T> = 1000u128.unique_saturated_into();
+			PeriodVtokenTotalRedeem::<T>::insert(vtoken, (old_amount, new_amount));
+
+			let old_amount: BalanceOf<T> = 0u128.unique_saturated_into();
+			let new_amount: BalanceOf<T> = 100u128.unique_saturated_into();
+			PeriodTotalCommissions::<T>::insert(vtoken, (old_amount, new_amount));
 
 			// register_channel
 			assert_ok!(ChannelCommission::<T>::register_channel(
 				origin.clone(),
-				channel_name, receiver
+				channel_name.clone(), receiver.clone()
 			));
 
 			// set channel share
+			let old_amount: BalanceOf<T> = 2000u128.unique_saturated_into();
+			let new_amount: BalanceOf<T> = 500u128.unique_saturated_into();
 			ChannelVtokenShares::<T>::insert(0, vtoken, share.clone());
-			PeriodChannelVtokenMint::<T>::insert(0, vtoken, (2000, 500));
+			PeriodChannelVtokenMint::<T>::insert(0, vtoken, (old_amount, new_amount));
 		}
 
 		let block_num =BlockNumberFor::<T>::from(101u32);
-	}: _<T::RuntimeOrigin>(block_num)
+	}: {ChannelCommission::<T>::on_initialize(block_num);}
 
 
 	impl_benchmark_test_suite!(ChannelCommission,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);

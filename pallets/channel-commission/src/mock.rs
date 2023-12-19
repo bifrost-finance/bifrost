@@ -182,12 +182,17 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		let commission_account: AccountId32 =
+			<Runtime as crate::Config>::CommissionPalletId::get().into_account_truncating();
+
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, KSM, 100),
 			(BOB, KSM, 100),
+			(commission_account.clone(), CurrencyId::Token2(0), 11000),
+			(commission_account, CurrencyId::VToken2(0), 11000),
 		])
 	}
 

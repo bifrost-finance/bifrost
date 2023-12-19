@@ -361,7 +361,8 @@ fn vtoken_minting() {
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				KSM,
 				100 * KSM_DECIMALS,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			// alice account should have 99.9 vKSM
 			assert_eq!(Currencies::free_balance(VKSM, &AccountId::from(ALICE)), 99900000000000);
@@ -390,7 +391,8 @@ fn transfer_to() {
 			RuntimeOrigin::signed(AccountId::from(ALICE)),
 			KSM,
 			100 * KSM_DECIMALS,
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 
 		assert_ok!(Slp::transfer_to(
@@ -749,7 +751,8 @@ fn delegate_works() {
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				KSM,
 				100 * KSM_DECIMALS,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 
 			assert_ok!(Slp::bond(

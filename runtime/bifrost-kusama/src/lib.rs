@@ -1980,7 +1980,7 @@ construct_runtime! {
 		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
 		LeverageStaking: leverage_staking = 135,
-		ChannelCommission: channel_commission = 136,
+		ChannelCommission: bifrost_channel_commission = 136,
 	}
 }
 

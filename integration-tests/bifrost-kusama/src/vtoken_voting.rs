@@ -85,7 +85,8 @@ fn vote_works() {
 			RuntimeOrigin::signed(BifrostKusamaAlice::get()),
 			KSM,
 			1_000_000_000_000,
-			Default::default()
+			Default::default(),
+			None
 		));
 		assert_eq!(
 			<Runtime as bifrost_vtoken_voting::Config>::VTokenSupplyProvider::get_token_supply(KSM),
