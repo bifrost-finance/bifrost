@@ -298,14 +298,16 @@ pub mod pallet {
 				Self::clear_bifrost_commissions();
 			}
 
-			T::WeightInfo::on_initialize()
+			// Weight under the assumption that we have 30 vtoken
+			T::WeightInfo::on_initialize(30)
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::register_channel())]
+		// Weight under the assumption that we have 30 vtoken
+		#[pallet::weight(T::WeightInfo::register_channel(30))]
 		pub fn register_channel(
 			origin: OriginFor<T>,
 			channel_name: Vec<u8>,

@@ -20,7 +20,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use bifrost_primitives::CurrencyId;
+use bifrost_primitives::{CurrencyId, KSM, VKSM};
 use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
@@ -109,29 +109,29 @@ benchmarks! {
 		let test_account: T::AccountId = account("seed",1,1);
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let channel_name = b"Bifrost".to_vec();
-		let receiver = whitelisted_caller();
+		let receiver: T::AccountId = whitelisted_caller();
 		let channel_id = 0;
-		let vtoken = CurrencyId::VToken2(0);
-		let commission_rate = 0;
-		let commission_token = CurrencyId::Token2(0);
-		let commission_account = T::CommissionPalletId::get().into_account_truncating();
+		let vtoken = VKSM;
+		let commission_token = KSM;
+		let commission_account: T::AccountId = T::CommissionPalletId::get().into_account_truncating();
 
 		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
+			origin.clone(),
 			vtoken, commission_token
 		));
 
 		assert_ok!(ChannelCommission::<T>::register_channel(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			channel_name, receiver
+			origin.clone(),
+			channel_name, receiver.clone()
 		));
 
 		// set some amount into ChannelClaimableCommissions storage
 		let amount = BalanceOf::<T>::unique_saturated_from(1000u32);
 		ChannelClaimableCommissions::<T>::insert(channel_id, commission_token, amount);
 		// deposit some amount into the commission pool
-		assert_ok!(T::MultiCurrency::deposit(commission_token, &commission_account, 10000u32.into()));
-
+		T::MultiCurrency::deposit(commission_token, &commission_account, 4000000000u32.into())?;
+		// deposit some amount into the receiver account to avoid existential deposit error
+		T::MultiCurrency::deposit(commission_token, &receiver, 4000000000u32.into())?;
 	}: _(RawOrigin::Signed(test_account), channel_id)
 
 	on_initialize {
