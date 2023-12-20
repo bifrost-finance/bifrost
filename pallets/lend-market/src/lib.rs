@@ -865,13 +865,15 @@ pub mod pallet {
 			asset_id: AssetIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::ensure_active_market(asset_id)?;
-			Self::accrue_interest(asset_id)?;
-			let exchange_rate = Self::exchange_rate_stored(asset_id)?;
-			Self::update_earned_stored(&who, asset_id, exchange_rate)?;
-			let deposits = AccountDeposits::<T>::get(asset_id, &who);
-			let redeem_amount = Self::do_redeem_voucher(&who, asset_id, deposits.voucher_balance)?;
-			Self::deposit_event(Event::<T>::Redeemed(who, asset_id, redeem_amount));
+			let _ = Self::do_redeem_all(&who, asset_id)?;
+			// Self::ensure_active_market(asset_id)?;
+			// Self::accrue_interest(asset_id)?;
+			// let exchange_rate = Self::exchange_rate_stored(asset_id)?;
+			// Self::update_earned_stored(&who, asset_id, exchange_rate)?;
+			// let deposits = AccountDeposits::<T>::get(asset_id, &who);
+			// let redeem_amount = Self::do_redeem_voucher(&who, asset_id,
+			// deposits.voucher_balance)?; Self::deposit_event(Event::<T>::Redeemed(who, asset_id,
+			// redeem_amount));
 
 			Ok(().into())
 		}
@@ -2020,6 +2022,20 @@ impl<T: Config> Pallet<T> {
 		let account_id: T::AccountId = T::PalletId::get().into_account_truncating();
 		let entropy = (b"lend-market/incentive", &[account_id]).using_encoded(blake2_256);
 		Ok(T::AccountId::decode(&mut &entropy[..]).map_err(|_| Error::<T>::CodecError)?)
+	}
+
+	pub fn do_redeem_all(
+		who: &AccountIdOf<T>,
+		asset_id: AssetIdOf<T>,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		Self::ensure_active_market(asset_id)?;
+		Self::accrue_interest(asset_id)?;
+		let exchange_rate = Self::exchange_rate_stored(asset_id)?;
+		Self::update_earned_stored(&who, asset_id, exchange_rate)?;
+		let deposits = AccountDeposits::<T>::get(asset_id, &who);
+		let redeem_amount = Self::do_redeem_voucher(&who, asset_id, deposits.voucher_balance)?;
+		Self::deposit_event(Event::<T>::Redeemed(who.clone(), asset_id, redeem_amount));
+		Ok(redeem_amount)
 	}
 }
 

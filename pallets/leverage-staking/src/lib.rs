@@ -95,16 +95,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlashLoanDeposited {
-			who: AccountIdOf<T>,
-			asset_id: AssetIdOf<T>,
-			amount: BalanceOf<T>,
-			rate: Rate,
-		},
-		FlashLoanRepaid {
-			who: AccountIdOf<T>,
-			asset_id: AssetIdOf<T>,
-		},
+		FlashLoanDeposited { who: AccountIdOf<T>, asset_id: AssetIdOf<T>, rate: Rate },
+		FlashLoanRepaid { who: AccountIdOf<T>, asset_id: AssetIdOf<T> },
 	}
 
 	#[pallet::call]
@@ -115,38 +107,34 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T>,
 			rate: Rate,
-			maybe_input_value: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// let input_value =
-			// 	if let Some(flash_loan_info) = AccountFlashLoans::<T>::get(asset_id, &who) {
-			// 		Self::do_repay(&who, asset_id, None)?;
-			// 		let value = maybe_input_value.unwrap_or(flash_loan_info.amount);
-			// 		value
-			// 	} else {
-			// 		let value = maybe_input_value.ok_or(Error::<T>::ArgumentsError)?;
-			// 		value
-			// 	};
-			Self::do_repay(&who, asset_id, None)?;
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			Self::do_repay(&who, asset_id)?;
 			// Redeem all vouchers.
 			let deposits = AccountDeposits::<T>::get(asset_id, &who);
-			// let redeem_amount = lend_market::Pallet::<T>::do_redeem_voucher(
-			// 	&who,
-			// 	asset_id,
-			// 	deposits.voucher_balance,
-			// )?;
-			// Self::deposit_event(Event::<T>::Redeemed(who, asset_id, redeem_amount));
-			// let input_value = maybe_input_value.unwrap_or(deposits.voucher_balance);
-
 			let exchange_rate = lend_market::Pallet::<T>::exchange_rate_stored(asset_id)?;
 			let underlying_amount = lend_market::Pallet::<T>::calc_underlying_amount(
 				deposits.voucher_balance,
 				exchange_rate,
 			)?;
-			// let voucher_amount = Self::calc_collateral_amount(redeem_amount, exchange_rate)?;
-			// let redeem_amount = Self::do_redeem_voucher(&from, asset_id, voucher_amount)?;
+			let _underlying_amount = lend_market::Pallet::<T>::do_redeem_all(&who, vtoken_id)?;
 
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			// let account_borrows = lend_market::Pallet::<T>::current_borrow_balance(&who,
+			// asset_id)?; let underlying_amount = if !account_borrows.is_zero() {
+			// 	Self::do_repay(&who, asset_id)?
+			// } else {
+			// 	// do_redeem_all
+			// 	// let deposits = AccountDeposits::<T>::get(asset_id, &who);
+			// 	lend_market::Pallet::<T>::do_redeem_all(&who, vtoken_id)?
+			// };
+
+			log::debug!("underlying_amount: {:?}", underlying_amount);
 			if rate.is_zero() {
 				return Ok(().into());
 			}
@@ -158,9 +146,6 @@ pub mod pallet {
 				.checked_mul(&rate)
 				.map(|r| r.into_inner())
 				.ok_or(ArithmeticError::Underflow)?;
-
-			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
-				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
 			let mut vtoken_total_amount: BalanceOf<T> = Zero::zero();
 			if let Some(market) = Markets::<T>::get(asset_id) {
@@ -177,7 +162,6 @@ pub mod pallet {
 					if !deposits.is_collateral {
 						T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 					}
-					log::debug!("++");
 					token_value = market.collateral_factor * token_value;
 					token_value = match token_total_value < token_value {
 						true => {
@@ -204,7 +188,6 @@ pub mod pallet {
 							token_total_value
 						},
 						false => {
-							log::debug!("===");
 							vtoken_total_amount = vtoken_total_amount
 								.checked_add(vtoken_value)
 								.ok_or(ArithmeticError::Overflow)?;
@@ -216,12 +199,7 @@ pub mod pallet {
 				}
 			}
 
-			// Self::deposit_event(Event::<T>::FlashLoanDeposited {
-			// 	who,
-			// 	asset_id,
-			// 	rate,
-			// 	amount: input_value,
-			// });
+			Self::deposit_event(Event::<T>::FlashLoanDeposited { who, asset_id, rate });
 			Ok(().into())
 		}
 	}
@@ -231,53 +209,23 @@ impl<T: Config> Pallet<T> {
 	pub fn do_repay(
 		who: &T::AccountId,
 		asset_id: AssetIdOf<T>,
-		maybe_rate: Option<Rate>,
-	) -> DispatchResult {
+	) -> Result<BalanceOf<T>, DispatchError> {
 		let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
 			.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-		// lend_market::Pallet::<T>::accrue_interest(asset_id)?;
 		let account_borrows = lend_market::Pallet::<T>::current_borrow_balance(who, asset_id)?;
 		if account_borrows.is_zero() {
-			return Ok(());
+			return Ok(0);
 		}
-		// lend_market::Pallet::<T>::do_repay_borrow_with_amount(borrower, asset_id,
-		// account_borrows, account_borrows)?;
 
-		// AccountFlashLoans::<T>::try_mutate_exists(
-		// 	asset_id,
-		// 	&who,
-		// 	|maybe_flash_loan_info| -> DispatchResult {
-		// let flash_loan_info = maybe_flash_loan_info.as_mut().ok_or(Error::<T>::ArgumentsError)?;
-		// let rate = match maybe_rate {
-		// 	Some(r) => {
-		// 		ensure!(flash_loan_info.leverage_rate >= r, Error::<T>::ArgumentsError);
-		// 		r
-		// 	},
-		// 	None => flash_loan_info.leverage_rate,
-		// };
-
-		// let token_value = FixedU128::from_inner(flash_loan_info.amount)
-		// 	.checked_mul(&rate)
-		// 	.map(|r| r.into_inner())
-		// 	.ok_or(ArithmeticError::Underflow)?;
 		let (pool_id, currency_id_in, currency_id_out) =
 			T::StablePoolHandler::get_pool_id(&vtoken_id, &asset_id)
 				.ok_or(Error::<T>::ArgumentsError)?;
 
 		<T as lend_market::Config>::Assets::mint_into(asset_id, &who, account_borrows)?;
-		// let total_rate = flash_loan_info
-		// 	.leverage_rate
-		// 	.checked_add(&FixedU128::from_inner(10_u128.pow(18)))
-		// 	.ok_or(ArithmeticError::Underflow)?;
-		// let vtoken_value = FixedU128::from_inner(flash_loan_info.vtoken_amount)
-		// 	.checked_mul(&rate)
-		// 	.and_then(|r: FixedU128| r.checked_div(&total_rate))
-		// 	.map(|r: FixedU128| r.into_inner())
-		// 	.ok_or(ArithmeticError::Underflow)?;
 
 		T::LendMarket::do_repay_borrow(&who, asset_id, account_borrows)?;
-		// T::LendMarket::do_redeem(&who, vtoken_id, vtoken_value)?;
+		// Do redeem
 		let deposits = AccountDeposits::<T>::get(asset_id, &who);
 		let redeem_amount =
 			lend_market::Pallet::<T>::do_redeem_voucher(&who, vtoken_id, deposits.voucher_balance)?;
@@ -302,23 +250,8 @@ impl<T: Config> Pallet<T> {
 			Precision::Exact,
 			Fortitude::Force,
 		)?;
-		// flash_loan_info.leverage_rate = flash_loan_info
-		// 	.leverage_rate
-		// 	.checked_sub(&rate)
-		// 	.ok_or(ArithmeticError::Underflow)?;
-
-		// flash_loan_info.vtoken_amount = flash_loan_info
-		// 	.vtoken_amount
-		// 	.checked_sub(vtoken_value)
-		// 	.ok_or(ArithmeticError::Underflow)?;
-
-		// if flash_loan_info.leverage_rate.is_zero() {
-		// 	*maybe_flash_loan_info = None;
-		// }
 
 		Self::deposit_event(Event::<T>::FlashLoanRepaid { who: who.clone(), asset_id });
-		Ok(())
-		// 	},
-		// )
+		Ok(redeem_amount)
 	}
 }
