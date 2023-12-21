@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::mock::*;
-use frame_support::{assert_noop, assert_ok, BoundedVec};
+use frame_support::{assert_noop, assert_ok, traits::fungibles::Inspect, BoundedVec};
 use lend_market::{AccountBorrows, BorrowSnapshot, Deposits};
 
 fn init() {

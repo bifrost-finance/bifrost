@@ -32,7 +32,7 @@ use bifrost_primitives::{CurrencyIdConversion, Rate, VtokenMintingInterface};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		fungibles::{Inspect, Mutate},
+		fungibles::Mutate,
 		tokens::{Fortitude, Precision},
 	},
 	transactional, BoundedVec,
@@ -44,14 +44,14 @@ pub use pallet_traits::{
 };
 pub use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{
-	traits::{CheckedMul, CheckedSub, Zero},
+	traits::{CheckedSub, Zero},
 	ArithmeticError, FixedPointNumber, FixedU128, SaturatedConversion,
 };
 use sp_std::{cmp::Ordering, marker::PhantomData};
 pub use weights::WeightInfo;
 
 use bifrost_stable_pool::traits::StablePoolHandler;
-use lend_market::{AccountDeposits, AccountIdOf, AssetIdOf, BalanceOf, Markets};
+use lend_market::{AccountDeposits, AccountIdOf, AssetIdOf, BalanceOf};
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -89,14 +89,17 @@ pub mod pallet {
 	pub enum Error<T> {
 		ArgumentsError,
 		NotSupportTokenType,
-		InsufficientBalance,
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlashLoanDeposited { who: AccountIdOf<T>, asset_id: AssetIdOf<T>, rate: Rate },
-		FlashLoanRepaid { who: AccountIdOf<T>, asset_id: AssetIdOf<T> },
+		FlashLoanDeposited {
+			who: AccountIdOf<T>,
+			asset_id: AssetIdOf<T>,
+			old_rate: Rate,
+			new_rate: Rate,
+		},
 	}
 
 	#[pallet::call]
@@ -129,11 +132,13 @@ impl<T: Config> Pallet<T> {
 		if !deposits.is_collateral {
 			T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
 		}
-		let underlying_amount = Self::current_collateral_amount(&who, vtoken_id)?;
+		let account_deposits = Self::current_collateral_amount(&who, vtoken_id)?;
 		let account_borrows = lend_market::Pallet::<T>::get_current_borrow_balance(&who, asset_id)?;
 
+		// Formula
+		// current_rate = account_borrows / ( vtoken_to_token(account_deposits) - account_borrows )
 		let deposits_token_value =
-			T::VtokenMinting::vtoken_to_token(asset_id, vtoken_id, underlying_amount)?;
+			T::VtokenMinting::vtoken_to_token(asset_id, vtoken_id, account_deposits)?;
 		let base_token_value = deposits_token_value
 			.checked_sub(account_borrows)
 			.ok_or(ArithmeticError::Overflow)?;
@@ -146,9 +151,8 @@ impl<T: Config> Pallet<T> {
 					.and_then(|r| r.checked_mul_int(base_token_value))
 					.ok_or(ArithmeticError::Overflow)?;
 				Self::reduce_leverage(&who, asset_id, vtoken_id, reduce_amount)?;
-				Self::deposit_event(Event::<T>::FlashLoanRepaid { who, asset_id });
 			},
-			Ordering::Equal => return Ok(()),
+			Ordering::Equal => return Err(Error::<T>::ArgumentsError.into()),
 			Ordering::Greater => {
 				let increase_amount = rate
 					.checked_sub(&current_rate)
@@ -162,9 +166,14 @@ impl<T: Config> Pallet<T> {
 					deposits_token_value,
 					account_borrows,
 				)?;
-				Self::deposit_event(Event::<T>::FlashLoanDeposited { who, asset_id, rate });
 			},
 		}
+		Self::deposit_event(Event::<T>::FlashLoanDeposited {
+			who,
+			asset_id,
+			old_rate: current_rate,
+			new_rate: rate,
+		});
 		Ok(())
 	}
 
@@ -216,47 +225,43 @@ impl<T: Config> Pallet<T> {
 		deposits_token_value: BalanceOf<T>,
 		borrows: BalanceOf<T>,
 	) -> DispatchResult {
-		if let Some(market) = Markets::<T>::get(asset_id) {
-			let mut token_value = (market.collateral_factor * deposits_token_value)
-				.checked_sub(borrows)
-				.ok_or(ArithmeticError::Overflow)?;
-			while increase_amount > Zero::zero() {
-				match increase_amount < token_value {
-					true => {
-						T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;
-						let vtoken_value = T::VtokenMinting::mint(
-							who.clone(),
-							asset_id,
-							increase_amount,
-							BoundedVec::default(),
-						)?;
-						T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-						break;
-					},
-					false => {
-						T::LendMarket::do_borrow(&who, asset_id, token_value)?;
-						increase_amount = increase_amount.saturating_sub(token_value);
-						let vtoken_value = T::VtokenMinting::mint(
-							who.clone(),
-							asset_id,
-							token_value,
-							BoundedVec::default(),
-						)?;
-						T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-						let underlying_amount = Self::current_collateral_amount(&who, vtoken_id)?;
-						let deposits_token_value = T::VtokenMinting::vtoken_to_token(
-							asset_id,
-							vtoken_id,
-							underlying_amount,
-						)?;
-						let account_borrows =
-							lend_market::Pallet::<T>::get_current_borrow_balance(&who, asset_id)?;
-						token_value = (market.collateral_factor * deposits_token_value)
-							.checked_sub(account_borrows)
-							.ok_or(ArithmeticError::Overflow)?;
-					},
-				};
-			}
+		let market = lend_market::Pallet::<T>::market(asset_id)?;
+		let mut token_value = (market.collateral_factor * deposits_token_value)
+			.checked_sub(borrows)
+			.ok_or(ArithmeticError::Overflow)?;
+		while increase_amount > Zero::zero() {
+			match increase_amount < token_value {
+				true => {
+					T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;
+					let vtoken_value = T::VtokenMinting::mint(
+						who.clone(),
+						asset_id,
+						increase_amount,
+						BoundedVec::default(),
+					)?;
+					T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
+					break;
+				},
+				false => {
+					T::LendMarket::do_borrow(&who, asset_id, token_value)?;
+					increase_amount = increase_amount.saturating_sub(token_value);
+					let vtoken_value = T::VtokenMinting::mint(
+						who.clone(),
+						asset_id,
+						token_value,
+						BoundedVec::default(),
+					)?;
+					T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
+					let underlying_amount = Self::current_collateral_amount(&who, vtoken_id)?;
+					let deposits_token_value =
+						T::VtokenMinting::vtoken_to_token(asset_id, vtoken_id, underlying_amount)?;
+					let account_borrows =
+						lend_market::Pallet::<T>::get_current_borrow_balance(&who, asset_id)?;
+					token_value = (market.collateral_factor * deposits_token_value)
+						.checked_sub(account_borrows)
+						.ok_or(ArithmeticError::Overflow)?;
+				},
+			};
 		}
 		Ok(())
 	}
@@ -279,132 +284,5 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		Ok(BalanceOf::<T>::saturated_from(underlying_amount))
-	}
-
-	pub fn flash_loan_deposit_old(
-		origin: OriginFor<T>,
-		asset_id: AssetIdOf<T>,
-		rate: Rate,
-	) -> DispatchResultWithPostInfo {
-		let who = ensure_signed(origin)?;
-
-		let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-
-		let account_borrows = lend_market::Pallet::<T>::current_borrow_balance(&who, asset_id)?;
-		let underlying_amount = if !account_borrows.is_zero() {
-			Self::do_repay(&who, asset_id)?
-		} else {
-			// do_redeem_all
-			lend_market::Pallet::<T>::do_redeem_all(&who, vtoken_id)?
-		};
-
-		if rate.is_zero() || underlying_amount.is_zero() {
-			return Ok(().into());
-		}
-
-		let free_balance = <T as lend_market::Config>::Assets::balance(asset_id, &who);
-		ensure!(free_balance >= underlying_amount, Error::<T>::InsufficientBalance);
-
-		let mut token_total_value = FixedU128::from_inner(underlying_amount)
-			.checked_mul(&rate)
-			.map(|r| r.into_inner())
-			.ok_or(ArithmeticError::Underflow)?;
-
-		let mut vtoken_total_amount: BalanceOf<T> = Zero::zero();
-		if let Some(market) = Markets::<T>::get(asset_id) {
-			let mut token_value = underlying_amount;
-			while token_total_value > Zero::zero() {
-				let vtoken_value = T::VtokenMinting::mint(
-					who.clone(),
-					asset_id,
-					token_value,
-					BoundedVec::default(),
-				)?;
-				T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-				let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
-				if !deposits.is_collateral {
-					T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
-				}
-				token_value = market.collateral_factor * token_value;
-				token_value = match token_total_value < token_value {
-					true => {
-						vtoken_total_amount = vtoken_total_amount
-							.checked_add(vtoken_value)
-							.ok_or(ArithmeticError::Overflow)?;
-						T::LendMarket::do_borrow(&who, asset_id, token_total_value)?;
-						let vtoken_value = T::VtokenMinting::mint(
-							who.clone(),
-							asset_id,
-							token_total_value,
-							BoundedVec::default(),
-						)?;
-						T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-						let deposits = lend_market::Pallet::<T>::account_deposits(vtoken_id, &who);
-						if !deposits.is_collateral {
-							T::LendMarket::do_collateral_asset(&who, vtoken_id, true)?;
-						}
-						vtoken_total_amount = vtoken_total_amount
-							.checked_add(vtoken_value)
-							.ok_or(ArithmeticError::Overflow)?;
-						token_total_value = Zero::zero();
-						token_total_value
-					},
-					false => {
-						vtoken_total_amount = vtoken_total_amount
-							.checked_add(vtoken_value)
-							.ok_or(ArithmeticError::Overflow)?;
-						T::LendMarket::do_borrow(&who, asset_id, token_value)?;
-						token_total_value = token_total_value.saturating_sub(token_value);
-						token_value
-					},
-				};
-			}
-		}
-
-		Self::deposit_event(Event::<T>::FlashLoanDeposited { who, asset_id, rate });
-		Ok(().into())
-	}
-
-	pub fn do_repay(
-		who: &T::AccountId,
-		asset_id: AssetIdOf<T>,
-	) -> Result<BalanceOf<T>, DispatchError> {
-		let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-
-		let account_borrows = lend_market::Pallet::<T>::get_current_borrow_balance(who, asset_id)?;
-		if account_borrows.is_zero() {
-			return Ok(0);
-		}
-
-		let (pool_id, currency_id_in, currency_id_out) =
-			T::StablePoolHandler::get_pool_id(&vtoken_id, &asset_id)
-				.ok_or(Error::<T>::ArgumentsError)?;
-
-		<T as lend_market::Config>::Assets::mint_into(asset_id, &who, account_borrows)?;
-
-		T::LendMarket::do_repay_borrow(&who, asset_id, account_borrows)?;
-		// Do redeem
-		let underlying_amount = lend_market::Pallet::<T>::do_redeem_all(&who, vtoken_id)?;
-
-		T::StablePoolHandler::swap(
-			&who,
-			pool_id,
-			currency_id_in,
-			currency_id_out,
-			underlying_amount,
-			underlying_amount,
-		)?;
-		<T as lend_market::Config>::Assets::burn_from(
-			asset_id,
-			&who,
-			account_borrows,
-			Precision::Exact,
-			Fortitude::Force,
-		)?;
-
-		Self::deposit_event(Event::<T>::FlashLoanRepaid { who: who.clone(), asset_id });
-		Ok(underlying_amount)
 	}
 }
