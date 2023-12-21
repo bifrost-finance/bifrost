@@ -22,9 +22,9 @@ use lend_market::{AccountBorrows, BorrowSnapshot, Deposits};
 
 fn init() {
 	env_logger::try_init().unwrap_or(());
-	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), DOT, market_mock(VKSM)));
+	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), DOT, market_mock(LDOT)));
 	assert_ok!(LendMarket::activate_market(RuntimeOrigin::root(), DOT));
-	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), VDOT, market_mock(VBNC)));
+	assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), VDOT, market_mock(LVDOT)));
 	assert_ok!(LendMarket::activate_market(RuntimeOrigin::root(), VDOT));
 	TimestampPallet::set_timestamp(6000);
 
@@ -43,7 +43,7 @@ fn init() {
 	assert_ok!(StablePool::edit_token_rate(
 		RuntimeOrigin::root(),
 		0,
-		vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
+		vec![(DOT, (1, 1)), (VDOT, (100_000_000, 100_000_000))]
 	));
 	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100_000), BoundedVec::default()));
@@ -153,7 +153,7 @@ fn reduce_leverage_should_work() {
 		);
 		assert_eq!(
 			AccountDeposits::<Test>::get(VDOT, 1),
-			Deposits { voucher_balance: 9044500, is_collateral: true },
+			Deposits { voucher_balance: 8994050, is_collateral: true },
 		);
 	});
 }

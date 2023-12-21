@@ -54,6 +54,9 @@ use xcm_executor::XcmExecutor;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub const LDOT: CurrencyId = CurrencyId::Lend(0);
+pub const LVDOT: CurrencyId = CurrencyId::Lend(1);
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test{
