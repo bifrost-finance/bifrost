@@ -167,7 +167,7 @@ pub mod pallet {
 		/// Invalid asset id
 		InvalidCurrencyId,
 		/// Invalid lend token id
-		InvalidPtokenId,
+		InvalidLendTokenId,
 		/// Market does not exist
 		MarketDoesNotExist,
 		/// Market already exists
@@ -472,7 +472,8 @@ pub mod pallet {
 		/// by the new provided value.
 		///
 		/// The lend token id and asset id are bound, the lend token id of new provided market
-		/// cannot be duplicated with the existing one, otherwise it will return `InvalidPtokenId`.
+		/// cannot be duplicated with the existing one, otherwise it will return
+		/// `InvalidLendTokenId`.
 		///
 		/// - `asset_id`: Market related currency
 		/// - `market`: The market that is going to be stored
@@ -665,7 +666,7 @@ pub mod pallet {
 			if UnderlyingAssetId::<T>::contains_key(market.lend_token_id) {
 				ensure!(
 					Self::underlying_id(market.lend_token_id)? == asset_id,
-					Error::<T>::InvalidPtokenId
+					Error::<T>::InvalidLendTokenId
 				);
 			}
 			UnderlyingAssetId::<T>::insert(market.lend_token_id, asset_id);
@@ -1841,10 +1842,13 @@ impl<T: Config> Pallet<T> {
 	// Ensures a given `lend_token_id` is unique in `Markets` and `UnderlyingAssetId`.
 	fn ensure_lend_token(lend_token_id: CurrencyId) -> DispatchResult {
 		// The lend token id is unique, cannot be repeated
-		ensure!(!UnderlyingAssetId::<T>::contains_key(lend_token_id), Error::<T>::InvalidPtokenId);
+		ensure!(
+			!UnderlyingAssetId::<T>::contains_key(lend_token_id),
+			Error::<T>::InvalidLendTokenId
+		);
 
 		// The lend token id should not be the same as the id of any asset in markets
-		ensure!(!Markets::<T>::contains_key(lend_token_id), Error::<T>::InvalidPtokenId);
+		ensure!(!Markets::<T>::contains_key(lend_token_id), Error::<T>::InvalidLendTokenId);
 
 		Ok(())
 	}
@@ -1971,7 +1975,7 @@ impl<T: Config> Pallet<T> {
 	// Returns `Err` if asset_id does not exist, it also means that lend_token_id is invalid.
 	pub fn underlying_id(lend_token_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
 		UnderlyingAssetId::<T>::try_get(lend_token_id)
-			.map_err(|_err| Error::<T>::InvalidPtokenId.into())
+			.map_err(|_err| Error::<T>::InvalidLendTokenId.into())
 	}
 
 	// Returns the lend_token_id of the related asset
