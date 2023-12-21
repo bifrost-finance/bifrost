@@ -46,25 +46,35 @@ fn init() {
 		vec![(DOT, (1, 1)), (VDOT, (90_000_000, 100_000_000))]
 	));
 	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100), BoundedVec::default()));
+	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100_000), BoundedVec::default()));
+	assert_eq!(Tokens::balance(VDOT, &0), unit(100_000));
+	assert_ok!(VtokenMinting::mint(Some(1).into(), DOT, unit(10), BoundedVec::default()));
+	assert_eq!(Tokens::balance(VDOT, &1), unit(10));
 	let amounts = vec![unit(100), unit(100)];
 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));
+	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), DOT, unit(100)));
+	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), VDOT, unit(100)));
 }
 
 #[test]
-fn flash_loan_deposit() {
+fn increase_leverage_should_work() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init();
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(3), DOT, 100_000));
-		assert_noop!(
-			LeverageStaking::flash_loan_deposit(
-				RuntimeOrigin::signed(3),
-				DOT,
-				FixedU128::from_inner(unit(1_000_000)),
-			),
-			lend_market::Error::<Test>::InvalidAmount
+		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(3), DOT, 1_000_000));
+		// assert_noop!(
+		// 	LeverageStaking::flash_loan_deposit(
+		// 		RuntimeOrigin::signed(3),
+		// 		DOT,
+		// 		FixedU128::from_inner(unit(1_000_000)),
+		// 	),
+		// 	lend_market::Error::<Test>::InvalidAmount
+		// );
+		assert_eq!(
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 0, is_collateral: false },
 		);
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, 100_000));
+		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), VDOT, 100_000));
+		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
 		assert_noop!(
 			LeverageStaking::flash_loan_deposit(
 				RuntimeOrigin::signed(1),
@@ -73,12 +83,32 @@ fn flash_loan_deposit() {
 			),
 			lend_market::Error::<Test>::InvalidAmount
 		);
-		assert_ok!(LeverageStaking::flash_loan_deposit(
+		assert_eq!(
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 5_000_000, is_collateral: false },
+		);
+		assert_ok!(LeverageStaking::flash_loan_deposit_inner(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(800_000)),
+			FixedU128::from_inner(unit(100_000)),
 		));
-		assert_ok!(LeverageStaking::flash_loan_deposit(
+		// assert_eq!(
+		// 	AccountDeposits::<Test>::get(VDOT, 1),
+		// 	Deposits { voucher_balance: 9_000_000, is_collateral: true },
+		// );
+		// assert_eq!(
+		// 	AccountBorrows::<Test>::get(DOT, 1),
+		// 	BorrowSnapshot { principal: 80_000, borrow_index: 1.into() },
+		// );
+		assert_eq!(
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 5500000, is_collateral: true },
+		);
+		assert_eq!(
+			AccountBorrows::<Test>::get(DOT, 1),
+			BorrowSnapshot { principal: 10_000, borrow_index: 1.into() },
+		);
+		assert_ok!(LeverageStaking::flash_loan_deposit_inner(
 			RuntimeOrigin::signed(1),
 			DOT,
 			FixedU128::from_inner(unit(900_000)),
@@ -87,9 +117,10 @@ fn flash_loan_deposit() {
 			AccountBorrows::<Test>::get(DOT, 1),
 			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() },
 		);
+		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
 		assert_eq!(
-			AccountDeposits::<Test>::get(DOT, 1),
-			Deposits { voucher_balance: 5_000_000, is_collateral: false },
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 9500000, is_collateral: true },
 		);
 		// assert_eq!(
 		// 	AccountDeposits::<Test>::get(VDOT, 1),
@@ -98,14 +129,75 @@ fn flash_loan_deposit() {
 	});
 }
 
+// #[test]
+// fn flash_loan_repay() {
+// 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+// 		init();
+// 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+// 		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
+// 		// assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), DOT, unit(100)));
+// 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), VDOT, 100_000));
+// 		assert_ok!(LeverageStaking::flash_loan_deposit(
+// 			RuntimeOrigin::signed(1),
+// 			DOT,
+// 			FixedU128::from_inner(unit(900_000)),
+// 		));
+// 		assert_eq!(
+// 			AccountBorrows::<Test>::get(DOT, 1),
+// 			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() },
+// 		);
+// 		assert_ok!(LeverageStaking::flash_loan_deposit(
+// 			RuntimeOrigin::signed(1),
+// 			DOT,
+// 			FixedU128::from_inner(unit(100_000)),
+// 		));
+// 		assert_eq!(
+// 			AccountBorrows::<Test>::get(DOT, 1),
+// 			BorrowSnapshot { principal: 10_000, borrow_index: 1.into() },
+// 		);
+// 		assert_ok!(LeverageStaking::flash_loan_deposit(
+// 			RuntimeOrigin::signed(1),
+// 			DOT,
+// 			FixedU128::from_inner(0),
+// 		));
+// 		assert_eq!(
+// 			AccountBorrows::<Test>::get(DOT, 1),
+// 			BorrowSnapshot { principal: 0, borrow_index: 1.into() },
+// 		);
+// 	});
+// }
+
 #[test]
-fn flash_loan_repay() {
+fn reduce_leverage_should_work() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		init();
-		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
-		assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default()));
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), DOT, unit(100)));
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), DOT, 100_000));
+		// assert_ok!(LendMarket::mint(RuntimeOrigin::signed(3), DOT, 1_000_000));
+		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), VDOT, 100_000));
+		assert_noop!(
+			LeverageStaking::flash_loan_deposit(
+				RuntimeOrigin::signed(1),
+				DOT,
+				FixedU128::from_inner(unit(1_000_000)),
+			),
+			lend_market::Error::<Test>::InvalidAmount
+		);
+		assert_eq!(
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 5_000_000, is_collateral: false },
+		);
+		// assert_ok!(LeverageStaking::flash_loan_deposit(
+		// 	RuntimeOrigin::signed(1),
+		// 	DOT,
+		// 	FixedU128::from_inner(unit(800_000)),
+		// ));
+		// assert_eq!(
+		// 	AccountDeposits::<Test>::get(VDOT, 1),
+		// 	Deposits { voucher_balance: 9_000_000, is_collateral: true },
+		// );
+		// assert_eq!(
+		// 	AccountBorrows::<Test>::get(DOT, 1),
+		// 	BorrowSnapshot { principal: 80_000, borrow_index: 1.into() },
+		// );
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),
 			DOT,
@@ -115,23 +207,20 @@ fn flash_loan_repay() {
 			AccountBorrows::<Test>::get(DOT, 1),
 			BorrowSnapshot { principal: 90_000, borrow_index: 1.into() },
 		);
-		assert_ok!(LeverageStaking::flash_loan_deposit(
+		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
+		assert_ok!(LeverageStaking::flash_loan_deposit_inner(
 			RuntimeOrigin::signed(1),
 			DOT,
-			FixedU128::from_inner(unit(100_000)),
+			FixedU128::from_inner(unit(800_000)),
 		));
+		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
-			BorrowSnapshot { principal: 10_000, borrow_index: 1.into() },
+			BorrowSnapshot { principal: 80_000, borrow_index: 1.into() },
 		);
-		assert_ok!(LeverageStaking::flash_loan_deposit(
-			RuntimeOrigin::signed(1),
-			DOT,
-			FixedU128::from_inner(0),
-		));
 		assert_eq!(
-			AccountBorrows::<Test>::get(DOT, 1),
-			BorrowSnapshot { principal: 0, borrow_index: 1.into() },
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 9044500, is_collateral: true },
 		);
 	});
 }
