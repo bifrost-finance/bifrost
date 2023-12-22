@@ -1090,7 +1090,7 @@ impl bifrost_vesting::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
