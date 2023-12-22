@@ -45,12 +45,11 @@ pub mod v1 {
 }
 
 pub mod v2 {
-	use super::v1;
-	use crate::{migration::migrate_to_v2, Config, CurrencyIdOf, Pallet};
+	use super::*;
+	use crate::{Config, CurrencyIdOf, Pallet};
 	use cumulus_primitives_core::Weight;
-	use frame_support::{ensure, pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
+	use frame_support::{pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
 	use sp_runtime::traits::Get;
-	use sp_std::vec::Vec;
 
 	pub struct MigrateToV2<T, C>(sp_std::marker::PhantomData<T>, sp_std::marker::PhantomData<C>);
 	impl<T: Config, C: Get<CurrencyIdOf<T>>> OnRuntimeUpgrade for MigrateToV2<T, C> {
