@@ -116,20 +116,30 @@ build-bifrost-polkadot-wasm:
 build-bifrost-rococo-fast-wasm:
 	.maintain/build-wasm.sh bifrost-kusama fast
 
+.PHONY: build-try-runtime # build bifrost rococo wasm
+build-try-runtime:
+	cargo build -p bifrost-cli --locked --features "with-all-runtime,try-runtime" --release
+
 .PHONY: try-kusama-runtime-upgrade # try kusama runtime upgrade
-try-kusama-runtime-upgrade:
+try-kusama-runtime-upgrade:build-try-runtime
 	try-runtime \
 		--runtime \
 			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
-		on-runtime-upgrade live \
-		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws 
+		on-runtime-upgrade \
+		--checks none \
+		--no-weight-warnings \
+		live \
+		--uri wss://hk.bifrost-rpc.liebi.com:443/ws 
 
 .PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
-try-polkadot-runtime-upgrade:
+try-polkadot-runtime-upgrade:build-try-runtime
 	try-runtime \
 		--runtime \
 		target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
-		on-runtime-upgrade live \
+		on-runtime-upgrade \
+		--checks none \
+		--no-weight-warnings \
+		live \
 		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: resources # export genesis resources
