@@ -30,6 +30,7 @@ mod tests;
 mod call;
 mod vote;
 
+pub mod migration;
 pub mod weights;
 
 use crate::vote::{Casting, Tally, Voting};
@@ -85,7 +86,7 @@ pub mod pallet {
 	use super::*;
 
 	/// The current storage version.
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -305,10 +306,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type UndecidingTimeout<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BlockNumberFor<T>>;
-
-	#[pallet::storage]
-	pub type DelegatorVoteRole<T: Config> =
-		StorageDoubleMap<_, Twox64Concat, CurrencyIdOf<T>, Twox64Concat, DerivativeIndex, VoteRole>;
 
 	#[pallet::storage]
 	pub type Delegators<T: Config> = StorageMap<
