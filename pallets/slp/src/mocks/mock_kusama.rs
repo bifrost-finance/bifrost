@@ -374,6 +374,34 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 					.into(),
 				}),
 			),
+			MANTA => {
+				// get parachain id
+				if let Some(location) = BifrostCurrencyIdConvert::convert(currency_id) {
+					if let Some(Parachain(para_id)) = location.interior().first() {
+						MultiLocation::new(
+							1,
+							X2(
+								Parachain(*para_id),
+								Junction::AccountId32 {
+									network: None,
+									id: Self::derivative_account_id(
+										polkadot_parachain_primitives::primitives::Sibling::from(
+											2030u32,
+										)
+										.into_account_truncating(),
+										sub_account_index,
+									)
+									.into(),
+								},
+							),
+						)
+					} else {
+						MultiLocation::default()
+					}
+				} else {
+					MultiLocation::default()
+				}
+			},
 			// Other sibling chains use the Bifrost para account with "sibl"
 			_ => {
 				// get parachain id
@@ -441,6 +469,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
 			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
+			MANTA => Some(MultiLocation::new(1, X1(Parachain(2104)))),
 			_ => None,
 		}
 	}
