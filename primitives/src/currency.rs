@@ -348,26 +348,6 @@ impl CurrencyId {
 			_ => Err(()),
 		}
 	}
-
-	pub fn discriminant(&self) -> u8 {
-		match *self {
-			Self::Native(..) => 0,
-			Self::VToken(..) => 1,
-			Self::Token(..) => 2,
-			Self::Stable(..) => 3,
-			Self::VSToken(..) => 4,
-			Self::VSBond(..) => 5,
-			Self::LPToken(..) => 6,
-			Self::ForeignAsset(..) => 7,
-			Self::Token2(..) => 8,
-			Self::VToken2(..) => 9,
-			Self::VSToken2(..) => 10,
-			Self::VSBond2(..) => 11,
-			Self::StableLpToken(..) => 13,
-			Self::BLP(..) => 14,
-			Self::Lend(..) => 15,
-		}
-	}
 }
 
 impl CurrencyIdExt for CurrencyId {
