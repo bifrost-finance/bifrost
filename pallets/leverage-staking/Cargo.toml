@@ -72,6 +72,7 @@ std = [
 	"bifrost-stable-pool/std",
 	"pallet-prices/std",
 	"log/std",
+	"orml-xtokens/std",
 ]
 try-runtime = ['frame-support/try-runtime']
 

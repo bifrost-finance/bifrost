@@ -323,7 +323,7 @@ impl pallet_prices::Config for Test {
 }
 
 parameter_types! {
-	pub const LendMarketPalletId: PalletId = PalletId(*b"par/loan");
+	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }

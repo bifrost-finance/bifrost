@@ -94,13 +94,13 @@ fn lend_token_unique_works() {
 		// lend_token_id already exists in `UnderlyingAssetId`
 		assert_noop!(
 			LendMarket::add_market(RuntimeOrigin::root(), LKSM, market_mock(VBNC)),
-			Error::<Test>::InvalidPtokenId
+			Error::<Test>::InvalidLendTokenId
 		);
 
 		// lend_token_id cannot as the same as the asset id in `Markets`
 		assert_noop!(
 			LendMarket::add_market(RuntimeOrigin::root(), LKSM, market_mock(KSM)),
-			Error::<Test>::InvalidPtokenId
+			Error::<Test>::InvalidLendTokenId
 		);
 	})
 }
