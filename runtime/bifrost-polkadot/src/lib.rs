@@ -1814,12 +1814,13 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	use crate::Runtime;
-	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
+	use super::*;
+
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
-		StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
 	);
 }
 

@@ -2010,11 +2010,13 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	use crate::Runtime;
-	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
+	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = StableAssetOnRuntimeUpgrade<Runtime>;
+	pub type Unreleased = (
+		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.
