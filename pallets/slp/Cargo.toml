@@ -70,6 +70,7 @@ std = [
     "bifrost-vtoken-minting/std",
     "bifrost-asset-registry/std",
     "bifrost-parachain-staking/std",
+    "orml-xtokens/std",
 ]
 
 runtime-benchmarks = [

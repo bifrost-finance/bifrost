@@ -347,7 +347,7 @@ impl<T: Config> Pallet<T> {
 
 		// call_as_subaccount = Utility(Box::new(AsDerivative(sub_account_index, Box::new(call))));
 		let utility_call: u8 = match currency_id {
-			MANTA => 10,
+			MANTA => 40,
 			MOVR | GLMR => 30,
 			ASTR => 11,
 			PHA => 3,
@@ -386,6 +386,12 @@ impl<T: Config> Pallet<T> {
 		};
 
 		let call_as_subaccount = Self::prepare_send_as_subaccount_call(call, who, currency_id)?;
+
+		#[cfg(feature = "std")]
+		println!(
+			"construct_xcm_as_subaccount_with_query_id: call_as_subaccount: {:?}",
+			&call_as_subaccount
+		);
 
 		let xcm_message = Self::construct_xcm_message(
 			call_as_subaccount,
