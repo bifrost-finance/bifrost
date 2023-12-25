@@ -98,15 +98,9 @@ fn remove_channel_should_work() {
 		);
 
 		// assure Channel A has records in ChannelCommissionTokenRates in both VKSM and VBNC
-		assert_eq!(
-			ChannelCommissionTokenRates::<Runtime>::get(0, VKSM),
-			Some(DEFAULT_COMMISSION_RATE)
-		);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), DEFAULT_COMMISSION_RATE);
 
-		assert_eq!(
-			ChannelCommissionTokenRates::<Runtime>::get(0, VBNC),
-			Some(DEFAULT_COMMISSION_RATE)
-		);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), DEFAULT_COMMISSION_RATE);
 
 		// successfully remove Channel A
 		assert_ok!(ChannelCommission::remove_channel(RuntimeOrigin::signed(ALICE), 0));
@@ -115,9 +109,9 @@ fn remove_channel_should_work() {
 		assert_eq!(Channels::<Runtime>::get(0), None);
 
 		// Channel A has no records in ChannelCommissionTokenRates in both VKSM and VBNC
-		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), None);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), Zero::zero());
 
-		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), None);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), Zero::zero());
 	});
 }
 
@@ -156,15 +150,9 @@ fn set_channel_commission_token_should_work() {
 		setup();
 
 		// assure Channel A has records in ChannelCommissionTokenRates in both VKSM and VBNC
-		assert_eq!(
-			ChannelCommissionTokenRates::<Runtime>::get(0, VKSM),
-			Some(DEFAULT_COMMISSION_RATE)
-		);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), DEFAULT_COMMISSION_RATE);
 
-		assert_eq!(
-			ChannelCommissionTokenRates::<Runtime>::get(0, VBNC),
-			Some(DEFAULT_COMMISSION_RATE)
-		);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), DEFAULT_COMMISSION_RATE);
 
 		let new_rate = Percent::from_percent(50);
 		// set commission token VKSM to 50%
@@ -172,20 +160,20 @@ fn set_channel_commission_token_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			0,
 			VKSM,
-			Some(50)
+			Percent::from_percent(50),
 		));
 
-		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), Some(new_rate));
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), new_rate);
 
 		// set commission token VBNC to None, which means removing it
 		assert_ok!(ChannelCommission::set_channel_commission_token(
 			RuntimeOrigin::signed(ALICE),
 			0,
 			VBNC,
-			None
+			Zero::zero(),
 		));
 
-		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), None);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), Zero::zero());
 	});
 }
 
@@ -207,10 +195,10 @@ fn claim_commissions_should_work() {
 		ChannelClaimableCommissions::<Runtime>::insert(0, BNC, 120);
 
 		// assure channel A's claimable KSM amount is 100
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), Some(100));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), 100);
 
 		// assure channel A's claimable BNC amount is 120
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), Some(120));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), 120);
 
 		let receiver_ksm_before = Currencies::free_balance(KSM, &CHANNEL_A_RECEIVER);
 		let receiver_bnc_before = Currencies::free_balance(BNC, &CHANNEL_A_RECEIVER);
@@ -222,10 +210,10 @@ fn claim_commissions_should_work() {
 		));
 
 		// assure channel A's claimable KSM amount is None
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), None);
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), 0);
 
 		// assure channel A's claimable BNC amount is None
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), None);
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), 0);
 
 		// assure channel A's receiver's KSM balance is increased by 100
 		assert_eq!(Currencies::free_balance(KSM, &CHANNEL_A_RECEIVER), receiver_ksm_before + 100);
@@ -297,12 +285,12 @@ fn channel_commission_distribution_with_net_mint_positive_should_work() {
 		run_to_block(100);
 		// set_clearing_environment already been called in block 100
 		// check whether the clearing environment is set correctly for block 100
-		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VKSM), Some((10000, 11000)));
-		assert_eq!(PeriodVtokenTotalMint::<Runtime>::get(VKSM), Some((2000, 0)));
-		assert_eq!(PeriodVtokenTotalRedeem::<Runtime>::get(VKSM), Some((1000, 0)));
-		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(0, VKSM), Some((500, 0)));
-		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(1, VKSM), Some((100, 0)));
-		assert_eq!(PeriodTotalCommissions::<Runtime>::get(KSM), Some((100, 0)));
+		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VKSM), (10000, 11000));
+		assert_eq!(PeriodVtokenTotalMint::<Runtime>::get(VKSM), (2000, 0));
+		assert_eq!(PeriodVtokenTotalRedeem::<Runtime>::get(VKSM), (1000, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(0, VKSM), (500, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(1, VKSM), (100, 0));
+		assert_eq!(PeriodTotalCommissions::<Runtime>::get(KSM), (100, 0));
 
 		// get channel B's vtoken share before being cleared
 		let channel_b_vtoken_share_before = ChannelVtokenShares::<Runtime>::get(1, VKSM);
@@ -311,30 +299,30 @@ fn channel_commission_distribution_with_net_mint_positive_should_work() {
 
 		let channel_a_commission = 4;
 		// check channel A claimable KSM amount after being cleared
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), Some(channel_a_commission));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), channel_a_commission);
 
 		let channel_a_new_percentage =
 			Permill::from_rational_with_rounding(2250u32, 11000u32, Rounding::Down).unwrap();
 		// check channel A vtoken share after being cleared
-		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), Some(channel_a_new_percentage));
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), channel_a_new_percentage);
 
 		// check channel B has not been cleared yet
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), None);
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), 0);
 		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), channel_b_vtoken_share_before);
 
 		run_to_block(102);
 
 		let channel_b_commission = 2;
 		// check channel B claimable KSM amount after being cleared
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), Some(channel_b_commission));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), channel_b_commission);
 
 		let channel_b_new_percentage =
 			Permill::from_rational_with_rounding(1050u32, 11000u32, Rounding::Down).unwrap();
 		// check channel B vtoken share after being cleared
-		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), Some(channel_b_new_percentage));
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), channel_b_new_percentage);
 
 		// check PeriodClearedCommissions, should be channel a commission + channel b commission
-		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), Some(6));
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), 6);
 
 		let bifrost_commission_receiver: AccountId32 =
 			<Runtime as crate::Config>::BifrostCommissionReceiver::get();
@@ -345,7 +333,7 @@ fn channel_commission_distribution_with_net_mint_positive_should_work() {
 
 		run_to_block(103);
 		// cleared commissions should be none
-		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), None);
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), 0);
 
 		// check Bifrost commission balance after being cleared
 		let bifrost_commission_balance_after =
@@ -414,12 +402,12 @@ fn channel_commission_distribution_with_net_mint_negative_should_work() {
 		run_to_block(100);
 		// set_clearing_environment already been called in block 100
 		// check whether the clearing environment is set correctly for block 100
-		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VBNC), Some((10000, 9000)));
-		assert_eq!(PeriodVtokenTotalMint::<Runtime>::get(VBNC), Some((1000, 0)));
-		assert_eq!(PeriodVtokenTotalRedeem::<Runtime>::get(VBNC), Some((2000, 0)));
-		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(0, VBNC), Some((200, 0)));
-		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(1, VBNC), Some((100, 0)));
-		assert_eq!(PeriodTotalCommissions::<Runtime>::get(BNC), Some((100, 0)));
+		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VBNC), (10000, 9000));
+		assert_eq!(PeriodVtokenTotalMint::<Runtime>::get(VBNC), (1000, 0));
+		assert_eq!(PeriodVtokenTotalRedeem::<Runtime>::get(VBNC), (2000, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(0, VBNC), (200, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(1, VBNC), (100, 0));
+		assert_eq!(PeriodTotalCommissions::<Runtime>::get(BNC), (100, 0));
 
 		// get channel A's vtoken share before being cleared
 		let channel_a_vtoken_share_before = ChannelVtokenShares::<Runtime>::get(0, VBNC);
@@ -432,13 +420,13 @@ fn channel_commission_distribution_with_net_mint_negative_should_work() {
 		// Since the net mint is negative, the share of channels should not be changed.
 		let channel_a_commission = 4;
 		// check channel A claimable BNC amount after being cleared
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), Some(channel_a_commission));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, BNC), channel_a_commission);
 
 		// check channel A vtoken share after being cleared
 		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VBNC), channel_a_vtoken_share_before);
 
 		// check channel B has not been cleared yet
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, BNC), None);
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, BNC), 0);
 		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VBNC), channel_b_vtoken_share_before);
 
 		run_to_block(102);
@@ -446,13 +434,13 @@ fn channel_commission_distribution_with_net_mint_negative_should_work() {
 		// Since the net mint is negative, the share of channels should not be changed.
 		let channel_b_commission = 2;
 		// check channel B claimable BNC amount after being cleared
-		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, BNC), Some(channel_b_commission));
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, BNC), channel_b_commission);
 
 		// check channel B vtoken share after being cleared
 		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VBNC), channel_b_vtoken_share_before);
 
 		// check PeriodClearedCommissions, should be channel a commission + channel b commission
-		assert_eq!(PeriodClearedCommissions::<Runtime>::get(BNC), Some(6));
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(BNC), 6);
 
 		let bifrost_commission_receiver: AccountId32 =
 			<Runtime as crate::Config>::BifrostCommissionReceiver::get();
@@ -463,7 +451,7 @@ fn channel_commission_distribution_with_net_mint_negative_should_work() {
 
 		run_to_block(103);
 		// cleared commissions should be none
-		assert_eq!(PeriodClearedCommissions::<Runtime>::get(BNC), None);
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(BNC), 0);
 
 		// check Bifrost commission balance after being cleared
 		let bifrost_commission_balance_after =

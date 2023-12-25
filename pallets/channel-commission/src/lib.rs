@@ -30,10 +30,8 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-	},
-	PerThing, Percent, Permill, Rounding, SaturatedConversion,
+	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+	PerThing, Percent, Permill, Rounding, SaturatedConversion, Saturating,
 };
 pub use weights::WeightInfo;
 
@@ -120,7 +118,7 @@ pub mod pallet {
 		ChannelCommissionSet {
 			channel_id: ChannelId,
 			vtoken: CurrencyId,
-			rate: Option<u8>,
+			rate: Percent,
 		},
 		CommissionClaimed {
 			channel_id: ChannelId,
@@ -161,7 +159,7 @@ pub mod pallet {
 		ChannelClaimableCommissionUpdated {
 			channel_id: ChannelId,
 			commission_token: CurrencyId,
-			amount: Option<BalanceOf<T>>,
+			amount: BalanceOf<T>,
 		},
 	}
 
@@ -197,7 +195,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyId,
 		Percent,
-		OptionQuery,
+		ValueQuery,
 	>;
 
 	/// Mapping a channel + vtoken to corresponding channel share, 【(channel_id, vtoken) => share】
@@ -210,7 +208,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyId,
 		Permill,
-		OptionQuery,
+		ValueQuery,
 	>;
 
 	/// 【vtoken => (old_issuance, new_issuance)】,old_issuance is the vtoken issuance at last
@@ -218,21 +216,21 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn vtoken_issuance_snapshots)]
 	pub type VtokenIssuanceSnapshots<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	/// Vtoken total minted amount in the ongoing period for the chain, 【vtoken => (old_total_mint,
 	/// new_total_mint)】
 	#[pallet::storage]
 	#[pallet::getter(fn period_vtoken_total_mint)]
 	pub type PeriodVtokenTotalMint<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	/// Vtoken total redeemed amount in the ongoing period for the chain, 【vtoken =>
 	/// (old_total_redeem, new_total_redeem)】
 	#[pallet::storage]
 	#[pallet::getter(fn period_vtoken_total_redeem)]
 	pub type PeriodVtokenTotalRedeem<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	/// Vtoken minted amount in the ongoing period for the channel, 【(channel_id, vtoken) =>
 	/// (old_mint_amount, new_mint_amount)】
@@ -245,7 +243,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyId,
 		(BalanceOf<T>, BalanceOf<T>),
-		OptionQuery,
+		ValueQuery,
 	>;
 
 	/// Commission pool for last period and ongoing period, 【commission token => (old_amount,
@@ -253,14 +251,14 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn period_total_commissions)]
 	pub type PeriodTotalCommissions<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	/// Commission amount that has been cleared for the current clearing process, 【commission token
 	/// => amount】
 	#[pallet::storage]
 	#[pallet::getter(fn period_cleared_commissions)]
 	pub type PeriodClearedCommissions<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>, ValueQuery>;
 
 	/// Commission amount to be claimed by channels, 【channel id + commission token => amount】
 	#[pallet::storage]
@@ -272,7 +270,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyId,
 		BalanceOf<T>,
-		OptionQuery,
+		ValueQuery,
 	>;
 
 	#[pallet::pallet]
@@ -284,9 +282,12 @@ pub mod pallet {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			let channel_count: u32 = ChannelNextId::<T>::get().into();
 
+			// get the commission token count
+			let commission_token_count = CommissionTokens::<T>::iter().count() as u32;
+
 			// If the current block number is the first block of a new clearing period, we need to
 			// prepare data for clearing.
-			if n % T::ClearingDuration::get() == Zero::zero() {
+			if (n % T::ClearingDuration::get()).is_zero() {
 				Self::set_clearing_environment();
 			} else if (n % T::ClearingDuration::get()) < (channel_count + 1).into() {
 				let channel_index = n % T::ClearingDuration::get().into() - 1u32.into();
@@ -299,7 +300,7 @@ pub mod pallet {
 			}
 
 			// Weight under the assumption that we have 30 vtoken
-			T::WeightInfo::on_initialize(30)
+			T::WeightInfo::on_initialize(commission_token_count)
 		}
 	}
 
@@ -307,18 +308,13 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		// Weight under the assumption that we have 30 vtoken
-		#[pallet::weight(T::WeightInfo::register_channel(30))]
+		#[pallet::weight(T::WeightInfo::register_channel(CommissionTokens::<T>::iter().count() as u32))]
 		pub fn register_channel(
 			origin: OriginFor<T>,
 			channel_name: Vec<u8>,
 			receive_account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-
-			ensure!(
-				channel_name.len() as u32 <= T::NameLengthLimit::get(),
-				Error::<T>::ChannelNameTooLong
-			);
 
 			// add to Channels storage
 			let channel_id = ChannelNextId::<T>::get();
@@ -422,7 +418,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			vtoken: CurrencyId,
-			rate: Option<u8>,
+			rate: Percent,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -435,18 +431,13 @@ pub mod pallet {
 				CommissionTokens::<T>::contains_key(vtoken),
 				Error::<T>::VtokenNotConfiguredForCommission
 			);
-			// check if the rate is valid
-			if let Some(rate) = rate {
-				ensure!(rate <= 100, Error::<T>::InvalidCommissionRate);
-			}
 
 			// if rate is None, remove the channel commission rate, if rate is Some, update the
 			// channel commission rate
-			if let Some(rate) = rate {
-				let rate = Percent::from_percent(rate);
-				ChannelCommissionTokenRates::<T>::insert(channel_id, vtoken, rate);
-			} else {
+			if rate.is_zero() {
 				ChannelCommissionTokenRates::<T>::remove(channel_id, vtoken);
+			} else {
+				ChannelCommissionTokenRates::<T>::insert(channel_id, vtoken, rate);
 			}
 
 			Self::deposit_event(Event::ChannelCommissionSet { channel_id, vtoken, rate });
@@ -598,70 +589,53 @@ impl<T: Config> Pallet<T> {
 			|(vtoken, channel_vtoken_share)| {
 				// get the commission_token of the vtoken
 				let commission_token_op = CommissionTokens::<T>::get(vtoken);
-				if commission_token_op.is_none() {
-					return;
-				}
-				let commission_token = commission_token_op.unwrap();
 
-				// get the vtoken issuance amount
-				let vtoken_issuance = VtokenIssuanceSnapshots::<T>::get(vtoken)
-					.unwrap_or((Zero::zero(), Zero::zero()))
-					.0;
-				if vtoken_issuance == Zero::zero() {
-					return;
-				}
-
-				// get the total commission amount
-				let total_commission = PeriodTotalCommissions::<T>::get(commission_token)
-					.unwrap_or((Zero::zero(), Zero::zero()))
-					.0;
-
-				// calculate the channel commission amount
-				let raw_channel_commission = channel_vtoken_share.mul_floor(total_commission);
-
-				// get the channel vtoken commission rate
-				let channel_commission_rate =
-					ChannelCommissionTokenRates::<T>::get(channel_id, vtoken)
-						.unwrap_or(DEFAULT_COMMISSION_RATE);
-
-				// calculate the channel commission amount
-				let channel_commission = channel_commission_rate.mul_floor(raw_channel_commission);
-
-				// update channel_commission to ChannelClaimableCommissions storage
-				ChannelClaimableCommissions::<T>::mutate(
-					channel_id,
-					commission_token,
-					|amount_op| {
-						if let Some(amount) = amount_op {
-							let sum_up_op = amount.checked_add(&channel_commission);
-
-							if let Some(sum_up) = sum_up_op {
-								*amount = sum_up;
-							}
-						} else {
-							*amount_op = Some(channel_commission);
-						}
-
-						Self::deposit_event(Event::ChannelClaimableCommissionUpdated {
-							channel_id,
-							commission_token,
-							amount: *amount_op,
-						});
-					},
-				);
-
-				// add the amount to the PeriodClearedCommissions storage
-				PeriodClearedCommissions::<T>::mutate(commission_token, |amount_op| {
-					if let Some(amount) = amount_op {
-						let sum_up_op = amount.checked_add(&channel_commission);
-
-						if let Some(sum_up) = sum_up_op {
-							*amount = sum_up;
-						}
-					} else {
-						*amount_op = Some(channel_commission);
+				if let Some(commission_token) = commission_token_op {
+					// get the vtoken issuance amount
+					let vtoken_issuance = VtokenIssuanceSnapshots::<T>::get(vtoken).0;
+					if vtoken_issuance.is_zero() {
+						return;
 					}
-				});
+
+					// get the total commission amount
+					let total_commission = PeriodTotalCommissions::<T>::get(commission_token).0;
+
+					// calculate the channel commission amount
+					let raw_channel_commission = channel_vtoken_share.mul_floor(total_commission);
+
+					// get the channel vtoken commission rate
+					let mut channel_commission_rate =
+						ChannelCommissionTokenRates::<T>::get(channel_id, vtoken);
+					if channel_commission_rate.is_zero() {
+						channel_commission_rate = DEFAULT_COMMISSION_RATE;
+					}
+
+					// calculate the channel commission amount
+					let channel_commission =
+						channel_commission_rate.mul_floor(raw_channel_commission);
+
+					// update channel_commission to ChannelClaimableCommissions storage
+					ChannelClaimableCommissions::<T>::mutate(
+						channel_id,
+						commission_token,
+						|amount| {
+							let sum_up = amount.saturating_add(channel_commission);
+							*amount = sum_up;
+
+							Self::deposit_event(Event::ChannelClaimableCommissionUpdated {
+								channel_id,
+								commission_token,
+								amount: *amount,
+							});
+						},
+					);
+
+					// add the amount to the PeriodClearedCommissions storage
+					PeriodClearedCommissions::<T>::mutate(commission_token, |amount| {
+						let sum_up = amount.saturating_add(channel_commission);
+						*amount = sum_up;
+					});
+				}
 			},
 		);
 	}
@@ -672,29 +646,22 @@ impl<T: Config> Pallet<T> {
 			|(vtoken, channel_old_share)| {
 				// get the vtoken issuance amount
 				let (old_vtoken_issuance, new_vtoken_issuance) =
-					VtokenIssuanceSnapshots::<T>::get(vtoken)
-						.unwrap_or((Zero::zero(), Zero::zero()));
+					VtokenIssuanceSnapshots::<T>::get(vtoken);
 
 				// get the total minted amount of the period
-				let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken)
-					.unwrap_or((Zero::zero(), Zero::zero()))
-					.0;
+				let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken).0;
 
 				// get the total redeemed amount of the period
-				let total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken)
-					.unwrap_or((Zero::zero(), Zero::zero()))
-					.0;
+				let total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken).0;
 
 				// only update the share when total_mint > total_redeem
 				if total_redeem < total_mint {
 					// net_mint = total_mint - total_redeem
-					let net_mint = total_mint.checked_sub(&total_redeem).unwrap_or(Zero::zero());
+					let net_mint = total_mint.saturating_sub(total_redeem);
 					// channel mint
-					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
-						.unwrap_or((Zero::zero(), Zero::zero()))
-						.0;
+					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken).0;
 					// channel_net_mint： channel_share * net_mint
-					let channel_period_net_mint = if total_mint == Zero::zero() {
+					let channel_period_net_mint = if total_mint.is_zero() {
 						Zero::zero()
 					} else {
 						Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
@@ -704,11 +671,11 @@ impl<T: Config> Pallet<T> {
 						channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
 					let denominator = new_vtoken_issuance;
 
-					let channel_new_share: Permill = if denominator == Zero::zero() {
+					let channel_new_share: Permill = if denominator.is_zero() {
 						Zero::zero()
 					} else {
 						Permill::from_rational_with_rounding(numerator, denominator, Rounding::Down)
-							.unwrap_or(Zero::zero())
+							.unwrap_or_default()
 					};
 
 					// update the share to ChannelVtokenShares storage
@@ -728,19 +695,15 @@ impl<T: Config> Pallet<T> {
 		// for all CommissionTokens，calculate the commission of Bifrost
 		CommissionTokens::<T>::iter_values().for_each(|commission_token| {
 			// get the total commission amount
-			let total_commission = PeriodTotalCommissions::<T>::get(commission_token)
-				.unwrap_or((Zero::zero(), Zero::zero()))
-				.0;
+			let total_commission = PeriodTotalCommissions::<T>::get(commission_token).0;
 
 			// get the cleared amount from the PeriodClearedCommissions storage
-			let cleared_commission =
-				PeriodClearedCommissions::<T>::get(commission_token).unwrap_or(Zero::zero());
+			let cleared_commission = PeriodClearedCommissions::<T>::get(commission_token);
 
 			// calculate the bifrost commission amount
-			let bifrost_commission =
-				total_commission.checked_sub(&cleared_commission).unwrap_or(Zero::zero());
+			let bifrost_commission = total_commission.saturating_sub(cleared_commission);
 
-			if bifrost_commission == Zero::zero() {
+			if bifrost_commission.is_zero() {
 				return;
 			}
 
@@ -763,7 +726,7 @@ impl<T: Config> Pallet<T> {
 		multiplier_2: BalanceOf<T>,
 		divider: BalanceOf<T>,
 	) -> BalanceOf<T> {
-		if divider == Zero::zero() {
+		if divider.is_zero() {
 			return Zero::zero();
 		}
 
@@ -817,13 +780,12 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 		vtoken: CurrencyId,
 		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
-		if amount == Zero::zero() {
+		if amount.is_zero() {
 			return Ok(());
 		}
 
 		// first add to PeriodVtokenTotalMint
-		let mut total_mint =
-			PeriodVtokenTotalMint::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
+		let mut total_mint = PeriodVtokenTotalMint::<T>::get(vtoken);
 		let sum_up_amount = total_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
 		total_mint.1 = sum_up_amount;
@@ -832,8 +794,7 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 		// only non-bifrost minting needs to record the channel minting amount
 		if let Some(channel_id) = channel_id {
 			// then add to PeriodChannelVtokenMint
-			let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken)
-				.unwrap_or((Zero::zero(), Zero::zero()));
+			let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken);
 			let sum_up_amount =
 				channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
@@ -845,13 +806,12 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 	}
 	// record the redeem amount of vtoken
 	fn record_redeem_amount(vtoken: CurrencyId, amount: BalanceOf<T>) -> Result<(), DispatchError> {
-		if amount == Zero::zero() {
+		if amount.is_zero() {
 			return Ok(());
 		}
 
 		// first add to PeriodVtokenTotalRedeem
-		let mut total_redeem =
-			PeriodVtokenTotalRedeem::<T>::get(vtoken).unwrap_or((Zero::zero(), Zero::zero()));
+		let mut total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken);
 		let sum_up_amount = total_redeem.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
 		total_redeem.1 = sum_up_amount;
@@ -867,7 +827,7 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 		staking_token: CurrencyId,
 		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
-		if amount == Zero::zero() {
+		if amount.is_zero() {
 			return Ok(());
 		}
 
@@ -877,8 +837,7 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 			.ok_or(Error::<T>::VtokenNotConfiguredForCommission)?;
 
 		// add to PeriodTotalCommissions
-		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token)
-			.unwrap_or((Zero::zero(), Zero::zero()));
+		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
 
 		let sum_up_amount = total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
