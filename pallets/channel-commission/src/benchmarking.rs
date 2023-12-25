@@ -81,7 +81,7 @@ benchmarks! {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let channel_name = b"Bifrost".to_vec();
 		let receiver = whitelisted_caller();
-		let commission_rate = 0;
+		let commission_rate = Percent::from_percent(0);
 		let channel_id = 0;
 		let vtoken = CurrencyId::VToken2(0);
 		let commission_token = CurrencyId::Token2(0);
@@ -96,7 +96,7 @@ benchmarks! {
 			origin.clone(),
 			channel_name, receiver
 		));
-	}: _<T::RuntimeOrigin>(origin.clone(),channel_id, vtoken, Some(commission_rate))
+	}: _<T::RuntimeOrigin>(origin.clone(),channel_id, vtoken, commission_rate)
 
 	set_commission_tokens {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
