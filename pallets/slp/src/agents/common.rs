@@ -347,7 +347,7 @@ impl<T: Config> Pallet<T> {
 
 		// call_as_subaccount = Utility(Box::new(AsDerivative(sub_account_index, Box::new(call))));
 		let utility_call: u8 = match currency_id {
-			MANTA => 10,
+			MANTA => 40,
 			MOVR | GLMR => 30,
 			ASTR => 11,
 			PHA => 3,
