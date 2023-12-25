@@ -387,12 +387,6 @@ impl<T: Config> Pallet<T> {
 
 		let call_as_subaccount = Self::prepare_send_as_subaccount_call(call, who, currency_id)?;
 
-		#[cfg(feature = "std")]
-		println!(
-			"construct_xcm_as_subaccount_with_query_id: call_as_subaccount: {:?}",
-			&call_as_subaccount
-		);
-
 		let xcm_message = Self::construct_xcm_message(
 			call_as_subaccount,
 			withdraw_fee,
