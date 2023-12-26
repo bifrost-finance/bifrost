@@ -945,6 +945,7 @@ impl bifrost_vesting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
+	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 // Bifrost modules start
@@ -1097,6 +1098,8 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub const SalpLockId: LockIdentifier = *b"salplock";
+	pub const BatchLimit: u32 = 50;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -1125,6 +1128,8 @@ impl bifrost_salp::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
+	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 impl bifrost_call_switchgear::Config for Runtime {
@@ -1360,7 +1365,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = CoreAdminOrCouncil;
 	type ResponseOrigin = EnsureResponse<Everything>;
 	type XcmDestWeightAndFee = XcmInterface;
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;

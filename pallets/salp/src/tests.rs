@@ -1482,3 +1482,116 @@ fn edit_fund_should_work() {
 		assert_eq!(fund.status, FundStatus::Ongoing);
 	});
 }
+
+fn reserve_init() -> (CurrencyId, CurrencyId) {
+	assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+	assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+	Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
+	assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
+
+	assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+	assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
+
+	// Mock the BlockNumber
+	let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
+	System::set_block_number(block_begin_redeem.into());
+
+	let vs_token =
+		<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get()).unwrap();
+	let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
+		RelayCurrencyId::get(),
+		3_000,
+		1,
+		SlotLength::get(),
+	)
+	.unwrap();
+	(vs_token, vs_bond)
+}
+
+#[test]
+fn batch_handle_reserve_should_work() {
+	new_test_ext().execute_with(|| {
+		let (vs_token, vs_bond) = reserve_init();
+
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
+		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 10, false));
+		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 40, false));
+		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 50);
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 50);
+		assert_ok!(Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000));
+		assert_eq!(ReserveInfos::<Test>::get(3_000, BRUCE).value, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
+
+		assert_eq!(Tokens::accounts(CATHI, vs_token).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_token).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vs_bond).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
+	});
+}
+
+#[test]
+fn batch_handle_reserve_should_fail() {
+	new_test_ext().execute_with(|| {
+		let (_vs_token, _vs_bond) = reserve_init();
+
+		assert_noop!(
+			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
+			Error::<Test>::InvalidFundStatus,
+		);
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 100, false));
+		assert_noop!(
+			Salp::batch_handle_reserve(Some(BRUCE).into(), 3_000),
+			Error::<Test>::InvalidFundStatus,
+		);
+	});
+}
+
+#[test]
+fn reserve_should_fail() {
+	new_test_ext().execute_with(|| {
+		let (_vs_token, _vs_bond) = reserve_init();
+
+		assert_noop!(
+			Salp::reserve(Some(CATHI).into(), 3_000, 10, false),
+			orml_tokens::Error::<Test>::BalanceTooLow,
+		);
+	});
+}
+
+#[test]
+fn reserve_should_work() {
+	new_test_ext().execute_with(|| {
+		let (vs_token, _vs_bond) = reserve_init();
+
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 100, false));
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
+		assert_ok!(Salp::cancel_reservation(Some(BRUCE).into(), 3_000));
+		assert_ok!(Salp::cancel_reservation(Some(BRUCE).into(), 3_000));
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 0);
+		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
+		assert_eq!(ReserveInfos::<Test>::get(3_000, BRUCE).value, 50);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).frozen, 50);
+		assert_eq!(Tokens::accounts(BRUCE, vs_token).free, 100);
+	});
+}
