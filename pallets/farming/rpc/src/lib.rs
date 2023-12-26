@@ -19,7 +19,7 @@
 use std::{marker::PhantomData, sync::Arc};
 
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_primitives::Balance;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,

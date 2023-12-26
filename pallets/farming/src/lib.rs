@@ -34,7 +34,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 use crate::boost::*;
-use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId};
+use bifrost_primitives::{FarmingInfo, PoolId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{

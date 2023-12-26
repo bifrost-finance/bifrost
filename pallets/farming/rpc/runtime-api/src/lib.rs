@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_primitives::Balance;
 use parity_scale_codec::Codec;
 use sp_api::decl_runtime_apis;
 use sp_std::vec::Vec;
