@@ -158,14 +158,7 @@ impl<T: Config> Pallet<T> {
 					.checked_sub(&current_rate)
 					.and_then(|r| r.checked_mul_int(base_token_value))
 					.ok_or(ArithmeticError::Overflow)?;
-				Self::increase_leverage(
-					&who,
-					asset_id,
-					vtoken_id,
-					increase_amount,
-					deposits_token_value,
-					account_borrows,
-				)?;
+				Self::increase_leverage(&who, asset_id, vtoken_id, increase_amount)?;
 			},
 		}
 		Self::deposit_event(Event::<T>::FlashLoanDeposited {
@@ -221,48 +214,20 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		asset_id: AssetIdOf<T>,
 		vtoken_id: AssetIdOf<T>,
-		mut increase_amount: BalanceOf<T>,
-		deposits_token_value: BalanceOf<T>,
-		borrows: BalanceOf<T>,
+		increase_amount: BalanceOf<T>,
 	) -> DispatchResult {
-		let market = lend_market::Pallet::<T>::market(asset_id)?;
-		let mut token_value = (market.collateral_factor * deposits_token_value)
-			.checked_sub(borrows)
-			.ok_or(ArithmeticError::Overflow)?;
-		while increase_amount > Zero::zero() {
-			match increase_amount < token_value {
-				true => {
-					T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;
-					let vtoken_value = T::VtokenMinting::mint(
-						who.clone(),
-						asset_id,
-						increase_amount,
-						BoundedVec::default(),
-					)?;
-					T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-					break;
-				},
-				false => {
-					T::LendMarket::do_borrow(&who, asset_id, token_value)?;
-					increase_amount = increase_amount.saturating_sub(token_value);
-					let vtoken_value = T::VtokenMinting::mint(
-						who.clone(),
-						asset_id,
-						token_value,
-						BoundedVec::default(),
-					)?;
-					T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
-					let underlying_amount = Self::current_collateral_amount(&who, vtoken_id)?;
-					let deposits_token_value =
-						T::VtokenMinting::vtoken_to_token(asset_id, vtoken_id, underlying_amount)?;
-					let account_borrows =
-						lend_market::Pallet::<T>::get_current_borrow_balance(&who, asset_id)?;
-					token_value = (market.collateral_factor * deposits_token_value)
-						.checked_sub(account_borrows)
-						.ok_or(ArithmeticError::Overflow)?;
-				},
-			};
-		}
+		<T as lend_market::Config>::Assets::mint_into(asset_id, &who, increase_amount)?;
+		let vtoken_value =
+			T::VtokenMinting::mint(who.clone(), asset_id, increase_amount, BoundedVec::default())?;
+		T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
+		T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;
+		<T as lend_market::Config>::Assets::burn_from(
+			asset_id,
+			&who,
+			increase_amount,
+			Precision::Exact,
+			Fortitude::Force,
+		)?;
 		Ok(())
 	}
 

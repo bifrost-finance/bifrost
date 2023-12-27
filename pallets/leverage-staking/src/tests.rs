@@ -45,7 +45,7 @@ fn init() {
 		0,
 		vec![(DOT, (1, 1)), (VDOT, (100_000_000, 100_000_000))]
 	));
-	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 1000));
 	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100_000), BoundedVec::default()));
 	assert_eq!(Tokens::balance(VDOT, &0), unit(100_000));
 	assert_ok!(VtokenMinting::mint(Some(1).into(), DOT, unit(10), BoundedVec::default()));
@@ -65,9 +65,9 @@ fn increase_leverage_should_not_work() {
 			LeverageStaking::flash_loan_deposit(
 				RuntimeOrigin::signed(1),
 				DOT,
-				FixedU128::from_inner(unit(1_000_000)),
+				FixedU128::from_inner(unit(1_000_100)),
 			),
-			lend_market::Error::<Test>::InvalidAmount
+			lend_market::Error::<Test>::InsufficientLiquidity
 		);
 	});
 }
