@@ -146,10 +146,14 @@ impl<T: Config> Pallet<T> {
 
 		match rate.cmp(&current_rate) {
 			Ordering::Less => {
-				let reduce_amount = current_rate
-					.checked_sub(&rate)
-					.and_then(|r| r.checked_mul_int(base_token_value))
-					.ok_or(ArithmeticError::Overflow)?;
+				let reduce_amount = if rate.is_zero() {
+					account_borrows
+				} else {
+					current_rate
+						.checked_sub(&rate)
+						.and_then(|r| r.checked_mul_int(base_token_value))
+						.ok_or(ArithmeticError::Overflow)?
+				};
 				Self::reduce_leverage(&who, asset_id, vtoken_id, reduce_amount)?;
 			},
 			Ordering::Equal => return Err(Error::<T>::ArgumentsError.into()),
