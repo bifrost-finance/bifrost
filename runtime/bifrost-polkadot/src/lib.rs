@@ -1586,7 +1586,7 @@ impl leverage_staking::Config for Runtime {
 parameter_types! {
 	pub const ClearingDuration: u32 = 7 * DAYS;
 	pub const NameLengthLimit: u32 = 20;
-	pub BifrostCommissionReceiver: AccountId = FeeSharePalletId::get().into_account_truncating();
+	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl bifrost_channel_commission::Config for Runtime {
