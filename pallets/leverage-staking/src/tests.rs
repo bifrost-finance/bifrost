@@ -141,12 +141,14 @@ fn reduce_leverage_should_work() {
 			Deposits { voucher_balance: 9500000, is_collateral: true },
 		);
 		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
+		assert_eq!(Tokens::balance(DOT, &1), 990000000000000);
 		assert_ok!(LeverageStaking::flash_loan_deposit(
 			RuntimeOrigin::signed(1),
 			DOT,
 			FixedU128::from_inner(unit(800_000)),
 		));
 		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
+		assert_eq!(Tokens::balance(DOT, &1), 990000000000098);
 		assert_eq!(
 			AccountBorrows::<Test>::get(DOT, 1),
 			BorrowSnapshot { principal: 80_000, borrow_index: 1.into() },
@@ -154,6 +156,21 @@ fn reduce_leverage_should_work() {
 		assert_eq!(
 			AccountDeposits::<Test>::get(VDOT, 1),
 			Deposits { voucher_balance: 8994050, is_collateral: true },
+		);
+		assert_ok!(LeverageStaking::flash_loan_deposit(
+			RuntimeOrigin::signed(1),
+			DOT,
+			FixedU128::from_inner(0),
+		));
+		assert_eq!(Tokens::balance(VDOT, &1), 9999999900000);
+		assert_eq!(Tokens::balance(DOT, &1), 990000000000196);
+		assert_eq!(
+			AccountBorrows::<Test>::get(DOT, 1),
+			BorrowSnapshot { principal: 0, borrow_index: 1.into() },
+		);
+		assert_eq!(
+			AccountDeposits::<Test>::get(VDOT, 1),
+			Deposits { voucher_balance: 4981100, is_collateral: true },
 		);
 	});
 }
