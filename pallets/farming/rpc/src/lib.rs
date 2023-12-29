@@ -19,7 +19,7 @@
 use std::{marker::PhantomData, sync::Arc};
 
 pub use bifrost_farming_rpc_runtime_api::{self as runtime_api, FarmingRuntimeApi};
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_primitives::Balance;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -32,7 +32,7 @@ use sp_rpc::number::NumberOrHex;
 use sp_runtime::traits::Block as BlockT;
 
 #[rpc(client, server)]
-pub trait FarmingRpcApi<BlockHash, AccountId, PoolId> {
+pub trait FarmingRpcApi<BlockHash, AccountId, PoolId, CurrencyId> {
 	/// rpc method for getting farming rewards
 	#[method(name = "farming_getFarmingRewards")]
 	fn get_farming_rewards(
@@ -65,14 +65,15 @@ impl<C, Block> FarmingRpc<C, Block> {
 }
 
 #[async_trait]
-impl<C, Block, AccountId, PoolId> FarmingRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId>
-	for FarmingRpc<C, Block>
+impl<C, Block, AccountId, PoolId, CurrencyId>
+	FarmingRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId, CurrencyId> for FarmingRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	AccountId: Codec,
 	PoolId: Codec,
+	CurrencyId: Codec,
 {
 	fn get_farming_rewards(
 		&self,
