@@ -294,7 +294,7 @@ scale-info            = { version = "2.10.0", default-features = false }
 serde                 = { version = "1.0.193", default-features = false }
 serde_json            = { version = "1.0.105", default-features = false }
 similar-asserts       = { version = "1.1.0" }
-smallvec              = { version = "1.11.0" }
+smallvec              = { version = "1.11.2" }
 static_assertions     = { version = "1.1.0" }
 strum                 = { version = "0.24.1", default-features = false, features = ["derive"] }
 strum_macros          = { version = "0.24.3" }
