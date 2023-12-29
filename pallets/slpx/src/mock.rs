@@ -580,6 +580,7 @@ impl slpx::Config for Test {
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
+	type XcmSender = ();
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
 	type ParachainId = ParachainId;

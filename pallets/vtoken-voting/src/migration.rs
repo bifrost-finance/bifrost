@@ -17,33 +17,47 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use frame_support::{storage_alias, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_support::{storage_alias, weights::Weight};
 
-mod v0 {
+pub mod v1 {
 	use super::*;
 
 	#[storage_alias]
-	pub(super) type DelegatorVote<T: Config> = StorageDoubleMap<
+	pub(super) type DelegatorVoteRole<T: Config> = StorageDoubleMap<
 		Pallet<T>,
 		Twox64Concat,
 		CurrencyIdOf<T>,
 		Twox64Concat,
 		DerivativeIndex,
+		VoteRole,
+	>;
+
+	#[storage_alias]
+	pub(super) type DelegatorVote<T: Config> = StorageNMap<
+		Pallet<T>,
+		(
+			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
+			NMapKey<Twox64Concat, PollIndex>,
+			NMapKey<Twox64Concat, DerivativeIndex>,
+		),
 		AccountVote<BalanceOf<T>>,
 	>;
 }
 
-pub mod v1 {
+pub mod v2 {
 	use super::*;
-	use frame_support::traits::StorageVersion;
+	use crate::{Config, CurrencyIdOf, Pallet};
+	use cumulus_primitives_core::Weight;
+	use frame_support::{pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
+	use sp_runtime::traits::Get;
 
-	pub struct MigrateToV1<T>(sp_std::marker::PhantomData<T>);
-	impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
+	pub struct MigrateToV2<T, C>(sp_std::marker::PhantomData<T>, sp_std::marker::PhantomData<C>);
+	impl<T: Config, C: Get<CurrencyIdOf<T>>> OnRuntimeUpgrade for MigrateToV2<T, C> {
 		fn on_runtime_upgrade() -> Weight {
-			if StorageVersion::get::<Pallet<T>>() == 0 {
-				let weight_consumed = migrate_to_v1::<T>();
-				log::info!("Migrating vtoken-voting storage to v1");
-				StorageVersion::new(1).put::<Pallet<T>>();
+			if StorageVersion::get::<Pallet<T>>() < 2 {
+				let weight_consumed = migrate_to_v2::<T, C>();
+				log::info!("Migrating vtoken-voting storage to v2");
+				StorageVersion::new(2).put::<Pallet<T>>();
 				weight_consumed
 			} else {
 				log::warn!("vtoken-voting migration should be removed.");
@@ -58,12 +72,12 @@ pub mod v1 {
 				StorageVersion::get::<Pallet<T>>(),
 			);
 			log::info!(
-				"vtoken-voting before migration: v0 count: {}",
-				v0::DelegatorVote::<T>::iter().count(),
+				"vtoken-voting before migration: count: {}",
+				v1::DelegatorVote::<T>::iter().count(),
 			);
 			ensure!(
-				v0::DelegatorVote::<T>::iter().count() > 0,
-				"v0::DelegatorVote should not be empty before the migration"
+				v1::DelegatorVote::<T>::iter().count() > 0,
+				"DelegatorVote should not be empty before the migration"
 			);
 
 			Ok(Vec::new())
@@ -76,12 +90,12 @@ pub mod v1 {
 				StorageVersion::get::<Pallet<T>>(),
 			);
 			log::info!(
-				"vtoken-voting after migration: v1 count: {}",
-				DelegatorVote::<T>::iter().count()
+				"vtoken-voting after migration: count: {}",
+				v1::DelegatorVote::<T>::iter().count()
 			);
 			ensure!(
-				DelegatorVote::<T>::iter().count() > 0,
-				"DelegatorVote should not be empty after the migration"
+				v1::DelegatorVote::<T>::iter().count() == 0,
+				"DelegatorVote should be empty after the migration"
 			);
 
 			Ok(())
@@ -89,34 +103,31 @@ pub mod v1 {
 	}
 }
 
-pub fn migrate_to_v1<T: Config>() -> Weight {
+pub fn migrate_to_v2<T: Config, C: Get<CurrencyIdOf<T>>>() -> Weight {
 	let mut weight: Weight = Weight::zero();
 
-	let old_keys = v0::DelegatorVote::<T>::iter_keys();
-	let vtoken = VKSM;
+	let token = C::get();
+	let vtoken = token.to_vtoken().unwrap();
 
-	for (_, voting) in VotingFor::<T>::iter() {
-		if let Voting::Casting(Casting { votes, .. }) = voting {
-			for (poll_index, vote, derivative_index, _) in votes.iter() {
-				if DelegatorVote::<T>::contains_key((vtoken, poll_index, derivative_index)) {
-					let _ = Pallet::<T>::try_add_delegator_vote(
-						vtoken,
-						*poll_index,
-						*derivative_index,
-						*vote,
-					);
-					weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 2));
-				} else {
-					DelegatorVote::<T>::insert((vtoken, poll_index, derivative_index), vote);
-					weight = weight.saturating_add(T::DbWeight::get().writes(1));
-				}
-			}
-		}
+	for who in ClassLocksFor::<T>::iter_keys() {
+		let _ = T::MultiCurrency::remove_lock(CONVICTION_VOTING_ID, vtoken, &who);
+		weight += T::DbWeight::get().writes(1);
 	}
 
-	for (vtoken, derivative_index) in old_keys {
-		v0::DelegatorVote::<T>::remove(vtoken, derivative_index);
-	}
+	let r1 = VotingFor::<T>::clear(u32::MAX, None);
+	weight += T::DbWeight::get().writes(r1.loops as u64);
+
+	let r2 = ClassLocksFor::<T>::clear(u32::MAX, None);
+	weight += T::DbWeight::get().writes(r2.loops as u64);
+
+	let r3 = ReferendumInfoFor::<T>::clear(u32::MAX, None);
+	weight += T::DbWeight::get().writes(r3.loops as u64);
+
+	let r4 = v1::DelegatorVote::<T>::clear(u32::MAX, None);
+	weight += T::DbWeight::get().writes(r4.loops as u64);
+
+	let r5 = v1::DelegatorVoteRole::<T>::clear(u32::MAX, None);
+	weight += T::DbWeight::get().writes(r5.loops as u64);
 
 	weight
 }

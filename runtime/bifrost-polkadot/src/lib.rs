@@ -114,6 +114,7 @@ use xcm_executor::{
 };
 
 pub mod governance;
+use crate::xcm_config::XcmRouter;
 use governance::{
 	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
 	TechAdminOrCouncil, ValidatorElection,
@@ -131,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 987,
+	spec_version: 990,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -945,7 +946,8 @@ impl bifrost_vesting::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
+	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 // Bifrost modules start
@@ -1307,6 +1309,7 @@ impl bifrost_slpx::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
+	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
@@ -1832,12 +1835,13 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	use crate::Runtime;
-	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
+	use super::*;
+
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
-		StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
 	);
 }
 

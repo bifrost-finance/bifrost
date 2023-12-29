@@ -155,6 +155,11 @@ fn init<
 		BoundedVec::default(),
 		None
 	));
+	assert_ok!(lend_market::Pallet::<T>::mint(
+		SystemOrigin::Signed(caller.clone()).into(),
+		VKSM,
+		lend_market::BalanceOf::<T>::unique_saturated_from(unit(1u128))
+	));
 
 	Ok(())
 }
@@ -175,12 +180,7 @@ mod benchmarks {
 		let rate = FixedU128::from_inner(unit(990_000));
 
 		#[extrinsic_call]
-		Pallet::<T>::flash_loan_deposit(
-			SystemOrigin::Signed(caller.clone()),
-			coin0.into(),
-			rate,
-			Some(unit(1).into()),
-		);
+		Pallet::<T>::flash_loan_deposit(SystemOrigin::Signed(caller.clone()), coin0.into(), rate);
 
 		Ok(())
 	}

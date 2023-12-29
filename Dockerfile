@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
+# Copyright (C) Liebi Technologies PTE. LTD.
 # This file is part of Bifrost.
 
 # Bifrost is free software: you can redistribute it and/or modify

@@ -12,6 +12,7 @@ sp-runtime = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
+log = { workspace = true }
 
 [dev-dependencies]
 sp-io = { workspace = true }
@@ -28,6 +29,8 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking?/std",
+	"log/std",
+	"pallet-balances/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

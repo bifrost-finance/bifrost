@@ -35,6 +35,7 @@ pub mod bifrost_stable_pool;
 pub mod bifrost_system_maker;
 pub mod bifrost_system_staking;
 pub mod bifrost_ve_minting;
+pub mod bifrost_vesting;
 pub mod bifrost_vstoken_conversion;
 pub mod bifrost_vtoken_minting;
 pub mod bifrost_vtoken_voting;

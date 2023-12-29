@@ -194,7 +194,8 @@ fn parachain_staking_bond_to_liquidize_works() {
 			BNC,
 			Box::new(subaccount_0_location),
 			5_000_000_000_000,
-			Some(validator_0_location)
+			Some(validator_0_location),
+			None
 		));
 		assert_ok!(Slp::bond_extra(
 			RuntimeOrigin::signed(ALICE),
@@ -202,6 +203,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			Some(validator_0_location),
 			5_000_000_000_000,
+			None
 		));
 		assert_ok!(Slp::unbond(
 			RuntimeOrigin::signed(ALICE),
@@ -209,6 +211,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			Some(validator_0_location),
 			2_000_000_000_000,
+			None
 		));
 
 		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
@@ -288,6 +291,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			Box::new(subaccount_0_location),
 			None,
 			Some(validator_0_location),
+			None,
 			None
 		));
 	});
@@ -335,6 +339,7 @@ fn parachain_staking_bond_extra_works() {
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				5_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::Unexpected
 		);
@@ -383,6 +388,7 @@ fn parachain_staking_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
 				2_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::Unexpected
 		);
@@ -425,7 +431,12 @@ fn parachain_staking_unbond_all_works() {
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
 
 		assert_noop!(
-			Slp::unbond_all(RuntimeOrigin::signed(ALICE), BNC, Box::new(subaccount_0_location),),
+			Slp::unbond_all(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+				None
+			),
 			Error::<Runtime>::Unexpected
 		);
 	});
@@ -481,6 +492,7 @@ fn parachain_staking_rebond_works() {
 				BNC,
 				Box::new(subaccount_0_location),
 				Some(validator_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -533,6 +545,7 @@ fn parachain_staking_undelegate_works() {
 				BNC,
 				Box::new(subaccount_0_location),
 				vec![validator_0_location],
+				None
 			),
 			Error::<Runtime>::Unexpected
 		);
@@ -588,6 +601,7 @@ fn parachain_staking_redelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				BNC,
 				Box::new(subaccount_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -648,6 +662,7 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -668,6 +683,7 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -697,7 +713,8 @@ fn parachain_staking_liquidize_works() {
 				BNC,
 				Box::new(subaccount_0_location),
 				5_000_000_000_000,
-				Some(validator_0_location)
+				Some(validator_0_location),
+				None
 			),
 			Error::<Runtime>::AlreadyBonded
 		);
@@ -723,6 +740,7 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -743,6 +761,7 @@ fn parachain_staking_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(validator_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::Unexpected
@@ -783,6 +802,7 @@ fn parachain_staking_transfer_back_works() {
 			Box::new(subaccount_0_location),
 			Box::new(exit_account_location),
 			5_000_000_000_000,
+			None
 		));
 	});
 }
