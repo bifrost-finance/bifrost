@@ -49,6 +49,7 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"xcm/std",
+	"xcm-builder/std",
 ]
 kusama = []
 polkadot = []

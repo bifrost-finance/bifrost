@@ -53,7 +53,6 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	fn reducible_balance(
 		lend_token_id: Self::AssetId,
 		who: &T::AccountId,
-		// _keep_alive: bool,
 		_preservation: Preservation,
 		_force: Fortitude,
 	) -> Self::Balance {
@@ -65,7 +64,6 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 		lend_token_id: Self::AssetId,
 		who: &T::AccountId,
 		amount: Self::Balance,
-		// _mint: bool,
 		_provenance: Provenance,
 	) -> DepositConsequence {
 		let underlying_id = match Self::underlying_id(lend_token_id) {

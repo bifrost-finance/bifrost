@@ -35,7 +35,6 @@ use sp_runtime::{
 use sp_std::{fmt::Debug, vec::Vec};
 
 pub trait TokenInfo {
-	fn currency_id(&self) -> u64;
 	fn name(&self) -> Option<&str>;
 	fn symbol(&self) -> Option<&str>;
 	fn decimals(&self) -> Option<u8>;
@@ -342,6 +341,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	) -> Result<Balance, DispatchError>;
 	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
+	fn get_token_pool(currency_id: CurrencyId) -> Balance;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
@@ -400,6 +400,10 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 
 	fn token_id(_vtoken_id: CurrencyId) -> Option<CurrencyId> {
 		None
+	}
+
+	fn get_token_pool(_currency_id: CurrencyId) -> Balance {
+		Zero::zero()
 	}
 
 	fn get_minimums_redeem(_vtoken_id: CurrencyId) -> Balance {

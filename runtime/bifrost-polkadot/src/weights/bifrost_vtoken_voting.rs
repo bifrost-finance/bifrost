@@ -203,7 +203,7 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 	// Proof Skipped: Slp DelegatorsIndex2Multilocation (max_values: None, max_size: None, mode: Measured)
 	// Storage: VtokenVoting DelegatorVote (r:1 w:1)
 	// Proof: VtokenVoting DelegatorVote (max_values: None, max_size: Some(81), added: 2556, mode: MaxEncodedLen)
-	fn set_delegator_role() -> Weight {
+	fn add_delegator() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `372`
 		//  Estimated: `3837`
@@ -262,6 +262,10 @@ impl<T: frame_system::Config> bifrost_vtoken_voting::WeightInfo for BifrostWeigh
 		//  Measured:  `329`
 		//  Estimated: `3501`
 		// Minimum execution time: 38_311 nanoseconds.
+		Weight::from_parts(38_955_000, 3501)
+			.saturating_add(T::DbWeight::get().reads(1))
+	}
+	fn set_vote_cap_ratio() -> Weight {
 		Weight::from_parts(38_955_000, 3501)
 			.saturating_add(T::DbWeight::get().reads(1))
 	}

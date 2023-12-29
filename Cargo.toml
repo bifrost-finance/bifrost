@@ -274,28 +274,32 @@ cumulus-primitives-utility            = { git = "https://github.com/paritytech/p
 parachain-info                        = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 # Other
-paste                 = { version = "1.0.14" }
-strum_macros          = { version = "0.24.3" }
+async-trait           = { version = "0.1.73" }
 bstringify            = { version = "0.1.2" }
 clap                  = { version = "4.4.2" }
+env_logger            = { version = "0.10.0" }
+ethabi                = { version = "18.0.0", default-features = false }
+ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }
+futures               = { version =  "0.3.28" }
+hex                   = { version = "0.4.3", default-features = false }
 hex-literal           = { version = "0.4.1" }
+impl-trait-for-tuples = { version = "0.2.2" }
+jsonrpsee             = { version = "0.16.3" }
+log                   = { version = "0.4.20", default-features = false }
+num-bigint            = { version = "0.4.3", default-features = false }
+num-traits            = { version = "0.2.15", default-features = false }
+parity-scale-codec    = { version = "3.6.5", default-features = false }
+paste                 = { version = "1.0.14" }
+scale-info            = { version = "2.10.0", default-features = false }
+serde                 = { version = "1.0.188", default-features = false }
+serde_json            = { version = "1.0.105", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.11.0" }
 static_assertions     = { version = "1.1.0" }
-async-trait           = { version = "0.1.73" }
-env_logger            = { version = "0.10.0" }
-jsonrpsee             = { version = "0.16.3" }
-futures               = { version =  "0.3.28" }
-parity-scale-codec    = { version = "3.6.5", default-features = false }
-hex                   = { version = "0.4.3", default-features = false }
-log                   = { version = "0.4.20", default-features = false }
-scale-info            = { version = "2.10.0", default-features = false }
-serde_json            = { version = "1.0.105", default-features = false }
-serde                 = { version = "1.0.188", default-features = false }
 strum                 = { version = "0.24.1", default-features = false, features = ["derive"] }
-num-traits            = { version = "0.2.15", default-features = false }
-num-bigint            = { version = "0.4.3", default-features = false }
-impl-trait-for-tuples = { version = "0.2.2" }
+strum_macros          = { version = "0.24.3" }
+tiny-keccak           = { version = "2.0", features = ["fips202"] }
+
 
 [profile.dev]
 split-debuginfo = "unpacked"
