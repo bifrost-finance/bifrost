@@ -297,7 +297,7 @@ similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.11.2" }
 static_assertions     = { version = "1.1.0" }
 strum                 = { version = "0.25.0", default-features = false, features = ["derive"] }
-strum_macros          = { version = "0.24.3" }
+strum_macros          = { version = "0.25.3" }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
 
 
