@@ -35,8 +35,8 @@
       "MOVR"
     ]
   },
-  "relay_chain": "rococo",
-  "para_id": 2001,
+  "relayChain": "rococo",
+  "paraId": 2001,
   "codeSubstitutes": {},
   "genesis": {
     "raw": {

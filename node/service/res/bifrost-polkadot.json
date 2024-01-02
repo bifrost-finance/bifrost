@@ -24,8 +24,8 @@
       "BNC"
     ]
   },
-  "relay_chain": "polkadot",
-  "para_id": 2030,
+  "relayChain": "polkadot",
+  "paraId": 2030,
   "codeSubstitutes": {},
   "genesis": {
     "raw": {
