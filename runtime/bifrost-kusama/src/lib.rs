@@ -34,7 +34,7 @@ pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly, Everything,
-		InstanceFilter, IsInVec, Nothing, Randomness,
+		InstanceFilter, IsInVec, Nothing, Randomness, WithdrawReasons,
 	},
 	weights::{
 		constants::{
@@ -1084,6 +1084,10 @@ impl pallet_aura::Config for Runtime {
 }
 
 // culumus runtime end
+parameter_types! {
+	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+}
 
 impl bifrost_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
@@ -1091,6 +1095,7 @@ impl bifrost_vesting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
+	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 

@@ -25,7 +25,8 @@
 //!
 //! A simple pallet providing a means of placing a linear curve on an account's locked balance. This
 //! pallet ensures that there is a lock in place preventing the balance to drop below the *unvested*
-//! amount for any reason other than transaction fee payment.
+//! amount for any reason other than the ones specified in `UnvestedFundsAllowedWithdrawReasons`
+//! configuration value.
 //!
 //! As the amount vested increases over time, the amount unvested reduces. However, locks remain in
 //! place and explicit action is needed on behalf of the user to ensure that the amount locked is
@@ -46,34 +47,39 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod benchmarking;
-mod migrations;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 mod vesting_info;
+
+pub mod migrations;
 pub mod weights;
 
 use frame_support::{
+	dispatch::DispatchResult,
 	ensure,
-	pallet_prelude::*,
+	storage::bounded_vec::BoundedVec,
 	traits::{
 		Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, VestingSchedule,
 		WithdrawReasons,
 	},
+	weights::Weight,
 };
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-pub use pallet::*;
-use parity_scale_codec::{Decode, Encode};
+use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::TypeInfo;
 use sp_runtime::{
+	codec::{Decode, Encode, MaxEncodedLen},
 	traits::{
 		AtLeast32BitUnsigned, Bounded, Convert, MaybeSerializeDeserialize, One, Saturating,
 		StaticLookup, Zero,
 	},
-	RuntimeDebug,
+	DispatchError, RuntimeDebug,
 };
-use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
+use sp_std::{fmt::Debug, marker::PhantomData, prelude::*};
+
+pub use pallet::*;
 pub use vesting_info::*;
 pub use weights::WeightInfo;
 
@@ -81,6 +87,7 @@ type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MaxLocksOf<T> =
 	<<T as Config>::Currency as LockableCurrency<<T as frame_system::Config>::AccountId>>::MaxLocks;
+type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
 const VESTING_ID: LockIdentifier = *b"vesting ";
 
@@ -104,9 +111,9 @@ enum VestingAction {
 	/// Do not actively remove any schedules.
 	Passive,
 	/// Remove the schedule specified by the index.
-	Remove(usize),
+	Remove { index: usize },
 	/// Remove the two schedules, specified by index, so they can be merged.
-	Merge(usize, usize),
+	Merge { index1: usize, index2: usize },
 }
 
 impl VestingAction {
@@ -114,8 +121,8 @@ impl VestingAction {
 	fn should_remove(&self, index: usize) -> bool {
 		match self {
 			Self::Passive => false,
-			Self::Remove(index1) => *index1 == index,
-			Self::Merge(index1, index2) => *index1 == index || *index2 == index,
+			Self::Remove { index: index1 } => *index1 == index,
+			Self::Merge { index1, index2 } => *index1 == index || *index2 == index,
 		}
 	}
 
@@ -145,6 +152,8 @@ impl<T: Config> Get<u32> for MaxVestingSchedulesGet<T> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -164,16 +173,26 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
+		/// Reasons that determine under which conditions the balance may drop below
+		/// the unvested amount.
+		type UnvestedFundsAllowedWithdrawReasons: Get<WithdrawReasons>;
+
 		/// Maximum number of vesting schedules an account may have at a given moment.
 		const MAX_VESTING_SCHEDULES: u32;
 	}
 
 	#[pallet::extra_constants]
 	impl<T: Config> Pallet<T> {
-		// TODO: rename to snake case after https://github.com/paritytech/substrate/issues/8826 fixed.
-		#[allow(non_snake_case)]
-		fn MaxVestingSchedules() -> u32 {
+		#[pallet::constant_name(MaxVestingSchedules)]
+		fn max_vesting_schedules() -> u32 {
 			T::MAX_VESTING_SCHEDULES
+		}
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn integrity_test() {
+			assert!(T::MAX_VESTING_SCHEDULES > 0, "`MaxVestingSchedules` must ge greater than 0");
 		}
 	}
 
@@ -241,7 +260,9 @@ pub mod pallet {
 				Vesting::<T>::try_append(who, vesting_info)
 					.expect("Too many vesting schedules at genesis.");
 
-				let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
+				let reasons =
+					WithdrawReasons::except(T::UnvestedFundsAllowedWithdrawReasons::get());
+
 				T::Currency::set_lock(VESTING_ID, who, locked, reasons);
 			}
 		}
@@ -250,12 +271,11 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// The amount vested has been updated. This could indicate more funds are available. The
+		/// The amount vested has been updated. This could indicate a change in funds available.
 		/// The balance given is the amount which is left unvested (and thus locked).
-		/// \[account, unvested\]
-		VestingUpdated(T::AccountId, BalanceOf<T>),
-		/// An \[account\] has become fully vested. No further vesting can happen.
-		VestingCompleted(T::AccountId),
+		VestingUpdated { account: T::AccountId, unvested: BalanceOf<T> },
+		/// An \[account\] has become fully vested.
+		VestingCompleted { account: T::AccountId },
 	}
 
 	/// Error for the vesting pallet.
@@ -263,8 +283,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// The account given is not vesting.
 		NotVesting,
-		/// An existing vesting schedule already exists for this account that cannot be clobbered.
-		ExistingVestingSchedule,
 		/// The account already has `MaxVestingSchedules` count of schedules and thus
 		/// cannot add another one. Consider merging existing schedules in order to add another.
 		AtMaxVestingSchedules,
@@ -284,36 +302,6 @@ pub mod pallet {
 		WrongCliffVesting,
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
-			migrations::v1::pre_migrate::<T>()?;
-			Ok(Vec::new())
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			if StorageVersion::<T>::get() == Releases::V0 {
-				StorageVersion::<T>::put(Releases::V1);
-				migrations::v1::migrate::<T>().saturating_add(T::DbWeight::get().reads_writes(1, 1))
-			} else {
-				T::DbWeight::get().reads(1)
-			}
-		}
-
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(
-			_number_of_invulnerables: Vec<u8>,
-		) -> Result<(), sp_runtime::DispatchError> {
-			migrations::v1::post_migrate::<T>()?;
-			Ok(())
-		}
-
-		fn integrity_test() {
-			assert!(T::MAX_VESTING_SCHEDULES > 0, "`MaxVestingSchedules` must ge greater than 0");
-		}
-	}
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Unlock any vested funds of the sender account.
@@ -323,15 +311,11 @@ pub mod pallet {
 		///
 		/// Emits either `VestingCompleted` or `VestingUpdated`.
 		///
-		/// # <weight>
+		/// ## Complexity
 		/// - `O(1)`.
-		/// - DbWeight: 2 Reads, 2 Writes
-		///     - Reads: Vesting Storage, Balances Locks, [Sender Account]
-		///     - Writes: Vesting Storage, Balances Locks, [Sender Account]
-		/// # </weight>
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get(),10u32)
-		.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get(),10u32))
+		#[pallet::weight(T::WeightInfo::vest_locked(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
+			.max(T::WeightInfo::vest_unlocked(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES))
 		)]
 		pub fn vest(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -348,20 +332,13 @@ pub mod pallet {
 		///
 		/// Emits either `VestingCompleted` or `VestingUpdated`.
 		///
-		/// # <weight>
+		/// ## Complexity
 		/// - `O(1)`.
-		/// - DbWeight: 3 Reads, 3 Writes
-		///     - Reads: Vesting Storage, Balances Locks, Target Account
-		///     - Writes: Vesting Storage, Balances Locks, Target Account
-		/// # </weight>
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get(),10u32)
-		.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get(),10u32))
+		#[pallet::weight(T::WeightInfo::vest_other_locked(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
+			.max(T::WeightInfo::vest_other_unlocked(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES))
 		)]
-		pub fn vest_other(
-			origin: OriginFor<T>,
-			target: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
+		pub fn vest_other(origin: OriginFor<T>, target: AccountIdLookupOf<T>) -> DispatchResult {
 			ensure_signed(origin)?;
 			let who = T::Lookup::lookup(target)?;
 			Self::check_cliff(who.clone())?;
@@ -372,23 +349,22 @@ pub mod pallet {
 		///
 		/// The dispatch origin for this call must be _Signed_.
 		///
-		/// - `target`: The account that should be transferred the vested funds.
-		/// - `amount`: The amount of funds to transfer and will be vested.
+		/// - `target`: The account receiving the vested funds.
 		/// - `schedule`: The vesting schedule attached to the transfer.
 		///
 		/// Emits `VestingCreated`.
 		///
-		/// # <weight>
+		/// NOTE: This will unlock all schedules through the current block.
+		///
+		/// ## Complexity
 		/// - `O(1)`.
-		/// - DbWeight: 3 Reads, 3 Writes
-		///     - Reads: Vesting Storage, Balances Locks, Target Account, [Sender Account]
-		///     - Writes: Vesting Storage, Balances Locks, Target Account, [Sender Account]
-		/// # </weight>
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get(),10u32))]
+		#[pallet::weight(
+			T::WeightInfo::vested_transfer(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
+		)]
 		pub fn vested_transfer(
 			origin: OriginFor<T>,
-			target: <T::Lookup as StaticLookup>::Source,
+			target: AccountIdLookupOf<T>,
 			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			let transactor = ensure_signed(origin)?;
@@ -402,23 +378,22 @@ pub mod pallet {
 		///
 		/// - `source`: The account whose funds should be transferred.
 		/// - `target`: The account that should be transferred the vested funds.
-		/// - `amount`: The amount of funds to transfer and will be vested.
 		/// - `schedule`: The vesting schedule attached to the transfer.
 		///
 		/// Emits `VestingCreated`.
 		///
-		/// # <weight>
+		/// NOTE: This will unlock all schedules through the current block.
+		///
+		/// ## Complexity
 		/// - `O(1)`.
-		/// - DbWeight: 4 Reads, 4 Writes
-		///     - Reads: Vesting Storage, Balances Locks, Target Account, Source Account
-		///     - Writes: Vesting Storage, Balances Locks, Target Account, Source Account
-		/// # </weight>
 		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get(),10u32))]
+		#[pallet::weight(
+			T::WeightInfo::force_vested_transfer(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
+		)]
 		pub fn force_vested_transfer(
 			origin: OriginFor<T>,
-			source: <T::Lookup as StaticLookup>::Source,
-			target: <T::Lookup as StaticLookup>::Source,
+			source: AccountIdLookupOf<T>,
+			target: AccountIdLookupOf<T>,
 			schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
@@ -519,8 +494,8 @@ pub mod pallet {
 		/// - `schedule2_index`: index of the second schedule to merge.
 		#[pallet::call_index(4)]
 		#[pallet::weight(
-		T::WeightInfo::not_unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
-		.max(T::WeightInfo::unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES))
+			T::WeightInfo::not_unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES)
+			.max(T::WeightInfo::unlocking_merge_schedules(MaxLocksOf::<T>::get(), T::MAX_VESTING_SCHEDULES))
 		)]
 		pub fn merge_schedules(
 			origin: OriginFor<T>,
@@ -535,7 +510,8 @@ pub mod pallet {
 			let schedule2_index = schedule2_index as usize;
 
 			let schedules = Self::vesting(&who).ok_or(Error::<T>::NotVesting)?;
-			let merge_action = VestingAction::Merge(schedule1_index, schedule2_index);
+			let merge_action =
+				VestingAction::Merge { index1: schedule1_index, index2: schedule2_index };
 
 			let (schedules, locked_now) = Self::exec_action(schedules.to_vec(), merge_action)?;
 
@@ -615,8 +591,8 @@ impl<T: Config> Pallet<T> {
 
 	// Execute a vested transfer from `source` to `target` with the given `schedule`.
 	fn do_vested_transfer(
-		source: <T::Lookup as StaticLookup>::Source,
-		target: <T::Lookup as StaticLookup>::Source,
+		source: AccountIdLookupOf<T>,
+		target: AccountIdLookupOf<T>,
 		schedule: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
 		// Validate user inputs.
@@ -692,11 +668,14 @@ impl<T: Config> Pallet<T> {
 	fn write_lock(who: &T::AccountId, total_locked_now: BalanceOf<T>) {
 		if total_locked_now.is_zero() {
 			T::Currency::remove_lock(VESTING_ID, who);
-			Self::deposit_event(Event::<T>::VestingCompleted(who.clone()));
+			Self::deposit_event(Event::<T>::VestingCompleted { account: who.clone() });
 		} else {
-			let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
+			let reasons = WithdrawReasons::except(T::UnvestedFundsAllowedWithdrawReasons::get());
 			T::Currency::set_lock(VESTING_ID, who, total_locked_now, reasons);
-			Self::deposit_event(Event::<T>::VestingUpdated(who.clone(), total_locked_now));
+			Self::deposit_event(Event::<T>::VestingUpdated {
+				account: who.clone(),
+				unvested: total_locked_now,
+			});
 		};
 	}
 
@@ -739,7 +718,7 @@ impl<T: Config> Pallet<T> {
 		action: VestingAction,
 	) -> Result<(Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>>, BalanceOf<T>), DispatchError> {
 		let (schedules, locked_now) = match action {
-			VestingAction::Merge(idx1, idx2) => {
+			VestingAction::Merge { index1: idx1, index2: idx2 } => {
 				// The schedule index is based off of the schedule ordering prior to filtering out
 				// any schedules that may be ending at this block.
 				let schedule1 = *schedules.get(idx1).ok_or(Error::<T>::ScheduleIndexOutOfBounds)?;
@@ -840,7 +819,7 @@ where
 		let (schedules, locked_now) =
 			Self::exec_action(schedules.to_vec(), VestingAction::Passive)?;
 
-		Self::write_vesting(&who, schedules)?;
+		Self::write_vesting(who, schedules)?;
 		Self::write_lock(who, locked_now);
 
 		Ok(())
@@ -870,11 +849,11 @@ where
 	/// Remove a vesting schedule for a given account.
 	fn remove_vesting_schedule(who: &T::AccountId, schedule_index: u32) -> DispatchResult {
 		let schedules = Self::vesting(who).ok_or(Error::<T>::NotVesting)?;
-		let remove_action = VestingAction::Remove(schedule_index as usize);
+		let remove_action = VestingAction::Remove { index: schedule_index as usize };
 
 		let (schedules, locked_now) = Self::exec_action(schedules.to_vec(), remove_action)?;
 
-		Self::write_vesting(&who, schedules)?;
+		Self::write_vesting(who, schedules)?;
 		Self::write_lock(who, locked_now);
 		Ok(())
 	}
