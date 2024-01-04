@@ -284,36 +284,6 @@ pub mod pallet {
 		WrongCliffVesting,
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
-			migrations::v1::pre_migrate::<T>()?;
-			Ok(Vec::new())
-		}
-
-		fn on_runtime_upgrade() -> Weight {
-			if StorageVersion::<T>::get() == Releases::V0 {
-				StorageVersion::<T>::put(Releases::V1);
-				migrations::v1::migrate::<T>().saturating_add(T::DbWeight::get().reads_writes(1, 1))
-			} else {
-				T::DbWeight::get().reads(1)
-			}
-		}
-
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(
-			_number_of_invulnerables: Vec<u8>,
-		) -> Result<(), sp_runtime::DispatchError> {
-			migrations::v1::post_migrate::<T>()?;
-			Ok(())
-		}
-
-		fn integrity_test() {
-			assert!(T::MAX_VESTING_SCHEDULES > 0, "`MaxVestingSchedules` must ge greater than 0");
-		}
-	}
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Unlock any vested funds of the sender account.

@@ -163,6 +163,7 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, ChainId, Nonce, ValueQuery>;
 
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 

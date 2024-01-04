@@ -106,8 +106,8 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Governance configurations.
 pub mod governance;
 use governance::{
-	custom_origins, CoreAdmin, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
-	TechAdminOrCouncil, ValidatorElection,
+	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdmin, CoreAdminOrCouncil,
+	SALPAdmin, SystemStakingAdmin, TechAdmin, TechAdminOrCouncil, ValidatorElection,
 };
 
 // xcm config
@@ -2015,9 +2015,41 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
-		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime, FellowshipReferendaInstance>,
+		OracleMembershipStoragePrefixMigration,
+		PhragmenElectionDepositRuntimeUpgrade,
 	);
+}
+
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
+use pallet_referenda::migration::v1::MigrateV0ToV1;
+pub struct PhragmenElectionDepositRuntimeUpgrade;
+impl pallet_elections_phragmen::migrations::v3::V2ToV3 for PhragmenElectionDepositRuntimeUpgrade {
+	type AccountId = AccountId;
+	type Balance = Balance;
+}
+impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		pallet_elections_phragmen::migrations::v3::apply::<Self, Runtime>(
+			deposit::<Runtime>(1, 64),
+			10_000 * BNCS,
+		);
+		StorageVersion::new(4).put::<PhragmenElection>();
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct OracleMembershipStoragePrefixMigration;
+impl OnRuntimeUpgrade for OracleMembershipStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use frame_support::traits::PalletInfo;
+		let storage_version = OracleMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<OracleMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
 }
 
 /// Executive: handles dispatch to the various modules.
