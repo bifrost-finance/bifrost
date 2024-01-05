@@ -23,7 +23,9 @@
 
 use crate as bifrost_ve_minting;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{
+	currency::*, CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
+};
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -54,12 +56,6 @@ pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-pub const vBNC: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
-// pub const vMOVR: CurrencyId = CurrencyId::VToken(TokenSymbol::MOVR);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -468,14 +464,14 @@ impl ExtBuilder {
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
 			(ALICE, BNC, 1_000_000_000_000),
-			(ALICE, vBNC, 1_000_000_000_000_000),
+			(ALICE, VBNC, 1_000_000_000_000_000),
 			(ALICE, KSM, 1_000_000_000_000),
 			(BOB, BNC, 1_000_000_000_000),
-			(BOB, vBNC, 1_000_000_000_000_000),
-			(BOB, vKSM, 1_000_000_000_000),
+			(BOB, VBNC, 1_000_000_000_000_000),
+			(BOB, VKSM, 1_000_000_000_000),
 			(BOB, MOVR, 1_000_000_000_000),
 			(CHARLIE, BNC, 1_000_000_000_000),
-			(CHARLIE, vBNC, 1_000_000_000_000_000),
+			(CHARLIE, VBNC, 1_000_000_000_000_000),
 		])
 	}
 

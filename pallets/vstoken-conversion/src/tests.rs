@@ -44,11 +44,11 @@ fn vsksm_convert_to_vsbond() {
 		};
 		assert_ok!(VstokenConversion::set_relaychain_lease(RuntimeOrigin::signed(ALICE), 1));
 		assert_noop!(
-			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 1000, 1),
+			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), VSBOND_KSM_2102_19_26, 1000, 1),
 			Error::<Runtime>::NotEnoughBalance
 		);
 		assert_noop!(
-			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
+			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), VSBOND_KSM_2102_19_26, 100, 1),
 			Error::<Runtime>::CalculationOverflow
 		);
 		assert_ok!(VstokenConversion::set_exchange_rate(
@@ -58,7 +58,7 @@ fn vsksm_convert_to_vsbond() {
 		));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		assert_noop!(
-			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
+			VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), VSBOND_KSM_2102_19_26, 100, 1),
 			orml_tokens::Error::<Runtime>::BalanceTooLow
 		);
 		assert_noop!(
@@ -67,13 +67,13 @@ fn vsksm_convert_to_vsbond() {
 		);
 		let vsbond_account: AccountId =
 			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsBond, &vsbond_account, 10000));
-		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 0);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 8200);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 1900);
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(VSBOND_KSM_2102_19_26, &vsbond_account, 10000));
+		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), VSBOND_KSM_2102_19_26, 100, 1));
+		assert_eq!(Tokens::free_balance(VSKSM, &BOB), 0);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &vsbond_account), 8200);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &BOB), 1900);
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(vsKSM, &BOB, 1000));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(VSKSM, &BOB, 1000));
 		pub const EXCHANGE_RATE_PERCENTAGE_0: Percent = Percent::from_percent(100);
 		const EXCHANGE_RATE_0: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vstoken: EXCHANGE_RATE_PERCENTAGE_0,
@@ -85,10 +85,10 @@ fn vsksm_convert_to_vsbond() {
 			-2,
 			EXCHANGE_RATE_0
 		));
-		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 900);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 8110);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 1990);
+		assert_ok!(VstokenConversion::vstoken_convert_to_vsbond(Some(BOB).into(), VSBOND_KSM_2102_19_26, 100, 1));
+		assert_eq!(Tokens::free_balance(VSKSM, &BOB), 900);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &vsbond_account), 8110);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &BOB), 1990);
 	});
 }
 
@@ -115,9 +115,9 @@ fn vsbond_convert_to_vsksm() {
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		let vsbond_account: AccountId =
 			<Runtime as Config>::VsbondAccount::get().into_account_truncating();
-		assert_ok!(VstokenConversion::vsbond_convert_to_vstoken(Some(BOB).into(), vsBond, 100, 1));
-		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 104);
-		assert_eq!(Tokens::free_balance(vsBond, &vsbond_account), 100);
-		assert_eq!(Tokens::free_balance(vsBond, &BOB), 0);
+		assert_ok!(VstokenConversion::vsbond_convert_to_vstoken(Some(BOB).into(), VSBOND_KSM_2102_19_26, 100, 1));
+		assert_eq!(Tokens::free_balance(VSKSM, &BOB), 104);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &vsbond_account), 100);
+		assert_eq!(Tokens::free_balance(VSBOND_KSM_2102_19_26, &BOB), 0);
 	});
 }

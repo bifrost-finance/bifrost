@@ -61,6 +61,7 @@ pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
 pub const MANTA_TOKEN_ID: u8 = 8u8;
 pub const MANTA: CurrencyId = CurrencyId::Token2(MANTA_TOKEN_ID);
 pub const VMANTA: CurrencyId = CurrencyId::VToken2(MANTA_TOKEN_ID);
+pub const VSBOND_KSM_2102_19_26: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2102, 19, 26);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

@@ -49,6 +49,7 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 	"bifrost-primitives/std",
+	"orml-xtokens/std",
 	"orml-traits/std",
     "bifrost-vtoken-minting/std",
 	"zenlink-protocol/std",
