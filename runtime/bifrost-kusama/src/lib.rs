@@ -2023,7 +2023,6 @@ pub mod migrations {
 }
 
 use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
-use pallet_referenda::migration::v1::MigrateV0ToV1;
 pub struct PhragmenElectionDepositRuntimeUpgrade;
 impl pallet_elections_phragmen::migrations::v3::V2ToV3 for PhragmenElectionDepositRuntimeUpgrade {
 	type AccountId = AccountId;
@@ -2043,7 +2042,6 @@ impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeU
 pub struct OracleMembershipStoragePrefixMigration;
 impl OnRuntimeUpgrade for OracleMembershipStoragePrefixMigration {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use frame_support::traits::PalletInfo;
 		let storage_version = OracleMembership::on_chain_storage_version();
 		if storage_version < 4 {
 			StorageVersion::new(4).put::<OracleMembership>();

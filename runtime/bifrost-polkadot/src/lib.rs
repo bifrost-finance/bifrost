@@ -116,8 +116,8 @@ use xcm_executor::{
 pub mod governance;
 use crate::xcm_config::XcmRouter;
 use governance::{
-	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
-	TechAdminOrCouncil, ValidatorElection,
+	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdminOrCouncil, SALPAdmin,
+	SystemStakingAdmin, TechAdmin, TechAdminOrCouncil, ValidatorElection,
 };
 
 impl_opaque_keys! {
@@ -1819,10 +1819,112 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
-		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
-		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime, FellowshipReferendaInstance>,
+		OracleMembershipMigration,
+		PhragmenElectionDepositRuntimeUpgrade,
+		TechnicalCommitteeMigration,
+		CouncilMigration,
+		pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
+		CouncilMembershipMigration,
+		TechnicalMembershipMigration,
+		BountiesMigration,
+		TipsMigration,
 	);
+}
+
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
+pub struct PhragmenElectionDepositRuntimeUpgrade;
+impl pallet_elections_phragmen::migrations::v3::V2ToV3 for PhragmenElectionDepositRuntimeUpgrade {
+	type AccountId = AccountId;
+	type Balance = Balance;
+}
+impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		pallet_elections_phragmen::migrations::v3::apply::<Self, Runtime>(
+			deposit(1, 64),
+			10_000 * DOLLARS,
+		);
+		StorageVersion::new(4).put::<PhragmenElection>();
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct OracleMembershipMigration;
+impl OnRuntimeUpgrade for OracleMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = OracleMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<OracleMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct CouncilMembershipMigration;
+impl OnRuntimeUpgrade for CouncilMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = CouncilMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<CouncilMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TechnicalMembershipMigration;
+impl OnRuntimeUpgrade for TechnicalMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = TechnicalMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<TechnicalMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TechnicalCommitteeMigration;
+impl OnRuntimeUpgrade for TechnicalCommitteeMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = TechnicalCommittee::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<TechnicalCommittee>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct CouncilMigration;
+impl OnRuntimeUpgrade for CouncilMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Council::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Council>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct BountiesMigration;
+impl OnRuntimeUpgrade for BountiesMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Bounties::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Bounties>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TipsMigration;
+impl OnRuntimeUpgrade for TipsMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Tips::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Tips>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
 }
 
 /// Executive: handles dispatch to the various modules.
