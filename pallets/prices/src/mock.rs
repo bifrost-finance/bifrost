@@ -72,10 +72,14 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
-			DOT =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
-			KSM =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			DOT => Some(TimeStampedPrice {
+				value: Price::saturating_from_integer(100),
+				timestamp: 0,
+			}),
+			KSM => Some(TimeStampedPrice {
+				value: Price::saturating_from_integer(500),
+				timestamp: 0,
+			}),
 			VDOT => Some(TimeStampedPrice {
 				value: Price::from_inner(15000000000_0000000000),
 				timestamp: 0,
@@ -96,10 +100,14 @@ impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get_no_op(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
-			DOT =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
-			KSM =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			DOT => Some(TimeStampedPrice {
+				value: Price::saturating_from_integer(100),
+				timestamp: 0,
+			}),
+			KSM => Some(TimeStampedPrice {
+				value: Price::saturating_from_integer(500),
+				timestamp: 0,
+			}),
 			_ => None,
 		}
 	}
@@ -140,6 +148,7 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -254,7 +263,9 @@ construct_runtime!(
 );
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default()
+		.build_storage()
+		.unwrap();
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![
@@ -302,9 +313,27 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		Assets::force_create(RuntimeOrigin::root(), VDOT.into(), ALICE, true, 1).unwrap();
 		Assets::force_create(RuntimeOrigin::root(), FIL.into(), ALICE, true, 1).unwrap();
 
-		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), VDOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
-		Assets::mint(RuntimeOrigin::signed(ALICE), FIL.into(), ALICE, 1000 * PRICE_ONE).unwrap();
+		Assets::mint(
+			RuntimeOrigin::signed(ALICE),
+			DOT.into(),
+			ALICE,
+			1000 * PRICE_ONE,
+		)
+		.unwrap();
+		Assets::mint(
+			RuntimeOrigin::signed(ALICE),
+			VDOT.into(),
+			ALICE,
+			1000 * PRICE_ONE,
+		)
+		.unwrap();
+		Assets::mint(
+			RuntimeOrigin::signed(ALICE),
+			FIL.into(),
+			ALICE,
+			1000 * PRICE_ONE,
+		)
+		.unwrap();
 
 		Prices::set_foreign_asset(RuntimeOrigin::signed(ALICE), VFIL, FIL).unwrap();
 	});

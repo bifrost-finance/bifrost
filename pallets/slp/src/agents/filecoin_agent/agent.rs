@@ -81,11 +81,17 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		ensure!(!DelegatorLedgers::<T>::contains_key(currency_id, who), Error::<T>::AlreadyBonded);
+		ensure!(
+			!DelegatorLedgers::<T>::contains_key(currency_id, who),
+			Error::<T>::AlreadyBonded
+		);
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.delegator_bonded_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		// Ensure the bond doesn't exceeds delegator_active_staking_maximum
 		ensure!(
@@ -99,7 +105,10 @@ impl<T: Config>
 		ensure!(miners.len() == 1, Error::<T>::VectorTooLong);
 
 		// Create a new delegator ledger
-		let ledger = FilecoinLedger::<BalanceOf<T>> { account: *who, initial_pledge: amount };
+		let ledger = FilecoinLedger::<BalanceOf<T>> {
+			account: *who,
+			initial_pledge: amount,
+		};
 		let filecoin_ledger = Ledger::<BalanceOf<T>>::Filecoin(ledger);
 
 		DelegatorLedgers::<T>::insert(currency_id, who, filecoin_ledger);
@@ -123,12 +132,17 @@ impl<T: Config>
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.bond_extra_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		if let Ledger::Filecoin(filecoin_ledger) = ledger {
 			let initial_pledge = filecoin_ledger.initial_pledge;
 
-			let total = amount.checked_add(&initial_pledge).ok_or(Error::<T>::OverFlow)?;
+			let total = amount
+				.checked_add(&initial_pledge)
+				.ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
@@ -176,11 +190,18 @@ impl<T: Config>
 			// Check if the unbonding amount exceeds minimum requirement.
 			let mins_maxs =
 				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-			ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+			ensure!(
+				amount >= mins_maxs.unbond_minimum,
+				Error::<T>::LowerThanMinimum
+			);
 
-			let remaining =
-				initial_pledge.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
-			ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
+			let remaining = initial_pledge
+				.checked_sub(&amount)
+				.ok_or(Error::<T>::NotEnoughToUnbond)?;
+			ensure!(
+				remaining >= mins_maxs.delegator_bonded_minimum,
+				Error::<T>::NotEnoughToUnbond
+			);
 
 			// update delegator ledger
 			DelegatorLedgers::<T>::mutate(
@@ -240,7 +261,10 @@ impl<T: Config>
 		// Need to check whether this validator is in the whitelist.
 		let validators_vec =
 			Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-		ensure!(validators_vec.contains(worker), Error::<T>::ValidatorNotExist);
+		ensure!(
+			validators_vec.contains(worker),
+			Error::<T>::ValidatorNotExist
+		);
 
 		// ensure the length of validators_vec does not exceed the MaxLengthLimit.
 		ensure!(
@@ -291,7 +315,10 @@ impl<T: Config>
 
 			let validators_by_delegator_vec = ValidatorsByDelegator::<T>::get(currency_id, who)
 				.ok_or(Error::<T>::ValidatorNotBonded)?;
-			ensure!(targets[0] == validators_by_delegator_vec[0], Error::<T>::ValidatorError);
+			ensure!(
+				targets[0] == validators_by_delegator_vec[0],
+				Error::<T>::ValidatorError
+			);
 
 			// remove entry.
 			ValidatorsByDelegator::<T>::remove(currency_id, who);
@@ -433,8 +460,9 @@ impl<T: Config>
 		let (fee_permill, _beneficiary) =
 			Pallet::<T>::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 		let fee_to_charge = fee_permill.mul_floor(token_amount);
-		let amount_to_increase =
-			token_amount.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;
+		let amount_to_increase = token_amount
+			.checked_sub(&fee_to_charge)
+			.ok_or(Error::<T>::UnderFlow)?;
 
 		if amount_to_increase > Zero::zero() {
 			// Tune the vtoken exchange rate.

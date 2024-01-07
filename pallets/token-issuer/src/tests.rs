@@ -31,134 +31,171 @@ fn initialize_charlie_as_issue_whitelist_member() {
 		CHARLIE
 	));
 	// Issue some ZLK to Charlie's account
-	assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), CHARLIE, ZLK, 1000));
+	assert_ok!(TokenIssuer::issue(
+		RuntimeOrigin::signed(CHARLIE),
+		CHARLIE,
+		ZLK,
+		1000
+	));
 }
 
 #[test]
 fn add_to_issue_whitelist_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		// Charlie is not allowed to issue ZLK.
-		assert_noop!(
-			TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
-			Error::<Runtime>::NotAllowed
-		);
-		// Chalie is added to the issue whitelist to have the ability of issuing ZLK.
-		assert_ok!(TokenIssuer::add_to_issue_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
+	ExtBuilder::default()
+		.one_hundred_for_alice_n_bob()
+		.build()
+		.execute_with(|| {
+			// Charlie is not allowed to issue ZLK.
+			assert_noop!(
+				TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
+				Error::<Runtime>::NotAllowed
+			);
+			// Chalie is added to the issue whitelist to have the ability of issuing ZLK.
+			assert_ok!(TokenIssuer::add_to_issue_whitelist(
+				pallet_collective::RawOrigin::Members(2, 3).into(),
+				ZLK,
+				CHARLIE
+			));
 
-		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_list));
-		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
-		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
-	});
+			let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+			assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_list));
+			// Charlie succuessfully issue 800 unit of ZLK to Alice account
+			assert_ok!(TokenIssuer::issue(
+				RuntimeOrigin::signed(CHARLIE),
+				ALICE,
+				ZLK,
+				800
+			));
+			assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
+		});
 }
 
 #[test]
 fn remove_from_issue_whitelist_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		// Charlie is not in the issue whitelist
-		assert_noop!(
-			TokenIssuer::remove_from_issue_whitelist(
+	ExtBuilder::default()
+		.one_hundred_for_alice_n_bob()
+		.build()
+		.execute_with(|| {
+			// Charlie is not in the issue whitelist
+			assert_noop!(
+				TokenIssuer::remove_from_issue_whitelist(
+					pallet_collective::RawOrigin::Members(2, 3).into(),
+					ZLK,
+					CHARLIE
+				),
+				Error::<Runtime>::NotExist
+			);
+			// Add Charlie
+			assert_ok!(TokenIssuer::add_to_issue_whitelist(
 				pallet_collective::RawOrigin::Members(2, 3).into(),
 				ZLK,
 				CHARLIE
-			),
-			Error::<Runtime>::NotExist
-		);
-		// Add Charlie
-		assert_ok!(TokenIssuer::add_to_issue_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
+			));
 
-		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
-		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
+			// Charlie succuessfully issue 800 unit of ZLK to Alice account
+			assert_ok!(TokenIssuer::issue(
+				RuntimeOrigin::signed(CHARLIE),
+				ALICE,
+				ZLK,
+				800
+			));
+			assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 
-		// Successfully remove Charlie
-		assert_ok!(TokenIssuer::remove_from_issue_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
-		// Charlie is no longer able to issue token to any account
-		assert_noop!(
-			TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
-			Error::<Runtime>::NotAllowed
-		);
-	});
+			// Successfully remove Charlie
+			assert_ok!(TokenIssuer::remove_from_issue_whitelist(
+				pallet_collective::RawOrigin::Members(2, 3).into(),
+				ZLK,
+				CHARLIE
+			));
+			// Charlie is no longer able to issue token to any account
+			assert_noop!(
+				TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
+				Error::<Runtime>::NotAllowed
+			);
+		});
 }
 
 #[test]
 fn add_to_transfer_whitelist_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		initialize_charlie_as_issue_whitelist_member();
+	ExtBuilder::default()
+		.one_hundred_for_alice_n_bob()
+		.build()
+		.execute_with(|| {
+			initialize_charlie_as_issue_whitelist_member();
 
-		// Charlie is not allowed to transfer ZLK.
-		assert_noop!(
-			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
-			Error::<Runtime>::NotAllowed
-		);
-		// Chalie is added to the transfer whitelist to have the ability of transferring ZLK.
-		assert_ok!(TokenIssuer::add_to_transfer_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
+			// Charlie is not allowed to transfer ZLK.
+			assert_noop!(
+				TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
+				Error::<Runtime>::NotAllowed
+			);
+			// Chalie is added to the transfer whitelist to have the ability of transferring ZLK.
+			assert_ok!(TokenIssuer::add_to_transfer_whitelist(
+				pallet_collective::RawOrigin::Members(2, 3).into(),
+				ZLK,
+				CHARLIE
+			));
 
-		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_list));
-		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
-		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
-		// exceed balance
-		assert_noop!(
-			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 300),
-			Error::<Runtime>::NotEnoughBalance
-		);
-	});
+			let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
+			assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_list));
+			// Charlie succuessfully transfer 800 unit of ZLK to Alice account
+			assert_ok!(TokenIssuer::transfer(
+				RuntimeOrigin::signed(CHARLIE),
+				ALICE,
+				ZLK,
+				800
+			));
+			assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
+			// exceed balance
+			assert_noop!(
+				TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 300),
+				Error::<Runtime>::NotEnoughBalance
+			);
+		});
 }
 
 #[test]
 fn remove_from_transfer_whitelist_should_work() {
-	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		initialize_charlie_as_issue_whitelist_member();
+	ExtBuilder::default()
+		.one_hundred_for_alice_n_bob()
+		.build()
+		.execute_with(|| {
+			initialize_charlie_as_issue_whitelist_member();
 
-		// Charlie is not in the transfer whitelist
-		assert_noop!(
-			TokenIssuer::remove_from_transfer_whitelist(
+			// Charlie is not in the transfer whitelist
+			assert_noop!(
+				TokenIssuer::remove_from_transfer_whitelist(
+					pallet_collective::RawOrigin::Members(2, 3).into(),
+					ZLK,
+					CHARLIE
+				),
+				Error::<Runtime>::NotExist
+			);
+			// Add Charlie
+			assert_ok!(TokenIssuer::add_to_transfer_whitelist(
 				pallet_collective::RawOrigin::Members(2, 3).into(),
 				ZLK,
 				CHARLIE
-			),
-			Error::<Runtime>::NotExist
-		);
-		// Add Charlie
-		assert_ok!(TokenIssuer::add_to_transfer_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
+			));
 
-		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
-		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
-		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
+			// Charlie succuessfully transfer 800 unit of ZLK to Alice account
+			assert_ok!(TokenIssuer::transfer(
+				RuntimeOrigin::signed(CHARLIE),
+				ALICE,
+				ZLK,
+				800
+			));
+			assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
 
-		// Successfully remove Charlie
-		assert_ok!(TokenIssuer::remove_from_transfer_whitelist(
-			pallet_collective::RawOrigin::Members(2, 3).into(),
-			ZLK,
-			CHARLIE
-		));
-		// Charlie is no longer able to transfer token to any account
-		assert_noop!(
-			TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
-			Error::<Runtime>::NotAllowed
-		);
-	});
+			// Successfully remove Charlie
+			assert_ok!(TokenIssuer::remove_from_transfer_whitelist(
+				pallet_collective::RawOrigin::Members(2, 3).into(),
+				ZLK,
+				CHARLIE
+			));
+			// Charlie is no longer able to transfer token to any account
+			assert_noop!(
+				TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800),
+				Error::<Runtime>::NotAllowed
+			);
+		});
 }

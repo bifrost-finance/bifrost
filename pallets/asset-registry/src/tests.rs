@@ -37,7 +37,10 @@ fn versioned_multi_location_convert_work() {
 		let location: MultiLocation = v3_location.try_into().unwrap();
 		assert_eq!(
 			location,
-			MultiLocation { parents: 0, interior: Junctions::X1(Junction::Parachain(1000)) }
+			MultiLocation {
+				parents: 0,
+				interior: Junctions::X1(Junction::Parachain(1000))
+			}
 		);
 
 		// V3
@@ -48,7 +51,10 @@ fn versioned_multi_location_convert_work() {
 		let location: MultiLocation = v3_location.clone().try_into().unwrap();
 		assert_eq!(
 			location,
-			MultiLocation { parents: 0, interior: Junctions::X1(Junction::Parachain(1000)) }
+			MultiLocation {
+				parents: 0,
+				interior: Junctions::X1(Junction::Parachain(1000))
+			}
 		);
 
 		// handle all of VersionedMultiLocation
@@ -199,7 +205,10 @@ fn register_token_metadata_should_work() {
 			Box::new(metadata.clone())
 		));
 
-		assert_eq!(CurrencyMetadatas::<Runtime>::get(CurrencyId::Token2(0)), Some(metadata.clone()))
+		assert_eq!(
+			CurrencyMetadatas::<Runtime>::get(CurrencyId::Token2(0)),
+			Some(metadata.clone())
+		)
 	})
 }
 
@@ -293,8 +302,12 @@ fn register_vsbond_metadata_should_work() {
 			minimal_balance: 0,
 		};
 		let name = "vsBOND-KSM-2001-10-20".as_bytes().to_vec();
-		let v_metadata =
-			AssetMetadata { name: name.clone(), symbol: name, decimals: 12, minimal_balance: 0 };
+		let v_metadata = AssetMetadata {
+			name: name.clone(),
+			symbol: name,
+			decimals: 12,
+			minimal_balance: 0,
+		};
 		assert_noop!(
 			AssetRegistry::register_vtoken_metadata(
 				RuntimeOrigin::signed(CouncilAccount::get()),

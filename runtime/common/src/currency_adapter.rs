@@ -32,12 +32,15 @@ enum Error {
 impl From<Error> for XcmError {
 	fn from(e: Error) -> Self {
 		match e {
-			Error::FailedToMatchFungible =>
-				XcmError::FailedToTransactAsset("FailedToMatchFungible"),
-			Error::AccountIdConversionFailed =>
-				XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
-			Error::CurrencyIdConversionFailed =>
-				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed"),
+			Error::FailedToMatchFungible => {
+				XcmError::FailedToTransactAsset("FailedToMatchFungible")
+			}
+			Error::AccountIdConversionFailed => {
+				XcmError::FailedToTransactAsset("AccountIdConversionFailed")
+			}
+			Error::CurrencyIdConversionFailed => {
+				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed")
+			}
 		}
 	}
 }
@@ -151,7 +154,7 @@ impl<
 	fn deposit_asset(
 		asset: &MultiAsset,
 		location: &MultiLocation,
-		_context: &XcmContext,
+		_context: Option<&XcmContext>,
 	) -> Result {
 		match (
 			AccountIdConvert::convert_location(location),
@@ -159,13 +162,15 @@ impl<
 			Match::matches_fungible(asset),
 		) {
 			// known asset
-			(Some(who), Some(currency_id), Some(amount)) =>
+			(Some(who), Some(currency_id), Some(amount)) => {
 				MultiCurrency::deposit(currency_id, &who, amount).or_else(|err| {
 					DepositFailureHandler::on_deposit_currency_fail(err, currency_id, &who, amount)
-				}),
+				})
+			}
 			// bad beneficiary
-			(None, Some(currency_id), Some(amount)) =>
-				DepositFailureHandler::on_account_id_convert_fail(currency_id, amount),
+			(None, Some(currency_id), Some(amount)) => {
+				DepositFailureHandler::on_account_id_convert_fail(currency_id, amount)
+			}
 			// unknown asset
 			_ => UnknownAsset::deposit(asset, location).or_else(|err| {
 				DepositFailureHandler::on_deposit_unknown_asset_fail(err, asset, location)

@@ -287,4 +287,12 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(4))
 	}
+
+	fn new_query() -> Weight {
+		todo!()
+	}
+
+	fn take_response() -> Weight {
+		todo!()
+	}
 }

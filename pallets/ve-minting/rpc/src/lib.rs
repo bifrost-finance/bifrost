@@ -61,7 +61,10 @@ where
 	C: BlockIdTo<Block>,
 {
 	pub fn new(client: Arc<C>) -> Self {
-		Self { client, _marker: PhantomData }
+		Self {
+			client,
+			_marker: PhantomData,
+		}
 	}
 }
 

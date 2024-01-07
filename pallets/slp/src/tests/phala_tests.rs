@@ -31,17 +31,27 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 
 // parents 0 means vault, parents 1 means stake_pool
-const VALIDATOR_0_LOCATION: MultiLocation =
-	MultiLocation { parents: 0, interior: X2(GeneralIndex(0), GeneralIndex(0)) };
+const VALIDATOR_0_LOCATION: MultiLocation = MultiLocation {
+	parents: 0,
+	interior: X2(GeneralIndex(0), GeneralIndex(0)),
+};
 const VALIDATOR_0_ACCOUNT_ID_32: [u8; 32] =
 	hex_literal::hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"];
 const VALIDATOR_0_LOCATION_WRONG: MultiLocation = MultiLocation {
 	parents: 1,
-	interior: X2(Parachain(2004), AccountId32 { network: None, id: VALIDATOR_0_ACCOUNT_ID_32 }),
+	interior: X2(
+		Parachain(2004),
+		AccountId32 {
+			network: None,
+			id: VALIDATOR_0_ACCOUNT_ID_32,
+		},
+	),
 };
 
-const VALIDATOR_1_LOCATION: MultiLocation =
-	MultiLocation { parents: 0, interior: X2(GeneralIndex(1), GeneralIndex(1)) };
+const VALIDATOR_1_LOCATION: MultiLocation = MultiLocation {
+	parents: 0,
+	interior: X2(GeneralIndex(1), GeneralIndex(1)),
+};
 
 #[test]
 fn initialize_phala_delegator_works() {
@@ -52,7 +62,10 @@ fn initialize_phala_delegator_works() {
 				.into();
 		let bifrost_parachain_account_id_32: AccountId =
 			Sibling::from(2001).into_account_truncating();
-		assert_eq!(bifrost_parachain_account_id_32_right, bifrost_parachain_account_id_32);
+		assert_eq!(
+			bifrost_parachain_account_id_32_right,
+			bifrost_parachain_account_id_32
+		);
 
 		// subaccount_id_0: 41YcGwBLwxbFV7VfbF6zYGgUnYbt96dHcA2DWruRJkWtANFD
 		let subaccount_id_0_right: AccountId =
@@ -78,7 +91,10 @@ fn initialize_phala_delegator_works() {
 			parents: 1,
 			interior: X2(
 				Parachain(2004),
-				AccountId32 { network: None, id: subaccount_id_0.into() },
+				AccountId32 {
+					network: None,
+					id: subaccount_id_0.into(),
+				},
 			),
 		};
 
@@ -103,7 +119,11 @@ fn initialize_phala_delegator_works() {
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), PHA, None));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			PHA,
+			None
+		));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(PHA), 1);
 		assert_eq!(
 			DelegatorsIndex2Multilocation::<Runtime>::get(PHA, 0),
@@ -129,7 +149,11 @@ fn add_validator_works() {
 		);
 
 		assert_noop!(
-			Slp::add_validator(RuntimeOrigin::signed(ALICE), PHA, Box::new(VALIDATOR_0_LOCATION)),
+			Slp::add_validator(
+				RuntimeOrigin::signed(ALICE),
+				PHA,
+				Box::new(VALIDATOR_0_LOCATION)
+			),
 			Error::<Runtime>::NotExist
 		);
 
@@ -171,7 +195,13 @@ fn phala_delegate_works() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
+		interior: X2(
+			Parachain(2004),
+			AccountId32 {
+				network: None,
+				id: subaccount_id_0.into(),
+			},
+		),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -188,7 +218,11 @@ fn phala_delegate_works() {
 			Error::<Runtime>::DelegatorNotExist
 		);
 
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), PHA, None));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			PHA,
+			None
+		));
 
 		assert_noop!(
 			Slp::delegate(
@@ -267,7 +301,11 @@ fn phala_delegate_works() {
 
 fn initialize_preparation_setup() {
 	// set operate_origins
-	assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), PHA, Some(ALICE)));
+	assert_ok!(Slp::set_operate_origin(
+		RuntimeOrigin::signed(ALICE),
+		PHA,
+		Some(ALICE)
+	));
 
 	// Set OngoingTimeUnitUpdateInterval as 1/3 Hour(300 blocks per hour, 12 seconds per block)
 	assert_ok!(Slp::set_ongoing_time_unit_update_interval(
@@ -279,12 +317,22 @@ fn initialize_preparation_setup() {
 	System::set_block_number(300);
 
 	// Initialize ongoing timeunit as 1.
-	assert_ok!(Slp::update_ongoing_time_unit(RuntimeOrigin::signed(ALICE), PHA, TimeUnit::Hour(1)));
+	assert_ok!(Slp::update_ongoing_time_unit(
+		RuntimeOrigin::signed(ALICE),
+		PHA,
+		TimeUnit::Hour(1)
+	));
 
 	// Initialize currency delays.21 days = 21 *24 = 504 hours
-	let delay =
-		Delays { unlock_delay: TimeUnit::Hour(504), leave_delegators_delay: TimeUnit::Hour(504) };
-	assert_ok!(Slp::set_currency_delays(RuntimeOrigin::signed(ALICE), PHA, Some(delay)));
+	let delay = Delays {
+		unlock_delay: TimeUnit::Hour(504),
+		leave_delegators_delay: TimeUnit::Hour(504),
+	};
+	assert_ok!(Slp::set_currency_delays(
+		RuntimeOrigin::signed(ALICE),
+		PHA,
+		Some(delay)
+	));
 
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 1_000_000_000_000,
@@ -312,7 +360,10 @@ fn phala_xcm_setup() {
 	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: treasury_account_id_32,
+		}),
 	};
 
 	// update some PHA balance to treasury account
@@ -331,35 +382,45 @@ fn phala_xcm_setup() {
 		Some((treasury_location, 1_000_000_000_000)),
 	));
 
-	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		PHA,
-		XcmOperationType::Bond,
-		Some((20_000_000_000.into(), 10_000_000_000)),
-	));
+	assert_ok!(
+		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::Bond,
+			Some((20_000_000_000.into(), 10_000_000_000)),
+		)
+	);
 
-	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		PHA,
-		XcmOperationType::Unbond,
-		Some((20_000_000_000.into(), 10_000_000_000)),
-	));
+	assert_ok!(
+		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::Unbond,
+			Some((20_000_000_000.into(), 10_000_000_000)),
+		)
+	);
 
-	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		PHA,
-		XcmOperationType::TransferBack,
-		Some((20_000_000_000.into(), 10_000_000_000)),
-	));
+	assert_ok!(
+		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::TransferBack,
+			Some((20_000_000_000.into(), 10_000_000_000)),
+		)
+	);
 
-	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		PHA,
-		XcmOperationType::TransferTo,
-		Some((20_000_000_000.into(), 10_000_000_000)),
-	));
+	assert_ok!(
+		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::TransferTo,
+			Some((20_000_000_000.into(), 10_000_000_000)),
+		)
+	);
 
-	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-		PHA,
-		XcmOperationType::ConvertAsset,
-		Some((20_000_000_000.into(), 10_000_000_000)),
-	));
+	assert_ok!(
+		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+			PHA,
+			XcmOperationType::ConvertAsset,
+			Some((20_000_000_000.into(), 10_000_000_000)),
+		)
+	);
 }
 
 fn phala_setup() {
@@ -370,13 +431,23 @@ fn phala_setup() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
+		interior: X2(
+			Parachain(2004),
+			AccountId32 {
+				network: None,
+				id: subaccount_id_0.into(),
+			},
+		),
 	};
 
 	initialize_preparation_setup();
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), PHA, None));
+	assert_ok!(Slp::initialize_delegator(
+		RuntimeOrigin::signed(ALICE),
+		PHA,
+		None
+	));
 
 	phala_xcm_setup();
 
@@ -407,13 +478,18 @@ fn phala_bond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32 },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32,
+			},
 		),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
-		let share_price_multilocation =
-			MultiLocation { parents: 1, interior: X2(GeneralIndex(2000), GeneralIndex(1000)) };
+		let share_price_multilocation = MultiLocation {
+			parents: 1,
+			interior: X2(GeneralIndex(2000), GeneralIndex(1000)),
+		};
 
 		assert_noop!(
 			Slp::bond(
@@ -428,7 +504,11 @@ fn phala_bond_works() {
 
 		// intialize a delegator
 		initialize_preparation_setup();
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), PHA, None));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			PHA,
+			None
+		));
 
 		assert_noop!(
 			Slp::bond(
@@ -524,12 +604,20 @@ fn phala_unbond_works() {
 
 	let subaccount_0_location = MultiLocation {
 		parents: 1,
-		interior: X2(Parachain(2004), AccountId32 { network: None, id: subaccount_id_0.into() }),
+		interior: X2(
+			Parachain(2004),
+			AccountId32 {
+				network: None,
+				id: subaccount_id_0.into(),
+			},
+		),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
-		let share_price_multilocation =
-			MultiLocation { parents: 1, interior: X2(GeneralIndex(1000), GeneralIndex(1000)) };
+		let share_price_multilocation = MultiLocation {
+			parents: 1,
+			interior: X2(GeneralIndex(1000), GeneralIndex(1000)),
+		};
 
 		assert_noop!(
 			Slp::unbond(
@@ -674,13 +762,18 @@ fn phala_rebond_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
-		let share_price_multilocation =
-			MultiLocation { parents: 1, interior: X2(GeneralIndex(2000), GeneralIndex(1000)) };
+		let share_price_multilocation = MultiLocation {
+			parents: 1,
+			interior: X2(GeneralIndex(2000), GeneralIndex(1000)),
+		};
 
 		// environment setup
 		phala_setup();
@@ -731,7 +824,10 @@ fn phala_undelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -832,7 +928,10 @@ fn phala_redelegate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -904,7 +1003,10 @@ fn phala_liquidize_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -996,7 +1098,10 @@ fn phala_bond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1045,7 +1150,10 @@ fn phala_bond_confirm_works() {
 			query_id
 		));
 
-		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			None
+		);
 
 		let ledger_new = PhalaLedger::<BalanceOf<Runtime>> {
 			account: subaccount_0_location,
@@ -1075,7 +1183,10 @@ fn phala_unbond_confirm_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1123,7 +1234,10 @@ fn phala_unbond_confirm_works() {
 			query_id
 		));
 
-		assert_eq!(DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id), None);
+		assert_eq!(
+			DelegatorLedgerXcmUpdateQueue::<Runtime>::get(query_id),
+			None
+		);
 
 		let ledger_new = PhalaLedger::<BalanceOf<Runtime>> {
 			account: subaccount_0_location,
@@ -1153,7 +1267,10 @@ fn phala_transfer_back_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1166,7 +1283,10 @@ fn phala_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: exit_account_id_32,
+			}),
 		};
 
 		assert_noop!(
@@ -1204,7 +1324,10 @@ fn phala_transfer_to_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1217,7 +1340,10 @@ fn phala_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: entrance_account_id_32,
+			}),
 		};
 
 		let exit_account_id_32: [u8; 32] =
@@ -1226,7 +1352,10 @@ fn phala_transfer_to_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: exit_account_id_32,
+			}),
 		};
 
 		assert_noop!(
@@ -1264,7 +1393,10 @@ fn supplement_fee_account_whitelist_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1275,13 +1407,19 @@ fn supplement_fee_account_whitelist_works() {
 		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: entrance_account_id_32,
+			}),
 		};
 
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: exit_account_id_32,
+			}),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -1381,7 +1519,10 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1411,7 +1552,10 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: treasury_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: treasury_32,
+			}),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -1429,7 +1573,11 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VPHA, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), PHA, 100));
+		assert_ok!(Slp::increase_token_pool(
+			RuntimeOrigin::signed(ALICE),
+			PHA,
+			100
+		));
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
@@ -1467,7 +1615,10 @@ fn add_validator_and_remove_validator_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 
@@ -1476,7 +1627,11 @@ fn add_validator_and_remove_validator_works() {
 
 		initialize_preparation_setup();
 
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), PHA, None));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			PHA,
+			None
+		));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
@@ -1520,7 +1675,10 @@ fn phala_convert_asset_works() {
 		parents: 1,
 		interior: X2(
 			Parachain(2004),
-			AccountId32 { network: None, id: subaccount_0_account_id_32.into() },
+			AccountId32 {
+				network: None,
+				id: subaccount_0_account_id_32.into(),
+			},
 		),
 	};
 

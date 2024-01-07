@@ -78,6 +78,7 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = ();
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -134,7 +135,9 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
-		let t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		let t = frame_system::GenesisConfig::<Runtime>::default()
+			.build_storage()
+			.unwrap();
 
 		t.into()
 	}

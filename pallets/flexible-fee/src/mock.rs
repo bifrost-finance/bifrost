@@ -85,10 +85,16 @@ frame_support::construct_runtime!(
 );
 
 pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeCall =
-	RuntimeCall::Balances(BalancesCall::transfer_allow_death { dest: ALICE, value: 69 });
+	RuntimeCall::Balances(BalancesCall::transfer_allow_death {
+		dest: ALICE,
+		value: 69,
+	});
 
 pub(crate) const SALP_CONTRIBUTE_CALL: <Test as frame_system::Config>::RuntimeCall =
-	RuntimeCall::Salp(bifrost_salp::Call::contribute { index: 2001, value: 1_000_000_000_000 });
+	RuntimeCall::Salp(bifrost_salp::Call::contribute {
+		index: 2001,
+		value: 1_000_000_000_000,
+	});
 
 pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::RuntimeCall =
 	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
@@ -164,6 +170,7 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -244,11 +251,12 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::SalpContribute,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => {
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
 					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				},
+				}
+			}
 			_ => ExtraFeeInfo::default(),
 		}
 	}
@@ -326,7 +334,12 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
 
 		Ok(())
 	}
@@ -355,7 +368,10 @@ where
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
+	system::GenesisConfig::<Test>::default()
+		.build_storage()
+		.unwrap()
+		.into()
 }
 
 //************** Salp mock start *****************
@@ -466,11 +482,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -492,8 +503,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();

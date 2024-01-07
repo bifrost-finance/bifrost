@@ -38,7 +38,11 @@ impl<
 	> RoundInfo<B>
 {
 	pub fn new(current: RoundIndex, first: B, length: u32) -> RoundInfo<B> {
-		RoundInfo { current, first, length }
+		RoundInfo {
+			current,
+			first,
+			length,
+		}
 	}
 	/// Check if the round should be updated
 	pub fn should_update(&self, now: B) -> bool {

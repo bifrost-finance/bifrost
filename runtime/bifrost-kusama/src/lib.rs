@@ -86,14 +86,22 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use constants::currency::*;
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	dispatch::DispatchClass,
+	genesis_builder_helper::{build_config, create_default_config},
 	sp_runtime::traits::{Convert, ConvertInto},
-	traits::{Currency, EitherOfDiverse, Get, Imbalance, LockIdentifier, OnUnbalanced},
+	traits::{
+		fungible::HoldConsideration,
+		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		Currency, EitherOfDiverse, EnqueueWithOrigin, Get, Imbalance, LinearStoragePrice,
+		LockIdentifier, OnUnbalanced, TransformOrigin,
+	},
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
+use pallet_identity::legacy::IdentityInfo;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 // zenlink imports
@@ -112,7 +120,11 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
+use crate::xcm_config::RelayOrigin;
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
+use sp_runtime::traits::IdentityLookup;
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -143,7 +155,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+	NativeVersion {
+		runtime_version: VERSION,
+		can_author_with: Default::default(),
+	}
 }
 
 /// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
@@ -258,10 +273,12 @@ impl Contains<RuntimeCall> for CallFilter {
 					&currency_id,
 				),
 				// Balances module
-				RuntimeCall::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
-					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-						&NativeCurrencyId::get(),
-					),
+				RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
 				RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
 					dest: _,
 					value: _,
@@ -465,8 +482,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::ParachainStaking(..)
 			),
 			ProxyType::Staking => {
-				matches!(c, RuntimeCall::ParachainStaking(..) | RuntimeCall::Utility(..))
-			},
+				matches!(
+					c,
+					RuntimeCall::ParachainStaking(..) | RuntimeCall::Utility(..)
+				)
+			}
 			ProxyType::Governance => matches!(
 				c,
 				RuntimeCall::Democracy(..) |
@@ -483,12 +503,15 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 						RuntimeCall::Whitelist(..)
 			),
 			ProxyType::CancelProxy => {
-				matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
-			},
+				matches!(
+					c,
+					RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. })
+				)
+			}
 			ProxyType::IdentityJudgement => matches!(
 				c,
-				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. }) |
-					RuntimeCall::Utility(..)
+				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. })
+					| RuntimeCall::Utility(..)
 			),
 		}
 	}
@@ -523,6 +546,7 @@ parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
 	pub PreimageBaseDeposit: Balance = deposit::<Runtime>(2, 64);
 	pub PreimageByteDeposit: Balance = deposit::<Runtime>(0, 1);
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -530,8 +554,12 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRoot<AccountId>;
-	type BaseDeposit = PreimageBaseDeposit;
-	type ByteDeposit = PreimageByteDeposit;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
 }
 
 parameter_types! {
@@ -576,6 +604,7 @@ parameter_types! {
 	// Minimum 4 CENTS/byte
 	pub BasicDeposit: Balance = deposit::<Runtime>(1, 258);
 	pub FieldDeposit: Balance = deposit::<Runtime>(0, 66);
+	pub ByteDeposit: Balance = deposit::<Runtime>(1, 0);
 	pub SubAccountDeposit: Balance = deposit::<Runtime>(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
@@ -586,10 +615,10 @@ impl pallet_identity::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
-	type FieldDeposit = FieldDeposit;
+	type ByteDeposit = ByteDeposit;
+	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
-	type MaxAdditionalFields = MaxAdditionalFields;
 	type MaxRegistrars = MaxRegistrars;
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
@@ -634,10 +663,11 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
+	type MaxHolds = ConstU32<10>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-	type RuntimeHoldReason = ();
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 }
 
 parameter_types! {
@@ -855,6 +885,14 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type AssetKind = ();
+	type Beneficiary = AccountId;
+	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
+	type Paymaster = PayFromAccount<pallet_balances::Pallet<Runtime>, BifrostTreasuryAccount>;
+	type BalanceConverter = UnityAssetBalanceConversion;
+	type PayoutPeriod = SpendPeriod;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -881,6 +919,7 @@ impl pallet_tips::Config for Runtime {
 	type TipReportDepositBase = TipReportDepositBase;
 	type Tippers = PhragmenElection;
 	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
+	type MaxTipAmount = ();
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -906,8 +945,10 @@ where
 		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
 	)> {
 		// take the biggest period possible.
-		let period =
-			BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+		let period = BlockHashCount::get()
+			.checked_next_power_of_two()
+			.map(|c| c / 2)
+			.unwrap_or(2) as u64;
 		let current_block = System::block_number()
 			.saturated_into::<u64>()
 			// The `System::block_number` is initialized with `n+1`,
@@ -956,7 +997,7 @@ parameter_types! {
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpMessageHandler = DmpQueue;
+	type DmpQueue = EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -965,6 +1006,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type WeightInfo = ();
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1110,11 +1152,12 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => {
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
 					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				},
+				}
+			}
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
@@ -1225,7 +1268,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			} else {
 				MultiLocation::default()
 			}
-		},
+		}
 	}
 }
 
@@ -1906,6 +1949,7 @@ construct_runtime! {
 		PolkadotXcm: pallet_xcm = 41,
 		CumulusXcm: cumulus_pallet_xcm = 42,
 		DmpQueue: cumulus_pallet_dmp_queue = 43,
+		MessageQueue: pallet_message_queue = 44,
 
 		// utilities
 		Utility: pallet_utility = 50,
@@ -2424,6 +2468,16 @@ impl_runtime_apis! {
 			Executive::try_execute_block(block, state_root_check,signature_check, select).unwrap()
 		}
 	}
+
+	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+	fn create_default_config() -> Vec<u8> {
+		create_default_config::<RuntimeGenesisConfig>()
+	}
+
+	fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
+		build_config::<RuntimeGenesisConfig>(config)
+	}
+}
 }
 
 struct CheckInherents;

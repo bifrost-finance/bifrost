@@ -242,9 +242,9 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
 			ensure!(
-				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
-					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
-					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
+				mint_fee.map(|x| x < fee_denominator).unwrap_or(true)
+					&& swap_fee.map(|x| x < fee_denominator).unwrap_or(true)
+					&& redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
 				bifrost_stable_asset::Error::<T>::ArgumentsError
 			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
@@ -340,8 +340,12 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-		let MintResult { mint_amount, fee_amount, balances, total_supply } =
-			bifrost_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
+		let MintResult {
+			mint_amount,
+			fee_amount,
+			balances,
+			total_supply,
+		} = bifrost_stable_asset::Pallet::<T>::get_mint_amount(&pool_info, &amounts)?;
 		let a = T::StableAsset::get_a(
 			pool_info.a,
 			pool_info.a_block,
@@ -355,8 +359,8 @@ impl<T: Config> Pallet<T> {
 				continue;
 			}
 			ensure!(
-				amounts_old[i] >=
-					Self::downscale(
+				amounts_old[i]
+					>= Self::downscale(
 						*amount,
 						pool_id,
 						*pool_info
@@ -441,8 +445,8 @@ impl<T: Config> Pallet<T> {
 		let zero = Zero::zero();
 		for i in 0..amounts.len() {
 			ensure!(
-				amounts[i] >=
-					*min_redeem_amounts
+				amounts[i]
+					>= *min_redeem_amounts
 						.get(i as usize)
 						.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 				bifrost_stable_asset::Error::<T>::RedeemUnderMin
@@ -518,13 +522,18 @@ impl<T: Config> Pallet<T> {
 					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 			)?;
 		}
-		let RedeemMultiResult { redeem_amount, fee_amount, balances, total_supply, burn_amount } =
-			bifrost_stable_asset::Pallet::<T>::get_redeem_multi_amount(
-				&mut pool_info,
-				&new_amounts,
-			)?;
+		let RedeemMultiResult {
+			redeem_amount,
+			fee_amount,
+			balances,
+			total_supply,
+			burn_amount,
+		} = bifrost_stable_asset::Pallet::<T>::get_redeem_multi_amount(&mut pool_info, &new_amounts)?;
 		let zero: T::Balance = Zero::zero();
-		ensure!(redeem_amount <= max_redeem_amount, Error::<T>::RedeemOverMax);
+		ensure!(
+			redeem_amount <= max_redeem_amount,
+			Error::<T>::RedeemOverMax
+		);
 		if fee_amount > zero {
 			<T as bifrost_stable_asset::Config>::Assets::transfer(
 				pool_info.pool_asset,
@@ -589,8 +598,13 @@ impl<T: Config> Pallet<T> {
 			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
 
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-		let RedeemSingleResult { mut dy, fee_amount, total_supply, balances, redeem_amount } =
-			bifrost_stable_asset::Pallet::<T>::get_redeem_single_amount(&mut pool_info, amount, i)?;
+		let RedeemSingleResult {
+			mut dy,
+			fee_amount,
+			total_supply,
+			balances,
+			redeem_amount,
+		} = bifrost_stable_asset::Pallet::<T>::get_redeem_single_amount(&mut pool_info, amount, i)?;
 		dy = Self::downscale(
 			dy,
 			pool_id,
@@ -602,8 +616,14 @@ impl<T: Config> Pallet<T> {
 		let i_usize = i as usize;
 		let pool_size = pool_info.assets.len();
 		let asset_length_usize = asset_length as usize;
-		ensure!(asset_length_usize == pool_size, bifrost_stable_asset::Error::<T>::ArgumentsError);
-		ensure!(dy >= min_redeem_amount, bifrost_stable_asset::Error::<T>::RedeemUnderMin);
+		ensure!(
+			asset_length_usize == pool_size,
+			bifrost_stable_asset::Error::<T>::ArgumentsError
+		);
+		ensure!(
+			dy >= min_redeem_amount,
+			bifrost_stable_asset::Error::<T>::RedeemUnderMin
+		);
 		if fee_amount > Zero::zero() {
 			T::MultiCurrency::transfer(
 				pool_info.pool_asset,
@@ -665,13 +685,17 @@ impl<T: Config> Pallet<T> {
 				.get(currency_id_in as usize)
 				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 		)?;
-		let SwapResult { dx: _, dy, y, balance_i } =
-			bifrost_stable_asset::Pallet::<T>::get_swap_amount(
-				&pool_info,
-				currency_id_in,
-				currency_id_out,
-				dx,
-			)?;
+		let SwapResult {
+			dx: _,
+			dy,
+			y,
+			balance_i,
+		} = bifrost_stable_asset::Pallet::<T>::get_swap_amount(
+			&pool_info,
+			currency_id_in,
+			currency_id_out,
+			dx,
+		)?;
 
 		let downscale_out = Self::downscale(
 			dy,
@@ -876,12 +900,12 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: &AssetIdOf<T>,
 	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
 		Pools::<T>::iter().find_map(|(pool_id, pool_info)| {
-			if pool_info.assets.get(0) == Some(currency_id_in) &&
-				pool_info.assets.get(1) == Some(currency_id_out)
+			if pool_info.assets.get(0) == Some(currency_id_in)
+				&& pool_info.assets.get(1) == Some(currency_id_out)
 			{
 				Some((pool_id, 0, 1))
-			} else if pool_info.assets.get(0) == Some(currency_id_out) &&
-				pool_info.assets.get(1) == Some(currency_id_in)
+			} else if pool_info.assets.get(0) == Some(currency_id_out)
+				&& pool_info.assets.get(1) == Some(currency_id_in)
 			{
 				Some((pool_id, 1, 0))
 			} else {

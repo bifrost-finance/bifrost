@@ -49,27 +49,31 @@ impl<T: Config> Pallet<T> {
 		if total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
-		conf.reward_rate.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
-			let increment: BalanceOf<T> = U512::from(
-				Self::last_time_reward_applicable()
-					.saturating_sub(conf.last_update_time)
-					.saturated_into::<u128>(),
-			)
-			.checked_mul(U512::from(reward.saturated_into::<u128>()))
-			.ok_or(ArithmeticError::Overflow)?
-			.checked_mul(U512::from(T::Multiplier::get().saturated_into::<u128>()))
-			.ok_or(ArithmeticError::Overflow)?
-			.checked_div(U512::from(total_supply.saturated_into::<u128>()))
-			.map(|x| u128::try_from(x))
-			.ok_or(ArithmeticError::Overflow)?
-			.map_err(|_| ArithmeticError::Overflow)?
-			.unique_saturated_into();
-			conf.reward_per_token_stored
-				.entry(*currency)
-				.and_modify(|total_reward| *total_reward = total_reward.saturating_add(increment))
-				.or_insert(increment);
-			Ok(())
-		})?;
+		conf.reward_rate
+			.iter()
+			.try_for_each(|(currency, &reward)| -> DispatchResult {
+				let increment: BalanceOf<T> = U512::from(
+					Self::last_time_reward_applicable()
+						.saturating_sub(conf.last_update_time)
+						.saturated_into::<u128>(),
+				)
+				.checked_mul(U512::from(reward.saturated_into::<u128>()))
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_mul(U512::from(T::Multiplier::get().saturated_into::<u128>()))
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_div(U512::from(total_supply.saturated_into::<u128>()))
+				.map(|x| u128::try_from(x))
+				.ok_or(ArithmeticError::Overflow)?
+				.map_err(|_| ArithmeticError::Overflow)?
+				.unique_saturated_into();
+				conf.reward_per_token_stored
+					.entry(*currency)
+					.and_modify(|total_reward| {
+						*total_reward = total_reward.saturating_add(increment)
+					})
+					.or_insert(increment);
+				Ok(())
+			})?;
 
 		IncentiveConfigs::<T>::set(conf.clone());
 		Ok(conf.reward_per_token_stored)
@@ -85,31 +89,33 @@ impl<T: Config> Pallet<T> {
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
-		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-			let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
-				.checked_mul(U256::from(
-					reward
-						.saturating_sub(
-							*Self::user_reward_per_token_paid(addr)
-								.get(currency)
-								.unwrap_or(&BalanceOf::<T>::zero()),
-						)
-						.saturated_into::<u128>(),
-				))
-				.ok_or(ArithmeticError::Overflow)?
-				.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
-				.map(|x| u128::try_from(x))
-				.ok_or(ArithmeticError::Overflow)?
-				.map_err(|_| ArithmeticError::Overflow)?
-				.unique_saturated_into();
-			rewards
-				.entry(*currency)
-				.and_modify(|total_reward| {
-					*total_reward = total_reward.saturating_add(increment);
-				})
-				.or_insert(increment);
-			Ok(())
-		})?;
+		reward_per_token
+			.iter()
+			.try_for_each(|(currency, reward)| -> DispatchResult {
+				let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
+					.checked_mul(U256::from(
+						reward
+							.saturating_sub(
+								*Self::user_reward_per_token_paid(addr)
+									.get(currency)
+									.unwrap_or(&BalanceOf::<T>::zero()),
+							)
+							.saturated_into::<u128>(),
+					))
+					.ok_or(ArithmeticError::Overflow)?
+					.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
+					.map(|x| u128::try_from(x))
+					.ok_or(ArithmeticError::Overflow)?
+					.map_err(|_| ArithmeticError::Overflow)?
+					.unique_saturated_into();
+				rewards
+					.entry(*currency)
+					.and_modify(|total_reward| {
+						*total_reward = total_reward.saturating_add(increment);
+					})
+					.or_insert(increment);
+				Ok(())
+			})?;
 		Ok(rewards)
 	}
 
@@ -136,14 +142,16 @@ impl<T: Config> Pallet<T> {
 		Self::update_reward(Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
-			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
-				T::MultiCurrency::transfer(
-					*currency,
-					&T::IncentivePalletId::get().into_account_truncating(),
-					addr,
-					reward,
-				)
-			})?;
+			rewards
+				.iter()
+				.try_for_each(|(currency, &reward)| -> DispatchResult {
+					T::MultiCurrency::transfer(
+						*currency,
+						&T::IncentivePalletId::get().into_account_truncating(),
+						addr,
+						reward,
+					)
+				})?;
 			Rewards::<T>::remove(addr);
 			Self::deposit_event(Event::Rewarded {
 				addr: addr.to_owned(),

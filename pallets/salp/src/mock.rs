@@ -137,6 +137,7 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -255,7 +256,12 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
 
 		Ok(())
 	}
@@ -317,7 +323,9 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
-		Ok(RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get())))
+		Ok(RuntimeOrigin::from(RawOrigin::Signed(
+			ConfirmMuitiSigAccount::get(),
+		)))
 	}
 }
 
@@ -522,11 +530,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -534,7 +537,7 @@ impl pallet_xcm::Config for Test {
 	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmExecutor = DoNothingExecuteXcm;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = ();
 	type XcmTeleportFilter = Nothing;
@@ -548,8 +551,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -558,7 +559,11 @@ impl pallet_xcm::Config for Test {
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: None, id: account.into() }).into()
+		X1(AccountId32 {
+			network: None,
+			id: account.into(),
+		})
+		.into()
 	}
 }
 
@@ -585,7 +590,9 @@ impl Get<Pid> for ParaInfo {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default()
+		.build_storage()
+		.unwrap();
 	pub const DOLLARS: Balance = 1_000_000_000_000;
 
 	let currency = vec![
@@ -629,9 +636,11 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	crate::GenesisConfig::<Test> { initial_multisig_account: Some(ALICE) }
-		.assimilate_storage(&mut t)
-		.unwrap();
+	crate::GenesisConfig::<Test> {
+		initial_multisig_account: Some(ALICE),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	t.into()
 }

@@ -79,7 +79,10 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 			return res;
 		}
 
-		if Self::total_supply(underlying_id).checked_add(amount).is_none() {
+		if Self::total_supply(underlying_id)
+			.checked_add(amount)
+			.is_none()
+		{
 			return DepositConsequence::Overflow;
 		}
 
@@ -143,8 +146,8 @@ impl<T: Config> Pallet<T> {
 		_keep_alive: bool,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		ensure!(
-			amount <=
-				Self::reducible_balance(
+			amount
+				<= Self::reducible_balance(
 					lend_token_id,
 					source,
 					Preservation::Expendable,
@@ -175,8 +178,10 @@ impl<T: Config> Pallet<T> {
 			source,
 			|deposits| -> DispatchResult {
 				let mut d = deposits.unwrap_or_default();
-				d.voucher_balance =
-					d.voucher_balance.checked_sub(amount).ok_or(ArithmeticError::Underflow)?;
+				d.voucher_balance = d
+					.voucher_balance
+					.checked_sub(amount)
+					.ok_or(ArithmeticError::Underflow)?;
 				if d.voucher_balance.is_zero() {
 					// remove deposits storage if zero balance
 					*deposits = None;
@@ -188,8 +193,10 @@ impl<T: Config> Pallet<T> {
 		)?;
 
 		AccountDeposits::<T>::try_mutate(underlying_id, dest, |deposits| -> DispatchResult {
-			deposits.voucher_balance =
-				deposits.voucher_balance.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
+			deposits.voucher_balance = deposits
+				.voucher_balance
+				.checked_add(amount)
+				.ok_or(ArithmeticError::Overflow)?;
 			Ok(())
 		})?;
 
@@ -201,8 +208,10 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let underlying_id = Self::underlying_id(lend_token_id)?;
-		let Deposits { is_collateral, voucher_balance } =
-			Self::account_deposits(underlying_id, who);
+		let Deposits {
+			is_collateral,
+			voucher_balance,
+		} = Self::account_deposits(underlying_id, who);
 
 		if !is_collateral {
 			return Ok(voucher_balance);

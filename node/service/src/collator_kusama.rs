@@ -19,7 +19,10 @@
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{sync::Arc, time::Duration};
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-kusama-runtime",
+	feature = "with-bifrost-runtime"
+))]
 pub use bifrost_kusama_runtime;
 use bifrost_kusama_runtime::RuntimeApi;
 use cumulus_client_cli::CollatorOptions;
@@ -38,6 +41,7 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use polkadot_primitives::CollatorPair;
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
@@ -54,12 +58,20 @@ use substrate_prometheus_endpoint::Registry;
 type HostFunctions = sp_io::SubstrateHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
-type HostFunctions =
-	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
+type HostFunctions = (
+	sp_io::SubstrateHostFunctions,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-kusama-runtime",
+	feature = "with-bifrost-runtime"
+))]
 pub struct BifrostExecutor;
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-kusama-runtime",
+	feature = "with-bifrost-runtime"
+))]
 impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
@@ -87,7 +99,11 @@ pub fn new_partial(
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
-		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(
+			ParachainBlockImport,
+			Option<Telemetry>,
+			Option<TelemetryWorkerHandle>,
+		),
 	>,
 	sc_service::Error,
 > {
@@ -104,7 +120,9 @@ pub fn new_partial(
 
 	let heap_pages = config
 		.default_heap_pages
-		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static { extra_pages: h as _ });
+		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static {
+			extra_pages: h as _,
+		});
 
 	let executor = sc_executor::WasmExecutor::<HostFunctions>::builder()
 		.with_execution_method(config.wasm_method)
@@ -125,7 +143,9 @@ pub fn new_partial(
 	let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
 
 	let telemetry = telemetry.map(|(worker, telemetry)| {
-		task_manager.spawn_handle().spawn("telemetry", None, worker.run());
+		task_manager
+			.spawn_handle()
+			.spawn("telemetry", None, worker.run());
 		telemetry
 	});
 
@@ -139,7 +159,11 @@ pub fn new_partial(
 		client.clone(),
 	);
 
-	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
+	let select_chain = if dev {
+		Some(LongestChain::new(backend.clone()))
+	} else {
+		None
+	};
 
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
@@ -260,13 +284,16 @@ fn start_consensus(
 		collator_service,
 		// Very limited proposal time.
 		authoring_duration: Duration::from_millis(500),
+		collation_request_receiver: None,
 	};
 
 	let fut =
 		basic_aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _>(
 			params,
 		);
-	task_manager.spawn_essential_handle().spawn("aura", None, fut);
+	task_manager
+		.spawn_essential_handle()
+		.spawn("aura", None, fut);
 
 	Ok(())
 }
@@ -378,6 +405,18 @@ async fn start_node_impl(
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);
+		// Here you can check whether the hardware meets your chains' requirements. Putting a link
+		// in there and swapping out the requirements for your own are probably a good idea. The
+		// requirements for a para-chain are dictated by its relay-chain.
+		match SUBSTRATE_REFERENCE_HARDWARE.check_hardware(&hwbench) {
+			Err(err) if validator => {
+				log::warn!(
+				"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority'.",
+				err
+			);
+			}
+			_ => {}
+		}
 
 		if let Some(ref mut telemetry) = telemetry {
 			let telemetry_handle = telemetry.handle();

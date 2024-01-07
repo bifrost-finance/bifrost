@@ -95,12 +95,19 @@ where
 }
 
 fn native_currency_location(id: CurrencyId) -> MultiLocation {
-	MultiLocation::new(0, X1(Junction::from(BoundedVec::try_from(id.encode()).unwrap())))
+	MultiLocation::new(
+		0,
+		X1(Junction::from(BoundedVec::try_from(id.encode()).unwrap())),
+	)
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset { id: Concrete(id), fun: Fungible(_) } = asset {
+		if let MultiAsset {
+			id: Concrete(id),
+			fun: Fungible(_),
+		} = asset
+		{
 			Self::convert(id)
 		} else {
 			None
@@ -111,7 +118,11 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: None, id: account.into() }).into()
+		X1(AccountId32 {
+			network: None,
+			id: account.into(),
+		})
+		.into()
 	}
 }
 
@@ -127,8 +138,9 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 
 		match id {
 			Token(KSM) => Some(MultiLocation::parent()),
-			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
-				Some(native_currency_location(id)),
+			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) => {
+				Some(native_currency_location(id))
+			}
 			// Karura currencyId types
 			Token(KAR) => Some(MultiLocation::new(
 				1,
@@ -185,53 +197,63 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		}
 
 		match location {
-			MultiLocation { parents, interior } if parents == 1 => match interior {
-				X2(Parachain(id), GeneralKey { data, length }) if id == parachains::karura::ID =>
+			MultiLocation {
+				parents: 1,
+				interior,
+			} => match interior {
+				X2(Parachain(id), GeneralKey { data, length }) if id == parachains::karura::ID => {
 					if data[..length as usize] == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(KAR))
 					} else if data[..length as usize] == parachains::karura::KUSD_KEY.to_vec() {
 						Some(Stable(KUSD))
 					} else {
 						None
-					},
+					}
+				}
 				X2(Parachain(id), GeneralIndex(key)) if id == parachains::Statemine::ID => {
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(RMRK))
 					} else {
 						None
 					}
-				},
+				}
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
-					if (id == parachains::Statemine::ID &&
-						index == parachains::Statemine::PALLET_ID) =>
+					if (id == parachains::Statemine::ID
+						&& index == parachains::Statemine::PALLET_ID) =>
 				{
 					if key == parachains::Statemine::RMRK_ID as u128 {
 						Some(Token(RMRK))
 					} else {
 						None
 					}
-				},
+				}
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(PHA)),
 				X2(Parachain(id), PalletInstance(index))
-					if ((id == parachains::moonriver::ID) &&
-						(index == parachains::moonriver::PALLET_ID)) =>
-					Some(Token(MOVR)),
+					if ((id == parachains::moonriver::ID)
+						&& (index == parachains::moonriver::PALLET_ID)) =>
+				{
+					Some(Token(MOVR))
+				}
 				_ => None,
 			},
-			MultiLocation { parents, interior } if parents == 0 => match interior {
+			MultiLocation {
+				parents: 0,
+				interior,
+			} => match interior {
 				X1(GeneralKey { data, length }) => {
 					// decode the general key
 					let key = &data[..length as usize];
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(ASG) | Native(BNC) | VToken(KSM) | VSToken(KSM) | Token(ZLK) =>
-								Some(currency_id),
+							Native(ASG) | Native(BNC) | VToken(KSM) | VSToken(KSM) | Token(ZLK) => {
+								Some(currency_id)
+							}
 							_ => None,
 						}
 					} else {
 						None
 					}
-				},
+				}
 				_ => None,
 			},
 			_ => None,
@@ -331,26 +353,35 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		// Then BuyExecution
 		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
-			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
+			BuyExecution {
+				weight_limit: Limited(ref mut weight),
+				..
+			} => {
 				if weight.all_gte(max_weight) {
 					weight.set_ref_time(max_weight.ref_time());
 					weight.set_proof_size(max_weight.proof_size());
 				};
-			},
-			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+			}
+			BuyExecution {
+				ref mut weight_limit,
+				..
+			} if weight_limit == &Unlimited => {
 				*weight_limit = Limited(max_weight);
-			},
-			_ => {},
+			}
+			_ => {}
 		};
 
 		// Then Transact
 		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
-			Transact { ref mut require_weight_at_most, .. } => {
+			Transact {
+				ref mut require_weight_at_most,
+				..
+			} => {
 				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
 				*require_weight_at_most = weight;
 				Ok(())
-			},
+			}
 			_ => Err(ProcessMessageError::Unsupported),
 		}
 	}
@@ -506,7 +537,11 @@ parameter_types! {
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
-		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
+		if let MultiAsset {
+			id: Concrete(location),
+			fun: Fungible(amount),
+		} = revenue
+		{
 			if let Some(currency_id) =
 				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(location)
 			{
@@ -546,7 +581,10 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		#[cfg(feature = "runtime-benchmarks")]
 		{
-			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
+			if matches!(
+				call,
+				RuntimeCall::System(frame_system::Call::remark_with_event { .. })
+			) {
 				return true;
 			}
 		}
@@ -689,11 +727,6 @@ pub type XcmRouter = (
 	XcmpQueue,
 );
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
@@ -721,8 +754,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -737,18 +768,45 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ChannelInfo = ParachainSystem;
 	type RuntimeEvent = RuntimeEvent;
 	type VersionWrapper = PolkadotXcm;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+	// Enqueue XCMP messages from siblings for later processing.
+	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+	type MaxInboundSuspended = ConstU32<1_000>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
-	type PriceForSiblingDelivery = ();
+	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
+	type WeightInfo = ();
 	type RuntimeEvent = RuntimeEvent;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type DmpSink = EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+}
+
+parameter_types! {
+	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
+}
+
+impl pallet_message_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type MessageProcessor =
+		pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type MessageProcessor = xcm_builder::ProcessXcmMessage<
+		AggregateMessageOrigin,
+		xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+		RuntimeCall,
+	>;
+	type Size = u32;
+	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+	type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
+	type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+	type HeapSize = ConstU32<{ 64 * 1024 }>;
+	type MaxStale = ConstU32<8>;
+	type ServiceWeight = MessageQueueServiceWeight;
 }
 
 // orml runtime start
@@ -794,8 +852,8 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostSalpLiteCrowdloanId::get(),
 		)
@@ -805,9 +863,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&VsbondAuctionPalletId::get(),
 		)
-		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
-			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(
+		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			|| LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(
 				&ParachainStakingPalletId::get(),
 			)
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
@@ -817,17 +875,17 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			&SlpEntrancePalletId::get(),
 		)
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
-			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a)
+			|| FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(
 				&SystemStakingPalletId::get(),
 			)
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
-			a.eq(&ZenklinkFeeAccount::get())
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+			|| a.eq(&ZenklinkFeeAccount::get())
 	}
 }
 

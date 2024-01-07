@@ -35,6 +35,7 @@ pallet-elections-phragmen = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-indices = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-message-queue = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
@@ -54,6 +55,7 @@ sp-arithmetic = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
+sp-genesis-builder = { workspace = true }
 sp-inherents = { workspace = true }
 sp-io = { workspace = true }
 sp-offchain = { workspace = true }
@@ -74,12 +76,14 @@ cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
+parachains-common = { workspace = true }
 parachain-info = { workspace = true }
 
 # Polkadot dependencies
 pallet-xcm = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 polkadot-primitives = { workspace = true }
+polkadot-runtime-common = { workspace = true }
 xcm = { workspace = true }
 xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
@@ -166,6 +170,7 @@ std = [
 	"pallet-identity/std",
 	"pallet-indices/std",
 	"pallet-membership/std",
+	"pallet-message-queue/std",
 	"pallet-multisig/std",
 	"pallet-preimage/std",
 	"pallet-proxy/std",
@@ -187,6 +192,7 @@ std = [
 	"sp-core/std",
 	"sp-inherents/std",
 	"sp-io/std",
+	"sp-genesis-builder/std",
 	"sp-offchain/std",
 	"sp-runtime/std",
 	"sp-session/std",
@@ -207,6 +213,7 @@ std = [
 
 	"pallet-xcm/std",
 	"polkadot-parachain-primitives/std",
+	"polkadot-runtime-common/std",
 	"polkadot-primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
@@ -285,6 +292,7 @@ runtime-benchmarks = [
 	"pallet-tips/runtime-benchmarks",
 	"pallet-elections-phragmen/runtime-benchmarks",
 	"pallet-whitelist/runtime-benchmarks",
+	"polkadot-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",

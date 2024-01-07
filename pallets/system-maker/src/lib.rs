@@ -99,11 +99,26 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Charged { who: AccountIdOf<T>, currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
-		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>> },
-		Closed { currency_id: CurrencyIdOf<T> },
-		Paid { currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
-		RedeemFailed { vcurrency_id: CurrencyIdOf<T>, amount: BalanceOf<T> },
+		Charged {
+			who: AccountIdOf<T>,
+			currency_id: CurrencyIdOf<T>,
+			value: BalanceOf<T>,
+		},
+		ConfigSet {
+			currency_id: CurrencyIdOf<T>,
+			info: Info<BalanceOf<T>>,
+		},
+		Closed {
+			currency_id: CurrencyIdOf<T>,
+		},
+		Paid {
+			currency_id: CurrencyIdOf<T>,
+			value: BalanceOf<T>,
+		},
+		RedeemFailed {
+			vcurrency_id: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -161,7 +176,10 @@ pub mod pallet {
 
 			let vcurrency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			ensure!(vcurrency_id == info.vcurrency_id, Error::<T>::NotSupportTokenType);
+			ensure!(
+				vcurrency_id == info.vcurrency_id,
+				Error::<T>::NotSupportTokenType
+			);
 			Infos::<T>::mutate(currency_id, |old_info| {
 				*old_info = Some(info.clone());
 			});
@@ -187,7 +205,11 @@ pub mod pallet {
 				value,
 			)?;
 
-			Self::deposit_event(Event::Charged { who: exchanger, currency_id, value });
+			Self::deposit_event(Event::Charged {
+				who: exchanger,
+				currency_id,
+				value,
+			});
 
 			Ok(())
 		}

@@ -65,7 +65,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
+		ensure!(
+			_locked.amount == BalanceOf::<T>::zero(),
+			Error::<T>::LockExist
+		); // Withdraw old tokens first
 
 		Self::_deposit_for(addr, _value, unlock_time, _locked)?;
 		Self::deposit_event(Event::LockCreated {
@@ -97,7 +100,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
+		ensure!(
+			_locked.amount > BalanceOf::<T>::zero(),
+			Error::<T>::LockNotExist
+		);
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
 		Self::_deposit_for(addr, BalanceOf::<T>::zero(), unlock_time, _locked)?;
@@ -116,7 +122,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 		Self::_deposit_for(addr, value, Zero::zero(), _locked)?;
-		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
+		Self::deposit_event(Event::AmountIncreased {
+			addr: addr.to_owned(),
+			value,
+		});
 		Ok(())
 	}
 
@@ -148,7 +157,10 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
-		Self::deposit_event(Event::Withdrawn { addr: addr.to_owned(), value });
+		Self::deposit_event(Event::Withdrawn {
+			addr: addr.to_owned(),
+			value,
+		});
 		Self::deposit_event(Event::Supply {
 			supply_before,
 			supply: supply_before.saturating_sub(value),
@@ -273,43 +285,45 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNu
 		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		remaining: BalanceOf<T>,
 	) -> DispatchResult {
-		rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-			let mut total_reward: BalanceOf<T> = *reward;
-			if remaining != Zero::zero() {
-				let leftover: BalanceOf<T> = conf
-					.reward_rate
-					.get(currency)
-					.unwrap_or(&Zero::zero())
-					.checked_mul(&remaining)
+		rewards
+			.iter()
+			.try_for_each(|(currency, reward)| -> DispatchResult {
+				let mut total_reward: BalanceOf<T> = *reward;
+				if remaining != Zero::zero() {
+					let leftover: BalanceOf<T> = conf
+						.reward_rate
+						.get(currency)
+						.unwrap_or(&Zero::zero())
+						.checked_mul(&remaining)
+						.ok_or(ArithmeticError::Overflow)?;
+					total_reward = total_reward.saturating_add(leftover);
+				}
+				let currency_amount = T::MultiCurrency::free_balance(
+					*currency,
+					&T::IncentivePalletId::get().into_account_truncating(),
+				);
+				// Make sure the new reward is less than or equal to the reward owned by the
+				// IncentivePalletId
+				ensure!(
+					total_reward <= currency_amount.saturating_add(*reward),
+					Error::<T>::NotEnoughBalance
+				);
+				let new_reward = total_reward
+					.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
 					.ok_or(ArithmeticError::Overflow)?;
-				total_reward = total_reward.saturating_add(leftover);
-			}
-			let currency_amount = T::MultiCurrency::free_balance(
-				*currency,
-				&T::IncentivePalletId::get().into_account_truncating(),
-			);
-			// Make sure the new reward is less than or equal to the reward owned by the
-			// IncentivePalletId
-			ensure!(
-				total_reward <= currency_amount.saturating_add(*reward),
-				Error::<T>::NotEnoughBalance
-			);
-			let new_reward = total_reward
-				.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
-				.ok_or(ArithmeticError::Overflow)?;
-			conf.reward_rate
-				.entry(*currency)
-				.and_modify(|total_reward| {
-					*total_reward = new_reward;
-				})
-				.or_insert(new_reward);
-			T::MultiCurrency::transfer(
-				*currency,
-				addr,
-				&T::IncentivePalletId::get().into_account_truncating(),
-				*reward,
-			)
-		})
+				conf.reward_rate
+					.entry(*currency)
+					.and_modify(|total_reward| {
+						*total_reward = new_reward;
+					})
+					.or_insert(new_reward);
+				T::MultiCurrency::transfer(
+					*currency,
+					addr,
+					&T::IncentivePalletId::get().into_account_truncating(),
+					*reward,
+				)
+			})
 	}
 }
 

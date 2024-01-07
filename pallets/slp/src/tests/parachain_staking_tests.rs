@@ -55,23 +55,39 @@ fn initialize_parachain_staking_delegator() {
 			Some(mins_and_maxs)
 		));
 
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), BNC, None,));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			None,
+		));
 		assert_eq!(DelegatorNextIndex::<Runtime>::get(BNC), 1);
 	});
 }
 
 fn parachain_staking_setup() {
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 	let treasury_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: treasury_account_id_32,
+		}),
 	};
 
 	// set operate_origins
-	assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), BNC, Some(ALICE)));
+	assert_ok!(Slp::set_operate_origin(
+		RuntimeOrigin::signed(ALICE),
+		BNC,
+		Some(ALICE)
+	));
 
 	// Set OngoingTimeUnitUpdateInterval as 1/3 round(600 blocks per round, 12 seconds per block)
 	assert_ok!(Slp::set_ongoing_time_unit_update_interval(
@@ -90,9 +106,15 @@ fn parachain_staking_setup() {
 	));
 
 	// Initialize currency delays.
-	let delay =
-		Delays { unlock_delay: TimeUnit::Round(24), leave_delegators_delay: TimeUnit::Round(24) };
-	assert_ok!(Slp::set_currency_delays(RuntimeOrigin::signed(ALICE), BNC, Some(delay)));
+	let delay = Delays {
+		unlock_delay: TimeUnit::Round(24),
+		leave_delegators_delay: TimeUnit::Round(24),
+	};
+	assert_ok!(Slp::set_currency_delays(
+		RuntimeOrigin::signed(ALICE),
+		BNC,
+		Some(delay)
+	));
 
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 100_000_000_000,
@@ -116,7 +138,11 @@ fn parachain_staking_setup() {
 	));
 
 	// First to setup index-multilocation relationship of subaccount_0
-	assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), BNC, None,));
+	assert_ok!(Slp::initialize_delegator(
+		RuntimeOrigin::signed(ALICE),
+		BNC,
+		None,
+	));
 
 	// update some BNC balance to treasury account
 	assert_ok!(Currencies::update_balance(
@@ -147,161 +173,199 @@ fn parachain_staking_setup() {
 fn parachain_staking_bond_to_liquidize_works() {
 	env_logger::try_init().unwrap_or(());
 
-	let subaccount_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: ALICE.into() }) };
+	let subaccount_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: ALICE.into(),
+		}),
+	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
-	ExtBuilder::default().init_for_alice_n_bob().build().execute_with(|| {
-		// environment setup
-		parachain_staking_setup();
-		initialize_parachain_staking_delegator();
-		env_logger::try_init().unwrap_or(());
+	ExtBuilder::default()
+		.init_for_alice_n_bob()
+		.build()
+		.execute_with(|| {
+			// environment setup
+			parachain_staking_setup();
+			initialize_parachain_staking_delegator();
+			env_logger::try_init().unwrap_or(());
 
-		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location);
-		DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location, 0);
+			DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location);
+			DelegatorsMultilocation2Index::<Runtime>::insert(BNC, subaccount_0_location, 0);
 
-		assert_ok!(ParachainStaking::join_candidates(
-			RuntimeOrigin::signed(BOB),
-			10_000_000_000_000u128,
-			10_000_000u32
-		));
-		assert_ok!(ParachainStaking::join_candidates(
-			RuntimeOrigin::signed(CHARLIE),
-			10_000_000_000_000u128,
-			10_000_000u32
-		));
+			assert_ok!(ParachainStaking::join_candidates(
+				RuntimeOrigin::signed(BOB),
+				10_000_000_000_000u128,
+				10_000_000u32
+			));
+			assert_ok!(ParachainStaking::join_candidates(
+				RuntimeOrigin::signed(CHARLIE),
+				10_000_000_000_000u128,
+				10_000_000u32
+			));
 
-		let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
+			let entrance_account_id_32: [u8; 32] = PalletId(*b"bf/vtkin").into_account_truncating();
 
-		let entrance_account_location = MultiLocation {
-			parents: 0,
-			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
-		};
-		let entrance_account = AccountId::new(entrance_account_id_32);
-		assert_eq!(Balances::free_balance(&entrance_account), 100000000000000);
+			let entrance_account_location = MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 {
+					network: None,
+					id: entrance_account_id_32,
+				}),
+			};
+			let entrance_account = AccountId::new(entrance_account_id_32);
+			assert_eq!(Balances::free_balance(&entrance_account), 100000000000000);
 
-		assert_ok!(Slp::transfer_to(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(entrance_account_location),
-			Box::new(subaccount_0_location),
-			5_000_000_000_000,
-		));
-		assert_ok!(Slp::bond(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(subaccount_0_location),
-			5_000_000_000_000,
-			Some(validator_0_location)
-		));
-		assert_ok!(Slp::bond_extra(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(subaccount_0_location),
-			Some(validator_0_location),
-			5_000_000_000_000,
-		));
-		assert_ok!(Slp::unbond(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(subaccount_0_location),
-			Some(validator_0_location),
-			2_000_000_000_000,
-		));
+			assert_ok!(Slp::transfer_to(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(entrance_account_location),
+				Box::new(subaccount_0_location),
+				5_000_000_000_000,
+			));
+			assert_ok!(Slp::bond(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+				5_000_000_000_000,
+				Some(validator_0_location)
+			));
+			assert_ok!(Slp::bond_extra(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+				Some(validator_0_location),
+				5_000_000_000_000,
+			));
+			assert_ok!(Slp::unbond(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+				Some(validator_0_location),
+				2_000_000_000_000,
+			));
 
-		let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
-		delegation_set.insert(validator_0_location, 10_000_000_000_000);
+			let mut delegation_set: BTreeMap<MultiLocation, BalanceOf<Runtime>> = BTreeMap::new();
+			delegation_set.insert(validator_0_location, 10_000_000_000_000);
 
-		let request = OneToManyScheduledRequest {
-			validator: validator_0_location,
-			when_executable: TimeUnit::Round(50),
-			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
-		};
+			let request = OneToManyScheduledRequest {
+				validator: validator_0_location,
+				when_executable: TimeUnit::Round(50),
+				action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
+			};
 
-		let mut request_list = Vec::new();
+			let mut request_list = Vec::new();
 
-		// random account to test ordering
-		let validator_10: [u8; 32] =
-			hex_literal::hex!["6d6f646c62662f76746b696e0000000000000000000000000000000000000000"]
-				.into();
-		let validator_10_location = MultiLocation {
-			parents: 0,
-			interior: X1(AccountId32 { network: None, id: validator_10 }),
-		};
-		let request10 = OneToManyScheduledRequest {
-			validator: validator_10_location,
-			when_executable: TimeUnit::Round(50),
-			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
-		};
+			// random account to test ordering
+			let validator_10: [u8; 32] = hex_literal::hex![
+				"6d6f646c62662f76746b696e0000000000000000000000000000000000000000"
+			]
+			.into();
+			let validator_10_location = MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 {
+					network: None,
+					id: validator_10,
+				}),
+			};
+			let request10 = OneToManyScheduledRequest {
+				validator: validator_10_location,
+				when_executable: TimeUnit::Round(50),
+				action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
+			};
 
-		// random account to test ordering
-		let validator_11: [u8; 32] =
-			hex_literal::hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
-				.into();
-		let validator_11_location = MultiLocation {
-			parents: 0,
-			interior: X1(AccountId32 { network: None, id: validator_11 }),
-		};
-		let request11 = OneToManyScheduledRequest {
-			validator: validator_11_location,
-			when_executable: TimeUnit::Round(50),
-			action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
-		};
-		request_list.push(request11);
-		request_list.push(request10);
-		request_list.push(request);
+			// random account to test ordering
+			let validator_11: [u8; 32] = hex_literal::hex![
+				"624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"
+			]
+			.into();
+			let validator_11_location = MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 {
+					network: None,
+					id: validator_11,
+				}),
+			};
+			let request11 = OneToManyScheduledRequest {
+				validator: validator_11_location,
+				when_executable: TimeUnit::Round(50),
+				action: OneToManyDelegationAction::Revoke(10_000_000_000_000),
+			};
+			request_list.push(request11);
+			request_list.push(request10);
+			request_list.push(request);
 
-		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
-			BTreeMap::new();
-		request_briefs_set.insert(validator_0_location, (TimeUnit::Round(50), 10_000_000_000_000));
-		// set delegator_0 ledger
-		let parachain_staking_ledger2 = OneToManyLedger {
-			account: subaccount_0_location,
-			total: 10_000_000_000_000,
-			less_total: 10_000_000_000_000,
-			delegations: delegation_set,
-			requests: request_list,
-			request_briefs: request_briefs_set,
-			status: OneToManyDelegatorStatus::Active,
-		};
-		let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
-		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger2.clone());
+			let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
+				BTreeMap::new();
+			request_briefs_set.insert(
+				validator_0_location,
+				(TimeUnit::Round(50), 10_000_000_000_000),
+			);
+			// set delegator_0 ledger
+			let parachain_staking_ledger2 = OneToManyLedger {
+				account: subaccount_0_location,
+				total: 10_000_000_000_000,
+				less_total: 10_000_000_000_000,
+				delegations: delegation_set,
+				requests: request_list,
+				request_briefs: request_briefs_set,
+				status: OneToManyDelegatorStatus::Active,
+			};
+			let ledger2 = Ledger::ParachainStaking(parachain_staking_ledger2);
+			DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger2.clone());
 
-		System::set_block_number(700_000);
-		assert_ok!(Slp::update_ongoing_time_unit(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			TimeUnit::Round(48)
-		));
-		bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
-		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
-		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
+			System::set_block_number(700_000);
+			assert_ok!(Slp::update_ongoing_time_unit(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				TimeUnit::Round(48)
+			));
+			bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
+			assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
+			assert_ok!(VtokenMinting::update_ongoing_time_unit(
+				BNC,
+				TimeUnit::Round(1000)
+			));
 
-		// let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
-		// log::debug!("test5{:?}", delegation_scheduled_requests);
+			// let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
+			// log::debug!("test5{:?}", delegation_scheduled_requests);
 
-		assert_ok!(Slp::liquidize(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(subaccount_0_location),
-			None,
-			Some(validator_0_location),
-			None
-		));
-	});
+			assert_ok!(Slp::liquidize(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+				None,
+				Some(validator_0_location),
+				None
+			));
+		});
 }
 
 #[test]
 fn parachain_staking_bond_extra_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -345,11 +409,19 @@ fn parachain_staking_bond_extra_works() {
 fn parachain_staking_unbond_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -393,11 +465,19 @@ fn parachain_staking_unbond_works() {
 fn parachain_staking_unbond_all_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -425,7 +505,11 @@ fn parachain_staking_unbond_all_works() {
 		DelegatorLedgers::<Runtime>::insert(BNC, subaccount_0_location, ledger);
 
 		assert_noop!(
-			Slp::unbond_all(RuntimeOrigin::signed(ALICE), BNC, Box::new(subaccount_0_location),),
+			Slp::unbond_all(
+				RuntimeOrigin::signed(ALICE),
+				BNC,
+				Box::new(subaccount_0_location),
+			),
 			Error::<Runtime>::Unexpected
 		);
 	});
@@ -435,11 +519,19 @@ fn parachain_staking_unbond_all_works() {
 fn parachain_staking_rebond_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -457,7 +549,10 @@ fn parachain_staking_rebond_works() {
 		request_list.push(request);
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		request_briefs_set.insert(validator_0_location, (TimeUnit::Round(24), 2_000_000_000_000));
+		request_briefs_set.insert(
+			validator_0_location,
+			(TimeUnit::Round(24), 2_000_000_000_000),
+		);
 
 		// set delegator_0 ledger
 		let parachain_staking_ledger = OneToManyLedger {
@@ -492,14 +587,27 @@ fn parachain_staking_rebond_works() {
 fn parachain_staking_undelegate_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
-	let validator_1_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: DAVE.into() }) };
+	let validator_1_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: DAVE.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -543,11 +651,19 @@ fn parachain_staking_undelegate_works() {
 fn parachain_staking_redelegate_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -565,7 +681,10 @@ fn parachain_staking_redelegate_works() {
 		request_list.push(request);
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		request_briefs_set.insert(validator_0_location, (TimeUnit::Round(24), 8_000_000_000_000));
+		request_briefs_set.insert(
+			validator_0_location,
+			(TimeUnit::Round(24), 8_000_000_000_000),
+		);
 
 		// set delegator_0 ledger
 		let parachain_staking_ledger = OneToManyLedger {
@@ -599,11 +718,19 @@ fn parachain_staking_redelegate_works() {
 fn parachain_staking_liquidize_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -623,7 +750,10 @@ fn parachain_staking_liquidize_works() {
 
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		request_briefs_set.insert(validator_0_location, (TimeUnit::Round(24), 2_000_000_000_000));
+		request_briefs_set.insert(
+			validator_0_location,
+			(TimeUnit::Round(24), 2_000_000_000_000),
+		);
 
 		// set delegator_0 ledger
 		let parachain_staking_ledger = OneToManyLedger {
@@ -687,9 +817,16 @@ fn parachain_staking_liquidize_works() {
 
 		let mut request_briefs_set: BTreeMap<MultiLocation, (TimeUnit, BalanceOf<Runtime>)> =
 			BTreeMap::new();
-		request_briefs_set.insert(validator_0_location, (TimeUnit::Round(50), 10_000_000_000_000));
+		request_briefs_set.insert(
+			validator_0_location,
+			(TimeUnit::Round(50), 10_000_000_000_000),
+		);
 
-		assert_ok!(Slp::initialize_delegator(RuntimeOrigin::signed(ALICE), BNC, None,));
+		assert_ok!(Slp::initialize_delegator(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			None,
+		));
 
 		assert_noop!(
 			Slp::bond(
@@ -754,7 +891,10 @@ fn parachain_staking_liquidize_works() {
 fn parachain_staking_transfer_back_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -764,7 +904,10 @@ fn parachain_staking_transfer_back_works() {
 
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: exit_account_id_32,
+			}),
 		};
 
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location);
@@ -791,7 +934,10 @@ fn parachain_staking_transfer_back_works() {
 fn parachain_staking_transfer_to_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -802,7 +948,10 @@ fn parachain_staking_transfer_to_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: entrance_account_id_32,
+			}),
 		};
 
 		DelegatorsIndex2Multilocation::<Runtime>::insert(BNC, 0, subaccount_0_location);
@@ -829,7 +978,10 @@ fn parachain_staking_transfer_to_works() {
 fn supplement_fee_account_whitelist_works() {
 	let subaccount_0_location = MultiLocation {
 		parents: 0,
-		interior: X1(AccountId32 { network: None, id: CHARLIE.into() }),
+		interior: X1(AccountId32 {
+			network: None,
+			id: CHARLIE.into(),
+		}),
 	};
 
 	ExtBuilder::default().build().execute_with(|| {
@@ -840,12 +992,18 @@ fn supplement_fee_account_whitelist_works() {
 
 		let entrance_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: entrance_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: entrance_account_id_32,
+			}),
 		};
 		let exit_account_id_32: [u8; 32] = PalletId(*b"bf/vtout").into_account_truncating();
 		let exit_account_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: exit_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: exit_account_id_32,
+			}),
 		};
 
 		let source_account_id_32: [u8; 32] = ALICE.into();
@@ -918,8 +1076,13 @@ fn supplement_fee_account_whitelist_works() {
 
 #[test]
 fn add_validator_and_remove_validator_works() {
-	let validator_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: BOB.into() }) };
+	let validator_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: BOB.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		let mut valis = vec![];
@@ -971,8 +1134,13 @@ fn add_validator_and_remove_validator_works() {
 
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
-	let subaccount_0_location =
-		MultiLocation { parents: 0, interior: X1(AccountId32 { network: None, id: ALICE.into() }) };
+	let subaccount_0_location = MultiLocation {
+		parents: 0,
+		interior: X1(AccountId32 {
+			network: None,
+			id: ALICE.into(),
+		}),
+	};
 
 	ExtBuilder::default().build().execute_with(|| {
 		// environment setup
@@ -980,14 +1148,21 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VBNC, &ALICE, 1000));
-		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), BNC, 1000));
+		assert_ok!(Slp::increase_token_pool(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			1000
+		));
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Permill::from_percent(20);
 		let treasury_account_id_32: [u8; 32] = PalletId(*b"bf/trsry").into_account_truncating();
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: None, id: treasury_account_id_32 }),
+			interior: X1(AccountId32 {
+				network: None,
+				id: treasury_account_id_32,
+			}),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -1012,7 +1187,10 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		));
 
 		// check token pool, should be 1000 + 1000 = 2000
-		assert_eq!(<Runtime as Config>::VtokenMinting::get_token_pool(BNC), 2000);
+		assert_eq!(
+			<Runtime as Config>::VtokenMinting::get_token_pool(BNC),
+			2000
+		);
 		// check vBNC issuance, should be 1000 + 20% * 1000 = 1200
 		assert_eq!(Currencies::total_issuance(VBNC), 1200);
 	});

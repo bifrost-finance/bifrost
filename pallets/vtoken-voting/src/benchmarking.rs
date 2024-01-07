@@ -38,9 +38,15 @@ fn funded_account<T: Config>(name: &'static str, index: u32) -> AccountIdOf<T> {
 }
 
 fn account_vote<T: Config>(b: BalanceOf<T>) -> AccountVote<BalanceOf<T>> {
-	let v = Vote { aye: true, conviction: Conviction::Locked1x };
+	let v = Vote {
+		aye: true,
+		conviction: Conviction::Locked1x,
+	};
 
-	AccountVote::Standard { vote: v, balance: b }
+	AccountVote::Standard {
+		vote: v,
+		balance: b,
+	}
 }
 
 fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
@@ -59,7 +65,10 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 		RawOrigin::Root.into(),
 		vtoken,
 		derivative_index,
-		VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
+		VoteRole::Standard {
+			aye: true,
+			conviction: Conviction::Locked1x,
+		},
 	)?;
 
 	Ok(())
@@ -82,9 +91,19 @@ mod benchmarks {
 		init_vote::<T>(vtoken)?;
 		let r = T::MaxVotes::get() - 1;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
-		for (i, index) in (0..T::MaxVotes::get()).collect::<Vec<_>>().iter().skip(1).enumerate() {
+		for (i, index) in (0..T::MaxVotes::get())
+			.collect::<Vec<_>>()
+			.iter()
+			.skip(1)
+			.enumerate()
+		{
 			Pallet::<T>::on_idle(Zero::zero(), Weight::MAX);
-			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, vote)?;
+			Pallet::<T>::vote(
+				RawOrigin::Signed(caller.clone()).into(),
+				vtoken,
+				*index,
+				vote,
+			)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
 				i as QueryId,
@@ -121,7 +140,12 @@ mod benchmarks {
 		let r = 50;
 		let response = Response::DispatchResult(MaybeErrorCode::Success);
 		for index in (0..r).collect::<Vec<_>>().iter() {
-			Pallet::<T>::vote(RawOrigin::Signed(caller.clone()).into(), vtoken, *index, old_vote)?;
+			Pallet::<T>::vote(
+				RawOrigin::Signed(caller.clone()).into(),
+				vtoken,
+				*index,
+				old_vote,
+			)?;
 			Pallet::<T>::notify_vote(
 				control_origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
 				*index as QueryId,
@@ -137,7 +161,12 @@ mod benchmarks {
 		let poll_index = 1u32;
 		let new_vote = account_vote::<T>(200u32.into());
 		#[extrinsic_call]
-		Pallet::<T>::vote(RawOrigin::Signed(caller.clone()), vtoken, poll_index, new_vote);
+		Pallet::<T>::vote(
+			RawOrigin::Signed(caller.clone()),
+			vtoken,
+			poll_index,
+			new_vote,
+		);
 
 		assert_matches!(
 			VotingFor::<T>::get(&caller),
@@ -231,7 +260,11 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, poll_index);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			vtoken,
+			poll_index,
+		);
 
 		Ok(())
 	}
@@ -278,7 +311,12 @@ mod benchmarks {
 		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, poll_index, info);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			vtoken,
+			poll_index,
+			info,
+		);
 
 		Ok(())
 	}
@@ -291,7 +329,11 @@ mod benchmarks {
 		let vote_locking_period = 100u32.into();
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, vote_locking_period);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			vtoken,
+			vote_locking_period,
+		);
 
 		Ok(())
 	}
@@ -304,7 +346,11 @@ mod benchmarks {
 		let undeciding_timeout = 100u32.into();
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, vtoken, undeciding_timeout);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			vtoken,
+			undeciding_timeout,
+		);
 
 		Ok(())
 	}
@@ -326,7 +372,11 @@ mod benchmarks {
 		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, query_id, response);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			query_id,
+			response,
+		);
 
 		Ok(())
 	}
@@ -348,7 +398,11 @@ mod benchmarks {
 		Pallet::<T>::vote(origin_caller.into(), vtoken, poll_index, vote)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, query_id, response);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			query_id,
+			response,
+		);
 
 		Ok(())
 	}
@@ -361,5 +415,9 @@ mod benchmarks {
 	//
 	// The line generates three steps per benchmark, with repeat=1 and the three steps are
 	//   [low, mid, high] of the range.
-	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext_benchmark(), crate::mock::Runtime);
+	impl_benchmark_test_suite!(
+		Pallet,
+		crate::mock::new_test_ext_benchmark(),
+		crate::mock::Runtime
+	);
 }

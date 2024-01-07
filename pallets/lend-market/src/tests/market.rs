@@ -90,7 +90,10 @@ macro_rules! rate_model_sanity_check {
 fn active_market_sets_state_to_active() {
 	new_test_ext().execute_with(|| {
 		LendMarket::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK).unwrap();
-		assert_eq!(LendMarket::market(VDOT).unwrap().state, MarketState::Pending);
+		assert_eq!(
+			LendMarket::market(VDOT).unwrap().state,
+			MarketState::Pending
+		);
 		LendMarket::activate_market(RuntimeOrigin::root(), VDOT).unwrap();
 		assert_eq!(LendMarket::market(VDOT).unwrap().state, MarketState::Active);
 	})
@@ -142,7 +145,11 @@ fn add_market_successfully_stores_a_new_market() {
 #[test]
 fn add_market_ensures_that_market_does_not_exist() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LendMarket::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK));
+		assert_ok!(LendMarket::add_market(
+			RuntimeOrigin::root(),
+			VDOT,
+			MARKET_MOCK
+		));
 		assert_noop!(
 			LendMarket::add_market(RuntimeOrigin::root(), VDOT, MARKET_MOCK),
 			Error::<Test>::MarketAlreadyExists
@@ -174,7 +181,11 @@ fn force_update_market_works() {
 			LendMarket::force_update_market(RuntimeOrigin::root(), DOT, market_mock(LUSDT)),
 			Error::<Test>::InvalidPtokenId
 		);
-		assert_ok!(LendMarket::force_update_market(RuntimeOrigin::root(), DOT, market_mock(LDOT)));
+		assert_ok!(LendMarket::force_update_market(
+			RuntimeOrigin::root(),
+			DOT,
+			market_mock(LDOT)
+		));
 		assert_eq!(LendMarket::market(DOT).unwrap().lend_token_id, LDOT);
 	})
 }
@@ -218,7 +229,10 @@ fn update_market_ensures_that_it_is_not_possible_to_modify_unknown_market_curren
 #[test]
 fn update_market_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(LendMarket::market(DOT).unwrap().close_factor, Ratio::from_percent(50));
+		assert_eq!(
+			LendMarket::market(DOT).unwrap().close_factor,
+			Ratio::from_percent(50)
+		);
 
 		let market = MARKET_MOCK;
 		assert_ok!(LendMarket::update_market(
@@ -234,15 +248,24 @@ fn update_market_works() {
 			None,
 		));
 
-		assert_eq!(LendMarket::market(DOT).unwrap().close_factor, Default::default());
-		assert_eq!(LendMarket::market(DOT).unwrap().supply_cap, market.supply_cap);
+		assert_eq!(
+			LendMarket::market(DOT).unwrap().close_factor,
+			Default::default()
+		);
+		assert_eq!(
+			LendMarket::market(DOT).unwrap().supply_cap,
+			market.supply_cap
+		);
 	})
 }
 
 #[test]
 fn update_market_should_not_work_if_with_invalid_params() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(LendMarket::market(DOT).unwrap().close_factor, Ratio::from_percent(50));
+		assert_eq!(
+			LendMarket::market(DOT).unwrap().close_factor,
+			Ratio::from_percent(50)
+		);
 
 		// check error code while collateral_factor is [0%, 100%)
 		assert_ok!(LendMarket::update_market(
@@ -331,7 +354,11 @@ fn update_rate_model_works() {
 			Rate::saturating_from_rational(35, 100),
 			Ratio::from_percent(80),
 		);
-		assert_ok!(LendMarket::update_rate_model(RuntimeOrigin::root(), DOT, new_rate_model,));
+		assert_ok!(LendMarket::update_rate_model(
+			RuntimeOrigin::root(),
+			DOT,
+			new_rate_model,
+		));
 		assert_eq!(LendMarket::market(DOT).unwrap().rate_model, new_rate_model);
 
 		// Invalid base_rate

@@ -70,16 +70,6 @@ pub enum Subcommand {
 	/// Sign a message, with a given (secret) key.
 	Sign(SignCmd),
 
-	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
-	/// testing.
-	#[cfg(feature = "try-runtime")]
-	#[allow(deprecated)]
-	TryRuntime(try_runtime_cli::TryRuntimeCmd),
-
-	/// Errors since the binary was not build with `--features try-runtime`.
-	#[cfg(not(feature = "try-runtime"))]
-	TryRuntime,
-
 	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
 	Verify(VerifyCmd),
 
@@ -137,6 +127,10 @@ impl RelayChainCli {
 			bifrost_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
 		let base_path = para_config.base_path.path().join("polkadot");
-		Self { base_path: Some(base_path), chain_id, base: Parser::parse_from(relay_chain_args) }
+		Self {
+			base_path: Some(base_path),
+			chain_id,
+			base: Parser::parse_from(relay_chain_args),
+		}
 	}
 }

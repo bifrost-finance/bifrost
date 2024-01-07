@@ -195,7 +195,7 @@ pub mod pallet {
 								.ok_or(ArithmeticError::Overflow)?;
 							token_total_value = Zero::zero();
 							token_total_value
-						},
+						}
 						false => {
 							vtoken_total_amount = vtoken_total_amount
 								.checked_add(vtoken_value)
@@ -203,7 +203,7 @@ pub mod pallet {
 							T::LendMarket::do_borrow(&who, asset_id, token_value)?;
 							token_total_value = token_total_value.saturating_sub(token_value);
 							token_value
-						},
+						}
 					};
 				}
 				AccountFlashLoans::<T>::insert(
@@ -242,13 +242,17 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			&who,
 			|maybe_flash_loan_info| -> DispatchResult {
-				let flash_loan_info =
-					maybe_flash_loan_info.as_mut().ok_or(Error::<T>::ArgumentsError)?;
+				let flash_loan_info = maybe_flash_loan_info
+					.as_mut()
+					.ok_or(Error::<T>::ArgumentsError)?;
 				let rate = match maybe_rate {
 					Some(r) => {
-						ensure!(flash_loan_info.leverage_rate >= r, Error::<T>::ArgumentsError);
+						ensure!(
+							flash_loan_info.leverage_rate >= r,
+							Error::<T>::ArgumentsError
+						);
 						r
-					},
+					}
 					None => flash_loan_info.leverage_rate,
 				};
 

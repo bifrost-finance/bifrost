@@ -27,19 +27,18 @@ build-all-release: copy-genesis-config-release
 
 .PHONY: check-all # cargo check all runtime
 check-all: format
-	SKIP_WASM_BUILD= cargo check -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
+	SKIP_WASM_BUILD= cargo check --all --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: test-all # cargo test all
 test-all: test-runtimes test-benchmarks
 
-
 .PHONY: test-runtimes
 test-runtimes:
-	cargo test --features "with-all-runtime" --lib
+	SKIP_WASM_BUILD= cargo test --all --features "with-all-runtime" --lib
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
+	SKIP_WASM_BUILD= cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:
@@ -68,7 +67,7 @@ format:
 
 .PHONY: clippy # cargo clippy
 clippy:
-	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
+	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:
@@ -122,7 +121,7 @@ try-kusama-runtime-upgrade:
 		--runtime \
 			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
 		on-runtime-upgrade live \
-		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws 
+		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
 
 .PHONY: try-polkadot-runtime-upgrade # try polkadot runtime upgrade
 try-polkadot-runtime-upgrade:

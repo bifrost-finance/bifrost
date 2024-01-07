@@ -352,7 +352,10 @@ pub mod pallet {
 			scheduled_exit: RoundIndex,
 		},
 		/// Delegator has left the set of delegators.
-		DelegatorLeft { delegator: AccountIdOf<T>, unstaked_amount: BalanceOf<T> },
+		DelegatorLeft {
+			delegator: AccountIdOf<T>,
+			unstaked_amount: BalanceOf<T>,
+		},
 		/// Delegation revoked.
 		DelegationRevoked {
 			delegator: AccountIdOf<T>,
@@ -388,11 +391,20 @@ pub mod pallet {
 			total_candidate_staked: BalanceOf<T>,
 		},
 		/// Paid the account (delegator or collator) the balance as liquid rewards.
-		Rewarded { account: AccountIdOf<T>, rewards: BalanceOf<T> },
+		Rewarded {
+			account: AccountIdOf<T>,
+			rewards: BalanceOf<T>,
+		},
 		/// Transferred to account which holds funds reserved for parachain bond.
-		ReservedForParachainBond { account: AccountIdOf<T>, value: BalanceOf<T> },
+		ReservedForParachainBond {
+			account: AccountIdOf<T>,
+			value: BalanceOf<T>,
+		},
 		/// Account (re)set for parachain bond treasury.
-		ParachainBondAccountSet { old: AccountIdOf<T>, new: AccountIdOf<T> },
+		ParachainBondAccountSet {
+			old: AccountIdOf<T>,
+			new: AccountIdOf<T>,
+		},
 		/// Percent of inflation reserved for parachain bond (re)set.
 		ParachainBondReservePercentSet { old: Percent, new: Percent },
 		/// Annual inflation input (first 3) was used to derive new per-round inflation (last 3)
@@ -648,10 +660,16 @@ pub mod pallet {
 					<Pallet<T>>::get_delegator_stakable_free_balance(delegator) >= balance,
 					"Account does not have enough balance to place delegation."
 				);
-				let cd_count =
-					if let Some(x) = col_delegator_count.get(target) { *x } else { 0u32 };
-				let dd_count =
-					if let Some(x) = del_delegation_count.get(delegator) { *x } else { 0u32 };
+				let cd_count = if let Some(x) = col_delegator_count.get(target) {
+					*x
+				} else {
+					0u32
+				};
+				let dd_count = if let Some(x) = del_delegation_count.get(delegator) {
+					*x
+				} else {
+					0u32
+				};
 				if let Err(error) = <Pallet<T>>::delegate(
 					T::RuntimeOrigin::from(Some(delegator.clone()).into()),
 					target.clone(),
@@ -717,7 +735,10 @@ pub mod pallet {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
 			ensure!(expectations.is_valid(), Error::<T>::InvalidSchedule);
 			let mut config = <InflationConfig<T>>::get();
-			ensure!(config.expect != expectations, Error::<T>::NoWritingSameValue);
+			ensure!(
+				config.expect != expectations,
+				Error::<T>::NoWritingSameValue
+			);
 			config.set_expectations(expectations);
 			Self::deposit_event(Event::StakeExpectationsSet {
 				expect_min: config.expect.min,
@@ -759,8 +780,11 @@ pub mod pallet {
 			new: AccountIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
-			let ParachainBondConfig { account: old, percent, payment_in_round } =
-				<ParachainBondInfo<T>>::get();
+			let ParachainBondConfig {
+				account: old,
+				percent,
+				payment_in_round,
+			} = <ParachainBondInfo<T>>::get();
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
 			<ParachainBondInfo<T>>::put(ParachainBondConfig {
 				account: new.clone(),
@@ -778,8 +802,11 @@ pub mod pallet {
 			new: Percent,
 		) -> DispatchResultWithPostInfo {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
-			let ParachainBondConfig { account, percent: old, payment_in_round } =
-				<ParachainBondInfo<T>>::get();
+			let ParachainBondConfig {
+				account,
+				percent: old,
+				payment_in_round,
+			} = <ParachainBondInfo<T>>::get();
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
 			<ParachainBondInfo<T>>::put(ParachainBondConfig {
 				account,
@@ -795,7 +822,10 @@ pub mod pallet {
 		/// - changes are not applied until the start of the next round
 		pub fn set_total_selected(origin: OriginFor<T>, new: u32) -> DispatchResultWithPostInfo {
 			frame_system::ensure_root(origin)?;
-			ensure!(new >= T::MinSelectedCandidates::get(), Error::<T>::CannotSetBelowMin);
+			ensure!(
+				new >= T::MinSelectedCandidates::get(),
+				Error::<T>::CannotSetBelowMin
+			);
 			let old = <TotalSelected<T>>::get();
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
 			ensure!(
@@ -828,7 +858,10 @@ pub mod pallet {
 		/// - also updates per-round inflation config
 		pub fn set_blocks_per_round(origin: OriginFor<T>, new: u32) -> DispatchResultWithPostInfo {
 			frame_system::ensure_root(origin)?;
-			ensure!(new >= T::MinBlocksPerRound::get(), Error::<T>::CannotSetBelowMin);
+			ensure!(
+				new >= T::MinBlocksPerRound::get(),
+				Error::<T>::CannotSetBelowMin
+			);
 			let mut round = <Round<T>>::get();
 			let (now, first, old) = (round.current, round.first, round.length);
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
@@ -864,7 +897,10 @@ pub mod pallet {
 			let acc = ensure_signed(origin)?;
 			ensure!(!Self::is_candidate(&acc), Error::<T>::CandidateExists);
 			ensure!(!Self::is_delegator(&acc), Error::<T>::DelegatorExists);
-			ensure!(bond >= T::MinCandidateStk::get(), Error::<T>::CandidateBondBelowMin);
+			ensure!(
+				bond >= T::MinCandidateStk::get(),
+				Error::<T>::CandidateBondBelowMin
+			);
 			let mut candidates = <CandidatePool<T>>::get();
 			let old_count = candidates.0.len() as u32;
 			ensure!(
@@ -872,7 +908,10 @@ pub mod pallet {
 				Error::<T>::TooLowCandidateCountWeightHintJoinCandidates
 			);
 			ensure!(
-				candidates.insert(Bond { owner: acc.clone(), amount: bond }),
+				candidates.insert(Bond {
+					owner: acc.clone(),
+					amount: bond
+				}),
 				Error::<T>::CandidateExists
 			);
 			ensure!(
@@ -1025,12 +1064,17 @@ pub mod pallet {
 				Error::<T>::TooLowCandidateCountWeightHintCancelLeaveCandidates
 			);
 			ensure!(
-				candidates.insert(Bond { owner: collator.clone(), amount: state.total_counted }),
+				candidates.insert(Bond {
+					owner: collator.clone(),
+					amount: state.total_counted
+				}),
 				Error::<T>::AlreadyActive
 			);
 			<CandidatePool<T>>::put(candidates);
 			<CandidateInfo<T>>::insert(&collator, state);
-			Self::deposit_event(Event::CancelledCandidateExit { candidate: collator });
+			Self::deposit_event(Event::CancelledCandidateExit {
+				candidate: collator,
+			});
 			Ok(().into())
 		}
 		#[pallet::call_index(11)]
@@ -1046,7 +1090,9 @@ pub mod pallet {
 				<CandidatePool<T>>::put(candidates);
 			}
 			<CandidateInfo<T>>::insert(&collator, state);
-			Self::deposit_event(Event::CandidateWentOffline { candidate: collator });
+			Self::deposit_event(Event::CandidateWentOffline {
+				candidate: collator,
+			});
 			Ok(().into())
 		}
 		#[pallet::call_index(12)]
@@ -1060,12 +1106,17 @@ pub mod pallet {
 			state.go_online();
 			let mut candidates = <CandidatePool<T>>::get();
 			ensure!(
-				candidates.insert(Bond { owner: collator.clone(), amount: state.total_counted }),
+				candidates.insert(Bond {
+					owner: collator.clone(),
+					amount: state.total_counted
+				}),
 				Error::<T>::AlreadyActive
 			);
 			<CandidatePool<T>>::put(candidates);
 			<CandidateInfo<T>>::insert(&collator, state);
-			Self::deposit_event(Event::CandidateBackOnline { candidate: collator });
+			Self::deposit_event(Event::CandidateBackOnline {
+				candidate: collator,
+			});
 			Ok(().into())
 		}
 		#[pallet::call_index(13)]
@@ -1340,7 +1391,10 @@ pub mod pallet {
 			collators: Vec<AccountIdOf<T>>,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
-			ensure!(collators.len() < 100, DispatchError::Other("Exceeded max allowed collators."));
+			ensure!(
+				collators.len() < 100,
+				DispatchError::Other("Exceeded max allowed collators.")
+			);
 			for collator in &collators {
 				let _ = Self::jit_ensure_collator_reserve_migrated(collator); // ignore error
 			}
@@ -1365,7 +1419,10 @@ pub mod pallet {
 			let mut delegator_state = if let Some(mut state) = <DelegatorState<T>>::get(&delegator)
 			{
 				// delegation after first
-				ensure!(amount >= T::MinDelegation::get(), Error::<T>::DelegationBelowMin);
+				ensure!(
+					amount >= T::MinDelegation::get(),
+					Error::<T>::DelegationBelowMin
+				);
 				ensure!(
 					delegation_count >= state.delegations.0.len() as u32,
 					Error::<T>::TooLowDelegationCountToDelegate
@@ -1375,14 +1432,20 @@ pub mod pallet {
 					Error::<T>::ExceedMaxDelegationsPerDelegator
 				);
 				ensure!(
-					state.add_delegation(Bond { owner: candidate.clone(), amount }),
+					state.add_delegation(Bond {
+						owner: candidate.clone(),
+						amount
+					}),
 					Error::<T>::AlreadyDelegatedCandidate
 				);
 				Self::jit_ensure_delegator_reserve_migrated(&delegator)?;
 				state
 			} else {
 				// first delegation
-				ensure!(amount >= T::MinDelegatorStk::get(), Error::<T>::DelegatorBondBelowMin);
+				ensure!(
+					amount >= T::MinDelegatorStk::get(),
+					Error::<T>::DelegatorBondBelowMin
+				);
 				ensure!(!Self::is_candidate(&delegator), Error::<T>::CandidateExists);
 				Delegator::new(delegator.clone(), candidate.clone(), amount)
 			};
@@ -1391,8 +1454,13 @@ pub mod pallet {
 				candidate_delegation_count >= state.delegation_count,
 				Error::<T>::TooLowCandidateDelegationCountToDelegate
 			);
-			let (delegator_position, less_total_staked) =
-				state.add_delegation::<T>(&candidate, Bond { owner: delegator.clone(), amount })?;
+			let (delegator_position, less_total_staked) = state.add_delegation::<T>(
+				&candidate,
+				Bond {
+					owner: delegator.clone(),
+					amount,
+				},
+			)?;
 			// TODO: causes redundant free_balance check
 			delegator_state.adjust_bond_lock::<T>(BondAdjust::Increase(amount))?;
 			// only is_some if kicked the lowest bottom as a consequence of this new delegation
@@ -1458,7 +1526,10 @@ pub mod pallet {
 		pub(crate) fn update_active(candidate: AccountIdOf<T>, total: BalanceOf<T>) {
 			let mut candidates = <CandidatePool<T>>::get();
 			candidates.remove(&Bond::from_owner(candidate.clone()));
-			candidates.insert(Bond { owner: candidate, amount: total });
+			candidates.insert(Bond {
+				owner: candidate,
+				amount: total,
+			});
 			<CandidatePool<T>>::put(candidates);
 		}
 		/// Compute round issuance based on total staked for the given round
@@ -1604,10 +1675,13 @@ pub mod pallet {
 						ExistenceRequirement::KeepAlive,
 					);
 					match result {
-						Ok(_) => Self::deposit_event(Event::Rewarded { account: to, rewards: amt }),
+						Ok(_) => Self::deposit_event(Event::Rewarded {
+							account: to,
+							rewards: amt,
+						}),
 						Err(e) => {
 							log::error!("reward from pool account fail as {:?}", e);
-						},
+						}
 					}
 				}
 			};
@@ -1779,7 +1853,7 @@ pub mod pallet {
 								bond.owner
 							);
 							BalanceOf::<T>::zero()
-						},
+						}
 						Some(DelegationAction::Decrease(amount)) => {
 							log::warn!(
 								"reward for delegator '{:?}' reduced by set amount due to pending \
@@ -1787,7 +1861,7 @@ pub mod pallet {
 								bond.owner
 							);
 							bond.amount.saturating_sub(*amount)
-						},
+						}
 					};
 
 					bond
@@ -1882,12 +1956,10 @@ pub mod pallet {
 
 	impl<T: Config> pallet_session::SessionManager<AccountIdOf<T>> for Pallet<T> {
 		/// 1. A new session starts.
-		/// 2. In hook new_session: Read the current top n candidates from the
-		///    TopCandidates and assign this set to author blocks for the next
-		///    session.
-		/// 3. AuRa queries the authorities from the session pallet for
-		///    this session and picks authors on round-robin-basis from list of
-		///    authorities.
+		/// 2. In hook new_session: Read the current top n candidates from the TopCandidates and
+		///    assign this set to author blocks for the next session.
+		/// 3. AuRa queries the authorities from the session pallet for this session and picks
+		///    authors on round-robin-basis from list of authorities.
 		fn new_session(new_index: SessionIndex) -> Option<Vec<AccountIdOf<T>>> {
 			log::debug!(
 				"assembling new collators for new session {} at #{:?}",

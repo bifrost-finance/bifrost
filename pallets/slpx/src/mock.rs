@@ -140,6 +140,7 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -259,7 +260,12 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
 
 		Ok(())
 	}
@@ -309,7 +315,10 @@ impl zenlink_protocol::Config for Test {
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account_id: AccountId) -> MultiLocation {
-		MultiLocation::from(Junction::AccountId32 { network: None, id: account_id.into() })
+		MultiLocation::from(Junction::AccountId32 {
+			network: None,
+			id: account_id.into(),
+		})
 	}
 }
 
@@ -495,11 +504,6 @@ impl bifrost_slp::Config for Test {
 	type XcmWeightAndFeeHandler = ();
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -521,8 +525,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -587,5 +589,8 @@ impl slpx::Config for Test {
 #[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	use sp_runtime::BuildStorage;
-	frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
+	frame_system::GenesisConfig::<Test>::default()
+		.build_storage()
+		.unwrap()
+		.into()
 }

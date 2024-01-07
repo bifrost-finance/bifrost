@@ -217,7 +217,10 @@ pub mod pallet {
 
 			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
 				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
-			ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
+			ensure!(
+				amount >= crossing_minimum_amount.0,
+				Error::<T>::AmountLowerThanMinimum
+			);
 
 			let issue_whitelist =
 				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
@@ -268,7 +271,10 @@ pub mod pallet {
 
 			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
 				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
-			ensure!(amount >= crossing_minimum_amount.1, Error::<T>::AmountLowerThanMinimum);
+			ensure!(
+				amount >= crossing_minimum_amount.1,
+				Error::<T>::AmountLowerThanMinimum
+			);
 
 			let balance = T::MultiCurrency::free_balance(currency_id, &crosser);
 			ensure!(balance >= amount, Error::<T>::NotEnoughBalance);
@@ -278,7 +284,12 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(currency_id, &crosser, amount)?;
 
-			Self::deposit_event(Event::CrossedOut { currency_id, crosser, location, amount });
+			Self::deposit_event(Event::CrossedOut {
+				currency_id,
+				crosser,
+				location,
+				amount,
+			});
 			Ok(())
 		}
 
@@ -295,7 +306,10 @@ pub mod pallet {
 
 			let register_whitelist =
 				Self::get_register_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-			ensure!(register_whitelist.contains(&registerer), Error::<T>::NotAllowed);
+			ensure!(
+				register_whitelist.contains(&registerer),
+				Error::<T>::NotAllowed
+			);
 
 			ensure!(
 				CrossCurrencyRegistry::<T>::contains_key(currency_id),
@@ -346,7 +360,10 @@ pub mod pallet {
 			let original_location =
 				Self::account_to_outer_multilocation(currency_id, account.clone())
 					.ok_or(Error::<T>::NotExist)?;
-			ensure!(original_location != *foreign_location.clone(), Error::<T>::AlreadyExist);
+			ensure!(
+				original_location != *foreign_location.clone(),
+				Error::<T>::AlreadyExist
+			);
 
 			AccountToOuterMultilocation::<T>::insert(
 				currency_id,
@@ -419,7 +436,10 @@ pub mod pallet {
 					issue_whitelist.len() < T::MaxLengthLimit::get() as usize,
 					Error::<T>::ExceedMaxLengthLimit
 				);
-				ensure!(!issue_whitelist.contains(&account), Error::<T>::AlreadyExist);
+				ensure!(
+					!issue_whitelist.contains(&account),
+					Error::<T>::AlreadyExist
+				);
 
 				issue_whitelist.push(account.clone());
 			} else {
@@ -431,7 +451,10 @@ pub mod pallet {
 
 			IssueWhiteList::<T>::insert(currency_id, bounded_issue_whitelist);
 
-			Self::deposit_event(Event::AddedToIssueList { account, currency_id });
+			Self::deposit_event(Event::AddedToIssueList {
+				account,
+				currency_id,
+			});
 
 			Ok(())
 		}
@@ -449,9 +472,12 @@ pub mod pallet {
 				match issue_whitelist {
 					Some(issue_list) if issue_list.contains(&account) => {
 						issue_list.retain(|x| x.clone() != account);
-						Self::deposit_event(Event::RemovedFromIssueList { account, currency_id });
+						Self::deposit_event(Event::RemovedFromIssueList {
+							account,
+							currency_id,
+						});
 						Ok(())
-					},
+					}
 					_ => Err(Error::<T>::NotExist),
 				}
 			})?;
@@ -484,7 +510,7 @@ pub mod pallet {
 								currency_id,
 							});
 							Ok(())
-						},
+						}
 						_ => Err(Error::<T>::NotAllowed),
 					}
 				},
@@ -513,7 +539,7 @@ pub mod pallet {
 								currency_id,
 							});
 							Ok(())
-						},
+						}
 						_ => Err(Error::<T>::NotExist),
 					}
 				},

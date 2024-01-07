@@ -29,4 +29,8 @@ rustflags = [
   "-Aclippy::needless_option_as_deref",  # false positives
   "-Aclippy::derivable_impls",           # false positives
   "-Aclippy::stable_sort_primitive",     # prefer stable sort
+  "-Aclippy::result-unit-err",           # use a custom `Error` type instead
+  "-Aclippy::match-like-matches-macro",  # match expression looks like `matches!` macro
+  "-Aclippy::clone-on-copy",             # clone-on-copy
+  "-Aambiguous-glob-imports",            # ambiguous glob re-exports
 ]

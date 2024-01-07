@@ -29,16 +29,28 @@ fn trait_inspect_methods_works() {
 		assert_eq!(LendMarket::balance(VBNC, &DAVE), 0);
 
 		// DAVE Deposit 100 BNC
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(100)
+		));
 		assert_eq!(LendMarket::balance(VBNC, &DAVE), unit(100) * 50);
 
 		assert_eq!(
 			LendMarket::reducible_balance(VBNC, &DAVE, Preservation::Expendable, Fortitude::Polite),
 			unit(100) * 50
 		);
-		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(DAVE), BNC, true));
+		assert_ok!(LendMarket::collateral_asset(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			true
+		));
 		// Borrow 25 BNC will reduce 25 BNC liquidity for collateral_factor is 50%
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(25)));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(25)
+		));
 
 		assert_eq!(
 			LendMarket::exchange_rate(BNC)
@@ -58,7 +70,11 @@ fn trait_inspect_methods_works() {
 		// DAVE Deposit 100 BNC, 50 DOT_U, Borrow 25 BNC
 		// Liquidity BNC = 25, DOT_U = 25
 		// lend tokens = dollar(25 + 25) / 1 / 0.5 / 0.02 = dollar(50) * 100
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), DOT_U, unit(50)));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(DAVE),
+			DOT_U,
+			unit(50)
+		));
 		assert_eq!(LendMarket::balance(LUSDT, &DAVE), unit(50) * 50);
 		assert_eq!(
 			LendMarket::reducible_balance(
@@ -70,13 +86,21 @@ fn trait_inspect_methods_works() {
 			unit(25) * 2 * 50
 		);
 		// enable DOT_U collateral
-		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(DAVE), DOT_U, true));
+		assert_ok!(LendMarket::collateral_asset(
+			RuntimeOrigin::signed(DAVE),
+			DOT_U,
+			true
+		));
 		assert_eq!(
 			LendMarket::reducible_balance(VBNC, &DAVE, Preservation::Expendable, Fortitude::Polite),
 			unit(25 + 25) * 2 * 50
 		);
 
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(50)));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(50)
+		));
 		assert_eq!(
 			LendMarket::reducible_balance(VBNC, &DAVE, Preservation::Expendable, Fortitude::Polite),
 			0
@@ -109,7 +133,11 @@ fn lend_token_unique_works() {
 fn transfer_lend_token_works() {
 	new_test_ext().execute_with(|| {
 		// DAVE Deposit 100 BNC
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(100)
+		));
 
 		// DAVE BNC collateral: deposit = 100
 		// BNC: cash - deposit = 1000 - 100 = 900
@@ -156,13 +184,29 @@ fn transfer_lend_token_works() {
 fn transfer_lend_tokens_under_collateral_works() {
 	new_test_ext().execute_with(|| {
 		// DAVE Deposit 100 BNC
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
-		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(DAVE), BNC, true));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(100)
+		));
+		assert_ok!(LendMarket::collateral_asset(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			true
+		));
 
 		// Borrow 50 BNC will reduce 50 BNC liquidity for collateral_factor is 50%
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(50)));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(50)
+		));
 		// Repay 40 BNC
-		assert_ok!(LendMarket::repay_borrow(RuntimeOrigin::signed(DAVE), BNC, unit(40)));
+		assert_ok!(LendMarket::repay_borrow(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(40)
+		));
 
 		// Transfer 20 lend tokens from DAVE to ALICE
 		LendMarket::transfer(VBNC, &DAVE, &ALICE, unit(20) * 50, true).unwrap();
@@ -180,7 +224,11 @@ fn transfer_lend_tokens_under_collateral_works() {
 			LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(31)),
 			Error::<Test>::InsufficientLiquidity
 		);
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(30)));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(DAVE),
+			BNC,
+			unit(30)
+		));
 
 		// Assert ALICE Supply BNC 20
 		assert_eq!(

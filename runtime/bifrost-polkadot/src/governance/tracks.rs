@@ -173,14 +173,15 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 		if let Ok(system_origin) = frame_system::RawOrigin::try_from(id.clone()) {
 			match system_origin {
 				frame_system::RawOrigin::Root => {
-					if let Some((track_id, _)) =
-						Self::tracks().into_iter().find(|(_, track)| track.name == "root")
+					if let Some((track_id, _)) = Self::tracks()
+						.into_iter()
+						.find(|(_, track)| track.name == "root")
 					{
 						Ok(*track_id)
 					} else {
 						Err(())
 					}
-				},
+				}
 				_ => Err(()),
 			}
 		} else if let Ok(custom_origin) = custom_origins::Origin::try_from(id.clone()) {
@@ -206,8 +207,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 fn vote_locking_always_longer_than_enactment_period() {
 	for (_, track) in TRACKS_DATA {
 		assert!(
-			<Runtime as pallet_conviction_voting::Config>::VoteLockingPeriod::get() >=
-				track.min_enactment_period,
+			<Runtime as pallet_conviction_voting::Config>::VoteLockingPeriod::get()
+				>= track.min_enactment_period,
 			"Track {} has enactment period {} < vote locking period {}",
 			track.name,
 			track.min_enactment_period,

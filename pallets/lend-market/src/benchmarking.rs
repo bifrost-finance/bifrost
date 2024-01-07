@@ -85,11 +85,20 @@ fn set_account_borrows<T: Config>(
 	AccountBorrows::<T>::insert(
 		asset_id,
 		&who,
-		BorrowSnapshot { principal: borrow_balance, borrow_index: Rate::one() },
+		BorrowSnapshot {
+			principal: borrow_balance,
+			borrow_index: Rate::one(),
+		},
 	);
 	TotalBorrows::<T>::insert(asset_id, borrow_balance);
-	T::Assets::burn_from(asset_id, &who, borrow_balance, Precision::Exact, Fortitude::Force)
-		.unwrap();
+	T::Assets::burn_from(
+		asset_id,
+		&who,
+		borrow_balance,
+		Precision::Exact,
+		Fortitude::Force,
+	)
+	.unwrap();
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {

@@ -40,7 +40,10 @@ pub struct FlexibleFeeRpc<Client, Block> {
 
 impl<Client, Block> FlexibleFeeRpc<Client, Block> {
 	pub fn new(client: Arc<Client>) -> Self {
-		Self { client, _marker: PhantomData }
+		Self {
+			client,
+			_marker: PhantomData,
+		}
 	}
 }
 
@@ -107,13 +110,15 @@ where
 			))
 		})?;
 
-		let fee_details = api.query_fee_details(at, uxt.clone(), encoded_len).map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
-				Error::RuntimeError.into(),
-				"Unable to query fee details.",
-				Some(format!("{:?}", e)),
-			))
-		})?;
+		let fee_details = api
+			.query_fee_details(at, uxt.clone(), encoded_len)
+			.map_err(|e| {
+				CallError::Custom(ErrorObject::owned(
+					Error::RuntimeError.into(),
+					"Unable to query fee details.",
+					Some(format!("{:?}", e)),
+				))
+			})?;
 
 		let total_inclusion_fee: Balance = {
 			if let Some(inclusion_fee) = fee_details.inclusion_fee {

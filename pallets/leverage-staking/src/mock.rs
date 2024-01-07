@@ -235,6 +235,7 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 ord_parameter_types! {
@@ -378,7 +379,10 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(_asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
-		Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
+		Some(TimeStampedPrice {
+			value: Price::saturating_from_integer(100),
+			timestamp: 0,
+		})
 	}
 }
 
@@ -416,7 +420,9 @@ impl MockPriceFeeder {
 
 	pub fn set_price(asset_id: CurrencyId, price: Price) {
 		Self::PRICES.with(|prices| {
-			prices.borrow_mut().insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
+			prices
+				.borrow_mut()
+				.insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
 		});
 	}
 
@@ -465,11 +471,6 @@ impl pallet_prices::Config for Test {
 	type WeightInfo = ();
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -491,8 +492,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureSignedBy<One, u128>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -504,7 +503,9 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self { endowed_accounts: vec![] }
+		Self {
+			endowed_accounts: vec![],
+		}
 	}
 }
 
@@ -525,7 +526,10 @@ impl ExtBuilder {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
+		let mut t = frame_system::GenesisConfig::<Test>::default()
+			.build_storage()
+			.unwrap()
+			.into();
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![

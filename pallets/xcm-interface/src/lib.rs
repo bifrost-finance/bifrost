@@ -266,7 +266,10 @@ pub mod pallet {
 					fees: fee_asset,
 					weight_limit: cumulus_primitives_core::Limited(dest_weight),
 				},
-				DepositAsset { assets: AllCounted(2).into(), beneficiary: dst_location },
+				DepositAsset {
+					assets: AllCounted(2).into(),
+					beneficiary: dst_location,
+				},
 			]);
 
 			pallet_xcm::Pallet::<T>::send_xcm(
@@ -363,7 +366,10 @@ pub mod pallet {
 			};
 			let message = Xcm(vec![
 				WithdrawAsset(asset.clone().into()),
-				BuyExecution { fees: asset, weight_limit: Unlimited },
+				BuyExecution {
+					fees: asset,
+					weight_limit: Unlimited,
+				},
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
 					require_weight_at_most: weight,
@@ -377,7 +383,10 @@ pub mod pallet {
 					max_weight: weight,
 				}),
 				RefundSurplus,
-				DepositAsset { assets: AllCounted(1).into(), beneficiary: sovereign_location },
+				DepositAsset {
+					assets: AllCounted(1).into(),
+					beneficiary: sovereign_location,
+				},
 			]);
 			let data = VersionedXcm::<()>::from(message.clone()).encode();
 			let id = Self::transact_id(&data[..]);
@@ -391,7 +400,11 @@ pub mod pallet {
 			use_relay!({
 				let contribute_call =
 					RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-						ContributeCall::Contribute(Contribution { index, value, signature: None }),
+						ContributeCall::Contribute(Contribution {
+							index,
+							value,
+							signature: None,
+						}),
 					)
 					.encode()
 					.into();

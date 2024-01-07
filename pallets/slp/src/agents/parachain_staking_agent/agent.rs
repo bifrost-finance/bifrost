@@ -84,7 +84,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
+		ensure!(
+			delegator_multilocation != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
@@ -109,7 +112,10 @@ impl<T: Config>
 		let collator = validator.ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		// Ensure amount is no less than delegation_amount_minimum.
-		ensure!(amount >= mins_maxs.delegation_amount_minimum.into(), Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.delegation_amount_minimum.into(),
+			Error::<T>::LowerThanMinimum
+		);
 
 		// check if the validator is in the white list.
 		let validator_list =
@@ -127,20 +133,30 @@ impl<T: Config>
 			);
 
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
-			let active_amount =
-				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
-			let add_total = active_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			let active_amount = ledger
+				.total
+				.checked_sub(&ledger.less_total)
+				.ok_or(Error::<T>::UnderFlow)?;
+			let add_total = active_amount
+				.checked_add(&amount)
+				.ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				add_total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
 			);
 
 			// check if the delegator-validator delegation exists.
-			ensure!(!ledger.delegations.contains_key(&collator), Error::<T>::AlreadyBonded);
+			ensure!(
+				!ledger.delegations.contains_key(&collator),
+				Error::<T>::AlreadyBonded
+			);
 
 			// check if it will exceeds the delegation limit of the delegator.
-			let new_deleagtions_count =
-				ledger.delegations.len().checked_add(1).ok_or(Error::<T>::OverFlow)?;
+			let new_deleagtions_count = ledger
+				.delegations
+				.len()
+				.checked_add(1)
+				.ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				(new_deleagtions_count as u32) <= mins_maxs.validators_back_maximum,
 				Error::<T>::GreaterThanMaximum
@@ -148,7 +164,10 @@ impl<T: Config>
 
 		// check if it will exceeds the delegation limit of the validator.
 		} else {
-			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+			ensure!(
+				amount >= mins_maxs.delegator_bonded_minimum,
+				Error::<T>::LowerThanMinimum
+			);
 
 			// Ensure the bond doesn't exceeds delegator_active_staking_maximum
 			ensure!(
@@ -214,16 +233,24 @@ impl<T: Config>
 							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
 						);
-						old_ledger.total =
-							old_ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+						old_ledger.total = old_ledger
+							.total
+							.checked_add(&amount)
+							.ok_or(Error::<T>::OverFlow)?;
 
 						let amount_rs = old_ledger.delegations.get(validator_multilocation);
-						let original_amount =
-							if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
+						let original_amount = if let Some(amt) = amount_rs {
+							*amt
+						} else {
+							Zero::zero()
+						};
 
-						let new_amount =
-							original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-						old_ledger.delegations.insert(*validator_multilocation, new_amount);
+						let new_amount = original_amount
+							.checked_add(&amount)
+							.ok_or(Error::<T>::OverFlow)?;
+						old_ledger
+							.delegations
+							.insert(*validator_multilocation, new_amount);
 						Ok(())
 					} else {
 						Err(Error::<T>::Unexpected)
@@ -262,7 +289,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let validator_multilocation =
 						validator.as_ref().ok_or(Error::<T>::Unexpected)?;
@@ -276,7 +303,7 @@ impl<T: Config>
 					))
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -325,7 +352,10 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.bond_extra_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		// check if the delegator exists, if not, return error.
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -342,11 +372,18 @@ impl<T: Config>
 				Error::<T>::DelegatorLeaving
 			);
 			// check if the delegation exists, if not, return error.
-			ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
+			ensure!(
+				ledger.delegations.contains_key(&collator),
+				Error::<T>::ValidatorNotBonded
+			);
 			// Ensure the bond after wont exceed delegator_active_staking_maximum
-			let active_amount =
-				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
-			let add_total = active_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+			let active_amount = ledger
+				.total
+				.checked_sub(&ledger.less_total)
+				.ok_or(Error::<T>::UnderFlow)?;
+			let add_total = active_amount
+				.checked_add(&amount)
+				.ok_or(Error::<T>::OverFlow)?;
 			ensure!(
 				add_total <= mins_maxs.delegator_active_staking_maximum,
 				Error::<T>::ExceedActiveMaximum
@@ -382,16 +419,24 @@ impl<T: Config>
 							old_ledger.status == OneToManyDelegatorStatus::Active,
 							Error::<T>::DelegatorLeaving
 						);
-						old_ledger.total =
-							old_ledger.total.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
+						old_ledger.total = old_ledger
+							.total
+							.checked_add(&amount)
+							.ok_or(Error::<T>::OverFlow)?;
 
 						let amount_rs = old_ledger.delegations.get(validator_multilocation);
-						let original_amount =
-							if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
+						let original_amount = if let Some(amt) = amount_rs {
+							*amt
+						} else {
+							Zero::zero()
+						};
 
-						let new_amount =
-							original_amount.checked_add(&amount).ok_or(Error::<T>::OverFlow)?;
-						old_ledger.delegations.insert(*validator_multilocation, new_amount);
+						let new_amount = original_amount
+							.checked_add(&amount)
+							.ok_or(Error::<T>::OverFlow)?;
+						old_ledger
+							.delegations
+							.insert(*validator_multilocation, new_amount);
 						Ok(())
 					} else {
 						Err(Error::<T>::Unexpected)
@@ -413,7 +458,7 @@ impl<T: Config>
 					))
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
 					MantaCall::ParachainStaking(MantaParachainStakingCall::<T>::DelegatorBondMore(
@@ -422,7 +467,7 @@ impl<T: Config>
 					))
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -470,7 +515,10 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.unbond_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		// check if the delegator exists, if not, return error.
 		let collator = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -482,24 +530,33 @@ impl<T: Config>
 				Error::<T>::DelegatorLeaving
 			);
 			// check if the delegation exists, if not, return error.
-			let old_delegate_amount =
-				ledger.delegations.get(&collator).ok_or(Error::<T>::ValidatorNotBonded)?;
+			let old_delegate_amount = ledger
+				.delegations
+				.get(&collator)
+				.ok_or(Error::<T>::ValidatorNotBonded)?;
 
 			// check if there is pending request
-			ensure!(!ledger.request_briefs.contains_key(&collator), Error::<T>::AlreadyRequested);
+			ensure!(
+				!ledger.request_briefs.contains_key(&collator),
+				Error::<T>::AlreadyRequested
+			);
 
-			let delegated_amount_after =
-				old_delegate_amount.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+			let delegated_amount_after = old_delegate_amount
+				.checked_sub(&amount)
+				.ok_or(Error::<T>::UnderFlow)?;
 			ensure!(
 				delegated_amount_after >= mins_maxs.delegation_amount_minimum.into(),
 				Error::<T>::LowerThanMinimum
 			);
 
 			// Ensure the unbond after wont below delegator_bonded_minimum
-			let active_amount =
-				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
-			let subtracted_total =
-				active_amount.checked_sub(&amount).ok_or(Error::<T>::UnderFlow)?;
+			let active_amount = ledger
+				.total
+				.checked_sub(&ledger.less_total)
+				.ok_or(Error::<T>::UnderFlow)?;
+			let subtracted_total = active_amount
+				.checked_sub(&amount)
+				.ok_or(Error::<T>::UnderFlow)?;
 			ensure!(
 				subtracted_total >= mins_maxs.delegator_bonded_minimum,
 				Error::<T>::LowerThanMinimum
@@ -573,7 +630,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
 					MantaCall::ParachainStaking(
@@ -584,7 +641,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -636,7 +693,10 @@ impl<T: Config>
 
 		if let Some(Ledger::ParachainStaking(ledger)) = ledger_option {
 			// check if the delegator is in the state of leaving.
-			ensure!(ledger.status == OneToManyDelegatorStatus::Active, Error::<T>::AlreadyLeaving);
+			ensure!(
+				ledger.status == OneToManyDelegatorStatus::Active,
+				Error::<T>::AlreadyLeaving
+			);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
@@ -673,7 +733,9 @@ impl<T: Config>
 						};
 						new_requests.push(request_entry);
 
-						old_ledger.request_briefs.insert(*vali, (unlock_time.clone(), *amt));
+						old_ledger
+							.request_briefs
+							.insert(*vali, (unlock_time.clone(), *amt));
 					}
 
 					old_ledger.requests = new_requests;
@@ -708,15 +770,20 @@ impl<T: Config>
 				Error::<T>::DelegatorLeaving
 			);
 
-			let (_, rebond_amount) =
-				ledger.request_briefs.get(&collator).ok_or(Error::<T>::RequestNotExist)?;
+			let (_, rebond_amount) = ledger
+				.request_briefs
+				.get(&collator)
+				.ok_or(Error::<T>::RequestNotExist)?;
 
 			// check if the pending request amount plus active amount greater than delegator minimum
 			// request.
-			let active =
-				ledger.total.checked_sub(&ledger.less_total).ok_or(Error::<T>::UnderFlow)?;
-			let rebond_after_amount =
-				active.checked_add(&rebond_amount).ok_or(Error::<T>::OverFlow)?;
+			let active = ledger
+				.total
+				.checked_sub(&ledger.less_total)
+				.ok_or(Error::<T>::UnderFlow)?;
+			let rebond_after_amount = active
+				.checked_add(&rebond_amount)
+				.ok_or(Error::<T>::OverFlow)?;
 
 			// ensure the rebond after amount meet the delegator bond requirement.
 			ensure!(
@@ -789,7 +856,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
 					MantaCall::ParachainStaking(
@@ -797,7 +864,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -862,8 +929,14 @@ impl<T: Config>
 				Error::<T>::DelegatorLeaving
 			);
 			// Second, check the validators one by one to see if all exist.
-			ensure!(ledger.delegations.contains_key(validator), Error::<T>::ValidatorNotBonded);
-			ensure!(!ledger.request_briefs.contains_key(validator), Error::<T>::AlreadyRequested);
+			ensure!(
+				ledger.delegations.contains_key(validator),
+				Error::<T>::ValidatorNotBonded
+			);
+			ensure!(
+				!ledger.request_briefs.contains_key(validator),
+				Error::<T>::AlreadyRequested
+			);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
@@ -889,8 +962,10 @@ impl<T: Config>
 							Error::<T>::DelegatorLeaving
 						);
 
-						let revoke_amount =
-							old_ledger.delegations.get(validator).ok_or(Error::<T>::Unexpected)?;
+						let revoke_amount = old_ledger
+							.delegations
+							.get(validator)
+							.ok_or(Error::<T>::Unexpected)?;
 
 						old_ledger.less_total = old_ledger
 							.less_total
@@ -934,7 +1009,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let validator_account = Pallet::<T>::multilocation_to_account(&validator)?;
 					MantaCall::ParachainStaking(
@@ -942,7 +1017,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -1066,10 +1141,15 @@ impl<T: Config>
 				leaving = true;
 			} else {
 				// check if the validator has a delegation request.
-				ensure!(ledger.delegations.contains_key(&collator), Error::<T>::ValidatorNotBonded);
+				ensure!(
+					ledger.delegations.contains_key(&collator),
+					Error::<T>::ValidatorNotBonded
+				);
 				// check whether the request is already due.
-				let request_info =
-					ledger.request_briefs.get(&collator).ok_or(Error::<T>::RequestNotExist)?;
+				let request_info = ledger
+					.request_briefs
+					.get(&collator)
+					.ok_or(Error::<T>::RequestNotExist)?;
 				let due_time = &request_info.0;
 				due_amount = request_info.1;
 				ensure!(now >= due_time.clone(), Error::<T>::RequestNotDue);
@@ -1261,7 +1341,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				MANTA => {
 					let delegator_account = Pallet::<T>::multilocation_to_account(who)?;
 					let validator_account = Pallet::<T>::multilocation_to_account(&collator)?;
@@ -1273,7 +1353,7 @@ impl<T: Config>
 					)
 					.encode()
 					.into()
-				},
+				}
 				_ => Err(Error::<T>::Unsupported)?,
 			};
 
@@ -1358,7 +1438,10 @@ impl<T: Config>
 				parents: 1,
 				interior: X2(
 					Parachain(T::ParachainId::get().into()),
-					AccountId32 { network: None, id: to_32 },
+					AccountId32 {
+						network: None,
+						id: to_32,
+					},
 				),
 			}));
 
@@ -1418,7 +1501,10 @@ impl<T: Config>
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+		ensure!(
+			from_account_id == entrance_account,
+			Error::<T>::InvalidAccount
+		);
 
 		if currency_id == BNC {
 			let to_account = Pallet::<T>::multilocation_to_account(to)?;
@@ -1485,7 +1571,9 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> DispatchResult {
 		// Get current VMOVR/MOVR、VGLMR/GLMR exchange rate.
-		let vtoken = currency_id.to_vtoken().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
+		let vtoken = currency_id
+			.to_vtoken()
+			.map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
 
 		let charge_amount =
 			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
@@ -1618,14 +1706,17 @@ impl<T: Config> ParachainStakingAgent<T> {
 									.ok_or(Error::<T>::OverFlow)?;
 
 								let amount_rs = old_ledger.delegations.get(&validator_id);
-								let original_amount =
-									if let Some(amt) = amount_rs { *amt } else { Zero::zero() };
+								let original_amount = if let Some(amt) = amount_rs {
+									*amt
+								} else {
+									Zero::zero()
+								};
 
 								let new_amount = original_amount
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
 								old_ledger.delegations.insert(validator_id, new_amount);
-							},
+							}
 							// schedule bond less request
 							BondLess => {
 								let validator_id =
@@ -1656,7 +1747,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 								old_ledger
 									.request_briefs
 									.insert(validator_id, (unlock_time_unit, amount));
-							},
+							}
 							// schedule revoke request
 							Revoke => {
 								let validator_id =
@@ -1692,7 +1783,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 								old_ledger
 									.request_briefs
 									.insert(validator_id, (unlock_time_unit, *revoke_amount));
-							},
+							}
 							// cancel bond less or revoke request
 							CancelRequest => {
 								let validator_id =
@@ -1721,7 +1812,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 								old_ledger.requests.remove(request_index);
 
 								old_ledger.request_briefs.remove(&validator_id);
-							},
+							}
 							// schedule leave
 							LeaveDelegator => {
 								ensure!(
@@ -1757,7 +1848,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 
 								old_ledger.requests = new_requests;
 								old_ledger.request_briefs = new_request_briefs;
-							},
+							}
 							// cancel leave
 							CancelLeave => {
 								let leaving = matches!(
@@ -1771,7 +1862,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 
 								old_ledger.requests = vec![];
 								old_ledger.request_briefs = BTreeMap::new();
-							},
+							}
 							// execute leaving
 							ExecuteLeave => {
 								// make sure leaving time is less than or equal to current time.
@@ -1820,7 +1911,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 
 								*old_ledger_opt = Some(moonbeam_ledger);
 								// execute request
-							},
+							}
 							ExecuteRequest => {
 								let validator_id =
 									validator_id_op.ok_or(Error::<T>::ValidatorError)?;
@@ -1894,7 +1985,7 @@ impl<T: Config> ParachainStakingAgent<T> {
 										.delegations
 										.insert(validator_id, new_delegate_amount);
 								}
-							},
+							}
 						}
 						Ok(())
 					} else {

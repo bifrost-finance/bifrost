@@ -64,7 +64,11 @@ impl<T: Ord> Range<T> {
 
 impl<T: Ord + Copy> From<T> for Range<T> {
 	fn from(other: T) -> Range<T> {
-		Range { min: other, ideal: other, max: other }
+		Range {
+			min: other,
+			ideal: other,
+			max: other,
+		}
 	}
 }
 /// Convert an annual inflation to a round inflation
@@ -123,7 +127,11 @@ impl<Balance> InflationInfo<Balance> {
 		annual: Range<Perbill>,
 		expect: Range<Balance>,
 	) -> InflationInfo<Balance> {
-		InflationInfo { expect, annual, round: annual_to_round::<T>(annual) }
+		InflationInfo {
+			expect,
+			annual,
+			round: annual_to_round::<T>(annual),
+		}
 	}
 	/// Set round inflation range according to input annual inflation range
 	pub fn set_round_from_annual<T: Config>(&mut self, new: Range<Perbill>) {
@@ -163,8 +171,11 @@ mod tests {
 		// 5% inflation for 10_000_0000 = 500,000 minted over the year
 		// let's assume there are 10 periods in a year
 		// => mint 500_000 over 10 periods => 50_000 minted per period
-		let expected_round_issuance_range: Range<u128> =
-			Range { min: 48_909, ideal: 48_909, max: 48_909 };
+		let expected_round_issuance_range: Range<u128> = Range {
+			min: 48_909,
+			ideal: 48_909,
+			max: 48_909,
+		};
 		let schedule = Range {
 			min: Perbill::from_percent(5),
 			ideal: Perbill::from_percent(5),
@@ -180,8 +191,11 @@ mod tests {
 		// 3-5% inflation for 10_000_0000 = 300_000-500,000 minted over the year
 		// let's assume there are 10 periods in a year
 		// => mint 300_000-500_000 over 10 periods => 30_000-50_000 minted per period
-		let expected_round_issuance_range: Range<u128> =
-			Range { min: 29_603, ideal: 39298, max: 48_909 };
+		let expected_round_issuance_range: Range<u128> = Range {
+			min: 29_603,
+			ideal: 39298,
+			max: 48_909,
+		};
 		let schedule = Range {
 			min: Perbill::from_percent(3),
 			ideal: Perbill::from_percent(4),
@@ -194,7 +208,11 @@ mod tests {
 	}
 	#[test]
 	fn expected_parameterization() {
-		let expected_round_schedule: Range<u128> = Range { min: 45, ideal: 56, max: 56 };
+		let expected_round_schedule: Range<u128> = Range {
+			min: 45,
+			ideal: 56,
+			max: 56,
+		};
 		let schedule = Range {
 			min: Perbill::from_percent(4),
 			ideal: Perbill::from_percent(5),

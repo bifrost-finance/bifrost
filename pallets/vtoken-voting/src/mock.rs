@@ -126,6 +126,7 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -190,11 +191,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -216,8 +212,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -339,7 +333,9 @@ impl vtoken_voting::Config for Runtime {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+	let mut t = frame_system::GenesisConfig::<Runtime>::default()
+		.build_storage()
+		.unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![(ALICE, 10), (BOB, 20), (CHARLIE, 30)],
 	}
@@ -347,7 +343,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	orml_tokens::GenesisConfig::<Runtime> {
-		balances: vec![(1, VKSM, 10), (2, VKSM, 20), (3, VKSM, 30), (4, VKSM, 40), (5, VKSM, 50)],
+		balances: vec![
+			(1, VKSM, 10),
+			(2, VKSM, 20),
+			(3, VKSM, 30),
+			(4, VKSM, 40),
+			(5, VKSM, 50),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

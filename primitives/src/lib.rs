@@ -20,6 +20,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::Everything;
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
@@ -29,6 +30,7 @@ use sp_runtime::{
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v3::prelude::*;
+use xcm_executor::traits::XcmAssetTransfers;
 
 pub mod currency;
 mod salp;
@@ -214,14 +216,7 @@ impl Ord for TimeUnit {
 
 impl PartialOrd for TimeUnit {
 	fn partial_cmp(&self, other: &Self) -> Option<sp_std::cmp::Ordering> {
-		match (&self, other) {
-			(Self::Era(a), Self::Era(b)) => Some(a.cmp(b)),
-			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),
-			(Self::Round(a), Self::Round(b)) => Some(a.cmp(b)),
-			(Self::Kblock(a), Self::Kblock(b)) => Some(a.cmp(b)),
-			(Self::Hour(a), Self::Hour(b)) => Some(a.cmp(b)),
-			_ => None,
-		}
+		Some(self.cmp(other))
 	}
 }
 
@@ -305,6 +300,12 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 	fn charge_fees(_location: impl Into<MultiLocation>, _fees: MultiAssets) -> XcmResult {
 		Ok(())
 	}
+}
+
+impl XcmAssetTransfers for DoNothingExecuteXcm {
+	type IsReserve = Everything;
+	type IsTeleporter = Everything;
+	type AssetTransactor = ();
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]

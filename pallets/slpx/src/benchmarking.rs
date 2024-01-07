@@ -65,7 +65,10 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
 
-		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), Some(&contract));
+		assert_eq!(
+			WhitelistAccountId::<T>::get(SupportChain::Astar).first(),
+			Some(&contract)
+		);
 	}
 
 	#[benchmark]
@@ -78,7 +81,10 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
 
-		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), None);
+		assert_eq!(
+			WhitelistAccountId::<T>::get(SupportChain::Astar).first(),
+			None
+		);
 	}
 
 	#[benchmark]
@@ -86,7 +92,10 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Root, CurrencyId::Token2(0), 10u32.into());
 
-		assert_eq!(ExecutionFee::<T>::get(CurrencyId::Token2(0)), Some(10u32.into()));
+		assert_eq!(
+			ExecutionFee::<T>::get(CurrencyId::Token2(0)),
+			Some(10u32.into())
+		);
 	}
 
 	#[benchmark]
@@ -94,7 +103,10 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Root, SupportChain::Moonbeam, 10u32.into());
 
-		assert_eq!(TransferToFee::<T>::get(SupportChain::Moonbeam), Some(10u32.into()));
+		assert_eq!(
+			TransferToFee::<T>::get(SupportChain::Moonbeam),
+			Some(10u32.into())
+		);
 	}
 
 	#[benchmark]
@@ -115,14 +127,26 @@ mod benchmarks {
 	fn redeem() {
 		let (caller, receiver) = init_whitelist::<T>();
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), receiver, VKSM, TargetChain::Astar(receiver));
+		_(
+			RawOrigin::Signed(caller),
+			receiver,
+			VKSM,
+			TargetChain::Astar(receiver),
+		);
 	}
 
 	#[benchmark]
 	fn zenlink_swap() {
 		let (caller, receiver) = init_whitelist::<T>();
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), receiver, KSM, VKSM, 0u128, TargetChain::Astar(receiver));
+		_(
+			RawOrigin::Signed(caller),
+			receiver,
+			KSM,
+			VKSM,
+			0u128,
+			TargetChain::Astar(receiver),
+		);
 	}
 
 	#[benchmark]

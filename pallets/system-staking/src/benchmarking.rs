@@ -149,6 +149,8 @@ benchmarks! {
 
 impl_benchmark_test_suite!(
 	SystemStaking,
-	crate::mock::ExtBuilder::default().one_hundred_for_alice_n_bob().build(),
+	crate::mock::ExtBuilder::default()
+		.one_hundred_for_alice_n_bob()
+		.build(),
 	crate::mock::Runtime
 );

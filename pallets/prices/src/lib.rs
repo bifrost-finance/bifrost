@@ -169,7 +169,8 @@ impl<T: Config> Pallet<T> {
 				asset_id,
 				mantissa
 			);
-			p.checked_div(&FixedU128::from_inner(mantissa)).map(|price| (price, 0))
+			p.checked_div(&FixedU128::from_inner(mantissa))
+				.map(|price| (price, 0))
 		})
 	}
 

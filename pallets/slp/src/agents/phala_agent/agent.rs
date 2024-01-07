@@ -72,7 +72,10 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
+		ensure!(
+			delegator_multilocation != MultiLocation::default(),
+			Error::<T>::FailToConvert
+		);
 
 		// Add the new delegator into storage
 		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
@@ -92,8 +95,12 @@ impl<T: Config>
 		// Check if it has already delegated a validator.
 		let (pool_id, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
-				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				let pool_id = ledger
+					.bonded_pool_id
+					.ok_or(Error::<T>::NotDelegateValidator)?;
+				let is_vault = ledger
+					.bonded_is_vault
+					.ok_or(Error::<T>::NotDelegateValidator)?;
 				(pool_id, is_vault)
 			} else {
 				Err(Error::<T>::DelegatorNotExist)?
@@ -101,7 +108,10 @@ impl<T: Config>
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.delegator_bonded_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		// Ensure the bond doesn't exceeds delegator_active_staking_maximum
 		ensure!(
@@ -195,10 +205,14 @@ impl<T: Config>
 		// Check if it has already delegated a validator.
 		let (pool_id, active_shares, unlocking_shares, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
+				let pool_id = ledger
+					.bonded_pool_id
+					.ok_or(Error::<T>::NotDelegateValidator)?;
 				let active_shares = ledger.active_shares;
 				let unlocking_shares = ledger.unlocking_shares;
-				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				let is_vault = ledger
+					.bonded_is_vault
+					.ok_or(Error::<T>::NotDelegateValidator)?;
 				Ok((pool_id, active_shares, unlocking_shares, is_vault))
 			} else {
 				Err(Error::<T>::DelegatorNotExist)
@@ -228,10 +242,15 @@ impl<T: Config>
 		);
 
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+		ensure!(
+			amount >= mins_maxs.unbond_minimum,
+			Error::<T>::LowerThanMinimum
+		);
 
 		// Check if the remaining active shares is enough for withdrawing.
-		active_shares.checked_sub(&shares).ok_or(Error::<T>::NotEnoughToUnbond)?;
+		active_shares
+			.checked_sub(&shares)
+			.ok_or(Error::<T>::NotEnoughToUnbond)?;
 
 		let call = {
 			if is_vault {
@@ -329,7 +348,10 @@ impl<T: Config>
 			let validators_set =
 				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-			ensure!(validators_set.contains(candidate), Error::<T>::ValidatorNotExist);
+			ensure!(
+				validators_set.contains(candidate),
+				Error::<T>::ValidatorNotExist
+			);
 
 			// if the delegator is new, create a ledger for it
 			if !DelegatorLedgers::<T>::contains_key(currency_id, &who.clone()) {
@@ -353,8 +375,14 @@ impl<T: Config>
 				*who,
 				|old_ledger_opt| -> Result<(), Error<T>> {
 					if let Some(Ledger::Phala(ref mut ledger)) = old_ledger_opt {
-						ensure!(ledger.active_shares == Zero::zero(), Error::<T>::AlreadyBonded);
-						ensure!(ledger.unlocking_shares == Zero::zero(), Error::<T>::AlreadyBonded);
+						ensure!(
+							ledger.active_shares == Zero::zero(),
+							Error::<T>::AlreadyBonded
+						);
+						ensure!(
+							ledger.unlocking_shares == Zero::zero(),
+							Error::<T>::AlreadyBonded
+						);
 
 						// delegate the validator
 						ledger.bonded_pool_id = Some(u64::unique_saturated_from(pool_id));
@@ -400,7 +428,10 @@ impl<T: Config>
 			|old_ledger_opt| -> Result<(), Error<T>> {
 				if let Some(Ledger::Phala(ref mut ledger)) = old_ledger_opt {
 					// Ensure both active_shares and unlocking_shares are zero.
-					ensure!(ledger.active_shares == Zero::zero(), Error::<T>::ValidatorStillInUse);
+					ensure!(
+						ledger.active_shares == Zero::zero(),
+						Error::<T>::ValidatorStillInUse
+					);
 					ensure!(
 						ledger.unlocking_shares == Zero::zero(),
 						Error::<T>::ValidatorStillInUse
@@ -455,8 +486,12 @@ impl<T: Config>
 		// Check if it has already delegated a validator.
 		let (pool_id, is_vault) =
 			if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-				let pool_id = ledger.bonded_pool_id.ok_or(Error::<T>::NotDelegateValidator)?;
-				let is_vault = ledger.bonded_is_vault.ok_or(Error::<T>::NotDelegateValidator)?;
+				let pool_id = ledger
+					.bonded_pool_id
+					.ok_or(Error::<T>::NotDelegateValidator)?;
+				let is_vault = ledger
+					.bonded_is_vault
+					.ok_or(Error::<T>::NotDelegateValidator)?;
 				(pool_id, is_vault)
 			} else {
 				Err(Error::<T>::DelegatorNotExist)?
@@ -560,12 +595,17 @@ impl<T: Config>
 
 		let locat = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
 		// Prepare parameter assets.
-		let asset =
-			MultiAsset { fun: Fungible(amount.unique_saturated_into()), id: Concrete(locat) };
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(locat),
+		};
 
 		// Construct xcm message.
-		let call: PhalaCall<T> =
-			PhalaCall::Xtransfer(XtransferCall::Transfer(Box::new(asset), Box::new(dest), None));
+		let call: PhalaCall<T> = PhalaCall::Xtransfer(XtransferCall::Transfer(
+			Box::new(asset),
+			Box::new(dest),
+			None,
+		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -597,7 +637,10 @@ impl<T: Config>
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+		ensure!(
+			from_account_id == entrance_account,
+			Error::<T>::InvalidAccount
+		);
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
@@ -658,7 +701,10 @@ impl<T: Config>
 
 		// Ensure delegator has bonded to a validator.
 		if let Some(Ledger::Phala(ledger)) = DelegatorLedgers::<T>::get(currency_id, *who) {
-			ensure!(ledger.bonded_pool_id.is_some(), Error::<T>::DelegatorNotBonded);
+			ensure!(
+				ledger.bonded_pool_id.is_some(),
+				Error::<T>::DelegatorNotBonded
+			);
 		} else {
 			Err(Error::<T>::DelegatorNotExist)?;
 		}
@@ -680,8 +726,14 @@ impl<T: Config>
 
 		if let Ledger::Phala(phala_ledger) = ledger {
 			// Check if ledger bonding and unlocking amount is zero. If not, return error.
-			ensure!(phala_ledger.active_shares.is_zero(), Error::<T>::AmountNotZero);
-			ensure!(phala_ledger.unlocking_shares.is_zero(), Error::<T>::AmountNotZero);
+			ensure!(
+				phala_ledger.active_shares.is_zero(),
+				Error::<T>::AmountNotZero
+			);
+			ensure!(
+				phala_ledger.unlocking_shares.is_zero(),
+				Error::<T>::AmountNotZero
+			);
 		} else {
 			Err(Error::<T>::Unexpected)?;
 		}
@@ -832,7 +884,7 @@ impl<T: Config> PhalaAgent<T> {
 									.active_shares
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
-							},
+							}
 							// If this is a bonding operation, increase unlocking_shares.
 							Unlock => {
 								// we only allow one unlocking operation at a time.
@@ -852,7 +904,7 @@ impl<T: Config> PhalaAgent<T> {
 									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 
 								old_pha_ledger.unlocking_time_unit = Some(unlock_time_unit);
-							},
+							}
 							_ => return Err(Error::<T>::Unexpected),
 						}
 						Ok(())

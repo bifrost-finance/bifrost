@@ -42,7 +42,10 @@ impl<T: Config> MantaCall<T> {
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum MantaBalancesCall<T: Config> {
 	#[codec(index = 3)]
-	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
+	TransferKeepAlive(
+		<T::Lookup as StaticLookup>::Source,
+		#[codec(compact)] BalanceOf<T>,
+	),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
@@ -81,7 +84,12 @@ pub enum MantaParachainStakingCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MantaXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(MantaCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
+	Transfer(
+		MantaCurrencyId,
+		BalanceOf<T>,
+		Box<VersionedMultiLocation>,
+		WeightLimit,
+	),
 }
 
 #[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]

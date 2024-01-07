@@ -26,7 +26,10 @@ use sp_runtime::traits::BadOrigin;
 use super::*;
 
 const BALANCE_TRANSFER: &<Runtime as frame_system::Config>::RuntimeCall =
-	&mock::RuntimeCall::Balances(pallet_balances::Call::transfer { dest: ALICE, value: 10 });
+	&mock::RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death {
+		dest: ALICE,
+		value: 10,
+	});
 const TOKENS_TRANSFER: &<Runtime as frame_system::Config>::RuntimeCall =
 	&mock::RuntimeCall::Tokens(orml_tokens::Call::transfer {
 		dest: ALICE,
@@ -43,7 +46,7 @@ fn switchoff_transaction_should_work() {
 			CallSwitchgear::switchoff_transaction(
 				RuntimeOrigin::signed(5),
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			),
 			BadOrigin
 		);
@@ -51,22 +54,25 @@ fn switchoff_transaction_should_work() {
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			)),
 			None
 		);
 		assert_ok!(CallSwitchgear::switchoff_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
-			b"transfer".to_vec()
+			b"transfer_allow_death".to_vec()
 		));
 		System::assert_last_event(RuntimeEvent::CallSwitchgear(
-			crate::Event::TransactionSwitchedoff(b"Balances".to_vec(), b"transfer".to_vec()),
+			crate::Event::TransactionSwitchedoff(
+				b"Balances".to_vec(),
+				b"transfer_allow_death".to_vec(),
+			),
 		));
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			)),
 			Some(())
 		);
@@ -103,12 +109,12 @@ fn switchon_transaction_transaction_should_work() {
 		assert_ok!(CallSwitchgear::switchoff_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
-			b"transfer".to_vec()
+			b"transfer_allow_death".to_vec()
 		));
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			)),
 			Some(())
 		);
@@ -117,7 +123,7 @@ fn switchon_transaction_transaction_should_work() {
 			CallSwitchgear::switchoff_transaction(
 				RuntimeOrigin::signed(5),
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			),
 			BadOrigin
 		);
@@ -125,15 +131,18 @@ fn switchon_transaction_transaction_should_work() {
 		assert_ok!(CallSwitchgear::switchon_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
-			b"transfer".to_vec()
+			b"transfer_allow_death".to_vec()
 		));
 		System::assert_last_event(RuntimeEvent::CallSwitchgear(
-			crate::Event::TransactionSwitchedOn(b"Balances".to_vec(), b"transfer".to_vec()),
+			crate::Event::TransactionSwitchedOn(
+				b"Balances".to_vec(),
+				b"transfer_allow_death".to_vec(),
+			),
 		));
 		assert_eq!(
 			CallSwitchgear::get_switchoff_transactions((
 				b"Balances".to_vec(),
-				b"transfer".to_vec()
+				b"transfer_allow_death".to_vec()
 			)),
 			None
 		);
@@ -161,32 +170,44 @@ fn switchon_transaction_transaction_should_work() {
 #[test]
 fn switchoff_transaction_filter_work() {
 	ExtBuilder.build().execute_with(|| {
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
+			BALANCE_TRANSFER
+		));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
+			TOKENS_TRANSFER
+		));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
-			b"transfer".to_vec()
+			b"transfer_allow_death".to_vec()
 		));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
 			RuntimeOrigin::signed(1),
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
-		assert!(SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
-		assert!(SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
+		assert!(SwitchOffTransactionFilter::<Runtime>::contains(
+			BALANCE_TRANSFER
+		));
+		assert!(SwitchOffTransactionFilter::<Runtime>::contains(
+			TOKENS_TRANSFER
+		));
 		assert_ok!(CallSwitchgear::switchon_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
-			b"transfer".to_vec()
+			b"transfer_allow_death".to_vec()
 		));
 		assert_ok!(CallSwitchgear::switchon_transaction(
 			RuntimeOrigin::signed(1),
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
+			BALANCE_TRANSFER
+		));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
+			TOKENS_TRANSFER
+		));
 	});
 }
 
@@ -194,9 +215,15 @@ fn switchoff_transaction_filter_work() {
 fn disable_transfers_filter_should_work() {
 	ExtBuilder.build().execute_with(|| {
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::disable_transfers(RuntimeOrigin::signed(1), KSM));
+		assert_ok!(CallSwitchgear::disable_transfers(
+			RuntimeOrigin::signed(1),
+			KSM
+		));
 		assert!(DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::enable_transfers(RuntimeOrigin::signed(1), KSM));
+		assert_ok!(CallSwitchgear::enable_transfers(
+			RuntimeOrigin::signed(1),
+			KSM
+		));
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
 	});
 }

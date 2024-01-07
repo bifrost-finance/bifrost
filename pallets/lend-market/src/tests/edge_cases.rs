@@ -5,7 +5,13 @@ use sp_runtime::FixedPointNumber;
 #[test]
 fn exceeded_supply_cap() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, DOT, million_unit(1001), 0,));
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			ALICE,
+			DOT,
+			million_unit(1001),
+			0,
+		));
 		let amount = million_unit(501);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, amount));
 		// Exceed upper bound.
@@ -24,15 +30,30 @@ fn exceeded_supply_cap() {
 fn repay_borrow_all_no_underflow() {
 	new_test_ext().execute_with(|| {
 		// Alice deposits 200 KSM as collateral
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
-		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			unit(200)
+		));
+		assert_ok!(LendMarket::collateral_asset(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			true
+		));
 
 		// Alice borrow only 1/1e5 KSM which is hard to accrue total borrows interest in 100 seconds
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, 10_u128.pow(7)));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			10_u128.pow(7)
+		));
 
 		accrue_interest_per_block(KSM, 100, 9);
 
-		assert_eq!(LendMarket::current_borrow_balance(&ALICE, KSM), Ok(10000005));
+		assert_eq!(
+			LendMarket::current_borrow_balance(&ALICE, KSM),
+			Ok(10000005)
+		);
 		// FIXME since total_borrows is too small and we accrue internal on it every 100 seconds
 		// accrue_interest fails every time
 		// as you can see the current borrow balance is not equal to total_borrows anymore
@@ -40,9 +61,15 @@ fn repay_borrow_all_no_underflow() {
 
 		// Alice repay all borrow balance. total_borrows = total_borrows.saturating_sub(10000005) =
 		// 0.
-		assert_ok!(LendMarket::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
+		assert_ok!(LendMarket::repay_borrow_all(
+			RuntimeOrigin::signed(ALICE),
+			KSM
+		));
 
-		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), unit(800) - 5);
+		assert_eq!(
+			<Test as Config>::Assets::balance(KSM, &ALICE),
+			unit(800) - 5
+		);
 
 		assert_eq!(
 			LendMarket::exchange_rate(DOT)
@@ -69,15 +96,33 @@ fn ensure_capacity_fails_when_market_not_existed() {
 #[test]
 fn redeem_all_should_be_accurate() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
-		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
-		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(50)));
+		assert_ok!(LendMarket::mint(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			unit(200)
+		));
+		assert_ok!(LendMarket::collateral_asset(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			true
+		));
+		assert_ok!(LendMarket::borrow(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			unit(50)
+		));
 
 		// let exchange_rate greater than 0.02
 		accrue_interest_per_block(KSM, 6, 2);
-		assert_eq!(LendMarket::exchange_rate(KSM), Rate::from_inner(20000000036387000));
+		assert_eq!(
+			LendMarket::exchange_rate(KSM),
+			Rate::from_inner(20000000036387000)
+		);
 
-		assert_ok!(LendMarket::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
+		assert_ok!(LendMarket::repay_borrow_all(
+			RuntimeOrigin::signed(ALICE),
+			KSM
+		));
 		// It failed with InsufficientLiquidity before #839
 		assert_ok!(LendMarket::redeem_all(RuntimeOrigin::signed(ALICE), KSM));
 	})

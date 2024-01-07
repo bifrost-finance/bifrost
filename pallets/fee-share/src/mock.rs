@@ -158,6 +158,7 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -419,7 +420,12 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
 
 		Ok(())
 	}
@@ -481,11 +487,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -507,8 +508,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -520,7 +519,9 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self { endowed_accounts: vec![] }
+		Self {
+			endowed_accounts: vec![],
+		}
 	}
 }
 
@@ -540,13 +541,23 @@ impl ExtBuilder {
 			(BOB, vsKSM, 100),
 			(BOB, KSM, 100),
 			(BOB, vsBond, 100),
-			(FeeSharePalletId::get().into_account_truncating(), vKSM, 10000),
-			(FeeSharePalletId::get().into_account_truncating(), KSM, 10000),
+			(
+				FeeSharePalletId::get().into_account_truncating(),
+				vKSM,
+				10000,
+			),
+			(
+				FeeSharePalletId::get().into_account_truncating(),
+				KSM,
+				10000,
+			),
 		])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default()
+			.build_storage()
+			.unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

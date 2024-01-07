@@ -135,6 +135,7 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -375,7 +376,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				} else {
 					MultiLocation::default()
 				}
-			},
+			}
 		}
 	}
 }
@@ -425,11 +426,16 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 		use TokenSymbol::*;
 
 		match id {
-			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
+			Token(MOVR) => Some(MultiLocation::new(
+				1,
+				X2(Parachain(2023), PalletInstance(10)),
+			)),
 			Token(KSM) => Some(MultiLocation::parent()),
 			Native(BNC) => Some(MultiLocation::new(
 				0,
-				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
+				X1(Junction::from(
+					BoundedVec::try_from("0x0001".encode()).unwrap(),
+				)),
 			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
 			_ => None,
@@ -519,11 +525,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
@@ -545,8 +546,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -558,7 +557,9 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self { endowed_accounts: vec![] }
+		Self {
+			endowed_accounts: vec![],
+		}
 	}
 }
 
@@ -584,7 +585,9 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default()
+			.build_storage()
+			.unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

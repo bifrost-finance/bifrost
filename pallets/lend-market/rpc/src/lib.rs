@@ -62,7 +62,10 @@ pub struct LendMarket<C, B> {
 impl<C, B> LendMarket<C, B> {
 	/// Create new `LendMarket` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
-		Self { client, _marker: Default::default() }
+		Self {
+			client,
+			_marker: Default::default(),
+		}
 	}
 }
 

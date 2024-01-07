@@ -57,7 +57,18 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_market_status(
 		asset_id: AssetIdOf<T>,
-	) -> Result<(Rate, Rate, Rate, Ratio, BalanceOf<T>, BalanceOf<T>, FixedU128), DispatchError> {
+	) -> Result<
+		(
+			Rate,
+			Rate,
+			Rate,
+			Ratio,
+			BalanceOf<T>,
+			BalanceOf<T>,
+			FixedU128,
+		),
+		DispatchError,
+	> {
 		let market = Self::market(asset_id)?;
 		let total_supply = Self::total_supply(asset_id);
 		let total_cash = Self::get_total_cash(asset_id);
@@ -66,8 +77,10 @@ impl<T: Config> Pallet<T> {
 		let mut borrow_index = Self::borrow_index(asset_id);
 
 		let util = Self::calc_utilization_ratio(total_cash, total_borrows, total_reserves)?;
-		let borrow_rate =
-			market.rate_model.get_borrow_rate(util).ok_or(ArithmeticError::Overflow)?;
+		let borrow_rate = market
+			.rate_model
+			.get_borrow_rate(util)
+			.ok_or(ArithmeticError::Overflow)?;
 		let supply_rate =
 			InterestRateModel::get_supply_rate(borrow_rate, util, market.reserve_factor);
 
@@ -141,8 +154,8 @@ impl<T: Config> Pallet<T> {
 	/// The exchange rate should be greater than 0.02 and less than 1
 	pub(crate) fn ensure_valid_exchange_rate(exchange_rate: Rate) -> DispatchResult {
 		ensure!(
-			exchange_rate >= Rate::from_inner(MIN_EXCHANGE_RATE) &&
-				exchange_rate < Rate::from_inner(MAX_EXCHANGE_RATE),
+			exchange_rate >= Rate::from_inner(MIN_EXCHANGE_RATE)
+				&& exchange_rate < Rate::from_inner(MAX_EXCHANGE_RATE),
 			Error::<T>::InvalidExchangeRate
 		);
 

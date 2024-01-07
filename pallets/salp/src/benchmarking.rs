@@ -45,7 +45,13 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 	let last_period = 7u32.into();
 	let para_id = id;
 
-	assert_ok!(Salp::<T>::create(RawOrigin::Root.into(), para_id, cap, first_period, last_period));
+	assert_ok!(Salp::<T>::create(
+		RawOrigin::Root.into(),
+		para_id,
+		cap,
+		first_period,
+		last_period
+	));
 
 	para_id
 }
@@ -69,7 +75,11 @@ where
 			bifrost_xcm_interface::BalanceOf::<T>::from(4000000000u32),
 		),
 	);
-	assert_ok!(Salp::<T>::contribute(RawOrigin::Signed(who.clone()).into(), index, value));
+	assert_ok!(Salp::<T>::contribute(
+		RawOrigin::Signed(who.clone()).into(),
+		index,
+		value
+	));
 	QueryIdContributionInfo::<T>::insert(0u64, (index, who.clone(), value));
 	MultisigConfirmAccount::<T>::put(who.clone());
 	(who, value)
@@ -119,7 +129,13 @@ mod benchmarks {
 		assert_eq!(status, ContributionStatus::Idle);
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), fund_index, 0u32.into(), 7u32.into(), contribution);
+		_(
+			RawOrigin::Signed(caller.clone()),
+			fund_index,
+			0u32.into(),
+			7u32.into(),
+			contribution,
+		);
 
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Idle);
@@ -148,7 +164,11 @@ mod benchmarks {
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), caller.clone(), fund_index);
+		_(
+			RawOrigin::Signed(caller.clone()),
+			caller.clone(),
+			fund_index,
+		);
 	}
 
 	#[benchmark]
@@ -285,7 +305,13 @@ mod benchmarks {
 	#[benchmark]
 	fn create() {
 		#[extrinsic_call]
-		_(RawOrigin::Root, 2001u32, BalanceOf::<T>::max_value(), 0u32.into(), 3u32.into());
+		_(
+			RawOrigin::Root,
+			2001u32,
+			BalanceOf::<T>::max_value(),
+			0u32.into(),
+			3u32.into(),
+		);
 	}
 
 	#[benchmark]
@@ -371,8 +397,16 @@ mod benchmarks {
 
 		assert_ok!(zenlink_protocol::Pallet::<T>::create_pair(
 			RawOrigin::Root.into(),
-			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
-			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			zenlink_protocol::AssetId {
+				chain_id: 2001,
+				asset_type: 2,
+				asset_index: 516
+			},
+			zenlink_protocol::AssetId {
+				chain_id: 2001,
+				asset_type: 2,
+				asset_index: 1028
+			},
 		));
 
 		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();
@@ -389,8 +423,16 @@ mod benchmarks {
 
 		assert_ok!(zenlink_protocol::Pallet::<T>::add_liquidity(
 			RawOrigin::Signed(buybck_caller).into(),
-			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
-			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			zenlink_protocol::AssetId {
+				chain_id: 2001,
+				asset_type: 2,
+				asset_index: 516
+			},
+			zenlink_protocol::AssetId {
+				chain_id: 2001,
+				asset_type: 2,
+				asset_index: 1028
+			},
 			1_000_000_000_000u128,
 			100_000_000_000_000u128,
 			0u128,
@@ -399,7 +441,10 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), BalanceOf::<T>::unique_saturated_from(1000u128))
+		_(
+			RawOrigin::Signed(caller),
+			BalanceOf::<T>::unique_saturated_from(1000u128),
+		)
 	}
 
 	#[benchmark]
@@ -490,7 +535,12 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), fund_index, contribution, false);
+		_(
+			RawOrigin::Signed(caller.clone()),
+			fund_index,
+			contribution,
+			false,
+		);
 	}
 
 	#[benchmark]

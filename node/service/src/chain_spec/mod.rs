@@ -16,9 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-kusama-runtime",
+	feature = "with-bifrost-runtime"
+))]
 pub mod bifrost_kusama;
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-polkadot-runtime",
+	feature = "with-bifrost-runtime"
+))]
 pub mod bifrost_polkadot;
 
 pub use bifrost_primitives::{AccountId, Block, Signature};
