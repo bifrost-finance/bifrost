@@ -179,7 +179,7 @@ fn force_update_market_works() {
 		// New lend_token_id must not be in use
 		assert_noop!(
 			LendMarket::force_update_market(RuntimeOrigin::root(), DOT, market_mock(LUSDT)),
-			Error::<Test>::InvalidPtokenId
+			Error::<Test>::InvalidLendTokenId
 		);
 		assert_ok!(LendMarket::force_update_market(
 			RuntimeOrigin::root(),

@@ -91,6 +91,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
 		let (pool_id, is_vault) =
@@ -151,6 +152,7 @@ impl<T: Config>
 				calls,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Calculate how many shares we can get by the amount at current price
@@ -188,8 +190,9 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
-		Self::bond(self, who, amount, share_price, currency_id)
+		Self::bond(self, who, amount, share_price, currency_id, weight_and_fee)
 	}
 
 	/// Decrease bonding amount to a delegator. In Phala context, it corresponds to `withdraw`
@@ -201,6 +204,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
 		let (pool_id, active_shares, unlocking_shares, is_vault) =
@@ -274,6 +278,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -298,6 +303,7 @@ impl<T: Config>
 		&self,
 		_who: &MultiLocation,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -309,11 +315,12 @@ impl<T: Config>
 		amount: Option<BalanceOf<T>>,
 		share_price: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let amount = amount.ok_or(Error::<T>::InvalidAmount)?;
 		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
 
-		Self::bond(self, who, amount, share_price, currency_id)
+		Self::bond(self, who, amount, share_price, currency_id, weight_and_fee)
 	}
 
 	/// Delegate to some validators. In Phala context, the passed in Multilocation
@@ -324,6 +331,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
@@ -420,6 +428,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		_targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
 		DelegatorLedgers::<T>::mutate(
@@ -468,9 +477,10 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorNotProvided)?;
-		Self::delegate(self, who, &targets, currency_id)
+		Self::delegate(self, who, &targets, currency_id, weight_and_fee)
 	}
 
 	/// Corresponds to the `check_and_maybe_force_withdraw` funtion of PhalaVault pallet.
@@ -482,6 +492,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it has already delegated a validator.
 		let (pool_id, is_vault) =
@@ -517,6 +528,7 @@ impl<T: Config>
 				call,
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Send out the xcm message.
@@ -535,6 +547,7 @@ impl<T: Config>
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
 		amount: Option<BalanceOf<T>>,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if amount is provided. This amount will replace the unlocking_shares in ledger.
 		let updated_amount = amount.ok_or(Error::<T>::AmountNotProvided)?;
@@ -572,7 +585,12 @@ impl<T: Config>
 	}
 
 	/// Not supported in Phala.
-	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(
+		&self,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -583,6 +601,7 @@ impl<T: Config>
 		to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
@@ -614,6 +633,7 @@ impl<T: Config>
 			call.encode(),
 			from,
 			currency_id,
+			weight_and_fee,
 		)?;
 
 		Ok(())
@@ -656,6 +676,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		if_from_currency: bool,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if delegator exists.
 		ensure!(
@@ -681,6 +702,7 @@ impl<T: Config>
 				call.encode(),
 				who,
 				currency_id,
+				weight_and_fee,
 			)?;
 
 		// Send out the xcm message.

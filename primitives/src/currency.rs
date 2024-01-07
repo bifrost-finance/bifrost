@@ -162,95 +162,6 @@ macro_rules! create_currency_id {
 
 
 		impl TokenInfo for CurrencyId {
-			// DATA LAYOUT
-			//
-			// ParaId:                      2byte
-			// LeasePeriod:                 2byte
-			// LeasePeriod:                 2byte
-			// Currency Discriminant:       1byte
-			// TokenSymbol Discriminant:    1byte
-			//
-			// If it is LPToken:
-			// Empty:						2byte
-			// Currency 2 Discriminant:     1byte
-			// TokenSymbol 2 Discriminant:  1byte
-			// Currency 1 Discriminant:     1byte
-			// TokenSymbol 2 Discriminant:  1byte
-			// Currency Discriminant:       1byte
-			// TokenSymbol Discriminant:    1byte
-			//
-			// If it is Foreign Asset:
-			// Empty:						2byte
-			// ForeignAssetId of u32:       4byte
-			// Currency Discriminant:       1byte
-			// TokenSymbol Discriminant:    1byte
-
-			fn currency_id(&self) -> u64 {
-				let c_discr = self.discriminant() as u64;
-
-				let t_discr = match *self {
-					Self::Token(ts)
-					| Self::VToken(ts)
-					| Self::Native(ts)
-					| Self::Stable(ts)
-					| Self::VSToken(ts)
-					| Self::VSBond(ts, ..) => ts as u64,
-					Self::Token2(tk_id)
-					| Self::VToken2(tk_id)
-					| Self::VSToken2(tk_id)
-					| Self::VSBond2(tk_id, ..) => tk_id as u64,
-					Self::ForeignAsset(..) | Self::LPToken(..) | Self::StableLpToken(..) | Self::BLP(..) => 0u64
-				};
-
-		 		let discr = (c_discr << 8) + t_discr;
-
-				match &*self {
-					Self::Token(..)
-					| Self::VToken(..)
-					| Self::Native(..)
-					| Self::Stable(..)
-					| Self::VSToken(..)
-					| Self::Token2(..)
-					| Self::VToken2(..)
-					| Self::VSToken2(..)
-					| Self::BLP(..)
-					| Self::StableLpToken(..)
-					=> (0x0000_ffff & discr) as u64,
-					Self::VSBond(_, pid, lp1, lp2) => {
-						// NOTE: ParaId representation
-						//
-						// The current goal is for Polkadot to support up to 100 parachains which `u8` could hold.
-						// But `paraId` be represented like 2001, 2002 and so on which exceeds the range which `u8`
-						//  could be represented.
-						// So `u16` is a choice better than `u8`.
-
-						// NOTE: LeasePeriod representation
-						//
-						// `u16` can hold the range of `LeasePeriod`
-
-						let pid = (0x0000_ffff & pid) as u64;
-						let lp1 = (0x0000_ffff & lp1) as u64;
-						let lp2 = (0x0000_ffff & lp2) as u64;
-
-						(pid << 48) + (lp1 << 32) + (lp2 << 16) + discr
-					},
-					Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2) => {
-						(((*token_symbol_1 as u64) << 16) & 0x0000_0000_00ff_0000) + (((*token_type_1 as u64) << 24) & 0x0000_0000_ff00_0000) +
-						(((*token_symbol_2 as u64) << 32) & 0x0000_00ff_0000_0000) + (((*token_type_2 as u64) << 40) & 0x0000_ff00_0000_0000) + discr
-					},
-					Self::ForeignAsset(asset_token_id) => {
-						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
-					},
-					Self::VSBond2(_, pid, lp1, lp2) => {
-						let pid = (0x0000_ffff & pid) as u64;
-						let lp1 = (0x0000_ffff & lp1) as u64;
-						let lp2 = (0x0000_ffff & lp2) as u64;
-
-						(pid << 48) + (lp1 << 32) + (lp2 << 16) + discr
-					},
-				}
-			}
-
 			fn name(&self) -> Option<&str> {
 				match self {
 					$(CurrencyId::Native(TokenSymbol::$symbol) => Some($name),)*
@@ -378,6 +289,7 @@ pub enum CurrencyId {
 	VSBond2(TokenId, ParaId, LeasePeriod, LeasePeriod),
 	StableLpToken(PoolId),
 	BLP(PoolId),
+	Lend(TokenId),
 }
 
 impl Default for CurrencyId {
@@ -435,25 +347,6 @@ impl CurrencyId {
 			Self::Token(symbol) => Ok(Self::VSToken(*symbol)),
 			Self::Token2(id) => Ok(Self::VSToken2(*id)),
 			_ => Err(()),
-		}
-	}
-
-	pub fn discriminant(&self) -> u8 {
-		match *self {
-			Self::Native(..) => 0,
-			Self::VToken(..) => 1,
-			Self::Token(..) => 2,
-			Self::Stable(..) => 3,
-			Self::VSToken(..) => 4,
-			Self::VSBond(..) => 5,
-			Self::LPToken(..) => 6,
-			Self::ForeignAsset(..) => 7,
-			Self::Token2(..) => 8,
-			Self::VToken2(..) => 9,
-			Self::VSToken2(..) => 10,
-			Self::VSBond2(..) => 11,
-			Self::StableLpToken(..) => 13,
-			Self::BLP(..) => 14,
 		}
 	}
 }

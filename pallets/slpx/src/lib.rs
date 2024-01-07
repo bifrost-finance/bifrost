@@ -17,31 +17,42 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use crate::types::{
+	AccountIdOf, BalanceOf, CurrencyIdOf, EthereumCallConfiguration, EthereumXcmCall,
+	EthereumXcmTransaction, EthereumXcmTransactionV2, MoonbeamCall, SupportChain, TargetChain,
+	EVM_FUNCTION_SELECTOR, MAX_GAS_LIMIT,
+};
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
 	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
 };
 use cumulus_primitives_core::ParaId;
+use ethereum::TransactionAction;
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::Get,
 };
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use frame_system::{
+	ensure_signed,
+	pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_core::{Hasher, H160};
+use parity_scale_codec::{Decode, Encode};
+use polkadot_parachain_primitives::primitives::Sibling;
+use sp_core::{Hasher, H160, U256};
 use sp_runtime::{
-	traits::{BlakeTwo256, CheckedSub},
-	DispatchError, RuntimeDebug,
+	traits::{AccountIdConversion, BlakeTwo256, CheckedSub},
+	BoundedVec, DispatchError,
 };
-use sp_std::vec;
+use sp_std::{vec, vec::Vec};
 use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
+
+mod types;
 
 pub mod weights;
 pub use weights::WeightInfo;
@@ -55,58 +66,15 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::CurrencyId;
-pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-#[derive(
-	Encode,
-	Decode,
-	MaxEncodedLen,
-	Eq,
-	PartialEq,
-	Copy,
-	Clone,
-	RuntimeDebug,
-	PartialOrd,
-	Ord,
-	TypeInfo,
-)]
-pub enum SupportChain {
-	Astar,
-	Moonbeam,
-	Hydradx,
-	Interlay,
-}
-
-#[derive(
-	Encode,
-	Decode,
-	MaxEncodedLen,
-	Eq,
-	PartialEq,
-	Copy,
-	Clone,
-	RuntimeDebug,
-	PartialOrd,
-	Ord,
-	TypeInfo,
-)]
-pub enum TargetChain<AccountId> {
-	Astar(H160),
-	Moonbeam(H160),
-	Hydradx(AccountId),
-	Interlay(AccountId),
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use bifrost_primitives::RedeemType;
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
-	use frame_support::pallet_prelude::{ValueQuery, *};
+	use frame_support::{
+		pallet_prelude::{ValueQuery, *},
+		weights::WeightMeter,
+	};
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -136,6 +104,9 @@ pub mod pallet {
 
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
+
+		///
+		type XcmSender: SendXcm;
 
 		/// Convert MultiLocation to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
@@ -225,6 +196,22 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			execution_fee: BalanceOf<T>,
 		},
+		SetCurrencyEthereumCallSwitch {
+			currency_id: CurrencyId,
+			is_support: bool,
+		},
+		SetEthereumCallConfiguration {
+			xcm_fee: u128,
+			xcm_weight: Weight,
+			period: BlockNumberFor<T>,
+			contract: H160,
+		},
+		XcmSetTokenAmount {
+			currency_id: CurrencyId,
+			token_amount: BalanceOf<T>,
+			vcurrency_id: CurrencyId,
+			vtoken_amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -245,6 +232,9 @@ pub mod pallet {
 		FreeBalanceTooLow,
 		/// ArgumentsError
 		ArgumentsError,
+		ErrorConvertVtoken,
+		ErrorValidating,
+		ErrorDelivering,
 	}
 
 	/// Contract whitelist
@@ -269,6 +259,85 @@ pub mod pallet {
 	#[pallet::getter(fn transfer_to_fee)]
 	pub type TransferToFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, SupportChain, BalanceOf<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_ethereum_call_configuration)]
+	pub type XcmEthereumCallConfiguration<T: Config> =
+		StorageValue<_, EthereumCallConfiguration<BlockNumberFor<T>>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn currency_id_list)]
+	pub type CurrencyIdList<T: Config> =
+		StorageValue<_, BoundedVec<CurrencyId, ConstU32<10>>, ValueQuery>;
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_idle(n: BlockNumberFor<T>, limit: Weight) -> Weight {
+			let mut weight = Weight::default();
+
+			if WeightMeter::with_limit(limit)
+				.try_consume(T::DbWeight::get().reads_writes(4, 2))
+				.is_err()
+			{
+				return weight;
+			}
+
+			let mut currency_list = CurrencyIdList::<T>::get().to_vec();
+			if currency_list.len() < 1 {
+				weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+			} else {
+				let configuration = XcmEthereumCallConfiguration::<T>::get();
+				match configuration {
+					Some(mut configuration) => {
+						let currency_id = currency_list[0];
+						let token_amount = T::VtokenMintingInterface::get_token_pool(currency_id);
+						// It's impossible to go wrong.
+						let vcurrency_id = T::VtokenMintingInterface::vtoken_id(currency_id)
+							.expect("Error convert vcurrency_id");
+						let vtoken_amount = T::MultiCurrency::total_issuance(vcurrency_id);
+
+						if configuration.last_block + configuration.period < n {
+							let encoded_call = Self::encode_transact_call(
+								configuration.contract,
+								currency_id,
+								token_amount,
+								vtoken_amount,
+							);
+
+							let result = Self::send_xcm_to_set_token_amount(
+								encoded_call,
+								configuration.xcm_weight,
+								configuration.xcm_fee,
+							);
+
+							if result.is_err() {
+								return weight
+									.saturating_add(T::DbWeight::get().reads_writes(4, 0));
+							}
+							Self::deposit_event(Event::XcmSetTokenAmount {
+								currency_id,
+								token_amount,
+								vcurrency_id,
+								vtoken_amount,
+							});
+
+							configuration.last_block = n;
+							XcmEthereumCallConfiguration::<T>::put(configuration);
+
+							currency_list.rotate_left(1);
+							CurrencyIdList::<T>::put(BoundedVec::try_from(currency_list).unwrap());
+
+							weight = weight.saturating_add(T::DbWeight::get().reads_writes(4, 2));
+						}
+					}
+					None => {
+						weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+					}
+				};
+			}
+			weight
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -628,10 +697,165 @@ pub mod pallet {
 			});
 			Ok(().into())
 		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
+		pub fn set_currency_ethereum_call_switch(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			is_support: bool,
+		) -> DispatchResultWithPostInfo {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			// Check in advance to avoid hook errors
+			T::VtokenMintingInterface::vtoken_id(currency_id)
+				.ok_or(Error::<T>::ErrorConvertVtoken)?;
+			let mut currency_list = CurrencyIdList::<T>::get();
+			match is_support {
+				true => {
+					ensure!(
+						!currency_list.contains(&currency_id),
+						Error::<T>::ArgumentsError
+					);
+					currency_list
+						.try_push(currency_id)
+						.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
+				}
+				false => {
+					ensure!(
+						currency_list.contains(&currency_id),
+						Error::<T>::ArgumentsError
+					);
+					currency_list.retain(|&x| x != currency_id);
+				}
+			};
+			CurrencyIdList::<T>::put(currency_list);
+			Self::deposit_event(Event::SetCurrencyEthereumCallSwitch {
+				currency_id,
+				is_support,
+			});
+			Ok(().into())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
+		pub fn set_ethereum_call_configration(
+			origin: OriginFor<T>,
+			xcm_fee: u128,
+			xcm_weight: Weight,
+			period: BlockNumberFor<T>,
+			contract: H160,
+		) -> DispatchResultWithPostInfo {
+			T::ControlOrigin::ensure_origin(origin)?;
+			XcmEthereumCallConfiguration::<T>::put(EthereumCallConfiguration {
+				xcm_fee,
+				xcm_weight,
+				period,
+				last_block: frame_system::Pallet::<T>::block_number(),
+				contract,
+			});
+			Self::deposit_event(Event::SetEthereumCallConfiguration {
+				xcm_fee,
+				xcm_weight,
+				period,
+				contract,
+			});
+			Ok(().into())
+		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
+	fn send_xcm_to_set_token_amount(
+		call: Vec<u8>,
+		xcm_weight: Weight,
+		xcm_fee: u128,
+	) -> DispatchResult {
+		let dest = MultiLocation {
+			parents: 1,
+			interior: X1(Parachain(
+				T::VtokenMintingInterface::get_moonbeam_parachain_id(),
+			)),
+		};
+
+		// Moonbeam Native Token
+		let asset = MultiAsset {
+			id: Concrete(MultiLocation {
+				parents: 0,
+				interior: X1(PalletInstance(10)),
+			}),
+			fun: Fungible(xcm_fee),
+		};
+
+		let xcm_message = Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution {
+				fees: asset,
+				weight_limit: Unlimited,
+			},
+			Transact {
+				origin_kind: OriginKind::SovereignAccount,
+				require_weight_at_most: xcm_weight,
+				call: call.into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: AllCounted(8).into(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(AccountKey20 {
+						network: None,
+						key: Sibling::from(T::ParachainId::get()).into_account_truncating(),
+					}),
+				},
+			},
+		]);
+
+		// Send to sovereign
+		let (ticket, _price) = T::XcmSender::validate(&mut Some(dest), &mut Some(xcm_message))
+			.map_err(|_| Error::<T>::ErrorValidating)?;
+		T::XcmSender::deliver(ticket).map_err(|_| Error::<T>::ErrorDelivering)?;
+
+		Ok(())
+	}
+
+	/// setTokenAmount(bytes2,uint256,uint256)
+	pub fn encode_ethereum_call(
+		currency_id: CurrencyId,
+		token_amount: BalanceOf<T>,
+		vtoken_amount: BalanceOf<T>,
+	) -> Vec<u8> {
+		let bytes2_currency_id: Vec<u8> = currency_id.encode()[..2].to_vec();
+		let uint256_token_amount = U256::from(token_amount.saturated_into::<u128>());
+		let uint256_vtoken_amount = U256::from(vtoken_amount.saturated_into::<u128>());
+
+		let mut call = ethabi::encode(&[
+			ethabi::Token::FixedBytes(bytes2_currency_id),
+			ethabi::Token::Uint(uint256_token_amount),
+			ethabi::Token::Uint(uint256_vtoken_amount),
+		]);
+
+		call.splice(0..0, EVM_FUNCTION_SELECTOR);
+		call
+	}
+
+	pub fn encode_transact_call(
+		contract: H160,
+		currency_id: CurrencyId,
+		token_amount: BalanceOf<T>,
+		vtoken_amount: BalanceOf<T>,
+	) -> Vec<u8> {
+		let ethereum_call = Self::encode_ethereum_call(currency_id, token_amount, vtoken_amount);
+		let transaction = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
+			gas_limit: U256::from(MAX_GAS_LIMIT),
+			action: TransactionAction::Call(contract),
+			value: U256::zero(),
+			input: BoundedVec::try_from(ethereum_call).unwrap(),
+			access_list: None,
+		});
+		return MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(transaction)).encode();
+	}
+
 	/// Check if the signer is in the whitelist
 	fn ensure_singer_on_whitelist(
 		origin: OriginFor<T>,

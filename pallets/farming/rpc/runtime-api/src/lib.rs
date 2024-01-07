@@ -18,15 +18,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_primitives::Balance;
 use parity_scale_codec::Codec;
 use sp_api::decl_runtime_apis;
 use sp_std::vec::Vec;
 
 decl_runtime_apis! {
-	pub trait FarmingRuntimeApi<AccountId, PoolId> where
+	pub trait FarmingRuntimeApi<AccountId, PoolId, CurrencyId> where
 		AccountId: Codec,
 		PoolId: Codec,
+		CurrencyId: Codec,
 	{
 		fn get_farming_rewards(
 			who: AccountId,

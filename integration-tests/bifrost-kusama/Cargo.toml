@@ -33,7 +33,7 @@ parachains-common = { workspace = true }
 xcm-emulator = { workspace = true }
 
 # Local
-integration-tests-common = { path = "../common", default-features = false}
+integration-tests-common = { path = "../common", default-features = false }
 bifrost-slp = { workspace = true }
 bifrost-vtoken-voting = { workspace = true }
 bifrost-primitives = { workspace = true }

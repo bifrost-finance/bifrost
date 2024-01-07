@@ -214,6 +214,7 @@ fn phala_delegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -230,6 +231,7 @@ fn phala_delegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![],
+				None
 			),
 			Error::<Runtime>::VectorEmpty
 		);
@@ -240,6 +242,7 @@ fn phala_delegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION_WRONG],
+				None
 			),
 			Error::<Runtime>::ValidatorError
 		);
@@ -250,6 +253,7 @@ fn phala_delegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::ValidatorSetNotExist
 		);
@@ -266,6 +270,7 @@ fn phala_delegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::ValidatorNotExist
 		);
@@ -281,6 +286,7 @@ fn phala_delegate_works() {
 			PHA,
 			Box::new(subaccount_0_location),
 			vec![VALIDATOR_0_LOCATION],
+			None
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -464,6 +470,7 @@ fn phala_setup() {
 		PHA,
 		Box::new(subaccount_0_location),
 		vec![VALIDATOR_0_LOCATION],
+		None
 	));
 }
 
@@ -497,7 +504,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation)
+				Some(share_price_multilocation),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -516,7 +524,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation)
+				Some(share_price_multilocation),
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -532,6 +541,7 @@ fn phala_bond_works() {
 			PHA,
 			Box::new(subaccount_0_location),
 			vec![VALIDATOR_0_LOCATION],
+			None
 		));
 
 		phala_xcm_setup();
@@ -542,7 +552,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				100_000_000_000,
-				Some(share_price_multilocation)
+				Some(share_price_multilocation),
+				None
 			),
 			Error::<Runtime>::LowerThanMinimum
 		);
@@ -553,7 +564,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				2_000_000_000_000_000_000,
-				Some(share_price_multilocation)
+				Some(share_price_multilocation),
+				None
 			),
 			Error::<Runtime>::ExceedActiveMaximum
 		);
@@ -565,7 +577,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(subaccount_0_location)
+				Some(subaccount_0_location),
+				None
 			),
 			Error::<Runtime>::SharePriceNotValid
 		);
@@ -577,7 +590,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(VALIDATOR_0_LOCATION)
+				Some(VALIDATOR_0_LOCATION),
+				None
 			),
 			Error::<Runtime>::DividedByZero
 		);
@@ -588,7 +602,8 @@ fn phala_bond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				Some(share_price_multilocation)
+				Some(share_price_multilocation),
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -626,6 +641,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				1_000_000,
+				None
 			),
 			Error::<Runtime>::DelegatorNotExist
 		);
@@ -653,6 +669,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				1_000_000,
+				None
 			),
 			Error::<Runtime>::AlreadyRequested
 		);
@@ -677,6 +694,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				0,
+				None
 			),
 			Error::<Runtime>::AmountZero
 		);
@@ -688,6 +706,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(subaccount_0_location),
 				1_000_000,
+				None
 			),
 			Error::<Runtime>::SharePriceNotValid
 		);
@@ -699,6 +718,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(VALIDATOR_0_LOCATION),
 				1_000_000,
+				None
 			),
 			Error::<Runtime>::DividedByZero
 		);
@@ -710,6 +730,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				1_000_000,
+				None
 			),
 			Error::<Runtime>::LowerThanMinimum
 		);
@@ -721,6 +742,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				1_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::NotEnoughToUnbond
 		);
@@ -745,6 +767,7 @@ fn phala_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
 				1_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -784,6 +807,7 @@ fn phala_rebond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
+				None,
 				None
 			),
 			Error::<Runtime>::InvalidAmount
@@ -795,7 +819,8 @@ fn phala_rebond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
-				Some(0)
+				Some(0),
+				None
 			),
 			Error::<Runtime>::AmountZero
 		);
@@ -806,7 +831,8 @@ fn phala_rebond_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				Some(share_price_multilocation),
-				Some(1_000_000_000_000)
+				Some(1_000_000_000_000),
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -854,6 +880,7 @@ fn phala_undelegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
@@ -877,6 +904,7 @@ fn phala_undelegate_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::ValidatorStillInUse
 		);
@@ -899,6 +927,7 @@ fn phala_undelegate_works() {
 			PHA,
 			Box::new(subaccount_0_location),
 			vec![VALIDATOR_0_LOCATION],
+			None
 		));
 
 		let undelegated_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -958,6 +987,7 @@ fn phala_redelegate_works() {
 				RuntimeOrigin::signed(ALICE),
 				PHA,
 				Box::new(subaccount_0_location),
+				None,
 				None
 			),
 			Error::<Runtime>::ValidatorNotProvided
@@ -973,7 +1003,8 @@ fn phala_redelegate_works() {
 			RuntimeOrigin::signed(ALICE),
 			PHA,
 			Box::new(subaccount_0_location),
-			Some(vec![VALIDATOR_1_LOCATION])
+			Some(vec![VALIDATOR_1_LOCATION]),
+			None
 		));
 
 		let new_ledger = PhalaLedger::<BalanceOf<Runtime>> {
@@ -1034,7 +1065,8 @@ fn phala_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				None,
-				Some(2_000_000_000_000)
+				Some(2_000_000_000_000),
+				None
 			),
 			Error::<Runtime>::InvalidAmount
 		);
@@ -1045,7 +1077,8 @@ fn phala_liquidize_works() {
 			Box::new(subaccount_0_location),
 			None,
 			None,
-			Some(500_000_000_000)
+			Some(500_000_000_000),
+			None
 		));
 
 		let compared_ledger_1 = PhalaLedger::<BalanceOf<Runtime>> {
@@ -1068,7 +1101,8 @@ fn phala_liquidize_works() {
 			Box::new(subaccount_0_location),
 			None,
 			None,
-			Some(Zero::zero())
+			Some(Zero::zero()),
+			None
 		));
 
 		let compared_ledger_2 = PhalaLedger::<BalanceOf<Runtime>> {
@@ -1296,6 +1330,7 @@ fn phala_transfer_back_works() {
 				Box::new(subaccount_0_location),
 				Box::new(exit_account_location),
 				Zero::zero(),
+				None
 			),
 			Error::<Runtime>::AmountZero
 		);
@@ -1307,6 +1342,7 @@ fn phala_transfer_back_works() {
 				Box::new(subaccount_0_location),
 				Box::new(exit_account_location),
 				5_000_000_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -1651,6 +1687,7 @@ fn add_validator_and_remove_validator_works() {
 			PHA,
 			Box::new(subaccount_0_location),
 			vec![VALIDATOR_0_LOCATION],
+			None
 		));
 
 		assert_ok!(Slp::remove_validator(
@@ -1691,7 +1728,8 @@ fn phala_convert_asset_works() {
 				PHA,
 				Box::new(subaccount_0_location),
 				1_000_000_000_000,
-				true
+				true,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);

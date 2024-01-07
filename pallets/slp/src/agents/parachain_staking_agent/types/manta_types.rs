@@ -59,22 +59,27 @@ pub enum MantaUtilityCall<MantaCall> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MantaParachainStakingCall<T: Config> {
 	#[codec(index = 18)]
-	Delegate(T::AccountId, BalanceOf<T>, u32, u32),
+	Delegate(
+		T::AccountId,
+		#[codec(compact)] BalanceOf<T>,
+		#[codec(compact)] u32,
+		#[codec(compact)] u32,
+	),
 	// schedule_revoke_delegation
 	#[codec(index = 19)]
 	ScheduleLeaveDelegators,
 	// execute_delegation_request
 	#[codec(index = 20)]
-	ExecuteLeaveDelegators(T::AccountId, u32),
+	ExecuteLeaveDelegators(T::AccountId, #[codec(compact)] u32),
 	// cancel_delegation_request
 	#[codec(index = 21)]
 	CancelLeaveDelegators,
 	#[codec(index = 22)]
 	ScheduleRevokeDelegation(T::AccountId),
 	#[codec(index = 23)]
-	DelegatorBondMore(T::AccountId, BalanceOf<T>),
+	DelegatorBondMore(T::AccountId, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 24)]
-	ScheduleDelegatorBondLess(T::AccountId, BalanceOf<T>),
+	ScheduleDelegatorBondLess(T::AccountId, #[codec(compact)] BalanceOf<T>),
 	#[codec(index = 25)]
 	ExecuteDelegationRequest(T::AccountId, T::AccountId),
 	#[codec(index = 26)]

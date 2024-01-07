@@ -100,7 +100,7 @@ pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::Runtime
 	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
 		vtoken: VKSM,
 		poll_index: 1u32,
-		vote: AccountVote::Split { aye: 1, nay: 1 },
+		vtoken_vote: AccountVote::Split { aye: 1, nay: 1 },
 	});
 
 impl bifrost_asset_registry::Config for Test {

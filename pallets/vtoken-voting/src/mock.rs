@@ -38,7 +38,7 @@ use pallet_xcm::EnsureResponse;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
-	BuildStorage,
+	BuildStorage, Perbill,
 };
 use xcm::prelude::*;
 use xcm_builder::FixedWeightBounds;
@@ -355,20 +355,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	vtoken_voting::GenesisConfig::<Runtime> {
-		delegator_vote_roles: vec![
-			(VKSM, 0, 0),
-			(VKSM, 1, 1),
-			(VKSM, 2, 2),
-			(VKSM, 3, 3),
-			(VKSM, 4, 4),
-			(VKSM, 5, 5),
-			(VKSM, 10, 10),
-			(VKSM, 11, 11),
-			(VKSM, 15, 15),
-			(VKSM, 20, 20),
-			(VKSM, 21, 21),
-		],
+		delegators: (VKSM, vec![0, 1, 2, 3, 4, 5, 10, 11, 15, 20, 21]),
 		undeciding_timeouts: vec![(VKSM, 100)],
+		vote_cap_ratio: (VKSM, Perbill::from_percent(10)),
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

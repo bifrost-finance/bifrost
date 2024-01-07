@@ -167,7 +167,7 @@ pub mod pallet {
 		/// Invalid asset id
 		InvalidCurrencyId,
 		/// Invalid lend token id
-		InvalidPtokenId,
+		InvalidLendTokenId,
 		/// Market does not exist
 		MarketDoesNotExist,
 		/// Market already exists
@@ -472,7 +472,8 @@ pub mod pallet {
 		/// by the new provided value.
 		///
 		/// The lend token id and asset id are bound, the lend token id of new provided market
-		/// cannot be duplicated with the existing one, otherwise it will return `InvalidPtokenId`.
+		/// cannot be duplicated with the existing one, otherwise it will return
+		/// `InvalidLendTokenId`.
 		///
 		/// - `asset_id`: Market related currency
 		/// - `market`: The market that is going to be stored
@@ -677,7 +678,7 @@ pub mod pallet {
 			if UnderlyingAssetId::<T>::contains_key(market.lend_token_id) {
 				ensure!(
 					Self::underlying_id(market.lend_token_id)? == asset_id,
-					Error::<T>::InvalidPtokenId
+					Error::<T>::InvalidLendTokenId
 				);
 			}
 			UnderlyingAssetId::<T>::insert(market.lend_token_id, asset_id);
@@ -883,13 +884,7 @@ pub mod pallet {
 			asset_id: AssetIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::ensure_active_market(asset_id)?;
-			Self::accrue_interest(asset_id)?;
-			let exchange_rate = Self::exchange_rate_stored(asset_id)?;
-			Self::update_earned_stored(&who, asset_id, exchange_rate)?;
-			let deposits = AccountDeposits::<T>::get(asset_id, &who);
-			let redeem_amount = Self::do_redeem_voucher(&who, asset_id, deposits.voucher_balance)?;
-			Self::deposit_event(Event::<T>::Redeemed(who, asset_id, redeem_amount));
+			let _ = Self::do_redeem_all(&who, asset_id)?;
 
 			Ok(().into())
 		}
@@ -1895,13 +1890,13 @@ impl<T: Config> Pallet<T> {
 		// The lend token id is unique, cannot be repeated
 		ensure!(
 			!UnderlyingAssetId::<T>::contains_key(lend_token_id),
-			Error::<T>::InvalidPtokenId
+			Error::<T>::InvalidLendTokenId
 		);
 
 		// The lend token id should not be the same as the id of any asset in markets
 		ensure!(
 			!Markets::<T>::contains_key(lend_token_id),
-			Error::<T>::InvalidPtokenId
+			Error::<T>::InvalidLendTokenId
 		);
 
 		Ok(())
@@ -1955,9 +1950,8 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			&Self::account_id(),
 			Preservation::Expendable,
-			Fortitude::Force,
+			Fortitude::Polite,
 		)
-		// T::Assets::balance(asset_id, &Self::account_id())
 	}
 
 	// Returns the uniform format price.
@@ -2035,7 +2029,7 @@ impl<T: Config> Pallet<T> {
 	// Returns `Err` if asset_id does not exist, it also means that lend_token_id is invalid.
 	pub fn underlying_id(lend_token_id: AssetIdOf<T>) -> Result<AssetIdOf<T>, DispatchError> {
 		UnderlyingAssetId::<T>::try_get(lend_token_id)
-			.map_err(|_err| Error::<T>::InvalidPtokenId.into())
+			.map_err(|_err| Error::<T>::InvalidLendTokenId.into())
 	}
 
 	// Returns the lend_token_id of the related asset
@@ -2054,6 +2048,20 @@ impl<T: Config> Pallet<T> {
 		let account_id: T::AccountId = T::PalletId::get().into_account_truncating();
 		let entropy = (b"lend-market/incentive", &[account_id]).using_encoded(blake2_256);
 		Ok(T::AccountId::decode(&mut &entropy[..]).map_err(|_| Error::<T>::CodecError)?)
+	}
+
+	pub fn do_redeem_all(
+		who: &AccountIdOf<T>,
+		asset_id: AssetIdOf<T>,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		Self::ensure_active_market(asset_id)?;
+		Self::accrue_interest(asset_id)?;
+		let exchange_rate = Self::exchange_rate_stored(asset_id)?;
+		Self::update_earned_stored(&who, asset_id, exchange_rate)?;
+		let deposits = AccountDeposits::<T>::get(asset_id, &who);
+		let redeem_amount = Self::do_redeem_voucher(&who, asset_id, deposits.voucher_balance)?;
+		Self::deposit_event(Event::<T>::Redeemed(who.clone(), asset_id, redeem_amount));
+		Ok(redeem_amount)
 	}
 }
 

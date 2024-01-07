@@ -29,6 +29,7 @@ use sp_runtime::{
 	traits::{StaticLookup, UniqueSaturatedFrom},
 	FixedPointNumber,
 };
+use sp_std::vec;
 
 pub fn unit(d: u128) -> u128 {
 	d.saturating_mul(10_u128.pow(12))
@@ -159,6 +160,11 @@ fn init<
 		bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(unit(100u128)),
 		BoundedVec::default()
 	));
+	assert_ok!(lend_market::Pallet::<T>::mint(
+		SystemOrigin::Signed(caller.clone()).into(),
+		VKSM,
+		lend_market::BalanceOf::<T>::unique_saturated_from(unit(1u128))
+	));
 
 	Ok(())
 }
@@ -179,12 +185,7 @@ mod benchmarks {
 		let rate = FixedU128::from_inner(unit(990_000));
 
 		#[extrinsic_call]
-		Pallet::<T>::flash_loan_deposit(
-			SystemOrigin::Signed(caller.clone()),
-			coin0.into(),
-			rate,
-			Some(unit(1).into()),
-		);
+		Pallet::<T>::flash_loan_deposit(SystemOrigin::Signed(caller.clone()), coin0.into(), rate);
 
 		Ok(())
 	}

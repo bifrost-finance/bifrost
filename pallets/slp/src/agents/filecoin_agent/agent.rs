@@ -79,6 +79,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(
@@ -125,6 +126,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -179,6 +181,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 		_validator: &Option<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -232,6 +235,7 @@ impl<T: Config>
 		&self,
 		_who: &MultiLocation,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -243,6 +247,7 @@ impl<T: Config>
 		_amount: Option<BalanceOf<T>>,
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -254,6 +259,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		ensure!(targets.len() == 1, Error::<T>::VectorTooLong);
 		let worker = &targets[0];
@@ -297,6 +303,7 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Vec<MultiLocation>,
 		currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(
@@ -344,9 +351,10 @@ impl<T: Config>
 		who: &MultiLocation,
 		targets: &Option<Vec<MultiLocation>>,
 		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		let targets = targets.as_ref().ok_or(Error::<T>::ValidatorSetNotExist)?;
-		let query_id = Self::delegate(self, who, targets, currency_id)?;
+		let query_id = Self::delegate(self, who, targets, currency_id, weight_and_fee)?;
 		Ok(query_id)
 	}
 
@@ -356,6 +364,7 @@ impl<T: Config>
 		_validator: &MultiLocation,
 		_when: &Option<TimeUnit>,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -367,11 +376,17 @@ impl<T: Config>
 		_validator: &Option<MultiLocation>,
 		_currency_id: CurrencyId,
 		_amount: Option<BalanceOf<T>>,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
-	fn chill(&self, _who: &MultiLocation, _currency_id: CurrencyId) -> Result<QueryId, Error<T>> {
+	fn chill(
+		&self,
+		_who: &MultiLocation,
+		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
 
@@ -382,6 +397,7 @@ impl<T: Config>
 		_to: &MultiLocation,
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<(), Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}
@@ -419,6 +435,7 @@ impl<T: Config>
 		_amount: BalanceOf<T>,
 		_currency_id: CurrencyId,
 		_if_from_currency: bool,
+		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		Err(Error::<T>::Unsupported)
 	}

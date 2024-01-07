@@ -355,7 +355,8 @@ fn moonriver_bond_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 				5_000_000_000_000_000_000,
-				Some(VALIDATOR_0_LOCATION)
+				Some(VALIDATOR_0_LOCATION),
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -412,6 +413,7 @@ fn moonriver_bond_extra_works() {
 				Box::new(subaccount_0_location),
 				Some(VALIDATOR_0_LOCATION),
 				5_000_000_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -468,6 +470,7 @@ fn moonriver_unbond_works() {
 				Box::new(subaccount_0_location),
 				Some(VALIDATOR_0_LOCATION),
 				2_000_000_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -535,6 +538,7 @@ fn moonriver_rebond_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 				Some(VALIDATOR_0_LOCATION),
+				None,
 				None
 			),
 			Error::<Runtime>::XcmFailure
@@ -592,6 +596,7 @@ fn moonriver_undelegate_works() {
 				MOVR,
 				Box::new(subaccount_0_location),
 				vec![VALIDATOR_0_LOCATION],
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);
@@ -662,6 +667,7 @@ fn moonriver_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(VALIDATOR_0_LOCATION),
+				None,
 				None
 			),
 			Error::<Runtime>::RequestNotDue
@@ -682,6 +688,7 @@ fn moonriver_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(VALIDATOR_0_LOCATION),
+				None,
 				None
 			),
 			Error::<Runtime>::XcmFailure
@@ -729,6 +736,7 @@ fn moonriver_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(VALIDATOR_0_LOCATION),
+				None,
 				None
 			),
 			Error::<Runtime>::LeavingNotDue
@@ -749,6 +757,7 @@ fn moonriver_liquidize_works() {
 				Box::new(subaccount_0_location),
 				None,
 				Some(VALIDATOR_0_LOCATION),
+				None,
 				None
 			),
 			Error::<Runtime>::XcmFailure
@@ -1604,6 +1613,7 @@ fn moonriver_transfer_back_works() {
 				Box::new(subaccount_0_location),
 				Box::new(exit_account_location),
 				5_000_000_000_000_000_000,
+				None
 			),
 			Error::<Runtime>::XcmFailure
 		);

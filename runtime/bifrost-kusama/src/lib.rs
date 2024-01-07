@@ -145,7 +145,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 987,
+	spec_version: 990,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1132,7 +1132,7 @@ impl bifrost_vesting::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
-	type WeightInfo = bifrost_vesting::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
@@ -1449,6 +1449,7 @@ parameter_types! {
 impl bifrost_farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
+	type CurrencyId = CurrencyId;
 	type ControlOrigin = TechAdminOrCouncil;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
@@ -1679,6 +1680,7 @@ impl bifrost_slpx::Config for Runtime {
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
+	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = SelfParaChainId;
@@ -2053,11 +2055,13 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
-	use crate::Runtime;
-	use bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade;
+	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = StableAssetOnRuntimeUpgrade<Runtime>;
+	pub type Unreleased = (
+		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
+		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -2362,7 +2366,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {
+	impl bifrost_farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
 		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
 		}
