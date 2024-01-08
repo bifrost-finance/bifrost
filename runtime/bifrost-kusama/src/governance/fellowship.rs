@@ -58,8 +58,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -80,8 +80,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -102,8 +102,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -124,8 +124,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -146,8 +146,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -168,8 +168,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -190,8 +190,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -212,8 +212,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -234,8 +234,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -256,8 +256,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 					},
 					min_support: pallet_referenda::Curve::LinearDecreasing {
 						length: Perbill::from_percent(100),
-						floor: Perbill::from_percent(0),
-						ceil: Perbill::from_percent(50),
+						floor: Perbill::from_percent(50),
+						ceil: Perbill::from_percent(60),
 					},
 				},
 			),
@@ -287,7 +287,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 			Ok(Origin::Fellowship8Dan) => Ok(8),
 			Ok(Origin::Fellowship9Dan) => Ok(9),
 			Ok(Origin::CoreAdmin) => Ok(6),
-			Ok(Origin::TechAdmin) => Ok(3),
+			Ok(Origin::TechAdmin) => Ok(4),
 			_ => Err(()),
 		}
 	}
