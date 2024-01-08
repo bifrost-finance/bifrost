@@ -276,7 +276,7 @@ parachain-info                        = { git = "https://github.com/paritytech/p
 # Other
 async-trait           = { version = "0.1.76" }
 bstringify            = { version = "0.1.2" }
-clap                  = { version = "4.4.12" }
+clap                  = { version = "4.4.14" }
 env_logger            = { version = "0.10.1" }
 ethabi                = { version = "18.0.0", default-features = false }
 ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }
