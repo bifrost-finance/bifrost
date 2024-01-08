@@ -63,6 +63,11 @@ pub const MANTA: CurrencyId = CurrencyId::Token2(MANTA_TOKEN_ID);
 pub const VMANTA: CurrencyId = CurrencyId::VToken2(MANTA_TOKEN_ID);
 pub const VSBOND_KSM_2102_19_26: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2102, 19, 26);
 
+pub const LDOT: CurrencyId = CurrencyId::Lend(0);
+pub const LKSM: CurrencyId = CurrencyId::Lend(1);
+pub const LUSDT: CurrencyId = CurrencyId::Lend(2);
+pub const LVDOT: CurrencyId = CurrencyId::Lend(3);
+
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*
 	$vis:vis enum TokenSymbol {

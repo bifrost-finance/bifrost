@@ -21,10 +21,7 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-pub use bifrost_primitives::{
-	currency::*,
-	CurrencyId, TokenSymbol,
-};
+pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
 use sp_core::{ConstU32, H256};
