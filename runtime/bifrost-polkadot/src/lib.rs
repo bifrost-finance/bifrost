@@ -790,7 +790,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 800_000 * BNCS;
+	pub const MaxBalance: Balance = 100_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<

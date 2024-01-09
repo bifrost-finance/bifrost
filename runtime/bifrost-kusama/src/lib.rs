@@ -830,7 +830,7 @@ parameter_types! {
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub CuratorDepositMin: Balance = 1 * BNCS;
 	pub CuratorDepositMax: Balance = 100 * BNCS;
-	pub const MaxBalance: Balance = 800_000 * BNCS;
+	pub const MaxBalance: Balance = 100_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
