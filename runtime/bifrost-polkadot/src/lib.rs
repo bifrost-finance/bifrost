@@ -116,8 +116,8 @@ use xcm_executor::{
 pub mod governance;
 use crate::xcm_config::XcmRouter;
 use governance::{
-	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
-	TechAdminOrCouncil, ValidatorElection,
+	custom_origins, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil, TreasurySpend,
+	ValidatorElection,
 };
 
 impl_opaque_keys! {
@@ -784,14 +784,14 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 500 * DOLLARS;
-	pub const SpendPeriod: BlockNumber = 24 * DAYS;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 800_000 * BNCS;
+	pub const MaxBalance: Balance = 100_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -801,7 +801,11 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
+	type SpendOrigin = EnsureWithSuccess<
+		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
+		AccountId,
+		MaxBalance,
+	>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1266,7 +1270,7 @@ parameter_types! {
 impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<CoreAdminOrCouncil, SystemStakingAdmin>;
+	type EnsureConfirmAsGovernance = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_system_staking::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;

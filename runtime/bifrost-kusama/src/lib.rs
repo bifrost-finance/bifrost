@@ -106,8 +106,8 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Governance configurations.
 pub mod governance;
 use governance::{
-	custom_origins, CoreAdmin, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
-	TechAdminOrCouncil, ValidatorElection,
+	custom_origins, CoreAdmin, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil,
+	TreasurySpend, ValidatorElection,
 };
 
 // xcm config
@@ -831,7 +831,7 @@ parameter_types! {
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub CuratorDepositMin: Balance = 1 * BNCS;
 	pub CuratorDepositMax: Balance = 100 * BNCS;
-	pub const MaxBalance: Balance = 800_000 * BNCS;
+	pub const MaxBalance: Balance = 100_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -841,7 +841,11 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
+	type SpendOrigin = EnsureWithSuccess<
+		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
+		AccountId,
+		MaxBalance,
+	>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1434,7 +1438,7 @@ parameter_types! {
 impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<CoreAdminOrCouncil, SystemStakingAdmin>;
+	type EnsureConfirmAsGovernance = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_system_staking::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
