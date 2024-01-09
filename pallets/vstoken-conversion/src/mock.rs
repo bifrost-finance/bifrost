@@ -195,7 +195,7 @@ impl ExtBuilder {
 			(ALICE, VDOT, 100),
 			(BOB, VSKSM, 100),
 			(BOB, KSM, 100),
-			(BOB, VSBOND_KSM_2102_19_26, 100),
+			(BOB, VSBOND_BNC_2001_0_8, 100),
 		])
 	}
 
