@@ -22,7 +22,7 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -60,16 +60,9 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-// pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-// pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
@@ -538,11 +531,9 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, RelayCurrencyId::get(), 10000),
-			(ALICE, vKSM, 10000),
-			(BOB, vsKSM, 100),
+			(ALICE, VKSM, 10000),
 			(BOB, KSM, 100),
-			(BOB, vsBond, 100),
-			(FeeSharePalletId::get().into_account_truncating(), vKSM, 10000),
+			(FeeSharePalletId::get().into_account_truncating(), VKSM, 10000),
 			(FeeSharePalletId::get().into_account_truncating(), KSM, 10000),
 		])
 	}
