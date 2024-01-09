@@ -35,8 +35,8 @@ use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpOperator, TimeUnit,
-	VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpHostingFeeProvider,
+	SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
 };
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
@@ -158,6 +158,12 @@ pub mod pallet {
 		type MaxLengthLimit: Get<u32>;
 
 		type ParachainStaking: ParachainStakingInterface<AccountIdOf<Self>, BalanceOf<Self>>;
+
+		type ChannelCommission: SlpHostingFeeProvider<
+			CurrencyId,
+			BalanceOf<Self>,
+			AccountIdOf<Self>,
+		>;
 	}
 
 	#[pallet::error]
@@ -1555,6 +1561,8 @@ pub mod pallet {
 
 			// Update the CurrencyLatestTuneRecord<T> storage.
 			CurrencyLatestTuneRecord::<T>::insert(currency_id, (current_time_unit, new_tune_num));
+
+			T::ChannelCommission::record_hosting_fee(currency_id, fee_to_charge)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::HostingFeeCharged {

@@ -132,6 +132,7 @@ lend-market = { workspace = true }
 lend-market-rpc-runtime-api = { workspace = true }
 pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
+bifrost-channel-commission = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -242,6 +243,7 @@ std = [
 	"pallet-prices/std",
 	"leverage-staking/std",
 	"bifrost-xcm-interface/std",
+	"bifrost-channel-commission/std",
 
 	"substrate-wasm-builder"
 ]
@@ -278,6 +280,7 @@ runtime-benchmarks = [
 	"bifrost-vtoken-voting/runtime-benchmarks",
 	"sp-api/disable-logging",
 	"lend-market/runtime-benchmarks",
+	"bifrost-channel-commission/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -347,6 +350,7 @@ try-runtime = [
 	"lend-market/try-runtime",
 	"pallet-prices/try-runtime",
 	"leverage-staking/try-runtime",
+	"bifrost-channel-commission/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

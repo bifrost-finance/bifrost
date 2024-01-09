@@ -312,6 +312,7 @@ parameter_types! {
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
+	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 }
 
 impl frame_system::Config for Runtime {
@@ -1213,6 +1214,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
@@ -1461,6 +1463,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
@@ -1582,6 +1585,23 @@ impl leverage_staking::Config for Runtime {
 	type LendMarket = LendMarket;
 	type StablePoolHandler = StablePool;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+}
+
+parameter_types! {
+	pub const ClearingDuration: u32 = 7 * DAYS;
+	pub const NameLengthLimit: u32 = 20;
+	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl bifrost_channel_commission::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = CoreAdminOrCouncil;
+	type CommissionPalletId = CommissionPalletId;
+	type BifrostCommissionReceiver = BifrostCommissionReceiver;
+	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
+	type ClearingDuration = ClearingDuration;
+	type NameLengthLimit = NameLengthLimit;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1767,6 +1787,7 @@ construct_runtime! {
 		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
 		LeverageStaking: leverage_staking = 135,
+		ChannelCommission: bifrost_channel_commission = 136,
 	}
 }
 

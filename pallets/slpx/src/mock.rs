@@ -226,6 +226,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
 }
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -493,6 +494,7 @@ impl bifrost_slp::Config for Test {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
+	type ChannelCommission = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
