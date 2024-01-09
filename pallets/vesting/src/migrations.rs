@@ -24,6 +24,7 @@ use super::*;
 pub(crate) mod v1 {
 	use super::*;
 
+	#[allow(dead_code)]
 	#[cfg(feature = "try-runtime")]
 	pub(crate) fn pre_migrate<T: Config>() -> Result<(), sp_runtime::DispatchError> {
 		assert!(
@@ -41,6 +42,7 @@ pub(crate) mod v1 {
 
 	/// Migrate from single schedule to multi schedule storage.
 	/// WARNING: This migration will delete schedules if `MaxVestingSchedules < 1`.
+	#[allow(dead_code)]
 	pub(crate) fn migrate<T: Config>() -> Weight {
 		let mut reads_writes = 0;
 
@@ -68,6 +70,7 @@ pub(crate) mod v1 {
 		T::DbWeight::get().reads_writes(reads_writes, reads_writes)
 	}
 
+	#[allow(dead_code)]
 	#[cfg(feature = "try-runtime")]
 	pub(crate) fn post_migrate<T: Config>() -> Result<(), sp_runtime::DispatchError> {
 		assert_eq!(super::pallet::StorageVersion::<T>::get(), Releases::V1);

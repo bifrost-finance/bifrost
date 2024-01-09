@@ -84,13 +84,11 @@ where
 			_ => return self.locked,
 		};
 		let vested_block_count = BlockNumberToBalance::convert(vested_block_count);
-		// Return amount that is still locked in vesting
-		let maybe_balance = vested_block_count.checked_mul(&self.per_block);
-		if let Some(balance) = maybe_balance {
-			self.locked.saturating_sub(balance)
-		} else {
-			Zero::zero()
-		}
+		// Return amount that is still locked in vesting.
+		vested_block_count
+			.checked_mul(&self.per_block()) // `per_block` accessor guarantees at least 1.
+			.map(|to_unlock| self.locked.saturating_sub(to_unlock))
+			.unwrap_or(Zero::zero())
 	}
 
 	/// Block number at which the schedule ends (as type `Balance`).
