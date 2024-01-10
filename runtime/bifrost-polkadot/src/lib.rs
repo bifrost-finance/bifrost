@@ -89,9 +89,9 @@ use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
-	traits::{Currency, EitherOfDiverse, Get},
+	traits::{Currency, EitherOf, EitherOfDiverse, Get},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
@@ -116,8 +116,8 @@ use xcm_executor::{
 pub mod governance;
 use crate::xcm_config::XcmRouter;
 use governance::{
-	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdminOrCouncil, SALPAdmin,
-	TechAdmin, TechAdminOrCouncil, TreasurySpend, ValidatorElection,
+	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdminOrCouncil, LiquidStaking,
+	SALPAdmin, Spender, TechAdmin, TechAdminOrCouncil,
 };
 
 impl_opaque_keys! {
@@ -791,7 +791,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 100_000 * BNCS;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -801,11 +801,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<
-		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
-		AccountId,
-		MaxBalance,
-	>;
+	type SpendOrigin = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1210,7 +1206,7 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, ValidatorElection>;
+	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = Slpx;
@@ -1606,7 +1602,7 @@ parameter_types! {
 impl bifrost_channel_commission::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = CoreAdminOrCouncil;
+	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
 	type CommissionPalletId = CommissionPalletId;
 	type BifrostCommissionReceiver = BifrostCommissionReceiver;
 	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
