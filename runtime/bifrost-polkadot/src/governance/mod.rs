@@ -20,7 +20,7 @@ pub mod referenda;
 
 use super::*;
 pub use bifrost_runtime_common::dollar;
-mod fellowship;
+pub mod fellowship;
 mod origins;
 pub use origins::{
 	custom_origins, CoreAdmin, Fellows, FellowshipAdmin, FellowshipExperts, FellowshipInitiates,
