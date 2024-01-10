@@ -47,7 +47,7 @@ pub mod custom_origins {
 		ReferendumKiller,
 		// Fellows,
 		/// Origin for managing validater node of SLP protocol.
-		ValidatorElection,
+		LiquidStaking,
 		/// Origin able to execute SALP protocol.
 		#[strum(serialize = "salp_admin")]
 		SALPAdmin,
@@ -124,7 +124,7 @@ pub mod custom_origins {
 		Fellows: u16 = 3,
 		FellowshipExperts: u16 = 5,
 		FellowshipMasters: u16 = 7,
-		ValidatorElection,
+		LiquidStaking,
 		SALPAdmin,
 		TechAdmin,
 		CoreAdmin,
