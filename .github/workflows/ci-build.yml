@@ -35,7 +35,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.71.0-nightly
+          toolchain: nightly-2023-05-22
           components: rustfmt
 
       - name: Cargo clippy
