@@ -89,9 +89,9 @@ use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
-	traits::{Currency, EitherOfDiverse, Get},
+	traits::{Currency, EitherOf, EitherOfDiverse, Get},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
@@ -116,7 +116,7 @@ use xcm_executor::{
 pub mod governance;
 use crate::xcm_config::XcmRouter;
 use governance::{
-	custom_origins, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil, TreasurySpend,
+	custom_origins, CoreAdminOrCouncil, SALPAdmin, Spender, TechAdmin, TechAdminOrCouncil,
 	ValidatorElection,
 };
 
@@ -791,7 +791,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 100_000 * BNCS;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -801,11 +801,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<
-		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
-		AccountId,
-		MaxBalance,
-	>;
+	type SpendOrigin = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;

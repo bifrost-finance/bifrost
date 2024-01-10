@@ -21,6 +21,7 @@ pub use custom_origins::*;
 
 #[frame_support::pallet]
 pub mod custom_origins {
+	use crate::{Balance, BNCS};
 	use frame_support::pallet_prelude::*;
 	use strum_macros::EnumString;
 
@@ -173,6 +174,12 @@ pub mod custom_origins {
 			Fellowship7Dan = 7,
 			Fellowship8Dan = 8,
 			Fellowship9Dan = 9,
+		}
+	}
+
+	decl_ensure! {
+		pub type Spender: EnsureOrigin<Success = Balance> {
+			TreasurySpend = 100_000 * BNCS,
 		}
 	}
 }
