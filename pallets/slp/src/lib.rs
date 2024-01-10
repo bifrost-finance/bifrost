@@ -502,9 +502,9 @@ pub mod pallet {
 		},
 	}
 
-	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
+	/// The current storage version, we set to 3 our new version(after migrate stroage from vec t
 	/// boundedVec).
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.

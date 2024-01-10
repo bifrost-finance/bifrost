@@ -19,7 +19,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 
-use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::{Pallet as System, RawOrigin};
