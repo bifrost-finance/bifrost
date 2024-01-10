@@ -25,7 +25,7 @@ use crate::{
 	Junctions::X2,
 	*,
 };
-use bifrost_primitives::currency::VPHA;
+use bifrost_primitives::currency::{PHA, VPHA};
 use frame_support::{assert_noop, assert_ok, PalletId};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;

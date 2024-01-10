@@ -221,8 +221,13 @@ impl<T: Config> Pallet<T> {
 		increase_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		<T as lend_market::Config>::Assets::mint_into(asset_id, &who, increase_amount)?;
-		let vtoken_value =
-			T::VtokenMinting::mint(who.clone(), asset_id, increase_amount, BoundedVec::default())?;
+		let vtoken_value = T::VtokenMinting::mint(
+			who.clone(),
+			asset_id,
+			increase_amount,
+			BoundedVec::default(),
+			None,
+		)?;
 		T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 		T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;
 		<T as lend_market::Config>::Assets::burn_from(

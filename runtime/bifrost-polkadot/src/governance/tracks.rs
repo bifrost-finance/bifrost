@@ -133,20 +133,6 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 		},
 	),
 	(
-		11,
-		pallet_referenda::TrackInfo {
-			name: "system_staking_admin",
-			max_deciding: 10,
-			decision_deposit: 10_000 * BNCS,
-			prepare_period: 2 * HOURS,
-			decision_period: 14 * DAYS,
-			confirm_period: 3 * HOURS,
-			min_enactment_period: 10 * MINUTES,
-			min_approval: Curve::make_reciprocal(4, 28, percent(80), percent(50), percent(100)),
-			min_support: Curve::make_reciprocal(4, 28, percent(5), percent(0), percent(50)),
-		},
-	),
-	(
 		12,
 		pallet_referenda::TrackInfo {
 			name: "salp_admin",
@@ -158,6 +144,20 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 			min_enactment_period: 10 * MINUTES,
 			min_approval: Curve::make_reciprocal(2, 28, percent(80), percent(50), percent(100)),
 			min_support: Curve::make_reciprocal(2, 28, percent(5), percent(0), percent(50)),
+		},
+	),
+	(
+		13,
+		pallet_referenda::TrackInfo {
+			name: "treasury_spend",
+			max_deciding: 100,
+			decision_deposit: 500 * BNCS,
+			prepare_period: 2 * HOURS,
+			decision_period: 14 * DAYS,
+			confirm_period: 3 * HOURS,
+			min_enactment_period: 10 * MINUTES,
+			min_approval: Curve::make_linear(23, 28, percent(50), percent(100)),
+			min_support: Curve::make_reciprocal(16, 28, percent(1), percent(0), percent(50)),
 		},
 	),
 ];

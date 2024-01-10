@@ -20,8 +20,8 @@ pub use super::*;
 use crate as leverage_staking;
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
-	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
-	ASTR, BNC, DOT, DOT_TOKEN_ID, GLMR, VBNC, VDOT, *,
+	currency::*, AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator,
+	TokenSymbol, *,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -53,9 +53,6 @@ use xcm_builder::FixedWeightBounds;
 use xcm_executor::XcmExecutor;
 
 type Block = frame_system::mocking::MockBlock<Test>;
-
-pub const LDOT: CurrencyId = CurrencyId::Lend(0);
-pub const LVDOT: CurrencyId = CurrencyId::Lend(1);
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -337,6 +334,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type BifrostSlpx = SlpxInterface;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
 }
 
 pub struct Slp;

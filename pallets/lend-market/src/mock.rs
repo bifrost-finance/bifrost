@@ -16,7 +16,7 @@ pub use super::*;
 use sp_runtime::BuildStorage;
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use bifrost_primitives::*;
+pub use bifrost_primitives::{currency::*, *};
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
@@ -33,15 +33,7 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
-pub use bifrost_primitives::{Price, BNC, DOT, DOT_U, KSM, VBNC, VDOT, VKSM, VSKSM};
-
 type Block = frame_system::mocking::MockBlock<Test>;
-
-pub const LDOT: CurrencyId = CurrencyId::Token2(10);
-pub const LKSM: CurrencyId = CurrencyId::Token2(11);
-pub const LUSDT: CurrencyId = CurrencyId::Token2(12);
-pub const PHA: CurrencyId = CurrencyId::Token2(5);
-pub const VPHA: CurrencyId = CurrencyId::VToken2(5);
 
 construct_runtime!(
 	pub enum Test {

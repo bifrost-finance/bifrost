@@ -450,6 +450,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type BifrostSlpx = SlpxInterface;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
 }
 
 parameter_types! {

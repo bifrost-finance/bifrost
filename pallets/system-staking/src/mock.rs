@@ -19,7 +19,7 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{CurrencyId, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use cumulus_primitives_core::*;
@@ -53,12 +53,6 @@ pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
-pub const MOVR: CurrencyId = CurrencyId::Token(TokenSymbol::MOVR);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
@@ -223,6 +217,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
 }
 
 ord_parameter_types! {
@@ -333,6 +328,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
+	type ChannelCommission = ();
 }
 
 parameter_types! {
@@ -473,9 +469,9 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
+			(ALICE, VDOT, 400),
 			(ALICE, KSM, 3000),
-			(BOB, vKSM, 1000),
+			(BOB, VKSM, 1000),
 			(BOB, KSM, 10000000000),
 			(BOB, MOVR, 1000000000000000000000),
 		])

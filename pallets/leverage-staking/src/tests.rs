@@ -15,6 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![cfg(test)]
 
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Inspect, BoundedVec};
@@ -46,9 +47,15 @@ fn init() {
 		vec![(DOT, (1, 1)), (VDOT, (100_000_000, 100_000_000))]
 	));
 	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 1000));
-	assert_ok!(VtokenMinting::mint(Some(0).into(), DOT, unit(100_000), BoundedVec::default()));
+	assert_ok!(VtokenMinting::mint(
+		Some(0).into(),
+		DOT,
+		unit(100_000),
+		BoundedVec::default(),
+		None
+	));
 	assert_eq!(Tokens::balance(VDOT, &0), unit(100_000));
-	assert_ok!(VtokenMinting::mint(Some(1).into(), DOT, unit(10), BoundedVec::default()));
+	assert_ok!(VtokenMinting::mint(Some(1).into(), DOT, unit(10), BoundedVec::default(), None));
 	assert_eq!(Tokens::balance(VDOT, &1), unit(10));
 	let amounts = vec![unit(100), unit(100)];
 	assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(0), 0, amounts, 0));

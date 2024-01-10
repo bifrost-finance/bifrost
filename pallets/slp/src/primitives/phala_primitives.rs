@@ -17,12 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{MultiLocation, TimeUnit};
-use bifrost_primitives::{CurrencyId, TokenSymbol};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-
-pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct PhalaLedger<Balance> {

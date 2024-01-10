@@ -132,7 +132,7 @@ fn refresh_token_info_should_work() {
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), VKSM, 10));
 
 		assert_ok!(SystemStaking::token_config(
 			RuntimeOrigin::root(),
@@ -166,7 +166,7 @@ fn round_process_token() {
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), VKSM, 10));
 
 		assert_ok!(SystemStaking::token_config(
 			RuntimeOrigin::root(),
@@ -202,7 +202,7 @@ fn round_process_token_rollback() {
 		));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), vKSM, 10000));
+		assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), VKSM, 10000));
 
 		assert_ok!(SystemStaking::token_config(
 			RuntimeOrigin::root(),

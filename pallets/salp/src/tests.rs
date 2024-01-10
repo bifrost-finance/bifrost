@@ -1437,7 +1437,13 @@ fn refund_meanwhile_issue_should_work() {
 		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(ALICE).into(), 2, amounts, 0));
 
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 0));
-		assert_ok!(VtokenMinting::mint(Some(ALICE).into(), KSM, 2_000, BoundedVec::default()));
+		assert_ok!(VtokenMinting::mint(
+			Some(ALICE).into(),
+			KSM,
+			2_000,
+			BoundedVec::default(),
+			None
+		));
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, VKSM, 0, 0));
 		assert_noop!(
 			Salp::buyback_vstoken_by_stable_pool(Some(ALICE).into(), 0, VKSM, 70),

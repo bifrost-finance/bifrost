@@ -24,8 +24,8 @@ pub mod fellowship;
 mod origins;
 pub use origins::{
 	custom_origins, CoreAdmin, Fellows, FellowshipAdmin, FellowshipExperts, FellowshipInitiates,
-	FellowshipMasters, ReferendumCanceller, ReferendumKiller, SALPAdmin, SystemStakingAdmin,
-	TechAdmin, ValidatorElection, WhitelistedCaller, *,
+	FellowshipMasters, ReferendumCanceller, ReferendumKiller, SALPAdmin, TechAdmin,
+	ValidatorElection, WhitelistedCaller, *,
 };
 mod tracks;
 pub use tracks::TracksInfo;

@@ -361,6 +361,7 @@ pub mod pallet {
 				currency_id,
 				token_amount,
 				remark,
+				None,
 			) {
 				Ok(_) => {
 					// success
@@ -853,11 +854,17 @@ impl<T: Config> Pallet<T> {
 				SupportChain::Interlay
 			},
 		};
-		let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
-		ensure!(
-			whitelist_account_ids.contains(&evm_contract_account_id),
-			Error::<T>::AccountIdNotInWhitelist
-		);
+
+		match target_chain {
+			TargetChain::Hydradx(_) => {},
+			_ => {
+				let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
+				ensure!(
+					whitelist_account_ids.contains(&evm_contract_account_id),
+					Error::<T>::AccountIdNotInWhitelist
+				);
+			},
+		};
 		Ok((evm_contract_account_id, evm_caller_account_id))
 	}
 
