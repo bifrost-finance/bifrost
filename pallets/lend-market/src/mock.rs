@@ -188,10 +188,7 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(_asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
-		Some(TimeStampedPrice {
-			value: Price::saturating_from_integer(100),
-			timestamp: 0,
-		})
+		Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
 	}
 }
 
@@ -258,9 +255,7 @@ impl MockPriceFeeder {
 
 	pub fn set_price(asset_id: CurrencyId, price: Price) {
 		Self::PRICES.with(|prices| {
-			prices
-				.borrow_mut()
-				.insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
+			prices.borrow_mut().insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
 		});
 	}
 
@@ -340,9 +335,7 @@ impl Config for Test {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Test>::default()
-		.build_storage()
-		.unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![
@@ -405,13 +398,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, unit(1000)).unwrap();
-		Assets::mint(
-			RuntimeOrigin::signed(ALICE),
-			DOT_U.into(),
-			ALICE,
-			unit(1000),
-		)
-		.unwrap();
+		Assets::mint(RuntimeOrigin::signed(ALICE), DOT_U.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), PHA.into(), ALICE, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), KSM.into(), BOB, unit(1000)).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), BOB, unit(1000)).unwrap();

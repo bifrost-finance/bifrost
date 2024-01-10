@@ -134,7 +134,7 @@ pub mod pallet {
 			match Self::get_issue_whitelist(currency_id) {
 				None => {
 					issue_vec = vec![account.clone()];
-				}
+				},
 				Some(issue_whitelist) => {
 					issue_vec = issue_whitelist.into_inner();
 					ensure!(!issue_vec.contains(&account), Error::<T>::NotAllowed);
@@ -144,7 +144,7 @@ pub mod pallet {
 					);
 
 					issue_vec.push(account.clone());
-				}
+				},
 			}
 
 			issue_whitelist_new =
@@ -170,7 +170,7 @@ pub mod pallet {
 						issue_list.retain(|x| x.clone() != account);
 						Self::deposit_event(Event::RemovedFromIssueList(account, currency_id));
 						Ok(())
-					}
+					},
 					_ => Err(Error::<T>::NotExist),
 				}
 			})?;
@@ -192,7 +192,7 @@ pub mod pallet {
 			match Self::get_transfer_whitelist(currency_id) {
 				None => {
 					transfer_vec = vec![account.clone()];
-				}
+				},
 				Some(transfer_whitelist) => {
 					transfer_vec = transfer_whitelist.into_inner();
 					ensure!(!transfer_vec.contains(&account), Error::<T>::NotAllowed);
@@ -202,7 +202,7 @@ pub mod pallet {
 					);
 
 					transfer_vec.push(account.clone());
-				}
+				},
 			}
 
 			transfer_whitelist_new =
@@ -233,7 +233,7 @@ pub mod pallet {
 								currency_id,
 							));
 							Ok(())
-						}
+						},
 						_ => Err(Error::<T>::NotExist),
 					}
 				},
@@ -278,10 +278,7 @@ pub mod pallet {
 
 			let transfer_whitelist =
 				Self::get_transfer_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-			ensure!(
-				transfer_whitelist.contains(&transferrer),
-				Error::<T>::NotAllowed
-			);
+			ensure!(transfer_whitelist.contains(&transferrer), Error::<T>::NotAllowed);
 
 			let balance = T::MultiCurrency::free_balance(currency_id, &transferrer);
 			ensure!(balance >= amount, Error::<T>::NotEnoughBalance);

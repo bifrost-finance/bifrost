@@ -155,7 +155,7 @@ impl<T: Config> Pallet<T> {
 						.ok_or(ArithmeticError::Overflow)?
 				};
 				Self::reduce_leverage(&who, asset_id, vtoken_id, reduce_amount)?;
-			}
+			},
 			Ordering::Equal => return Err(Error::<T>::ArgumentsError.into()),
 			Ordering::Greater => {
 				let increase_amount = rate
@@ -163,7 +163,7 @@ impl<T: Config> Pallet<T> {
 					.and_then(|r| r.checked_mul_int(base_token_value))
 					.ok_or(ArithmeticError::Overflow)?;
 				Self::increase_leverage(&who, asset_id, vtoken_id, increase_amount)?;
-			}
+			},
 		}
 		Self::deposit_event(Event::<T>::FlashLoanDeposited {
 			who,

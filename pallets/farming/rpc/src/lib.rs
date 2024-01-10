@@ -60,10 +60,7 @@ pub struct FarmingRpc<C, Block> {
 
 impl<C, Block> FarmingRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: PhantomData,
-		}
+		Self { client, _marker: PhantomData }
 	}
 }
 

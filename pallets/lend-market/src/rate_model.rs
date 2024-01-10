@@ -44,12 +44,7 @@ impl InterestRateModel {
 		full_rate: Rate,
 		jump_utilization: Ratio,
 	) -> Self {
-		Self::Jump(JumpModel::new_model(
-			base_rate,
-			jump_rate,
-			full_rate,
-			jump_utilization,
-		))
+		Self::Jump(JumpModel::new_model(base_rate, jump_rate, full_rate, jump_utilization))
 	}
 
 	pub fn new_curve_model(base_rate: Rate) -> Self {
@@ -107,19 +102,14 @@ impl JumpModel {
 		full_rate: Rate,
 		jump_utilization: Ratio,
 	) -> JumpModel {
-		Self {
-			base_rate,
-			jump_rate,
-			full_rate,
-			jump_utilization,
-		}
+		Self { base_rate, jump_rate, full_rate, jump_utilization }
 	}
 
 	/// Check the jump model for sanity
 	pub fn check_model(&self) -> bool {
-		if self.base_rate > Self::MAX_BASE_RATE
-			|| self.jump_rate > Self::MAX_JUMP_RATE
-			|| self.full_rate > Self::MAX_FULL_RATE
+		if self.base_rate > Self::MAX_BASE_RATE ||
+			self.jump_rate > Self::MAX_JUMP_RATE ||
+			self.full_rate > Self::MAX_FULL_RATE
 		{
 			return false;
 		}
@@ -182,9 +172,7 @@ impl CurveModel {
 	pub fn get_borrow_rate(&self, utilization: Ratio) -> Option<Rate> {
 		const NINE: usize = 9;
 		let utilization_rate: Rate = utilization.into();
-		utilization_rate
-			.saturating_pow(NINE)
-			.checked_add(&self.base_rate)
+		utilization_rate.saturating_pow(NINE).checked_add(&self.base_rate)
 	}
 }
 
@@ -241,9 +229,9 @@ mod tests {
 		let excess_util = util.saturating_sub(jump_utilization);
 		assert_eq!(
 			borrow_rate,
-			(jump_model.full_rate - jump_model.jump_rate).saturating_mul(excess_util.into())
-				/ FixedU128::saturating_from_rational(20, 100)
-				+ normal_rate,
+			(jump_model.full_rate - jump_model.jump_rate).saturating_mul(excess_util.into()) /
+				FixedU128::saturating_from_rational(20, 100) +
+				normal_rate,
 		);
 	}
 

@@ -134,9 +134,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(());
 		}
 		PoolInfos::<T>::mutate_exists(pool, |maybe_pool_info| -> DispatchResult {
-			let pool_info = maybe_pool_info
-				.as_mut()
-				.ok_or(Error::<T>::PoolDoesNotExist)?;
+			let pool_info = maybe_pool_info.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
 			pool_info
 				.rewards
@@ -176,10 +174,7 @@ impl<T: Config> Pallet<T> {
 						U256::from(add_amount.to_owned().saturated_into::<u128>())
 							.saturating_mul(total_reward.to_owned().saturated_into::<u128>().into())
 							.checked_div(
-								initial_total_shares
-									.to_owned()
-									.saturated_into::<u128>()
-									.into(),
+								initial_total_shares.to_owned().saturated_into::<u128>().into(),
 							)
 							.unwrap_or_default(),
 					)
@@ -200,17 +195,15 @@ impl<T: Config> Pallet<T> {
 			.unwrap_or_else(|| ShareInfo::new(who.clone(), current_block_number));
 		share_info.share = share_info.share.saturating_add(add_amount);
 		// update withdrawn inflation for each reward currency
-		withdrawn_inflation
-			.into_iter()
-			.for_each(|(reward_currency, reward_inflation)| {
-				share_info
-					.withdrawn_rewards
-					.entry(reward_currency)
-					.and_modify(|withdrawn_reward| {
-						*withdrawn_reward = withdrawn_reward.saturating_add(reward_inflation);
-					})
-					.or_insert(reward_inflation);
-			});
+		withdrawn_inflation.into_iter().for_each(|(reward_currency, reward_inflation)| {
+			share_info
+				.withdrawn_rewards
+				.entry(reward_currency)
+				.and_modify(|withdrawn_reward| {
+					*withdrawn_reward = withdrawn_reward.saturating_add(reward_inflation);
+				})
+				.or_insert(reward_inflation);
+		});
 		SharesAndWithdrawnRewards::<T>::insert(pid, who, share_info);
 		PoolInfos::<T>::insert(&pid, pool_info);
 	}
@@ -245,9 +238,7 @@ impl<T: Config> Pallet<T> {
 				}
 
 				PoolInfos::<T>::mutate(pool, |maybe_pool_info| -> DispatchResult {
-					let pool_info = maybe_pool_info
-						.as_mut()
-						.ok_or(Error::<T>::PoolDoesNotExist)?;
+					let pool_info = maybe_pool_info.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
 					share_info
 						.withdraw_list
@@ -312,9 +303,8 @@ impl<T: Config> Pallet<T> {
 					}
 
 					PoolInfos::<T>::mutate(pool, |maybe_pool_info| -> DispatchResult {
-						let pool_info = maybe_pool_info
-							.as_mut()
-							.ok_or(Error::<T>::PoolDoesNotExist)?;
+						let pool_info =
+							maybe_pool_info.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
 						let total_shares =
 							U256::from(pool_info.total_shares.to_owned().saturated_into::<u128>());
@@ -438,10 +428,10 @@ impl<T: Config> Pallet<T> {
 					share_info.withdraw_list = tmp;
 
 					// if withdraw_list and share both are empty, and if_remove is true, remove it.
-					if share_info.withdraw_list
-						!= Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default()
-						|| !share_info.share.is_zero()
-						|| !if_remove
+					if share_info.withdraw_list !=
+						Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default() ||
+						!share_info.share.is_zero() ||
+						!if_remove
 					{
 						*share_info_old = Some(share_info);
 					};

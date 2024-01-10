@@ -91,12 +91,7 @@ pub enum MoonbeamParachainStakingCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MoonbeamXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(
-		MoonbeamCurrencyId,
-		BalanceOf<T>,
-		Box<VersionedMultiLocation>,
-		WeightLimit,
-	),
+	Transfer(MoonbeamCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]

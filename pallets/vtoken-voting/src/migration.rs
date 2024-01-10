@@ -51,10 +51,7 @@ pub mod v2 {
 	use frame_support::{pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
 	use sp_runtime::traits::Get;
 
-	pub struct MigrateToV2<T, C>(
-		sp_std::marker::PhantomData<T>,
-		sp_std::marker::PhantomData<C>,
-	);
+	pub struct MigrateToV2<T, C>(sp_std::marker::PhantomData<T>, sp_std::marker::PhantomData<C>);
 	impl<T: Config, C: Get<CurrencyIdOf<T>>> OnRuntimeUpgrade for MigrateToV2<T, C> {
 		fn on_runtime_upgrade() -> Weight {
 			if StorageVersion::get::<Pallet<T>>() < 2 {

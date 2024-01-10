@@ -72,10 +72,8 @@ impl<T: Config> Pallet<T> {
 				let total_supply = TotalSupply::<T>::get(asset_id);
 				let delta_index =
 					Self::calculate_reward_delta_index(delta_block, supply_speed, total_supply)?;
-				supply_state.index = supply_state
-					.index
-					.checked_add(delta_index)
-					.ok_or(ArithmeticError::Overflow)?;
+				supply_state.index =
+					supply_state.index.checked_add(delta_index).ok_or(ArithmeticError::Overflow)?;
 			}
 			supply_state.block = current_block_number;
 
@@ -103,10 +101,8 @@ impl<T: Config> Pallet<T> {
 					borrow_speed,
 					base_borrow_amount,
 				)?;
-				borrow_state.index = borrow_state
-					.index
-					.checked_add(delta_index)
-					.ok_or(ArithmeticError::Overflow)?;
+				borrow_state.index =
+					borrow_state.index.checked_add(delta_index).ok_or(ArithmeticError::Overflow)?;
 			}
 			borrow_state.block = current_block_number;
 
@@ -133,9 +129,8 @@ impl<T: Config> Pallet<T> {
 					let supplier_account = AccountDeposits::<T>::get(asset_id, supplier);
 					let supplier_amount = supplier_account.voucher_balance;
 					let reward_delta = Self::calculate_reward_delta(supplier_amount, delta_index)?;
-					*total_reward = total_reward
-						.checked_add(reward_delta)
-						.ok_or(ArithmeticError::Overflow)?;
+					*total_reward =
+						total_reward.checked_add(reward_delta).ok_or(ArithmeticError::Overflow)?;
 					Self::deposit_event(Event::<T>::DistributedSupplierReward(
 						asset_id,
 						supplier.clone(),
@@ -173,9 +168,8 @@ impl<T: Config> Pallet<T> {
 						.ok_or(ArithmeticError::Overflow)?;
 					let reward_delta =
 						Self::calculate_reward_delta(base_borrow_amount, delta_index)?;
-					*total_reward = total_reward
-						.checked_add(reward_delta)
-						.ok_or(ArithmeticError::Overflow)?;
+					*total_reward =
+						total_reward.checked_add(reward_delta).ok_or(ArithmeticError::Overflow)?;
 					Self::deposit_event(Event::<T>::DistributedBorrowerReward(
 						asset_id,
 						borrower.clone(),

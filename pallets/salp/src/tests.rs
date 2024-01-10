@@ -30,13 +30,7 @@ use zenlink_protocol::AssetId;
 #[test]
 fn create_fund_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::funds(3_000).ok_or(()));
 		assert_eq!(Salp::current_trie_index(), 1);
 	});
@@ -55,13 +49,7 @@ fn create_fund_with_wrong_origin_should_fail() {
 #[test]
 fn create_fund_existed_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 
 		assert_noop!(
 			Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()),
@@ -93,13 +81,7 @@ fn create_fund_first_slot_bigger_than_last_slot_should_fail() {
 #[test]
 fn set_fund_success_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
 		// Check status
@@ -111,47 +93,23 @@ fn set_fund_success_should_work() {
 #[test]
 fn set_fund_success_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
-		assert_noop!(
-			Salp::fund_success(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_noop!(Salp::fund_success(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	})
 }
 
 #[test]
 fn set_fund_success_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
-		assert_noop!(
-			Salp::fund_success(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_noop!(Salp::fund_success(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn set_fund_success_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_noop!(
 			Salp::fund_success(Some(ALICE).into(), 3_000),
@@ -163,13 +121,7 @@ fn set_fund_success_with_wrong_fund_status_should_fail() {
 #[test]
 fn set_fund_fail_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 
 		// Check status
@@ -181,65 +133,32 @@ fn set_fund_fail_should_work() {
 #[test]
 fn set_fund_fail_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
-		assert_noop!(
-			Salp::fund_fail(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_noop!(Salp::fund_fail(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn set_fund_fail_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
-		assert_noop!(
-			Salp::fund_fail(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_noop!(Salp::fund_fail(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn set_fund_fail_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(
-			Salp::fund_fail(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::fund_fail(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 	});
 }
 
 #[test]
 fn set_fund_retire_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
@@ -252,49 +171,25 @@ fn set_fund_retire_should_work() {
 #[test]
 fn set_fund_retire_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(
-			Salp::fund_retire(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Salp::fund_retire(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn set_fund_retire_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(
-			Salp::fund_retire(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_noop!(Salp::fund_retire(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn set_fund_retire_with_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::fund_retire(Some(ALICE).into(), 3_000),
 			Error::<Test>::InvalidFundStatus
@@ -305,13 +200,7 @@ fn set_fund_retire_with_with_wrong_fund_status_should_fail() {
 #[test]
 fn set_fund_end_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -326,74 +215,41 @@ fn set_fund_end_should_work() {
 #[test]
 fn set_fund_end_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::fund_end(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Salp::fund_end(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn set_fund_end_with_wrong_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::fund_end(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_noop!(Salp::fund_end(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn set_fund_end_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::fund_end(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::fund_end(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 	});
 }
 
 #[test]
 fn unlock_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -423,13 +279,7 @@ fn unlock_should_work() {
 #[test]
 fn unlock_by_vsbond_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -462,9 +312,7 @@ fn unlock_vstoken_should_work() {
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
 				.unwrap();
-		assert_ok!(<Test as Config>::MultiCurrency::reserve(
-			vs_token, &ALICE, 1
-		));
+		assert_ok!(<Test as Config>::MultiCurrency::reserve(vs_token, &ALICE, 1));
 
 		assert_eq!(Tokens::accounts(ALICE, vs_token).free, 99999);
 		assert_eq!(Tokens::accounts(ALICE, vs_token).frozen, 0);
@@ -500,13 +348,7 @@ fn unlock_vstoken_should_work() {
 #[test]
 fn contribute_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true));
@@ -535,13 +377,7 @@ fn contribute_should_work() {
 #[test]
 fn double_contribute_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -574,13 +410,7 @@ fn double_contribute_should_work() {
 #[test]
 fn contribute_when_xcm_error_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, false,));
@@ -613,13 +443,7 @@ fn contribute_when_xcm_error_should_work() {
 #[test]
 fn confirm_contribute_later_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
@@ -649,17 +473,8 @@ fn confirm_contribute_later_should_work() {
 #[test]
 fn contribute_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
-		assert_noop!(
-			Salp::contribute(RuntimeOrigin::none(), 3_000, 100),
-			DispatchError::BadOrigin
-		);
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_noop!(Salp::contribute(RuntimeOrigin::none(), 3_000, 100), DispatchError::BadOrigin);
 
 		assert_noop!(
 			Salp::confirm_contribute(RuntimeOrigin::none(), 0, true),
@@ -671,13 +486,7 @@ fn contribute_with_wrong_origin_should_fail() {
 #[test]
 fn contribute_with_low_contribution_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::contribute(Some(BRUCE).into(), 3_000, MinContribution::get() - 1),
 			Error::<Test>::ContributionTooSmall
@@ -688,13 +497,7 @@ fn contribute_with_low_contribution_should_fail() {
 #[test]
 fn contribute_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::contribute(Some(BRUCE).into(), 4_000, 100),
 			Error::<Test>::InvalidParaId
@@ -705,13 +508,7 @@ fn contribute_with_wrong_para_id_should_fail() {
 #[test]
 fn contribute_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000,));
 		assert_noop!(
 			Salp::contribute(Some(BRUCE).into(), 3_000, 100),
@@ -723,13 +520,7 @@ fn contribute_with_wrong_fund_status_should_fail() {
 #[test]
 fn contribute_exceed_cap_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::contribute(Some(BRUCE).into(), 3_000, 1_001),
 			Error::<Test>::CapExceeded
@@ -740,13 +531,7 @@ fn contribute_exceed_cap_should_fail() {
 #[test]
 fn contribute_when_contributing_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::confirm_contribute(Some(ALICE).into(), 0, true),
 			Error::<Test>::NotFindContributionValue
@@ -757,13 +542,7 @@ fn contribute_when_contributing_should_fail() {
 #[test]
 fn confirm_contribute_when_not_in_contributing_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 
 		assert_noop!(
@@ -781,13 +560,7 @@ fn contribute_with_when_ump_wrong_should_fail() {
 #[test]
 fn withdraw_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -798,13 +571,7 @@ fn withdraw_should_work() {
 		let fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			4_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 4_000, 100));
 		Salp::bind_query_id_and_contribution(0, 4_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -819,13 +586,7 @@ fn withdraw_should_work() {
 #[test]
 fn withdraw_when_xcm_error_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -836,13 +597,7 @@ fn withdraw_when_xcm_error_should_work() {
 		let fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			4_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 4_000, 100));
 		Salp::bind_query_id_and_contribution(0, 4_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -857,43 +612,25 @@ fn withdraw_when_xcm_error_should_work() {
 #[test]
 fn double_withdraw_same_fund_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		assert_noop!(
-			Salp::withdraw(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 
 		let fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			4_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 4_000, 100));
 		Salp::bind_query_id_and_contribution(0, 4_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 4_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
-		assert_noop!(
-			Salp::withdraw(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 4_000), Error::<Test>::InvalidFundStatus);
 
 		let fund = Salp::funds(4_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RefundWithdrew);
@@ -903,82 +640,46 @@ fn double_withdraw_same_fund_should_fail() {
 #[test]
 fn double_withdraw_same_fund_when_one_of_xcm_error_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		assert_noop!(
-			Salp::withdraw(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 	});
 }
 
 #[test]
 fn withdraw_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::withdraw(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Salp::withdraw(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn withdraw_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::withdraw(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn withdraw_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::withdraw(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 	});
 }
 
@@ -990,25 +691,13 @@ fn withdraw_with_when_ump_wrong_should_fail() {
 #[test]
 fn refund_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::refund(
-			Some(BRUCE).into(),
-			3_000,
-			1,
-			SlotLength::get(),
-			100
-		));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
@@ -1026,10 +715,7 @@ fn refund_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 	});
@@ -1038,25 +724,13 @@ fn refund_should_work() {
 #[test]
 fn refund_when_xcm_error_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::refund(
-			Some(BRUCE).into(),
-			3_000,
-			1,
-			SlotLength::get(),
-			100
-		));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 
 		let vs_token =
 			<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get())
@@ -1080,25 +754,13 @@ fn refund_when_xcm_error_should_work() {
 #[test]
 fn double_refund_when_one_of_xcm_error_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::refund(
-			Some(BRUCE).into(),
-			3_000,
-			1,
-			SlotLength::get(),
-			100
-		));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 		assert_noop!(
 			Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100),
 			Error::<Test>::NotEnoughBalanceInFund
@@ -1109,13 +771,7 @@ fn double_refund_when_one_of_xcm_error_should_work() {
 #[test]
 fn refund_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1131,26 +787,14 @@ fn refund_with_wrong_origin_should_fail() {
 			DispatchError::BadOrigin
 		);
 
-		assert_ok!(Salp::refund(
-			Some(BRUCE).into(),
-			3_000,
-			1,
-			SlotLength::get(),
-			100
-		));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 	});
 }
 
 #[test]
 fn refund_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
@@ -1167,13 +811,7 @@ fn dissolve_should_work() {
 		let remove_times = 4;
 		let contribute_account_num = remove_times * RemoveKeysLimit::get();
 
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			10_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 10_000, 1, SlotLength::get()));
 		for i in 0..contribute_account_num {
 			let ract = AccountId::new([(i as u8); 32]);
 			assert_ok!(Tokens::deposit(RelayCurrencyId::get(), &ract, 10));
@@ -1198,86 +836,50 @@ fn dissolve_should_work() {
 #[test]
 fn dissolve_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::dissolve(RuntimeOrigin::none(), 3_000),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Salp::dissolve(RuntimeOrigin::none(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn dissolve_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::dissolve(Some(ALICE).into(), 4_000),
-			Error::<Test>::InvalidParaId
-		);
+		assert_noop!(Salp::dissolve(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
 	});
 }
 
 #[test]
 fn dissolve_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::dissolve(Some(ALICE).into(), 3_000),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::dissolve(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 	});
 }
 
 #[test]
 fn redeem_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE - 100
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 100);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
@@ -1315,12 +917,8 @@ fn redeem_should_work() {
 		)
 		.unwrap();
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_token, &BRUCE, &CATHI, 50
-		));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_bond, &BRUCE, &CATHI, 50
-		));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 
@@ -1330,10 +928,7 @@ fn redeem_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE - 50
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
@@ -1345,10 +940,7 @@ fn redeem_should_work() {
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(CATHI, RelayCurrencyId::get()).free,
-			INIT_BALANCE + 50
-		);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
 	});
@@ -1362,21 +954,12 @@ fn redeem_with_speical_vsbond_should_work() {
 		Salp::bind_query_id_and_contribution(0, 2001, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE - 100
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 100);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
-		assert_eq!(
-			Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).free,
-			100
-		);
-		assert_eq!(
-			Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).frozen,
-			0
-		);
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).free, 100);
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(
 			Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).reserved,
 			0
@@ -1403,12 +986,8 @@ fn redeem_with_speical_vsbond_should_work() {
 		)
 		.unwrap();
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_token, &BRUCE, &CATHI, 50
-		));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_bond, &BRUCE, &CATHI, 50
-		));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 2001, 50));
 
@@ -1418,10 +997,7 @@ fn redeem_with_speical_vsbond_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE - 50
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
@@ -1433,10 +1009,7 @@ fn redeem_with_speical_vsbond_should_work() {
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(CATHI, RelayCurrencyId::get()).free,
-			INIT_BALANCE + 50
-		);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
 	});
@@ -1445,13 +1018,7 @@ fn redeem_with_speical_vsbond_should_work() {
 #[test]
 fn redeem_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1465,27 +1032,15 @@ fn redeem_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(
-			Salp::redeem(RuntimeOrigin::root(), 3_000, 50),
-			DispatchError::BadOrigin
-		);
-		assert_noop!(
-			Salp::redeem(RuntimeOrigin::none(), 3_000, 50),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Salp::redeem(RuntimeOrigin::root(), 3_000, 50), DispatchError::BadOrigin);
+		assert_noop!(Salp::redeem(RuntimeOrigin::none(), 3_000, 50), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn redeem_with_not_redeemable_vsbond_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1507,35 +1062,19 @@ fn redeem_with_not_redeemable_vsbond_should_fail() {
 		)
 		.unwrap();
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_token, &BRUCE, &CATHI, 50
-		));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_bond, &BRUCE, &CATHI, 50
-		));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
 
-		assert_noop!(
-			Salp::redeem(Some(BRUCE).into(), 3_000, 50),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidFundStatus);
 
-		assert_noop!(
-			Salp::redeem(Some(CATHI).into(), 3_000, 50),
-			Error::<Test>::InvalidFundStatus
-		);
+		assert_noop!(Salp::redeem(Some(CATHI).into(), 3_000, 50), Error::<Test>::InvalidFundStatus);
 	});
 }
 
 #[test]
 fn redeem_without_enough_vsassets_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1560,12 +1099,8 @@ fn redeem_without_enough_vsassets_should_fail() {
 		)
 		.unwrap();
 
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_token, &BRUCE, &CATHI, 50
-		));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_bond, &BRUCE, &CATHI, 50
-		));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
 
 		assert_noop!(
 			Salp::redeem(Some(BRUCE).into(), 3_000, 60),
@@ -1582,13 +1117,7 @@ fn redeem_without_enough_vsassets_should_fail() {
 #[test]
 fn redeem_without_enough_balance_in_pool_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1629,13 +1158,7 @@ fn release_from_redeem_to_bancor_should_work() {
 	}
 
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1664,13 +1187,7 @@ fn check_next_trie_index() {
 #[test]
 fn batch_unlock_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1682,13 +1199,7 @@ fn batch_unlock_should_work() {
 #[test]
 fn unlock_when_fund_ongoing_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1717,23 +1228,14 @@ fn unlock_when_fund_ongoing_should_work() {
 #[test]
 fn set_confirmor_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_noop!(
 			Salp::confirm_contribute(Some(BRUCE).into(), 0, true),
 			DispatchError::BadOrigin,
 		);
-		assert_ok!(Salp::set_multisig_confirm_account(
-			Some(ALICE).into(),
-			BRUCE
-		));
+		assert_ok!(Salp::set_multisig_confirm_account(Some(ALICE).into(), BRUCE));
 		assert_ok!(Salp::confirm_contribute(Some(BRUCE).into(), 0, true,));
 	});
 }
@@ -1741,13 +1243,7 @@ fn set_confirmor_should_work() {
 #[test]
 fn refund_meanwhile_issue_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -1770,12 +1266,7 @@ fn refund_meanwhile_issue_should_work() {
 			),
 			false
 		);
-		assert_ok!(Salp::continue_fund(
-			Some(ALICE).into(),
-			3_000,
-			2,
-			SlotLength::get() + 1
-		));
+		assert_ok!(Salp::continue_fund(Some(ALICE).into(), 3_000, 2, SlotLength::get() + 1));
 		assert_eq!(
 			<Test as Config>::CurrencyIdRegister::check_vsbond_registered(
 				TokenSymbol::KSM,
@@ -1805,13 +1296,7 @@ fn refund_meanwhile_issue_should_work() {
 		assert_eq!(new_fund.raised, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 100);
 		// refund from old failed fund should success
-		assert_ok!(Salp::refund(
-			Some(BRUCE).into(),
-			3_000,
-			1,
-			SlotLength::get(),
-			50
-		));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50));
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 50);
 		// refund from new fund should failed
 		assert_noop!(
@@ -1824,12 +1309,7 @@ fn refund_meanwhile_issue_should_work() {
 			Error::<Test>::InvalidFundNotExist,
 		);
 		// after dissolve failed fund refund from old should fail
-		assert_ok!(Salp::dissolve_refunded(
-			Some(ALICE).into(),
-			3_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::dissolve_refunded(Some(ALICE).into(), 3_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50),
 			Error::<Test>::InvalidRefund,
@@ -1851,24 +1331,12 @@ fn refund_meanwhile_issue_should_work() {
 			100
 		);
 		assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
-		assert_eq!(
-			Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free,
-			0
-		);
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(3_000), RelayCurrencyId::get()).free, 0);
 		let treasury_account: AccountId = TreasuryAccount::get();
-		assert_eq!(
-			Tokens::accounts(treasury_account, RelayCurrencyId::get()).free,
-			25
-		);
+		assert_eq!(Tokens::accounts(treasury_account, RelayCurrencyId::get()).free, 25);
 		let buyback_account: AccountId = BuybackPalletId::get().into_account_truncating();
-		assert_eq!(
-			Tokens::accounts(buyback_account.clone(), RelayCurrencyId::get()).free,
-			75
-		);
-		assert_noop!(
-			Salp::redeem(Some(BRUCE).into(), 3_000, 50),
-			Error::<Test>::InvalidParaId
-		);
+		assert_eq!(Tokens::accounts(buyback_account.clone(), RelayCurrencyId::get()).free, 75);
+		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 
 		let para_id = 2001u32;
 		let asset_0_currency_id: AssetId =
@@ -1966,18 +1434,9 @@ fn refund_meanwhile_issue_should_work() {
 			2,
 			vec![(VSKSM, (1, 1)), (VKSM, (10, 11))]
 		));
-		assert_ok!(StablePool::add_liquidity(
-			RuntimeOrigin::signed(ALICE).into(),
-			2,
-			amounts,
-			0
-		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(ALICE).into(), 2, amounts, 0));
 
-		assert_ok!(VtokenMinting::set_minimum_mint(
-			RuntimeOrigin::signed(ALICE),
-			KSM,
-			0
-		));
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 0));
 		assert_ok!(VtokenMinting::mint(
 			Some(ALICE).into(),
 			KSM,
@@ -1985,13 +1444,7 @@ fn refund_meanwhile_issue_should_work() {
 			BoundedVec::default(),
 			None
 		));
-		assert_ok!(Tokens::set_balance(
-			RuntimeOrigin::root(),
-			ALICE,
-			VKSM,
-			0,
-			0
-		));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, VKSM, 0, 0));
 		assert_noop!(
 			Salp::buyback_vstoken_by_stable_pool(Some(ALICE).into(), 0, VKSM, 70),
 			Error::<Test>::ArgumentsError
@@ -2003,20 +1456,9 @@ fn refund_meanwhile_issue_should_work() {
 		let token_value = VtokenMinting::token_to_vtoken(KSM, VKSM, 100);
 		assert_eq!(token_value, Ok(100));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 95000);
-		assert_ok!(Tokens::set_balance(
-			RuntimeOrigin::root(),
-			buyback_account,
-			KSM,
-			100,
-			0
-		));
+		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), buyback_account, KSM, 100, 0));
 
-		assert_ok!(Salp::buyback_vstoken_by_stable_pool(
-			Some(BRUCE).into(),
-			1,
-			KSM,
-			100
-		));
+		assert_ok!(Salp::buyback_vstoken_by_stable_pool(Some(BRUCE).into(), 1, KSM, 100));
 		assert_eq!(Tokens::free_balance(VSKSM, &BRUCE), 100);
 	});
 }
@@ -2024,13 +1466,7 @@ fn refund_meanwhile_issue_should_work() {
 #[test]
 fn edit_fund_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			1,
-			SlotLength::get()
-		));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -2054,13 +1490,7 @@ fn edit_fund_should_work() {
 }
 
 fn reserve_init() -> (CurrencyId, CurrencyId) {
-	assert_ok!(Salp::create(
-		Some(ALICE).into(),
-		3_000,
-		1_000,
-		1,
-		SlotLength::get()
-	));
+	assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 	assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 	Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 	assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
@@ -2090,12 +1520,8 @@ fn batch_handle_reserve_should_work() {
 		let (vs_token, vs_bond) = reserve_init();
 
 		assert_ok!(Salp::reserve(Some(BRUCE).into(), 3_000, 50, false));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_token, &BRUCE, &CATHI, 50
-		));
-		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(
-			vs_bond, &BRUCE, &CATHI, 50
-		));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_token, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vs_bond, &BRUCE, &CATHI, 50));
 		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 10, false));
 		assert_ok!(Salp::reserve(Some(CATHI).into(), 3_000, 40, false));
 		assert_eq!(Tokens::accounts(CATHI, vs_token).frozen, 50);
@@ -2112,10 +1538,7 @@ fn batch_handle_reserve_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(BRUCE, RelayCurrencyId::get()).free,
-			INIT_BALANCE - 50
-		);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
@@ -2125,10 +1548,7 @@ fn batch_handle_reserve_should_work() {
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).free, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, vs_bond).reserved, 0);
-		assert_eq!(
-			Tokens::accounts(CATHI, RelayCurrencyId::get()).free,
-			INIT_BALANCE + 50
-		);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
 		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
 	});

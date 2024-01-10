@@ -102,19 +102,13 @@ fn init<
 		KSM,
 		market_mock(VKSM)
 	));
-	assert_ok!(lend_market::Pallet::<T>::activate_market(
-		SystemOrigin::Root.into(),
-		KSM
-	));
+	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), KSM));
 	assert_ok!(lend_market::Pallet::<T>::add_market(
 		SystemOrigin::Root.into(),
 		VKSM,
 		market_mock(VBNC)
 	));
-	assert_ok!(lend_market::Pallet::<T>::activate_market(
-		SystemOrigin::Root.into(),
-		VKSM
-	));
+	assert_ok!(lend_market::Pallet::<T>::activate_market(SystemOrigin::Root.into(), VKSM));
 	assert_ok!(lend_market::Pallet::<T>::mint(
 		SystemOrigin::Signed(caller.clone()).into(),
 		KSM,

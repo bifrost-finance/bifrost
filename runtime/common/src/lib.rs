@@ -144,10 +144,7 @@ macro_rules! prod_or_test {
 	};
 	($prod:expr, $test:expr, $env:expr) => {
 		if cfg!(feature = "fast-runtime") {
-			core::option_env!($env)
-				.map(|s| s.parse().ok())
-				.flatten()
-				.unwrap_or($test)
+			core::option_env!($env).map(|s| s.parse().ok()).flatten().unwrap_or($test)
 		} else {
 			$prod
 		}

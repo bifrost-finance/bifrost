@@ -90,19 +90,12 @@ where
 }
 
 fn native_currency_location(id: CurrencyId) -> MultiLocation {
-	MultiLocation::new(
-		0,
-		X1(Junction::from(BoundedVec::try_from(id.encode()).unwrap())),
-	)
+	MultiLocation::new(0, X1(Junction::from(BoundedVec::try_from(id.encode()).unwrap())))
 }
 
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset {
-			id: Concrete(id),
-			fun: Fungible(_),
-		} = asset
-		{
+		if let MultiAsset { id: Concrete(id), fun: Fungible(_) } = asset {
 			Self::convert(id)
 		} else {
 			None
@@ -113,11 +106,7 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 {
-			network: None,
-			id: account.into(),
-		})
-		.into()
+		X1(AccountId32 { network: None, id: account.into() }).into()
 	}
 }
 
@@ -161,16 +150,11 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		}
 
 		match location {
-			MultiLocation {
-				parents: 1,
-				interior,
-			} => match interior {
+			MultiLocation { parents: 1, interior } => match interior {
 				X2(Parachain(id), PalletInstance(index))
-					if ((id == parachains::moonbeam::ID)
-						&& (index == parachains::moonbeam::PALLET_ID)) =>
-				{
-					Some(Token2(GLMR_TOKEN_ID))
-				}
+					if ((id == parachains::moonbeam::ID) &&
+						(index == parachains::moonbeam::PALLET_ID)) =>
+					Some(Token2(GLMR_TOKEN_ID)),
 				X2(Parachain(id), GeneralKey { data, length })
 					if (id == u32::from(ParachainInfo::parachain_id())) =>
 				{
@@ -183,13 +167,10 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					} else {
 						None
 					}
-				}
+				},
 				_ => None,
 			},
-			MultiLocation {
-				parents: 0,
-				interior,
-			} => match interior {
+			MultiLocation { parents: 0, interior } => match interior {
 				X1(GeneralKey { data, length }) => {
 					// decode the general key
 					let key = &data[..length as usize];
@@ -201,7 +182,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					} else {
 						None
 					}
-				}
+				},
 				_ => None,
 			},
 			_ => None,
@@ -300,35 +281,26 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 		// Then BuyExecution
 		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
-			BuyExecution {
-				weight_limit: Limited(ref mut weight),
-				..
-			} => {
+			BuyExecution { weight_limit: Limited(ref mut weight), .. } => {
 				if weight.all_gte(max_weight) {
 					weight.set_ref_time(max_weight.ref_time());
 					weight.set_proof_size(max_weight.proof_size());
 				};
-			}
-			BuyExecution {
-				ref mut weight_limit,
-				..
-			} if weight_limit == &Unlimited => {
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
 				*weight_limit = Limited(max_weight);
-			}
-			_ => {}
+			},
+			_ => {},
 		};
 
 		// Then Transact
 		let i = iter.next().ok_or(ProcessMessageError::Unsupported)?;
 		match i {
-			Transact {
-				ref mut require_weight_at_most,
-				..
-			} => {
+			Transact { ref mut require_weight_at_most, .. } => {
 				let weight = Weight::from_parts(DEFAULT_REF_TIMR, DEFAULT_PROOF_SIZE);
 				*require_weight_at_most = weight;
 				Ok(())
-			}
+			},
 			_ => Err(ProcessMessageError::Unsupported),
 		}
 	}
@@ -402,11 +374,7 @@ parameter_types! {
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
-		if let MultiAsset {
-			id: Concrete(location),
-			fun: Fungible(amount),
-		} = revenue
-		{
+		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
 			if let Some(currency_id) =
 				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(location)
 			{
@@ -435,10 +403,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		#[cfg(feature = "runtime-benchmarks")]
 		{
-			if matches!(
-				call,
-				RuntimeCall::System(frame_system::Call::remark_with_event { .. })
-			) {
+			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
 				return true;
 			}
 		}
@@ -679,8 +644,8 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a)
-			|| AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostVsbondPalletId::get(),
 		)
@@ -688,15 +653,15 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			&SlpEntrancePalletId::get(),
 		)
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
-			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a)
-			|| FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
-			|| AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
+			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
-			|| a.eq(&ZenklinkFeeAccount::get())
-			|| AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
+			a.eq(&ZenklinkFeeAccount::get()) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
 				.eq(a)
 	}
 }

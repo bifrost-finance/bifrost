@@ -321,9 +321,8 @@ impl CurrencyId {
 		let vsbond_origin = CurrencyId::VSBond(symbol, index, first_slot, last_slot);
 
 		let vsbond_fixed = match vsbond_origin {
-			Self::VSBond(TokenSymbol::KSM, 2001, 13, 20) => {
-				Self::VSBond(TokenSymbol::BNC, 2001, 13, 20)
-			}
+			Self::VSBond(TokenSymbol::KSM, 2001, 13, 20) =>
+				Self::VSBond(TokenSymbol::BNC, 2001, 13, 20),
 			_ => vsbond_origin,
 		};
 
@@ -425,33 +424,28 @@ impl TryFrom<u64> for CurrencyId {
 				let token_symbol_1 = TokenSymbol::try_from(token_symbol_num_1).unwrap_or_default();
 				let token_symbol_2 = TokenSymbol::try_from(token_symbol_num_2).unwrap_or_default();
 
-				Ok(Self::LPToken(
-					token_symbol_1,
-					token_type_1,
-					token_symbol_2,
-					token_type_2,
-				))
-			}
+				Ok(Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2))
+			},
 			7 => {
 				let foreign_asset_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as ForeignAssetId;
 				Ok(Self::ForeignAsset(foreign_asset_id))
-			}
+			},
 			8 => {
 				let token_id = t_discr as TokenId;
 				Ok(Self::Token2(token_id))
-			}
+			},
 			9 => {
 				let token_id = t_discr as TokenId;
 				Ok(Self::VToken2(token_id))
-			}
+			},
 			10 => {
 				let token_id = t_discr as TokenId;
 				Ok(Self::VSToken2(token_id))
-			}
+			},
 			11 => {
 				let token_id = t_discr as TokenId;
 				Ok(Self::VSBond2(token_id, pid, lp1, lp2))
-			}
+			},
 			_ => Err(()),
 		}
 	}

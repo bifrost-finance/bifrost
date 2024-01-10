@@ -479,10 +479,7 @@ fn revoke_buy_order_which_be_partial_clinchd_should_work() {
 #[test]
 fn revoke_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(
-			Auction::revoke_order(Some(ALICE).into(), 0),
-			Error::<Test>::NotFindOrderInfo
-		);
+		assert_noop!(Auction::revoke_order(Some(ALICE).into(), 0), Error::<Test>::NotFindOrderInfo);
 	});
 }
 
@@ -519,23 +516,11 @@ fn revoke_order_by_origin_illegal_should_fail() {
 			Error::<Test>::ForbidRevokeOrderWithoutOwnership
 		);
 
-		assert_noop!(
-			Auction::revoke_order(RuntimeOrigin::root(), 0),
-			DispatchError::BadOrigin
-		);
-		assert_noop!(
-			Auction::revoke_order(RuntimeOrigin::root(), 1),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::root(), 1), DispatchError::BadOrigin);
 
-		assert_noop!(
-			Auction::revoke_order(RuntimeOrigin::none(), 0),
-			DispatchError::BadOrigin
-		);
-		assert_noop!(
-			Auction::revoke_order(RuntimeOrigin::none(), 1),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::none(), 0), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(RuntimeOrigin::none(), 1), DispatchError::BadOrigin);
 	});
 }
 
@@ -617,11 +602,7 @@ fn partial_clinch_sell_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
 		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
-		assert_ok!(Auction::partial_clinch_order(
-			Some(BRUCE).into(),
-			0,
-			9999999
-		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
 		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
 		assert_eq!(user_sell_order_ids.len(), 0);
@@ -688,11 +669,7 @@ fn partial_clinch_buy_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
 		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
-		assert_ok!(Auction::partial_clinch_order(
-			Some(BRUCE).into(),
-			0,
-			9999999
-		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
 		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 0);
@@ -720,10 +697,7 @@ fn partial_clinch_buy_order_should_work() {
 #[test]
 fn partial_clinch_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(
-			Auction::clinch_order(Some(BRUCE).into(), 1),
-			Error::<Test>::NotFindOrderInfo
-		);
+		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 1), Error::<Test>::NotFindOrderInfo);
 		assert_noop!(
 			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
 			Error::<Test>::NotFindOrderInfo
@@ -827,11 +801,7 @@ fn handle_special_vsbond_sell_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
 		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
-		assert_ok!(Auction::partial_clinch_order(
-			Some(BRUCE).into(),
-			0,
-			9999999
-		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
 		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
 		assert_eq!(user_sell_order_ids.len(), 0);
@@ -898,11 +868,7 @@ fn handle_special_vsbond_buy_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
 		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
-		assert_ok!(Auction::partial_clinch_order(
-			Some(BRUCE).into(),
-			0,
-			9999999
-		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
 		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 0);
@@ -931,11 +897,7 @@ fn handle_special_vsbond_buy_order_should_work() {
 fn set_buy_and_sell_transaction_fee_rate_should_work() {
 	new_test_ext().execute_with(|| {
 		// both buy and see rate are 10%.
-		assert_ok!(Auction::set_buy_and_sell_transaction_fee_rate(
-			Some(ALICE).into(),
-			1000,
-			1000
-		));
+		assert_ok!(Auction::set_buy_and_sell_transaction_fee_rate(Some(ALICE).into(), 1000, 1000));
 
 		assert_eq!(
 			Auction::get_transaction_fee_rate(),
@@ -997,9 +959,6 @@ fn check_price_to_pay() {
 	let price_to_pays: [BalanceOf<Test>; 4] = [0, 10, 109, 1099];
 
 	for (quantity, price_to_pay) in quantities.iter().zip(price_to_pays.iter()) {
-		assert_eq!(
-			Auction::price_to_pay(*quantity, unit_price).unwrap(),
-			*price_to_pay
-		);
+		assert_eq!(Auction::price_to_pay(*quantity, unit_price).unwrap(), *price_to_pay);
 	}
 }

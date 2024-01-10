@@ -380,10 +380,7 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(_asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
-		Some(TimeStampedPrice {
-			value: Price::saturating_from_integer(100),
-			timestamp: 0,
-		})
+		Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
 	}
 }
 
@@ -421,9 +418,7 @@ impl MockPriceFeeder {
 
 	pub fn set_price(asset_id: CurrencyId, price: Price) {
 		Self::PRICES.with(|prices| {
-			prices
-				.borrow_mut()
-				.insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
+			prices.borrow_mut().insert(CurrencyIdWrap(asset_id), Some((price, 1u64)));
 		});
 	}
 
@@ -504,9 +499,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -527,10 +520,7 @@ impl ExtBuilder {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Test>::default()
-			.build_storage()
-			.unwrap()
-			.into();
+		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![

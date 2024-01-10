@@ -707,10 +707,7 @@ pub mod pallet {
 				staking_agent.initialize_delegator(currency_id, delegator_location)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorInitialized {
-				currency_id,
-				delegator_id,
-			});
+			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });
 			Ok(())
 		}
 
@@ -1119,11 +1116,7 @@ pub mod pallet {
 			)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ConvertAsset {
-				currency_id,
-				who: *who,
-				amount,
-			});
+			Pallet::<T>::deposit_event(Event::ConvertAsset { currency_id, who: *who, amount });
 
 			Ok(())
 		}
@@ -1144,10 +1137,7 @@ pub mod pallet {
 			T::VtokenMinting::increase_token_pool(currency_id, amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::PoolTokenIncreased {
-				currency_id,
-				amount,
-			});
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased { currency_id, amount });
 			Ok(())
 		}
 
@@ -1167,10 +1157,7 @@ pub mod pallet {
 			T::VtokenMinting::decrease_token_pool(currency_id, amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::PoolTokenDecreased {
-				currency_id,
-				amount,
-			});
+			Pallet::<T>::deposit_event(Event::PoolTokenDecreased { currency_id, amount });
 			Ok(())
 		}
 
@@ -1191,9 +1178,8 @@ pub mod pallet {
 			let last_update_block = LastTimeUpdatedOngoingTimeUnit::<T>::get(currency_id)
 				.ok_or(Error::<T>::LastTimeUpdatedOngoingTimeUnitNotExist)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
-			let blocks_between = current_block
-				.checked_sub(&last_update_block)
-				.ok_or(Error::<T>::UnderFlow)?;
+			let blocks_between =
+				current_block.checked_sub(&last_update_block).ok_or(Error::<T>::UnderFlow)?;
 
 			ensure!(blocks_between >= interval, Error::<T>::TooFrequent);
 
@@ -1263,11 +1249,11 @@ pub mod pallet {
 						let mut deduct_amount = idx_record_amount;
 						if exit_account_balance < idx_record_amount {
 							match redeem_type {
-								RedeemType::Native => {}
-								RedeemType::Astar(_)
-								| RedeemType::Moonbeam(_)
-								| RedeemType::Hydradx(_)
-								| RedeemType::Interlay(_) => break,
+								RedeemType::Native => {},
+								RedeemType::Astar(_) |
+								RedeemType::Moonbeam(_) |
+								RedeemType::Hydradx(_) |
+								RedeemType::Interlay(_) => break,
 							};
 							deduct_amount = exit_account_balance;
 						};
@@ -1280,7 +1266,7 @@ pub mod pallet {
 									&user_account,
 									deduct_amount,
 								)?;
-							}
+							},
 							RedeemType::Astar(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
@@ -1299,7 +1285,7 @@ pub mod pallet {
 									dest,
 									Unlimited,
 								)?;
-							}
+							},
 							RedeemType::Hydradx(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
@@ -1318,7 +1304,7 @@ pub mod pallet {
 									dest,
 									Unlimited,
 								)?;
-							}
+							},
 							RedeemType::Interlay(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
@@ -1337,7 +1323,7 @@ pub mod pallet {
 									dest,
 									Unlimited,
 								)?;
-							}
+							},
 							RedeemType::Moonbeam(receiver) => {
 								let dest = MultiLocation {
 									parents: 1,
@@ -1371,7 +1357,7 @@ pub mod pallet {
 										Unlimited,
 									)?;
 								}
-							}
+							},
 						};
 						// Delete the corresponding unlocking record storage.
 						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
@@ -1409,8 +1395,8 @@ pub mod pallet {
 
 			if extra_weight != 0 {
 				Ok(Some(
-					<T as Config>::WeightInfo::refund_currency_due_unbond()
-						+ Weight::from_parts(extra_weight, 0),
+					<T as Config>::WeightInfo::refund_currency_due_unbond() +
+						Weight::from_parts(extra_weight, 0),
 				)
 				.into())
 			} else {
@@ -1583,10 +1569,7 @@ pub mod pallet {
 				currency_id,
 				amount: fee_to_charge,
 			});
-			Pallet::<T>::deposit_event(Event::PoolTokenIncreased {
-				currency_id,
-				amount: value,
-			});
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased { currency_id, amount: value });
 			Ok(())
 		}
 
@@ -1610,10 +1593,7 @@ pub mod pallet {
 			});
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::OperateOriginSet {
-				currency_id,
-				operator: who,
-			});
+			Pallet::<T>::deposit_event(Event::OperateOriginSet { currency_id, operator: who });
 
 			Ok(())
 		}
@@ -1634,10 +1614,7 @@ pub mod pallet {
 			});
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::FeeSourceSet {
-				currency_id,
-				who_and_fee,
-			});
+			Pallet::<T>::deposit_event(Event::FeeSourceSet { currency_id, who_and_fee });
 
 			Ok(())
 		}
@@ -1680,10 +1657,7 @@ pub mod pallet {
 			staking_agent.remove_delegator(&who, currency_id)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorRemoved {
-				currency_id,
-				delegator_id: *who,
-			});
+			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: *who });
 			Ok(())
 		}
 
@@ -1880,10 +1854,7 @@ pub mod pallet {
 				*fee_set = maybe_fee_set;
 			});
 
-			Pallet::<T>::deposit_event(Event::HostingFeesSet {
-				currency_id,
-				fees: maybe_fee_set,
-			});
+			Pallet::<T>::deposit_event(Event::HostingFeesSet { currency_id, fees: maybe_fee_set });
 
 			Ok(())
 		}
@@ -2256,9 +2227,8 @@ pub mod pallet {
 				// if the validator is in the validator boost list, change the due block
 				// number
 				validator_boost_vec = validator_boost_list.to_vec();
-				if let Some(index) = validator_boost_vec
-					.iter()
-					.position(|(validator, _)| validator == who.as_ref())
+				if let Some(index) =
+					validator_boost_vec.iter().position(|(validator, _)| validator == who.as_ref())
 				{
 					let original_due_block = validator_boost_vec[index].1;
 					// get the due block number
@@ -2379,14 +2349,12 @@ pub mod pallet {
 			match origin.clone().into() {
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
-				{
-					Ok(())
-				}
+					Ok(()),
 				_ => {
 					T::ControlOrigin::ensure_origin(origin)
 						.map_err(|_| Error::<T>::NotAuthorized)?;
 					Ok(())
-				}
+				},
 			}
 		}
 
@@ -2404,10 +2372,8 @@ pub mod pallet {
 		}
 
 		pub fn confirm_delegator_ledger_call() -> <T as Config>::RuntimeCall {
-			let call = Call::<T>::confirm_delegator_ledger {
-				query_id: 0,
-				response: Default::default(),
-			};
+			let call =
+				Call::<T>::confirm_delegator_ledger { query_id: 0, response: Default::default() };
 			<T as Config>::RuntimeCall::from(call)
 		}
 

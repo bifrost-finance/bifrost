@@ -39,10 +39,7 @@ pub struct SalpRpc<C, Block> {
 
 impl<C, Block> SalpRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: PhantomData,
-		}
+		Self { client, _marker: PhantomData }
 	}
 }
 

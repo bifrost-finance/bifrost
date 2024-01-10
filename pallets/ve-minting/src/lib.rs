@@ -361,8 +361,8 @@ pub mod pallet {
 				u_old.bias = u_old
 					.slope
 					.checked_mul(
-						(old_locked.end.saturated_into::<u128>() as i128)
-							- (current_block_number.saturated_into::<u128>() as i128),
+						(old_locked.end.saturated_into::<u128>() as i128) -
+							(current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 			}
@@ -376,8 +376,8 @@ pub mod pallet {
 				u_new.bias = u_new
 					.slope
 					.checked_mul(
-						(new_locked.end.saturated_into::<u128>() as i128)
-							- (current_block_number.saturated_into::<u128>() as i128),
+						(new_locked.end.saturated_into::<u128>() as i128) -
+							(current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 			}
@@ -411,9 +411,7 @@ pub mod pallet {
 				.checked_mul(&T::Week::get())
 				.ok_or(ArithmeticError::Overflow)?;
 			for _i in 0..255 {
-				t_i = t_i
-					.checked_add(&T::Week::get())
-					.ok_or(ArithmeticError::Overflow)?;
+				t_i = t_i.checked_add(&T::Week::get()).ok_or(ArithmeticError::Overflow)?;
 				let mut d_slope = Zero::zero();
 				if t_i > current_block_number {
 					t_i = current_block_number
@@ -435,10 +433,8 @@ pub mod pallet {
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 
-				last_point.slope = last_point
-					.slope
-					.checked_add(d_slope)
-					.ok_or(ArithmeticError::Overflow)?;
+				last_point.slope =
+					last_point.slope.checked_add(d_slope).ok_or(ArithmeticError::Overflow)?;
 				if last_point.slope < 0_i128 {
 					//This cannot happen - just in case
 					last_point.slope = 0_i128
@@ -450,9 +446,7 @@ pub mod pallet {
 
 				last_checkpoint = t_i;
 				last_point.block = t_i;
-				g_epoch = g_epoch
-					.checked_add(U256::one())
-					.ok_or(ArithmeticError::Overflow)?;
+				g_epoch = g_epoch.checked_add(U256::one()).ok_or(ArithmeticError::Overflow)?;
 
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
@@ -489,22 +483,19 @@ pub mod pallet {
 
 			if old_locked.end > current_block_number {
 				// old_dslope was <something> - u_old.slope, so we cancel that
-				old_dslope = old_dslope
-					.checked_add(u_old.slope)
-					.ok_or(ArithmeticError::Overflow)?;
+				old_dslope =
+					old_dslope.checked_add(u_old.slope).ok_or(ArithmeticError::Overflow)?;
 				if new_locked.end == old_locked.end {
-					old_dslope = old_dslope
-						.checked_sub(u_new.slope)
-						.ok_or(ArithmeticError::Overflow)?;
+					old_dslope =
+						old_dslope.checked_sub(u_new.slope).ok_or(ArithmeticError::Overflow)?;
 				} // It was a new deposit, not extension
 				SlopeChanges::<T>::insert(old_locked.end, old_dslope);
 			}
 
 			if new_locked.end > current_block_number {
 				if new_locked.end > old_locked.end {
-					new_dslope = new_dslope
-						.checked_sub(u_new.slope)
-						.ok_or(ArithmeticError::Overflow)?;
+					new_dslope =
+						new_dslope.checked_sub(u_new.slope).ok_or(ArithmeticError::Overflow)?;
 					SlopeChanges::<T>::insert(new_locked.end, new_dslope);
 				}
 				// else: we recorded it already in old_dslope
@@ -531,17 +522,10 @@ pub mod pallet {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Self::supply();
-			Supply::<T>::set(
-				supply_before
-					.checked_add(&value)
-					.ok_or(ArithmeticError::Overflow)?,
-			);
+			Supply::<T>::set(supply_before.checked_add(&value).ok_or(ArithmeticError::Overflow)?);
 
 			let old_locked = _locked.clone();
-			_locked.amount = _locked
-				.amount
-				.checked_add(&value)
-				.ok_or(ArithmeticError::Overflow)?;
+			_locked.amount = _locked.amount.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
 			if unlock_time != Zero::zero() {
 				_locked.end = unlock_time
 			}
@@ -565,9 +549,7 @@ pub mod pallet {
 			});
 			Self::deposit_event(Event::Supply {
 				supply_before,
-				supply: supply_before
-					.checked_add(&value)
-					.ok_or(ArithmeticError::Overflow)?,
+				supply: supply_before.checked_add(&value).ok_or(ArithmeticError::Overflow)?,
 			});
 			Ok(())
 		}
@@ -639,9 +621,7 @@ pub mod pallet {
 				if Self::user_point_history(addr, _mid).block <= block {
 					_min = _mid
 				} else {
-					_max = _mid
-						.checked_sub(U256::one())
-						.ok_or(ArithmeticError::Overflow)?
+					_max = _mid.checked_sub(U256::one()).ok_or(ArithmeticError::Overflow)?
 				}
 			}
 

@@ -31,16 +31,10 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 			let name = scale_info::prelude::format!("Bifrost Stable Pool Token {}", pool_id)
 				.as_bytes()
 				.to_vec();
-			let symbol = scale_info::prelude::format!("BLP{}", pool_id)
-				.as_bytes()
-				.to_vec();
+			let symbol = scale_info::prelude::format!("BLP{}", pool_id).as_bytes().to_vec();
 			CurrencyMetadatas::<T>::insert(
 				CurrencyId::BLP(pool_id),
-				&AssetMetadata {
-					name,
-					symbol,
-					..old_metadata
-				},
+				&AssetMetadata { name, symbol, ..old_metadata },
 			)
 		}
 	}

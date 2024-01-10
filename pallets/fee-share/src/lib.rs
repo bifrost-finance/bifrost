@@ -248,15 +248,11 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let current_block = frame_system::Pallet::<T>::block_number();
-			let next_era = current_block
-				.checked_add(&era_length)
-				.ok_or(ArithmeticError::Overflow)?;
+			let next_era =
+				current_block.checked_add(&era_length).ok_or(ArithmeticError::Overflow)?;
 			AutoEra::<T>::put((era_length, next_era));
 
-			Self::deposit_event(Event::EraLengthSet {
-				era_length,
-				next_era,
-			});
+			Self::deposit_event(Event::EraLengthSet { era_length, next_era });
 			Ok(())
 		}
 
@@ -296,36 +292,32 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		fn execute_distribute_inner(infos: &Info<AccountIdOf<T>>) -> DispatchResult {
-			infos
-				.token_type
-				.iter()
-				.try_for_each(|&currency_id| -> DispatchResult {
-					let ed = T::MultiCurrency::minimum_balance(currency_id);
-					let amount =
-						T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
-					infos.tokens_proportion.iter().try_for_each(
-						|(account_to_send, &proportion)| -> DispatchResult {
-							let withdraw_amount = proportion.mul_floor(amount);
-							if withdraw_amount < ed {
-								let receiver_balance =
-									T::MultiCurrency::total_balance(currency_id, &account_to_send);
+			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
+				let ed = T::MultiCurrency::minimum_balance(currency_id);
+				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				infos.tokens_proportion.iter().try_for_each(
+					|(account_to_send, &proportion)| -> DispatchResult {
+						let withdraw_amount = proportion.mul_floor(amount);
+						if withdraw_amount < ed {
+							let receiver_balance =
+								T::MultiCurrency::total_balance(currency_id, &account_to_send);
 
-								let receiver_balance_after = receiver_balance
-									.checked_add(&withdraw_amount)
-									.ok_or(ArithmeticError::Overflow)?;
-								if receiver_balance_after < ed {
-									Err(Error::<T>::ExistentialDeposit)?;
-								}
+							let receiver_balance_after = receiver_balance
+								.checked_add(&withdraw_amount)
+								.ok_or(ArithmeticError::Overflow)?;
+							if receiver_balance_after < ed {
+								Err(Error::<T>::ExistentialDeposit)?;
 							}
-							T::MultiCurrency::transfer(
-								currency_id,
-								&infos.receiving_address,
-								&account_to_send,
-								withdraw_amount,
-							)
-						},
-					)
-				})
+						}
+						T::MultiCurrency::transfer(
+							currency_id,
+							&infos.receiving_address,
+							&account_to_send,
+							withdraw_amount,
+						)
+					},
+				)
+			})
 		}
 	}
 }

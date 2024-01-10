@@ -113,12 +113,7 @@ pub mod pallet {
 		FlexibleFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>), // token and amount
 		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
 		// [extra_fee_name, currency_id, amount_in, BNC_amount_out]
-		ExtraFeeDeducted(
-			ExtraFeeName,
-			CurrencyIdOf<T>,
-			PalletBalanceOf<T>,
-			PalletBalanceOf<T>,
-		),
+		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>),
 	}
 
 	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
@@ -203,9 +198,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get universal fee currency order list
 		let mut universal_fee_currency_order_list: Vec<CurrencyIdOf<T>> =
-			UniversalFeeCurrencyOrderList::<T>::get()
-				.into_iter()
-				.collect();
+			UniversalFeeCurrencyOrderList::<T>::get().into_iter().collect();
 
 		// Concat user default fee currency and universal fee currency order list
 		order_list.append(&mut universal_fee_currency_order_list);
@@ -265,15 +258,8 @@ impl<T: Config> Pallet<T> {
 	pub fn get_extrinsic_and_extra_fee_total(
 		call: &CallOf<T>,
 		fee: PalletBalanceOf<T>,
-	) -> Result<
-		(
-			PalletBalanceOf<T>,
-			PalletBalanceOf<T>,
-			PalletBalanceOf<T>,
-			Vec<AssetId>,
-		),
-		Error<T>,
-	> {
+	) -> Result<(PalletBalanceOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>, Vec<AssetId>), Error<T>>
+	{
 		let mut total_fee = fee;
 
 		let native_asset_id = Self::get_currency_asset_id(BNC)?;
@@ -307,9 +293,7 @@ impl<T: Config> Pallet<T> {
 					.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?;
 
 			let extra_bnc_fee = PalletBalanceOf::<T>::saturated_from(extra_fee_vec[0]);
-			total_fee = total_fee
-				.checked_add(&extra_bnc_fee)
-				.ok_or(Error::<T>::Overflow)?;
+			total_fee = total_fee.checked_add(&extra_bnc_fee).ok_or(Error::<T>::Overflow)?;
 
 			return Ok((total_fee, extra_bnc_fee, fee_value, path));
 		} else {

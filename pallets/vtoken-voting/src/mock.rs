@@ -333,9 +333,7 @@ impl vtoken_voting::Config for Runtime {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Runtime>::default()
-		.build_storage()
-		.unwrap();
+	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![(ALICE, 10), (BOB, 20), (CHARLIE, 30)],
 	}
@@ -343,13 +341,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	orml_tokens::GenesisConfig::<Runtime> {
-		balances: vec![
-			(1, VKSM, 10),
-			(2, VKSM, 20),
-			(3, VKSM, 30),
-			(4, VKSM, 40),
-			(5, VKSM, 50),
-		],
+		balances: vec![(1, VKSM, 10), (2, VKSM, 20), (3, VKSM, 30), (4, VKSM, 40), (5, VKSM, 50)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

@@ -73,10 +73,8 @@ pub enum VoteRole {
 impl<Balance> From<AccountVote<Balance>> for VoteRole {
 	fn from(a: AccountVote<Balance>) -> VoteRole {
 		match a {
-			AccountVote::Standard { vote, balance: _ } => VoteRole::Standard {
-				aye: vote.aye,
-				conviction: vote.conviction,
-			},
+			AccountVote::Standard { vote, balance: _ } =>
+				VoteRole::Standard { aye: vote.aye, conviction: vote.conviction },
 			AccountVote::Split { .. } => VoteRole::Split,
 			AccountVote::SplitAbstain { .. } => VoteRole::SplitAbstain,
 		}
@@ -86,14 +84,9 @@ impl<Balance> From<AccountVote<Balance>> for VoteRole {
 impl<Balance: Zero> From<VoteRole> for AccountVote<Balance> {
 	fn from(v: VoteRole) -> AccountVote<Balance> {
 		match v {
-			VoteRole::Standard { aye, conviction } => AccountVote::Standard {
-				vote: Vote { aye, conviction },
-				balance: Zero::zero(),
-			},
-			VoteRole::Split => AccountVote::Split {
-				aye: Zero::zero(),
-				nay: Zero::zero(),
-			},
+			VoteRole::Standard { aye, conviction } =>
+				AccountVote::Standard { vote: Vote { aye, conviction }, balance: Zero::zero() },
+			VoteRole::Split => AccountVote::Split { aye: Zero::zero(), nay: Zero::zero() },
 			VoteRole::SplitAbstain => AccountVote::SplitAbstain {
 				aye: Zero::zero(),
 				nay: Zero::zero(),
@@ -107,62 +100,20 @@ impl TryFrom<u8> for VoteRole {
 	type Error = ();
 	fn try_from(i: u8) -> Result<VoteRole, ()> {
 		Ok(match i {
-			0 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::None,
-			},
-			1 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked1x,
-			},
-			2 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked2x,
-			},
-			3 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked3x,
-			},
-			4 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked4x,
-			},
-			5 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked5x,
-			},
-			6 => VoteRole::Standard {
-				aye: true,
-				conviction: Conviction::Locked6x,
-			},
-			10 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::None,
-			},
-			11 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked1x,
-			},
-			12 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked2x,
-			},
-			13 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked3x,
-			},
-			14 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked4x,
-			},
-			15 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked5x,
-			},
-			16 => VoteRole::Standard {
-				aye: false,
-				conviction: Conviction::Locked6x,
-			},
+			0 => VoteRole::Standard { aye: true, conviction: Conviction::None },
+			1 => VoteRole::Standard { aye: true, conviction: Conviction::Locked1x },
+			2 => VoteRole::Standard { aye: true, conviction: Conviction::Locked2x },
+			3 => VoteRole::Standard { aye: true, conviction: Conviction::Locked3x },
+			4 => VoteRole::Standard { aye: true, conviction: Conviction::Locked4x },
+			5 => VoteRole::Standard { aye: true, conviction: Conviction::Locked5x },
+			6 => VoteRole::Standard { aye: true, conviction: Conviction::Locked6x },
+			10 => VoteRole::Standard { aye: false, conviction: Conviction::None },
+			11 => VoteRole::Standard { aye: false, conviction: Conviction::Locked1x },
+			12 => VoteRole::Standard { aye: false, conviction: Conviction::Locked2x },
+			13 => VoteRole::Standard { aye: false, conviction: Conviction::Locked3x },
+			14 => VoteRole::Standard { aye: false, conviction: Conviction::Locked4x },
+			15 => VoteRole::Standard { aye: false, conviction: Conviction::Locked5x },
+			16 => VoteRole::Standard { aye: false, conviction: Conviction::Locked6x },
 			20 => VoteRole::Split,
 			21 => VoteRole::SplitAbstain,
 			_ => return Err(()),
@@ -197,11 +148,7 @@ pub enum AccountVote<Balance> {
 	/// A split vote with balances given for both ways as well as abstentions, and with no
 	/// conviction, useful for parachains when voting, other off-chain aggregate accounts and
 	/// individuals who wish to abstain.
-	SplitAbstain {
-		aye: Balance,
-		nay: Balance,
-		abstain: Balance,
-	},
+	SplitAbstain { aye: Balance, nay: Balance, abstain: Balance },
 }
 
 impl<Balance: Saturating> AccountVote<Balance> {
@@ -233,9 +180,8 @@ impl<Balance: Saturating> AccountVote<Balance> {
 		match self {
 			AccountVote::Standard { balance, .. } => balance,
 			AccountVote::Split { aye, nay } => aye.saturating_add(nay),
-			AccountVote::SplitAbstain { aye, nay, abstain } => {
-				aye.saturating_add(nay).saturating_add(abstain)
-			}
+			AccountVote::SplitAbstain { aye, nay, abstain } =>
+				aye.saturating_add(nay).saturating_add(abstain),
 		}
 	}
 
@@ -254,35 +200,21 @@ impl<Balance: Saturating> AccountVote<Balance> {
 	{
 		match (self, vote) {
 			(
-				AccountVote::Standard {
-					vote: v1,
-					balance: b1,
-				},
-				AccountVote::Standard {
-					vote: v2,
-					balance: b2,
-				},
+				AccountVote::Standard { vote: v1, balance: b1 },
+				AccountVote::Standard { vote: v2, balance: b2 },
 			) if *v1 == v2 => b1.saturating_accrue(b2),
 			(AccountVote::Split { aye: a1, nay: n1 }, AccountVote::Split { aye: a2, nay: n2 }) => {
 				a1.saturating_accrue(a2);
 				n1.saturating_accrue(n2);
-			}
+			},
 			(
-				AccountVote::SplitAbstain {
-					aye: a1,
-					nay: n1,
-					abstain: ab1,
-				},
-				AccountVote::SplitAbstain {
-					aye: a2,
-					nay: n2,
-					abstain: ab2,
-				},
+				AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 },
+				AccountVote::SplitAbstain { aye: a2, nay: n2, abstain: ab2 },
 			) => {
 				a1.saturating_accrue(a2);
 				n1.saturating_accrue(n2);
 				ab1.saturating_accrue(ab2);
-			}
+			},
 			_ => return Err(()),
 		}
 		Ok(())
@@ -294,35 +226,21 @@ impl<Balance: Saturating> AccountVote<Balance> {
 	{
 		match (self, vote) {
 			(
-				AccountVote::Standard {
-					vote: v1,
-					balance: b1,
-				},
-				AccountVote::Standard {
-					vote: v2,
-					balance: b2,
-				},
+				AccountVote::Standard { vote: v1, balance: b1 },
+				AccountVote::Standard { vote: v2, balance: b2 },
 			) if *v1 == v2 => b1.saturating_reduce(b2),
 			(AccountVote::Split { aye: a1, nay: n1 }, AccountVote::Split { aye: a2, nay: n2 }) => {
 				a1.saturating_reduce(a2);
 				n1.saturating_reduce(n2);
-			}
+			},
 			(
-				AccountVote::SplitAbstain {
-					aye: a1,
-					nay: n1,
-					abstain: ab1,
-				},
-				AccountVote::SplitAbstain {
-					aye: a2,
-					nay: n2,
-					abstain: ab2,
-				},
+				AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 },
+				AccountVote::SplitAbstain { aye: a2, nay: n2, abstain: ab2 },
 			) => {
 				a1.saturating_reduce(a2);
 				n1.saturating_reduce(n2);
 				ab1.saturating_reduce(ab2);
-			}
+			},
 			_ => return Err(()),
 		}
 		Ok(())
@@ -333,23 +251,16 @@ impl<Balance: Saturating> AccountVote<Balance> {
 		Balance: Copy + EnsureMulAssign,
 	{
 		match self {
-			AccountVote::Standard {
-				vote: _,
-				balance: b1,
-			} => b1.ensure_mul_assign(balance)?,
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_mul_assign(balance)?,
 			AccountVote::Split { aye: a1, nay: n1 } => {
 				a1.ensure_mul_assign(balance)?;
 				n1.ensure_mul_assign(balance)?;
-			}
-			AccountVote::SplitAbstain {
-				aye: a1,
-				nay: n1,
-				abstain: ab1,
-			} => {
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
 				a1.ensure_mul_assign(balance)?;
 				n1.ensure_mul_assign(balance)?;
 				ab1.ensure_mul_assign(balance)?;
-			}
+			},
 		}
 		Ok(())
 	}
@@ -359,23 +270,16 @@ impl<Balance: Saturating> AccountVote<Balance> {
 		Balance: Copy + EnsureDivAssign,
 	{
 		match self {
-			AccountVote::Standard {
-				vote: _,
-				balance: b1,
-			} => b1.ensure_div_assign(balance)?,
+			AccountVote::Standard { vote: _, balance: b1 } => b1.ensure_div_assign(balance)?,
 			AccountVote::Split { aye: a1, nay: n1 } => {
 				a1.ensure_div_assign(balance)?;
 				n1.ensure_div_assign(balance)?;
-			}
-			AccountVote::SplitAbstain {
-				aye: a1,
-				nay: n1,
-				abstain: ab1,
-			} => {
+			},
+			AccountVote::SplitAbstain { aye: a1, nay: n1, abstain: ab1 } => {
 				a1.ensure_div_assign(balance)?;
 				n1.ensure_div_assign(balance)?;
 				ab1.ensure_div_assign(balance)?;
-			}
+			},
 		}
 		Ok(())
 	}
@@ -510,10 +414,8 @@ where
 	/// The amount of this account's balance that must currently be locked due to voting.
 	pub fn locked_balance(&self) -> Balance {
 		match self {
-			Voting::Casting(Casting { votes, prior, .. }) => votes
-				.iter()
-				.map(|i| i.1.balance())
-				.fold(prior.locked(), |a, i| a.max(i)),
+			Voting::Casting(Casting { votes, prior, .. }) =>
+				votes.iter().map(|i| i.1.balance()).fold(prior.locked(), |a, i| a.max(i)),
 			Voting::Delegating(Delegating { balance, prior, .. }) => *balance.max(&prior.locked()),
 		}
 	}
@@ -524,16 +426,10 @@ where
 		prior: PriorLock<BlockNumber, Balance>,
 	) {
 		let (d, p) = match self {
-			Voting::Casting(Casting {
-				ref mut delegations,
-				ref mut prior,
-				..
-			}) => (delegations, prior),
-			Voting::Delegating(Delegating {
-				ref mut delegations,
-				ref mut prior,
-				..
-			}) => (delegations, prior),
+			Voting::Casting(Casting { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
+			Voting::Delegating(Delegating { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
 		};
 		*d = delegations;
 		*p = prior;
@@ -596,18 +492,12 @@ impl<
 	pub fn account_vote(&self, conviction: Conviction) -> AccountVote<Votes> {
 		if self.ayes >= self.nays {
 			AccountVote::Standard {
-				vote: Vote {
-					aye: true,
-					conviction,
-				},
+				vote: Vote { aye: true, conviction },
 				balance: self.ayes - self.nays,
 			}
 		} else {
 			AccountVote::Standard {
-				vote: Vote {
-					aye: false,
-					conviction,
-				},
+				vote: Vote { aye: false, conviction },
 				balance: self.nays - self.ayes,
 			}
 		}
@@ -622,28 +512,26 @@ impl<
 					true => {
 						self.support = self.support.checked_add(&capital)?;
 						self.ayes = self.ayes.checked_add(&votes)?
-					}
+					},
 					false => self.nays = self.nays.checked_add(&votes)?,
 				}
-			}
+			},
 			AccountVote::Split { aye, nay } => {
 				let aye = Conviction::None.votes(aye);
 				let nay = Conviction::None.votes(nay);
 				self.support = self.support.checked_add(&aye.capital)?;
 				self.ayes = self.ayes.checked_add(&aye.votes)?;
 				self.nays = self.nays.checked_add(&nay.votes)?;
-			}
+			},
 			AccountVote::SplitAbstain { aye, nay, abstain } => {
 				let aye = Conviction::None.votes(aye);
 				let nay = Conviction::None.votes(nay);
 				let abstain = Conviction::None.votes(abstain);
-				self.support = self
-					.support
-					.checked_add(&aye.capital)?
-					.checked_add(&abstain.capital)?;
+				self.support =
+					self.support.checked_add(&aye.capital)?.checked_add(&abstain.capital)?;
 				self.ayes = self.ayes.checked_add(&aye.votes)?;
 				self.nays = self.nays.checked_add(&nay.votes)?;
-			}
+			},
 		}
 		Some(())
 	}
@@ -657,28 +545,26 @@ impl<
 					true => {
 						self.support = self.support.checked_sub(&capital)?;
 						self.ayes = self.ayes.checked_sub(&votes)?
-					}
+					},
 					false => self.nays = self.nays.checked_sub(&votes)?,
 				}
-			}
+			},
 			AccountVote::Split { aye, nay } => {
 				let aye = Conviction::None.votes(aye);
 				let nay = Conviction::None.votes(nay);
 				self.support = self.support.checked_sub(&aye.capital)?;
 				self.ayes = self.ayes.checked_sub(&aye.votes)?;
 				self.nays = self.nays.checked_sub(&nay.votes)?;
-			}
+			},
 			AccountVote::SplitAbstain { aye, nay, abstain } => {
 				let aye = Conviction::None.votes(aye);
 				let nay = Conviction::None.votes(nay);
 				let abstain = Conviction::None.votes(abstain);
-				self.support = self
-					.support
-					.checked_sub(&aye.capital)?
-					.checked_sub(&abstain.capital)?;
+				self.support =
+					self.support.checked_sub(&aye.capital)?.checked_sub(&abstain.capital)?;
 				self.ayes = self.ayes.checked_sub(&aye.votes)?;
 				self.nays = self.nays.checked_sub(&nay.votes)?;
-			}
+			},
 		}
 		Some(())
 	}
@@ -689,7 +575,7 @@ impl<
 			true => {
 				self.support = self.support.saturating_add(delegations.capital);
 				self.ayes = self.ayes.saturating_add(delegations.votes);
-			}
+			},
 			false => self.nays = self.nays.saturating_add(delegations.votes),
 		}
 	}
@@ -700,7 +586,7 @@ impl<
 			true => {
 				self.support = self.support.saturating_sub(delegations.capital);
 				self.ayes = self.ayes.saturating_sub(delegations.votes);
-			}
+			},
 			false => self.nays = self.nays.saturating_sub(delegations.votes),
 		}
 	}

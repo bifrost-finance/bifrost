@@ -74,11 +74,7 @@ pub fn inflation_config() -> InflationInfo<Balance> {
 	};
 	InflationInfo {
 		// staking expectations
-		expect: Range {
-			min: 100_000 * DOLLARS,
-			ideal: 200_000 * DOLLARS,
-			max: 500_000 * DOLLARS,
-		},
+		expect: Range { min: 100_000 * DOLLARS, ideal: 200_000 * DOLLARS, max: 500_000 * DOLLARS },
 		// annual inflation
 		annual,
 		round: to_round_inflation(annual),
@@ -212,11 +208,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 		// eCSrvbA5gGNQr7VZ48fkCX5vkt1H16F8Np9g2hYssRXHZJF
 		hex!["6d6f646c62662f7374616b650000000000000000000000000000000000000000"].into(),
 	];
-	let balances = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, ENDOWMENT()))
-		.collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
@@ -320,10 +312,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions {
-			relay_chain: "kusama-local".into(),
-			para_id: PARA_ID,
-		},
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	)
 	.with_name("Bifrost Local Testnet")
 	.with_id("bifrost_local_testnet")
@@ -378,11 +367,7 @@ fn rococo_testnet_config_genesis(id: ParaId) -> serde_json::Value {
 		// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
 		hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
 	];
-	let balances = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, ENDOWMENT()))
-		.collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
@@ -425,10 +410,7 @@ fn rococo_testnet_config_genesis(id: ParaId) -> serde_json::Value {
 pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions {
-			relay_chain: "rococo".into(),
-			para_id: PARA_ID,
-		},
+		RelayExtensions { relay_chain: "rococo".into(), para_id: PARA_ID },
 	)
 	.with_name("Bifrost K Rococo")
 	.with_id("bifrost-k-rococo")
@@ -446,10 +428,7 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions {
-			relay_chain: "kusama".into(),
-			para_id: PARA_ID,
-		},
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
 	)
 	.with_name("Bifrost")
 	.with_id("bifrost")
@@ -510,31 +489,24 @@ fn bifrost_config_genesis(id: ParaId) -> serde_json::Value {
 	let balances = balances_configs
 		.into_iter()
 		.flat_map(|bc| bc.balances)
-		.fold(
-			BTreeMap::<AccountId, Balance>::new(),
-			|mut acc, (account_id, amount)| {
-				if let Some(balance) = acc.get_mut(&account_id) {
-					*balance = balance
-						.checked_add(amount)
-						.expect("balance cannot overflow when building genesis");
-				} else {
-					acc.insert(account_id.clone(), amount);
-				}
-
-				total_issuance = total_issuance
+		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
+			if let Some(balance) = acc.get_mut(&account_id) {
+				*balance = balance
 					.checked_add(amount)
-					.expect("total insurance cannot overflow when building genesis");
-				acc
-			},
-		)
+					.expect("balance cannot overflow when building genesis");
+			} else {
+				acc.insert(account_id.clone(), amount);
+			}
+
+			total_issuance = total_issuance
+				.checked_add(amount)
+				.expect("total insurance cannot overflow when building genesis");
+			acc
+		})
 		.into_iter()
 		.collect();
 
-	assert_eq!(
-		total_issuance,
-		32_000_000 * DOLLARS,
-		"total issuance must be equal to 320 million"
-	);
+	assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
 
 	let vesting_configs: Vec<VestingConfig> =
 		config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
@@ -547,10 +519,7 @@ fn bifrost_config_genesis(id: ParaId) -> serde_json::Value {
 		invulnerables,
 		vec![],
 		balances,
-		vesting_configs
-			.into_iter()
-			.flat_map(|vc| vc.vesting)
-			.collect(),
+		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 		vec![], // tokens
 		vec![], // council membership

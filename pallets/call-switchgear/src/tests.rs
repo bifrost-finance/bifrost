@@ -170,12 +170,8 @@ fn switchon_transaction_transaction_should_work() {
 #[test]
 fn switchoff_transaction_filter_work() {
 	ExtBuilder.build().execute_with(|| {
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
-			BALANCE_TRANSFER
-		));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
-			TOKENS_TRANSFER
-		));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 		assert_ok!(CallSwitchgear::switchoff_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
@@ -186,12 +182,8 @@ fn switchoff_transaction_filter_work() {
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
-		assert!(SwitchOffTransactionFilter::<Runtime>::contains(
-			BALANCE_TRANSFER
-		));
-		assert!(SwitchOffTransactionFilter::<Runtime>::contains(
-			TOKENS_TRANSFER
-		));
+		assert!(SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
+		assert!(SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 		assert_ok!(CallSwitchgear::switchon_transaction(
 			RuntimeOrigin::signed(1),
 			b"Balances".to_vec(),
@@ -202,12 +194,8 @@ fn switchoff_transaction_filter_work() {
 			b"Tokens".to_vec(),
 			b"transfer".to_vec()
 		));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
-			BALANCE_TRANSFER
-		));
-		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(
-			TOKENS_TRANSFER
-		));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
+		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
 	});
 }
 
@@ -215,15 +203,9 @@ fn switchoff_transaction_filter_work() {
 fn disable_transfers_filter_should_work() {
 	ExtBuilder.build().execute_with(|| {
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::disable_transfers(
-			RuntimeOrigin::signed(1),
-			KSM
-		));
+		assert_ok!(CallSwitchgear::disable_transfers(RuntimeOrigin::signed(1), KSM));
 		assert!(DisableTransfersFilter::<Runtime>::contains(&KSM));
-		assert_ok!(CallSwitchgear::enable_transfers(
-			RuntimeOrigin::signed(1),
-			KSM
-		));
+		assert_ok!(CallSwitchgear::enable_transfers(RuntimeOrigin::signed(1), KSM));
 		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
 	});
 }

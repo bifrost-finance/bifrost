@@ -95,9 +95,9 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			StorageVersion::new(2).put::<Pallet<T>>();
 
 			// Return the consumed weight
-			let count = Validators::<T>::iter().count()
-				+ ValidatorsByDelegator::<T>::iter().count()
-				+ ValidatorBoostList::<T>::iter().count();
+			let count = Validators::<T>::iter().count() +
+				ValidatorsByDelegator::<T>::iter().count() +
+				ValidatorBoostList::<T>::iter().count();
 			Weight::from(T::DbWeight::get().reads_writes(count as u64 + 1, count as u64 + 1))
 		} else {
 			// We don't do anything here.

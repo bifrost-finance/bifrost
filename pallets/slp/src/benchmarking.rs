@@ -23,20 +23,10 @@ use crate::*;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 
-const DELEGATOR1: MultiLocation = MultiLocation {
-	parents: 1,
-	interior: X1(AccountId32 {
-		network: None,
-		id: [1u8; 32],
-	}),
-};
-const DELEGATOR2: MultiLocation = MultiLocation {
-	parents: 1,
-	interior: X1(AccountId32 {
-		network: None,
-		id: [2u8; 32],
-	}),
-};
+const DELEGATOR1: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: [1u8; 32] }) };
+const DELEGATOR2: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: [2u8; 32] }) };
 
 pub fn set_mins_and_maxs<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
 	let mins_and_maxs = MinimumsMaximums {
@@ -55,11 +45,7 @@ pub fn set_mins_and_maxs<T: Config>(origin: <T as frame_system::Config>::Runtime
 	};
 
 	// Set minimums and maximums
-	assert_ok!(Pallet::<T>::set_minimums_and_maximums(
-		origin,
-		KSM,
-		Some(mins_and_maxs)
-	));
+	assert_ok!(Pallet::<T>::set_minimums_and_maximums(origin, KSM, Some(mins_and_maxs)));
 }
 
 pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
@@ -73,14 +59,7 @@ pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) 
 	)
 	.unwrap();
 
-	assert_ok!(Pallet::<T>::bond(
-		origin,
-		KSM,
-		Box::new(DELEGATOR1),
-		10u32.into(),
-		None,
-		None
-	));
+	assert_ok!(Pallet::<T>::bond(origin, KSM, Box::new(DELEGATOR1), 10u32.into(), None, None));
 }
 
 pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
@@ -91,21 +70,11 @@ pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::Runtime
 	));
 
 	// Initialize ongoing timeunit as 1.
-	assert_ok!(Pallet::<T>::update_ongoing_time_unit(
-		origin.clone(),
-		KSM,
-		TimeUnit::Era(0)
-	));
+	assert_ok!(Pallet::<T>::update_ongoing_time_unit(origin.clone(), KSM, TimeUnit::Era(0)));
 
-	let delay = Delays {
-		unlock_delay: TimeUnit::Era(0),
-		leave_delegators_delay: Default::default(),
-	};
-	assert_ok!(Pallet::<T>::set_currency_delays(
-		origin.clone(),
-		KSM,
-		Some(delay)
-	));
+	let delay =
+		Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
+	assert_ok!(Pallet::<T>::set_currency_delays(origin.clone(), KSM, Some(delay)));
 }
 
 #[benchmarks(where T: Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config)]
@@ -123,11 +92,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			None,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, None);
 
 		Ok(())
 	}
@@ -223,12 +188,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-			None,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
 
 		Ok(())
 	}
@@ -404,12 +364,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-			None,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
 
 		Ok(())
 	}
@@ -518,11 +473,7 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			10u32.into(),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 10u32.into());
 
 		Ok(())
 	}
@@ -539,11 +490,7 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			10u32.into(),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 10u32.into());
 
 		Ok(())
 	}
@@ -557,11 +504,7 @@ mod benchmarks {
 		LastTimeUpdatedOngoingTimeUnit::<T>::insert(KSM, BlockNumberFor::<T>::from(0u32));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			TimeUnit::Era(0),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, TimeUnit::Era(0));
 
 		Ok(())
 	}
@@ -607,11 +550,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 		Ok(())
 	}
 
@@ -658,11 +597,7 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Some(whitelisted_caller()),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(whitelisted_caller()));
 
 		Ok(())
 	}
@@ -689,12 +624,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			0u16,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u16, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -713,11 +643,7 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -729,11 +655,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -751,11 +673,7 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -792,12 +710,7 @@ mod benchmarks {
 		})));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-			ledger,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), ledger);
 
 		Ok(())
 	}
@@ -822,11 +735,7 @@ mod benchmarks {
 		};
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Some(mins_and_maxs),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(mins_and_maxs));
 
 		Ok(())
 	}
@@ -835,17 +744,11 @@ mod benchmarks {
 	fn set_currency_delays() -> Result<(), BenchmarkError> {
 		let origin = <T as Config>::ControlOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Weightless)?;
-		let delay = Delays {
-			unlock_delay: TimeUnit::Era(0),
-			leave_delegators_delay: Default::default(),
-		};
+		let delay =
+			Delays { unlock_delay: TimeUnit::Era(0), leave_delegators_delay: Default::default() };
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Some(delay),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Some(delay));
 
 		Ok(())
 	}
@@ -901,11 +804,7 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -921,11 +820,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1)
 		));
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -937,11 +832,7 @@ mod benchmarks {
 		init_bond::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			0u64,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u64);
 
 		Ok(())
 	}
@@ -953,11 +844,7 @@ mod benchmarks {
 		init_bond::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			0u64,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 0u64);
 
 		Ok(())
 	}
@@ -996,11 +883,7 @@ mod benchmarks {
 			),
 		);
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			1u64,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
 
 		Ok(())
 	}
@@ -1039,11 +922,7 @@ mod benchmarks {
 			),
 		);
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			1u64,
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u64);
 
 		Ok(())
 	}
@@ -1055,11 +934,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			vec![DELEGATOR1],
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, vec![DELEGATOR1]);
 
 		Ok(())
 	}
@@ -1071,11 +946,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			vec![DELEGATOR1],
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, vec![DELEGATOR1]);
 
 		Ok(())
 	}
@@ -1087,11 +958,7 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}
@@ -1109,11 +976,7 @@ mod benchmarks {
 		));
 
 		#[extrinsic_call]
-		_(
-			origin as <T as frame_system::Config>::RuntimeOrigin,
-			KSM,
-			Box::new(DELEGATOR1),
-		);
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 
 		Ok(())
 	}

@@ -31,12 +31,7 @@ fn liquidate_borrow_allowed_works() {
 			LendMarket::liquidate_borrow_allowed(&ALICE, KSM, unit(51), &ksm_market),
 			Error::<Test>::TooMuchRepay
 		);
-		assert_ok!(LendMarket::liquidate_borrow_allowed(
-			&ALICE,
-			KSM,
-			unit(50),
-			&ksm_market
-		));
+		assert_ok!(LendMarket::liquidate_borrow_allowed(&ALICE, KSM, unit(50), &ksm_market));
 	})
 }
 
@@ -88,22 +83,12 @@ fn lf_liquidate_borrow_allowed_works() {
 			LendMarket::liquidate_borrow_allowed(&ALICE, DOT, unit(51), &dot_market),
 			Error::<Test>::TooMuchRepay
 		);
-		assert_ok!(LendMarket::liquidate_borrow_allowed(
-			&ALICE,
-			DOT,
-			unit(50),
-			&dot_market
-		));
+		assert_ok!(LendMarket::liquidate_borrow_allowed(&ALICE, DOT, unit(50), &dot_market));
 
 		// Remove CDOT from lf collateral
 		LendMarket::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![]).unwrap();
 		// The max repay amount = 400 * 50 = $200
-		assert_ok!(LendMarket::liquidate_borrow_allowed(
-			&ALICE,
-			DOT,
-			unit(100),
-			&dot_market
-		));
+		assert_ok!(LendMarket::liquidate_borrow_allowed(&ALICE, DOT, unit(100), &dot_market));
 	})
 }
 
@@ -184,10 +169,7 @@ fn full_workflow_works_as_expected() {
 		);
 		// 3 dollar reserved in our incentive reward account
 		let incentive_reward_account = LendMarket::incentive_reward_account_id().unwrap();
-		println!(
-			"incentive reserve account:{:?}",
-			incentive_reward_account.clone()
-		);
+		println!("incentive reserve account:{:?}", incentive_reward_account.clone());
 		assert_eq!(
 			LendMarket::exchange_rate(DOT_U).saturating_mul_int(
 				LendMarket::account_deposits(DOT_U, incentive_reward_account.clone())
@@ -211,10 +193,7 @@ fn full_workflow_works_as_expected() {
 			unit(1),
 		);
 		// 2 dollar transfer to alice
-		assert_eq!(
-			<Test as Config>::Assets::balance(DOT_U, &ALICE),
-			unit(800) + unit(2),
-		);
+		assert_eq!(<Test as Config>::Assets::balance(DOT_U, &ALICE), unit(800) + unit(2),);
 	})
 }
 
@@ -261,39 +240,16 @@ fn liquidator_must_not_be_borrower() {
 }
 
 fn alice_borrows_100_ksm() {
-	assert_ok!(LendMarket::borrow(
-		RuntimeOrigin::signed(ALICE),
-		KSM,
-		unit(100)
-	));
+	assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(100)));
 }
 
 fn initial_setup() {
 	// Bob deposits 200 KSM
 	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), KSM, unit(200)));
 	// Alice deposits 200 DOT as collateral
-	assert_ok!(LendMarket::mint(
-		RuntimeOrigin::signed(ALICE),
-		DOT_U,
-		unit(200)
-	));
-	assert_ok!(LendMarket::collateral_asset(
-		RuntimeOrigin::signed(ALICE),
-		DOT_U,
-		true
-	));
-	assert_ok!(LendMarket::mint(
-		RuntimeOrigin::signed(ALICE),
-		PHA,
-		unit(200)
-	));
-	assert_ok!(LendMarket::collateral_asset(
-		RuntimeOrigin::signed(ALICE),
-		PHA,
-		true
-	));
-	assert_ok!(LendMarket::update_liquidation_free_collateral(
-		RuntimeOrigin::root(),
-		vec![PHA]
-	));
+	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT_U, unit(200)));
+	assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT_U, true));
+	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), PHA, unit(200)));
+	assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), PHA, true));
+	assert_ok!(LendMarket::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]));
 }

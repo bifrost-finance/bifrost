@@ -40,11 +40,7 @@ where
 		per_block: Balance,
 		starting_block: BlockNumber,
 	) -> VestingInfo<Balance, BlockNumber> {
-		VestingInfo {
-			locked,
-			per_block,
-			starting_block,
-		}
+		VestingInfo { locked, per_block, starting_block }
 	}
 
 	/// Validate parameters for `VestingInfo`. Note that this does not check
@@ -105,8 +101,8 @@ where
 			// the block after starting.
 			One::one()
 		} else {
-			self.locked / self.per_block()
-				+ if (self.locked % self.per_block()).is_zero() {
+			self.locked / self.per_block() +
+				if (self.locked % self.per_block()).is_zero() {
 					Zero::zero()
 				} else {
 					// `per_block` does not perfectly divide `locked`, so we need an extra block to

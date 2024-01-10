@@ -256,12 +256,7 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(
-			currency_id,
-			&origin,
-			&target,
-			amount.unique_saturated_into(),
-		)?;
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
 
 		Ok(())
 	}
@@ -323,9 +318,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
-		Ok(RuntimeOrigin::from(RawOrigin::Signed(
-			ConfirmMuitiSigAccount::get(),
-		)))
+		Ok(RuntimeOrigin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get())))
 	}
 }
 
@@ -560,11 +553,7 @@ impl pallet_xcm::Config for Test {
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 {
-			network: None,
-			id: account.into(),
-		})
-		.into()
+		X1(AccountId32 { network: None, id: account.into() }).into()
 	}
 }
 
@@ -591,9 +580,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<Test>::default()
-		.build_storage()
-		.unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	pub const DOLLARS: Balance = 1_000_000_000_000;
 
 	let currency = vec![
@@ -637,11 +624,9 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	crate::GenesisConfig::<Test> {
-		initial_multisig_account: Some(ALICE),
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+	crate::GenesisConfig::<Test> { initial_multisig_account: Some(ALICE) }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	t.into()
 }

@@ -398,7 +398,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				} else {
 					MultiLocation::default()
 				}
-			}
+			},
 			// Other sibling chains use the Bifrost para account with "sibl"
 			_ => {
 				// get parachain id
@@ -427,7 +427,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 				} else {
 					MultiLocation::default()
 				}
-			}
+			},
 		}
 	}
 }
@@ -461,16 +461,11 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 		use TokenSymbol::*;
 
 		match id {
-			Token(MOVR) => Some(MultiLocation::new(
-				1,
-				X2(Parachain(2023), PalletInstance(10)),
-			)),
+			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
 			Token(KSM) => Some(MultiLocation::parent()),
 			Native(BNC) => Some(MultiLocation::new(
 				0,
-				X1(Junction::from(
-					BoundedVec::try_from("0x0001".encode()).unwrap(),
-				)),
+				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
 			)),
 			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
 			MANTA => Some(MultiLocation::new(1, X1(Parachain(2104)))),
@@ -616,9 +611,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -629,17 +622,11 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_alice(self) -> Self {
-		self.balances(vec![
-			(ALICE, BNC, 100),
-			(ALICE, KSM, 100),
-			(ALICE, VKSM, 100),
-		])
+		self.balances(vec![(ALICE, BNC, 100), (ALICE, KSM, 100), (ALICE, VKSM, 100)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Runtime>::default()
-			.build_storage()
-			.unwrap();
+		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

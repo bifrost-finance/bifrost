@@ -110,14 +110,7 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 		amount: Self::Balance,
 		min_dy: Self::Balance,
 	) -> DispatchResult {
-		Self::on_swap(
-			who,
-			pool_id,
-			currency_id_in,
-			currency_id_out,
-			amount,
-			min_dy,
-		)
+		Self::on_swap(who, pool_id, currency_id_in, currency_id_out, amount, min_dy)
 	}
 
 	fn redeem_single(

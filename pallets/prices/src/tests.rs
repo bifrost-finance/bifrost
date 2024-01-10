@@ -55,10 +55,7 @@ fn set_price_work() {
 			KSM,
 			Price::saturating_from_integer(1)
 		));
-		assert_eq!(
-			Prices::get_emergency_price(&KSM),
-			Some((1_000_000.into(), 0))
-		);
+		assert_eq!(Prices::get_emergency_price(&KSM), Some((1_000_000.into(), 0)));
 	});
 }
 
@@ -114,13 +111,9 @@ fn set_price_call_work() {
 		);
 
 		// check the event
-		let set_price_event = RuntimeEvent::Prices(crate::Event::SetPrice(
-			DOT,
-			Price::saturating_from_integer(90),
-		));
-		assert!(System::events()
-			.iter()
-			.any(|record| record.event == set_price_event));
+		let set_price_event =
+			RuntimeEvent::Prices(crate::Event::SetPrice(DOT, Price::saturating_from_integer(90)));
+		assert!(System::events().iter().any(|record| record.event == set_price_event));
 		assert_eq!(
 			Prices::set_price(
 				RuntimeOrigin::signed(ALICE),
@@ -153,10 +146,7 @@ fn reset_price_call_work() {
 		);
 
 		// try reset price
-		assert_noop!(
-			Prices::reset_price(RuntimeOrigin::signed(CHARLIE), DOT),
-			BadOrigin
-		);
+		assert_noop!(Prices::reset_price(RuntimeOrigin::signed(CHARLIE), DOT), BadOrigin);
 		assert_ok!(Prices::reset_price(RuntimeOrigin::signed(ALICE), DOT));
 
 		// price need to be 100 after reset_price
@@ -167,13 +157,8 @@ fn reset_price_call_work() {
 
 		// check the event
 		let reset_price_event = RuntimeEvent::Prices(crate::Event::ResetPrice(DOT));
-		assert!(System::events()
-			.iter()
-			.any(|record| record.event == reset_price_event));
-		assert_eq!(
-			Prices::reset_price(RuntimeOrigin::signed(ALICE), DOT),
-			Ok(().into())
-		);
+		assert!(System::events().iter().any(|record| record.event == reset_price_event));
+		assert_eq!(Prices::reset_price(RuntimeOrigin::signed(ALICE), DOT), Ok(().into()));
 	});
 }
 

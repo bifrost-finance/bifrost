@@ -60,10 +60,7 @@ pub struct StablePoolRpc<C, Block> {
 
 impl<C, Block> StablePoolRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: PhantomData,
-		}
+		Self { client, _marker: PhantomData }
 	}
 }
 

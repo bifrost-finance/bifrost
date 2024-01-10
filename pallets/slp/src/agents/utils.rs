@@ -46,10 +46,7 @@ impl<T: Config> Pallet<T> {
 		let account_32 = match who {
 			MultiLocation {
 				parents: 0,
-				interior: X1(AccountId32 {
-					network: _network_id,
-					id: account_id,
-				}),
+				interior: X1(AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
@@ -69,10 +66,7 @@ impl<T: Config> Pallet<T> {
 		let mut validators_list: Vec<MultiLocation> = vec![];
 		for validator in validators.iter() {
 			// Check if the validator is in the validator whitelist
-			ensure!(
-				validators_set.contains(&validator),
-				Error::<T>::ValidatorNotExist
-			);
+			ensure!(validators_set.contains(&validator), Error::<T>::ValidatorNotExist);
 			if !validators_list.contains(&validator) {
 				validators_list.push(*validator);
 			}
@@ -122,21 +116,11 @@ impl<T: Config> Pallet<T> {
 		let account_32 = match who {
 			MultiLocation {
 				parents: _,
-				interior: X1(AccountId32 {
-					network: _network_id,
-					id: account_id,
-				}),
+				interior: X1(AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
 			MultiLocation {
 				parents: _,
-				interior:
-					X2(
-						_,
-						AccountId32 {
-							network: _network_id,
-							id: account_id,
-						},
-					),
+				interior: X2(_, AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
@@ -154,10 +138,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_local_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let local_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 {
-				network: None,
-				id: account_32,
-			}),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(local_location)
@@ -169,49 +150,20 @@ impl<T: Config> Pallet<T> {
 		let inside: Junction = match location {
 			MultiLocation {
 				parents: _p,
-				interior:
-					X2(
-						Parachain(_para_id),
-						AccountId32 {
-							network: None,
-							id: account_32,
-						},
-					),
-			} => AccountId32 {
-				network: None,
-				id: *account_32,
-			},
+				interior: X2(Parachain(_para_id), AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			MultiLocation {
 				parents: _p,
-				interior:
-					X2(
-						Parachain(_para_id),
-						AccountKey20 {
-							network: None,
-							key: account_20,
-						},
-					),
-			} => AccountKey20 {
-				network: None,
-				key: *account_20,
-			},
+				interior: X2(Parachain(_para_id), AccountKey20 { network: None, key: account_20 }),
+			} => AccountKey20 { network: None, key: *account_20 },
 			MultiLocation {
 				parents: _p,
-				interior: X1(AccountId32 {
-					network: None,
-					id: account_32,
-				}),
-			} => AccountId32 {
-				network: None,
-				id: *account_32,
-			},
+				interior: X1(AccountId32 { network: None, id: account_32 }),
+			} => AccountId32 { network: None, id: *account_32 },
 			_ => Err(Error::<T>::Unsupported)?,
 		};
 
-		let local_location = MultiLocation {
-			parents: 0,
-			interior: X1(inside),
-		};
+		let local_location = MultiLocation { parents: 0, interior: X1(inside) };
 
 		Ok(local_location)
 	}
@@ -219,10 +171,7 @@ impl<T: Config> Pallet<T> {
 	pub fn account_32_to_parent_location(account_32: [u8; 32]) -> Result<MultiLocation, Error<T>> {
 		let parent_location = MultiLocation {
 			parents: 1,
-			interior: X1(AccountId32 {
-				network: None,
-				id: account_32,
-			}),
+			interior: X1(AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parent_location)
@@ -234,13 +183,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<MultiLocation, Error<T>> {
 		let parachain_location = MultiLocation {
 			parents: 1,
-			interior: X2(
-				Parachain(chain_id),
-				AccountId32 {
-					network: None,
-					id: account_32,
-				},
-			),
+			interior: X2(Parachain(chain_id), AccountId32 { network: None, id: account_32 }),
 		};
 
 		Ok(parachain_location)
@@ -251,14 +194,7 @@ impl<T: Config> Pallet<T> {
 		let account_20 = match who {
 			MultiLocation {
 				parents: _,
-				interior:
-					X2(
-						Parachain(_),
-						AccountKey20 {
-							network: _network_id,
-							key: account_id,
-						},
-					),
+				interior: X2(Parachain(_), AccountKey20 { network: _network_id, key: account_id }),
 			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
@@ -290,9 +226,8 @@ impl<T: Config> Pallet<T> {
 		if now <= timeout {
 			let currency_id = match entry.clone() {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				LedgerUpdateEntry::ParachainStaking(moonbeam_entry) => {
-					Some(moonbeam_entry.currency_id)
-				}
+				LedgerUpdateEntry::ParachainStaking(moonbeam_entry) =>
+					Some(moonbeam_entry.currency_id),
 				_ => None,
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
@@ -324,9 +259,8 @@ impl<T: Config> Pallet<T> {
 		let mut updated = true;
 		if now <= timeout {
 			let currency_id = match entry.clone() {
-				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) => {
-					Some(substrate_entry.currency_id)
-				}
+				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+					Some(substrate_entry.currency_id),
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -370,9 +304,8 @@ impl<T: Config> Pallet<T> {
 		let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
 			.ok_or(Error::<T>::QueryNotExist)?;
 		let currency_id = match entry {
-			ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) => {
-				Some(substrate_entry.currency_id)
-			}
+			ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+				Some(substrate_entry.currency_id),
 		}
 		.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
@@ -395,26 +328,15 @@ impl<T: Config> Pallet<T> {
 	) -> Result<MultiLocation, Error<T>> {
 		match currency_id {
 			KSM | DOT => Ok(MultiLocation::parent()),
-			MOVR => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::moonriver::ID)),
-			}),
-			GLMR => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::moonbeam::ID)),
-			}),
-			ASTR => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::astar::ID)),
-			}),
-			MANTA => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::manta::ID)),
-			}),
-			PHA => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::phala::ID)),
-			}),
+			MOVR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
+			GLMR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
+			ASTR =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+			PHA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::phala::ID)) }),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
@@ -437,10 +359,8 @@ impl<T: Config> Pallet<T> {
 					PalletInstance(parachains::moonbeam::PALLET_ID),
 				),
 			}),
-			MANTA => Ok(MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(parachains::manta::ID)),
-			}),
+			MANTA =>
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}

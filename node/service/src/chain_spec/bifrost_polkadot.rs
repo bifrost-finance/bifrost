@@ -151,11 +151,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 		whitelisted_caller(), // Benchmarking whitelist_account
 		account("bechmarking_account_1", 0, 0),
 	];
-	let balances = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, ENDOWMENT()))
-		.collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
@@ -178,11 +174,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 			Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
 		),
 	];
-	let vcurrency = vec![
-		VSToken2(DOT_TOKEN_ID),
-		VToken(TokenSymbol::BNC),
-		VToken2(DOT_TOKEN_ID),
-	];
+	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 
 	bifrost_polkadot_genesis(
 		vec![
@@ -190,10 +182,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_from_seed::<AuraId>("Alice"),
 			),
-			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_from_seed::<AuraId>("Bob"),
-			),
+			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
 		balances,
 		vestings,
@@ -210,10 +199,7 @@ fn local_config_genesis(id: ParaId) -> serde_json::Value {
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions {
-			relay_chain: "polkadot-local".into(),
-			para_id: PARA_ID,
-		},
+		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
 	)
 	.with_name("Bifrost Polkadot Local Testnet")
 	.with_id("bifrost_polkadot_local_testnet")
@@ -227,10 +213,7 @@ pub fn local_testnet_config() -> ChainSpec {
 pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions {
-			relay_chain: "polkadot".into(),
-			para_id: PARA_ID,
-		},
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
 	)
 	.with_name("Bifrost Polkadot")
 	.with_id("bifrost_polkadot")

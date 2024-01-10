@@ -127,10 +127,6 @@ impl RelayChainCli {
 			bifrost_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
 		let base_path = para_config.base_path.path().join("polkadot");
-		Self {
-			base_path: Some(base_path),
-			chain_id,
-			base: Parser::parse_from(relay_chain_args),
-		}
+		Self { base_path: Some(base_path), chain_id, base: Parser::parse_from(relay_chain_args) }
 	}
 }

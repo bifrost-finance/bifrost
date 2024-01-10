@@ -71,10 +71,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
@@ -93,17 +90,11 @@ impl<T: Config>
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		ensure!(
-			!DelegatorLedgers::<T>::contains_key(currency_id, who),
-			Error::<T>::AlreadyBonded
-		);
+		ensure!(!DelegatorLedgers::<T>::contains_key(currency_id, who), Error::<T>::AlreadyBonded);
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			amount >= mins_maxs.delegator_bonded_minimum,
-			Error::<T>::LowerThanMinimum
-		);
+		ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
 		// Ensure the bond doesn't exceeds delegator_active_staking_maximum
 		ensure!(
@@ -181,10 +172,7 @@ impl<T: Config>
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			amount >= mins_maxs.bond_extra_minimum,
-			Error::<T>::LowerThanMinimum
-		);
+		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
 		// Check if the new_add_amount + active_staking_amount doesn't exceeds
 		// delegator_active_staking_maximum
@@ -248,28 +236,19 @@ impl<T: Config>
 			DelegatorLedgers::<T>::get(currency_id, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		if let Ledger::Substrate(substrate_ledger) = ledger {
-			let (active_staking, unlocking_num) = (
-				substrate_ledger.active,
-				substrate_ledger.unlocking.len() as u32,
-			);
+			let (active_staking, unlocking_num) =
+				(substrate_ledger.active, substrate_ledger.unlocking.len() as u32);
 
 			// Check if the unbonding amount exceeds minimum requirement.
 			let mins_maxs =
 				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-			ensure!(
-				amount >= mins_maxs.unbond_minimum,
-				Error::<T>::LowerThanMinimum
-			);
+			ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
 			// Check if the remaining active balance is enough for (unbonding amount + minimum
 			// bonded amount)
-			let remaining = active_staking
-				.checked_sub(&amount)
-				.ok_or(Error::<T>::NotEnoughToUnbond)?;
-			ensure!(
-				remaining >= mins_maxs.delegator_bonded_minimum,
-				Error::<T>::NotEnoughToUnbond
-			);
+			let remaining =
+				active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
+			ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
 
 			// Check if this unbonding will exceed the maximum unlocking records bound for a single
 			// delegator.
@@ -384,10 +363,7 @@ impl<T: Config>
 
 		// Check if the rebonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			amount >= mins_maxs.rebond_minimum,
-			Error::<T>::LowerThanMinimum
-		);
+		ensure!(amount >= mins_maxs.rebond_minimum, Error::<T>::LowerThanMinimum);
 
 		// Get the delegator ledger
 		if let Ledger::Substrate(substrate_ledger) = ledger {
@@ -396,19 +372,10 @@ impl<T: Config>
 			// Check if the delegator unlocking amount is greater than or equal to the rebond
 			// amount.
 			let mut total_unlocking: BalanceOf<T> = Zero::zero();
-			for UnlockChunk {
-				value,
-				unlock_time: _,
-			} in unlock_chunk_list.iter()
-			{
-				total_unlocking = total_unlocking
-					.checked_add(value)
-					.ok_or(Error::<T>::OverFlow)?;
+			for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
+				total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
 			}
-			ensure!(
-				total_unlocking >= amount,
-				Error::<T>::RebondExceedUnlockingAmount
-			);
+			ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
 		} else {
 			Err(Error::<T>::Unexpected)?;
 		}
@@ -468,10 +435,7 @@ impl<T: Config>
 
 		// Check if targets exceeds validators_back_maximum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			vec_len <= mins_maxs.validators_back_maximum,
-			Error::<T>::GreaterThanMaximum
-		);
+		ensure!(vec_len <= mins_maxs.validators_back_maximum, Error::<T>::GreaterThanMaximum);
 
 		// remove duplicates
 		let dedup_list = Pallet::<T>::remove_validators_duplicates(currency_id, targets)?;
@@ -625,11 +589,9 @@ impl<T: Config>
 		};
 		// Construct xcm message.
 		let call = match currency_id {
-			KSM => KusamaCall::Staking(StakingCall::<T>::PayoutStakers(
-				validator_account,
-				payout_era,
-			))
-			.encode(),
+			KSM =>
+				KusamaCall::Staking(StakingCall::<T>::PayoutStakers(validator_account, payout_era))
+					.encode(),
 			DOT => PolkadotCall::Staking(StakingCall::<T>::PayoutStakers(
 				validator_account,
 				payout_era,
@@ -679,9 +641,8 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let call = match currency_id {
-			KSM => {
-				KusamaCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans)).encode()
-			}
+			KSM =>
+				KusamaCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans)).encode(),
 			DOT => PolkadotCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans))
 				.encode(),
 			_ => Err(Error::NotSupportedCurrencyId)?,
@@ -793,10 +754,7 @@ impl<T: Config>
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(MultiLocation {
-				parents: 0,
-				interior: Here,
-			}),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
 		let assets: Box<VersionedMultiAssets> =
 			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
@@ -862,10 +820,7 @@ impl<T: Config>
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(
-			from_account_id == entrance_account,
-			Error::<T>::InvalidAccount
-		);
+		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
@@ -903,15 +858,11 @@ impl<T: Config>
 		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
 			if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
 				// Increase both the active and total amount.
-				old_sub_ledger.active = old_sub_ledger
-					.active
-					.checked_add(&token_amount)
-					.ok_or(Error::<T>::OverFlow)?;
+				old_sub_ledger.active =
+					old_sub_ledger.active.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
 
-				old_sub_ledger.total = old_sub_ledger
-					.total
-					.checked_add(&token_amount)
-					.ok_or(Error::<T>::OverFlow)?;
+				old_sub_ledger.total =
+					old_sub_ledger.total.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
 				Ok(())
 			} else {
 				Err(Error::<T>::Unexpected)?
@@ -948,9 +899,7 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> DispatchResult {
 		// Get current VKSM/KSM or VDOT/DOT exchange rate.
-		let vtoken = currency_id
-			.to_vtoken()
-			.map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
+		let vtoken = currency_id.to_vtoken().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
 
 		let charge_amount =
 			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
@@ -1092,7 +1041,7 @@ impl<T: Config> PolkadotAgent<T> {
 									.total
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
-							}
+							},
 							Unlock => {
 								old_sub_ledger.active = old_sub_ledger
 									.active
@@ -1102,13 +1051,11 @@ impl<T: Config> PolkadotAgent<T> {
 								let unlock_time_unit =
 									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 
-								let new_unlock_record = UnlockChunk {
-									value: amount,
-									unlock_time: unlock_time_unit,
-								};
+								let new_unlock_record =
+									UnlockChunk { value: amount, unlock_time: unlock_time_unit };
 
 								old_sub_ledger.unlocking.push(new_unlock_record);
-							}
+							},
 							Rebond => {
 								// If it is a rebonding operation.
 								// Reduce the unlocking records.
@@ -1137,7 +1084,7 @@ impl<T: Config> PolkadotAgent<T> {
 									.active
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
-							}
+							},
 							Liquidize => {
 								// If it is a liquidize operation.
 								let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
@@ -1179,7 +1126,7 @@ impl<T: Config> PolkadotAgent<T> {
 									.total
 									.checked_sub(&accumulated)
 									.ok_or(Error::<T>::OverFlow)?;
-							}
+							},
 						}
 						Ok(())
 					} else {
@@ -1207,11 +1154,7 @@ impl<T: Config> PolkadotAgent<T> {
 	) -> Result<(), Error<T>> {
 		// update ValidatorsByDelegator<T> storage
 		let ValidatorsByDelegatorUpdateEntry::Substrate(
-			SubstrateValidatorsByDelegatorUpdateEntry {
-				currency_id,
-				delegator_id,
-				validators,
-			},
+			SubstrateValidatorsByDelegatorUpdateEntry { currency_id, delegator_id, validators },
 		) = query_entry;
 
 		// ensure the length of validators does not exceed MaxLengthLimit

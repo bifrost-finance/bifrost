@@ -29,13 +29,8 @@ use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
-const SUBACCOUNT_0_LOCATION: MultiLocation = MultiLocation {
-	parents: 1,
-	interior: X1(AccountId32 {
-		network: None,
-		id: SUBACCOUNT_0_32,
-	}),
-};
+const SUBACCOUNT_0_LOCATION: MultiLocation =
+	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: SUBACCOUNT_0_32 }) };
 
 #[test]
 fn construct_xcm_and_send_as_subaccount_should_work() {
@@ -77,59 +72,49 @@ fn set_fee_source_works() {
 			KSM,
 			Some((alice_location, 1_000_000_000_000))
 		));
-		assert_eq!(
-			FeeSources::<Runtime>::get(KSM),
-			Some((alice_location, 1_000_000_000_000))
-		);
+		assert_eq!(FeeSources::<Runtime>::get(KSM), Some((alice_location, 1_000_000_000_000)));
 	});
 }
 
 // test native token fee supplement. Non-native will be tested in the integration tests.
 #[test]
 fn supplement_fee_reserve_works() {
-	ExtBuilder::default()
-		.one_hundred_for_alice()
-		.build()
-		.execute_with(|| {
-			// set fee source
-			let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
-			let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-			assert_ok!(Slp::set_fee_source(
+	ExtBuilder::default().one_hundred_for_alice().build().execute_with(|| {
+		// set fee source
+		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
+		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
+		assert_ok!(Slp::set_fee_source(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Some((alice_location, 10))
+		));
+
+		// supplement fee
+		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
+		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
+		assert_eq!(Balances::free_balance(&ALICE), 100);
+		assert_eq!(Balances::free_balance(&BOB), 0);
+
+		assert_noop!(
+			Slp::supplement_fee_reserve(
 				RuntimeOrigin::signed(ALICE),
 				BNC,
-				Some((alice_location, 10))
-			));
+				Box::new(alice_location)
+			),
+			Error::<Runtime>::DestAccountNotValid
+		);
 
-			// supplement fee
-			let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
-			let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
-			assert_eq!(Balances::free_balance(&ALICE), 100);
-			assert_eq!(Balances::free_balance(&BOB), 0);
+		assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), BNC, Some(BOB)));
 
-			assert_noop!(
-				Slp::supplement_fee_reserve(
-					RuntimeOrigin::signed(ALICE),
-					BNC,
-					Box::new(alice_location)
-				),
-				Error::<Runtime>::DestAccountNotValid
-			);
+		assert_ok!(Slp::supplement_fee_reserve(
+			RuntimeOrigin::signed(ALICE),
+			BNC,
+			Box::new(bob_location)
+		));
 
-			assert_ok!(Slp::set_operate_origin(
-				RuntimeOrigin::signed(ALICE),
-				BNC,
-				Some(BOB)
-			));
-
-			assert_ok!(Slp::supplement_fee_reserve(
-				RuntimeOrigin::signed(ALICE),
-				BNC,
-				Box::new(bob_location)
-			));
-
-			assert_eq!(Balances::free_balance(&ALICE), 90);
-			assert_eq!(Balances::free_balance(&BOB), 10);
-		});
+		assert_eq!(Balances::free_balance(&ALICE), 90);
+		assert_eq!(Balances::free_balance(&BOB), 10);
+	});
 }
 
 #[test]
@@ -179,14 +164,8 @@ fn remove_delegator_works() {
 		));
 
 		assert_eq!(DelegatorsIndex2Multilocation::<Runtime>::get(KSM, 0), None);
-		assert_eq!(
-			DelegatorsMultilocation2Index::<Runtime>::get(KSM, subaccount_0_location),
-			None
-		);
-		assert_eq!(
-			DelegatorLedgers::<Runtime>::get(KSM, subaccount_0_location),
-			None
-		);
+		assert_eq!(DelegatorsMultilocation2Index::<Runtime>::get(KSM, subaccount_0_location), None);
+		assert_eq!(DelegatorLedgers::<Runtime>::get(KSM, subaccount_0_location), None);
 	});
 }
 
@@ -201,11 +180,7 @@ fn decrease_token_pool_works() {
 		bifrost_vtoken_minting::TokenPool::<Runtime>::insert(KSM, 100);
 
 		// Decrease token pool by 10.
-		assert_ok!(Slp::decrease_token_pool(
-			RuntimeOrigin::signed(ALICE),
-			KSM,
-			10
-		));
+		assert_ok!(Slp::decrease_token_pool(RuntimeOrigin::signed(ALICE), KSM, 10));
 
 		// Check the value after decreasing
 		assert_eq!(VtokenMinting::token_pool(KSM), 90);
@@ -234,10 +209,7 @@ fn update_ongoing_time_unit_works() {
 		));
 
 		// Check the value after updating.
-		assert_eq!(
-			VtokenMinting::ongoing_time_unit(KSM),
-			Some(TimeUnit::Era(9))
-		);
+		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(9)));
 	});
 }
 
@@ -344,10 +316,7 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(Currencies::total_issuance(VKSM), 0);
 
 		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(
-			RuntimeOrigin::signed(ALICE),
-			KSM
-		));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// After: check pool_token amount
 		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
@@ -391,10 +360,7 @@ fn refund_currency_due_unbond_works() {
 			Some(time_record_100_new)
 		);
 
-		assert_eq!(
-			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(CHARLIE, KSM,),
-			None
-		);
+		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(CHARLIE, KSM,), None);
 		assert_eq!(
 			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(DAVE, KSM,),
 			Some((8, bounded_vec_dave))
@@ -424,10 +390,7 @@ fn refund_currency_due_unbond_works() {
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(110));
 
 		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(
-			RuntimeOrigin::signed(ALICE),
-			KSM
-		));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// Check storages
 		assert_eq!(
@@ -435,19 +398,10 @@ fn refund_currency_due_unbond_works() {
 			None
 		);
 
-		assert_eq!(
-			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 3),
-			None
-		);
-		assert_eq!(
-			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 4),
-			None
-		);
+		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 3), None);
+		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 4), None);
 
-		assert_eq!(
-			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,),
-			None
-		);
+		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,), None);
 
 		// check account balances
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 17);
@@ -456,10 +410,7 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
 		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
 		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 13);
-		assert_ok!(Slp::refund_currency_due_unbond(
-			RuntimeOrigin::signed(ALICE),
-			KSM
-		));
+		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
 
 		// check account balances
 		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
@@ -516,10 +467,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 {
-				network: None,
-				id: treasury_32,
-			}),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -537,11 +485,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VKSM, &ALICE, 100));
-		assert_ok!(Slp::increase_token_pool(
-			RuntimeOrigin::signed(ALICE),
-			KSM,
-			100
-		));
+		assert_ok!(Slp::increase_token_pool(RuntimeOrigin::signed(ALICE), KSM, 100));
 
 		// call the charge_host_fee_and_tune_vtoken_exchange_rate
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
@@ -574,10 +518,7 @@ fn set_hosting_fees_works() {
 		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 {
-				network: None,
-				id: treasury_32,
-			}),
+			interior: X1(AccountId32 { network: None, id: treasury_32 }),
 		};
 
 		assert_ok!(Slp::set_hosting_fees(
@@ -623,22 +564,12 @@ fn register_subaccount_index_0() {
 	System::set_block_number(600);
 
 	// Initialize ongoing timeunit as 0.
-	assert_ok!(Slp::update_ongoing_time_unit(
-		RuntimeOrigin::signed(ALICE),
-		DOT,
-		TimeUnit::Era(0)
-	));
+	assert_ok!(Slp::update_ongoing_time_unit(RuntimeOrigin::signed(ALICE), DOT, TimeUnit::Era(0)));
 
 	// Initialize currency delays.
-	let delay = Delays {
-		unlock_delay: TimeUnit::Era(10),
-		leave_delegators_delay: Default::default(),
-	};
-	assert_ok!(Slp::set_currency_delays(
-		RuntimeOrigin::signed(ALICE),
-		DOT,
-		Some(delay)
-	));
+	let delay =
+		Delays { unlock_delay: TimeUnit::Era(10), leave_delegators_delay: Default::default() };
+	assert_ok!(Slp::set_currency_delays(RuntimeOrigin::signed(ALICE), DOT, Some(delay)));
 
 	let mins_and_maxs = MinimumsMaximums {
 		delegator_bonded_minimum: 100_000_000_000,
@@ -670,85 +601,65 @@ fn register_subaccount_index_0() {
 	));
 
 	// Register Operation weight and fee
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::TransferTo,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::TransferTo,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Bond,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Bond,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::BondExtra,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::BondExtra,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Unbond,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Unbond,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Rebond,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Rebond,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Delegate,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Delegate,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Payout,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Payout,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Liquidize,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Liquidize,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::Chill,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::Chill,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 
-	assert_ok!(
-		<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			DOT,
-			XcmOperationType::TransferBack,
-			Some((20_000_000_000.into(), 10_000_000_000)),
-		)
-	);
+	assert_ok!(<Runtime as crate::Config>::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
+		DOT,
+		XcmOperationType::TransferBack,
+		Some((20_000_000_000.into(), 10_000_000_000)),
+	));
 }
 
 #[test]
@@ -772,10 +683,7 @@ fn test_construct_xcm() {
 			messsage.0[1],
 			BuyExecution {
 				fees: MultiAsset {
-					id: Concrete(MultiLocation {
-						parents: 0,
-						interior: Here
-					}),
+					id: Concrete(MultiLocation { parents: 0, interior: Here }),
 					fun: Fungible(10000000000)
 				},
 				weight_limit: Unlimited
@@ -804,10 +712,7 @@ fn test_construct_xcm() {
 			messsage.0[1],
 			BuyExecution {
 				fees: MultiAsset {
-					id: Concrete(MultiLocation {
-						parents: 0,
-						interior: Here
-					}),
+					id: Concrete(MultiLocation { parents: 0, interior: Here }),
 					fun: Fungible(100)
 				},
 				weight_limit: Unlimited

@@ -274,16 +274,10 @@ pub mod pallet {
 			let owner = ensure_signed(origin)?;
 
 			// Check amount
-			ensure!(
-				amount > T::MinimumAmount::get(),
-				Error::<T, I>::NotEnoughAmount
-			);
+			ensure!(amount > T::MinimumAmount::get(), Error::<T, I>::NotEnoughAmount);
 
 			// Check the token_symbol
-			ensure!(
-				token_symbol == TokenSymbol::KSM,
-				Error::<T, I>::InvalidVsbond
-			);
+			ensure!(token_symbol == TokenSymbol::KSM, Error::<T, I>::InvalidVsbond);
 
 			// Construct vsbond
 			let (_, vsbond) = CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot);
@@ -309,7 +303,7 @@ pub mod pallet {
 						amt_to_transfer,
 					)
 					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
-				}
+				},
 				OrderType::Sell => {
 					T::MultiCurrency::ensure_can_withdraw(
 						token_to_transfer,
@@ -324,7 +318,7 @@ pub mod pallet {
 						maker_fee,
 					)
 					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
-				}
+				},
 			}
 
 			let order_ids_len = Self::user_order_ids(&owner, order_type).len();
@@ -396,10 +390,7 @@ pub mod pallet {
 			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
-			ensure!(
-				order_info.owner == from,
-				Error::<T, I>::ForbidRevokeOrderWithoutOwnership
-			);
+			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
 
 			Self::do_order_revoke(order_id)?;
 
@@ -465,21 +456,14 @@ pub mod pallet {
 			// Calculate the total price that buyer need to pay
 			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price())?;
 
-			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) =
-				match order_info.order_type {
-					OrderType::Buy => (
-						T::InvoicingCurrency::get(),
-						price_to_pay,
-						order_info.vsbond,
-						quantity_clinchd,
-					),
-					OrderType::Sell => (
-						order_info.vsbond,
-						quantity_clinchd,
-						T::InvoicingCurrency::get(),
-						price_to_pay,
-					),
-				};
+			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) = match order_info
+				.order_type
+			{
+				OrderType::Buy =>
+					(T::InvoicingCurrency::get(), price_to_pay, order_info.vsbond, quantity_clinchd),
+				OrderType::Sell =>
+					(order_info.vsbond, quantity_clinchd, T::InvoicingCurrency::get(), price_to_pay),
+			};
 
 			// Calculate the transaction fee
 			let taker_fee_rate = Self::get_transaction_fee_rate().1;
@@ -503,15 +487,14 @@ pub mod pallet {
 						taker_fee,
 					)
 					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
-				}
+				},
 				OrderType::Sell => {
 					// transaction amount + fee
-					let amt_to_pay = amount_to_pay
-						.checked_add(&taker_fee)
-						.ok_or(Error::<T, I>::Overflow)?;
+					let amt_to_pay =
+						amount_to_pay.checked_add(&taker_fee).ok_or(Error::<T, I>::Overflow)?;
 					T::MultiCurrency::ensure_can_withdraw(token_to_pay, &order_taker, amt_to_pay)
 						.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
-				}
+				},
 			};
 
 			// Get the new OrderInfo
@@ -524,11 +507,7 @@ pub mod pallet {
 				.checked_sub(&price_to_pay)
 				.ok_or(Error::<T, I>::Overflow)?;
 
-			let new_order_info = OrderInfo {
-				remain: remain_order,
-				remain_price,
-				..order_info
-			};
+			let new_order_info = OrderInfo { remain: remain_order, remain_price, ..order_info };
 
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account_truncating();
 
@@ -540,9 +519,8 @@ pub mod pallet {
 				let receiver_balance =
 					T::MultiCurrency::total_balance(token_to_pay, &new_order_info.owner);
 
-				let receiver_balance_after = receiver_balance
-					.checked_add(&amount_to_pay)
-					.ok_or(Error::<T, I>::Overflow)?;
+				let receiver_balance_after =
+					receiver_balance.checked_add(&amount_to_pay).ok_or(Error::<T, I>::Overflow)?;
 				if receiver_balance_after < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
@@ -571,9 +549,8 @@ pub mod pallet {
 			if amount_to_get < ed {
 				let receiver_balance = T::MultiCurrency::total_balance(token_to_get, &order_taker);
 
-				let receiver_balance_after = receiver_balance
-					.checked_add(&amount_to_get)
-					.ok_or(Error::<T, I>::Overflow)?;
+				let receiver_balance_after =
+					receiver_balance.checked_add(&amount_to_get).ok_or(Error::<T, I>::Overflow)?;
 				if receiver_balance_after < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
@@ -681,9 +658,8 @@ pub mod pallet {
 			unit_price: FixedU128,
 		) -> Result<BalanceOf<T, I>, Error<T, I>> {
 			let quantity: u128 = quantity.saturated_into();
-			let total_price = unit_price
-				.checked_mul_int(quantity)
-				.ok_or(Error::<T, I>::Overflow)?;
+			let total_price =
+				unit_price.checked_mul_int(quantity).ok_or(Error::<T, I>::Overflow)?;
 
 			Ok(BalanceOf::<T, I>::saturated_from(total_price))
 		}

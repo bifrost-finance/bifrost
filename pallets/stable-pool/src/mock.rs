@@ -358,9 +358,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -393,10 +391,7 @@ impl ExtBuilder {
 
 	// Build genesis storage according to the mock runtime.
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Test>::default()
-			.build_storage()
-			.unwrap()
-			.into();
+		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
 
 		bifrost_asset_registry::GenesisConfig::<Test> {
 			currency: vec![

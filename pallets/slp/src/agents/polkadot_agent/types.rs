@@ -72,10 +72,7 @@ pub enum SystemCall {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum BalancesCall<T: Config> {
 	#[codec(index = 3)]
-	TransferKeepAlive(
-		<T::Lookup as StaticLookup>::Source,
-		#[codec(compact)] BalanceOf<T>,
-	),
+	TransferKeepAlive(<T::Lookup as StaticLookup>::Source, #[codec(compact)] BalanceOf<T>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
@@ -98,10 +95,7 @@ pub enum PolkadotUtilityCall<PolkadotCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama/Polkadot has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(
-		#[codec(compact)] BalanceOf<T>,
-		RewardDestination<T::AccountId>,
-	),
+	Bond(#[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]

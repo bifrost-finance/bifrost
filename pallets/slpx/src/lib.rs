@@ -329,10 +329,10 @@ pub mod pallet {
 
 							weight = weight.saturating_add(T::DbWeight::get().reads_writes(4, 2));
 						}
-					}
+					},
 					None => {
 						weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
-					}
+					},
 				};
 			}
 			weight
@@ -384,7 +384,7 @@ pub mod pallet {
 						token_amount,
 						target_chain,
 					});
-				}
+				},
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
@@ -399,7 +399,7 @@ pub mod pallet {
 						token_amount,
 						target_chain,
 					});
-				}
+				},
 			};
 			Ok(().into())
 		}
@@ -455,7 +455,7 @@ pub mod pallet {
 						currency_id_out_amount,
 						target_chain,
 					});
-				}
+				},
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
@@ -472,7 +472,7 @@ pub mod pallet {
 						currency_id_in_amount,
 						target_chain,
 					});
-				}
+				},
 			}
 			Ok(().into())
 		}
@@ -494,7 +494,7 @@ pub mod pallet {
 				TargetChain::Astar(receiver) => {
 					let receiver = Self::h160_to_account_id(receiver);
 					RedeemType::Astar(receiver)
-				}
+				},
 				TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
 				TargetChain::Hydradx(receiver) => RedeemType::Hydradx(receiver),
 				TargetChain::Interlay(receiver) => RedeemType::Interlay(receiver),
@@ -537,7 +537,7 @@ pub mod pallet {
 						vtoken_amount,
 						target_chain,
 					});
-				}
+				},
 			};
 			Ok(().into())
 		}
@@ -592,7 +592,7 @@ pub mod pallet {
 						currency_id_out_amount,
 						target_chain,
 					});
-				}
+				},
 				Err(_) => {
 					Self::transfer_to(
 						evm_caller_account_id.clone(),
@@ -608,7 +608,7 @@ pub mod pallet {
 						currency_id_in_amount,
 						target_chain,
 					});
-				}
+				},
 			};
 			Ok(())
 		}
@@ -675,10 +675,7 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			ExecutionFee::<T>::insert(currency_id, execution_fee);
-			Self::deposit_event(Event::SetExecutionFee {
-				currency_id,
-				execution_fee,
-			});
+			Self::deposit_event(Event::SetExecutionFee { currency_id, execution_fee });
 			Ok(().into())
 		}
 
@@ -692,10 +689,7 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			TransferToFee::<T>::insert(support_chain, transfer_to_fee);
-			Self::deposit_event(Event::SetTransferToFee {
-				support_chain,
-				transfer_to_fee,
-			});
+			Self::deposit_event(Event::SetTransferToFee { support_chain, transfer_to_fee });
 			Ok(().into())
 		}
 
@@ -714,27 +708,18 @@ pub mod pallet {
 			let mut currency_list = CurrencyIdList::<T>::get();
 			match is_support {
 				true => {
-					ensure!(
-						!currency_list.contains(&currency_id),
-						Error::<T>::ArgumentsError
-					);
+					ensure!(!currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
 					currency_list
 						.try_push(currency_id)
 						.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
-				}
+				},
 				false => {
-					ensure!(
-						currency_list.contains(&currency_id),
-						Error::<T>::ArgumentsError
-					);
+					ensure!(currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
 					currency_list.retain(|&x| x != currency_id);
-				}
+				},
 			};
 			CurrencyIdList::<T>::put(currency_list);
-			Self::deposit_event(Event::SetCurrencyEthereumCallSwitch {
-				currency_id,
-				is_support,
-			});
+			Self::deposit_event(Event::SetCurrencyEthereumCallSwitch { currency_id, is_support });
 			Ok(().into())
 		}
 
@@ -774,26 +759,18 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let dest = MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(
-				T::VtokenMintingInterface::get_moonbeam_parachain_id(),
-			)),
+			interior: X1(Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id())),
 		};
 
 		// Moonbeam Native Token
 		let asset = MultiAsset {
-			id: Concrete(MultiLocation {
-				parents: 0,
-				interior: X1(PalletInstance(10)),
-			}),
+			id: Concrete(MultiLocation { parents: 0, interior: X1(PalletInstance(10)) }),
 			fun: Fungible(xcm_fee),
 		};
 
 		let xcm_message = Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
-			BuyExecution {
-				fees: asset,
-				weight_limit: Unlimited,
-			},
+			BuyExecution { fees: asset, weight_limit: Unlimited },
 			Transact {
 				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: xcm_weight,
@@ -871,22 +848,22 @@ impl<T: Config> Pallet<T> {
 			TargetChain::Hydradx(_) => {
 				evm_caller_account_id = evm_contract_account_id.clone();
 				SupportChain::Hydradx
-			}
+			},
 			TargetChain::Interlay(_) => {
 				evm_caller_account_id = evm_contract_account_id.clone();
 				SupportChain::Interlay
-			}
+			},
 		};
 
 		match target_chain {
-			TargetChain::Hydradx(_) => {}
+			TargetChain::Hydradx(_) => {},
 			_ => {
 				let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
 				ensure!(
 					whitelist_account_ids.contains(&evm_contract_account_id),
 					Error::<T>::AccountIdNotInWhitelist
 				);
-			}
+			},
 		};
 		Ok((evm_contract_account_id, evm_caller_account_id))
 	}
@@ -907,9 +884,8 @@ impl<T: Config> Pallet<T> {
 			execution_fee,
 		)?;
 
-		let balance_exclude_fee = free_balance
-			.checked_sub(&execution_fee)
-			.ok_or(Error::<T>::FreeBalanceTooLow)?;
+		let balance_exclude_fee =
+			free_balance.checked_sub(&execution_fee).ok_or(Error::<T>::FreeBalanceTooLow)?;
 		Ok(balance_exclude_fee)
 	}
 
@@ -927,52 +903,40 @@ impl<T: Config> Pallet<T> {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
-						AccountId32 {
-							network: None,
-							id: receiver.encode().try_into().unwrap(),
-						},
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			}
+			},
 			TargetChain::Hydradx(receiver) => {
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
-						AccountId32 {
-							network: None,
-							id: receiver.encode().try_into().unwrap(),
-						},
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			}
+			},
 			TargetChain::Interlay(receiver) => {
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
-						AccountId32 {
-							network: None,
-							id: receiver.encode().try_into().unwrap(),
-						},
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			}
+			},
 			TargetChain::Moonbeam(receiver) => {
 				let dest = MultiLocation {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
-						AccountKey20 {
-							network: None,
-							key: receiver.to_fixed_bytes(),
-						},
+						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 					),
 				};
 				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
@@ -990,12 +954,12 @@ impl<T: Config> Pallet<T> {
 						T::XcmTransfer::transfer_multicurrencies(
 							caller, assets, 1, dest, Unlimited,
 						)?;
-					}
+					},
 					_ => {
 						T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-					}
+					},
 				};
-			}
+			},
 		};
 		Ok(())
 	}

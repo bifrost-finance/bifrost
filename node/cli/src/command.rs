@@ -51,58 +51,31 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	};
 	#[allow(unreachable_code)]
 	Ok(match id {
-		#[cfg(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost" | "bifrost-kusama" => Box::new(
-			service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost" | "bifrost-kusama" =>
+			Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
 				&include_bytes!("../../service/res/bifrost-kusama.json")[..],
-			)?,
-		),
-		#[cfg(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost-genesis" | "bifrost-kusama-genesis" => {
-			Box::new(service::chain_spec::bifrost_kusama::chainspec_config())
-		}
-		#[cfg(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost-local" | "bifrost-kusama-local" => {
-			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config())
-		}
-		#[cfg(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost-kusama-rococo" => {
-			Box::new(service::chain_spec::bifrost_kusama::rococo_testnet_config()?)
-		}
+			)?),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-genesis" | "bifrost-kusama-genesis" =>
+			Box::new(service::chain_spec::bifrost_kusama::chainspec_config()),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-local" | "bifrost-kusama-local" =>
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-kusama-rococo" =>
+			Box::new(service::chain_spec::bifrost_kusama::rococo_testnet_config()?),
 
-		#[cfg(any(
-			feature = "with-bifrost-polkadot-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost-polkadot" => Box::new(
-			service::chain_spec::bifrost_polkadot::ChainSpec::from_json_bytes(
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot" =>
+			Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_bytes(
 				&include_bytes!("../../service/res/bifrost-polkadot.json")[..],
-			)?,
-		),
-		#[cfg(any(
-			feature = "with-bifrost-polkadot-runtime",
-			feature = "with-bifrost-runtime"
-		))]
+			)?),
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-genesis" => Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
-		#[cfg(any(
-			feature = "with-bifrost-polkadot-runtime",
-			feature = "with-bifrost-runtime"
-		))]
-		"bifrost-polkadot-local" => {
-			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config())
-		}
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot-local" =>
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
@@ -111,9 +84,9 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 					feature = "with-bifrost-runtime"
 				))]
 				{
-					Box::new(
-						service::chain_spec::bifrost_polkadot::ChainSpec::from_json_file(path)?,
-					)
+					Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_file(
+						path,
+					)?)
 				}
 				#[cfg(not(any(
 					feature = "with-bifrost-polkadot-runtime",
@@ -136,7 +109,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			} else {
 				return Err(service::UNKNOWN_RUNTIME.into());
 			}
-		}
+		},
 	})
 }
 
@@ -259,7 +232,7 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-		}
+		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -275,7 +248,7 @@ pub fn run() -> Result<()> {
 					))
 				});
 			})
-		}
+		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -285,13 +258,10 @@ pub fn run() -> Result<()> {
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
 					let components = new_partial(&config, false)?;
-					Ok((
-						cmd.run(components.client, config.database),
-						components.task_manager,
-					))
+					Ok((cmd.run(components.client, config.database), components.task_manager))
 				});
 			})
-		}
+		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -301,13 +271,10 @@ pub fn run() -> Result<()> {
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
 					let components = new_partial(&config, false)?;
-					Ok((
-						cmd.run(components.client, config.chain_spec),
-						components.task_manager,
-					))
+					Ok((cmd.run(components.client, config.chain_spec), components.task_manager))
 				});
 			})
-		}
+		},
 		Some(Subcommand::ExportGenesisState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -318,14 +285,14 @@ pub fn run() -> Result<()> {
 					cmd.run(&*config.chain_spec, &*partials.client)
 				});
 			})
-		}
+		},
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|_config| {
 				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
 				cmd.run(&*spec)
 			})
-		}
+		},
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -334,7 +301,7 @@ pub fn run() -> Result<()> {
 			with_runtime_or_err!(chain_spec, {
 				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config));
 			})
-		}
+		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -349,16 +316,14 @@ pub fn run() -> Result<()> {
 					))
 				});
 			})
-		}
+		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name()]
-						.iter()
-						.chain(cli.relay_chain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(
@@ -370,7 +335,7 @@ pub fn run() -> Result<()> {
 
 				cmd.run(config, polkadot_config)
 			})
-		}
+		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
@@ -385,7 +350,7 @@ pub fn run() -> Result<()> {
 					))
 				});
 			})
-		}
+		},
 		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::Sign(cmd)) => cmd.run(),
 		Some(Subcommand::Verify(cmd)) => cmd.run(),
@@ -397,7 +362,7 @@ pub fn run() -> Result<()> {
 
 			// Switch on the concrete benchmark sub-command-
 			match cmd {
-				BenchmarkCmd::Pallet(cmd) => {
+				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						with_runtime_or_err!(chain_spec, {
 							return runner.sync_run(|config| {
@@ -411,8 +376,7 @@ pub fn run() -> Result<()> {
 						Err("Benchmarking wasn't enabled when building the node. \
 						You can enable it with `--features runtime-benchmarks`."
 							.into())
-					}
-				}
+					},
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
@@ -422,14 +386,13 @@ pub fn run() -> Result<()> {
 					})
 				}),
 				#[cfg(not(feature = "runtime-benchmarks"))]
-				BenchmarkCmd::Storage(_) => {
+				BenchmarkCmd::Storage(_) =>
 					return Err(sc_cli::Error::Input(
 						"Compile with --features=runtime-benchmarks \
 						to enable storage benchmarks."
 							.into(),
 					)
-					.into())
-				}
+					.into()),
 				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
@@ -442,15 +405,14 @@ pub fn run() -> Result<()> {
 					})
 				}),
 				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
-				BenchmarkCmd::Machine(cmd) => {
-					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
-				}
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 				// NOTE: this allows the Client to leniently implement
 				// new benchmark commands without requiring a companion MR.
 				#[allow(unreachable_patterns)]
 				_ => Err("Benchmarking sub-command unsupported".into()),
 			}
-		}
+		},
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let collator_options = cli.run.collator_options();
@@ -470,9 +432,7 @@ pub fn run() -> Result<()> {
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name()]
-						.iter()
-						.chain(cli.relay_chain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
 				);
 
 				let id = ParaId::from(para_id);
@@ -491,14 +451,7 @@ pub fn run() -> Result<()> {
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
-				info!(
-					"Is collating: {}",
-					if config.role.is_authority() {
-						"yes"
-					} else {
-						"no"
-					}
-				);
+				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
@@ -509,7 +462,7 @@ pub fn run() -> Result<()> {
 					}
 				})
 			})
-		}
+		},
 	}
 }
 
@@ -552,9 +505,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 		default_listen_port: u16,
 		chain_spec: &Box<dyn ChainSpec>,
 	) -> Result<Option<PrometheusConfig>> {
-		self.base
-			.base
-			.prometheus_config(default_listen_port, chain_spec)
+		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
 	fn init<F>(
@@ -573,11 +524,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn chain_id(&self, is_dev: bool) -> Result<String> {
 		let chain_id = self.base.base.chain_id(is_dev)?;
 
-		Ok(if chain_id.is_empty() {
-			self.chain_id.clone().unwrap_or_default()
-		} else {
-			chain_id
-		})
+		Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
 	}
 
 	fn role(&self, is_dev: bool) -> Result<sc_service::Role> {

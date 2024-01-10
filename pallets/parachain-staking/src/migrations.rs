@@ -74,11 +74,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 
 		let inflation_info: InflationInfo<BalanceOf<T>> = InflationInfo {
 			// staking expectations
-			expect: Range {
-				min: expected,
-				ideal: expected,
-				max: expected,
-			},
+			expect: Range { min: expected, ideal: expected, max: expected },
 			// annual inflation
 			annual,
 			round: to_round_inflation(annual),
@@ -162,13 +158,13 @@ impl<T: Config> SplitDelegatorStateIntoDelegationScheduledRequests<T> {
 					"delegator({:?})_when({})_Revoke({:?})",
 					delegator, request.when_executable, request.amount
 				)
-			}
+			},
 			DelegationChange::Decrease => {
 				format!(
 					"delegator({:?})_when({})_Decrease({:?})",
 					delegator, request.when_executable, request.amount
 				)
-			}
+			},
 		}
 	}
 
@@ -180,13 +176,13 @@ impl<T: Config> SplitDelegatorStateIntoDelegationScheduledRequests<T> {
 					"delegator({:?})_when({})_Revoke({:?})",
 					request.delegator, request.when_executable, v
 				)
-			}
+			},
 			DelegationAction::Decrease(v) => {
 				format!(
 					"delegator({:?})_when({})_Decrease({:?})",
 					request.delegator, request.when_executable, v
 				)
-			}
+			},
 		}
 	}
 }
@@ -306,12 +302,8 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 			collator_state_map,
 			expected_delegator_state_entries,
 			expected_requests,
-		): (
-			BTreeMap<String, BalanceOf<T>>,
-			BTreeMap<String, String>,
-			u64,
-			u64,
-		) = Decode::decode(&mut &state[..]).expect("pre_upgrade provides a valid state; qed");
+		): (BTreeMap<String, BalanceOf<T>>, BTreeMap<String, String>, u64, u64) =
+			Decode::decode(&mut &state[..]).expect("pre_upgrade provides a valid state; qed");
 		// Scheduled decrease amount (bond_less) is correctly migrated
 		let mut actual_delegator_state_entries = 0;
 		for (delegator, state) in <DelegatorState<T>>::iter() {
@@ -405,10 +397,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 				"Correcting total from {:?} to {:?}",
 				delegations.total, correct_total
 			);
-			Delegations {
-				delegations: delegations.delegations,
-				total: correct_total,
-			}
+			Delegations { delegations: delegations.delegations, total: correct_total }
 		}
 		for (account, old_top_delegations) in stored_top_delegations {
 			let new_top_delegations = fix_delegations::<T>(old_top_delegations);
@@ -429,10 +418,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 		let top = migrated_candidates_top_count.saturating_mul(3 * weight.write + 3 * weight.read);
 		let bottom = migrated_candidates_bottom_count.saturating_mul(weight.write + weight.read);
 		// 20% max block weight as margin for error
-		Weight::from_parts(
-			top.saturating_add(bottom).saturating_add(100_000_000_000),
-			0,
-		)
+		Weight::from_parts(top.saturating_add(bottom).saturating_add(100_000_000_000), 0)
 	}
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {

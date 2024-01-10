@@ -260,12 +260,7 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(
-			currency_id,
-			&origin,
-			&target,
-			amount.unique_saturated_into(),
-		)?;
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
 
 		Ok(())
 	}
@@ -315,10 +310,7 @@ impl zenlink_protocol::Config for Test {
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account_id: AccountId) -> MultiLocation {
-		MultiLocation::from(Junction::AccountId32 {
-			network: None,
-			id: account_id.into(),
-		})
+		MultiLocation::from(Junction::AccountId32 { network: None, id: account_id.into() })
 	}
 }
 
@@ -591,8 +583,5 @@ impl slpx::Config for Test {
 #[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	use sp_runtime::BuildStorage;
-	frame_system::GenesisConfig::<Test>::default()
-		.build_storage()
-		.unwrap()
-		.into()
+	frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }

@@ -175,10 +175,7 @@ fn set_user_default_fee_currency_should_work() {
 		let alice_default_currency = UserDefaultFeeCurrency::<Test>::get(ALICE).unwrap();
 		assert_eq!(alice_default_currency, CURRENCY_ID_0);
 
-		assert_ok!(FlexibleFee::set_user_default_fee_currency(
-			origin_signed_alice.clone(),
-			None
-		));
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(origin_signed_alice.clone(), None));
 		assert_eq!(UserDefaultFeeCurrency::<Test>::get(ALICE).is_none(), true);
 	});
 }
@@ -210,10 +207,7 @@ fn set_universal_fee_currency_order_list_should_work() {
 			asset_order_list_vec.clone()
 		));
 
-		assert_eq!(
-			crate::UniversalFeeCurrencyOrderList::<Test>::get(),
-			asset_order_list_vec
-		);
+		assert_eq!(crate::UniversalFeeCurrencyOrderList::<Test>::get(), asset_order_list_vec);
 	});
 }
 
@@ -252,10 +246,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		new_list.push(CURRENCY_ID_0);
 		new_list.append(&mut asset_order_list_vec);
 
-		assert_eq!(
-			FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE),
-			new_list
-		);
+		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), new_list);
 	});
 }
 
@@ -347,18 +338,14 @@ fn find_out_fee_currency_and_amount_should_work() {
 
 		// charlie originally has 200 currency 0(Native currency)
 		let (fee_token, amount_in, amount_out) =
-			FlexibleFee::find_out_fee_currency_and_amount(&CHARLIE, 88)
-				.unwrap()
-				.unwrap();
+			FlexibleFee::find_out_fee_currency_and_amount(&CHARLIE, 88).unwrap().unwrap();
 		assert_eq!(fee_token, CURRENCY_ID_0);
 		assert_eq!(amount_in, 88);
 		assert_eq!(amount_out, 88);
 
 		// alice originally should have 50 Asset 0. Should use Currency 4 to pay fee.
 		let (fee_token, amount_in, amount_out) =
-			FlexibleFee::find_out_fee_currency_and_amount(&ALICE, 88)
-				.unwrap()
-				.unwrap();
+			FlexibleFee::find_out_fee_currency_and_amount(&ALICE, 88).unwrap().unwrap();
 		assert_eq!(fee_token, CURRENCY_ID_4);
 		assert_eq!(amount_in, 97);
 		assert_eq!(amount_out, 88);
@@ -467,10 +454,7 @@ fn withdraw_fee_should_work() {
 		// 99 inclusion fee and a tip of 8
 		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			93
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 	});
 }
 
@@ -497,10 +481,7 @@ fn correct_and_deposit_fee_should_work() {
 
 		let already_withdrawn = FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			93
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 
 		assert_ok!(FlexibleFee::correct_and_deposit_fee(
 			&CHARLIE,
@@ -511,10 +492,7 @@ fn correct_and_deposit_fee_should_work() {
 			already_withdrawn
 		));
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			120
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 120);
 	});
 }
 
@@ -529,13 +507,7 @@ fn deduct_salp_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// 80 inclusion fee and a tip of 8
-		assert_ok!(FlexibleFee::withdraw_fee(
-			&CHARLIE,
-			&SALP_CONTRIBUTE_CALL,
-			&info,
-			80,
-			8
-		));
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &SALP_CONTRIBUTE_CALL, &info, 80, 8));
 
 		// originally Charlie has 200 currency 0(Native currency)
 		// 200 - 88 = 112. extra fee cost 104. 112 - 104 = 8
@@ -566,20 +538,12 @@ fn get_currency_asset_id_should_work() {
 	new_test_ext().execute_with(|| {
 		// BNC
 		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_0).unwrap();
-		let bnc_asset_id = AssetId {
-			chain_id: 2001,
-			asset_type: 0,
-			asset_index: 0,
-		};
+		let bnc_asset_id = AssetId { chain_id: 2001, asset_type: 0, asset_index: 0 };
 		assert_eq!(asset_id, bnc_asset_id);
 
 		// KSM
 		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_4).unwrap();
-		let ksm_asset_id = AssetId {
-			chain_id: 2001,
-			asset_type: 2,
-			asset_index: 516,
-		};
+		let ksm_asset_id = AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 };
 		assert_eq!(asset_id, ksm_asset_id);
 	});
 }

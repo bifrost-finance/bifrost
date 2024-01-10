@@ -68,10 +68,7 @@ impl<T: Config> Pallet<T> {
 		// Ensure delegators count is not greater than maximum.
 		let delegators_count = DelegatorNextIndex::<T>::get(currency_id);
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			delegators_count < mins_maxs.delegators_maximum,
-			Error::<T>::GreaterThanMaximum
-		);
+		ensure!(delegators_count < mins_maxs.delegators_maximum, Error::<T>::GreaterThanMaximum);
 
 		// Revise two delegator storages.
 		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
@@ -119,10 +116,7 @@ impl<T: Config> Pallet<T> {
 		Validators::<T>::insert(currency_id, bounded_list);
 
 		// Deposit event.
-		Self::deposit_event(Event::ValidatorsAdded {
-			currency_id,
-			validator_id: *who,
-		});
+		Self::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: *who });
 
 		Ok(())
 	}
@@ -228,16 +222,15 @@ impl<T: Config> Pallet<T> {
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Self::multilocation_to_account_32(to)?;
 
-		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(
-			Parachain(T::ParachainId::get().into()),
-		))));
+		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(Parachain(
+			T::ParachainId::get().into(),
+		)))));
 
-		let beneficiary = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(
-			AccountId32 {
+		let beneficiary =
+			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
 				network: None,
 				id: to_32,
-			},
-		))));
+			}))));
 
 		Ok((dest, beneficiary))
 	}
@@ -311,26 +304,18 @@ impl<T: Config> Pallet<T> {
 	) -> Result<Vec<Instruction>, Error<T>> {
 		let multi = Self::get_currency_local_multilocation(currency_id);
 
-		let asset = MultiAsset {
-			id: Concrete(multi),
-			fun: Fungible(extra_fee.unique_saturated_into()),
-		};
+		let asset =
+			MultiAsset { id: Concrete(multi), fun: Fungible(extra_fee.unique_saturated_into()) };
 
 		let interior = Self::get_interior_by_currency_id(currency_id);
 
 		Ok(vec![
 			WithdrawAsset(asset.clone().into()),
-			BuyExecution {
-				fees: asset,
-				weight_limit: Unlimited,
-			},
+			BuyExecution { fees: asset, weight_limit: Unlimited },
 			RefundSurplus,
 			DepositAsset {
 				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior,
-				},
+				beneficiary: MultiLocation { parents: 0, interior },
 			},
 		])
 	}
@@ -423,17 +408,17 @@ impl<T: Config> Pallet<T> {
 		let responder = Self::get_para_multilocation_by_currency_id(currency_id)?;
 
 		let (notify_call_weight, callback_option) = match (currency_id, operation) {
-			(DOT, &XcmOperationType::Delegate)
-			| (DOT, &XcmOperationType::Undelegate)
-			| (KSM, &XcmOperationType::Delegate)
-			| (KSM, &XcmOperationType::Undelegate) => {
+			(DOT, &XcmOperationType::Delegate) |
+			(DOT, &XcmOperationType::Undelegate) |
+			(KSM, &XcmOperationType::Delegate) |
+			(KSM, &XcmOperationType::Undelegate) => {
 				let notify_call = Self::confirm_validators_by_delegator_call();
 				(notify_call.get_dispatch_info().weight, Some(notify_call))
-			}
+			},
 			_ => {
 				let notify_call = Self::confirm_delegator_ledger_call();
 				(notify_call.get_dispatch_info().weight, Some(notify_call))
-			}
+			},
 		};
 
 		let query_id =
@@ -482,11 +467,7 @@ impl<T: Config> Pallet<T> {
 			_ => MultiLocation::new(1, X1(Parachain(u32::from(T::ParachainId::get())))),
 		};
 
-		ReportTransactStatus(QueryResponseInfo {
-			destination: dest_location,
-			query_id,
-			max_weight,
-		})
+		ReportTransactStatus(QueryResponseInfo { destination: dest_location, query_id, max_weight })
 	}
 
 	pub(crate) fn insert_delegator_ledger_update_entry(
@@ -593,8 +574,8 @@ impl<T: Config> Pallet<T> {
 					currency_id,
 				);
 				xcm_message.insert(3, report_transact_status_instruct);
-			}
-			_ => {}
+			},
+			_ => {},
 		};
 		Ok(Xcm(xcm_message))
 	}
@@ -608,45 +589,41 @@ impl<T: Config> Pallet<T> {
 		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
 
 		let unlock_time_unit = match (currency_id, current_time_unit) {
-			(ASTR, TimeUnit::Era(current_era))
-			| (KSM, TimeUnit::Era(current_era))
-			| (DOT, TimeUnit::Era(current_era)) => {
+			(ASTR, TimeUnit::Era(current_era)) |
+			(KSM, TimeUnit::Era(current_era)) |
+			(DOT, TimeUnit::Era(current_era)) =>
 				if let TimeUnit::Era(delay_era) = delays.unlock_delay {
-					let unlock_era = current_era
-						.checked_add(delay_era)
-						.ok_or(Error::<T>::OverFlow)?;
+					let unlock_era =
+						current_era.checked_add(delay_era).ok_or(Error::<T>::OverFlow)?;
 					TimeUnit::Era(unlock_era)
 				} else {
 					Err(Error::<T>::InvalidTimeUnit)?
-				}
-			}
+				},
 			(PHA, TimeUnit::Hour(current_hour)) => {
 				if let TimeUnit::Hour(delay_hour) = delays.unlock_delay {
-					let unlock_hour = current_hour
-						.checked_add(delay_hour)
-						.ok_or(Error::<T>::OverFlow)?;
+					let unlock_hour =
+						current_hour.checked_add(delay_hour).ok_or(Error::<T>::OverFlow)?;
 					TimeUnit::Hour(unlock_hour)
 				} else {
 					Err(Error::<T>::InvalidTimeUnit)?
 				}
-			}
-			(BNC, TimeUnit::Round(current_round))
-			| (MOVR, TimeUnit::Round(current_round))
-			| (GLMR, TimeUnit::Round(current_round))
-			| (MANTA, TimeUnit::Round(current_round)) => {
+			},
+			(BNC, TimeUnit::Round(current_round)) |
+			(MOVR, TimeUnit::Round(current_round)) |
+			(GLMR, TimeUnit::Round(current_round)) |
+			(MANTA, TimeUnit::Round(current_round)) => {
 				let mut delay = delays.unlock_delay;
 				if if_leave {
 					delay = delays.leave_delegators_delay;
 				}
 				if let TimeUnit::Round(delay_round) = delay {
-					let unlock_round = current_round
-						.checked_add(delay_round)
-						.ok_or(Error::<T>::OverFlow)?;
+					let unlock_round =
+						current_round.checked_add(delay_round).ok_or(Error::<T>::OverFlow)?;
 					TimeUnit::Round(unlock_round)
 				} else {
 					Err(Error::<T>::InvalidTimeUnit)?
 				}
-			}
+			},
 			_ => Err(Error::<T>::InvalidTimeUnit)?,
 		};
 

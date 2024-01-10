@@ -72,10 +72,7 @@ impl<T: Config>
 
 		// Generate multi-location by id.
 		let delegator_multilocation = T::AccountConverter::convert((new_delegator_id, currency_id));
-		ensure!(
-			delegator_multilocation != MultiLocation::default(),
-			Error::<T>::FailToConvert
-		);
+		ensure!(delegator_multilocation != MultiLocation::default(), Error::<T>::FailToConvert);
 
 		// Add the new delegator into storage
 		Pallet::<T>::inner_add_delegator(new_delegator_id, &delegator_multilocation, currency_id)
@@ -96,10 +93,7 @@ impl<T: Config>
 		let contract_multilocation = validator.ok_or(Error::<T>::ValidatorNotProvided)?;
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		// Check if the amount exceeds the minimum requirement.
-		ensure!(
-			amount >= mins_maxs.bond_extra_minimum,
-			Error::<T>::LowerThanMinimum
-		);
+		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the validator is in the white list.
 		let validator_list =
@@ -111,10 +105,7 @@ impl<T: Config>
 
 		if DelegatorLedgers::<T>::get(currency_id, who).is_none() {
 			// Check if the amount exceeds the minimum requirement. The first bond requires 500 ASTR
-			ensure!(
-				amount >= mins_maxs.delegator_bonded_minimum,
-				Error::<T>::LowerThanMinimum
-			);
+			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
 			// Create a new delegator ledger
 			// The real bonded amount will be updated by services once the xcm transaction succeeds.
@@ -134,10 +125,8 @@ impl<T: Config>
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
 
 		// Construct xcm message.
-		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::BondAndStake(
-			smart_contract,
-			amount,
-		));
+		let call =
+			AstarCall::Staking(AstarDappsStakingCall::<T>::BondAndStake(smart_contract, amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -190,10 +179,7 @@ impl<T: Config>
 	) -> Result<QueryId, Error<T>> {
 		// Check if the unbonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
-		ensure!(
-			amount >= mins_maxs.unbond_minimum,
-			Error::<T>::LowerThanMinimum
-		);
+		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
 		// check if the delegator exists, if not, return error.
 		let contract_multilocation = (*validator).ok_or(Error::<T>::ValidatorNotProvided)?;
@@ -421,20 +407,16 @@ impl<T: Config>
 			X1(Parachain(T::ParachainId::get().into())),
 		)));
 
-		let beneficiary = Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(
-			AccountId32 {
+		let beneficiary =
+			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
 				network: None,
 				id: to_32,
-			},
-		))));
+			}))));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(MultiLocation {
-				parents: 0,
-				interior: Here,
-			}),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
 		let assets: Box<VersionedMultiAssets> =
 			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
@@ -482,10 +464,7 @@ impl<T: Config>
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(
-			from_account_id == entrance_account,
-			Error::<T>::InvalidAccount
-		);
+		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
@@ -523,15 +502,11 @@ impl<T: Config>
 		DelegatorLedgers::<T>::mutate(currency_id, who, |old_ledger| -> Result<(), Error<T>> {
 			if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
 				// Increase both the active and total amount.
-				old_sub_ledger.active = old_sub_ledger
-					.active
-					.checked_add(&token_amount)
-					.ok_or(Error::<T>::OverFlow)?;
+				old_sub_ledger.active =
+					old_sub_ledger.active.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
 
-				old_sub_ledger.total = old_sub_ledger
-					.total
-					.checked_add(&token_amount)
-					.ok_or(Error::<T>::OverFlow)?;
+				old_sub_ledger.total =
+					old_sub_ledger.total.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
 				Ok(())
 			} else {
 				Err(Error::<T>::Unexpected)?
@@ -684,7 +659,7 @@ impl<T: Config> AstarAgent<T> {
 									.total
 									.checked_add(&amount)
 									.ok_or(Error::<T>::OverFlow)?;
-							}
+							},
 							Unlock => {
 								old_sub_ledger.active = old_sub_ledger
 									.active
@@ -694,16 +669,14 @@ impl<T: Config> AstarAgent<T> {
 								let unlock_time_unit =
 									unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
 
-								let new_unlock_record = UnlockChunk {
-									value: amount,
-									unlock_time: unlock_time_unit,
-								};
+								let new_unlock_record =
+									UnlockChunk { value: amount, unlock_time: unlock_time_unit };
 
 								old_sub_ledger.unlocking.push(new_unlock_record);
-							}
+							},
 							Rebond => {
 								Err(Error::<T>::Unexpected)?;
-							}
+							},
 							Liquidize => {
 								// If it is a liquidize operation.
 								let unlock_unit = unlock_time.ok_or(Error::<T>::InvalidTimeUnit)?;
@@ -745,7 +718,7 @@ impl<T: Config> AstarAgent<T> {
 									.total
 									.checked_sub(&accumulated)
 									.ok_or(Error::<T>::OverFlow)?;
-							}
+							},
 						}
 						Ok(())
 					} else {
