@@ -15,6 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![cfg(test)]
 
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Inspect, BoundedVec};
@@ -62,14 +63,16 @@ fn init() {
 		Some(0).into(),
 		DOT,
 		unit(100_000),
-		BoundedVec::default()
+		BoundedVec::default(),
+		None
 	));
 	assert_eq!(Tokens::balance(VDOT, &0), unit(100_000));
 	assert_ok!(VtokenMinting::mint(
 		Some(1).into(),
 		DOT,
 		unit(10),
-		BoundedVec::default()
+		BoundedVec::default(),
+		None
 	));
 	assert_eq!(Tokens::balance(VDOT, &1), unit(10));
 	let amounts = vec![unit(100), unit(100)];

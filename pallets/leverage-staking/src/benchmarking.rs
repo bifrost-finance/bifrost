@@ -158,7 +158,8 @@ fn init<
 		SystemOrigin::Signed(caller.clone()).into(),
 		KSM,
 		bifrost_vtoken_minting::BalanceOf::<T>::unique_saturated_from(unit(100u128)),
-		BoundedVec::default()
+		BoundedVec::default(),
+		None
 	));
 	assert_ok!(lend_market::Pallet::<T>::mint(
 		SystemOrigin::Signed(caller.clone()).into(),

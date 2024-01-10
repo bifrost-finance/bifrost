@@ -47,8 +47,6 @@ pub mod custom_origins {
 		// Fellows,
 		/// Origin for managing validater node of SLP protocol.
 		ValidatorElection,
-		/// Origin able to configure SystemStaking.
-		SystemStakingAdmin,
 		/// Origin able to execute SALP protocol.
 		SALPAdmin,
 		/// Origin commanded by any members of the Polkadot Fellowship (no Dan grade needed).
@@ -81,6 +79,8 @@ pub mod custom_origins {
 		TechAdmin,
 		/// Origin able to manage Pallet with track6.
 		CoreAdmin,
+		/// Origin able to execute treasury.spend.
+		TreasurySpend,
 	}
 
 	macro_rules! decl_unit_ensures {
@@ -123,10 +123,10 @@ pub mod custom_origins {
 		FellowshipExperts: u16 = 5,
 		FellowshipMasters: u16 = 7,
 		ValidatorElection,
-		SystemStakingAdmin,
 		SALPAdmin,
 		TechAdmin,
 		CoreAdmin,
+		TreasurySpend,
 	);
 
 	macro_rules! decl_ensure {

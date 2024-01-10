@@ -176,7 +176,8 @@ fn mint_successful_equal_amounts() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			let (coin0, coin1, pool_asset, swap_id) = create_pool();
 			System::set_block_number(2);
@@ -257,7 +258,8 @@ fn swap_successful() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			let (coin0, coin1, pool_asset, swap_id) = create_pool();
 			System::set_block_number(2);
@@ -325,7 +327,8 @@ fn get_swap_output_amount() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 
 			let (coin0, coin1, pool_asset, swap_id) = create_pool();
@@ -437,7 +440,8 @@ fn mint_swap_redeem1() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(Tokens::set_balance(
 				RuntimeOrigin::root(),
@@ -498,7 +502,8 @@ fn mint_swap_redeem2() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(Tokens::set_balance(
 				RuntimeOrigin::root(),
@@ -590,7 +595,8 @@ fn mint_swap_redeem_for_precisions() {
 				Some(3).into(),
 				DOT,
 				100_000_000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(Tokens::set_balance(
 				RuntimeOrigin::root(),

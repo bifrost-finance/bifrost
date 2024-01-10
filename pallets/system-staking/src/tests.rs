@@ -156,7 +156,7 @@ fn refresh_token_info_should_work() {
 			));
 			assert_ok!(VtokenMinting::set_minimum_redeem(
 				RuntimeOrigin::signed(ALICE),
-				vKSM,
+				VKSM,
 				10
 			));
 
@@ -207,7 +207,7 @@ fn round_process_token() {
 			));
 			assert_ok!(VtokenMinting::set_minimum_redeem(
 				RuntimeOrigin::signed(ALICE),
-				vKSM,
+				VKSM,
 				10
 			));
 
@@ -257,7 +257,7 @@ fn round_process_token_rollback() {
 			));
 			assert_ok!(VtokenMinting::set_minimum_redeem(
 				RuntimeOrigin::signed(ALICE),
-				vKSM,
+				VKSM,
 				10000
 			));
 

@@ -16,31 +16,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Ensure we're `no_std` when compiling for Wasm.
-
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnInitialize;
+use bifrost_primitives::{
+	currency::{BNC, KSM},
+	CurrencyId, TokenSymbol,
+};
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
 use sp_core::{ConstU32, H256};
 use sp_runtime::{
-	traits::{BlakeTwo256, ConvertInto, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32, BuildStorage,
 };
 
-use crate as bifrost_farming;
+use crate as bifrost_channel_commission;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u128;
+pub type Balance = u64;
 
 pub type AccountId = AccountId32;
+
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
+pub const CHARLIE: AccountId = AccountId32::new([2u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime {
@@ -48,9 +50,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens,
 		Balances: pallet_balances,
 		Currencies: bifrost_currencies,
-		Farming: bifrost_farming,
-		VeMinting: bifrost_ve_minting,
-		AssetRegistry: bifrost_asset_registry,
+		ChannelCommission: bifrost_channel_commission
 	}
 );
 
@@ -125,6 +125,10 @@ orml_traits::parameter_type_with_key! {
 		0
 	};
 }
+parameter_types! {
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
+	pub const MaxLocks: u32 = 100;
+}
 impl orml_tokens::Config for Runtime {
 	type Amount = i128;
 	type Balance = Balance;
@@ -132,73 +136,34 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ();
+	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type CurrencyHooks = ();
 }
 
-parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
-	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub const WhitelistMaximumLimit: u32 = 10;
-}
-
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
 }
 
-impl bifrost_farming::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type CurrencyId = CurrencyId;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type TreasuryAccount = TreasuryAccount;
-	type Keeper = FarmingKeeperPalletId;
-	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type FarmingBoost = FarmingBoostPalletId;
-	type WeightInfo = ();
-	type VeMinting = VeMinting;
-	type BlockNumberToBalance = ConvertInto;
-	type WhitelistMaximumLimit = WhitelistMaximumLimit;
-}
-
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
-	pub const Week: BlockNumber = 50400; // a week
-	pub const MaxBlock: BlockNumber = 10512000; // four years
-	pub const Multiplier: Balance = 10_u128.pow(12);
-	pub const VoteWeightMultiplier: Balance = 3;
+	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
+	pub const ClearingDuration: u32 = 100;
+	pub const NameLengthLimit: u32 = 20;
+	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
+	pub BifrostCommissionReceiver: AccountId = AccountId32::new([7u8; 32]);
 }
 
-impl bifrost_ve_minting::Config for Runtime {
+impl bifrost_channel_commission::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
-	type IncentivePalletId = IncentivePalletId;
+	type CommissionPalletId = CommissionPalletId;
+	type BifrostCommissionReceiver = BifrostCommissionReceiver;
 	type WeightInfo = ();
-	type BlockNumberToBalance = ConvertInto;
-	type Week = Week;
-	type MaxBlock = MaxBlock;
-	type Multiplier = Multiplier;
-	type VoteWeightMultiplier = VoteWeightMultiplier;
-}
-
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-impl bifrost_asset_registry::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-	type WeightInfo = ();
+	type ClearingDuration = ClearingDuration;
+	type NameLengthLimit = NameLengthLimit;
 }
 
 pub struct ExtBuilder {
@@ -220,17 +185,17 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		let commission_account: AccountId32 =
+			<Runtime as crate::Config>::CommissionPalletId::get().into_account_truncating();
+
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
-			(CHARLIE, BNC, 1_000_000_000_000),
-			(CHARLIE, VBNC, 1_000_000_000_000_000),
-			(CHARLIE, KSM, 1_000_000_000_000),
-			(ALICE, DOT, 100),
-			(ALICE, VDOT, 100),
-			(ALICE, KSM, 3000),
-			(BOB, VSKSM, 100),
-			(BOB, KSM, 10000000),
+			(CHARLIE, BNC, 100),
+			(ALICE, KSM, 100),
+			(BOB, KSM, 100),
+			(commission_account.clone(), CurrencyId::Token2(0), 11000),
+			(commission_account, CurrencyId::VToken2(0), 11000),
 		])
 	}
 
@@ -254,7 +219,6 @@ impl ExtBuilder {
 		orml_tokens::GenesisConfig::<Runtime> {
 			balances: self
 				.endowed_accounts
-				.clone()
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != BNC)
 				.collect::<Vec<_>>(),
@@ -263,5 +227,13 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		System::set_block_number(System::block_number() + 1);
+		ChannelCommission::on_initialize(System::block_number());
 	}
 }

@@ -53,7 +53,7 @@ benchmarks! {
 
 	impl_benchmark_test_suite!(
 	CallSwitchgear,
-	crate::mock::ExtBuilder::default().build(),
+	crate::mock::new_test_ext(),
 	crate::mock::Runtime
 );
 }

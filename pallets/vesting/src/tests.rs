@@ -1139,12 +1139,15 @@ fn multiple_schedules_from_genesis_config_errors() {
 		.build();
 }
 
-// #[test]
-// fn build_genesis_has_storage_version_v1() {
-// 	ExtBuilder::default().existential_deposit(ED).build().execute_with(|| {
-// 		assert_eq!(StorageVersion::<Test>::get(), Releases::V1);
-// 	});
-// }
+#[test]
+fn build_genesis_has_storage_version_v1() {
+	ExtBuilder::default()
+		.existential_deposit(ED)
+		.build()
+		.execute_with(|| {
+			assert_eq!(StorageVersion::<Test>::get(), Releases::V1);
+		});
+}
 
 #[test]
 fn merge_vesting_handles_per_block_0() {
@@ -1152,20 +1155,21 @@ fn merge_vesting_handles_per_block_0() {
 		.existential_deposit(ED)
 		.build()
 		.execute_with(|| {
+			const ED: u64 = 256;
 			assert_ok!(Vesting::init_vesting_start_at(RawOrigin::Root.into(), 0));
 			let sched0 = VestingInfo::new(
 				ED, 0, // Vesting over 256 blocks.
 				1,
 			);
-			assert_eq!(sched0.ending_block_as_balance::<Identity>(), ED + 1);
+			assert_eq!(sched0.ending_block_as_balance::<Identity>(), 257);
 			let sched1 = VestingInfo::new(
 				ED * 2,
 				0, // Vesting over 512 blocks.
 				10,
 			);
-			assert_eq!(sched1.ending_block_as_balance::<Identity>(), ED * 2 + 10);
+			assert_eq!(sched1.ending_block_as_balance::<Identity>(), 512u64 + 10);
 
-			let merged = VestingInfo::new(ED * 3, 1, 10);
+			let merged = VestingInfo::new(764, 1, 10);
 			assert_eq!(Vesting::merge_vesting_info(5, sched0, sched1), Some(merged));
 		});
 }

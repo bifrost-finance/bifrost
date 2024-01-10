@@ -554,6 +554,7 @@ impl<T: Config> Pallet<T> {
 				token_id,
 				mint_amount,
 				BoundedVec::default(),
+				None,
 			)?;
 
 			//Update system_shadow_amount += mint_amount

@@ -19,8 +19,8 @@
 
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{
-	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol,
+pub use bifrost_primitives::{
+	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol, BNC, KSM,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -68,7 +68,6 @@ pub type Amount = i128;
 pub type BlockNumber = u64;
 pub type AccountId = AccountId32;
 
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 
@@ -164,8 +163,8 @@ impl bifrost_currencies::Config for Test {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> u128 {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * 1_000_000_000,
-			&CurrencyId::Token(TokenSymbol::KSM) => 10 * 1_000_000_000,
+			&BNC => 10 * 1_000_000_000,
+			&KSM => 10 * 1_000_000_000,
 			_=> 10 * 1_000_000_000
 		}
 	};
@@ -227,6 +226,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
 }
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -502,6 +502,7 @@ impl bifrost_slp::Config for Test {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
+	type ChannelCommission = ();
 }
 
 impl pallet_xcm::Config for Test {

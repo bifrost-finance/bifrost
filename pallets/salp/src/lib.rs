@@ -1528,6 +1528,7 @@ pub mod pallet {
 									T::RelayChainToken::get(),
 									info.value,
 									BoundedVec::default(),
+									None,
 								)
 								.map_err(|_| Error::<T>::NotSupportTokenType)?;
 							}
@@ -1560,6 +1561,7 @@ pub mod pallet {
 									T::RelayChainToken::get(),
 									info.value,
 									BoundedVec::default(),
+									None,
 								)
 								.map_err(|_| Error::<T>::NotSupportTokenType)?;
 							}

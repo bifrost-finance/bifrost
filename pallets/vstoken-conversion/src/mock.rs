@@ -21,7 +21,7 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use bifrost_primitives::{CurrencyId, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
 use sp_core::{ConstU32, H256};
@@ -38,15 +38,9 @@ pub type Amount = i128;
 pub type Balance = u64;
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
@@ -201,10 +195,10 @@ impl ExtBuilder {
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
-			(ALICE, vDOT, 100),
-			(BOB, vsKSM, 100),
+			(ALICE, VDOT, 100),
+			(BOB, VSKSM, 100),
 			(BOB, KSM, 100),
-			(BOB, vsBond, 100),
+			(BOB, VSBOND_BNC_2001_0_8, 100),
 		])
 	}
 

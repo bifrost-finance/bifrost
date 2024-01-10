@@ -38,7 +38,7 @@ fn on_idle() {
 				RuntimeOrigin::signed(ALICE),
 				RelayCurrencyId::get(),
 				Info {
-					vcurrency_id: vKSM,
+					vcurrency_id: VKSM,
 					annualization: 600_000u32,
 					granularity: 1000,
 					minimum_redeem: 20000
@@ -52,20 +52,20 @@ fn on_idle() {
 				Weight::from_parts(100000000, 0),
 			);
 			System::set_block_number(System::block_number() + 1);
-			assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);
+			assert_eq!(Tokens::free_balance(VKSM, &system_maker), 10731);
 			assert_eq!(Tokens::free_balance(KSM, &zenlink_pair_account_id), 3000);
-			assert_eq!(Tokens::free_balance(vKSM, &zenlink_pair_account_id), 1469);
+			assert_eq!(Tokens::free_balance(VKSM, &zenlink_pair_account_id), 1469);
 			init_vtoken_minting();
 			SystemMaker::on_idle(
 				<frame_system::Pallet<Runtime>>::block_number(),
 				Weight::zero(),
 			);
-			assert_eq!(Tokens::free_balance(vKSM, &system_maker), 10731);
+			assert_eq!(Tokens::free_balance(VKSM, &system_maker), 10731);
 			assert_ok!(SystemMaker::set_config(
 				RuntimeOrigin::signed(ALICE),
 				RelayCurrencyId::get(),
 				Info {
-					vcurrency_id: vKSM,
+					vcurrency_id: VKSM,
 					annualization: 600_000u32,
 					granularity: 1000,
 					minimum_redeem: 2000
@@ -75,14 +75,14 @@ fn on_idle() {
 				<frame_system::Pallet<Runtime>>::block_number(),
 				Weight::zero(),
 			);
-			assert_eq!(Tokens::free_balance(vKSM, &system_maker), 0);
+			assert_eq!(Tokens::free_balance(VKSM, &system_maker), 0);
 		});
 }
 
 fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
 	let asset_0_currency_id: AssetId =
 		AssetId::try_convert_from(RelayCurrencyId::get(), para_id).unwrap();
-	let asset_1_currency_id: AssetId = AssetId::try_convert_from(vKSM, para_id).unwrap();
+	let asset_1_currency_id: AssetId = AssetId::try_convert_from(VKSM, para_id).unwrap();
 	// let path = vec![asset_0_currency_id, asset_1_currency_id];
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
@@ -119,7 +119,7 @@ fn init_vtoken_minting() {
 	));
 	assert_ok!(VtokenMinting::set_minimum_redeem(
 		RuntimeOrigin::signed(ALICE),
-		vKSM,
+		VKSM,
 		90
 	));
 }

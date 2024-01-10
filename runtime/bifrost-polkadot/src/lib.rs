@@ -35,7 +35,7 @@ pub use frame_support::{
 	traits::{
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, EqualPrivilegeOnly,
 		Everything, Imbalance, InstanceFilter, IsInVec, LockIdentifier, NeverEnsureOrigin, Nothing,
-		OnUnbalanced, Randomness,
+		OnUnbalanced, Randomness, WithdrawReasons,
 	},
 	weights::{
 		constants::{
@@ -126,8 +126,8 @@ pub mod governance;
 use crate::xcm_config::RelayOrigin;
 use crate::xcm_config::XcmRouter;
 use governance::{
-	custom_origins, CoreAdminOrCouncil, SALPAdmin, SystemStakingAdmin, TechAdmin,
-	TechAdminOrCouncil, ValidatorElection,
+	custom_origins, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil, TreasurySpend,
+	ValidatorElection,
 };
 
 impl_opaque_keys! {
@@ -327,6 +327,7 @@ parameter_types! {
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
+	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 }
 
 impl frame_system::Config for Runtime {
@@ -809,14 +810,14 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 500 * DOLLARS;
-	pub const SpendPeriod: BlockNumber = 24 * DAYS;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 800_000 * BNCS;
+	pub const MaxBalance: Balance = 100_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -826,7 +827,11 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
+	type SpendOrigin = EnsureWithSuccess<
+		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
+		AccountId,
+		MaxBalance,
+	>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -976,12 +981,18 @@ impl pallet_collator_selection::Config for Runtime {
 
 // culumus runtime end
 
+parameter_types! {
+	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+}
+
 impl bifrost_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
+	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
@@ -1250,6 +1261,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
@@ -1295,7 +1307,7 @@ parameter_types! {
 impl bifrost_system_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type EnsureConfirmAsGovernance = EitherOfDiverse<CoreAdminOrCouncil, SystemStakingAdmin>;
+	type EnsureConfirmAsGovernance = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_system_staking::BifrostWeight<Runtime>;
 	type FarmingInfo = Farming;
 	type VtokenMintingInterface = VtokenMinting;
@@ -1498,6 +1510,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
@@ -1619,6 +1632,23 @@ impl leverage_staking::Config for Runtime {
 	type LendMarket = LendMarket;
 	type StablePoolHandler = StablePool;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+}
+
+parameter_types! {
+	pub const ClearingDuration: u32 = 7 * DAYS;
+	pub const NameLengthLimit: u32 = 20;
+	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl bifrost_channel_commission::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = CoreAdminOrCouncil;
+	type CommissionPalletId = CommissionPalletId;
+	type BifrostCommissionReceiver = BifrostCommissionReceiver;
+	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
+	type ClearingDuration = ClearingDuration;
+	type NameLengthLimit = NameLengthLimit;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1797,14 +1827,15 @@ construct_runtime! {
 		Slpx: bifrost_slpx = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
-		StableAsset: bifrost_stable_asset::{Pallet, Storage, Event<T>} = 128,
+		StableAsset: bifrost_stable_asset exclude_parts { Call } = 128,
 		StablePool: bifrost_stable_pool = 129,
 		VtokenVoting: bifrost_vtoken_voting = 130,
 		LendMarket: lend_market = 131,
 		Prices: pallet_prices = 132,
 		Oracle: orml_oracle::<Instance1> = 133,
-		OracleMembership: pallet_membership::<Instance3>::{Pallet, Call, Storage, Event<T>, Config<T>} = 134,
+		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
+		ChannelCommission: bifrost_channel_commission = 136,
 	}
 }
 

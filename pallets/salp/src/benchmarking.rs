@@ -511,7 +511,8 @@ mod benchmarks {
 			RawOrigin::Signed(caller.clone()).into(),
 			KSM,
 			token_amount,
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 		#[extrinsic_call]
 		_(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())

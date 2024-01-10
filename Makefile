@@ -66,8 +66,8 @@ format:
 	cargo fmt --all -- --check
 
 .PHONY: clippy # cargo clippy
-clippy:
-	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime
+clippy: format
+	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:

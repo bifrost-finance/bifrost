@@ -61,6 +61,12 @@ pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
 pub const MANTA_TOKEN_ID: u8 = 8u8;
 pub const MANTA: CurrencyId = CurrencyId::Token2(MANTA_TOKEN_ID);
 pub const VMANTA: CurrencyId = CurrencyId::VToken2(MANTA_TOKEN_ID);
+pub const VSBOND_BNC_2001_0_8: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
+
+pub const LDOT: CurrencyId = CurrencyId::Lend(0);
+pub const LKSM: CurrencyId = CurrencyId::Lend(1);
+pub const LUSDT: CurrencyId = CurrencyId::Lend(2);
+pub const LVDOT: CurrencyId = CurrencyId::Lend(3);
 
 macro_rules! create_currency_id {
 	($(#[$meta:meta])*

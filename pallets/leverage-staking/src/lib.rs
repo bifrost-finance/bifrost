@@ -226,6 +226,7 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			increase_amount,
 			BoundedVec::default(),
+			None,
 		)?;
 		T::LendMarket::do_mint(&who, vtoken_id, vtoken_value)?;
 		T::LendMarket::do_borrow(&who, asset_id, increase_amount)?;

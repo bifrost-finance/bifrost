@@ -142,3 +142,12 @@ impl ExtBuilder {
 		t.into()
 	}
 }
+
+#[cfg(feature = "runtime-benchmarks")]
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	use sp_runtime::BuildStorage;
+	frame_system::GenesisConfig::<Runtime>::default()
+		.build_storage()
+		.unwrap()
+		.into()
+}

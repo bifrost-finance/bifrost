@@ -34,7 +34,8 @@ fn mint_bnc() {
 				Some(BOB).into(),
 				BNC,
 				95000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::set_unlock_duration(
 				RuntimeOrigin::signed(ALICE),
@@ -69,7 +70,8 @@ fn redeem_bnc() {
 				Some(BOB).into(),
 				BNC,
 				100000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::set_unlock_duration(
 				RuntimeOrigin::signed(ALICE),
@@ -100,26 +102,29 @@ fn mint() {
 			pub const FEE: Permill = Permill::from_percent(5);
 			assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
 			assert_noop!(
-				VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default()),
+				VtokenMinting::mint(Some(BOB).into(), KSM, 100, BoundedVec::default(), None),
 				Error::<Runtime>::BelowMinimumMint
 			);
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				KSM,
 				100000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				MOVR,
 				100000000000000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				MOVR,
 				100000000000000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_eq!(VtokenMinting::token_pool(MOVR), 190000000000000000000);
 			assert_eq!(VtokenMinting::token_pool(KSM), 95000000000);
@@ -160,7 +165,8 @@ fn redeem() {
 				Some(BOB).into(),
 				KSM,
 				1000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_noop!(
 				VtokenMinting::redeem(Some(BOB).into(), VKSM, 80),
@@ -187,7 +193,8 @@ fn redeem() {
 				Some(BOB).into(),
 				MOVR,
 				300000000000000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(
 				Some(BOB).into(),
@@ -264,13 +271,15 @@ fn rebond() {
 				Some(BOB).into(),
 				KSM,
 				200,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				KSM,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
@@ -338,7 +347,8 @@ fn movr() {
 				Some(BOB).into(),
 				MOVR,
 				300000000000000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_eq!(
 				Tokens::free_balance(MOVR, &entrance_account),
@@ -375,7 +385,8 @@ fn movr() {
 				Some(CHARLIE).into(),
 				MOVR,
 				30000000000000000000000,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(
 				Some(CHARLIE).into(),
@@ -440,13 +451,15 @@ fn hook() {
 				Some(BOB).into(),
 				KSM,
 				200,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				KSM,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
@@ -490,7 +503,8 @@ fn hook() {
 				Some(BOB).into(),
 				KSM,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 			VtokenMinting::on_initialize(0);
@@ -537,13 +551,15 @@ fn rebond_by_unlock_id() {
 				Some(BOB).into(),
 				KSM,
 				200,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				KSM,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 200));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VKSM, 100));
@@ -626,13 +642,15 @@ fn fast_redeem_for_fil() {
 				Some(BOB).into(),
 				FIL,
 				200,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::mint(
 				Some(BOB).into(),
 				FIL,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 200));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 100));
@@ -676,7 +694,8 @@ fn fast_redeem_for_fil() {
 				Some(BOB).into(),
 				FIL,
 				100,
-				BoundedVec::default()
+				BoundedVec::default(),
+				None
 			));
 			assert_ok!(VtokenMinting::redeem(Some(BOB).into(), VFIL, 200));
 			VtokenMinting::on_initialize(0);

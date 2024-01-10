@@ -934,6 +934,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-channel-commission"
+version = "0.8.0"
+dependencies = [
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 8.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.4.0)",
+]
+
+[[package]]
 name = "bifrost-cli"
 version = "0.9.90"
 dependencies = [
@@ -1156,6 +1177,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-channel-commission",
  "bifrost-cross-in-out",
  "bifrost-currencies",
  "bifrost-farming",
@@ -1304,6 +1326,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
+ "bifrost-channel-commission",
  "bifrost-cross-in-out",
  "bifrost-currencies",
  "bifrost-farming",

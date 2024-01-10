@@ -100,12 +100,7 @@ fn test_whitelist_work() {
 		assert_eq!(evm_contract_account_id, BOB);
 		assert_eq!(evm_caller_account_id, Slpx::h160_to_account_id(evm_caller));
 
-		// Hydradx
-		assert_ok!(Slpx::add_whitelist(
-			RuntimeOrigin::root(),
-			SupportChain::Hydradx,
-			ALICE
-		));
+		// Hydradx No whitelist checking
 		let target_chain = TargetChain::Hydradx(ALICE);
 		let (evm_contract_account_id, evm_caller_account_id) = Slpx::ensure_singer_on_whitelist(
 			RuntimeOrigin::signed(ALICE),
@@ -113,10 +108,6 @@ fn test_whitelist_work() {
 			&target_chain,
 		)
 		.unwrap();
-		assert_noop!(
-			Slpx::ensure_singer_on_whitelist(RuntimeOrigin::signed(BOB), evm_caller, &target_chain),
-			Error::<Test>::AccountIdNotInWhitelist
-		);
 		assert_eq!(evm_contract_account_id, ALICE);
 		assert_eq!(evm_caller_account_id, ALICE);
 	});

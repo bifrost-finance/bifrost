@@ -16,7 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::parameter_types;
+use frame_support::{
+	parameter_types,
+	traits::{ConstU32, WithdrawReasons},
+};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{BlakeTwo256, Identity, IdentityLookup},
@@ -85,6 +88,8 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const MinVestedTransfer: u64 = 256 * 2;
 	pub static ExistentialDeposit: u64 = 1;
+	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+	WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 impl Config for Test {
 	type BlockNumberToBalance = Identity;
@@ -92,6 +97,7 @@ impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	const MAX_VESTING_SCHEDULES: u32 = 3;
 	type MinVestedTransfer = MinVestedTransfer;
+	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	type WeightInfo = ();
 }
 

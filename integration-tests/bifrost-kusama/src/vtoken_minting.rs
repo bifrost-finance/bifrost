@@ -136,7 +136,8 @@ fn mint_should_work() {
 			RawOrigin::Signed(BifrostKusamaAlice::get()).into(),
 			KSM,
 			5_000_000_000_000,
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 
 		//check balance
@@ -167,7 +168,8 @@ fn redeem_should_work() {
 			RawOrigin::Signed(BifrostKusamaAlice::get()).into(),
 			KSM,
 			5 * 1_000_000_000_000,
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 		assert_eq!(VtokenMinting::token_pool(KSM), 5 * 1_000_000_000_000 - 5 * 20_000_000_000); // 1000 + 980 - 98 - 196
 
