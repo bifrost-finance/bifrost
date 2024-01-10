@@ -121,7 +121,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 	(
 		10,
 		pallet_referenda::TrackInfo {
-			name: "validator_election",
+			name: "liquid_staking",
 			max_deciding: 10,
 			decision_deposit: 2_500 * BNCS,
 			prepare_period: 2 * HOURS,
