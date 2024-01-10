@@ -37,6 +37,8 @@ jobs:
           profile: minimal
           toolchain: nightly-2023-05-22
           components: rustfmt
+          override: true
+          default: true
 
       - name: Cargo clippy
         run: |
