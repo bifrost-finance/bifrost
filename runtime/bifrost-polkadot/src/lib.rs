@@ -1866,16 +1866,8 @@ pub mod migrations {
 
 use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
 pub struct PhragmenElectionDepositRuntimeUpgrade;
-impl pallet_elections_phragmen::migrations::v3::V2ToV3 for PhragmenElectionDepositRuntimeUpgrade {
-	type AccountId = AccountId;
-	type Balance = Balance;
-}
 impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		pallet_elections_phragmen::migrations::v3::apply::<Self, Runtime>(
-			deposit(1, 64),
-			10_000 * DOLLARS,
-		);
 		StorageVersion::new(4).put::<PhragmenElection>();
 		RocksDbWeight::get().reads_writes(1, 1)
 	}
