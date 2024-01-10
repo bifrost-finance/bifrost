@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     if: "!contains(github.event.commits[0].message, '[skip ci]')"
-    runs-on: [self-hosted, normal]
+    runs-on: [ self-hosted, normal ]
     steps:
       - name: Check to latest commit
         uses: actions/checkout@v4
@@ -27,10 +27,16 @@ jobs:
         with:
           profile: minimal
           toolchain: 1.73.0
-          components: rustfmt,clippy
+          components: clippy
           target: wasm32-unknown-unknown
           override: true
           default: true
+      - name: Install toolchain nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.71.0-nightly
+          components: rustfmt
 
       - name: Cargo clippy
         run: |
