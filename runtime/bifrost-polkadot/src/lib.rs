@@ -93,10 +93,10 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
-		Currency, EitherOfDiverse, Get, LinearStoragePrice, TransformOrigin,
+		Currency, EitherOf, EitherOfDiverse, Get, LinearStoragePrice, TransformOrigin,
 	},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -125,8 +125,8 @@ use xcm_executor::{
 pub mod governance;
 use crate::xcm_config::{RelayOrigin, XcmRouter};
 use governance::{
-	custom_origins, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil, TreasurySpend,
-	ValidatorElection,
+	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdminOrCouncil, LiquidStaking,
+	SALPAdmin, Spender, TechAdmin, TechAdminOrCouncil,
 };
 
 impl_opaque_keys! {
@@ -809,7 +809,7 @@ parameter_types! {
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
-	pub const MaxBalance: Balance = 100_000 * BNCS;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -819,11 +819,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<
-		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
-		AccountId,
-		MaxBalance,
-	>;
+	type SpendOrigin = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1238,7 +1234,7 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, ValidatorElection>;
+	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = Slpx;
@@ -1634,7 +1630,7 @@ parameter_types! {
 impl bifrost_channel_commission::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = CoreAdminOrCouncil;
+	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
 	type CommissionPalletId = CommissionPalletId;
 	type BifrostCommissionReceiver = BifrostCommissionReceiver;
 	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
@@ -1879,10 +1875,104 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
-		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
-		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime, FellowshipReferendaInstance>,
+		OracleMembershipMigration,
+		PhragmenElectionDepositRuntimeUpgrade,
+		TechnicalCommitteeMigration,
+		CouncilMigration,
+		pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
+		CouncilMembershipMigration,
+		TechnicalMembershipMigration,
+		BountiesMigration,
+		TipsMigration,
 	);
+}
+
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
+pub struct PhragmenElectionDepositRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		StorageVersion::new(4).put::<PhragmenElection>();
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct OracleMembershipMigration;
+impl OnRuntimeUpgrade for OracleMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = OracleMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<OracleMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct CouncilMembershipMigration;
+impl OnRuntimeUpgrade for CouncilMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = CouncilMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<CouncilMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TechnicalMembershipMigration;
+impl OnRuntimeUpgrade for TechnicalMembershipMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = TechnicalMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<TechnicalMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TechnicalCommitteeMigration;
+impl OnRuntimeUpgrade for TechnicalCommitteeMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = TechnicalCommittee::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<TechnicalCommittee>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct CouncilMigration;
+impl OnRuntimeUpgrade for CouncilMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Council::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Council>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct BountiesMigration;
+impl OnRuntimeUpgrade for BountiesMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Bounties::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Bounties>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct TipsMigration;
+impl OnRuntimeUpgrade for TipsMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = Tips::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<Tips>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
 }
 
 /// Executive: handles dispatch to the various modules.

@@ -125,8 +125,8 @@ try-kusama-runtime-upgrade:build-try-runtime
 		--runtime \
 			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
 		on-runtime-upgrade \
-		--checks none \
-		--no-weight-warnings \
+		--disable-spec-version-check \
+		--disable-idempotency-checks \
 		live \
 		--uri wss://hk.bifrost-rpc.liebi.com:443/ws
 
@@ -136,10 +136,38 @@ try-polkadot-runtime-upgrade:build-try-runtime
 		--runtime \
 		target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
 		on-runtime-upgrade \
-		--checks none \
-		--no-weight-warnings \
+		--disable-spec-version-check \
+		--disable-idempotency-checks \
 		live \
 		--uri wss://hk.p.bifrost-rpc.liebi.com:443/ws
+
+.PHONY: try-polkadot-runtime-create-snap # create polkadot runtime snapshot
+try-polkadot-runtime-create-snap:
+	try-runtime create-snapshot --uri wss://hk.p.bifrost-rpc.liebi.com:443/ws bifrost_polkadot@latest.snap
+
+.PHONY: try-polkadot-runtime-upgrade-snap # try polkadot runtime upgrade use snapshot
+try-polkadot-runtime-upgrade-snap:build-try-runtime
+	try-runtime \
+		--runtime \
+			target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
+		on-runtime-upgrade \
+		--disable-spec-version-check \
+		--disable-idempotency-checks \
+		snap -p bifrost_polkadot@latest.snap
+
+.PHONY: try-kusama-runtime-create-snap # create kusama runtime snapshot
+try-kusama-runtime-create-snap:
+	try-runtime create-snapshot --uri wss://hk.bifrost-rpc.liebi.com:443/ws bifrost@latest.snap
+
+.PHONY: try-kusama-runtime-upgrade-snap # try kusama runtime upgrade use snapshot
+try-kusama-runtime-upgrade-snap:build-try-runtime
+	try-runtime \
+		--runtime \
+			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
+		on-runtime-upgrade \
+		--disable-spec-version-check \
+		--disable-idempotency-checks \
+		snap -p bifrost@latest.snap
 
 .PHONY: resources # export genesis resources
 resources:

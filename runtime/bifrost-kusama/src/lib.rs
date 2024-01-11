@@ -94,11 +94,11 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
-		Currency, EitherOfDiverse, EnqueueWithOrigin, Get, Imbalance, LinearStoragePrice,
+		Currency, EitherOf, EitherOfDiverse, EnqueueWithOrigin, Get, Imbalance, LinearStoragePrice,
 		LockIdentifier, OnUnbalanced, TransformOrigin,
 	},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 use pallet_identity::legacy::IdentityInfo;
@@ -114,8 +114,8 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Governance configurations.
 pub mod governance;
 use governance::{
-	custom_origins, CoreAdmin, CoreAdminOrCouncil, SALPAdmin, TechAdmin, TechAdminOrCouncil,
-	TreasurySpend, ValidatorElection,
+	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdmin, CoreAdminOrCouncil,
+	LiquidStaking, SALPAdmin, Spender, TechAdmin, TechAdminOrCouncil,
 };
 
 // xcm config
@@ -852,7 +852,7 @@ parameter_types! {
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub CuratorDepositMin: Balance = 1 * BNCS;
 	pub CuratorDepositMax: Balance = 100 * BNCS;
-	pub const MaxBalance: Balance = 100_000 * BNCS;
+	pub const MaxBalance: Balance = 800_000 * BNCS;
 }
 
 type ApproveOrigin = EitherOfDiverse<
@@ -862,11 +862,7 @@ type ApproveOrigin = EitherOfDiverse<
 
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
-	type SpendOrigin = EnsureWithSuccess<
-		EitherOfDiverse<EnsureRoot<AccountId>, TreasurySpend>,
-		AccountId,
-		MaxBalance,
-	>;
+	type SpendOrigin = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type Currency = Balances;
@@ -1413,7 +1409,7 @@ impl bifrost_slp::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, ValidatorElection>;
+	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = Slpx;
@@ -1829,7 +1825,7 @@ parameter_types! {
 impl bifrost_channel_commission::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = CoreAdminOrCouncil;
+	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
 	type CommissionPalletId = CommissionPalletId;
 	type BifrostCommissionReceiver = BifrostCommissionReceiver;
 	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
@@ -2077,9 +2073,31 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_stable_asset::migration::StableAssetOnRuntimeUpgrade<Runtime>,
-		bifrost_vtoken_voting::migration::v2::MigrateToV2<Runtime, RelayCurrencyId>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime>,
+		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime, FellowshipReferendaInstance>,
+		OracleMembershipStoragePrefixMigration,
+		PhragmenElectionDepositRuntimeUpgrade,
 	);
+}
+
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
+pub struct PhragmenElectionDepositRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		StorageVersion::new(4).put::<PhragmenElection>();
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
+}
+
+pub struct OracleMembershipStoragePrefixMigration;
+impl OnRuntimeUpgrade for OracleMembershipStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let storage_version = OracleMembership::on_chain_storage_version();
+		if storage_version < 4 {
+			StorageVersion::new(4).put::<OracleMembership>();
+		}
+		RocksDbWeight::get().reads_writes(1, 1)
+	}
 }
 
 /// Executive: handles dispatch to the various modules.
