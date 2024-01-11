@@ -531,7 +531,7 @@ impl pallet_xcm::Config for Test {
 	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = ();
 	type XcmTeleportFilter = Nothing;

@@ -51,9 +51,5 @@ benchmarks! {
 		let enable_call = Call::<T>::enable_transfers{currency_id: CurrencyId::Token(TokenSymbol::KSM)};
 	}: {enable_call.dispatch_bypass_filter(origin)?}
 
-	impl_benchmark_test_suite!(
-	CallSwitchgear,
-	crate::mock::new_test_ext(),
-	crate::mock::Runtime
-);
+	impl_benchmark_test_suite!(CallSwitchgear,crate::mock::ExtBuilder.build(),crate::mock::Runtime);
 }

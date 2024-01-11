@@ -23,7 +23,7 @@ use std::{
 
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
-	DefaultBlocksPerRound, InflationInfo, Range, SS58Prefix, VestingConfig,
+	DefaultBlocksPerRound, InflationInfo, Range, RuntimeGenesisConfig, SS58Prefix, VestingConfig,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
@@ -47,7 +47,7 @@ const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 use sp_runtime::Perbill;
 
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<(), RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
