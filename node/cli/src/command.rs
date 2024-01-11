@@ -61,13 +61,10 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			Box::new(service::chain_spec::bifrost_kusama::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-local" | "bifrost-kusama-local" =>
-			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()?),
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-kusama-rococo" =>
 			Box::new(service::chain_spec::bifrost_kusama::rococo_testnet_config()?),
-		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-		"bifrost-kusama-rococo-local" =>
-			Box::new(service::chain_spec::bifrost_kusama::rococo_local_config()?),
 
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot" =>
@@ -78,11 +75,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 		"bifrost-polkadot-genesis" => Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
-			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
-		#[cfg(feature = "with-bifrost-kusama-runtime")]
-		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
-		#[cfg(feature = "with-bifrost-polkadot-runtime")]
-		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::development_config()?),
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
@@ -420,36 +413,6 @@ pub fn run() -> Result<()> {
 				_ => Err("Benchmarking sub-command unsupported".into()),
 			}
 		},
-		#[cfg(feature = "try-runtime")]
-		Some(Subcommand::TryRuntime(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-
-			set_default_ss58_version(chain_spec);
-
-			with_runtime_or_err!(chain_spec, {
-				return runner.async_run(|config| {
-					let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-					let task_manager =
-						sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-							.map_err(|e| {
-								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-							})?;
-					let info_provider = try_runtime_cli::block_building_info::substrate_info(12000);
-					Ok((
-						cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(info_provider)),
-						task_manager,
-					))
-				});
-			})
-		},
-		#[cfg(not(feature = "try-runtime"))]
-		Some(Subcommand::TryRuntime) => Err("Try-runtime was not enabled when building the node. \
-			You can enable it with `--features try-runtime`."
-			.into()),
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let collator_options = cli.run.collator_options();

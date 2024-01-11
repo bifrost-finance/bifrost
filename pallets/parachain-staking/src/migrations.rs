@@ -307,10 +307,9 @@ impl<T: Config> OnRuntimeUpgrade for SplitDelegatorStateIntoDelegationScheduledR
 		// Scheduled decrease amount (bond_less) is correctly migrated
 		let mut actual_delegator_state_entries = 0;
 		for (delegator, state) in <DelegatorState<T>>::iter() {
-			let expected_delegator_decrease_amount: BalanceOf<T> = delegator_state_map
+			let expected_delegator_decrease_amount: BalanceOf<T> = *(delegator_state_map
 				.get(&(&*format!("expected_delegator-{:?}_decrease_amount", state.id)).to_string())
-				.expect("must exist")
-				.clone();
+				.expect("must exist"));
 			assert_eq!(
 				expected_delegator_decrease_amount, state.less_total,
 				"decrease amount did not match for delegator {:?}",
@@ -445,8 +444,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 		for (account, state) in <CandidateInfo<T>>::iter() {
 			let old_count = candidate_total_counted_map
 				.get(&(&format!("Candidate{:?}TotalCounted", account)[..]).to_string())
-				.expect("qed")
-				.clone();
+				.expect("qed");
 			let new_count = state.total_counted;
 			let top_delegations_sum = <TopDelegations<T>>::get(account)
 				.expect("CandidateInfo exists => TopDelegations exists")
@@ -455,7 +453,7 @@ impl<T: Config> OnRuntimeUpgrade for PatchIncorrectDelegationSums<T> {
 				.fold(BalanceOf::<T>::zero(), |acc, b| acc + b.amount);
 			let correct_total_counted = top_delegations_sum + state.bond;
 			assert_eq!(new_count, correct_total_counted);
-			if new_count != old_count {
+			if new_count != *old_count {
 				log::info!(
 					target: "PatchIncorrectDelegationSums",
 					"Corrected total from {:?} to {:?}",

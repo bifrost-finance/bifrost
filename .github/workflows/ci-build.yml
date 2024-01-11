@@ -32,9 +32,6 @@ jobs:
           override: true
           default: true
 
-      - name: Check All
-        run: make check-all
-
       - name: Cargo clippy
         run: |
           make clippy

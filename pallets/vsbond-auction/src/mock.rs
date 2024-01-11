@@ -151,13 +151,13 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(BRUCE, SPECIAL_VSBOND, 100),
 			(DAVE, VSBOND, 100),
 			#[cfg(feature = "runtime-benchmarks")]
-			(whitelist_caller.clone(), TOKEN, 100_000_000_000_000),
+			(whitelist_caller, TOKEN, 100_000_000_000_000),
 			#[cfg(feature = "runtime-benchmarks")]
-			(whitelist_caller.clone(), VSBOND, 100_000_000_000_000),
+			(whitelist_caller, VSBOND, 100_000_000_000_000),
 			#[cfg(feature = "runtime-benchmarks")]
-			(benchmarking_account_1.clone(), TOKEN, 100_000_000_000_000),
+			(benchmarking_account_1, TOKEN, 100_000_000_000_000),
 			#[cfg(feature = "runtime-benchmarks")]
-			(benchmarking_account_1.clone(), VSBOND, 100_000_000_000_000),
+			(benchmarking_account_1, VSBOND, 100_000_000_000_000),
 		],
 	}
 	.assimilate_storage(&mut fs_gc)

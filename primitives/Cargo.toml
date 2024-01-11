@@ -15,6 +15,7 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 xcm = { workspace = true }
+xcm-executor = { workspace = true }
 
 zenlink-protocol = { workspace = true }
 orml-oracle = { workspace = true }

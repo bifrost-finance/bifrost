@@ -95,6 +95,7 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type WeightInfo = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -287,7 +288,13 @@ pub(crate) fn events() -> Vec<pallet::Event<Test>> {
 		.into_iter()
 		.map(|r| r.event)
 		.filter_map(
-			|e| if let RuntimeEvent::ParachainStaking(inner) = e { Some(inner) } else { None },
+			|e| {
+				if let RuntimeEvent::ParachainStaking(inner) = e {
+					Some(inner)
+				} else {
+					None
+				}
+			},
 		)
 		.collect::<Vec<_>>()
 }
