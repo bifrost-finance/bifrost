@@ -79,9 +79,9 @@ pub use bifrost_primitives::{
 	Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol,
 };
 pub use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, AuraId, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
 use constants::currency::*;
@@ -95,6 +95,7 @@ use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use polkadot_runtime_common::prod_or_fast;
 
 // zenlink imports
 use zenlink_protocol::{
@@ -976,7 +977,7 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = prod_or_test!(2 * HOURS, 10);
+	pub const DefaultBlocksPerRound: u32 = prod_or_fast!(2 * HOURS, 10);
 	/// Rounds before the collator leaving the candidates request can be executed
 	pub const LeaveCandidatesDelay: u32 = 84;
 	/// Rounds before the candidate bond increase/decrease can be executed
@@ -990,7 +991,7 @@ parameter_types! {
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
-	pub const MinSelectedCandidates: u32 = prod_or_test!(16,6);
+	pub const MinSelectedCandidates: u32 = prod_or_fast!(16,6);
 	/// Maximum top delegations per candidate
 	pub const MaxTopDelegationsPerCandidate: u32 = 300;
 	/// Maximum bottom delegations per candidate
@@ -1008,7 +1009,7 @@ parameter_types! {
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 50 * BNCS;
 	pub AllowInflation: bool = false;
-	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_test!(vec![
+	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_fast!(vec![
 		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
 		hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
 		hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
@@ -1426,7 +1427,7 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const BlocksPerRound: u32 = prod_or_fast!(1500, 50);
 	pub const MaxTokenLen: u32 = 500;
 	pub const MaxFarmingPoolIdLen: u32 = 100;
 }
@@ -1786,7 +1787,7 @@ impl leverage_staking::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ClearingDuration: u32 = 7 * DAYS;
+	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
 	pub const NameLengthLimit: u32 = 20;
 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }

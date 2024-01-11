@@ -78,7 +78,7 @@ pub use bifrost_primitives::{
 	GLMR_TOKEN_ID,
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
+	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -103,6 +103,7 @@ use zenlink_protocol::{
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use polkadot_runtime_common::prod_or_fast;
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -1258,7 +1259,7 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const BlocksPerRound: u32 = prod_or_fast!(1500, 50);
 	pub const MaxTokenLen: u32 = 500;
 	pub const MaxFarmingPoolIdLen: u32 = 100;
 }
@@ -1594,7 +1595,7 @@ impl leverage_staking::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ClearingDuration: u32 = 7 * DAYS;
+	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
 	pub const NameLengthLimit: u32 = 20;
 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
