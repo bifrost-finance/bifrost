@@ -1,0 +1,45 @@
+[package]
+name = "emulated-integration-tests-common"
+version = "1.0.0"
+authors = ["hqwangningbo <2536935847@qq.com>"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Common resources for integration testing with xcm-emulator"
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+paste = { workspace = true }
+serde_json = { workspace = true }
+
+# Substrate
+sc-consensus-grandpa = { workspace = true }
+sp-authority-discovery = { workspace = true }
+sp-runtime = { workspace = true }
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-consensus-babe = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-balances = {workspace = true }
+pallet-message-queue = { workspace = true }
+pallet-im-online = { workspace = true}
+sp-consensus-beefy = { workspace = true }
+
+# Polkadot
+polkadot-service = { workspace = true, features = ["full-node"] }
+polkadot-primitives = { workspace = true}
+polkadot-runtime-parachains = { workspace = true }
+xcm = { workspace = true}
+pallet-xcm = { workspace = true}
+
+# Cumulus
+parachains-common = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+xcm-emulator = { workspace = true}
+cumulus-pallet-xcmp-queue = { workspace = true}
+cumulus-pallet-parachain-system = { workspace = true }
+asset-test-utils = { workspace = true }
+
+# Bridges
+bp-messages = { workspace = true }
+pallet-bridge-messages = { workspace = true }
+bridge-runtime-common = { workspace = true }

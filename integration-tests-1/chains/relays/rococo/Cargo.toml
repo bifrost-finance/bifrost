@@ -1,0 +1,29 @@
+[package]
+name = "rococo-emulated-chain"
+version = "0.0.0"
+authors = ["hqwangningbo <2536935847@qq.com>"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Rococo emulated chain"
+publish = false
+
+[dependencies]
+serde_json = "1.0.104"
+
+# Substrate
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-authority-discovery = { workspace = true }
+sp-consensus-babe = { workspace = true }
+sp-consensus-beefy = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
+pallet-im-online = { workspace = true }
+
+# Polkadot
+polkadot-primitives = { workspace = true }
+rococo-runtime-constants = { workspace = true }
+rococo-runtime = { workspace = true }
+
+# Cumulus
+parachains-common = { workspace = true }
+emulated-integration-tests-common = { workspace = true }

@@ -16,12 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use assets_common::matching::{FromSiblingParachain, IsForeignConcreteAsset};
+use parachains_common::impls::ToStakingPot;
+use parachains_common::westend::currency::CENTS;
+use bifrost_primitives::BNC;
+use frame_support::pallet_prelude::PalletInfoAccess;
+use xcm_builder::LocalMint;
+use xcm_builder::StartsWith;
+use xcm_builder::UsingComponents;
+use westend_runtime_constants::system_parachain;
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
-use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
+use polkadot_runtime_common::xcm_sender::{ExponentialPrice, NoPriceForMessageDelivery};
 use frame_support::{
 	ensure, parameter_types,
 	sp_runtime::traits::{CheckedConversion, Convert},
@@ -39,6 +48,7 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
+use xcm_builder::{NetworkExportTableItem, NetworkExportTable, NoChecking, WithComputedOrigin, DenyReserveTransferToRelayChain, XcmFeeToAccount, XcmFeeManagerFromComponents, FungiblesAdapter, HashedDescription, DescribeFamily, DescribeAllTerminal};
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 
 // orml imports
@@ -54,9 +64,10 @@ use orml_traits::{
 };
 pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use pallet_xcm::XcmPassthrough;
+use parachains_common::xcm_config::{AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem, RelayOrOtherSystemParachains};
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
+use xcm_builder::{Account32Hash, AllowExplicitUnpaidExecutionFrom, GlobalConsensusParachainConvertsFor, StartsWithExplicitGlobalConsensus, TrailingSetTopicAsId, WithUniqueTopic};
 use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
@@ -244,7 +255,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 
 parameter_types! {
 	pub const KsmLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+	pub const RelayNetwork: NetworkId = NetworkId::Westend;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub SelfParaChainId: CumulusParaId = ParachainInfo::parachain_id();
 	pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
@@ -260,9 +271,17 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
-	// TODO: Generate remote accounts according to polkadot standards
-	// Derives a private `Account32` by hashing `("multiloc", received multilocation)`
-	Account32Hash<RelayNetwork, AccountId>,
+	// Foreign locations alias into accounts according to a hash of their standard description.
+	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
+	// Different global consensus parachain sovereign account.
+	// (Used for over-bridge transfers and reserve processing)
+	GlobalConsensusParachainConvertsFor<UniversalLocation, AccountId>,
+);
+
+pub type ForeignCreatorsSovereignAccountOf = (
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	AccountId32Aliases<RelayNetwork, AccountId>,
+	ParentIsPreset<AccountId>,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `RuntimeOrigin`
@@ -293,6 +312,15 @@ parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
+		pub const WestendLocation: MultiLocation = MultiLocation::parent();
+
+	pub tLocation: MultiLocation = MultiLocation::new(2, X3(GlobalConsensus(NetworkId::Rococo), Parachain(2030), Junction::from(BoundedVec::try_from(BNC.encode()).unwrap())));
+	pub bncLocation: MultiLocation = MultiLocation::new(0, X1(Junction::from(BoundedVec::try_from(BNC.encode()).unwrap())));
+	pub UniversalLocationNetworkId: NetworkId = UniversalLocation::get().global_consensus().unwrap();
+	pub ForeignAssetsPalletLocation: MultiLocation =
+		PalletInstance(<ForeignAssets as PalletInfoAccess>::index() as u8).into();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(westend_runtime_constants::TREASURY_PALLET_ID)).into();
 }
 
 match_types! {
@@ -359,18 +387,77 @@ impl<T: Contains<MultiLocation>> ShouldExecute for AllowTopLevelPaidExecutionDes
 	}
 }
 
-pub type Barrier = TrailingSetTopicAsId<(
-	// Weight that is paid for may be consumed.
-	TakeWeightCredit,
-	// Expected responses are OK.
-	AllowKnownQueryResponses<PolkadotXcm>,
-	// If the message is one that immediately attemps to pay for execution, then allow it.
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	// Subscriptions for version tracking are OK.
-	AllowSubscriptionsFrom<Everything>,
-	// Barrier allowing a top level paid message with DescendOrigin instruction
-	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
-)>;
+pub struct AllXcm<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllXcm<T> {
+	fn should_execute<Call>(
+		origin: &MultiLocation,
+		message: &mut [Instruction<Call>],
+		max_weight: Weight,
+		_weight_credit: &mut Properties,
+	) -> Result<(), ProcessMessageError> {
+		log::debug!(
+			target: "xcm::barriers",
+			"AllXcm origin:
+			{:?}, message: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, message, max_weight, _weight_credit,
+		);
+		Ok(())
+	}
+}
+
+// pub type Barrier = TrailingSetTopicAsId<(
+// 	// Weight that is paid for may be consumed.
+// 	TakeWeightCredit,
+// 	// Expected responses are OK.
+// 	AllowKnownQueryResponses<PolkadotXcm>,
+// 	// If the message is one that immediately attemps to pay for execution, then allow it.
+// 	AllowTopLevelPaidExecutionFrom<Everything>,
+// 	// Subscriptions for version tracking are OK.
+// 	AllowSubscriptionsFrom<Everything>,
+// 	// Barrier allowing a top level paid message with DescendOrigin instruction
+// 	AllowTopLevelPaidExecutionDescendOriginFirst<Everything>,
+// 	AllowExplicitUnpaidExecutionFrom<(
+// 		Equals<bridging::SiblingBridgeHub>,
+// 	)>,
+// )>;
+
+match_types! {
+	pub type ParentOrParentsPlurality: impl Contains<MultiLocation> = {
+		MultiLocation { parents: 1, interior: Here } |
+		MultiLocation { parents: 1, interior: X1(Plurality { .. }) }
+	};
+}
+
+pub type Barrier = TrailingSetTopicAsId<
+	xcm_builder::DenyThenTry<
+		DenyReserveTransferToRelayChain,
+		(
+			AllXcm<Everything>,
+			TakeWeightCredit,
+			// Expected responses are OK.
+			AllowKnownQueryResponses<PolkadotXcm>,
+			// Allow XCMs with some computed origins to pass through.
+			WithComputedOrigin<
+				(
+					// If the message is one that immediately attempts to pay for execution, then
+					// allow it.
+					AllowTopLevelPaidExecutionFrom<Everything>,
+					// Parent, its pluralities (i.e. governance bodies), relay treasury pallet and
+					// BridgeHub get free execution.
+					AllowExplicitUnpaidExecutionFrom<(
+						ParentOrParentsPlurality,
+						Equals<RelayTreasuryLocation>,
+						Equals<bridging::SiblingBridgeHub>,
+					)>,
+					// Subscriptions for version tracking are OK.
+					AllowSubscriptionsFrom<Everything>,
+				),
+				UniversalLocation,
+				ConstU32<8>,
+			>,
+		),
+	>,
+>;
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
@@ -383,8 +470,66 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	DepositToAlternative<BifrostTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
+/// Means for transacting the native currency on this chain.
+pub type CurrencyTransactor = CurrencyAdapter<
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<bncLocation>,
+	// Convert an XCM MultiLocation into a local account id:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We don't track any teleports of `Balances`.
+	(),
+>;
+
+// `AssetId/Balance` converter for `TrustBackedAssets`
+// pub type TrustBackedAssetsConvertedConcreteId =
+// assets_common::TrustBackedAssetsConvertedConcreteId<TrustBackedAssetsPalletLocation, Balance>;
+//
+// /// `AssetId/Balance` converter for `TrustBackedAssets`
+// pub type ForeignAssetsConvertedConcreteId = assets_common::ForeignAssetsConvertedConcreteId<
+// 	(
+// 		// Ignore `TrustBackedAssets` explicitly
+// 		StartsWith<TrustBackedAssetsPalletLocation>,
+// 		// Ignore asset which starts explicitly with our `GlobalConsensus(NetworkId)`, means:
+// 		// - foreign assets from our consensus should be: `MultiLocation {parents: 1,
+// 		//   X*(Parachain(xyz), ..)}
+// 		// - foreign assets outside our consensus with the same `GlobalConsensus(NetworkId)` wont
+// 		//   be accepted here
+// 		StartsWithExplicitGlobalConsensus<UniversalLocationNetworkId>,
+// 	),
+// 	Balance,
+// >;
+
+// Means for transacting foreign assets from different global consensus.
+// pub type ForeignFungiblesTransactor = FungiblesAdapter<
+// 	// Use this fungibles implementation:
+// 	ForeignAssets,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	ForeignAssetsConvertedConcreteId,
+// 	// Convert an XCM MultiLocation into a local account id:
+// 	LocationToAccountId,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// 	// We dont need to check teleports here.
+// 	NoChecking,
+// 	// The account to use for tracking teleports.
+// 	CheckingAccount,
+// >;
+
+// Means for transacting assets on this chain.
+pub type AssetTransactors = (CurrencyTransactor, BifrostAssetTransactor);
+
+
 parameter_types! {
+	pub const BaseDeliveryFee: u128 = CENTS.saturating_mul(3);
+	pub FeeAssetId: AssetId = Concrete(xcm_config::WestendLocation::get());
+	pub XcmAssetFeesReceiver: Option<AccountId> = Authorship::author();
+	pub kPerSecond: (AssetId, u128, u128) = (MultiLocation::new(2, X3(GlobalConsensus(NetworkId::Rococo), Parachain(2030), Junction::from(BoundedVec::try_from(BNC.encode()).unwrap()))).into(), ksm_per_second::<Runtime>(),0);
 	pub KsmPerSecond: (AssetId, u128, u128) = (MultiLocation::parent().into(), ksm_per_second::<Runtime>(),0);
+	// pub DotPerSecond: (AssetId, u128, u128) = (MultiLocation::new(2, X1(GlobalConsensus(NetworkId::Rococo))).into(), ksm_per_second::<Runtime>() / 10, 0u128);
 	pub VksmPerSecond: (AssetId, u128,u128) = (
 		MultiLocation::new(
 			0,
@@ -534,6 +679,8 @@ pub type Trader = (
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<MovrPerSecond, ToTreasury>,
+	// FixedRateOfFungible<DotPerSecond, ToTreasury>,
+	FixedRateOfFungible<kPerSecond, ToTreasury>,
 	FixedRateOfAsset<Runtime, BasePerSecond, ToTreasury>,
 );
 
@@ -652,15 +799,43 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
+/// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
+///
+/// - ROC with the parent Relay Chain and sibling system parachains; and
+/// - Sibling parachains' assets from where they originate (as `ForeignCreators`).
+pub type TrustedTeleporters = (
+	IsConcrete<bncLocation>,
+	ConcreteAssetFromSystem<TokenLocation>,
+	IsForeignConcreteAsset<FromSiblingParachain<parachain_info::Pallet<Runtime>>>,
+);
+
+match_types! {
+	pub type SystemParachains: impl Contains<MultiLocation> = {
+		MultiLocation {
+			parents: 1,
+			interior: X1(Parachain(
+				system_parachain::ASSET_HUB_ID |
+				system_parachain::BRIDGE_HUB_ID
+			)),
+		}
+	};
+}
+
+/// Locations that will not be charged fees in the executor,
+/// either execution or delivery.
+/// We only waive fees for system functions, which these locations represent.
+pub type WaivedLocations = (RelayOrOtherSystemParachains<SystemParachains, Runtime>, Equals<RelayTreasuryLocation>);
+
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
-	type AssetTransactor = BifrostAssetTransactor;
+	type AssetTransactor = AssetTransactors;
 	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
-	type IsTeleporter = ();
+	type IsReserve = (bridging::to_rococo::IsTrustedBridgedReserveLocationForConcreteAsset,);
+	type IsTeleporter = Everything;
 	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = PolkadotXcm;
@@ -670,12 +845,15 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = ConstU32<8>;
-	type UniversalAliases = Nothing;
+	type UniversalAliases = (bridging::to_rococo::UniversalAliases,);
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = SafeCallFilter;
+	type SafeCallFilter = Everything;
 	type AssetLocker = ();
 	type AssetExchanger = ();
-	type FeeManager = ();
+	type FeeManager = XcmFeeManagerFromComponents<
+		WaivedLocations,
+		XcmFeeToAccount<Self::AssetTransactor, AccountId, BifrostTreasuryAccount>,
+	>;
 	type MessageExporter = ();
 	type Aliasers = Nothing;
 }
@@ -683,14 +861,24 @@ impl xcm_executor::Config for XcmConfig {
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
-/// The means for routing XCM messages which are not for local execution into the right message
-/// queues.
-pub type XcmRouter = (
+pub type PriceForParentDelivery =  ExponentialPrice<FeeAssetId, BaseDeliveryFee, TransactionByteFee, ParachainSystem>;
+
+/// For routing XCM messages which do not cross local consensus boundary.
+type LocalXcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, PriceForParentDelivery>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
+
+/// The means for routing XCM messages which are not for local execution into the right message
+/// queues.
+pub type XcmRouter = WithUniqueTopic<(
+	LocalXcmRouter,
+	// Router which wraps and sends xcm to BridgeHub to be delivered to the Westend
+	// GlobalConsensus
+	ToRococoXcmRouter,
+)>;
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
@@ -703,7 +891,7 @@ impl pallet_xcm::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	#[cfg(feature = "runtime-benchmarks")]
 	type XcmExecutor = bifrost_primitives::DoNothingExecuteXcm;
 	#[cfg(not(feature = "runtime-benchmarks"))]
@@ -713,7 +901,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmRouter = XcmRouter;
-	type XcmTeleportFilter = Nothing;
+	type XcmTeleportFilter = Everything;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -851,6 +1039,7 @@ impl orml_tokens::Config for Runtime {
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub const TokenLocation: MultiLocation = MultiLocation::parent();
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -911,4 +1100,130 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type ParachainId = SelfParaChainId;
 	type CallBackTimeOut = ConstU32<10>;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+}
+
+/// All configuration related to bridging
+pub mod bridging {
+	use super::*;
+	use assets_common::matching;
+	use sp_std::collections::btree_set::BTreeSet;
+
+	parameter_types! {
+		/// Base price of every byte of the Westend -> Rococo message. Can be adjusted via
+		/// governance `set_storage` call.
+		///
+		/// Default value is our estimation of the:
+		///
+		/// 1) an approximate cost of XCM execution (`ExportMessage` and surroundings) at Westend bridge hub;
+		///
+		/// 2) the approximate cost of Westend -> Rococo message delivery transaction on Rococo Bridge Hub,
+		///    converted into WNDs using 1:1 conversion rate;
+		///
+		/// 3) the approximate cost of Westend -> Rococo message confirmation transaction on Westend Bridge Hub.
+		pub storage XcmBridgeHubRouterBaseFee: Balance =
+			bp_bridge_hub_westend::BridgeHubWestendBaseXcmFeeInWnds::get()
+				.saturating_add(bp_bridge_hub_rococo::BridgeHubRococoBaseDeliveryFeeInRocs::get())
+				.saturating_add(bp_bridge_hub_westend::BridgeHubWestendBaseConfirmationFeeInWnds::get());
+		/// Price of every byte of the Westend -> Rococo message. Can be adjusted via
+		/// governance `set_storage` call.
+		pub storage XcmBridgeHubRouterByteFee: Balance = TransactionByteFee::get();
+
+		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_westend::BRIDGE_HUB_WESTEND_PARACHAIN_ID;
+		pub SiblingBridgeHub: MultiLocation = MultiLocation::new(1, X1(Parachain(SiblingBridgeHubParaId::get())));
+		/// Router expects payment with this `AssetId`.
+		/// (`AssetId` has to be aligned with `BridgeTable`)
+		pub XcmBridgeHubRouterFeeAssetId: AssetId = WestendLocation::get().into();
+
+		pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> =
+			sp_std::vec::Vec::new().into_iter()
+			.chain(to_rococo::BridgeTable::get())
+			.collect();
+	}
+
+	pub type NetworkExportTable = xcm_builder::NetworkExportTable<BridgeTable>;
+
+	pub mod to_rococo {
+		use super::*;
+
+		parameter_types! {
+			pub SiblingBridgeHubWithBridgeHubRococoInstance: MultiLocation = MultiLocation::new(
+				1,
+				X2(
+					Parachain(SiblingBridgeHubParaId::get()),
+					PalletInstance(bp_bridge_hub_westend::WITH_BRIDGE_WESTEND_TO_ROCOCO_MESSAGES_PALLET_INDEX)
+				)
+			);
+
+			pub const RococoNetwork: NetworkId = NetworkId::Rococo;
+			pub BifrostPolkadot: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(RococoNetwork::get()), Parachain(2030)));
+			pub RocLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(RococoNetwork::get())));
+			pub BncLocation: MultiLocation = MultiLocation::new(2, X3(GlobalConsensus(RococoNetwork::get()), Parachain(2030), Junction::from(BoundedVec::try_from(BNC.encode()).unwrap())));
+
+			pub BncFromBifrostPolkadot: (MultiAssetFilter, MultiLocation) = (
+				Wild(AllOf { fun: WildFungible, id: Concrete(BncLocation::get()) }),
+				BifrostPolkadot::get()
+			);
+
+			pub DotFromBifrostPolkadot: (MultiAssetFilter, MultiLocation) = (
+				Wild(AllOf { fun: WildFungible, id: Concrete(RocLocation::get()) }),
+				BifrostPolkadot::get()
+			);
+
+			/// Set up exporters configuration.
+			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
+			/// 要不然bridge hub失败
+			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
+				NetworkExportTableItem::new(
+					RococoNetwork::get(),
+					Some(sp_std::vec![
+						BifrostPolkadot::get().interior.split_global().expect("invalid configuration for BifrostPolkadot").1,
+					]),
+					// None,
+					SiblingBridgeHub::get(),
+					// base delivery fee to local `BridgeHub`
+					Some((
+						XcmBridgeHubRouterFeeAssetId::get(),
+						XcmBridgeHubRouterBaseFee::get(),
+					).into())
+				)
+			];
+
+			/// Universal aliases
+			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
+				sp_std::vec![
+					(SiblingBridgeHubWithBridgeHubRococoInstance::get(), GlobalConsensus(RococoNetwork::get()))
+				]
+			);
+		}
+
+		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
+			fn contains(alias: &(MultiLocation, Junction)) -> bool {
+				UniversalAliases::get().contains(alias)
+			}
+		}
+
+		/// Reserve locations filter for `xcm_executor::Config::IsReserve`.
+		/// Locations from which the runtime accepts reserved assets.
+		pub type IsTrustedBridgedReserveLocationForConcreteAsset =
+		matching::IsTrustedBridgedReserveLocationForConcreteAsset<
+			UniversalLocation,
+			(
+				// allow receive BNC from BifrostPolkadot
+				xcm_builder::Case<BncFromBifrostPolkadot>,
+				// and nothing else
+				xcm_builder::Case<DotFromBifrostPolkadot>,
+			),
+		>;
+
+		impl Contains<RuntimeCall> for ToRococoXcmRouter {
+			fn contains(call: &RuntimeCall) -> bool {
+				matches!(
+					call,
+					RuntimeCall::ToRococoXcmRouter(
+						pallet_xcm_bridge_hub_router::Call::report_bridge_status { .. }
+					)
+				)
+			}
+		}
+	}
 }

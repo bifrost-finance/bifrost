@@ -1,0 +1,34 @@
+[package]
+name = "asset-hub-rococo-integration-tests"
+version = "1.0.0"
+authors = ["hqwangningbo <2536935847@qq.com>"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Asset Hub Rococo runtime integration tests with xcm-emulator"
+publish = false
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+assert_matches = "1.5.0"
+
+# Substrate
+sp-runtime = { workspace = true}
+frame-support = { workspace = true}
+pallet-balances = { workspace = true}
+pallet-assets = { workspace = true}
+pallet-asset-conversion = { workspace = true}
+pallet-message-queue = { workspace = true }
+
+# Polkadot
+xcm = { workspace = true}
+pallet-xcm = { workspace = true}
+xcm-executor = { workspace = true}
+rococo-runtime = { workspace = true }
+
+# Cumulus
+asset-test-utils = { workspace = true }
+parachains-common = { workspace = true }
+asset-hub-rococo-runtime = { workspace = true }
+emulated-integration-tests-common = { workspace = true }
+penpal-runtime = { workspace = true }
+rococo-system-emulated-network = { workspace = true }

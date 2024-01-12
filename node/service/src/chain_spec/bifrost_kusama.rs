@@ -137,13 +137,13 @@ pub fn bifrost_genesis(
 		"balances": {
 			"balances": balances
 		},
-		// "council_membership": {
+		// "councilMembership": {
 		// 	"members": council_membership
 		// },
-		// "technical_membership": {
+		// "technicalMembership": {
 		// 	"members": technical_committee_membership
 		// },
-		// "oracle_membership": {
+		// "oracleMembership": {
 		// 	"members": oracle_membership
 		// },
 		"parachainInfo": {
@@ -168,11 +168,11 @@ pub fn bifrost_genesis(
 		// "tokens": {
 		// 	"balances": tokens
 		// },
-		// "asset_registry": {
-		// 	"currency": asset_registry.0,
-		// 	"vcurrency": asset_registry.1,
-		// 	"vsbond": asset_registry.2,
-		// },
+		"assetRegistry": {
+			"currency": asset_registry.0,
+			"vcurrency": asset_registry.1,
+			"vsbond": asset_registry.2,
+		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(3),
 		},
@@ -184,7 +184,10 @@ pub fn bifrost_genesis(
 				.collect::<Vec<_>>(),
 			"delegations": delegations,
 			"inflationConfig": inflation_config(),
-		}
+		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+		},
 	})
 }
 

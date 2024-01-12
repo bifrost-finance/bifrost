@@ -46,8 +46,8 @@ use zenlink_protocol::AssetBalance;
 pub mod weights;
 pub use weights::WeightInfo;
 
-#[cfg(test)]
-mod mock;
+// #[cfg(test)]
+// mod mock;
 
 #[cfg(test)]
 mod tests;

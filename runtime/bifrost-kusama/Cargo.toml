@@ -24,6 +24,7 @@ frame-system = { workspace = true }
 frame-system-benchmarking = { workspace = true, optional = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
+pallet-assets = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
@@ -43,6 +44,7 @@ pallet-ranked-collective = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
+pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -72,12 +74,22 @@ cumulus-pallet-aura-ext = { workspace = true }
 cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
-cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true, features = ["bridging"] }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
 parachains-common = { workspace = true }
 parachain-info = { workspace = true }
+westend-runtime-constants = { workspace = true }
+
+# Bridges
+pallet-xcm-bridge-hub-router = { workspace = true }
+bp-asset-hub-rococo = { workspace = true }
+bp-asset-hub-westend = { workspace = true }
+bp-bridge-hub-rococo = { workspace = true }
+bp-bridge-hub-westend = { workspace = true }
+#pallet-asset-conversion = { workspace = true }
+assets-common = { workspace = true }
 
 # Polkadot dependencies
 pallet-xcm = { workspace = true }
@@ -159,6 +171,7 @@ std = [
 	"frame-system/std",
 	"frame-system-benchmarking?/std",
 	"frame-try-runtime/std",
+	"pallet-assets/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
@@ -178,6 +191,7 @@ std = [
 	"pallet-referenda/std",
 	"pallet-scheduler/std",
 	"pallet-session/std",
+	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -209,6 +223,7 @@ std = [
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
+	"westend-runtime-constants/std",
 	"parachain-info/std",
 
 	"pallet-xcm/std",
@@ -218,6 +233,13 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+
+	"assets-common/std",
+	"pallet-xcm-bridge-hub-router/std",
+	"bp-asset-hub-rococo/std",
+	"bp-asset-hub-westend/std",
+	"bp-bridge-hub-rococo/std",
+	"bp-bridge-hub-westend/std",
 
 	"orml-tokens/std",
 	"orml-traits/std",

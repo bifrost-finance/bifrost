@@ -28,6 +28,9 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
+use assets_common::foreign_creators::ForeignCreators;
+use assets_common::matching::FromSiblingParachain;
+use assets_common::MultiLocationForAssetId;
 // A few exports that help ease life for downstream crates.
 pub use bifrost_parachain_staking::{InflationInfo, Range};
 pub use frame_support::{
@@ -50,15 +53,9 @@ pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
 use sp_core::{ConstBool, OpaqueMetadata};
-use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
-	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, StaticLookup, Zero,
-	},
-	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
-	SaturatedConversion,
-};
+use sp_runtime::{create_runtime_str, generic, impl_opaque_keys, traits::{
+	AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, StaticLookup, Zero,
+}, transaction_validity::{TransactionSource, TransactionValidity}, ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug, SaturatedConversion, codec};
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -94,7 +91,7 @@ use frame_support::{
 };
 use frame_support::genesis_builder_helper::{build_config, create_default_config};
 use frame_support::traits::tokens::{PayFromAccount, UnityAssetBalanceConversion};
-use frame_support::traits::TransformOrigin;
+use frame_support::traits::{AsEnsureOriginWithArg, Equals, TransformOrigin};
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
@@ -117,7 +114,8 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
-use pallet_xcm::{EnsureResponse, QueryStatus};
+use pallet_xcm::{EnsureResponse, EnsureXcm, QueryStatus};
+use parachains_common::AssetIdForTrustBackedAssets;
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use sp_runtime::traits::IdentityLookup;
@@ -128,7 +126,7 @@ pub use xcm_config::{
 	XcmConfig, XcmRouter,
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
-use crate::xcm_config::XcmOriginToTransactDispatchOrigin;
+use crate::xcm_config::{ForeignCreatorsSovereignAccountOf, XcmOriginToTransactDispatchOrigin};
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -1013,6 +1011,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 	type WeightInfo = ();
+	type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
 }
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
@@ -1928,6 +1927,96 @@ where
 	}
 }
 
+/// XCM router instance to BridgeHub with bridging capabilities for `Rococo` global
+/// consensus with dynamic fees and back-pressure.
+pub type ToRococoXcmRouterInstance = pallet_xcm_bridge_hub_router::Instance1;
+impl pallet_xcm_bridge_hub_router::Config<ToRococoXcmRouterInstance> for Runtime {
+	type WeightInfo = ();
+
+	type UniversalLocation = xcm_config::UniversalLocation;
+	type BridgedNetworkId = xcm_config::bridging::to_rococo::RococoNetwork;
+	type Bridges = xcm_config::bridging::NetworkExportTable;
+
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type BridgeHubOrigin = EnsureXcm<Equals<xcm_config::bridging::SiblingBridgeHub>>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BridgeHubOrigin = frame_support::traits::EitherOfDiverse<
+		// for running benchmarks
+		EnsureRoot<AccountId>,
+		// for running tests with `--feature runtime-benchmarks`
+		EnsureXcm<Equals<xcm_config::bridging::SiblingBridgeHub>>,
+	>;
+
+	type ToBridgeHubSender = XcmpQueue;
+	type WithBridgeHubChannel =
+	cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
+		xcm_config::bridging::SiblingBridgeHubParaId,
+		Runtime,
+	>;
+
+	type ByteFee = xcm_config::bridging::XcmBridgeHubRouterByteFee;
+	type FeeAsset = xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
+}
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 1_000_000_000_000 / 10; // 1 / 10 UNITS deposit to create asset
+	pub AssetAccountDeposit: Balance = deposit::<Runtime>(1, 16);
+	pub const ApprovalDeposit: Balance = 1_000_000_000_000 / 10;
+	pub const AssetsStringLimit: u32 = 50;
+	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
+	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
+	pub MetadataDepositBase: Balance = deposit::<Runtime>(1, 68);
+	pub MetadataDepositPerByte: Balance = deposit::<Runtime>(0, 1);
+	// we just reuse the same deposits
+	pub const ForeignAssetsAssetDeposit: Balance = AssetDeposit::get();
+	pub ForeignAssetsAssetAccountDeposit: Balance = deposit::<Runtime>(1, 16);
+	pub const ForeignAssetsApprovalDeposit: Balance = ApprovalDeposit::get();
+	pub const ForeignAssetsAssetsStringLimit: u32 = AssetsStringLimit::get();
+	pub ForeignAssetsMetadataDepositBase: Balance = deposit::<Runtime>(1, 68);
+	pub ForeignAssetsMetadataDepositPerByte: Balance = deposit::<Runtime>(0, 1);
+}
+
+/// We allow root to execute privileged asset operations.
+pub type AssetsForceOrigin = EnsureRoot<AccountId>;
+
+/// Assets managed by some foreign location. Note: we do not declare a `ForeignAssetsCall` type, as
+/// this type is used in proxy definitions. We assume that a foreign location would not want to set
+/// an individual, local account as a proxy for the issuance of their assets. This issuance should
+/// be managed by the foreign location's governance.
+pub type ForeignAssetsInstance = pallet_assets::Instance2;
+impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = MultiLocationForAssetId;
+	type AssetIdParameter = MultiLocationForAssetId;
+	type Currency = Balances;
+	type CreateOrigin = ForeignCreators<
+		(FromSiblingParachain<parachain_info::Pallet<Runtime>>,),
+		ForeignCreatorsSovereignAccountOf,
+		AccountId,
+	>;
+	type ForceOrigin = AssetsForceOrigin;
+	type AssetDeposit = ForeignAssetsAssetDeposit;
+	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
+	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
+	type ApprovalDeposit = ForeignAssetsApprovalDeposit;
+	type StringLimit = ForeignAssetsAssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = ();
+	type CallbackHandle = ();
+	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
+	type RemoveItemsLimit = ConstU32<1000>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = xcm_config::XcmBenchmarkHelper;
+}
+
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = ();
+}
+
 // zenlink runtime end
 
 construct_runtime! {
@@ -1938,6 +2027,7 @@ construct_runtime! {
 		Indices: pallet_indices = 2,
 		ParachainSystem: cumulus_pallet_parachain_system = 5,
 		ParachainInfo: parachain_info = 6,
+		Sudo: pallet_sudo = 7,
 
 		// Monetary stuff
 		Balances: pallet_balances = 10,
@@ -1974,6 +2064,9 @@ construct_runtime! {
 		Proxy: pallet_proxy = 52,
 		Multisig: pallet_multisig = 53,
 		Identity: pallet_identity = 54,
+
+		ToRococoXcmRouter: pallet_xcm_bridge_hub_router::<Instance1> = 55,
+		ForeignAssets: pallet_assets::<Instance2> = 56,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: bifrost_vesting = 60,

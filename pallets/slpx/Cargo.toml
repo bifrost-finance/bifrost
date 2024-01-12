@@ -45,6 +45,7 @@ xcm-builder = { workspace = true }
 pallet-xcm  = { workspace = true }
 xcm-simulator  = { workspace = true }
 bifrost-runtime-common = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
 pallet-collective = { workspace = true }
 parachain-info = { workspace = true }
 

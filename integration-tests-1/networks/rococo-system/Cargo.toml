@@ -1,0 +1,17 @@
+[package]
+name = "rococo-system-emulated-network"
+version = "0.0.0"
+authors = ["hqwangningbo <2536935847@qq.com>"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Rococo System emulated network"
+publish = false
+
+[dependencies]
+# Cumulus
+emulated-integration-tests-common = { workspace = true }
+rococo-emulated-chain = { workspace = true }
+asset-hub-rococo-emulated-chain = { workspace = true }
+bifrost-polkadot-emulated-chain = { workspace = true }
+bridge-hub-rococo-emulated-chain = { workspace = true }
+penpal-emulated-chain = { workspace = true }
