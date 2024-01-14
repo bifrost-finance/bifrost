@@ -721,7 +721,7 @@ pub mod pallet {
 					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
 						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
 					}
-					let _ = DelegatorVotes::<T>::remove(vtoken, poll_index);
+					DelegatorVotes::<T>::remove(vtoken, poll_index);
 					DelegatorVotes::<T>::try_mutate(
 						vtoken,
 						poll_index,
