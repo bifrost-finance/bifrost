@@ -721,7 +721,7 @@ pub mod pallet {
 					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
 						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
 					}
-					let _ = DelegatorVotes::<T>::clear(u32::MAX, None);
+					let _ = DelegatorVotes::<T>::remove(vtoken, poll_index);
 					DelegatorVotes::<T>::try_mutate(
 						vtoken,
 						poll_index,
@@ -796,7 +796,7 @@ pub mod pallet {
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
-					let _ = DelegatorVotes::<T>::clear(u32::MAX, None);
+					DelegatorVotes::<T>::remove(vtoken, poll_index);
 				}
 				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
