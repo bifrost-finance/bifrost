@@ -1046,6 +1046,115 @@ fn compute_delegator_total_vote_works() {
 		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 4)), Ok(nay(80, 0)));
 		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 5)), Ok(nay(100, 0)));
 		assert_eq!(VtokenVoting::compute_delegator_total_vote(vtoken, nay(2, 6)), Ok(nay(120, 0)));
+
+		SimpleVTokenSupplyProvider::set_token_supply(10_000_000);
+		assert_eq!(VtokenVoting::vote_cap(vtoken), Ok(1_000_000));
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(1_000_000, 0)),
+			Ok(aye(1_000_000, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(
+					vtoken,
+					aye(10_000_000 * i as Balance, 0)
+				),
+				Ok(aye(1_000_000, i))
+			);
+		}
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(100_000, 1)),
+			Ok(aye(1_000_000, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(
+					vtoken,
+					aye(1_000_000 * i as Balance, 1)
+				),
+				Ok(aye(1_000_000, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(6_000_006, 1)),
+			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(50_000, 2)),
+			Ok(aye(1_000_000, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(vtoken, aye(500_000 * i as Balance, 2)),
+				Ok(aye(1_000_000, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(3_000_003, 2)),
+			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(33_333, 3)),
+			Ok(aye(999_990, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(vtoken, aye(333_333 * i as Balance, 3)),
+				Ok(aye(999_999, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(2_000_002, 3)),
+			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(25_000, 4)),
+			Ok(aye(1_000_000, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(vtoken, aye(250_000 * i as Balance, 4)),
+				Ok(aye(1_000_000, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(1_500_002, 4)),
+			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(20_000, 5)),
+			Ok(aye(1_000_000, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(vtoken, aye(200_000 * i as Balance, 5)),
+				Ok(aye(1_000_000, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(1_200_002, 5)),
+			Error::<Runtime>::InsufficientFunds
+		);
+
+		assert_eq!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(16_666, 6)),
+			Ok(aye(999_960, 0))
+		);
+		for i in 1..=6_u8 {
+			assert_eq!(
+				VtokenVoting::compute_delegator_total_vote(vtoken, aye(166_666 * i as Balance, 6)),
+				Ok(aye(999_996, i))
+			);
+		}
+		assert_noop!(
+			VtokenVoting::compute_delegator_total_vote(vtoken, aye(1_000_001, 6)),
+			Error::<Runtime>::InsufficientFunds
+		);
 	});
 }
 
@@ -1063,19 +1172,67 @@ fn allocate_delegator_votes_works() {
 	new_test_ext().execute_with(|| {
 		let vtoken = VKSM;
 		let poll_index = 3;
-		let vote = aye(5e9 as Balance, 2);
 
-		let delegator_votes = VtokenVoting::allocate_delegator_votes(vtoken, poll_index, vote);
-		assert_eq!(delegator_votes, Ok(vec![(0, aye(4294967295, 2)), (1, aye(705032705, 2))]));
-		assert_eq!(
-			delegator_votes.unwrap().into_iter().map(|(_derivative_index, vote)| vote).fold(
-				aye(0, 2),
-				|mut acc, vote| {
-					let _ = acc.checked_add(vote);
-					acc
-				},
-			),
-			vote
-		);
+		for conviction in 0..=6 {
+			let vote = aye(5e9 as Balance, conviction);
+			let delegator_votes = VtokenVoting::allocate_delegator_votes(vtoken, poll_index, vote);
+			assert_eq!(
+				delegator_votes,
+				Ok(vec![(0, aye(4294967295, conviction)), (1, aye(705032705, conviction))])
+			);
+			assert_eq!(
+				delegator_votes.unwrap().into_iter().map(|(_derivative_index, vote)| vote).fold(
+					aye(0, conviction),
+					|mut acc, vote| {
+						let _ = acc.checked_add(vote);
+						acc
+					},
+				),
+				vote
+			);
+		}
+
+		for conviction in 0..=6 {
+			let vote = aye(3e10 as Balance, conviction);
+			let delegator_votes = VtokenVoting::allocate_delegator_votes(vtoken, poll_index, vote);
+			assert_eq!(
+				delegator_votes,
+				Ok(vec![
+					(0, aye(4294967295, conviction)),
+					(1, aye(4294967295, conviction)),
+					(2, aye(4294967295, conviction)),
+					(3, aye(4294967295, conviction)),
+					(4, aye(4294967295, conviction)),
+					(5, aye(4294967295, conviction)),
+					(10, aye(4230196230, conviction))
+				])
+			);
+			assert_eq!(
+				delegator_votes.unwrap().into_iter().map(|(_derivative_index, vote)| vote).fold(
+					aye(0, conviction),
+					|mut acc, vote| {
+						let _ = acc.checked_add(vote);
+						acc
+					},
+				),
+				vote
+			);
+		}
 	});
+}
+
+#[test]
+fn tally_convert_works() {
+	assert_eq!(
+		TallyOf::<Runtime>::from_parts(10, 9, 0).account_vote(Conviction::Locked1x),
+		aye(1, 1)
+	);
+	assert_eq!(
+		TallyOf::<Runtime>::from_parts(10, 11, 0).account_vote(Conviction::Locked1x),
+		nay(1, 1)
+	);
+	assert_eq!(
+		TallyOf::<Runtime>::from_parts(10, 10, 0).account_vote(Conviction::Locked1x),
+		aye(0, 1)
+	);
 }

@@ -308,15 +308,30 @@ impl BlockNumberProvider for RelaychainDataProvider {
 	}
 }
 
+parameter_types! {
+	pub static VTokenSupply: Balance = u64::MAX.into();
+	pub static TokenSupply: Balance = u64::MAX.into();
+}
+
 pub struct SimpleVTokenSupplyProvider;
+
+impl SimpleVTokenSupplyProvider {
+	pub fn set_vtoken_supply(supply: Balance) {
+		VTokenSupply::set(supply);
+	}
+
+	pub fn set_token_supply(supply: Balance) {
+		TokenSupply::set(supply);
+	}
+}
 
 impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
 	fn get_vtoken_supply(_: CurrencyId) -> Option<Balance> {
-		Some(u64::MAX.into())
+		Some(VTokenSupply::get())
 	}
 
 	fn get_token_supply(_: CurrencyId) -> Option<Balance> {
-		Some(u64::MAX.into())
+		Some(TokenSupply::get())
 	}
 }
 
