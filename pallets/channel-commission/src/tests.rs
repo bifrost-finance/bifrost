@@ -69,6 +69,20 @@ fn set_commission_tokens_should_work() {
 #[test]
 fn register_channel_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		// set commission tokens: VKSM -> KSM
+		assert_ok!(ChannelCommission::set_commission_tokens(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			KSM,
+		));
+
+		// set commission tokens: VBNC -> BNC
+		assert_ok!(ChannelCommission::set_commission_tokens(
+			RuntimeOrigin::signed(ALICE),
+			VBNC,
+			BNC,
+		));
+
 		assert_ok!(ChannelCommission::register_channel(
 			RuntimeOrigin::signed(ALICE),
 			CHANNEL_A_NAME.to_vec(),
@@ -83,6 +97,15 @@ fn register_channel_should_work() {
 
 		// next channel id has been increased
 		assert_eq!(ChannelNextId::<Runtime>::get(), 1);
+
+		// ChannelCommissionTokenRates have been set for Channel A in both VKSM and VBNC
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VKSM), DEFAULT_COMMISSION_RATE);
+		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), DEFAULT_COMMISSION_RATE);
+
+		// ChannelVtokenShares has been initialized for Channel A in both VKSM and VBNC
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), Permill::from_percent(0));
+
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VBNC), Permill::from_percent(0));
 	});
 }
 
