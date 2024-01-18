@@ -159,4 +159,14 @@ impl<T: frame_system::Config> bifrost_channel_commission::WeightInfo for Bifrost
 			.saturating_add(Weight::from_parts(69_114, 0).saturating_mul(x.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
+
+	fn set_channel_vtoken_shares(x: u32, ) -> Weight {
+		Weight::from_parts(43_239_575, 3597)
+			.saturating_add(Weight::from_parts(5_355_920, 0).saturating_mul(x.into()))
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(x.into())))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
+			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(x.into())))
+			.saturating_add(Weight::from_parts(0, 2499).saturating_mul(x.into()))
+	}
 }
