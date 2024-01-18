@@ -60,6 +60,7 @@ pub trait WeightInfo {
 	fn set_commission_tokens() -> Weight;
 	fn claim_commissions() -> Weight;
 	fn on_initialize(x: u32, ) -> Weight;
+	fn set_channel_vtoken_shares(x: u32,) -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -168,5 +169,15 @@ impl WeightInfo for () {
 			// Standard Error: 1_765
 			.saturating_add(Weight::from_parts(58_153, 0).saturating_mul(x.into()))
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
+	}
+
+	fn set_channel_vtoken_shares(x: u32, ) -> Weight {
+		Weight::from_parts(43_239_575, 3597)
+			.saturating_add(Weight::from_parts(5_355_920, 0).saturating_mul(x.into()))
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().reads((1_u64).saturating_mul(x.into())))
+			.saturating_add(RocksDbWeight::get().writes(2_u64))
+			.saturating_add(RocksDbWeight::get().writes((1_u64).saturating_mul(x.into())))
+			.saturating_add(Weight::from_parts(0, 2499).saturating_mul(x.into()))
 	}
 }

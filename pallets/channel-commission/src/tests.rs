@@ -20,7 +20,7 @@
 
 use crate::{mock::*, *};
 use bifrost_primitives::{currency::KSM, BNC, VBNC, VKSM};
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use sp_runtime::AccountId32;
 
 const CHANNEL_A_NAME: &[u8] = b"channel_a";
@@ -480,5 +480,105 @@ fn channel_commission_distribution_with_net_mint_negative_should_work() {
 		let bifrost_commission_balance_after =
 			Currencies::free_balance(BNC, &bifrost_commission_receiver);
 		assert_eq!(bifrost_commission_balance_after, 100 - 6);
+	});
+}
+
+#[test]
+fn set_channel_vtoken_shares_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		setup();
+
+		// assure Channel A has no 0 percent in ChannelVtokenShares in VKSM
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), Permill::from_percent(0));
+
+		// set channel A's vtoken share in VKSM to 50%
+		assert_ok!(ChannelCommission::set_channel_vtoken_shares(
+			RuntimeOrigin::signed(ALICE),
+			0,
+			VKSM,
+			Permill::from_percent(50),
+		));
+
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), Permill::from_percent(50));
+
+		// set channel B's vtoken share in VKSM to 90%, it should fail because the sum of all shares
+		// should be less than or equal to 100%
+		assert_noop!(
+			ChannelCommission::set_channel_vtoken_shares(
+				RuntimeOrigin::signed(ALICE),
+				1,
+				VKSM,
+				Permill::from_percent(90),
+			),
+			Error::<Runtime>::InvalidCommissionRate
+		);
+
+		// set channel B's vtoken share in VKSM to 30%, it should be ok now
+		assert_ok!(ChannelCommission::set_channel_vtoken_shares(
+			RuntimeOrigin::signed(ALICE),
+			1,
+			VKSM,
+			Permill::from_percent(30),
+		));
+
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), Permill::from_percent(30));
+	});
+}
+
+// register a new channel base on some existing channels, and mint some tokens to see whether the
+// shares of existing channels are updated correctly.s
+#[test]
+fn register_a_new_channel_and_mint_should_update_shares_and_get_claimable_tokens() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let commission_account: AccountId =
+			<Runtime as crate::Config>::CommissionPalletId::get().into_account_truncating();
+
+		// set the block number to 35
+		System::set_block_number(35);
+
+		// we have registered channel A and channel B for 0 shares for VKSM
+		setup();
+
+		// VtokenIssuanceSnapshots, set VKSM old total issuance to 10000. newly minted
+		// VKSM is 1000
+		VtokenIssuanceSnapshots::<Runtime>::insert(VKSM, (9000, 10000));
+
+		// PeriodVtokenTotalMint
+		PeriodVtokenTotalMint::<Runtime>::insert(VKSM, (10000, 2000));
+
+		// PeriodVtokenTotalRedeem
+		PeriodVtokenTotalRedeem::<Runtime>::insert(VKSM, (0, 1000));
+
+		// PeriodChannelVtokenMint. Channel A mint 1000 VKSM, Channel B mint 1000 VKSM.
+		PeriodChannelVtokenMint::<Runtime>::insert(0, VKSM, (2000, 500));
+		PeriodChannelVtokenMint::<Runtime>::insert(1, VKSM, (2000, 100));
+
+		// set vksm token issuance to 11000
+		let _ = Currencies::update_balance(
+			RuntimeOrigin::root(),
+			commission_account.clone(),
+			VKSM,
+			11000,
+		);
+
+		// set ksm token issuance to 11000
+		let _ = Currencies::update_balance(
+			RuntimeOrigin::root(),
+			commission_account.clone(),
+			KSM,
+			11000,
+		);
+
+		// set block number to 100
+		run_to_block(100);
+		run_to_block(101);
+
+		let channel_a_new_net_mint: u32 = 500 * 1000 / 2000;
+
+		let channel_a_new_percentage =
+			Permill::from_rational_with_rounding(channel_a_new_net_mint, 11000u32, Rounding::Down)
+				.unwrap();
+		// check channel A vtoken share after being cleared
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), channel_a_new_percentage);
 	});
 }

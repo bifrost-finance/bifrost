@@ -469,6 +469,11 @@ pub mod pallet {
 			// set the commission token
 			CommissionTokens::<T>::insert(vtoken, commission_token);
 
+			// set VtokenIssuanceSnapshots for the vtoken
+			let issuance = T::MultiCurrency::total_issuance(vtoken);
+			let zero_balance: BalanceOf<T> = Zero::zero();
+			VtokenIssuanceSnapshots::<T>::insert(vtoken, (zero_balance, issuance));
+
 			Self::deposit_event(Event::CommissionTokenSet {
 				vtoken,
 				commission_token: Some(commission_token),
@@ -483,6 +488,60 @@ pub mod pallet {
 			ensure_signed(origin)?;
 
 			Self::settle_channel_commission(channel_id)?;
+			Ok(())
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::set_channel_vtoken_shares(Channels::<T>::iter().count() as u32))]
+		pub fn set_channel_vtoken_shares(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			vtoken: CurrencyId,
+			shares: Permill,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// check if the channel exists
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::ChannelNotExist);
+
+			// check if the vtoken exists
+			ensure!(
+				CommissionTokens::<T>::contains_key(vtoken),
+				Error::<T>::VtokenNotConfiguredForCommission
+			);
+
+			// 将所有渠道的这个vtoken的share加起来，但当前渠道的share不用storage里的，用传入的值
+			// 如果加起来的share大于1，报错
+			// 获取所有的channel_id
+			let channel_ids: Vec<ChannelId> = Channels::<T>::iter_keys().collect();
+			// 对于每一个channel_id，获取这个channel_id的这个vtoken的share，
+			// 如果channel_id是当前channel_id，用传入的值
+			let mut total_shares = Permill::zero();
+			for id in channel_ids {
+				let share = if id == channel_id {
+					shares
+				} else {
+					ChannelVtokenShares::<T>::get(id, vtoken)
+				};
+
+				let total_shares_op = total_shares.checked_add(&share);
+
+				if let Some(total_shares_new) = total_shares_op {
+					total_shares = total_shares_new
+				} else {
+					Err(Error::<T>::InvalidCommissionRate)?
+				};
+			}
+
+			// update the channel vtoken share
+			ChannelVtokenShares::<T>::insert(channel_id, vtoken, shares);
+
+			Self::deposit_event(Event::ChannelVtokenSharesUpdated {
+				channel_id,
+				vtoken,
+				share: shares,
+			});
+
 			Ok(())
 		}
 	}

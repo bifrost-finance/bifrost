@@ -188,6 +188,23 @@ benchmarks! {
 		let block_num =BlockNumberFor::<T>::from(101u32);
 	}: {ChannelCommission::<T>::on_initialize(block_num);}
 
+	set_channel_vtoken_shares {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let vtoken_set = CurrencyId::VToken2(0);
+		let shares = Permill::from_percent(1);
+		let channel_id = 0;
+
+		// assume we have 60 channels at most
+		let x in 1 .. 60;
+		let channel_name =  b"Bifrost".to_vec();
+		let receiver = whitelisted_caller();
+
+		// register channels
+		for i in 0 .. x {
+			assert_ok!(register_channel(origin.clone(), channel_name.clone(), receiver.clone()));
+		}
+
+	}: _<T::RuntimeOrigin>(origin.clone(), channel_id, vtoken_set, shares)
 
 	impl_benchmark_test_suite!(ChannelCommission,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);
 }
