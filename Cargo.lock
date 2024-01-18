@@ -997,7 +997,7 @@ dependencies = [
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-ve-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1142,7 +1142,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-vtoken-voting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-support",
  "frame-system",
  "hex-literal 0.4.1",
@@ -1718,7 +1718,7 @@ dependencies = [
  "bifrost-vtoken-minting",
  "bifrost-xcm-interface",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1820,7 +1820,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-stable-asset",
  "bifrost-vtoken-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1967,7 +1967,7 @@ dependencies = [
  "bifrost-slp",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2088,7 +2088,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-slp",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -4337,9 +4337,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
 dependencies = [
  "humantime",
  "is-terminal",
@@ -4596,7 +4596,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "log",
 ]
 
@@ -6229,7 +6229,7 @@ dependencies = [
  "bifrost-stable-asset",
  "bifrost-stable-pool",
  "bifrost-vtoken-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
