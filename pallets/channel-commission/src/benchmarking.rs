@@ -197,11 +197,11 @@ benchmarks! {
 		// assume we have 60 channels at most
 		let x in 1 .. 60;
 		let channel_name =  b"Bifrost".to_vec();
-		let receiver = whitelisted_caller();
+		let receiver: T::AccountId = whitelisted_caller();
 
 		// register channels
 		for i in 0 .. x {
-			assert_ok!(register_channel(origin.clone(), channel_name.clone(), receiver.clone()));
+			assert_ok!(ChannelCommission::<T>::register_channel(origin.clone(), channel_name.clone(), receiver.clone()));
 		}
 
 	}: _<T::RuntimeOrigin>(origin.clone(), channel_id, vtoken_set, shares)
