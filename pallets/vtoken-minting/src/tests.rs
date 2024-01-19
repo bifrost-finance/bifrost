@@ -501,7 +501,7 @@ fn recreate_currency_ongoing_time_unit_should_work() {
 
 		// recreate_currency_ongoing_time_unit the ongoing time unit of KSM to be Round(2)
 		assert_ok!(VtokenMinting::recreate_currency_ongoing_time_unit(
-			RuntimeOrigin::root(),
+			RuntimeOrigin::signed(ALICE),
 			KSM,
 			TimeUnit::Round(2)
 		));
