@@ -219,6 +219,10 @@ pub mod pallet {
 		FastRedeemFailed {
 			err: DispatchError,
 		},
+		CurrencyTimeUnitRecreated {
+			token_id: CurrencyIdOf<T>,
+			time_unit: TimeUnit,
+		},
 	}
 
 	#[pallet::error]
@@ -800,6 +804,23 @@ pub mod pallet {
 			MinTimeUnit::<T>::mutate(&token_id, |old_time_unit| *old_time_unit = time_unit.clone());
 
 			Self::deposit_event(Event::MinTimeUnitSet { token_id, time_unit });
+			Ok(())
+		}
+
+		#[pallet::call_index(13)]
+		#[pallet::weight({0})]
+		pub fn recreate_currency_ongoing_time_unit(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			time_unit: TimeUnit,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			OngoingTimeUnit::<T>::mutate(&token_id, |old_time_unit| {
+				*old_time_unit = Some(time_unit.clone())
+			});
+
+			Self::deposit_event(Event::CurrencyTimeUnitRecreated { token_id, time_unit });
 			Ok(())
 		}
 	}
