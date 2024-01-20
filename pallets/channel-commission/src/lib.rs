@@ -332,6 +332,9 @@ pub mod pallet {
 					vtoken,
 					DEFAULT_COMMISSION_RATE,
 				);
+
+				// for each vtoken, add the 0 share to ChannelVtokenShares storage
+				ChannelVtokenShares::<T>::insert(channel_id, vtoken, Permill::zero());
 			});
 
 			Self::deposit_event(Event::ChannelRegistered {

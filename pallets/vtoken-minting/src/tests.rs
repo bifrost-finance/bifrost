@@ -489,3 +489,22 @@ fn fast_redeem_for_fil() {
 		);
 	});
 }
+
+#[test]
+fn recreate_currency_ongoing_time_unit_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
+		// set KSM ongoing time unit to be Era(1)
+		OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(1));
+		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(1)));
+
+		// recreate_currency_ongoing_time_unit the ongoing time unit of KSM to be Round(2)
+		assert_ok!(VtokenMinting::recreate_currency_ongoing_time_unit(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			TimeUnit::Round(2)
+		));
+		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Round(2)));
+	})
+}

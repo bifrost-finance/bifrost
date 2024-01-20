@@ -78,7 +78,7 @@ pub use bifrost_primitives::{
 	GLMR_TOKEN_ID,
 };
 use bifrost_runtime_common::{
-	constants::time::*, dollar, micro, milli, prod_or_test, AuraId, CouncilCollective,
+	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
 	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
 	TechnicalCollective,
 };
@@ -103,6 +103,7 @@ use zenlink_protocol::{
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use polkadot_runtime_common::prod_or_fast;
 use static_assertions::const_assert;
 use xcm::v3::prelude::*;
 use xcm_config::{
@@ -132,7 +133,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 990,
+	spec_version: 992,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1220,7 +1221,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 parameter_types! {
@@ -1258,7 +1259,7 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BlocksPerRound: u32 = prod_or_test!(1500, 50);
+	pub const BlocksPerRound: u32 = prod_or_fast!(1500, 50);
 	pub const MaxTokenLen: u32 = 500;
 	pub const MaxFarmingPoolIdLen: u32 = 100;
 }
@@ -1469,7 +1470,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 parameter_types! {
@@ -1593,22 +1594,22 @@ impl leverage_staking::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
-parameter_types! {
-	pub const ClearingDuration: u32 = 7 * DAYS;
-	pub const NameLengthLimit: u32 = 20;
-	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
-}
-
-impl bifrost_channel_commission::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
-	type CommissionPalletId = CommissionPalletId;
-	type BifrostCommissionReceiver = BifrostCommissionReceiver;
-	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
-	type ClearingDuration = ClearingDuration;
-	type NameLengthLimit = NameLengthLimit;
-}
+// parameter_types! {
+// 	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
+// 	pub const NameLengthLimit: u32 = 20;
+// 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
+// }
+//
+// impl bifrost_channel_commission::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type MultiCurrency = Currencies;
+// 	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
+// 	type CommissionPalletId = CommissionPalletId;
+// 	type BifrostCommissionReceiver = BifrostCommissionReceiver;
+// 	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
+// 	type ClearingDuration = ClearingDuration;
+// 	type NameLengthLimit = NameLengthLimit;
+// }
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -1793,7 +1794,7 @@ construct_runtime! {
 		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
-		ChannelCommission: bifrost_channel_commission = 136,
+		// ChannelCommission: bifrost_channel_commission = 136,
 	}
 }
 

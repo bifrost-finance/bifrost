@@ -917,7 +917,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.9.90"
+version = "0.9.92"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -1259,6 +1259,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "polkadot-primitives",
+ "polkadot-runtime-common",
  "scale-info",
  "smallvec",
  "sp-api",
@@ -1427,6 +1428,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "polkadot-primitives",
+ "polkadot-runtime-common",
  "scale-info",
  "smallvec",
  "sp-api",
