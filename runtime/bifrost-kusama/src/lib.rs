@@ -1786,22 +1786,22 @@ impl leverage_staking::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 }
 
-// parameter_types! {
-// 	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
-// 	pub const NameLengthLimit: u32 = 20;
-// 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
-// }
-//
-// impl bifrost_channel_commission::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type MultiCurrency = Currencies;
-// 	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
-// 	type CommissionPalletId = CommissionPalletId;
-// 	type BifrostCommissionReceiver = BifrostCommissionReceiver;
-// 	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
-// 	type ClearingDuration = ClearingDuration;
-// 	type NameLengthLimit = NameLengthLimit;
-// }
+parameter_types! {
+	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
+	pub const NameLengthLimit: u32 = 20;
+	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl bifrost_channel_commission::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<CoreAdminOrCouncil, LiquidStaking>;
+	type CommissionPalletId = CommissionPalletId;
+	type BifrostCommissionReceiver = BifrostCommissionReceiver;
+	type WeightInfo = weights::bifrost_channel_commission::BifrostWeight<Runtime>;
+	type ClearingDuration = ClearingDuration;
+	type NameLengthLimit = NameLengthLimit;
+}
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -1989,7 +1989,7 @@ construct_runtime! {
 		Oracle: orml_oracle::<Instance1> = 133,
 		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
-		// ChannelCommission: bifrost_channel_commission = 136,
+		ChannelCommission: bifrost_channel_commission = 136,
 	}
 }
 

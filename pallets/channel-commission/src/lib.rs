@@ -469,6 +469,11 @@ pub mod pallet {
 			// set the commission token
 			CommissionTokens::<T>::insert(vtoken, commission_token);
 
+			// set VtokenIssuanceSnapshots for the vtoken
+			let issuance = T::MultiCurrency::total_issuance(vtoken);
+			let zero_balance: BalanceOf<T> = Zero::zero();
+			VtokenIssuanceSnapshots::<T>::insert(vtoken, (zero_balance, issuance));
+
 			Self::deposit_event(Event::CommissionTokenSet {
 				vtoken,
 				commission_token: Some(commission_token),
@@ -483,6 +488,62 @@ pub mod pallet {
 			ensure_signed(origin)?;
 
 			Self::settle_channel_commission(channel_id)?;
+			Ok(())
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::set_channel_vtoken_shares(Channels::<T>::iter().count() as u32))]
+		pub fn set_channel_vtoken_shares(
+			origin: OriginFor<T>,
+			channel_id: ChannelId,
+			vtoken: CurrencyId,
+			shares: Permill,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// check if the channel exists
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::ChannelNotExist);
+
+			// check if the vtoken exists
+			ensure!(
+				CommissionTokens::<T>::contains_key(vtoken),
+				Error::<T>::VtokenNotConfiguredForCommission
+			);
+
+			// get all channel_ids
+			let channel_ids: Vec<ChannelId> = Channels::<T>::iter_keys().collect();
+			// for each channel_id，get its vtoken share for the particular vtoken from the storage
+			// if channel_id equals the passed in channel_id, we use the passed in share instead of
+			// the storage one
+			let mut total_shares = Permill::zero();
+			for id in channel_ids {
+				let share = if id == channel_id {
+					shares
+				} else {
+					ChannelVtokenShares::<T>::get(id, vtoken)
+				};
+
+				// add up all the vtoken shares of all channels for this particular vtoken,
+				// but use the passed in share for the passed in channel_id
+				// if the sum of all shares is greater than 1, throw an error
+				let total_shares_op = total_shares.checked_add(&share);
+
+				if let Some(total_shares_new) = total_shares_op {
+					total_shares = total_shares_new
+				} else {
+					Err(Error::<T>::InvalidCommissionRate)?
+				};
+			}
+
+			// update the channel vtoken share
+			ChannelVtokenShares::<T>::insert(channel_id, vtoken, shares);
+
+			Self::deposit_event(Event::ChannelVtokenSharesUpdated {
+				channel_id,
+				vtoken,
+				share: shares,
+			});
+
 			Ok(())
 		}
 	}
