@@ -510,12 +510,11 @@ pub mod pallet {
 				Error::<T>::VtokenNotConfiguredForCommission
 			);
 
-			// 将所有渠道的这个vtoken的share加起来，但当前渠道的share不用storage里的，用传入的值
-			// 如果加起来的share大于1，报错
-			// 获取所有的channel_id
+			// get all channel_ids
 			let channel_ids: Vec<ChannelId> = Channels::<T>::iter_keys().collect();
-			// 对于每一个channel_id，获取这个channel_id的这个vtoken的share，
-			// 如果channel_id是当前channel_id，用传入的值
+			// for each channel_id，get its vtoken share for the particular vtoken from the storage
+			// if channel_id equals the passed in channel_id, we use the passed in share instead of
+			// the storage one
 			let mut total_shares = Permill::zero();
 			for id in channel_ids {
 				let share = if id == channel_id {
@@ -524,6 +523,9 @@ pub mod pallet {
 					ChannelVtokenShares::<T>::get(id, vtoken)
 				};
 
+				// add up all the vtoken shares of all channels for this particular vtoken,
+				// but use the passed in share for the passed in channel_id
+				// if the sum of all shares is greater than 1, throw an error
 				let total_shares_op = total_shares.checked_add(&share);
 
 				if let Some(total_shares_new) = total_shares_op {

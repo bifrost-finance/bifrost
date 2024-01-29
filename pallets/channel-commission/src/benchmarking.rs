@@ -199,6 +199,12 @@ benchmarks! {
 		let channel_name =  b"Bifrost".to_vec();
 		let receiver: T::AccountId = whitelisted_caller();
 
+		// set_commission_tokens
+		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
+			origin.clone(),
+			vtoken_set, CurrencyId::Token2(0)
+		));
+
 		// register channels
 		for i in 0 .. x {
 			assert_ok!(ChannelCommission::<T>::register_channel(origin.clone(), channel_name.clone(), receiver.clone()));
