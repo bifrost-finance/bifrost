@@ -263,4 +263,10 @@ impl<T: frame_system::Config> bifrost_vtoken_minting::WeightInfo for BifrostWeig
 		Weight::from_parts(16_763_000, 3492)
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
+
+	fn recreate_currency_ongoing_time_unit() -> Weight {
+		Weight::from_parts(70_238_000, 4197)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 }

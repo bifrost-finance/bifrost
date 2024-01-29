@@ -1221,7 +1221,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 parameter_types! {
@@ -1470,7 +1470,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 parameter_types! {

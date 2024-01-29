@@ -1393,7 +1393,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1635,7 +1635,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2092>;
-	type ChannelCommission = ChannelCommission;
+	type ChannelCommission = ();
 }
 
 impl bifrost_slpx::Config for Runtime {
@@ -2105,7 +2105,7 @@ mod benches {
 		[bifrost_vtoken_voting, VtokenVoting]
 		[lend_market, LendMarket]
 		[leverage_staking, LeverageStaking]
-		[bifrost_channel_commission, ChannelCommission]
+		// [bifrost_channel_commission, ChannelCommission]
 	);
 }
 

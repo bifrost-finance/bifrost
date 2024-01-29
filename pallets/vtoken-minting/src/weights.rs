@@ -65,6 +65,7 @@ pub trait WeightInfo {
 	fn rebond() -> Weight;
 	fn rebond_by_unlock_id() -> Weight;
 	fn on_initialize() -> Weight;
+	fn recreate_currency_ongoing_time_unit() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -277,5 +278,11 @@ impl WeightInfo for () {
 		// Minimum execution time: 14_822_000 picoseconds.
 		Weight::from_parts(15_243_000, 3492)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
+	}
+
+	fn recreate_currency_ongoing_time_unit() -> Weight {
+		Weight::from_parts(70_238_000, 4197)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }
