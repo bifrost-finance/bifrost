@@ -997,7 +997,7 @@ dependencies = [
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-ve-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1142,7 +1142,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-vtoken-voting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-support",
  "frame-system",
  "hex-literal 0.4.1",
@@ -1720,7 +1720,7 @@ dependencies = [
  "bifrost-vtoken-minting",
  "bifrost-xcm-interface",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1822,7 +1822,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-stable-asset",
  "bifrost-vtoken-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1969,7 +1969,7 @@ dependencies = [
  "bifrost-slp",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2090,7 +2090,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-slp",
  "cumulus-primitives-core",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2571,18 +2571,6 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chacha20"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c80e5460aa66fe3b91d40bcbdab953a597b60053e34d684ac6903f863b680a6"
-dependencies = [
- "cfg-if",
- "cipher 0.3.0",
- "cpufeatures",
- "zeroize",
-]
-
-[[package]]
-name = "chacha20"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3613f74bd2eac03dad61bd53dbe620703d4371614fe0bc3b9f04dd36fe4e818"
@@ -2594,14 +2582,14 @@ dependencies = [
 
 [[package]]
 name = "chacha20poly1305"
-version = "0.9.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a18446b09be63d457bbec447509e85f662f32952b035ce892290396bc0b0cff5"
+checksum = "10cd79432192d1c0f4e1a0fef9527696cc039165d729fb41b3f4f4f354c2dc35"
 dependencies = [
- "aead 0.4.3",
- "chacha20 0.8.2",
- "cipher 0.3.0",
- "poly1305 0.7.2",
+ "aead 0.5.2",
+ "chacha20",
+ "cipher 0.4.4",
+ "poly1305",
  "zeroize",
 ]
 
@@ -2658,6 +2646,7 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
+ "zeroize",
 ]
 
 [[package]]
@@ -4339,9 +4328,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
 dependencies = [
  "humantime",
  "is-terminal",
@@ -4598,7 +4587,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "log",
 ]
 
@@ -5287,9 +5276,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.21"
+version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91fc23aa11be92976ef4729127f1a74adf36d8436f7816b185d18df956790833"
+checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
 dependencies = [
  "bytes",
  "fnv",
@@ -5297,7 +5286,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http",
- "indexmap 1.9.3",
+ "indexmap 2.0.2",
  "slab",
  "tokio",
  "tokio-util",
@@ -6231,7 +6220,7 @@ dependencies = [
  "bifrost-stable-asset",
  "bifrost-stable-pool",
  "bifrost-vtoken-minting",
- "env_logger 0.10.1",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -10460,17 +10449,6 @@ dependencies = [
 
 [[package]]
 name = "poly1305"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "048aeb476be11a4b6ca432ca569e375810de9294ae78f4774e78ea98a9246ede"
-dependencies = [
- "cpufeatures",
- "opaque-debug 0.3.0",
- "universal-hash 0.4.1",
-]
-
-[[package]]
-name = "poly1305"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8159bd90725d2df49889a078b54f4f79e87f1f8a8444194cdca81d38f5393abf"
@@ -13034,9 +13012,9 @@ dependencies = [
 
 [[package]]
 name = "shlex"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7cee0529a6d40f580e7a5e6c495c8fbfe21b7b52795ed4bb5e62cdf92bc6380"
+checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signal-hook-registry"
@@ -13178,7 +13156,7 @@ dependencies = [
  "bip39",
  "blake2-rfc",
  "bs58 0.5.0",
- "chacha20 0.9.1",
+ "chacha20",
  "crossbeam-queue",
  "derive_more",
  "ed25519-zebra 4.0.3",
@@ -13200,7 +13178,7 @@ dependencies = [
  "num-traits",
  "pbkdf2 0.12.2",
  "pin-project",
- "poly1305 0.8.0",
+ "poly1305",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "ruzstd",
@@ -13263,16 +13241,16 @@ checksum = "5e9f0ab6ef7eb7353d9119c170a436d1bf248eea575ac42d19d12f4e34130831"
 
 [[package]]
 name = "snow"
-version = "0.9.3"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c9d1425eb528a21de2755c75af4c9b5d57f50a0d4c3b7f1828a4cd03f8ba155"
+checksum = "2e87c18a6608909007e75a60e04d03eda77b601c94de1c74d9a9dc2c04ab789a"
 dependencies = [
- "aes-gcm 0.9.4",
+ "aes-gcm 0.10.3",
  "blake2",
  "chacha20poly1305",
  "curve25519-dalek 4.1.1",
  "rand_core 0.6.4",
- "ring 0.16.20",
+ "ring 0.17.5",
  "rustc_version",
  "sha2 0.10.8",
  "subtle",

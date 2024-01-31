@@ -1470,7 +1470,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MoonbeamParachainId = ConstU32<2004>;
 	type HydradxParachainId = ConstU32<2034>;
 	type InterlayParachainId = ConstU32<2032>;
-	type ChannelCommission = ();
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
