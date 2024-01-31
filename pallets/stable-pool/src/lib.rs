@@ -37,12 +37,16 @@ use bifrost_primitives::{
 pub use bifrost_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
+	TokenRateHardtop,
 };
 use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{
+	traits::{CheckedAdd, CheckedDiv},
+	Permill, SaturatedConversion,
+};
 use sp_std::prelude::*;
 
 #[allow(type_alias_bounds)]
@@ -324,41 +328,58 @@ impl<T: Config> Pallet<T> {
 		token_in: AssetIdOf<T>,
 		token_out: AssetIdOf<T>,
 	) -> Option<()> {
-		let (vtoken, vtoken_issuance, token, token_pool_amount) =
-			if CurrencyId::is_vtoken(&token_in.into()) &&
-				T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out)
-			{
-				(
-					token_in,
-					T::MultiCurrency::total_issuance(token_in),
-					token_out,
-					T::VtokenMinting::get_token_pool(token_out),
-				)
-			} else if CurrencyId::is_vtoken(&token_out.into()) &&
-				T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in)
-			{
-				(
-					token_out,
-					T::MultiCurrency::total_issuance(token_out),
-					token_in,
-					T::VtokenMinting::get_token_pool(token_in),
-				)
-			} else {
-				// Do not refresh token rate if both token_in and token_out are not vtoken or do not
-				// match.
-				return None;
-			};
+		let (vtoken, vtoken_issuance, token, token_pool_amount): (
+			AssetIdOf<T>,
+			AtLeast64BitUnsignedOf<T>,
+			AssetIdOf<T>,
+			AtLeast64BitUnsignedOf<T>,
+		) = if CurrencyId::is_vtoken(&token_in.into()) &&
+			T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out)
+		{
+			(
+				token_in,
+				T::MultiCurrency::total_issuance(token_in).into(),
+				token_out,
+				T::VtokenMinting::get_token_pool(token_out).into(),
+			)
+		} else if CurrencyId::is_vtoken(&token_out.into()) &&
+			T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in)
+		{
+			(
+				token_out,
+				T::MultiCurrency::total_issuance(token_out).into(),
+				token_in,
+				T::VtokenMinting::get_token_pool(token_in).into(),
+			)
+		} else {
+			// Do not refresh token rate if both token_in and token_out are not vtoken or do not
+			// match.
+			return None;
+		};
 
 		if let Some((demoninator, numerator)) =
 			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
 		{
-			bifrost_stable_asset::Pallet::<T>::set_token_rate(
-				pool_id,
-				vec![(vtoken, (vtoken_issuance.into(), token_pool_amount.into()))],
-			)
-			.ok()?;
+			let hardtop = Self::get_token_rate_hardtop();
+			let delta: AtLeast64BitUnsignedOf<T> =
+				(hardtop * numerator.saturated_into::<u128>()).into();
+			if token_pool_amount.checked_div(&vtoken_issuance)? <=
+				delta.checked_add(&numerator)?.checked_div(&demoninator)?
+			// (0.8 * 1.1 + 1.1) / 1 = 1.21
+			{
+				bifrost_stable_asset::Pallet::<T>::set_token_rate(
+					pool_id,
+					vec![(vtoken, (vtoken_issuance.into(), token_pool_amount.into()))],
+				)
+				.ok()?
+				// } else {
+			}
 		}
 		None
+	}
+
+	fn get_token_rate_hardtop() -> Permill {
+		TokenRateHardtop::<T>::get()
 	}
 
 	#[transactional]

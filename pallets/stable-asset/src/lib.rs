@@ -348,7 +348,7 @@ pub mod pallet {
 	use parity_scale_codec::Codec;
 	use sp_runtime::{
 		traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-		FixedPointOperand,
+		FixedPointOperand, Permill,
 	};
 	use sp_std::prelude::*;
 
@@ -429,6 +429,10 @@ pub mod pallet {
 		T::AssetId,
 		(T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned),
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn token_rate_hardtop)]
+	pub type TokenRateHardtop<T: Config> = StorageValue<_, Permill, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
