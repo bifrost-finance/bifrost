@@ -2571,18 +2571,6 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chacha20"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c80e5460aa66fe3b91d40bcbdab953a597b60053e34d684ac6903f863b680a6"
-dependencies = [
- "cfg-if",
- "cipher 0.3.0",
- "cpufeatures",
- "zeroize",
-]
-
-[[package]]
-name = "chacha20"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3613f74bd2eac03dad61bd53dbe620703d4371614fe0bc3b9f04dd36fe4e818"
@@ -2594,14 +2582,14 @@ dependencies = [
 
 [[package]]
 name = "chacha20poly1305"
-version = "0.9.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a18446b09be63d457bbec447509e85f662f32952b035ce892290396bc0b0cff5"
+checksum = "10cd79432192d1c0f4e1a0fef9527696cc039165d729fb41b3f4f4f354c2dc35"
 dependencies = [
- "aead 0.4.3",
- "chacha20 0.8.2",
- "cipher 0.3.0",
- "poly1305 0.7.2",
+ "aead 0.5.2",
+ "chacha20",
+ "cipher 0.4.4",
+ "poly1305",
  "zeroize",
 ]
 
@@ -2658,6 +2646,7 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
+ "zeroize",
 ]
 
 [[package]]
@@ -10460,17 +10449,6 @@ dependencies = [
 
 [[package]]
 name = "poly1305"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "048aeb476be11a4b6ca432ca569e375810de9294ae78f4774e78ea98a9246ede"
-dependencies = [
- "cpufeatures",
- "opaque-debug 0.3.0",
- "universal-hash 0.4.1",
-]
-
-[[package]]
-name = "poly1305"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8159bd90725d2df49889a078b54f4f79e87f1f8a8444194cdca81d38f5393abf"
@@ -13178,7 +13156,7 @@ dependencies = [
  "bip39",
  "blake2-rfc",
  "bs58 0.5.0",
- "chacha20 0.9.1",
+ "chacha20",
  "crossbeam-queue",
  "derive_more",
  "ed25519-zebra 4.0.3",
@@ -13200,7 +13178,7 @@ dependencies = [
  "num-traits",
  "pbkdf2 0.12.2",
  "pin-project",
- "poly1305 0.8.0",
+ "poly1305",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "ruzstd",
@@ -13263,16 +13241,16 @@ checksum = "5e9f0ab6ef7eb7353d9119c170a436d1bf248eea575ac42d19d12f4e34130831"
 
 [[package]]
 name = "snow"
-version = "0.9.3"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c9d1425eb528a21de2755c75af4c9b5d57f50a0d4c3b7f1828a4cd03f8ba155"
+checksum = "2e87c18a6608909007e75a60e04d03eda77b601c94de1c74d9a9dc2c04ab789a"
 dependencies = [
- "aes-gcm 0.9.4",
+ "aes-gcm 0.10.3",
  "blake2",
  "chacha20poly1305",
  "curve25519-dalek 4.1.1",
  "rand_core 0.6.4",
- "ring 0.16.20",
+ "ring 0.17.5",
  "rustc_version",
  "sha2 0.10.8",
  "subtle",
