@@ -319,6 +319,48 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	fn refresh_token_rate(
+		pool_id: StableAssetPoolId,
+		token_in: AssetIdOf<T>,
+		token_out: AssetIdOf<T>,
+	) -> Option<()> {
+		let (vtoken, vtoken_issuance, token, token_pool_amount) =
+			if CurrencyId::is_vtoken(&token_in.into()) &&
+				T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out)
+			{
+				(
+					token_in,
+					T::MultiCurrency::total_issuance(token_in),
+					token_out,
+					T::VtokenMinting::get_token_pool(token_out),
+				)
+			} else if CurrencyId::is_vtoken(&token_out.into()) &&
+				T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in)
+			{
+				(
+					token_out,
+					T::MultiCurrency::total_issuance(token_out),
+					token_in,
+					T::VtokenMinting::get_token_pool(token_in),
+				)
+			} else {
+				// Do not refresh token rate if both token_in and token_out are not vtoken or do not
+				// match.
+				return None;
+			};
+
+		if let Some((demoninator, numerator)) =
+			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
+		{
+			bifrost_stable_asset::Pallet::<T>::set_token_rate(
+				pool_id,
+				vec![(vtoken, (vtoken_issuance.into(), token_pool_amount.into()))],
+			)
+			.ok()?;
+		}
+		None
+	}
+
 	#[transactional]
 	fn mint_inner(
 		who: &AccountIdOf<T>,
@@ -656,15 +698,17 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let mut pool_info =
 			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
+
+		let token_in = *pool_info
+			.assets
+			.get(currency_id_in as usize)
+			.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?;
+		let token_out = *pool_info
+			.assets
+			.get(currency_id_out as usize)
+			.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-		let dx = Self::upscale(
-			amount,
-			pool_id,
-			*pool_info
-				.assets
-				.get(currency_id_in as usize)
-				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
-		)?;
+		let dx = Self::upscale(amount, pool_id, token_in)?;
 		let SwapResult { dx: _, dy, y, balance_i } =
 			bifrost_stable_asset::Pallet::<T>::get_swap_amount(
 				&pool_info,
@@ -673,14 +717,7 @@ impl<T: Config> Pallet<T> {
 				dx,
 			)?;
 
-		let downscale_out = Self::downscale(
-			dy,
-			pool_id,
-			*pool_info
-				.assets
-				.get(currency_id_out as usize)
-				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
-		)?;
+		let downscale_out = Self::downscale(dy, pool_id, token_out)?;
 		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
 		let mut balances = pool_info.balances.clone();
@@ -725,6 +762,11 @@ impl<T: Config> Pallet<T> {
 				output_amount: downscale_out,
 			},
 		);
+		if Self::refresh_token_rate(pool_id, token_in, token_out).is_none() {
+			bifrost_stable_asset::Pallet::<T>::deposit_event(
+				bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
+			)
+		}
 		Ok(())
 	}
 

@@ -539,6 +539,9 @@ pub mod pallet {
 			pool_id: StableAssetPoolId,
 			token_rate: Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>,
 		},
+		TokenRateRefreshFailed {
+			pool_id: StableAssetPoolId,
+		},
 	}
 
 	#[pallet::error]
