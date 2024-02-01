@@ -778,7 +778,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(11)]
-		#[pallet::weight({0})]
+		#[pallet::weight(T::WeightInfo::set_unlocking_total())]
 		pub fn set_unlocking_total(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -793,7 +793,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(12)]
-		#[pallet::weight({0})]
+		#[pallet::weight(T::WeightInfo::set_min_time_unit())]
 		pub fn set_min_time_unit(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
@@ -808,7 +808,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(13)]
-		#[pallet::weight({0})]
+		#[pallet::weight(T::WeightInfo::recreate_currency_ongoing_time_unit())]
 		pub fn recreate_currency_ongoing_time_unit(
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,

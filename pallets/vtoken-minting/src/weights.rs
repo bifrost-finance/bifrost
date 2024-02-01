@@ -56,6 +56,9 @@ pub trait WeightInfo {
 	fn set_minimum_mint() -> Weight;
 	fn set_minimum_redeem() -> Weight;
 	fn set_unlock_duration() -> Weight;
+	fn set_unlocking_total() -> Weight;
+	fn set_min_time_unit() -> Weight;
+	fn recreate_currency_ongoing_time_unit() -> Weight;
 	fn add_support_rebond_token() -> Weight;
 	fn remove_support_rebond_token() -> Weight;
 	fn set_fees() -> Weight;
@@ -65,7 +68,6 @@ pub trait WeightInfo {
 	fn rebond() -> Weight;
 	fn rebond_by_unlock_id() -> Weight;
 	fn on_initialize() -> Weight;
-	fn recreate_currency_ongoing_time_unit() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -104,6 +106,42 @@ impl WeightInfo for () {
 		Weight::from_parts(46_294_000, 3492)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	/// Storage: `VtokenMinting::UnlockingTotal` (r:1 w:1)
+	/// Proof: `VtokenMinting::UnlockingTotal` (`max_values`: None, `max_size`: Some(38), added: 2513, mode: `MaxEncodedLen`)
+	fn set_unlocking_total() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3503`
+		// Minimum execution time: 14_808_000 picoseconds.
+		Weight::from_parts(15_209_000, 0)
+			.saturating_add(Weight::from_parts(0, 3503))
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: `VtokenMinting::MinTimeUnit` (r:1 w:1)
+	/// Proof: `VtokenMinting::MinTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
+	fn set_min_time_unit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3492`
+		// Minimum execution time: 15_269_000 picoseconds.
+		Weight::from_parts(15_499_000, 0)
+			.saturating_add(Weight::from_parts(0, 3492))
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: `VtokenMinting::OngoingTimeUnit` (r:1 w:1)
+	/// Proof: `VtokenMinting::OngoingTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
+	fn recreate_currency_ongoing_time_unit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3492`
+		// Minimum execution time: 15_209_000 picoseconds.
+		Weight::from_parts(15_509_000, 0)
+			.saturating_add(Weight::from_parts(0, 3492))
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	/// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	/// Proof: VtokenMinting TokenToRebond (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
@@ -278,11 +316,5 @@ impl WeightInfo for () {
 		// Minimum execution time: 14_822_000 picoseconds.
 		Weight::from_parts(15_243_000, 3492)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
-	}
-
-	fn recreate_currency_ongoing_time_unit() -> Weight {
-		Weight::from_parts(70_238_000, 4197)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }

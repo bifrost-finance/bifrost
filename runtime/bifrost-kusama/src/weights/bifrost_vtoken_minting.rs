@@ -89,6 +89,42 @@ impl<T: frame_system::Config> bifrost_vtoken_minting::WeightInfo for BifrostWeig
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+	/// Storage: `VtokenMinting::UnlockingTotal` (r:1 w:1)
+	/// Proof: `VtokenMinting::UnlockingTotal` (`max_values`: None, `max_size`: Some(38), added: 2513, mode: `MaxEncodedLen`)
+	fn set_unlocking_total() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3503`
+		// Minimum execution time: 14_808_000 picoseconds.
+		Weight::from_parts(15_209_000, 0)
+			.saturating_add(Weight::from_parts(0, 3503))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `VtokenMinting::MinTimeUnit` (r:1 w:1)
+	/// Proof: `VtokenMinting::MinTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
+	fn set_min_time_unit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3492`
+		// Minimum execution time: 15_269_000 picoseconds.
+		Weight::from_parts(15_499_000, 0)
+			.saturating_add(Weight::from_parts(0, 3492))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `VtokenMinting::OngoingTimeUnit` (r:1 w:1)
+	/// Proof: `VtokenMinting::OngoingTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
+	fn recreate_currency_ongoing_time_unit() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `180`
+		//  Estimated: `3492`
+		// Minimum execution time: 15_209_000 picoseconds.
+		Weight::from_parts(15_509_000, 0)
+			.saturating_add(Weight::from_parts(0, 3492))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
 	// Storage: VtokenMinting TokenToRebond (r:1 w:1)
 	// Proof: VtokenMinting TokenToRebond (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
 	fn add_support_rebond_token() -> Weight {
@@ -262,11 +298,5 @@ impl<T: frame_system::Config> bifrost_vtoken_minting::WeightInfo for BifrostWeig
 		// Minimum execution time: 16_412 nanoseconds.
 		Weight::from_parts(16_763_000, 3492)
 			.saturating_add(T::DbWeight::get().reads(1))
-	}
-
-	fn recreate_currency_ongoing_time_unit() -> Weight {
-		Weight::from_parts(70_238_000, 4197)
-			.saturating_add(T::DbWeight::get().reads(2_u64))
-			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 }
