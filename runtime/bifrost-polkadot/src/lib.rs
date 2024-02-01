@@ -1847,7 +1847,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,);
 }
 
 /// Executive: handles dispatch to the various modules.
