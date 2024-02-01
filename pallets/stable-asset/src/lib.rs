@@ -432,7 +432,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_rate_hardtop)]
-	pub type TokenRateHardtop<T: Config> = StorageValue<_, Permill, ValueQuery>;
+	pub type TokenRateHardtop<T: Config> = StorageValue<_, (Vec<T::AssetId>, Permill), ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
@@ -542,6 +542,10 @@ pub mod pallet {
 		TokenRateSet {
 			pool_id: StableAssetPoolId,
 			token_rate: Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>,
+		},
+		TokenRateHardtopSet {
+			vtokens: Vec<T::AssetId>,
+			hardtop: Permill,
 		},
 		TokenRateRefreshFailed {
 			pool_id: StableAssetPoolId,

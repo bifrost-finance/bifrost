@@ -319,66 +319,88 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			bifrost_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
+		pub fn edit_token_rate_hardtop(
+			origin: OriginFor<T>,
+			vtokens: Vec<AssetIdOf<T>>,
+			hardtop: Permill,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			TokenRateHardtop::<T>::set((vtokens.clone(), hardtop));
+			bifrost_stable_asset::Pallet::<T>::deposit_event(
+				bifrost_stable_asset::Event::<T>::TokenRateHardtopSet { vtokens, hardtop },
+			);
+			Ok(())
+		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	fn refresh_token_rate(
-		pool_id: StableAssetPoolId,
+	fn ensure_can_refresh(
 		token_in: AssetIdOf<T>,
 		token_out: AssetIdOf<T>,
-	) -> Option<()> {
-		let (vtoken, vtoken_issuance, token, token_pool_amount): (
-			AssetIdOf<T>,
-			AtLeast64BitUnsignedOf<T>,
-			AssetIdOf<T>,
-			AtLeast64BitUnsignedOf<T>,
-		) = if CurrencyId::is_vtoken(&token_in.into()) &&
-			T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out)
+	) -> Option<(AssetIdOf<T>, AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>, Permill)> {
+		let (vtokens, hardtop) = Self::get_token_rate_hardtop();
+
+		if CurrencyId::is_vtoken(&token_in.into()) &&
+			T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out) &&
+			vtokens.contains(&token_in)
 		{
-			(
+			return Some((
 				token_in,
 				T::MultiCurrency::total_issuance(token_in).into(),
-				token_out,
 				T::VtokenMinting::get_token_pool(token_out).into(),
-			)
+				hardtop,
+			));
 		} else if CurrencyId::is_vtoken(&token_out.into()) &&
-			T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in)
+			T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in) &&
+			vtokens.contains(&token_out)
 		{
-			(
+			return Some((
 				token_out,
 				T::MultiCurrency::total_issuance(token_out).into(),
-				token_in,
 				T::VtokenMinting::get_token_pool(token_in).into(),
-			)
+				hardtop,
+			));
 		} else {
 			// Do not refresh token rate if both token_in and token_out are not vtoken or do not
 			// match.
 			return None;
 		};
+	}
 
+	fn refresh_token_rate(
+		pool_id: StableAssetPoolId,
+		vtoken: AssetIdOf<T>,
+		vtoken_issuance: AtLeast64BitUnsignedOf<T>,
+		token_pool_amount: AtLeast64BitUnsignedOf<T>,
+		hardtop: Permill,
+	) -> Option<()> {
 		if let Some((demoninator, numerator)) =
 			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
 		{
-			let hardtop = Self::get_token_rate_hardtop();
 			let delta: AtLeast64BitUnsignedOf<T> =
 				(hardtop * numerator.saturated_into::<u128>()).into();
 			if token_pool_amount.checked_div(&vtoken_issuance)? <=
 				delta.checked_add(&numerator)?.checked_div(&demoninator)?
-			// (0.8 * 1.1 + 1.1) / 1 = 1.21
 			{
 				bifrost_stable_asset::Pallet::<T>::set_token_rate(
 					pool_id,
 					vec![(vtoken, (vtoken_issuance.into(), token_pool_amount.into()))],
 				)
 				.ok()?
-				// } else {
+			} else {
+				bifrost_stable_asset::Pallet::<T>::deposit_event(
+					bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
+				)
 			}
 		}
 		None
 	}
 
-	fn get_token_rate_hardtop() -> Permill {
+	fn get_token_rate_hardtop() -> (Vec<AssetIdOf<T>>, Permill) {
 		TokenRateHardtop::<T>::get()
 	}
 
@@ -783,10 +805,22 @@ impl<T: Config> Pallet<T> {
 				output_amount: downscale_out,
 			},
 		);
-		if Self::refresh_token_rate(pool_id, token_in, token_out).is_none() {
-			bifrost_stable_asset::Pallet::<T>::deposit_event(
-				bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
+		if let Some((vtoken, vtoken_issuance, token_pool_amount, hardtop)) =
+			Self::ensure_can_refresh(token_in, token_out)
+		{
+			if Self::refresh_token_rate(
+				pool_id,
+				vtoken,
+				vtoken_issuance,
+				token_pool_amount,
+				hardtop,
 			)
+			.is_none()
+			{
+				bifrost_stable_asset::Pallet::<T>::deposit_event(
+					bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
+				)
+			}
 		}
 		Ok(())
 	}
