@@ -62,6 +62,25 @@ benchmarks! {
 		);
 	}: _(RawOrigin::Root, 0, vec![(VDOT.into(), (9u128.into(), 10u128.into())),(DOT.into(), (1u128.into(), 1u128.into()))])
 
+	edit_token_rate_hardtop {
+		let fee_account: T::AccountId = account("seed",1,1);
+		let coin0 = BNC;
+		let coin1 = KSM;
+		assert_ok!(
+			StablePool::<T>::create_pool(
+			RawOrigin::Root.into(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			10000000u128.into(),
+			20000000u128.into(),
+			50000000u128.into(),
+			10000u128.into(),
+			fee_account.clone(),
+			fee_account.clone(),
+			1000000000000000000u128.into())
+		);
+	}: _(RawOrigin::Root, vec![VDOT.into()], Permill::from_percent(10))
+
 	add_liquidity {
 		let test_account: T::AccountId = whitelisted_caller();
 		let fee_account: T::AccountId = account("seed",1,1);

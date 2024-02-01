@@ -318,7 +318,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate_hardtop())]
 		pub fn edit_token_rate_hardtop(
 			origin: OriginFor<T>,
 			vtokens: Vec<AssetIdOf<T>>,

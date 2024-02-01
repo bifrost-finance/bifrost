@@ -84,6 +84,16 @@ impl<T: frame_system::Config> bifrost_stable_pool::WeightInfo for BifrostWeight<
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+	/// Storage: `StableAsset::TokenRateHardtop` (r:0 w:1)
+	/// Proof: `StableAsset::TokenRateHardtop` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	fn edit_token_rate_hardtop() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 11_532_000 picoseconds.
+		Weight::from_parts(11_813_000, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
 	// Storage: StableAsset Pools (r:1 w:1)
 	// Proof Skipped: StableAsset Pools (max_values: None, max_size: None, mode: Measured)
 	// Storage: StableAsset TokenRateCaches (r:2 w:0)
