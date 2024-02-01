@@ -43,10 +43,7 @@ use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transacti
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
-use sp_runtime::{
-	traits::{CheckedAdd, CheckedDiv},
-	Permill, SaturatedConversion,
-};
+use sp_runtime::{Permill, SaturatedConversion};
 use sp_std::prelude::*;
 
 #[allow(type_alias_bounds)]
@@ -381,20 +378,26 @@ impl<T: Config> Pallet<T> {
 		if let Some((demoninator, numerator)) =
 			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
 		{
-			let delta: AtLeast64BitUnsignedOf<T> =
-				(hardtop * numerator.saturated_into::<u128>()).into();
-			if token_pool_amount.checked_div(&vtoken_issuance)? <=
-				delta.checked_add(&numerator)?.checked_div(&demoninator)?
+			let fee_denominator = T::FeePrecision::get().saturated_into::<u128>();
+			let numerator_u256 = U256::from(numerator.saturated_into::<u128>());
+			let demoninator_u256 = U256::from(demoninator.saturated_into::<u128>());
+
+			let delta = U256::from(hardtop * fee_denominator).checked_mul(numerator_u256)?;
+			let new_price = U256::from(fee_denominator)
+				.checked_mul(U256::from(token_pool_amount.saturated_into::<u128>()))?
+				.checked_div(U256::from(vtoken_issuance.saturated_into::<u128>()))?;
+			let old_price = U256::from(fee_denominator.saturated_into::<u128>())
+				.checked_mul(numerator_u256)?
+				.checked_div(demoninator_u256)?;
+			// Skip if the new price is less than old price.
+			if new_price <= delta.checked_div(demoninator_u256)?.checked_add(old_price)? &&
+				new_price > old_price
 			{
 				bifrost_stable_asset::Pallet::<T>::set_token_rate(
 					pool_id,
-					vec![(vtoken, (vtoken_issuance.into(), token_pool_amount.into()))],
+					vec![(vtoken, (vtoken_issuance, token_pool_amount))],
 				)
 				.ok()?
-			} else {
-				bifrost_stable_asset::Pallet::<T>::deposit_event(
-					bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
-				)
 			}
 		}
 		None
