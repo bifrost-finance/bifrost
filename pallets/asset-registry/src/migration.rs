@@ -42,6 +42,17 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 	T::DbWeight::get().reads(pool_count.into()) + T::DbWeight::get().writes(pool_count.into())
 }
 
+const BNC_LOCATION: MultiLocation = MultiLocation {
+	parents: 0,
+	interior: X1(GeneralKey {
+		length: 2,
+		data: [
+			0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0,
+		],
+	}),
+};
+
 pub struct InsertBNCMetadata<T>(PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 	fn on_runtime_upgrade() -> Weight {
@@ -56,26 +67,16 @@ impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 			},
 		);
 
-		CurrencyIdToLocations::<T>::insert(
-			BNC,
-			MultiLocation {
-				parents: 0,
-				interior: X1(GeneralKey {
-					length: 2,
-					data: [
-						0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0,
-					],
-				}),
-			},
-		);
-		Weight::from(T::DbWeight::get().reads_writes(2 as u64 + 1, 2 as u64 + 1))
+		CurrencyIdToLocations::<T>::insert(BNC, BNC_LOCATION);
+
+		LocationToCurrencyIds::<T>::insert(BNC_LOCATION, BNC);
+
+		Weight::from(T::DbWeight::get().reads_writes(3 as u64 + 1, 3 as u64 + 1))
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
-		assert!(CurrencyMetadatas::<T>::get(BNC).is_none());
-		assert!(CurrencyIdToLocations::<T>::get(BNC).is_none());
+		assert!(LocationToCurrencyIds::<T>::get(BNC_LOCATION).is_none());
 
 		Ok(sp_std::vec![])
 	}
@@ -99,24 +100,20 @@ impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 		);
 
 		let location = CurrencyIdToLocations::<T>::get(BNC);
-		assert_eq!(
-			location,
-			Some(MultiLocation {
-				parents: 0,
-				interior: X1(GeneralKey {
-					length: 2,
-					data: [
-						0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0
-					]
-				}),
-			})
-		);
+		assert_eq!(location, Some(BNC_LOCATION));
 
 		log::info!(
 			target: LOG_TARGET,
 			"InsertBNCMetadata post-migrate storage: {:?}",
 			location
+		);
+
+		let currency = LocationToCurrencyIds::<T>::get(BNC_LOCATION);
+		assert_eq!(currency, Some(BNC));
+		log::info!(
+			target: LOG_TARGET,
+			"InsertBNCMetadata post-migrate storage: {:?}",
+			currency
 		);
 
 		Ok(())
