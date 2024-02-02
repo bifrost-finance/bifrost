@@ -318,16 +318,38 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate_hardcap())]
-		pub fn edit_token_rate_hardcap(
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::config_vtoken_auto_refresh())]
+		pub fn config_vtoken_auto_refresh(
 			origin: OriginFor<T>,
-			vtokens: Vec<AssetIdOf<T>>,
+			vtoken: AssetIdOf<T>,
 			hardcap: Permill,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			TokenRateHardcap::<T>::set((vtokens.clone(), hardcap));
+
+			ensure!(
+				CurrencyId::is_vtoken(&vtoken.into()),
+				bifrost_stable_asset::Error::<T>::ArgumentsError
+			);
+			TokenRateHardcap::<T>::insert(vtoken, hardcap);
+
 			bifrost_stable_asset::Pallet::<T>::deposit_event(
-				bifrost_stable_asset::Event::<T>::TokenRateHardcapSet { vtokens, hardcap },
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapAdded { vtoken, hardcap },
+			);
+			Ok(())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::remove_vtoken_auto_refresh())]
+		pub fn remove_vtoken_auto_refresh(
+			origin: OriginFor<T>,
+			vtoken: AssetIdOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			TokenRateHardcap::<T>::remove(vtoken);
+
+			bifrost_stable_asset::Pallet::<T>::deposit_event(
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapRemoved { vtoken },
 			);
 			Ok(())
 		}
@@ -339,33 +361,26 @@ impl<T: Config> Pallet<T> {
 		token_in: AssetIdOf<T>,
 		token_out: AssetIdOf<T>,
 	) -> Option<(AssetIdOf<T>, AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>, Permill)> {
-		let (vtokens, hardcap) = Self::get_token_rate_hardcap();
-
-		if CurrencyId::is_vtoken(&token_in.into()) &&
-			T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out) &&
-			vtokens.contains(&token_in)
-		{
-			return Some((
-				token_in,
-				T::MultiCurrency::total_issuance(token_in).into(),
-				T::VtokenMinting::get_token_pool(token_out).into(),
-				hardcap,
-			));
-		} else if CurrencyId::is_vtoken(&token_out.into()) &&
-			T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in) &&
-			vtokens.contains(&token_out)
-		{
-			return Some((
-				token_out,
-				T::MultiCurrency::total_issuance(token_out).into(),
-				T::VtokenMinting::get_token_pool(token_in).into(),
-				hardcap,
-			));
-		} else {
-			// Do not refresh token rate if both token_in and token_out are not vtoken or do not
-			// match.
-			return None;
-		};
+		if let Some(hardcap) = Self::get_token_rate_hardcap(token_in) {
+			if T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out) {
+				return Some((
+					token_in,
+					T::MultiCurrency::total_issuance(token_in).into(),
+					T::VtokenMinting::get_token_pool(token_out).into(),
+					hardcap,
+				));
+			}
+		} else if let Some(hardcap) = Self::get_token_rate_hardcap(token_out) {
+			if T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in) {
+				return Some((
+					token_out,
+					T::MultiCurrency::total_issuance(token_out).into(),
+					T::VtokenMinting::get_token_pool(token_in).into(),
+					hardcap,
+				));
+			}
+		}
+		return None;
 	}
 
 	fn refresh_token_rate(
@@ -403,8 +418,8 @@ impl<T: Config> Pallet<T> {
 		None
 	}
 
-	fn get_token_rate_hardcap() -> (Vec<AssetIdOf<T>>, Permill) {
-		TokenRateHardcap::<T>::get()
+	fn get_token_rate_hardcap(vtoken: AssetIdOf<T>) -> Option<Permill> {
+		TokenRateHardcap::<T>::get(vtoken)
 	}
 
 	#[transactional]

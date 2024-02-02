@@ -62,7 +62,7 @@ benchmarks! {
 		);
 	}: _(RawOrigin::Root, 0, vec![(VDOT.into(), (9u128.into(), 10u128.into())),(DOT.into(), (1u128.into(), 1u128.into()))])
 
-	edit_token_rate_hardcap {
+	config_vtoken_auto_refresh {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = KSM;
@@ -79,7 +79,27 @@ benchmarks! {
 			fee_account.clone(),
 			1000000000000000000u128.into())
 		);
-	}: _(RawOrigin::Root, vec![VDOT.into()], Permill::from_percent(10))
+	}: _(RawOrigin::Root, VDOT.into(), Permill::from_percent(10))
+
+	remove_vtoken_auto_refresh {
+		let fee_account: T::AccountId = account("seed",1,1);
+		let coin0 = BNC;
+		let coin1 = KSM;
+		assert_ok!(
+			StablePool::<T>::create_pool(
+			RawOrigin::Root.into(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			10000000u128.into(),
+			20000000u128.into(),
+			50000000u128.into(),
+			10000u128.into(),
+			fee_account.clone(),
+			fee_account.clone(),
+			1000000000000000000u128.into())
+		);
+		assert_ok!(StablePool::<T>::config_vtoken_auto_refresh(RawOrigin::Root.into(), VDOT.into(), Permill::from_percent(10)));
+	}: _(RawOrigin::Root, VDOT.into())
 
 	add_liquidity {
 		let test_account: T::AccountId = whitelisted_caller();

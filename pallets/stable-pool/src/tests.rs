@@ -861,7 +861,7 @@ fn redeem_movr() {
 }
 
 #[test]
-fn edit_token_rate_hardcap_should_work() {
+fn config_vtoken_auto_refresh_should_work() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(
@@ -878,9 +878,9 @@ fn edit_token_rate_hardcap_should_work() {
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0, 2));
 		assert_eq!(Tokens::free_balance(DOT, &3), 85000000u128 - BALANCE_OFF);
 
-		assert_ok!(StablePool::edit_token_rate_hardcap(
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
 			RuntimeOrigin::root(),
-			vec![VDOT],
+			VDOT,
 			Permill::from_percent(10)
 		));
 		assert_ok!(StablePool::edit_token_rate(
@@ -929,9 +929,9 @@ fn over_the_hardcap_should_not_work() {
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0, 2));
 		assert_eq!(Tokens::free_balance(DOT, &3), 85000000u128 - BALANCE_OFF);
 
-		assert_ok!(StablePool::edit_token_rate_hardcap(
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
 			RuntimeOrigin::root(),
-			vec![VDOT],
+			VDOT,
 			Permill::from_percent(10)
 		));
 		assert_ok!(StablePool::edit_token_rate(
@@ -950,9 +950,9 @@ fn over_the_hardcap_should_not_work() {
 			vec![(coin0, (1, 1)), (coin1, (1, 1))]
 		);
 
-		assert_ok!(StablePool::edit_token_rate_hardcap(
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
 			RuntimeOrigin::root(),
-			vec![VDOT],
+			VDOT,
 			Permill::from_percent(20)
 		));
 		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
@@ -969,7 +969,7 @@ fn over_the_hardcap_should_not_work() {
 }
 
 #[test]
-fn not_edit_token_rate_hardcap_should_not_work() {
+fn not_config_vtoken_auto_refresh_should_not_work() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
 		assert_ok!(VtokenMinting::mint(
