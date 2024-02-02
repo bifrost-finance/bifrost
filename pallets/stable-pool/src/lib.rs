@@ -333,7 +333,7 @@ pub mod pallet {
 			TokenRateHardcap::<T>::insert(vtoken, hardcap);
 
 			bifrost_stable_asset::Pallet::<T>::deposit_event(
-				bifrost_stable_asset::Event::<T>::TokenRateHardcapAdded { vtoken, hardcap },
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapConfigured { vtoken, hardcap },
 			);
 			Ok(())
 		}
@@ -380,7 +380,7 @@ impl<T: Config> Pallet<T> {
 				));
 			}
 		}
-		return None;
+		None
 	}
 
 	fn refresh_token_rate(
@@ -397,17 +397,17 @@ impl<T: Config> Pallet<T> {
 			let numerator_u256 = U256::from(numerator.saturated_into::<u128>());
 			let demoninator_u256 = U256::from(demoninator.saturated_into::<u128>());
 
-			let delta = U256::from(hardcap * fee_denominator).checked_mul(numerator_u256)?;
+			let delta = U256::from(hardcap * fee_denominator)
+				.checked_mul(numerator_u256)?
+				.checked_div(demoninator_u256)?;
 			let new_price = U256::from(fee_denominator)
 				.checked_mul(U256::from(token_pool_amount.saturated_into::<u128>()))?
 				.checked_div(U256::from(vtoken_issuance.saturated_into::<u128>()))?;
-			let old_price = U256::from(fee_denominator.saturated_into::<u128>())
+			let old_price = U256::from(fee_denominator)
 				.checked_mul(numerator_u256)?
 				.checked_div(demoninator_u256)?;
 			// Skip if the new price is less than old price.
-			if new_price <= delta.checked_div(demoninator_u256)?.checked_add(old_price)? &&
-				new_price > old_price
-			{
+			if new_price <= delta.checked_add(old_price)? && new_price > old_price {
 				bifrost_stable_asset::Pallet::<T>::set_token_rate(
 					pool_id,
 					vec![(vtoken, (vtoken_issuance, token_pool_amount))],
