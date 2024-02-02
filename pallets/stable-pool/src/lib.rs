@@ -408,11 +408,14 @@ impl<T: Config> Pallet<T> {
 				.checked_div(demoninator_u256)?;
 			// Skip if the new price is less than old price.
 			if new_price <= delta.checked_add(old_price)? && new_price > old_price {
-				bifrost_stable_asset::Pallet::<T>::set_token_rate(
+				return bifrost_stable_asset::Pallet::<T>::set_token_rate(
 					pool_id,
 					vec![(vtoken, (vtoken_issuance, token_pool_amount))],
 				)
-				.ok()?
+				.ok();
+			} else if new_price == old_price {
+				// Do not update token rate or emit failed event if the price is the same.
+				return Some(());
 			}
 		}
 		None
