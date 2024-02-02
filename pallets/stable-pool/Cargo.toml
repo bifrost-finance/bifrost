@@ -51,6 +51,7 @@ std = [
 	"bifrost-primitives/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
+	"orml-xtokens/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

@@ -55,6 +55,8 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn create_pool() -> Weight;
 	fn edit_token_rate() -> Weight;
+	fn config_vtoken_auto_refresh() -> Weight;
+	fn remove_vtoken_auto_refresh() -> Weight;
 	fn add_liquidity() -> Weight;
 	fn swap() -> Weight;
 	fn redeem_proportion() -> Weight;
@@ -96,6 +98,28 @@ impl WeightInfo for () {
 		Weight::from_parts(69_659_000, 8673)
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
+	}
+	/// Storage: `StableAsset::TokenRateHardcap` (r:0 w:1)
+	/// Proof: `StableAsset::TokenRateHardcap` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn config_vtoken_auto_refresh() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 12_383_000 picoseconds.
+		Weight::from_parts(12_724_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+	/// Storage: `StableAsset::TokenRateHardcap` (r:0 w:1)
+	/// Proof: `StableAsset::TokenRateHardcap` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn remove_vtoken_auto_refresh() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 12_453_000 picoseconds.
+		Weight::from_parts(12_564_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	/// Storage: StableAsset Pools (r:1 w:1)
 	/// Proof Skipped: StableAsset Pools (max_values: None, max_size: None, mode: Measured)
