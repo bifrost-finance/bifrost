@@ -55,7 +55,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn create_pool() -> Weight;
 	fn edit_token_rate() -> Weight;
-	fn edit_token_rate_hardtop() -> Weight;
+	fn edit_token_rate_hardcap() -> Weight;
 	fn add_liquidity() -> Weight;
 	fn swap() -> Weight;
 	fn redeem_proportion() -> Weight;
@@ -98,9 +98,9 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
-	/// Storage: `StableAsset::TokenRateHardtop` (r:0 w:1)
-	/// Proof: `StableAsset::TokenRateHardtop` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	fn edit_token_rate_hardtop() -> Weight {
+	/// Storage: `StableAsset::TokenRateHardcap` (r:0 w:1)
+	/// Proof: `StableAsset::TokenRateHardcap` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	fn edit_token_rate_hardcap() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`

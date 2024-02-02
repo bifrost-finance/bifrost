@@ -37,7 +37,7 @@ use bifrost_primitives::{
 pub use bifrost_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
-	TokenRateHardtop,
+	TokenRateHardcap,
 };
 use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
 use frame_system::pallet_prelude::*;
@@ -318,16 +318,16 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(10)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate_hardtop())]
-		pub fn edit_token_rate_hardtop(
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate_hardcap())]
+		pub fn edit_token_rate_hardcap(
 			origin: OriginFor<T>,
 			vtokens: Vec<AssetIdOf<T>>,
-			hardtop: Permill,
+			hardcap: Permill,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			TokenRateHardtop::<T>::set((vtokens.clone(), hardtop));
+			TokenRateHardcap::<T>::set((vtokens.clone(), hardcap));
 			bifrost_stable_asset::Pallet::<T>::deposit_event(
-				bifrost_stable_asset::Event::<T>::TokenRateHardtopSet { vtokens, hardtop },
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapSet { vtokens, hardcap },
 			);
 			Ok(())
 		}
@@ -339,7 +339,7 @@ impl<T: Config> Pallet<T> {
 		token_in: AssetIdOf<T>,
 		token_out: AssetIdOf<T>,
 	) -> Option<(AssetIdOf<T>, AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>, Permill)> {
-		let (vtokens, hardtop) = Self::get_token_rate_hardtop();
+		let (vtokens, hardcap) = Self::get_token_rate_hardcap();
 
 		if CurrencyId::is_vtoken(&token_in.into()) &&
 			T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out) &&
@@ -349,7 +349,7 @@ impl<T: Config> Pallet<T> {
 				token_in,
 				T::MultiCurrency::total_issuance(token_in).into(),
 				T::VtokenMinting::get_token_pool(token_out).into(),
-				hardtop,
+				hardcap,
 			));
 		} else if CurrencyId::is_vtoken(&token_out.into()) &&
 			T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in) &&
@@ -359,7 +359,7 @@ impl<T: Config> Pallet<T> {
 				token_out,
 				T::MultiCurrency::total_issuance(token_out).into(),
 				T::VtokenMinting::get_token_pool(token_in).into(),
-				hardtop,
+				hardcap,
 			));
 		} else {
 			// Do not refresh token rate if both token_in and token_out are not vtoken or do not
@@ -373,7 +373,7 @@ impl<T: Config> Pallet<T> {
 		vtoken: AssetIdOf<T>,
 		vtoken_issuance: AtLeast64BitUnsignedOf<T>,
 		token_pool_amount: AtLeast64BitUnsignedOf<T>,
-		hardtop: Permill,
+		hardcap: Permill,
 	) -> Option<()> {
 		if let Some((demoninator, numerator)) =
 			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
@@ -382,7 +382,7 @@ impl<T: Config> Pallet<T> {
 			let numerator_u256 = U256::from(numerator.saturated_into::<u128>());
 			let demoninator_u256 = U256::from(demoninator.saturated_into::<u128>());
 
-			let delta = U256::from(hardtop * fee_denominator).checked_mul(numerator_u256)?;
+			let delta = U256::from(hardcap * fee_denominator).checked_mul(numerator_u256)?;
 			let new_price = U256::from(fee_denominator)
 				.checked_mul(U256::from(token_pool_amount.saturated_into::<u128>()))?
 				.checked_div(U256::from(vtoken_issuance.saturated_into::<u128>()))?;
@@ -403,8 +403,8 @@ impl<T: Config> Pallet<T> {
 		None
 	}
 
-	fn get_token_rate_hardtop() -> (Vec<AssetIdOf<T>>, Permill) {
-		TokenRateHardtop::<T>::get()
+	fn get_token_rate_hardcap() -> (Vec<AssetIdOf<T>>, Permill) {
+		TokenRateHardcap::<T>::get()
 	}
 
 	#[transactional]
@@ -808,7 +808,7 @@ impl<T: Config> Pallet<T> {
 				output_amount: downscale_out,
 			},
 		);
-		if let Some((vtoken, vtoken_issuance, token_pool_amount, hardtop)) =
+		if let Some((vtoken, vtoken_issuance, token_pool_amount, hardcap)) =
 			Self::ensure_can_refresh(token_in, token_out)
 		{
 			if Self::refresh_token_rate(
@@ -816,7 +816,7 @@ impl<T: Config> Pallet<T> {
 				vtoken,
 				vtoken_issuance,
 				token_pool_amount,
-				hardtop,
+				hardcap,
 			)
 			.is_none()
 			{

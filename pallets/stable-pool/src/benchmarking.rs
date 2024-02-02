@@ -62,7 +62,7 @@ benchmarks! {
 		);
 	}: _(RawOrigin::Root, 0, vec![(VDOT.into(), (9u128.into(), 10u128.into())),(DOT.into(), (1u128.into(), 1u128.into()))])
 
-	edit_token_rate_hardtop {
+	edit_token_rate_hardcap {
 		let fee_account: T::AccountId = account("seed",1,1);
 		let coin0 = BNC;
 		let coin1 = KSM;
