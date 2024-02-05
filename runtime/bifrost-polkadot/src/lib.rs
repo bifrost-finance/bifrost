@@ -1221,7 +1221,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type ChannelCommission = ();
+	type ChannelCommission = ChannelCommission;
 }
 
 parameter_types! {
