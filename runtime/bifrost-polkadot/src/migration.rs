@@ -77,16 +77,16 @@ pub mod v1 {
 	use super::*;
 	use pallet_referenda::{
 		BalanceOf, Config, Pallet, ReferendumIndex, ReferendumInfo, ReferendumInfoFor,
-		ReferendumInfoOf,
 	};
 
 	/// The log target.
 	const TARGET: &'static str = "runtime::referenda::migration::v1";
 
-	/// Transforms a submission deposit of ReferendumInfo(Approved|Rejected|Cancelled|TimedOut) to
-	/// optional value, making it refundable.
-	pub struct MigrateV0ToV1<T, I = ()>(PhantomData<(T, I)>);
-	impl<T: Config<I>, I: 'static> OnRuntimeUpgrade for MigrateV0ToV1<T, I> {
+	/// Restore ReferendumInfo(Approved|Rejected|Cancelled|TimedOut).
+	pub struct RestoreReferendaV1<R: Get<&'static str>, T, I = ()>(PhantomData<(R, T, I)>);
+	impl<R: Get<&'static str>, T: Config<I>, I: 'static> OnRuntimeUpgrade
+		for RestoreReferendaV1<R, T, I>
+	{
 		#[cfg(feature = "try-runtime")]
 		fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 			let referendum_count = v0::ReferendumInfoFor::<T, I>::iter().count();
@@ -102,13 +102,10 @@ pub mod v1 {
 
 		fn on_runtime_upgrade() -> Weight {
 			use pallet_referenda::Deposit;
-			use scale_info::prelude::string::String;
 			use sp_runtime::Deserialize;
 			#[derive(Debug, Deserialize, Clone)]
-			struct MyItem<AccountId, Balance> {
+			struct ForeignReferendumInfo<AccountId, Balance> {
 				index: ReferendumIndex,
-				item: String,
-				moment: u64,
 				deposit1: Option<ForeignDeposit<AccountId, Balance>>,
 				deposit2: Option<ForeignDeposit<AccountId, Balance>>,
 			}
@@ -118,10 +115,8 @@ pub mod v1 {
 				who: AccountId,
 				amount: Balance,
 			}
-			let json_data = r#"[{"index":0,"item":"approved","moment":3400026,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":10,"item":"approved","moment":3596647,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":1000000000000}},{"index":4,"item":"approved","moment":3470499,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":21,"item":"approved","moment":3867437,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":20,"item":"approved","moment":3838680,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":16,"item":"approved","moment":3739448,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":11,"item":"approved","moment":3606431,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":14,"item":"approved","moment":3649181,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":6,"item":"approved","moment":3514343,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":19,"item":"approved","moment":3810819,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":1000000000000}},{"index":15,"item":"approved","moment":3691240,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":2,"item":"approved","moment":3434821,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":13,"item":"approved","moment":3649150,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":5,"item":"approved","moment":3509139,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":18,"item":"approved","moment":3788633,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":7,"item":"approved","moment":3561876,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":22,"item":"approved","moment":3868037,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":24,"item":"approved","moment":3881005,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":8,"item":"approved","moment":3578405,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":1,"item":"approved","moment":3401224,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":12,"item":"approved","moment":3636697,"deposit1":{"who":"cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop","amount":0},"deposit2":{"who":"cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop","amount":10000000000000}},{"index":3,"item":"approved","moment":3450220,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":17,"item":"approved","moment":3773821,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":25,"item":"approved","moment":3886610,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":23,"item":"approved","moment":3879418,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":9,"item":"rejected","moment":3610884,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":null}]"#;
-
-			let result: Vec<MyItem<T::AccountId, BalanceOf<T, I>>> =
-				serde_json::from_str(json_data).expect("Failed to deserialize JSON");
+			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
+				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
 
 			let mut weight = T::DbWeight::get().reads(1);
 
@@ -130,7 +125,11 @@ pub mod v1 {
 					.iter()
 					.filter(|item| item.index == key)
 					.cloned()
-					.collect::<Vec<MyItem<T::AccountId, BalanceOf<T, I>>>>();
+					.collect::<Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>>>();
+				if item.len() != 1 {
+					weight.saturating_accrue(T::DbWeight::get().reads(1));
+					return;
+				}
 				let maybe_new_value = match value {
 					v0::ReferendumInfo::Ongoing(_) | v0::ReferendumInfo::Killed(_) => None,
 					v0::ReferendumInfo::Approved(e, mut s, mut d) => {
@@ -151,10 +150,24 @@ pub mod v1 {
 						}
 						Some(ReferendumInfo::Rejected(e, s, d))
 					},
-					v0::ReferendumInfo::Cancelled(e, s, d) =>
-						Some(ReferendumInfo::Cancelled(e, s, d)),
-					v0::ReferendumInfo::TimedOut(e, s, d) =>
-						Some(ReferendumInfo::TimedOut(e, s, d)),
+					v0::ReferendumInfo::Cancelled(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::Cancelled(e, s, d))
+					},
+					v0::ReferendumInfo::TimedOut(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::TimedOut(e, s, d))
+					},
 				};
 				if let Some(new_value) = maybe_new_value {
 					weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
@@ -176,8 +189,6 @@ pub mod v1 {
 			let post_referendum_count = ReferendumInfoFor::<T, I>::iter().count() as u32;
 			ensure!(post_referendum_count == pre_referendum_count, "must migrate all referendums.");
 			log::info!(target: TARGET, "migrated all referendums.");
-			let infos = ReferendumInfoFor::<T, I>::iter().collect::<Vec<_>>();
-			log::info!("post_upgrade infos: {:?}", infos);
 			Ok(())
 		}
 	}

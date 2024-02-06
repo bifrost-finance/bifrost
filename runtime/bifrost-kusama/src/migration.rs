@@ -77,16 +77,16 @@ pub mod v1 {
 	use super::*;
 	use pallet_referenda::{
 		BalanceOf, Config, Pallet, ReferendumIndex, ReferendumInfo, ReferendumInfoFor,
-		ReferendumInfoOf,
 	};
 
 	/// The log target.
 	const TARGET: &'static str = "runtime::referenda::migration::v1";
 
-	/// Transforms a submission deposit of ReferendumInfo(Approved|Rejected|Cancelled|TimedOut) to
-	/// optional value, making it refundable.
-	pub struct MigrateV0ToV1<T, I = ()>(PhantomData<(T, I)>);
-	impl<T: Config<I>, I: 'static> OnRuntimeUpgrade for MigrateV0ToV1<T, I> {
+	/// Restore ReferendumInfo(Approved|Rejected|Cancelled|TimedOut).
+	pub struct RestoreReferendaV1<R: Get<&'static str>, T, I = ()>(PhantomData<(R, T, I)>);
+	impl<R: Get<&'static str>, T: Config<I>, I: 'static> OnRuntimeUpgrade
+		for RestoreReferendaV1<R, T, I>
+	{
 		#[cfg(feature = "try-runtime")]
 		fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
 			let referendum_count = v0::ReferendumInfoFor::<T, I>::iter().count();
@@ -102,13 +102,10 @@ pub mod v1 {
 
 		fn on_runtime_upgrade() -> Weight {
 			use pallet_referenda::Deposit;
-			use scale_info::prelude::string::String;
 			use sp_runtime::Deserialize;
 			#[derive(Debug, Deserialize, Clone)]
-			struct MyItem<AccountId, Balance> {
+			struct ForeignReferendumInfo<AccountId, Balance> {
 				index: ReferendumIndex,
-				item: String,
-				moment: u64,
 				deposit1: Option<ForeignDeposit<AccountId, Balance>>,
 				deposit2: Option<ForeignDeposit<AccountId, Balance>>,
 			}
@@ -118,10 +115,8 @@ pub mod v1 {
 				who: AccountId,
 				amount: Balance,
 			}
-			let json_data = r#"[{"index":0,"item":"approved","moment":4655264,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":10,"item":"approved","moment":5005706,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":4,"item":"approved","moment":4711806,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":21,"item":"approved","moment":5242084,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"hJmectFjn7CCEQL1tKDxvboA1i9hcfTyUrLuW3xjDqRgxmm","amount":10000000000000}},{"index":28,"item":"approved","moment":5364637,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":20,"item":"rejected","moment":5256350,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":30,"item":"approved","moment":5403372,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":39,"item":"approved","moment":5627214,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":38,"item":"approved","moment":5578836,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":34,"item":"approved","moment":5483685,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":16,"item":"approved","moment":5099545,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":10000000000000}},{"index":11,"item":"approved","moment":5014894,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":14,"item":"approved","moment":5065068,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":6,"item":"approved","moment":4763470,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":19,"item":"approved","moment":5202672,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":1000000000000}},{"index":35,"item":"approved","moment":5483693,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":36,"item":"approved","moment":5522990,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":10000000000000}},{"index":31,"item":"approved","moment":5426963,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":33,"item":"approved","moment":5464554,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":1000000000000}},{"index":41,"item":"approved","moment":5705997,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":15,"item":"approved","moment":5077671,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":1000000000000}},{"index":40,"item":"approved","moment":5671841,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":2,"item":"rejected","moment":4726229,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":13,"item":"approved","moment":5065120,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":10000000000000}},{"index":32,"item":"approved","moment":5438975,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":27,"item":"approved","moment":5330661,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":29,"item":"approved","moment":5366509,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":42,"item":"approved","moment":5718845,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":43,"item":"approved","moment":5722849,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":5,"item":"approved","moment":4760550,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":18,"item":"approved","moment":5192305,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":7,"item":"approved","moment":4852971,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":26,"item":"approved","moment":5309065,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":22,"item":"approved","moment":5261989,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":24,"item":"approved","moment":5287150,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":8,"item":"approved","moment":4860211,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":1,"item":"approved","moment":4670644,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":12,"item":"approved","moment":5022210,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":{"who":"ddeADYcZ13GmFSR44KjMiRixvq8Hbdh9HW9wPRX4gupWDDb","amount":10000000000000}},{"index":3,"item":"approved","moment":4704466,"deposit1":{"who":"fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw","amount":0},"deposit2":null},{"index":17,"item":"approved","moment":5119363,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":1000000000000}},{"index":25,"item":"approved","moment":5299127,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":1000000000000}},{"index":23,"item":"approved","moment":5264569,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":37,"item":"approved","moment":5530454,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":9,"item":"approved","moment":4951386,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null}]"#;
-
-			let result: Vec<MyItem<T::AccountId, BalanceOf<T, I>>> =
-				serde_json::from_str(json_data).expect("Failed to deserialize JSON");
+			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
+				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
 
 			let mut weight = T::DbWeight::get().reads(1);
 
@@ -130,7 +125,11 @@ pub mod v1 {
 					.iter()
 					.filter(|item| item.index == key)
 					.cloned()
-					.collect::<Vec<MyItem<T::AccountId, BalanceOf<T, I>>>>();
+					.collect::<Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>>>();
+				if item.len() != 1 {
+					weight.saturating_accrue(T::DbWeight::get().reads(1));
+					return;
+				}
 				let maybe_new_value = match value {
 					v0::ReferendumInfo::Ongoing(_) | v0::ReferendumInfo::Killed(_) => None,
 					v0::ReferendumInfo::Approved(e, mut s, mut d) => {
@@ -151,10 +150,24 @@ pub mod v1 {
 						}
 						Some(ReferendumInfo::Rejected(e, s, d))
 					},
-					v0::ReferendumInfo::Cancelled(e, s, d) =>
-						Some(ReferendumInfo::Cancelled(e, s, d)),
-					v0::ReferendumInfo::TimedOut(e, s, d) =>
-						Some(ReferendumInfo::TimedOut(e, s, d)),
+					v0::ReferendumInfo::Cancelled(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::Cancelled(e, s, d))
+					},
+					v0::ReferendumInfo::TimedOut(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::TimedOut(e, s, d))
+					},
 				};
 				if let Some(new_value) = maybe_new_value {
 					weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
@@ -176,8 +189,6 @@ pub mod v1 {
 			let post_referendum_count = ReferendumInfoFor::<T, I>::iter().count() as u32;
 			ensure!(post_referendum_count == pre_referendum_count, "must migrate all referendums.");
 			log::info!(target: TARGET, "migrated all referendums.");
-			let infos = ReferendumInfoFor::<T, I>::iter().collect::<Vec<_>>();
-			log::info!("post_upgrade infos: {:?}", infos);
 			Ok(())
 		}
 	}
