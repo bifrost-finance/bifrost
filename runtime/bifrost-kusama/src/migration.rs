@@ -17,8 +17,6 @@ pub mod v0 {
 	// ReferendumStatus and its dependency types referenced from the latest version while staying
 	// unchanged. [`super::test::referendum_status_v0()`] checks its immutability between v0 and
 	// latest version.
-	#[cfg(test)]
-	pub(super) use super::{ReferendumStatus, ReferendumStatusOf};
 
 	pub type ReferendumInfoOf<T, I> = ReferendumInfo<
 		TrackIdOf<T, I>,
