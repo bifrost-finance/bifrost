@@ -24,7 +24,7 @@ use crate::types::{
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
-	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMANTA, VMOVR},
 	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
 };
 use cumulus_primitives_core::ParaId;
@@ -942,7 +942,7 @@ impl<T: Config> Pallet<T> {
 				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
 					.unwrap_or_else(|| Self::get_default_fee(BNC));
 				match currency_id {
-					VKSM | VMOVR | VBNC | FIL | VFIL | VDOT | VGLMR => {
+					VKSM | VMOVR | VBNC | FIL | VFIL | VDOT | VGLMR | VMANTA => {
 						T::MultiCurrency::transfer(
 							BNC,
 							evm_contract_account_id,
