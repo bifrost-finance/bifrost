@@ -185,13 +185,6 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	fn get_special_asset_price(
-		_asset_id: CurrencyId,
-		_base_price: TimeStampedPrice,
-	) -> Option<TimeStampedPrice> {
-		None
-	}
-
 	fn normalize_detail_price(price: TimeStampedPrice, mantissa: u128) -> Option<PriceDetail> {
 		price
 			.value
@@ -212,10 +205,7 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 		// if emergency price exists, return it
 		Self::get_emergency_price(asset_id).or_else(|| {
 			let mantissa = Self::get_asset_mantissa(asset_id)?;
-			T::Source::get(&T::RelayCurrency::get())
-				.and_then(|base_price| Self::get_special_asset_price(*asset_id, base_price))
-				.or_else(|| T::Source::get(asset_id))
-				.and_then(|price| Self::normalize_detail_price(price, mantissa))
+			T::Source::get(asset_id).and_then(|price| Self::normalize_detail_price(price, mantissa))
 		})
 	}
 }
@@ -238,9 +228,7 @@ impl<T: Config> EmergencyPriceFeeder<CurrencyId, Price> for Pallet<T> {
 impl<T: Config> DataProviderExtended<CurrencyId, TimeStampedPrice> for Pallet<T> {
 	fn get_no_op(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		let _mantissa = Self::get_asset_mantissa(asset_id)?;
-		T::Source::get_no_op(&T::RelayCurrency::get())
-			.and_then(|base_price| Self::get_special_asset_price(*asset_id, base_price))
-			.or_else(|| T::Source::get_no_op(asset_id))
+		T::Source::get_no_op(asset_id)
 	}
 
 	fn get_all_values() -> Vec<(CurrencyId, Option<TimeStampedPrice>)> {
