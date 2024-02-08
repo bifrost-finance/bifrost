@@ -663,6 +663,27 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
 			ensure!(market.rate_model.check_model(), Error::<T>::InvalidRateModelParam);
+			ensure!(
+				market.collateral_factor >= Ratio::zero() &&
+					market.collateral_factor < Ratio::one(),
+				Error::<T>::InvalidFactor,
+			);
+			ensure!(
+				market.liquidation_threshold < Ratio::one() &&
+					market.liquidation_threshold >= market.collateral_factor,
+				Error::<T>::InvalidFactor
+			);
+			ensure!(
+				market.reserve_factor > Ratio::zero() && market.reserve_factor < Ratio::one(),
+				Error::<T>::InvalidFactor,
+			);
+			ensure!(
+				market.liquidate_incentive_reserved_factor > Ratio::zero() &&
+					market.liquidate_incentive_reserved_factor < Ratio::one(),
+				Error::<T>::InvalidFactor,
+			);
+			ensure!(market.supply_cap > Zero::zero(), Error::<T>::InvalidSupplyCap,);
+
 			if UnderlyingAssetId::<T>::contains_key(market.lend_token_id) {
 				ensure!(
 					Self::underlying_id(market.lend_token_id)? == asset_id,
