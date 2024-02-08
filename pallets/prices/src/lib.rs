@@ -101,12 +101,6 @@ pub mod pallet {
 	pub type EmergencyPrice<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
 
-	/// Mapping from foreign vault token to our's vault token
-	#[pallet::storage]
-	#[pallet::getter(fn foreign_to_native_asset)]
-	pub type ForeignToNativeAsset<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, CurrencyId, OptionQuery>;
-
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -139,20 +133,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			T::FeederOrigin::ensure_origin(origin)?;
 			<Pallet<T> as EmergencyPriceFeeder<CurrencyId, Price>>::reset_emergency_price(asset_id);
-			Ok(().into())
-		}
-
-		/// Set foreign vault token mapping
-		#[pallet::call_index(2)]
-		#[pallet::weight((<T as Config>::WeightInfo::set_foreign_asset(), DispatchClass::Operational))]
-		#[transactional]
-		pub fn set_foreign_asset(
-			origin: OriginFor<T>,
-			foreign_asset_id: CurrencyId,
-			asset_id: CurrencyId,
-		) -> DispatchResultWithPostInfo {
-			T::UpdateOrigin::ensure_origin(origin)?;
-			ForeignToNativeAsset::<T>::insert(foreign_asset_id, asset_id);
 			Ok(().into())
 		}
 	}

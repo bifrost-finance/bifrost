@@ -28,7 +28,6 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn set_price() -> Weight;
 	fn reset_price() -> Weight;
-	fn set_foreign_asset() -> Weight;
 }
 
 /// Weights for pallet_prices using the Substrate node and recommended hardware.
@@ -44,11 +43,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
-	fn set_foreign_asset() -> Weight {
-		Weight::from_parts(23_361_000 as u64, 3979)
-			.saturating_add(T::DbWeight::get().reads(1 as u64))
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
-	}
 }
 
 // For backwards compatibility and tests
@@ -60,11 +54,6 @@ impl WeightInfo for () {
 	}
 	fn reset_price() -> Weight {
 		Weight::from_parts(21_361_000 as u64, 3979)
-			.saturating_add(RocksDbWeight::get().reads(1 as u64))
-			.saturating_add(RocksDbWeight::get().writes(1 as u64))
-	}
-	fn set_foreign_asset() -> Weight {
-		Weight::from_parts(23_361_000 as u64, 3979)
 			.saturating_add(RocksDbWeight::get().reads(1 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}

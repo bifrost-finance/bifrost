@@ -305,8 +305,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		Assets::mint(RuntimeOrigin::signed(ALICE), DOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), VDOT.into(), ALICE, 1000 * PRICE_ONE).unwrap();
 		Assets::mint(RuntimeOrigin::signed(ALICE), FIL.into(), ALICE, 1000 * PRICE_ONE).unwrap();
-
-		Prices::set_foreign_asset(RuntimeOrigin::signed(ALICE), VFIL, FIL).unwrap();
 	});
 
 	ext
