@@ -625,6 +625,11 @@ pub mod pallet {
 				reserve_factor > Ratio::zero() && reserve_factor < Ratio::one(),
 				Error::<T>::InvalidFactor
 			);
+			ensure!(
+				liquidate_incentive_reserved_factor > Ratio::zero() &&
+					liquidate_incentive_reserved_factor < Ratio::one(),
+				Error::<T>::InvalidFactor,
+			);
 			ensure!(supply_cap > Zero::zero(), Error::<T>::InvalidSupplyCap);
 
 			let market = Self::mutate_market(asset_id, |stored_market| {
