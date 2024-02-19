@@ -34,6 +34,7 @@ bifrost-asset-registry = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 
 [dev-dependencies]
+hex = "0.4.3"
 orml-tokens = { workspace = true }
 orml-xtokens = { workspace = true }
 orml-traits = { workspace = true }

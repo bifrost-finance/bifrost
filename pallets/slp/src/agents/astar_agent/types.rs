@@ -44,22 +44,22 @@ pub enum AstarUtilityCall<AstarCall> {
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum AstarDappsStakingCall<T: Config> {
-	#[codec(index = 3)]
-	BondAndStake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
-	#[codec(index = 4)]
-	UnbondAndUnstake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
-	#[codec(index = 5)]
-	WithdrawUnbonded,
-	#[codec(index = 6)]
-	NominationTransfer(
-		SmartContract<T::AccountId>,
-		#[codec(compact)] BalanceOf<T>,
-		SmartContract<T::AccountId>,
-	),
 	#[codec(index = 7)]
-	ClaimStaker(SmartContract<T::AccountId>),
+	Lock(#[codec(compact)] BalanceOf<T>),
+	#[codec(index = 8)]
+	Unlock(#[codec(compact)] BalanceOf<T>),
+	#[codec(index = 9)]
+	ClaimUnlocked,
+	#[codec(index = 10)]
+	RelockUnlocking,
 	#[codec(index = 11)]
-	SetRewardDestination(RewardDestination),
+	Stake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
+	#[codec(index = 12)]
+	Unstake(SmartContract<T::AccountId>, #[codec(compact)] BalanceOf<T>),
+	#[codec(index = 13)]
+	ClaimStakerRewards,
+	#[codec(index = 14)]
+	ClaimBonusReward(SmartContract<T::AccountId>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
