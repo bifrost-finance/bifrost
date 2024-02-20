@@ -1113,7 +1113,7 @@ pub mod pallet {
 		///
 		/// The `assets` won't be counted when do general
 		#[pallet::call_index(21)]
-		#[pallet::weight(T::WeightInfo::update_liquidation_free_collateral())]
+		#[pallet::weight(T::WeightInfo::update_liquidation_free_collateral(collaterals.len() as u32))]
 		#[transactional]
 		pub fn update_liquidation_free_collateral(
 			origin: OriginFor<T>,

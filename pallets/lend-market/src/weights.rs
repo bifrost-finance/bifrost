@@ -68,7 +68,7 @@ pub trait WeightInfo {
 	fn reduce_reserves() -> Weight;
 	fn withdraw_missing_reward() -> Weight;
 	fn collateral_asset() -> Weight;
-	fn update_liquidation_free_collateral() -> Weight;
+	fn update_liquidation_free_collateral(n: u32, ) -> Weight;
 }
 
 /// Weights for loans using the Substrate node and recommended hardware.
@@ -672,14 +672,20 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(8_u64))
 			.saturating_add(T::DbWeight::get().writes(4_u64))
 	}
-	fn update_liquidation_free_collateral() -> Weight {
+	/// Storage: `LendMarket::LiquidationFreeCollaterals` (r:1 w:1)
+	/// Proof: `LendMarket::LiquidationFreeCollaterals` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 1]`.
+	fn update_liquidation_free_collateral(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `2857`
-		//  Estimated: `26757`
-		// Minimum execution time: 115_421_000 picoseconds.
-		Weight::from_parts(116_053_000, 26757)
-			.saturating_add(T::DbWeight::get().reads(8_u64))
-			.saturating_add(T::DbWeight::get().writes(4_u64))
+		//  Measured:  `109`
+		//  Estimated: `1594`
+		// Minimum execution time: 16_581_000 picoseconds.
+		Weight::from_parts(17_176_644, 0)
+			.saturating_add(Weight::from_parts(0, 1594))
+			// Standard Error: 29_081
+			.saturating_add(Weight::from_parts(12_055, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	fn collateral_asset() -> Weight {
 		// Proof Size summary in bytes:
@@ -1292,14 +1298,20 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(8_u64))
 			.saturating_add(RocksDbWeight::get().writes(4_u64))
 	}
-	fn update_liquidation_free_collateral() -> Weight {
+	/// Storage: `LendMarket::LiquidationFreeCollaterals` (r:1 w:1)
+	/// Proof: `LendMarket::LiquidationFreeCollaterals` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 1]`.
+	fn update_liquidation_free_collateral(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `2857`
-		//  Estimated: `26757`
-		// Minimum execution time: 115_421_000 picoseconds.
-		Weight::from_parts(116_053_000, 26757)
-			.saturating_add(RocksDbWeight::get().reads(8_u64))
-			.saturating_add(RocksDbWeight::get().writes(4_u64))
+		//  Measured:  `109`
+		//  Estimated: `1594`
+		// Minimum execution time: 16_581_000 picoseconds.
+		Weight::from_parts(17_176_644, 0)
+			.saturating_add(Weight::from_parts(0, 1594))
+			// Standard Error: 29_081
+			.saturating_add(Weight::from_parts(12_055, 0).saturating_mul(n.into()))
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	fn collateral_asset() -> Weight {
 		// Proof Size summary in bytes:
