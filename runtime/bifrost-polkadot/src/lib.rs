@@ -65,6 +65,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+mod migration;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 pub use bifrost_primitives::{
@@ -1847,7 +1848,15 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,);
+	pub type Unreleased = (
+		bifrost_asset_registry::migration::InsertBNCMetadata<Runtime>,
+		crate::migration::v1::RestoreReferendaV1<crate::migration::ReferendaData, Runtime>,
+		crate::migration::v1::RestoreReferendaV1<
+			crate::migration::FellowshipReferendaData,
+			Runtime,
+			governance::fellowship::FellowshipReferendaInstance,
+		>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.

@@ -66,6 +66,7 @@ use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
+mod migration;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
 
@@ -2042,7 +2043,14 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (
+		crate::migration::v1::RestoreReferendaV1<crate::migration::ReferendaData, Runtime>,
+		crate::migration::v1::RestoreReferendaV1<
+			crate::migration::FellowshipReferendaData,
+			Runtime,
+			governance::fellowship::FellowshipReferendaInstance,
+		>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.
