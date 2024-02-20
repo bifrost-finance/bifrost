@@ -52,7 +52,7 @@ pub trait WeightInfo {
 	fn force_update_market() -> Weight;
 	fn add_reward() -> Weight;
 	fn update_market_reward_speed() -> Weight;
-	fn claim_reward() -> Weight;
+	fn claim_reward(n: u32, ) -> Weight;
 	fn claim_reward_for_market() -> Weight;
 	fn mint() -> Weight;
 	fn borrow() -> Weight;
@@ -171,42 +171,46 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(6_u64))
 			.saturating_add(T::DbWeight::get().writes(4_u64))
 	}
-	/// Storage: Loans Markets (r:2 w:0)
-	/// Proof Skipped: Loans Markets (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardSupplyState (r:1 w:1)
-	/// Proof Skipped: Loans RewardSupplyState (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardSupplySpeed (r:1 w:0)
-	/// Proof Skipped: Loans RewardSupplySpeed (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens TotalIssuance (r:1 w:0)
-	/// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(35), added: 2510, mode: MaxEncodedLen)
-	/// Storage: Loans RewardSupplierIndex (r:1 w:1)
-	/// Proof Skipped: Loans RewardSupplierIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardAccrued (r:1 w:1)
-	/// Proof Skipped: Loans RewardAccrued (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:3 w:2)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(115), added: 2590, mode: MaxEncodedLen)
-	/// Storage: Loans RewardBorrowState (r:1 w:1)
-	/// Proof Skipped: Loans RewardBorrowState (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardBorrowSpeed (r:1 w:0)
-	/// Proof Skipped: Loans RewardBorrowSpeed (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans TotalBorrows (r:1 w:0)
-	/// Proof Skipped: Loans TotalBorrows (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans BorrowIndex (r:1 w:0)
-	/// Proof Skipped: Loans BorrowIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardBorrowerIndex (r:1 w:1)
-	/// Proof Skipped: Loans RewardBorrowerIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans AccountBorrows (r:1 w:0)
-	/// Proof Skipped: Loans AccountBorrows (max_values: None, max_size: None, mode: Measured)
-	/// Storage: System Account (r:1 w:0)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	fn claim_reward() -> Weight {
+	/// Storage: `LendMarket::Markets` (r:2 w:0)
+	/// Proof: `LendMarket::Markets` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplyState` (r:1 w:1)
+	/// Proof: `LendMarket::RewardSupplyState` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplySpeed` (r:1 w:0)
+	/// Proof: `LendMarket::RewardSupplySpeed` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::TotalSupply` (r:1 w:0)
+	/// Proof: `LendMarket::TotalSupply` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplierIndex` (r:1 w:1)
+	/// Proof: `LendMarket::RewardSupplierIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardAccured` (r:1 w:1)
+	/// Proof: `LendMarket::RewardAccured` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::AccountDeposits` (r:1 w:0)
+	/// Proof: `LendMarket::AccountDeposits` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowState` (r:1 w:1)
+	/// Proof: `LendMarket::RewardBorrowState` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowSpeed` (r:1 w:0)
+	/// Proof: `LendMarket::RewardBorrowSpeed` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::TotalBorrows` (r:1 w:0)
+	/// Proof: `LendMarket::TotalBorrows` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::BorrowIndex` (r:1 w:0)
+	/// Proof: `LendMarket::BorrowIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowerIndex` (r:1 w:1)
+	/// Proof: `LendMarket::RewardBorrowerIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::AccountBorrows` (r:1 w:0)
+	/// Proof: `LendMarket::AccountBorrows` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `System::Account` (r:2 w:2)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 1]`.
+	fn claim_reward(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `3492`
-		//  Estimated: `80995`
-		// Minimum execution time: 210_812_000 picoseconds.
-		Weight::from_parts(211_623_000, 80995)
-			.saturating_add(T::DbWeight::get().reads(17_u64))
-			.saturating_add(T::DbWeight::get().writes(7_u64))
+		//  Measured:  `1280`
+		//  Estimated: `7220`
+		// Minimum execution time: 145_736_000 picoseconds.
+		Weight::from_parts(150_117_344, 0)
+			.saturating_add(Weight::from_parts(0, 7220))
+			// Standard Error: 189_715
+			.saturating_add(Weight::from_parts(273_055, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(16))
+			.saturating_add(T::DbWeight::get().writes(7))
 	}
 	/// Storage: Loans RewardSupplyState (r:1 w:1)
 	/// Proof Skipped: Loans RewardSupplyState (max_values: None, max_size: None, mode: Measured)
@@ -791,42 +795,46 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(6_u64))
 			.saturating_add(RocksDbWeight::get().writes(4_u64))
 	}
-	/// Storage: Loans Markets (r:2 w:0)
-	/// Proof Skipped: Loans Markets (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardSupplyState (r:1 w:1)
-	/// Proof Skipped: Loans RewardSupplyState (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardSupplySpeed (r:1 w:0)
-	/// Proof Skipped: Loans RewardSupplySpeed (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens TotalIssuance (r:1 w:0)
-	/// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(35), added: 2510, mode: MaxEncodedLen)
-	/// Storage: Loans RewardSupplierIndex (r:1 w:1)
-	/// Proof Skipped: Loans RewardSupplierIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardAccrued (r:1 w:1)
-	/// Proof Skipped: Loans RewardAccrued (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:3 w:2)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(115), added: 2590, mode: MaxEncodedLen)
-	/// Storage: Loans RewardBorrowState (r:1 w:1)
-	/// Proof Skipped: Loans RewardBorrowState (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardBorrowSpeed (r:1 w:0)
-	/// Proof Skipped: Loans RewardBorrowSpeed (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans TotalBorrows (r:1 w:0)
-	/// Proof Skipped: Loans TotalBorrows (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans BorrowIndex (r:1 w:0)
-	/// Proof Skipped: Loans BorrowIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans RewardBorrowerIndex (r:1 w:1)
-	/// Proof Skipped: Loans RewardBorrowerIndex (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Loans AccountBorrows (r:1 w:0)
-	/// Proof Skipped: Loans AccountBorrows (max_values: None, max_size: None, mode: Measured)
-	/// Storage: System Account (r:1 w:0)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	fn claim_reward() -> Weight {
+	/// Storage: `LendMarket::Markets` (r:2 w:0)
+	/// Proof: `LendMarket::Markets` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplyState` (r:1 w:1)
+	/// Proof: `LendMarket::RewardSupplyState` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplySpeed` (r:1 w:0)
+	/// Proof: `LendMarket::RewardSupplySpeed` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::TotalSupply` (r:1 w:0)
+	/// Proof: `LendMarket::TotalSupply` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardSupplierIndex` (r:1 w:1)
+	/// Proof: `LendMarket::RewardSupplierIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardAccured` (r:1 w:1)
+	/// Proof: `LendMarket::RewardAccured` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::AccountDeposits` (r:1 w:0)
+	/// Proof: `LendMarket::AccountDeposits` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowState` (r:1 w:1)
+	/// Proof: `LendMarket::RewardBorrowState` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowSpeed` (r:1 w:0)
+	/// Proof: `LendMarket::RewardBorrowSpeed` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::TotalBorrows` (r:1 w:0)
+	/// Proof: `LendMarket::TotalBorrows` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::BorrowIndex` (r:1 w:0)
+	/// Proof: `LendMarket::BorrowIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::RewardBorrowerIndex` (r:1 w:1)
+	/// Proof: `LendMarket::RewardBorrowerIndex` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `LendMarket::AccountBorrows` (r:1 w:0)
+	/// Proof: `LendMarket::AccountBorrows` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `System::Account` (r:2 w:2)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 1]`.
+	fn claim_reward(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `3492`
-		//  Estimated: `80995`
-		// Minimum execution time: 210_812_000 picoseconds.
-		Weight::from_parts(211_623_000, 80995)
-			.saturating_add(RocksDbWeight::get().reads(17_u64))
-			.saturating_add(RocksDbWeight::get().writes(7_u64))
+		//  Measured:  `1280`
+		//  Estimated: `7220`
+		// Minimum execution time: 145_736_000 picoseconds.
+		Weight::from_parts(150_117_344, 0)
+			.saturating_add(Weight::from_parts(0, 7220))
+			// Standard Error: 189_715
+			.saturating_add(Weight::from_parts(273_055, 0).saturating_mul(n.into()))
+			.saturating_add(RocksDbWeight::get().reads(16))
+			.saturating_add(RocksDbWeight::get().writes(7))
 	}
 	/// Storage: Loans RewardSupplyState (r:1 w:1)
 	/// Proof Skipped: Loans RewardSupplyState (max_values: None, max_size: None, mode: Measured)
