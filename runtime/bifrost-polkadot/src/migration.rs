@@ -79,11 +79,25 @@ pub mod v0 {
 pub mod v1 {
 	use super::*;
 	use pallet_referenda::{
-		BalanceOf, Config, Pallet, ReferendumIndex, ReferendumInfo, ReferendumInfoFor,
+		BalanceOf, Config, Deposit, Pallet, ReferendumIndex, ReferendumInfo, ReferendumInfoFor,
 	};
+	use sp_runtime::Deserialize;
 
 	/// The log target.
 	const TARGET: &'static str = "runtime::referenda::migration::v1";
+
+	#[derive(Debug, Deserialize, Clone)]
+	struct ForeignReferendumInfo<AccountId, Balance> {
+		index: ReferendumIndex,
+		deposit1: Option<ForeignDeposit<AccountId, Balance>>,
+		deposit2: Option<ForeignDeposit<AccountId, Balance>>,
+	}
+
+	#[derive(Debug, Deserialize, Clone)]
+	struct ForeignDeposit<AccountId, Balance> {
+		who: AccountId,
+		amount: Balance,
+	}
 
 	/// Restore ReferendumInfo(Approved|Rejected|Cancelled|TimedOut).
 	pub struct RestoreReferendaV1<R: Get<&'static str>, T, I = ()>(PhantomData<(R, T, I)>);
@@ -104,20 +118,6 @@ pub mod v1 {
 		}
 
 		fn on_runtime_upgrade() -> Weight {
-			use pallet_referenda::Deposit;
-			use sp_runtime::Deserialize;
-			#[derive(Debug, Deserialize, Clone)]
-			struct ForeignReferendumInfo<AccountId, Balance> {
-				index: ReferendumIndex,
-				deposit1: Option<ForeignDeposit<AccountId, Balance>>,
-				deposit2: Option<ForeignDeposit<AccountId, Balance>>,
-			}
-
-			#[derive(Debug, Deserialize, Clone)]
-			struct ForeignDeposit<AccountId, Balance> {
-				who: AccountId,
-				amount: Balance,
-			}
 			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
 				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
 
@@ -191,6 +191,40 @@ pub mod v1 {
 				.expect("failed to decode the state from pre-upgrade.");
 			let post_referendum_count = ReferendumInfoFor::<T, I>::iter().count() as u32;
 			ensure!(post_referendum_count == pre_referendum_count, "must migrate all referendums.");
+
+			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
+				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
+			for item in result {
+				let referendum_info = ReferendumInfoFor::<T, I>::get(item.index)
+					.expect("failed to decode the state from pre-upgrade.");
+
+				match referendum_info {
+					ReferendumInfo::Ongoing(_) | ReferendumInfo::Killed(_) => (),
+					ReferendumInfo::Approved(_e, s, d) |
+					ReferendumInfo::Rejected(_e, s, d) |
+					ReferendumInfo::Cancelled(_e, s, d) |
+					ReferendumInfo::TimedOut(_e, s, d) => {
+						match (s, item.deposit1) {
+							(Some(s), Some(a)) => {
+								ensure!(s.amount == a.amount, "amount not equal");
+								ensure!(s.who == a.who, "who not equal");
+							},
+							(None, None) => (),
+							_ => return Err(TryRuntimeError::Other("Referenda Data mismatch")),
+						}
+						match (d, item.deposit2) {
+							(Some(d), Some(a)) => {
+								ensure!(d.amount == a.amount, "amount not equal");
+								ensure!(d.who == a.who, "who not equal");
+							},
+							(None, None) => (),
+							_ => return Err(TryRuntimeError::Other("Referenda Data mismatch")),
+						}
+						()
+					},
+				};
+			}
+
 			log::info!(target: TARGET, "migrated all referendums.");
 			Ok(())
 		}
