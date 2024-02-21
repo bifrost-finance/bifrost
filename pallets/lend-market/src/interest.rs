@@ -138,7 +138,7 @@ impl<T: Config> Pallet<T> {
 		Ok(Ratio::from_rational(borrows, total))
 	}
 
-	/// The exchange rate should be greater than 0.02 and less than 1
+	/// The exchange rate should be greater or equal than 0.02 and less than 1
 	pub(crate) fn ensure_valid_exchange_rate(exchange_rate: Rate) -> DispatchResult {
 		ensure!(
 			exchange_rate >= Rate::from_inner(MIN_EXCHANGE_RATE) &&

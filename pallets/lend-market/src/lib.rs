@@ -956,7 +956,7 @@ pub mod pallet {
 		/// The sender liquidates the borrower's collateral.
 		///
 		/// - `borrower`: the borrower to be liquidated.
-		/// - `liquidation_asset_id`: the assert to be liquidated.
+		/// - `liquidation_asset_id`: the asset to be liquidated.
 		/// - `repay_amount`: the amount to be repaid borrow.
 		/// - `collateral_asset_id`: The collateral to seize from the borrower.
 		#[pallet::call_index(17)]
@@ -1891,7 +1891,7 @@ impl<T: Config> Pallet<T> {
 		Ok(FixedU128::from_inner(underlying_amount)
 			.checked_div(&exchange_rate)
 			.map(|r| r.into_inner())
-			.ok_or(ArithmeticError::Underflow)?)
+			.ok_or(ArithmeticError::Overflow)?)
 	}
 
 	fn get_total_cash(asset_id: AssetIdOf<T>) -> BalanceOf<T> {
