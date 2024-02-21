@@ -24,7 +24,7 @@ use crate::types::{
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
-	currency::{BNC, FIL, VBNC, VDOT, VFIL, VGLMR, VKSM, VMOVR},
+	currency::{BNC, VFIL},
 	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenInfo, TryConvertFrom, VtokenMintingInterface,
 };
 use cumulus_primitives_core::ParaId;
@@ -52,6 +52,7 @@ use sp_std::{vec, vec::Vec};
 use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
 
+pub mod migration;
 mod types;
 
 pub mod weights;
@@ -212,6 +213,10 @@ pub mod pallet {
 			vcurrency_id: CurrencyId,
 			vtoken_amount: BalanceOf<T>,
 		},
+		SetCurrencyToSupportXcmFee {
+			currency_id: CurrencyId,
+			is_support: bool,
+		},
 	}
 
 	#[pallet::error]
@@ -269,6 +274,11 @@ pub mod pallet {
 	#[pallet::getter(fn currency_id_list)]
 	pub type CurrencyIdList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<10>>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn support_xcm_fee_list)]
+	pub type SupportXcmFeeList<T: Config> =
+		StorageValue<_, BoundedVec<CurrencyId, ConstU32<100>>, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -748,6 +758,32 @@ pub mod pallet {
 			});
 			Ok(().into())
 		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1))]
+		pub fn set_currency_support_xcm_fee(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			is_support: bool,
+		) -> DispatchResultWithPostInfo {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mut currency_list = SupportXcmFeeList::<T>::get();
+			match is_support {
+				true => {
+					ensure!(!currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
+					currency_list.try_push(currency_id).map_err(|_| Error::<T>::ArgumentsError)?;
+				},
+				false => {
+					ensure!(currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
+					currency_list.retain(|&x| x != currency_id);
+				},
+			};
+			SupportXcmFeeList::<T>::put(currency_list);
+			Self::deposit_event(Event::SetCurrencyToSupportXcmFee { currency_id, is_support });
+			Ok(().into())
+		}
 	}
 }
 
@@ -939,26 +975,16 @@ impl<T: Config> Pallet<T> {
 						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 					),
 				};
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
-					.unwrap_or_else(|| Self::get_default_fee(BNC));
-				match currency_id {
-					VKSM | VMOVR | VBNC | FIL | VFIL | VDOT | VGLMR => {
-						T::MultiCurrency::transfer(
-							BNC,
-							evm_contract_account_id,
-							&caller,
-							fee_amount,
-						)?;
-						let assets = vec![(currency_id, amount), (BNC, fee_amount)];
+				if SupportXcmFeeList::<T>::get().contains(&currency_id) {
+					T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+				} else {
+					let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+						.unwrap_or_else(|| Self::get_default_fee(BNC));
+					T::MultiCurrency::transfer(BNC, evm_contract_account_id, &caller, fee_amount)?;
+					let assets = vec![(currency_id, amount), (BNC, fee_amount)];
 
-						T::XcmTransfer::transfer_multicurrencies(
-							caller, assets, 1, dest, Unlimited,
-						)?;
-					},
-					_ => {
-						T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-					},
-				};
+					T::XcmTransfer::transfer_multicurrencies(caller, assets, 1, dest, Unlimited)?;
+				}
 			},
 		};
 		Ok(())

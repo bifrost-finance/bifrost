@@ -1856,6 +1856,7 @@ pub mod migrations {
 			Runtime,
 			governance::fellowship::FellowshipReferendaInstance,
 		>,
+		bifrost_slpx::migration::BifrostPolkadotAddCurrencyToSupportXcmFee<Runtime>,
 	);
 }
 
