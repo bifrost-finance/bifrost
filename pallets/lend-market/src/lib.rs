@@ -669,6 +669,10 @@ pub mod pallet {
 					Error::<T>::InvalidLendTokenId
 				);
 			}
+			ensure!(
+				!Markets::<T>::contains_key(market.lend_token_id),
+				Error::<T>::InvalidLendTokenId
+			);
 			UnderlyingAssetId::<T>::insert(market.lend_token_id, asset_id);
 			let updated_market = Self::mutate_market(asset_id, |stored_market| {
 				*stored_market = market;
