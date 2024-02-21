@@ -88,7 +88,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		ArgumentsError,
-		NotSupportTokenType,
+		NotSupportedTokenType,
 	}
 
 	#[pallet::event]
@@ -126,7 +126,7 @@ impl<T: Config> Pallet<T> {
 		let who = ensure_signed(origin)?;
 
 		let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(asset_id)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
+			.map_err(|_| Error::<T>::NotSupportedTokenType)?;
 
 		let deposits = AccountDeposits::<T>::get(vtoken_id, &who);
 		if !deposits.is_collateral {
