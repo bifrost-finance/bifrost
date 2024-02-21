@@ -1799,10 +1799,9 @@ impl<T: Config> Pallet<T> {
 
 	// Ensures a given `asset_id` is an active market.
 	fn ensure_active_market(asset_id: AssetIdOf<T>) -> Result<Market<BalanceOf<T>>, DispatchError> {
-		Self::active_markets()
-			.find(|(id, _)| id == &asset_id)
-			.map(|(_, market)| market)
-			.ok_or_else(|| Error::<T>::MarketNotActivated.into())
+		let market = Self::market(asset_id)?;
+		ensure!(market.state == MarketState::Active, Error::<T>::MarketNotActivated);
+		Ok(market)
 	}
 
 	/// Ensure market is enough to supply `amount` asset.
