@@ -125,7 +125,7 @@ fn mint_must_return_err_when_overflows_occur() {
 		// Verify token balance first
 		assert_noop!(
 			LendMarket::mint(RuntimeOrigin::signed(CHARLIE), DOT, OVERFLOW_DEPOSIT),
-			ArithmeticError::Underflow
+			ArithmeticError::Overflow
 		);
 
 		// Deposit OVERFLOW_DEPOSIT DOT for CHARLIE
@@ -140,7 +140,7 @@ fn mint_must_return_err_when_overflows_occur() {
 		// Underflow is used here redeem could also be 0
 		assert_noop!(
 			LendMarket::mint(RuntimeOrigin::signed(CHARLIE), DOT, OVERFLOW_DEPOSIT),
-			ArithmeticError::Underflow
+			ArithmeticError::Overflow
 		);
 
 		// Exchange rate must ge greater than zero
@@ -297,7 +297,7 @@ fn redeem_must_return_err_when_overflows_occur() {
 		// Underflow is used here redeem could also be 0
 		assert_noop!(
 			LendMarket::redeem(RuntimeOrigin::signed(ALICE), DOT, u128::MAX),
-			ArithmeticError::Underflow,
+			ArithmeticError::Overflow,
 		);
 	})
 }
@@ -778,7 +778,7 @@ fn calc_collateral_amount_works() {
 	assert_eq!(LendMarket::calc_collateral_amount(1000, exchange_rate).unwrap(), 3333);
 	assert_eq!(
 		LendMarket::calc_collateral_amount(u128::MAX, exchange_rate),
-		Err(DispatchError::Arithmetic(ArithmeticError::Underflow))
+		Err(DispatchError::Arithmetic(ArithmeticError::Overflow))
 	);
 
 	// relative test: prevent_the_exchange_rate_attack
