@@ -1052,6 +1052,7 @@ pub mod pallet {
 			if reduce_amount > total_reserves {
 				return Err(Error::<T>::InsufficientReserves.into());
 			}
+			ensure!(!reduce_amount.is_zero(), Error::<T>::InvalidAmount);
 			let total_reserves_new =
 				total_reserves.checked_sub(reduce_amount).ok_or(ArithmeticError::Underflow)?;
 			TotalReserves::<T>::insert(asset_id, total_reserves_new);
