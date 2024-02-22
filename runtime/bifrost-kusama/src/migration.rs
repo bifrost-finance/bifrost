@@ -142,7 +142,7 @@ pub mod v1 {
 						if let Some(a) = &item[0].deposit2 {
 							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
 						}
-						Some(ReferendumInfo::Rejected(e, s, d))
+						Some(ReferendumInfo::Approved(e, s, d))
 					},
 					v0::ReferendumInfo::Rejected(e, mut s, mut d) => {
 						if let Some(a) = &item[0].deposit1 {
