@@ -23,14 +23,10 @@ jobs:
         with:
           fetch-depth: 1
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly-2023-05-22
-          components: rustfmt,clippy
+          components: rustfmt, clippy
           target: wasm32-unknown-unknown
-          override: true
-          default: true
 
       - name: Check All
         run: make check-all
