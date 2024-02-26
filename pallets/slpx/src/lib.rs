@@ -508,6 +508,7 @@ pub mod pallet {
 				TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
 				TargetChain::Hydradx(receiver) => RedeemType::Hydradx(receiver),
 				TargetChain::Interlay(receiver) => RedeemType::Interlay(receiver),
+				TargetChain::Manta(receiver) => RedeemType::Manta(receiver),
 			};
 
 			if vtoken_id == VFIL {
@@ -889,10 +890,15 @@ impl<T: Config> Pallet<T> {
 				evm_caller_account_id = evm_contract_account_id.clone();
 				SupportChain::Interlay
 			},
+			TargetChain::Manta(_) => {
+				evm_caller_account_id = evm_contract_account_id.clone();
+				SupportChain::Manta
+			},
 		};
 
 		match target_chain {
 			TargetChain::Hydradx(_) => {},
+			TargetChain::Manta(_) => {},
 			_ => {
 				let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
 				ensure!(
@@ -961,6 +967,17 @@ impl<T: Config> Pallet<T> {
 					parents: 1,
 					interior: X2(
 						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
+						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
+					),
+				};
+
+				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+			},
+			TargetChain::Manta(receiver) => {
+				let dest = MultiLocation {
+					parents: 1,
+					interior: X2(
+						Parachain(T::VtokenMintingInterface::get_manta_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					),
 				};

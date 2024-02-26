@@ -1662,6 +1662,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2092>;
 	type ChannelCommission = ChannelCommission;
 }
