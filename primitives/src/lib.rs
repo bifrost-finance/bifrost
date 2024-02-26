@@ -240,6 +240,8 @@ pub enum RedeemType<AccountId> {
 	Hydradx(AccountId),
 	/// Interlay chain.
 	Interlay(AccountId),
+	/// Manta chain.
+	Manta(AccountId),
 }
 
 impl<AccountId> Default for RedeemType<AccountId> {

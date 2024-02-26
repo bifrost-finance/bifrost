@@ -129,6 +129,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type InterlayParachainId: Get<u32>;
 
+		#[pallet::constant]
+		type MantaParachainId: Get<u32>;
+
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
 		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
@@ -1034,6 +1037,25 @@ pub mod pallet {
 							Unlimited,
 						)?;
 					},
+					RedeemType::Manta(receiver) => {
+						let dest = MultiLocation {
+							parents: 1,
+							interior: X2(
+								Parachain(T::MantaParachainId::get()),
+								AccountId32 {
+									network: None,
+									id: receiver.encode().try_into().unwrap(),
+								},
+							),
+						};
+						T::XcmTransfer::transfer(
+							account.clone(),
+							token_id,
+							unlock_amount,
+							dest,
+							Unlimited,
+						)?;
+					},
 					RedeemType::Moonbeam(receiver) => {
 						let dest = MultiLocation {
 							parents: 1,
@@ -1071,6 +1093,7 @@ pub mod pallet {
 					RedeemType::Astar(_) |
 					RedeemType::Moonbeam(_) |
 					RedeemType::Hydradx(_) |
+					RedeemType::Manta(_) |
 					RedeemType::Interlay(_) => {
 						return Ok(());
 					},
@@ -1648,6 +1671,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	fn get_interlay_parachain_id() -> u32 {
 		T::InterlayParachainId::get()
 	}
+	fn get_manta_parachain_id() -> u32 {
+		T::MantaParachainId::get()
+	}
 }
 
 impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>>
@@ -1723,6 +1749,9 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 	fn get_interlay_parachain_id() -> u32 {
 		T::InterlayParachainId::get()
+	}
+	fn get_manta_parachain_id() -> u32 {
+		T::MantaParachainId::get()
 	}
 }
 

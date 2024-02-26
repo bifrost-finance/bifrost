@@ -48,6 +48,7 @@ pub enum SupportChain {
 	Moonbeam,
 	Hydradx,
 	Interlay,
+	Manta,
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -56,6 +57,7 @@ pub enum TargetChain<AccountId> {
 	Moonbeam(H160),
 	Hydradx(AccountId),
 	Interlay(AccountId),
+	Manta(AccountId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
