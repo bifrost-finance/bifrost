@@ -410,7 +410,7 @@ impl<T: Config> Pallet<T> {
 			if new_price <= delta.checked_add(old_price)? && new_price > old_price {
 				return bifrost_stable_asset::Pallet::<T>::set_token_rate(
 					pool_id,
-					vec![(vtoken, (vtoken_issuance, token_pool_amount))],
+					sp_std::vec![(vtoken, (vtoken_issuance, token_pool_amount))],
 				)
 				.ok();
 			} else if new_price == old_price {
