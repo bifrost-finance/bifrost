@@ -16,13 +16,11 @@ jobs:
         with:
           submodules: recursive
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: nightly-2023-05-22
           components: rustfmt
           target: wasm32-unknown-unknown
-          default: true
+          toolchain: nightly-2023-05-22
       - name: Generate WeightInfo Files
         run: make generate-bifrost-weights
       - name: Commit Automatically

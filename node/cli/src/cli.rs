@@ -70,16 +70,6 @@ pub enum Subcommand {
 	/// Sign a message, with a given (secret) key.
 	Sign(SignCmd),
 
-	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
-	/// testing.
-	#[cfg(feature = "try-runtime")]
-	#[allow(deprecated)]
-	TryRuntime(try_runtime_cli::TryRuntimeCmd),
-
-	/// Errors since the binary was not build with `--features try-runtime`.
-	#[cfg(not(feature = "try-runtime"))]
-	TryRuntime,
-
 	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
 	Verify(VerifyCmd),
 
