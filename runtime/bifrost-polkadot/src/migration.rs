@@ -1,161 +1,232 @@
 use super::*;
-use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
-#[allow(unused_imports)]
-use frame_support::ensure;
-use frame_support::traits::OnRuntimeUpgrade;
-use node_primitives::{traits::XcmDestWeightAndFeeHandler, XcmOperationType};
+use frame_support::{pallet_prelude::*, storage_alias, traits::OnRuntimeUpgrade};
+use log;
+use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
+use sp_std::fmt::Debug;
 
-const LOG_TARGET: &str = "XCM-INTERFACE::migration";
+#[cfg(feature = "try-runtime")]
+use sp_runtime::TryRuntimeError;
 
-pub struct XcmInterfaceMigration;
-impl OnRuntimeUpgrade for XcmInterfaceMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		// Check the storage version
-		let onchain_version = XcmInterface::on_chain_storage_version();
-		if onchain_version < 2 {
-			// Transform storage values
-			// We transform the storage values from the old into the new format.
+parameter_types! {
+	pub const FellowshipReferendaData: &'static str = r#"[{"index":0,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":10,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":1000000000000}},{"index":4,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":21,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":20,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":16,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":11,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":14,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":6,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":19,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":1000000000000}},{"index":15,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":2,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":13,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":5,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":18,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":7,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":22,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":24,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":8,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":1,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":12,"deposit1":{"who":"cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop","amount":0},"deposit2":{"who":"cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop","amount":10000000000000}},{"index":3,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":null},{"index":17,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":25,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":23,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":0},"deposit2":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000}},{"index":9,"deposit1":{"who":"dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP","amount":0},"deposit2":null}]"#;
+	pub const ReferendaData: &'static str = r#"[{"index":0,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000},"deposit2":null},{"index":4,"deposit1":{"who":"gB5r2iWvPCZcUMXxXBfp9UChnRovJ9YwZMrPGDdbxayuqhZ","amount":10000000000000},"deposit2":null},{"index":6,"deposit1":{"who":"g5SajmWUz458LZG1EEX9ybhkQ35nDXr4fg1yjkq5kiVkKcD","amount":10000000000000},"deposit2":{"who":"g5SajmWUz458LZG1EEX9ybhkQ35nDXr4fg1yjkq5kiVkKcD","amount":2500000000000000}},{"index":2,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000},"deposit2":null},{"index":5,"deposit1":{"who":"gB5r2iWvPCZcUMXxXBfp9UChnRovJ9YwZMrPGDdbxayuqhZ","amount":10000000000000},"deposit2":null},{"index":7,"deposit1":{"who":"gB5r2iWvPCZcUMXxXBfp9UChnRovJ9YwZMrPGDdbxayuqhZ","amount":10000000000000},"deposit2":null},{"index":1,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000},"deposit2":null},{"index":3,"deposit1":{"who":"fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu","amount":10000000000000},"deposit2":null}]"#;
+}
+
+/// Initial version of storage types.
+pub mod v0 {
+	use super::*;
+	use pallet_referenda::{
+		BalanceOf, BoundedCallOf, Config, Deposit, Pallet, PalletsOriginOf, ReferendumIndex,
+		ReferendumStatus, ScheduleAddressOf, TallyOf, TrackIdOf,
+	};
+	// ReferendumStatus and its dependency types referenced from the latest version while staying
+	// unchanged. [`super::test::referendum_status_v0()`] checks its immutability between v0 and
+	// latest version.
+
+	pub type ReferendumInfoOf<T, I> = ReferendumInfo<
+		TrackIdOf<T, I>,
+		PalletsOriginOf<T>,
+		frame_system::pallet_prelude::BlockNumberFor<T>,
+		BoundedCallOf<T, I>,
+		BalanceOf<T, I>,
+		TallyOf<T, I>,
+		<T as frame_system::Config>::AccountId,
+		ScheduleAddressOf<T, I>,
+	>;
+
+	/// Info regarding a referendum, present or past.
+	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub enum ReferendumInfo<
+		TrackId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		RuntimeOrigin: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		Moment: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone + EncodeLike,
+		Call: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		Balance: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		Tally: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		AccountId: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+		ScheduleAddress: Eq + PartialEq + Debug + Encode + Decode + TypeInfo + Clone,
+	> {
+		/// Referendum has been submitted and is being voted on.
+		Ongoing(
+			ReferendumStatus<
+				TrackId,
+				RuntimeOrigin,
+				Moment,
+				Call,
+				Balance,
+				Tally,
+				AccountId,
+				ScheduleAddress,
+			>,
+		),
+		/// Referendum finished with approval. Submission deposit is held.
+		Approved(Moment, Option<Deposit<AccountId, Balance>>, Option<Deposit<AccountId, Balance>>),
+		/// Referendum finished with rejection. Submission deposit is held.
+		Rejected(Moment, Option<Deposit<AccountId, Balance>>, Option<Deposit<AccountId, Balance>>),
+		/// Referendum finished with cancellation. Submission deposit is held.
+		Cancelled(Moment, Option<Deposit<AccountId, Balance>>, Option<Deposit<AccountId, Balance>>),
+		/// Referendum finished and was never decided. Submission deposit is held.
+		TimedOut(Moment, Option<Deposit<AccountId, Balance>>, Option<Deposit<AccountId, Balance>>),
+		/// Referendum finished with a kill.
+		Killed(Moment),
+	}
+
+	#[storage_alias]
+	pub type ReferendumInfoFor<T: Config<I>, I: 'static> =
+		StorageMap<Pallet<T, I>, Blake2_128Concat, ReferendumIndex, ReferendumInfoOf<T, I>>;
+}
+
+pub mod v1 {
+	use super::*;
+	use pallet_referenda::{
+		BalanceOf, Config, Deposit, Pallet, ReferendumIndex, ReferendumInfo, ReferendumInfoFor,
+	};
+	use sp_runtime::Deserialize;
+
+	/// The log target.
+	const TARGET: &'static str = "runtime::referenda::migration::v1";
+
+	#[derive(Debug, Deserialize, Clone)]
+	struct ForeignReferendumInfo<AccountId, Balance> {
+		index: ReferendumIndex,
+		deposit1: Option<ForeignDeposit<AccountId, Balance>>,
+		deposit2: Option<ForeignDeposit<AccountId, Balance>>,
+	}
+
+	#[derive(Debug, Deserialize, Clone)]
+	struct ForeignDeposit<AccountId, Balance> {
+		who: AccountId,
+		amount: Balance,
+	}
+
+	/// Restore ReferendumInfo(Approved|Rejected|Cancelled|TimedOut).
+	pub struct RestoreReferendaV1<R: Get<&'static str>, T, I = ()>(PhantomData<(R, T, I)>);
+	impl<R: Get<&'static str>, T: Config<I>, I: 'static> OnRuntimeUpgrade
+		for RestoreReferendaV1<R, T, I>
+	{
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+			let referendum_count = v0::ReferendumInfoFor::<T, I>::iter().count();
 			log::info!(
-				target: LOG_TARGET,
-				"Start to migrate XcmInterface storage XcmDestWeightAndFee..."
+				target: TARGET,
+				"pre-upgrade state contains '{}' referendums.",
+				referendum_count
 			);
-
-			let count1 = xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().count();
-
-			// 先将Xcm_interface的XcmDestWeightAndFee的值从旧的存储中取出来，
-			// 然后设置到新的XcmWeightAndFee存储中,新增一个currency_id作为主key
-			xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().for_each(|(key, value)| {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated to doublemap for {:?}, {:?}...",
-					key,
-					value
-				);
-
-				let new_operation_key = match key {
-					xcm_interface::XcmInterfaceOperation::UmpContributeTransact =>
-						XcmOperationType::UmpContributeTransact,
-					xcm_interface::XcmInterfaceOperation::StatemineTransfer =>
-						XcmOperationType::StatemineTransfer,
-				};
-
-				let _ = XcmInterface::set_xcm_dest_weight_and_fee(
-					RelayCurrencyId::get(),
-					new_operation_key,
-					Some(value),
-				);
-			});
-
-			// get value from the old SLP XcmDestWeightAndFee storage and set it to the XcmInterface
-			// storage
-			let count2 = bifrost_slp::XcmDestWeightAndFee::<Runtime>::iter().count();
-
-			// iterrate the old SLP XcmDestWeightAndFee storage
-			bifrost_slp::XcmDestWeightAndFee::<Runtime>::iter().for_each(|(key1, key2, value)| {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated to XcmInterface XcmWeightAndFee for {:?}, {:?}, {:?}...",
-					key1,
-					key2,
-					value
-				);
-
-				let new_operation_key = match key2 {
-					bifrost_slp::XcmOperation::Bond => XcmOperationType::Bond,
-					bifrost_slp::XcmOperation::WithdrawUnbonded =>
-						XcmOperationType::WithdrawUnbonded,
-					bifrost_slp::XcmOperation::BondExtra => XcmOperationType::BondExtra,
-					bifrost_slp::XcmOperation::Unbond => XcmOperationType::Unbond,
-					bifrost_slp::XcmOperation::Rebond => XcmOperationType::Rebond,
-					bifrost_slp::XcmOperation::Delegate => XcmOperationType::Delegate,
-					bifrost_slp::XcmOperation::Payout => XcmOperationType::Payout,
-					bifrost_slp::XcmOperation::Liquidize => XcmOperationType::Liquidize,
-					bifrost_slp::XcmOperation::TransferBack => XcmOperationType::TransferBack,
-					bifrost_slp::XcmOperation::TransferTo => XcmOperationType::TransferTo,
-					bifrost_slp::XcmOperation::Chill => XcmOperationType::Chill,
-					bifrost_slp::XcmOperation::Undelegate => XcmOperationType::Undelegate,
-					bifrost_slp::XcmOperation::CancelLeave => XcmOperationType::CancelLeave,
-					bifrost_slp::XcmOperation::XtokensTransferBack =>
-						XcmOperationType::XtokensTransferBack,
-					bifrost_slp::XcmOperation::ExecuteLeave => XcmOperationType::ExecuteLeave,
-					bifrost_slp::XcmOperation::ConvertAsset => XcmOperationType::ConvertAsset,
-					bifrost_slp::XcmOperation::Vote => XcmOperationType::Vote,
-					bifrost_slp::XcmOperation::RemoveVote => XcmOperationType::RemoveVote,
-					_default => XcmOperationType::Any,
-				};
-
-				// set the value to the new XcmInterface storage
-				let _ =
-					XcmInterface::set_xcm_dest_weight_and_fee(key1, new_operation_key, Some(value));
-
-				// delete the old SLP XcmDestWeightAndFee storage
-				bifrost_slp::XcmDestWeightAndFee::<Runtime>::remove(key1, key2);
-			});
-
-			// delete the old Xcm_interface XcmDestWeightAndFee storage
-			xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().for_each(|(key, _value)| {
-				xcm_interface::XcmDestWeightAndFee::<Runtime>::remove(key);
-			});
-
-			// Update the storage version
-			StorageVersion::new(2).put::<xcm_interface::Pallet<Runtime>>();
-
-			let count = count1 + count2;
-			// Return the consumed weight
-			Weight::from(
-				<Runtime as frame_system::Config>::DbWeight::get()
-					.reads_writes(count as u64 + 1, count as u64 + 1),
-			)
-		} else {
-			// We don't do anything here.
-			Weight::zero()
+			let infos = v0::ReferendumInfoFor::<T, I>::iter().collect::<Vec<_>>();
+			log::info!("pre_upgrade infos: {:?}", infos);
+			Ok((referendum_count as u32).encode())
 		}
-	}
 
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		let xcm_interface_xcm_dest_weight_and_fee_cnt =
-			xcm_interface::XcmDestWeightAndFee::<Runtime>::iter().count();
-		// print out the pre-migrate storage count
-		log::info!(
-			target: LOG_TARGET,
-			"XcmInterface XcmDestWeightAndFee pre-migrate storage count: {:?}",
-			xcm_interface_xcm_dest_weight_and_fee_cnt
-		);
+		fn on_runtime_upgrade() -> Weight {
+			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
+				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
 
-		let slp_xcm_dest_weight_and_fee_cnt =
-			bifrost_slp::XcmDestWeightAndFee::<Runtime>::iter().count();
-		log::info!(
-			target: LOG_TARGET,
-			"Slp XcmDestWeightAndFee pre-migrate storage count: {:?}",
-			slp_xcm_dest_weight_and_fee_cnt
-		);
+			let mut weight = T::DbWeight::get().reads(1);
 
-		let cnt =
-			(xcm_interface_xcm_dest_weight_and_fee_cnt + slp_xcm_dest_weight_and_fee_cnt) as u32;
+			v0::ReferendumInfoFor::<T, I>::iter().for_each(|(key, value)| {
+				let item = result
+					.iter()
+					.filter(|item| item.index == key)
+					.cloned()
+					.collect::<Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>>>();
+				if item.len() != 1 {
+					weight.saturating_accrue(T::DbWeight::get().reads(1));
+					return;
+				}
+				let maybe_new_value = match value {
+					v0::ReferendumInfo::Ongoing(_) | v0::ReferendumInfo::Killed(_) => None,
+					v0::ReferendumInfo::Approved(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::Approved(e, s, d))
+					},
+					v0::ReferendumInfo::Rejected(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::Rejected(e, s, d))
+					},
+					v0::ReferendumInfo::Cancelled(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::Cancelled(e, s, d))
+					},
+					v0::ReferendumInfo::TimedOut(e, mut s, mut d) => {
+						if let Some(a) = &item[0].deposit1 {
+							s = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						if let Some(a) = &item[0].deposit2 {
+							d = Some(Deposit { amount: a.amount, who: a.who.clone() })
+						}
+						Some(ReferendumInfo::TimedOut(e, s, d))
+					},
+				};
+				if let Some(new_value) = maybe_new_value {
+					weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+					log::info!(target: TARGET, "migrating referendum #{:?}", &key);
+					ReferendumInfoFor::<T, I>::insert(key, new_value);
+				} else {
+					weight.saturating_accrue(T::DbWeight::get().reads(1));
+				}
+			});
+			StorageVersion::new(1).put::<Pallet<T, I>>();
+			weight.saturating_accrue(T::DbWeight::get().writes(1));
+			weight
+		}
 
-		Ok(cnt.encode())
-	}
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
+			let pre_referendum_count: u32 = Decode::decode(&mut &state[..])
+				.expect("failed to decode the state from pre-upgrade.");
+			let post_referendum_count = ReferendumInfoFor::<T, I>::iter().count() as u32;
+			ensure!(post_referendum_count == pre_referendum_count, "must migrate all referendums.");
 
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(cnt: Vec<u8>) -> Result<(), &'static str> {
-		let old_xcm_interface_xcm_weight_and_fee_cnt: u32 = Decode::decode(&mut cnt.as_slice())
-			.expect("the state parameter should be something that was generated by pre_upgrade");
+			let result: Vec<ForeignReferendumInfo<T::AccountId, BalanceOf<T, I>>> =
+				serde_json::from_str(R::get()).expect("Failed to deserialize JSON");
+			for item in result {
+				let referendum_info = ReferendumInfoFor::<T, I>::get(item.index)
+					.expect("failed to decode the state from pre-upgrade.");
 
-		let new_xcm_interface_xcm_weight_and_fee_cnt =
-			xcm_interface::XcmWeightAndFee::<Runtime>::iter().count();
-		// print out the post-migrate storage count
-		log::info!(
-			target: LOG_TARGET,
-			"XcmInterface XcmWeightAndFee post-migrate storage count: {:?}",
-			new_xcm_interface_xcm_weight_and_fee_cnt
-		);
-		ensure!(
-			new_xcm_interface_xcm_weight_and_fee_cnt as u32 ==
-				old_xcm_interface_xcm_weight_and_fee_cnt,
-			"XcmInterface XcmWeightAndFee post-migrate storage count not match"
-		);
+				match referendum_info {
+					ReferendumInfo::Ongoing(_) | ReferendumInfo::Killed(_) => (),
+					ReferendumInfo::Approved(_e, s, d) |
+					ReferendumInfo::Rejected(_e, s, d) |
+					ReferendumInfo::Cancelled(_e, s, d) |
+					ReferendumInfo::TimedOut(_e, s, d) => {
+						match (s, item.deposit1) {
+							(Some(s), Some(a)) => {
+								ensure!(s.amount == a.amount, "amount not equal");
+								ensure!(s.who == a.who, "who not equal");
+							},
+							(None, None) => (),
+							_ => return Err(TryRuntimeError::Other("Referenda Data mismatch")),
+						}
+						match (d, item.deposit2) {
+							(Some(d), Some(a)) => {
+								ensure!(d.amount == a.amount, "amount not equal");
+								ensure!(d.who == a.who, "who not equal");
+							},
+							(None, None) => (),
+							_ => return Err(TryRuntimeError::Other("Referenda Data mismatch")),
+						}
+						()
+					},
+				};
+			}
 
-		Ok(())
+			log::info!(target: TARGET, "migrated all referendums.");
+			Ok(())
+		}
 	}
 }

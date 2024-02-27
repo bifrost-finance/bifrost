@@ -16,10 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, AssetIdOf, AtLeast64BitUnsignedOf, Error};
+use bifrost_primitives::VtokenMintingOperator;
 use bifrost_stable_asset::StableAssetPoolInfo;
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, Permill};
 
 pub const BALANCE_OFF: u128 = 0;
 
@@ -81,6 +82,18 @@ fn create_movr_pool() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
 		million_unit(1),
 	));
 	(coin0, coin1, pool_asset, 30160825295207673652903702381u128)
+}
+
+fn init() -> (CurrencyId, CurrencyId, CurrencyId, u128) {
+	assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(1), DOT, 0));
+	assert_ok!(VtokenMinting::mint(Some(3).into(), DOT, 100_000_000, BoundedVec::default(), None));
+	let (coin0, coin1, pool_asset, swap_id) = create_pool();
+	System::set_block_number(2);
+	let amounts = vec![10000000u128, 20000000u128];
+	assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
+	assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0, 2));
+	assert_eq!(Tokens::free_balance(DOT, &3), 85000000u128 - BALANCE_OFF);
+	(coin0, coin1, pool_asset, swap_id)
 }
 
 #[test]
@@ -315,7 +328,7 @@ fn get_swap_output_amount() {
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 2, 5000000u128, 0),
-			bifrost_stable_asset::Error::<Test>::ArgumentsError
+			bifrost_stable_asset::Error::<Test>::ArgumentsMismatch
 		);
 		assert_noop!(
 			StablePool::on_swap(&3u128, 0, 0, 1, 0u128, 0),
@@ -856,5 +869,166 @@ fn redeem_movr() {
 		assert_eq!(Tokens::free_balance(pool_asset, &0), 21765598211330627258732);
 		assert_eq!(Tokens::free_balance(coin0, &0), 992676625984156921892393);
 		assert_eq!(Tokens::free_balance(coin1, &0), 985353251968313843784786);
+	});
+}
+
+#[test]
+fn config_vtoken_auto_refresh_should_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let (coin0, coin1, _pool_asset, _swap_id) = init();
+
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
+			RuntimeOrigin::root(),
+			VDOT,
+			Permill::from_percent(10)
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		));
+		assert_ok!(Currencies::deposit(VDOT, &3, 100));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		);
+		assert_ok!(<Test as crate::Config>::VtokenMinting::increase_token_pool(DOT, 1000));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (100000100, 100001000))]
+		);
+
+		assert_eq!(Tokens::free_balance(DOT, &3), 75000000u128 - BALANCE_OFF);
+	});
+}
+
+#[test]
+fn over_the_hardcap_should_not_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let (coin0, coin1, _pool_asset, _swap_id) = init();
+
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
+			RuntimeOrigin::root(),
+			VDOT,
+			Permill::from_percent(10)
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		));
+
+		assert_ok!(<Test as crate::Config>::VtokenMinting::increase_token_pool(DOT, 20_000_000));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		);
+
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
+			RuntimeOrigin::root(),
+			VDOT,
+			Permill::from_percent(20)
+		));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (100000000, 120000000))]
+		);
+
+		assert_eq!(Tokens::free_balance(DOT, &3), 75000000u128 - BALANCE_OFF);
+	});
+}
+
+#[test]
+fn not_config_vtoken_auto_refresh_should_not_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let (coin0, coin1, _pool_asset, _swap_id) = init();
+
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		));
+		assert_ok!(<Test as crate::Config>::VtokenMinting::increase_token_pool(DOT, 1000));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		);
+		assert_eq!(Tokens::free_balance(DOT, &3), 80000000u128 - BALANCE_OFF);
+	});
+}
+
+#[test]
+fn config_vtoken_auto_refresh_should_not_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		assert_noop!(
+			StablePool::config_vtoken_auto_refresh(
+				RuntimeOrigin::root(),
+				DOT,
+				Permill::from_percent(20)
+			),
+			bifrost_stable_asset::Error::<Test>::ArgumentsError
+		);
+	});
+}
+
+#[test]
+fn remove_vtoken_auto_refresh_should_work() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let (coin0, coin1, _pool_asset, _swap_id) = init();
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		));
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
+			RuntimeOrigin::root(),
+			VDOT,
+			Permill::from_percent(20)
+		));
+		assert_ok!(<Test as crate::Config>::VtokenMinting::increase_token_pool(DOT, 20_000_000));
+
+		assert_ok!(StablePool::remove_vtoken_auto_refresh(RuntimeOrigin::root(), VDOT));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (1, 1))]
+		);
+
+		assert_ok!(StablePool::config_vtoken_auto_refresh(
+			RuntimeOrigin::root(),
+			VDOT,
+			Permill::from_percent(20)
+		));
+		assert_ok!(StablePool::on_swap(&3u128, 0, 0, 1, 5000000u128, 0));
+		assert_eq!(
+			bifrost_stable_asset::TokenRateCaches::<Test>::iter_prefix(0).collect::<Vec<(
+				AssetIdOf<Test>,
+				(AtLeast64BitUnsignedOf<Test>, AtLeast64BitUnsignedOf<Test>),
+			)>>(),
+			vec![(coin0, (1, 1)), (coin1, (100000000, 120000000))]
+		);
 	});
 }

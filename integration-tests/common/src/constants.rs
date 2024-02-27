@@ -17,11 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Substrate
+use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
+use grandpa_primitives::AuthorityId as GrandpaId;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use sc_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
-use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_core::{sr25519, storage::Storage, Pair, Public};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -29,10 +29,6 @@ use sp_runtime::{
 };
 
 // Cumulus
-use bifrost_kusama_runtime::{
-	constants::currency::DOLLARS, DefaultBlocksPerRound, InflationInfo, Range,
-};
-use bifrost_primitives::DOT;
 use parachains_common::{AccountId, AssetHubPolkadotAuraId, AuraId, Balance, BlockNumber};
 use polkadot_parachain_primitives::primitives::{HeadData, ValidationCode};
 use polkadot_primitives::{AssignmentId, ValidatorId};
@@ -40,7 +36,6 @@ use polkadot_runtime_parachains::{
 	configuration::HostConfiguration,
 	paras::{ParaGenesisArgs, ParaKind},
 };
-use polkadot_service::chain_spec::get_authority_keys_from_seed_no_beefy;
 use xcm;
 
 pub const XCM_V2: u32 = 3;
@@ -116,57 +111,6 @@ pub mod collators {
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		]
 	}
-
-	pub fn candidates() -> Vec<(AccountId, Balance)> {
-		vec![
-			(get_account_id_from_seed::<sr25519::Public>("Alice"), 10000 * 1_000_000_000_000u128),
-			(get_account_id_from_seed::<sr25519::Public>("Bob"), 10000 * 1_000_000_000_000u128),
-		]
-	}
-
-	pub fn delegations() -> Vec<(AccountId, AccountId, Balance)> {
-		vec![
-			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				5000 * 1_000_000_000_000u128,
-			),
-			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				5000 * 1_000_000_000_000u128,
-			),
-		]
-	}
-
-	pub fn inflation_config() -> InflationInfo<Balance> {
-		fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
-			use bifrost_parachain_staking::inflation::{
-				perbill_annual_to_perbill_round, BLOCKS_PER_YEAR,
-			};
-			perbill_annual_to_perbill_round(
-				annual,
-				// rounds per year
-				BLOCKS_PER_YEAR / DefaultBlocksPerRound::get(),
-			)
-		}
-		let annual = Range {
-			min: Perbill::from_percent(4),
-			ideal: Perbill::from_percent(5),
-			max: Perbill::from_percent(5),
-		};
-		InflationInfo {
-			// staking expectations
-			expect: Range {
-				min: 100_000 * DOLLARS,
-				ideal: 200_000 * DOLLARS,
-				max: 500_000 * DOLLARS,
-			},
-			// annual inflation
-			annual,
-			round: to_round_inflation(annual),
-		}
-	}
 }
 
 pub mod validators {
@@ -181,13 +125,26 @@ pub mod validators {
 		ValidatorId,
 		AssignmentId,
 		AuthorityDiscoveryId,
+		BeefyId,
 	)> {
-		vec![get_authority_keys_from_seed_no_beefy("Alice")]
+		let seed = "Alice";
+		vec![(
+			get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
+			get_account_id_from_seed::<sr25519::Public>(seed),
+			get_from_seed::<BabeId>(seed),
+			get_from_seed::<GrandpaId>(seed),
+			get_from_seed::<ImOnlineId>(seed),
+			get_from_seed::<ValidatorId>(seed),
+			get_from_seed::<AssignmentId>(seed),
+			get_from_seed::<AuthorityDiscoveryId>(seed),
+			get_from_seed::<BeefyId>(seed),
+		)]
 	}
 }
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
 // Polkadot
 pub mod polkadot {
 	use super::*;
@@ -219,6 +176,7 @@ pub mod polkadot {
 		para_validator: ValidatorId,
 		para_assignment: AssignmentId,
 		authority_discovery: AuthorityDiscoveryId,
+		beefy: BeefyId,
 	) -> polkadot_runtime::SessionKeys {
 		polkadot_runtime::SessionKeys {
 			babe,
@@ -227,6 +185,7 @@ pub mod polkadot {
 			para_validator,
 			para_assignment,
 			authority_discovery,
+			beefy,
 		}
 	}
 
@@ -257,6 +216,7 @@ pub mod polkadot {
 								x.5.clone(),
 								x.6.clone(),
 								x.7.clone(),
+								x.8.clone(),
 							),
 						)
 					})
@@ -286,16 +246,38 @@ pub mod polkadot {
 			},
 			configuration: polkadot_runtime::ConfigurationConfig { config: get_host_config() },
 			paras: polkadot_runtime::ParasConfig {
-				paras: vec![(
-					bifrost_polkadot::PARA_ID.into(),
-					ParaGenesisArgs {
-						genesis_head: HeadData::default(),
-						validation_code: ValidationCode(
-							bifrost_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
-						),
-						para_kind: ParaKind::Parachain,
-					},
-				)],
+				paras: vec![
+					(
+						asset_hub_polkadot::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								asset_hub_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+					(
+						bridge_hub_polkadot::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								bridge_hub_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+					(
+						bifrost_polkadot::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								bifrost_polkadot_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+				],
 				..Default::default()
 			},
 			..Default::default()
@@ -377,7 +359,7 @@ pub mod kusama {
 								x.5.clone(),
 								x.6.clone(),
 								x.7.clone(),
-								get_from_seed::<BeefyId>("Alice"),
+								x.8.clone(),
 							),
 						)
 					})
@@ -407,16 +389,266 @@ pub mod kusama {
 			},
 			configuration: kusama_runtime::ConfigurationConfig { config: get_host_config() },
 			paras: kusama_runtime::ParasConfig {
-				paras: vec![(
-					bifrost_kusama::PARA_ID.into(),
-					ParaGenesisArgs {
-						genesis_head: HeadData::default(),
-						validation_code: ValidationCode(
-							bifrost_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
-						),
-						para_kind: ParaKind::Parachain,
-					},
-				)],
+				paras: vec![
+					(
+						asset_hub_kusama::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								asset_hub_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+					(
+						bridge_hub_kusama::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								bridge_hub_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+					(
+						bifrost_kusama::PARA_ID.into(),
+						ParaGenesisArgs {
+							genesis_head: HeadData::default(),
+							validation_code: ValidationCode(
+								bifrost_kusama_runtime::WASM_BINARY.unwrap().to_vec(),
+							),
+							para_kind: ParaKind::Parachain,
+						},
+					),
+				],
+				..Default::default()
+			},
+			..Default::default()
+		};
+
+		genesis_config.build_storage().unwrap()
+	}
+}
+
+// Asset Hub Polkadot
+pub mod asset_hub_polkadot {
+	use super::*;
+	pub const PARA_ID: u32 = 1000;
+	pub const ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
+
+	pub fn genesis() -> Storage {
+		let genesis_config = asset_hub_polkadot_runtime::RuntimeGenesisConfig {
+			system: asset_hub_polkadot_runtime::SystemConfig {
+				code: asset_hub_polkadot_runtime::WASM_BINARY
+					.expect("WASM binary was not build, please build it!")
+					.to_vec(),
+				..Default::default()
+			},
+			balances: asset_hub_polkadot_runtime::BalancesConfig {
+				balances: accounts::init_balances()
+					.iter()
+					.cloned()
+					.map(|k| (k, ED * 4096))
+					.collect(),
+			},
+			parachain_info: asset_hub_polkadot_runtime::ParachainInfoConfig {
+				parachain_id: PARA_ID.into(),
+				..Default::default()
+			},
+			collator_selection: asset_hub_polkadot_runtime::CollatorSelectionConfig {
+				invulnerables: collators::invulnerables_asset_hub_polkadot()
+					.iter()
+					.cloned()
+					.map(|(acc, _)| acc)
+					.collect(),
+				candidacy_bond: ED * 16,
+				..Default::default()
+			},
+			session: asset_hub_polkadot_runtime::SessionConfig {
+				keys: collators::invulnerables_asset_hub_polkadot()
+					.into_iter()
+					.map(|(acc, aura)| {
+						(
+							acc.clone(),                                      // account id
+							acc,                                              // validator id
+							asset_hub_polkadot_runtime::SessionKeys { aura }, // session keys
+						)
+					})
+					.collect(),
+			},
+			polkadot_xcm: asset_hub_polkadot_runtime::PolkadotXcmConfig {
+				safe_xcm_version: Some(SAFE_XCM_VERSION),
+				..Default::default()
+			},
+			..Default::default()
+		};
+
+		genesis_config.build_storage().unwrap()
+	}
+}
+
+// Asset Hub Kusama
+pub mod asset_hub_kusama {
+	use super::*;
+	pub const PARA_ID: u32 = 1000;
+	pub const ED: Balance = parachains_common::kusama::currency::EXISTENTIAL_DEPOSIT;
+
+	pub fn genesis() -> Storage {
+		let genesis_config = asset_hub_kusama_runtime::RuntimeGenesisConfig {
+			system: asset_hub_kusama_runtime::SystemConfig {
+				code: asset_hub_kusama_runtime::WASM_BINARY
+					.expect("WASM binary was not build, please build it!")
+					.to_vec(),
+				..Default::default()
+			},
+			balances: asset_hub_kusama_runtime::BalancesConfig {
+				balances: accounts::init_balances()
+					.iter()
+					.cloned()
+					.map(|k| (k, ED * 4096))
+					.collect(),
+			},
+			parachain_info: asset_hub_kusama_runtime::ParachainInfoConfig {
+				parachain_id: PARA_ID.into(),
+				..Default::default()
+			},
+			collator_selection: asset_hub_kusama_runtime::CollatorSelectionConfig {
+				invulnerables: collators::invulnerables()
+					.iter()
+					.cloned()
+					.map(|(acc, _)| acc)
+					.collect(),
+				candidacy_bond: ED * 16,
+				..Default::default()
+			},
+			session: asset_hub_kusama_runtime::SessionConfig {
+				keys: collators::invulnerables()
+					.into_iter()
+					.map(|(acc, aura)| {
+						(
+							acc.clone(),                                    // account id
+							acc,                                            // validator id
+							asset_hub_kusama_runtime::SessionKeys { aura }, // session keys
+						)
+					})
+					.collect(),
+			},
+			polkadot_xcm: asset_hub_kusama_runtime::PolkadotXcmConfig {
+				safe_xcm_version: Some(SAFE_XCM_VERSION),
+				..Default::default()
+			},
+			..Default::default()
+		};
+
+		genesis_config.build_storage().unwrap()
+	}
+}
+
+// Bridge Hub Polkadot
+pub mod bridge_hub_polkadot {
+	use super::*;
+	pub const PARA_ID: u32 = 1002;
+	pub const ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
+
+	pub fn genesis() -> Storage {
+		let genesis_config = bridge_hub_polkadot_runtime::RuntimeGenesisConfig {
+			system: bridge_hub_polkadot_runtime::SystemConfig {
+				code: bridge_hub_polkadot_runtime::WASM_BINARY
+					.expect("WASM binary was not build, please build it!")
+					.to_vec(),
+				..Default::default()
+			},
+			balances: bridge_hub_polkadot_runtime::BalancesConfig {
+				balances: accounts::init_balances()
+					.iter()
+					.cloned()
+					.map(|k| (k, ED * 4096))
+					.collect(),
+			},
+			parachain_info: bridge_hub_polkadot_runtime::ParachainInfoConfig {
+				parachain_id: PARA_ID.into(),
+				..Default::default()
+			},
+			collator_selection: bridge_hub_polkadot_runtime::CollatorSelectionConfig {
+				invulnerables: collators::invulnerables()
+					.iter()
+					.cloned()
+					.map(|(acc, _)| acc)
+					.collect(),
+				candidacy_bond: ED * 16,
+				..Default::default()
+			},
+			session: bridge_hub_polkadot_runtime::SessionConfig {
+				keys: collators::invulnerables()
+					.into_iter()
+					.map(|(acc, aura)| {
+						(
+							acc.clone(),                                       // account id
+							acc,                                               // validator id
+							bridge_hub_polkadot_runtime::SessionKeys { aura }, // session keys
+						)
+					})
+					.collect(),
+			},
+			polkadot_xcm: bridge_hub_polkadot_runtime::PolkadotXcmConfig {
+				safe_xcm_version: Some(SAFE_XCM_VERSION),
+				..Default::default()
+			},
+			..Default::default()
+		};
+
+		genesis_config.build_storage().unwrap()
+	}
+}
+
+// Bridge Hub Kusama
+pub mod bridge_hub_kusama {
+	use super::*;
+	pub const PARA_ID: u32 = 1002;
+	pub const ED: Balance = parachains_common::kusama::currency::EXISTENTIAL_DEPOSIT;
+
+	pub fn genesis() -> Storage {
+		let genesis_config = bridge_hub_kusama_runtime::RuntimeGenesisConfig {
+			system: bridge_hub_kusama_runtime::SystemConfig {
+				code: bridge_hub_kusama_runtime::WASM_BINARY
+					.expect("WASM binary was not build, please build it!")
+					.to_vec(),
+				..Default::default()
+			},
+			balances: bridge_hub_kusama_runtime::BalancesConfig {
+				balances: accounts::init_balances()
+					.iter()
+					.cloned()
+					.map(|k| (k, ED * 4096))
+					.collect(),
+			},
+			parachain_info: bridge_hub_kusama_runtime::ParachainInfoConfig {
+				parachain_id: PARA_ID.into(),
+				..Default::default()
+			},
+			collator_selection: bridge_hub_kusama_runtime::CollatorSelectionConfig {
+				invulnerables: collators::invulnerables()
+					.iter()
+					.cloned()
+					.map(|(acc, _)| acc)
+					.collect(),
+				candidacy_bond: ED * 16,
+				..Default::default()
+			},
+			session: bridge_hub_kusama_runtime::SessionConfig {
+				keys: collators::invulnerables()
+					.into_iter()
+					.map(|(acc, aura)| {
+						(
+							acc.clone(),                                     // account id
+							acc,                                             // validator id
+							bridge_hub_kusama_runtime::SessionKeys { aura }, // session keys
+						)
+					})
+					.collect(),
+			},
+			polkadot_xcm: bridge_hub_kusama_runtime::PolkadotXcmConfig {
+				safe_xcm_version: Some(SAFE_XCM_VERSION),
 				..Default::default()
 			},
 			..Default::default()
@@ -430,6 +662,7 @@ pub mod kusama {
 pub mod bifrost_polkadot {
 	use super::*;
 	use crate::BOB;
+	use bifrost_primitives::DOT;
 	pub const PARA_ID: u32 = 2030;
 	pub const ED: Balance = 10_000_000_000;
 

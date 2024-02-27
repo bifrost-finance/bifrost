@@ -125,8 +125,7 @@ impl<T: Config>
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
 
 		// Construct xcm message.
-		let call =
-			AstarCall::Staking(AstarDappsStakingCall::<T>::BondAndStake(smart_contract, amount));
+		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::Stake(smart_contract, amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -159,13 +158,28 @@ impl<T: Config>
 	/// Bond extra amount to a delegator.
 	fn bond_extra(
 		&self,
-		_who: &MultiLocation,
-		_amount: BalanceOf<T>,
-		_validator: &Option<MultiLocation>,
-		_currency_id: CurrencyId,
-		_weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+		validator: &Option<MultiLocation>,
+		currency_id: CurrencyId,
+		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
-		Err(Error::<T>::Unsupported)
+		let call = match validator {
+			Some(_) => AstarCall::Staking(AstarDappsStakingCall::<T>::Unlock(amount)).encode(),
+			None => AstarCall::Staking(AstarDappsStakingCall::<T>::Lock(amount)).encode(),
+		};
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperationType::Payout,
+			call,
+			who,
+			currency_id,
+			weight_and_fee,
+		)?;
+
+		Ok(Zero::zero())
 	}
 
 	/// Decrease bonding amount to a delegator.
@@ -202,10 +216,7 @@ impl<T: Config>
 		// Construct xcm message.
 		let contract_h160 = Pallet::<T>::multilocation_to_h160_account(&contract_multilocation)?;
 		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
-		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::UnbondAndUnstake(
-			smart_contract,
-			amount,
-		));
+		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::Unstake(smart_contract, amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -299,18 +310,22 @@ impl<T: Config>
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 	) -> Result<QueryId, Error<T>> {
-		// Get the validator account
-		let contract_h160 = Pallet::<T>::multilocation_to_h160_account(&validator)?;
-		let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
+		let call: Vec<u8>;
 
-		// Construct xcm message.
-		let call = AstarCall::Staking(AstarDappsStakingCall::<T>::ClaimStaker(smart_contract));
+		if validator == &MultiLocation::default() {
+			call = AstarCall::Staking(AstarDappsStakingCall::<T>::ClaimStakerRewards).encode();
+		} else {
+			let contract_h160 = Pallet::<T>::multilocation_to_h160_account(&validator)?;
+			let smart_contract = SmartContract::<T::AccountId>::Evm(contract_h160);
+			call = AstarCall::Staking(AstarDappsStakingCall::<T>::ClaimBonusReward(smart_contract))
+				.encode()
+		}
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
-			call.encode(),
+			call,
 			who,
 			currency_id,
 			weight_and_fee,
@@ -336,7 +351,7 @@ impl<T: Config>
 		);
 
 		// Construct xcm message.
-		let call = AstarCall::<T>::Staking(AstarDappsStakingCall::WithdrawUnbonded);
+		let call = AstarCall::<T>::Staking(AstarDappsStakingCall::ClaimUnlocked);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.

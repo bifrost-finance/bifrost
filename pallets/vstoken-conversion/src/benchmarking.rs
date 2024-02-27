@@ -38,12 +38,13 @@ pub const VS_KSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 
 benchmarks! {
 	set_exchange_fee {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let fee: VstokenConversionExchangeFee<BalanceOf<T>> =
 			VstokenConversionExchangeFee {
 				vstoken_exchange_fee: 10u32.into(),
 				vsbond_exchange_fee_of_vstoken: 10u32.into(),
 			};
-	}: _(RawOrigin::Root,fee)
+	}: _<T::RuntimeOrigin>(origin,fee)
 
 	set_exchange_rate {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -75,7 +76,7 @@ benchmarks! {
 		};
 		assert_ok!(
 			VstokenConversion::<T>::set_exchange_fee(
-				RawOrigin::Root.into(),
+				T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
 				fee
 			));
 
@@ -111,7 +112,7 @@ benchmarks! {
 		};
 		assert_ok!(
 			VstokenConversion::<T>::set_exchange_fee(
-				RawOrigin::Root.into(),
+				T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
 				fee
 			));
 

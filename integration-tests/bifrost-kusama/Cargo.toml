@@ -13,6 +13,7 @@ parity-scale-codec = { workspace = true }
 # Substrate
 sp-runtime = { workspace = true }
 sp-io = { workspace = true }
+sp-staking = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-balances = { workspace = true }

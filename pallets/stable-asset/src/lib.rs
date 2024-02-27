@@ -348,7 +348,7 @@ pub mod pallet {
 	use parity_scale_codec::Codec;
 	use sp_runtime::{
 		traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-		FixedPointOperand,
+		FixedPointOperand, Permill,
 	};
 	use sp_std::prelude::*;
 
@@ -429,6 +429,10 @@ pub mod pallet {
 		T::AssetId,
 		(T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned),
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn token_rate_hardcap)]
+	pub type TokenRateHardcap<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, Permill>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
@@ -538,6 +542,16 @@ pub mod pallet {
 		TokenRateSet {
 			pool_id: StableAssetPoolId,
 			token_rate: Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>,
+		},
+		TokenRateHardcapConfigured {
+			vtoken: T::AssetId,
+			hardcap: Permill,
+		},
+		TokenRateHardcapRemoved {
+			vtoken: T::AssetId,
+		},
+		TokenRateRefreshFailed {
+			pool_id: StableAssetPoolId,
 		},
 	}
 

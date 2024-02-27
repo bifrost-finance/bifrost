@@ -66,6 +66,7 @@ use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
+mod migration;
 pub mod weights;
 use bifrost_asset_registry::AssetIdMaps;
 
@@ -89,11 +90,17 @@ use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDa
 use frame_support::{
 	dispatch::DispatchClass,
 	sp_runtime::traits::{Convert, ConvertInto},
-	traits::{Currency, EitherOf, EitherOfDiverse, Get, Imbalance, LockIdentifier, OnUnbalanced},
+	traits::{
+		fungible::HoldConsideration,
+		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, LinearStoragePrice, LockIdentifier,
+		OnUnbalanced,
+	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
+use pallet_identity::simple::IdentityInfo;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_runtime_common::prod_or_fast;
 
@@ -107,13 +114,14 @@ use zenlink_stable_amm::traits::{StableAmmApi, StablePoolLpCurrencyIdGenerate, V
 // Governance configurations.
 pub mod governance;
 use governance::{
-	custom_origins, fellowship::FellowshipReferendaInstance, CoreAdmin, CoreAdminOrCouncil,
-	LiquidStaking, SALPAdmin, Spender, TechAdmin, TechAdminOrCouncil,
+	custom_origins, CoreAdmin, CoreAdminOrCouncil, LiquidStaking, SALPAdmin, Spender, TechAdmin,
+	TechAdminOrCouncil,
 };
 
 // xcm config
 pub mod xcm_config;
 use pallet_xcm::{EnsureResponse, QueryStatus};
+use sp_runtime::traits::IdentityLookup;
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -134,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 992,
+	spec_version: 994,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -259,10 +267,12 @@ impl Contains<RuntimeCall> for CallFilter {
 					&currency_id,
 				),
 				// Balances module
-				RuntimeCall::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
-					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-						&NativeCurrencyId::get(),
-					),
+				RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
 				RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
 					dest: _,
 					value: _,
@@ -525,6 +535,7 @@ parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
 	pub PreimageBaseDeposit: Balance = deposit::<Runtime>(2, 64);
 	pub PreimageByteDeposit: Balance = deposit::<Runtime>(0, 1);
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -532,8 +543,12 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRoot<AccountId>;
-	type BaseDeposit = PreimageBaseDeposit;
-	type ByteDeposit = PreimageByteDeposit;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
 }
 
 parameter_types! {
@@ -592,6 +607,7 @@ impl pallet_identity::Config for Runtime {
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
 	type MaxAdditionalFields = MaxAdditionalFields;
+	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
 	type MaxRegistrars = MaxRegistrars;
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
@@ -636,10 +652,11 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
+	type MaxHolds = ConstU32<1>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-	type RuntimeHoldReason = ();
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 }
 
 parameter_types! {
@@ -825,6 +842,7 @@ parameter_types! {
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
+	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
 	pub BountyValueMinimum: Balance = 10 * BNCS;
 	pub const MaxApprovals: u32 = 100;
@@ -848,6 +866,14 @@ impl pallet_treasury::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxApprovals = MaxApprovals;
+	type AssetKind = ();
+	type Beneficiary = AccountId;
+	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
+	type Paymaster = PayFromAccount<Balances, BifrostFeeAccount>;
+	type BalanceConverter = UnityAssetBalanceConversion;
+	type PayoutPeriod = PayoutSpendPeriod;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 	type OnSlash = Treasury;
 	type PalletId = TreasuryPalletId;
 	type ProposalBond = ProposalBond;
@@ -882,6 +908,7 @@ impl pallet_tips::Config for Runtime {
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
 	type Tippers = PhragmenElection;
+	type MaxTipAmount = ();
 	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
@@ -967,6 +994,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1393,7 +1421,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type ChannelCommission = ();
+	type ChannelCommission = ChannelCommission;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1634,6 +1662,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2092>;
 	type ChannelCommission = ChannelCommission;
 }
@@ -2038,35 +2067,19 @@ pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
 pub mod migrations {
+	#![allow(unused_imports)]
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime>,
-		pallet_referenda::migration::v1::MigrateV0ToV1<Runtime, FellowshipReferendaInstance>,
-		OracleMembershipStoragePrefixMigration,
-		PhragmenElectionDepositRuntimeUpgrade,
+		crate::migration::v1::RestoreReferendaV1<crate::migration::ReferendaData, Runtime>,
+		crate::migration::v1::RestoreReferendaV1<
+			crate::migration::FellowshipReferendaData,
+			Runtime,
+			governance::fellowship::FellowshipReferendaInstance,
+		>,
+		bifrost_slpx::migration::BifrostKusamaAddCurrencyToSupportXcmFee<Runtime>,
 	);
-}
-
-use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
-pub struct PhragmenElectionDepositRuntimeUpgrade;
-impl frame_support::traits::OnRuntimeUpgrade for PhragmenElectionDepositRuntimeUpgrade {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		StorageVersion::new(4).put::<PhragmenElection>();
-		RocksDbWeight::get().reads_writes(1, 1)
-	}
-}
-
-pub struct OracleMembershipStoragePrefixMigration;
-impl OnRuntimeUpgrade for OracleMembershipStoragePrefixMigration {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let storage_version = OracleMembership::on_chain_storage_version();
-		if storage_version < 4 {
-			StorageVersion::new(4).put::<OracleMembership>();
-		}
-		RocksDbWeight::get().reads_writes(1, 1)
-	}
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -2481,6 +2494,7 @@ impl_runtime_apis! {
 }
 
 struct CheckInherents;
+#[allow(deprecated)]
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 	fn check_inherents(
 		block: &Block,

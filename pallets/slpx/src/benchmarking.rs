@@ -19,7 +19,7 @@
 
 use crate::*;
 use bifrost_asset_registry::CurrencyIdToLocations;
-use bifrost_primitives::{CurrencyId, KSM};
+use bifrost_primitives::{CurrencyId, KSM, VKSM};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;

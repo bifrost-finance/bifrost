@@ -149,6 +149,7 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
 	fn get_interlay_parachain_id() -> u32;
+	fn get_manta_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
@@ -348,6 +349,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn get_moonbeam_parachain_id() -> u32;
 	fn get_hydradx_parachain_id() -> u32;
 	fn get_interlay_parachain_id() -> u32;
+	fn get_manta_parachain_id() -> u32;
 }
 
 impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, CurrencyId, Balance>
@@ -422,6 +424,9 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		0
 	}
 	fn get_interlay_parachain_id() -> u32 {
+		0
+	}
+	fn get_manta_parachain_id() -> u32 {
 		0
 	}
 }

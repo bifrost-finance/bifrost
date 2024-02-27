@@ -47,7 +47,7 @@ use sp_runtime::{
 };
 use sp_std::marker::PhantomData;
 use xcm::{prelude::*, v3::Weight};
-use xcm_builder::FixedWeightBounds;
+use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
@@ -150,7 +150,8 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
-	type RuntimeHoldReason = ();
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -359,6 +360,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
 }
@@ -474,6 +476,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetLocker = ();
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
+	type TransactionalProcessor = FrameTransactionalProcessor;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
