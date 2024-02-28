@@ -1253,6 +1253,7 @@ pub mod pallet {
 								RedeemType::Astar(_) |
 								RedeemType::Moonbeam(_) |
 								RedeemType::Hydradx(_) |
+								RedeemType::Manta(_) |
 								RedeemType::Interlay(_) => break,
 							};
 							deduct_amount = exit_account_balance;
@@ -1310,6 +1311,25 @@ pub mod pallet {
 									parents: 1,
 									interior: X2(
 										Parachain(T::VtokenMinting::get_interlay_parachain_id()),
+										AccountId32 {
+											network: None,
+											id: receiver.encode().try_into().unwrap(),
+										},
+									),
+								};
+								T::XcmTransfer::transfer(
+									user_account.clone(),
+									currency_id,
+									deduct_amount,
+									dest,
+									Unlimited,
+								)?;
+							},
+							RedeemType::Manta(receiver) => {
+								let dest = MultiLocation {
+									parents: 1,
+									interior: X2(
+										Parachain(T::VtokenMinting::get_manta_parachain_id()),
 										AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),

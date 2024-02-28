@@ -324,3 +324,17 @@ fn test_set_ethereum_call_configration() {
 		);
 	})
 }
+
+#[test]
+fn test_set_currency_to_support_xcm_fee() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, true));
+		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![BNC]);
+
+		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), KSM, true));
+		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![BNC, KSM]);
+
+		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, false));
+		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![KSM]);
+	})
+}

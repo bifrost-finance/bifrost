@@ -151,7 +151,7 @@ impl<
 	fn deposit_asset(
 		asset: &MultiAsset,
 		location: &MultiLocation,
-		_context: &XcmContext,
+		_context: Option<&XcmContext>,
 	) -> Result {
 		match (
 			AccountIdConvert::convert_location(location),

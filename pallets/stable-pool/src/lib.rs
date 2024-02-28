@@ -37,12 +37,13 @@ use bifrost_primitives::{
 pub use bifrost_stable_asset::{
 	MintResult, PoolCount, PoolTokenIndex, Pools, RedeemMultiResult, RedeemProportionResult,
 	RedeemSingleResult, StableAsset, StableAssetPoolId, StableAssetPoolInfo, SwapResult,
+	TokenRateHardcap,
 };
 use frame_support::{self, pallet_prelude::*, sp_runtime::traits::Zero, transactional};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{Permill, SaturatedConversion};
 use sp_std::prelude::*;
 
 #[allow(type_alias_bounds)]
@@ -315,10 +316,115 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			bifrost_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::config_vtoken_auto_refresh())]
+		pub fn config_vtoken_auto_refresh(
+			origin: OriginFor<T>,
+			vtoken: AssetIdOf<T>,
+			hardcap: Permill,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				CurrencyId::is_vtoken(&vtoken.into()),
+				bifrost_stable_asset::Error::<T>::ArgumentsError
+			);
+			TokenRateHardcap::<T>::insert(vtoken, hardcap);
+
+			bifrost_stable_asset::Pallet::<T>::deposit_event(
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapConfigured { vtoken, hardcap },
+			);
+			Ok(())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::remove_vtoken_auto_refresh())]
+		pub fn remove_vtoken_auto_refresh(
+			origin: OriginFor<T>,
+			vtoken: AssetIdOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			TokenRateHardcap::<T>::remove(vtoken);
+
+			bifrost_stable_asset::Pallet::<T>::deposit_event(
+				bifrost_stable_asset::Event::<T>::TokenRateHardcapRemoved { vtoken },
+			);
+			Ok(())
+		}
 	}
 }
 
 impl<T: Config> Pallet<T> {
+	fn ensure_can_refresh(
+		token_in: AssetIdOf<T>,
+		token_out: AssetIdOf<T>,
+	) -> Option<(AssetIdOf<T>, AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>, Permill)> {
+		if let Some(hardcap) = Self::get_token_rate_hardcap(token_in) {
+			if T::CurrencyIdConversion::convert_to_token(token_in).ok() == Some(token_out) {
+				return Some((
+					token_in,
+					T::MultiCurrency::total_issuance(token_in).into(),
+					T::VtokenMinting::get_token_pool(token_out).into(),
+					hardcap,
+				));
+			}
+		} else if let Some(hardcap) = Self::get_token_rate_hardcap(token_out) {
+			if T::CurrencyIdConversion::convert_to_token(token_out).ok() == Some(token_in) {
+				return Some((
+					token_out,
+					T::MultiCurrency::total_issuance(token_out).into(),
+					T::VtokenMinting::get_token_pool(token_in).into(),
+					hardcap,
+				));
+			}
+		}
+		None
+	}
+
+	fn refresh_token_rate(
+		pool_id: StableAssetPoolId,
+		vtoken: AssetIdOf<T>,
+		vtoken_issuance: AtLeast64BitUnsignedOf<T>,
+		token_pool_amount: AtLeast64BitUnsignedOf<T>,
+		hardcap: Permill,
+	) -> Option<()> {
+		if let Some((demoninator, numerator)) =
+			bifrost_stable_asset::Pallet::<T>::get_token_rate(pool_id, vtoken)
+		{
+			let fee_denominator = T::FeePrecision::get().saturated_into::<u128>();
+			let numerator_u256 = U256::from(numerator.saturated_into::<u128>());
+			let demoninator_u256 = U256::from(demoninator.saturated_into::<u128>());
+
+			let delta = U256::from(hardcap * fee_denominator)
+				.checked_mul(numerator_u256)?
+				.checked_div(demoninator_u256)?;
+			let new_price = U256::from(fee_denominator)
+				.checked_mul(U256::from(token_pool_amount.saturated_into::<u128>()))?
+				.checked_div(U256::from(vtoken_issuance.saturated_into::<u128>()))?;
+			let old_price = U256::from(fee_denominator)
+				.checked_mul(numerator_u256)?
+				.checked_div(demoninator_u256)?;
+			// Skip if the new price is less than old price.
+			if new_price <= delta.checked_add(old_price)? && new_price > old_price {
+				return bifrost_stable_asset::Pallet::<T>::set_token_rate(
+					pool_id,
+					sp_std::vec![(vtoken, (vtoken_issuance, token_pool_amount))],
+				)
+				.ok();
+			} else if new_price == old_price {
+				// Do not update token rate or emit failed event if the price is the same.
+				return Some(());
+			}
+		}
+		None
+	}
+
+	fn get_token_rate_hardcap(vtoken: AssetIdOf<T>) -> Option<Permill> {
+		TokenRateHardcap::<T>::get(vtoken)
+	}
+
 	#[transactional]
 	fn mint_inner(
 		who: &AccountIdOf<T>,
@@ -656,15 +762,17 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let mut pool_info =
 			T::StableAsset::pool(pool_id).ok_or(bifrost_stable_asset::Error::<T>::PoolNotFound)?;
+
+		let token_in = *pool_info
+			.assets
+			.get(currency_id_in as usize)
+			.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?;
+		let token_out = *pool_info
+			.assets
+			.get(currency_id_out as usize)
+			.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?;
 		T::StableAsset::collect_yield(pool_id, &mut pool_info)?;
-		let dx = Self::upscale(
-			amount,
-			pool_id,
-			*pool_info
-				.assets
-				.get(currency_id_in as usize)
-				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
-		)?;
+		let dx = Self::upscale(amount, pool_id, token_in)?;
 		let SwapResult { dx: _, dy, y, balance_i } =
 			bifrost_stable_asset::Pallet::<T>::get_swap_amount(
 				&pool_info,
@@ -673,14 +781,7 @@ impl<T: Config> Pallet<T> {
 				dx,
 			)?;
 
-		let downscale_out = Self::downscale(
-			dy,
-			pool_id,
-			*pool_info
-				.assets
-				.get(currency_id_out as usize)
-				.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
-		)?;
+		let downscale_out = Self::downscale(dy, pool_id, token_out)?;
 		ensure!(downscale_out >= min_dy, Error::<T>::SwapUnderMin);
 
 		let mut balances = pool_info.balances.clone();
@@ -725,6 +826,23 @@ impl<T: Config> Pallet<T> {
 				output_amount: downscale_out,
 			},
 		);
+		if let Some((vtoken, vtoken_issuance, token_pool_amount, hardcap)) =
+			Self::ensure_can_refresh(token_in, token_out)
+		{
+			if Self::refresh_token_rate(
+				pool_id,
+				vtoken,
+				vtoken_issuance,
+				token_pool_amount,
+				hardcap,
+			)
+			.is_none()
+			{
+				bifrost_stable_asset::Pallet::<T>::deposit_event(
+					bifrost_stable_asset::Event::<T>::TokenRateRefreshFailed { pool_id },
+				)
+			}
+		}
 		Ok(())
 	}
 

@@ -37,7 +37,7 @@ bifrost-currencies = { workspace = true }
 orml-xtokens = { workspace = true }
 pallet-balances = { workspace = true }
 bifrost-asset-registry = { workspace = true }
-xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+xcm-executor = { workspace = true }
 
 
 [features]
@@ -60,6 +60,7 @@ std = [
 	"bifrost-asset-registry/std",
 	"cumulus-primitives-core/std",
 	"pallet-xcm/std",
+	"pallet-sudo/std",
 	"xcm/std",
 	"pallet-multisig/std",
 	"pallet-collective/std",

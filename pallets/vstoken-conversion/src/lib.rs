@@ -321,7 +321,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			ExchangeFee::<T>::mutate(|old_exchange_fee| {
 				*old_exchange_fee = exchange_fee.clone();

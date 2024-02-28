@@ -51,6 +51,7 @@ use xcm::{
 		Junctions::{X1, X2},
 	},
 };
+use xcm_builder::FrameTransactionalProcessor;
 pub use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
 	ChildParachainAsNative, ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
@@ -138,7 +139,8 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
-	type RuntimeHoldReason = ();
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -224,6 +226,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type AstarParachainId = ConstU32<2007>;
 	type MoonbeamParachainId = ConstU32<2023>;
 	type HydradxParachainId = ConstU32<2034>;
+	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
 }
@@ -346,6 +349,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetLocker = ();
 	type Aliasers = Nothing;
 	type AssetExchanger = ();
+	type TransactionalProcessor = FrameTransactionalProcessor;
 }
 
 parameter_type_with_key! {

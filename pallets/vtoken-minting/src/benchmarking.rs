@@ -62,6 +62,22 @@ benchmarks! {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 	}: _<T::RuntimeOrigin>(origin, 10u32)
 
+	set_unlocking_total {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let token = CurrencyId::Token(TokenSymbol::KSM);
+		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u32 as u128);
+	}: _<T::RuntimeOrigin>(origin, token, token_amount)
+
+	set_min_time_unit {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let token = CurrencyId::Token(TokenSymbol::KSM);
+	}: _<T::RuntimeOrigin>(origin, token, TimeUnit::Era(1))
+
+	recreate_currency_ongoing_time_unit {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let token = CurrencyId::Token(TokenSymbol::KSM);
+	}: _<T::RuntimeOrigin>(origin, token, TimeUnit::Era(1))
+
 	mint {
 		let caller: T::AccountId = whitelisted_caller();
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
