@@ -21,13 +21,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master 
         with:
-          profile: minimal
-          toolchain: nightly-2023-05-22
           components: rustfmt
           target: wasm32-unknown-unknown
-          default: true
+          toolchain: nightly-2023-05-22
 
       - name: Download kusama strool result
         uses: actions/download-artifact@v4

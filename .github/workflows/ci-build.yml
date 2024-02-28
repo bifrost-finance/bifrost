@@ -23,15 +23,11 @@ jobs:
         with:
           fetch-depth: 1
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly-2023-05-22
-          components: rustfmt,clippy
+          components: rustfmt, clippy
           target: wasm32-unknown-unknown
-          override: true
-          default: true
-
       - name: Cargo clippy
         run: |
           make clippy
