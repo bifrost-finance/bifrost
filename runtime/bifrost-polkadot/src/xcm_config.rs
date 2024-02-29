@@ -192,6 +192,9 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 }
 
 parameter_types! {
+	/// The location that this chain recognizes as the Relay network's Asset Hub.
+	pub SystemAssetHubLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(1000)));
+	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(Ethereum { chain_id: 11155111 })));
 	pub const DotLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
@@ -498,6 +501,26 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
+/// Asset filter that allows all assets from a certain location matching asset id.
+pub struct AssetPrefixFrom<Prefix, Origin>(PhantomData<(Prefix, Origin)>);
+impl<Prefix, Origin> ContainsPair<MultiAsset, MultiLocation> for AssetPrefixFrom<Prefix, Origin>
+where
+	Prefix: Get<MultiLocation>,
+	Origin: Get<MultiLocation>,
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		let loc = Origin::get();
+		&loc == origin &&
+			matches!(asset, MultiAsset { id: AssetId::Concrete(asset_loc), fun: Fungible(_a) }
+			if asset_loc.starts_with(&Prefix::get()))
+	}
+}
+
+pub type Reserves = (
+	MultiNativeAsset<RelativeReserveProvider>,
+	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
+);
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -505,7 +528,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
+	type IsReserve = Reserves;
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;

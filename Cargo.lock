@@ -1404,12 +1404,16 @@ dependencies = [
 name = "bifrost-polkadot-integration-tests"
 version = "0.8.0"
 dependencies = [
+ "asset-hub-polkadot-runtime",
  "bifrost-asset-registry",
  "bifrost-polkadot-runtime",
  "bifrost-primitives",
  "frame-support",
  "frame-system",
+ "hex-literal 0.4.1",
  "integration-tests-common",
+ "orml-tokens",
+ "pallet-assets",
  "pallet-balances",
  "pallet-xcm",
  "parachains-common",

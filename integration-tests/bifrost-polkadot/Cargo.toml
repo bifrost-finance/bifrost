@@ -13,6 +13,7 @@ sp-io = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
 
 # Polkadot
 polkadot-parachain-primitives = { workspace = true }
@@ -30,3 +31,6 @@ integration-tests-common = { path = "../common", default-features = false}
 bifrost-primitives = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 bifrost-polkadot-runtime = { workspace = true }
+asset-hub-polkadot-runtime = { workspace = true }
+hex-literal = { workspace = true }
+orml-tokens = { workspace = true }

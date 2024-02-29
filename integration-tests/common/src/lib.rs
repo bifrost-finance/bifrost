@@ -244,5 +244,5 @@ impl_assets_helpers_for_parachain!(AssetHubKusama, Kusama);
 impl_assert_events_helpers_for_parachain!(AssetHubKusama);
 
 impl_test_accounts_helpers_for_chain! {
-	Polkadot, Kusama, BifrostPolkadot, BifrostKusama
+	Polkadot, Kusama, BifrostPolkadot, BifrostKusama, AssetHubPolkadot
 }
