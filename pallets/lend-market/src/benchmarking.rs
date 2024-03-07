@@ -182,12 +182,17 @@ benchmarks! {
 	}
 
 	claim_reward {
-		let n in 0 .. 1;
+		let n in 1 .. 2;
 
 		let caller: AccountIdOf<T> = account("caller", 2, 2);
 		transfer_initial_balance::<T>(caller.clone());
-		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), KSM, pending_market_mock::<T>(LEND_KSM)));
-		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), KSM));
+		let tokens = vec![(KSM, LEND_KSM),(VKSM, LEND_VKSM)];
+		for i in 0..n {
+			if let Some((token1,token2)) = tokens.get(i as usize) {
+				assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), *token1, pending_market_mock::<T>(*token2)));
+				assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), *token1));
+			}
+		}
 		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), KSM, 100_000_000));
 		assert_ok!(LendMarket::<T>::add_reward(SystemOrigin::Signed(caller.clone()).into(), 1_000_000_000_000_u128));
 		assert_ok!(LendMarket::<T>::update_market_reward_speed(SystemOrigin::Root.into(), KSM, Some(1_000_000), Some(1_000_000)));
@@ -355,11 +360,15 @@ benchmarks! {
 	}
 
 	update_liquidation_free_collateral {
-		let n in 0 .. 1;
+		let n in 0 .. 10;
 
-	}: _(SystemOrigin::Root, vec![KSM])
+		let mut vec = Vec::new();
+		for i in 0..n {
+			vec.push(CurrencyId::Lend(i.try_into().unwrap()))
+		}
+	}: _(SystemOrigin::Root, vec.clone())
 	verify {
-		assert_last_event::<T>(Event::<T>::LiquidationFreeCollateralsUpdated(vec![KSM]).into());
+		assert_last_event::<T>(Event::<T>::LiquidationFreeCollateralsUpdated(vec).into());
 	}
 }
 

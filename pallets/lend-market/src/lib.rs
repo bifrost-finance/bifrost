@@ -785,7 +785,7 @@ pub mod pallet {
 
 		/// Claim reward from all market.
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::claim_reward())]
+		#[pallet::weight(T::WeightInfo::claim_reward(Markets::<T>::iter_keys().count() as u32))]
 		#[transactional]
 		pub fn claim_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
