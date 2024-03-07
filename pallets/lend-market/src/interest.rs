@@ -73,6 +73,7 @@ impl<T: Config> Pallet<T> {
 
 		let now = T::UnixTime::now().as_secs();
 		let last_accrued_interest_time = Self::last_accrued_interest_time(asset_id);
+		ensure!(!last_accrued_interest_time.is_zero(), Error::<T>::InvalidAccruedInterestTime);
 		if now > last_accrued_interest_time {
 			let delta_time = now - last_accrued_interest_time;
 			let interest_accumulated =

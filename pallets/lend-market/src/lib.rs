@@ -194,6 +194,8 @@ pub mod pallet {
 		CodecError,
 		/// Collateral is reserved and cannot be liquidated
 		CollateralReserved,
+		/// Last accrued interest time is not initialized
+		InvalidAccruedInterestTime,
 	}
 
 	#[pallet::event]
