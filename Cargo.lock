@@ -1085,6 +1085,7 @@ dependencies = [
  "log",
  "orml-tokens",
  "orml-traits",
+ "pallet-asset-rate",
  "pallet-balances",
  "pallet-collective",
  "pallet-xcm",

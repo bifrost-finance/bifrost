@@ -36,6 +36,7 @@ bifrost-runtime-common = { workspace = true }
 env_logger = { workspace = true }
 xcm-builder = { workspace = true }
 pallet-xcm = { workspace = true }
+pallet-asset-rate = { workspace = true }
 pallet-collective = { workspace = true }
 
 [features]
@@ -56,6 +57,7 @@ runtime-benchmarks = [
 	"pallet-collective/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"pallet-asset-rate/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks"
 ]
