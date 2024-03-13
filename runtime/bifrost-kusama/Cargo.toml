@@ -76,6 +76,7 @@ cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
+cumulus-primitives-aura  = { workspace = true }
 parachain-info = { workspace = true }
 
 # Polkadot dependencies
@@ -207,6 +208,7 @@ std = [
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
+	"cumulus-primitives-aura/std",
 	"parachain-info/std",
 
 	"pallet-xcm/std",

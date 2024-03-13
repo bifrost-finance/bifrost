@@ -127,6 +127,7 @@ cumulus-primitives-core                    = { version = "0.4.0", default-featur
 cumulus-primitives-parachain-inherent      = { version = "0.4.0", default-features = false }
 cumulus-primitives-timestamp               = { version = "0.4.0", default-features = false }
 cumulus-primitives-utility                 = { version = "0.4.0", default-features = false }
+cumulus-primitives-aura                    = { version = "0.4.0", default-features = false }
 cumulus-test-relay-sproof-builder          = { version = "0.4.0", default-features = false }
 frame-benchmarking                         = { version = "25.0.0", default-features = false }
 frame-executive                            = { version = "25.0.0", default-features = false }
