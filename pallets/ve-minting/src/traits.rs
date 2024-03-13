@@ -238,8 +238,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Ok(last_point
 			.amount
 			.checked_add(
-				&T::VoteWeightMultiplier::get()
-					.checked_mul(&(last_point.bias as u128).unique_saturated_into())
+				T::VoteWeightMultiplier::get()
+					.checked_mul((last_point.bias as u128).unique_saturated_into())
 					.ok_or(ArithmeticError::Overflow)?,
 			)
 			.ok_or(ArithmeticError::Overflow)?)
@@ -295,7 +295,7 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNu
 				Error::<T>::NotEnoughBalance
 			);
 			let new_reward = total_reward
-				.checked_div(&T::BlockNumberToBalance::convert(conf.rewards_duration))
+				.checked_div(T::BlockNumberToBalance::convert(conf.rewards_duration))
 				.ok_or(ArithmeticError::Overflow)?;
 			conf.reward_rate
 				.entry(*currency)
