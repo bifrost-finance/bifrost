@@ -112,7 +112,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let ve_config = Self::ve_configs();
 		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(addr);
-		ensure!(_locked.amount > Zero::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
+		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 		Self::_deposit_for(addr, value, Zero::zero(), _locked)?;
@@ -275,7 +275,7 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNu
 	) -> DispatchResult {
 		rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
 			let mut total_reward: BalanceOf<T> = *reward;
-			if remaining != Zero::zero() {
+			if remaining != BalanceOf::<T>::zero() {
 				let leftover: BalanceOf<T> = conf
 					.reward_rate
 					.get(currency)
@@ -359,5 +359,39 @@ where
 		_t: BlockNumber,
 	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
+	}
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
+pub struct UserMarkupInfo {
+	// pub old_locked: LockedBalance<Balance, BlockNumber>,
+	pub old_markup_coefficient: FixedU128,
+	pub markup_coefficient: FixedU128,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+pub struct LockedToken<CurrencyId, Balance> {
+	pub asset_id: CurrencyId,
+	pub amount: Balance,
+	pub markup_coefficient: FixedU128,
+}
+
+pub trait MarkupInfo<AccountId> {
+	fn update_markup_info(
+		addr: &AccountId,
+		new_markup_coefficient: FixedU128,
+		user_markup_info: &mut UserMarkupInfo,
+	);
+}
+
+impl<T: Config> MarkupInfo<AccountIdOf<T>> for Pallet<T> {
+	fn update_markup_info(
+		addr: &AccountIdOf<T>,
+		new_markup_coefficient: FixedU128,
+		user_markup_info: &mut UserMarkupInfo,
+	) {
+		user_markup_info.old_markup_coefficient = user_markup_info.markup_coefficient;
+		user_markup_info.markup_coefficient = new_markup_coefficient;
+		UserMarkupInfos::<T>::insert(addr, user_markup_info);
 	}
 }

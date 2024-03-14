@@ -51,7 +51,7 @@ use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, cmp::Ordering, collections::btree_map::BTreeMap, vec, vec::Vec};
-pub use traits::VeMintingInterface;
+pub use traits::{LockedToken, MarkupInfo, UserMarkupInfo, VeMintingInterface};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -267,12 +267,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_markup_infos)]
-	pub type UserMarkupInfos<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		AccountIdOf<T>,
-		UserMarkupInfo<BalanceOf<T>, BlockNumberFor<T>>,
-	>;
+	pub type UserMarkupInfos<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, UserMarkupInfo>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn locked_tokens)]
@@ -606,7 +602,13 @@ pub mod pallet {
 					value,
 				)?;
 			}
-			Self::_checkpoint(addr, old_locked, _locked.clone())?;
+			Self::markup_calc(
+				&addr,
+				old_locked,
+				_locked.clone(),
+				UserMarkupInfos::<T>::get(&addr).as_ref(),
+			)?;
+			// Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
 			Self::deposit_event(Event::Minted {
 				addr: addr.clone(),
@@ -725,18 +727,28 @@ pub mod pallet {
 			addr: &AccountIdOf<T>,
 			mut old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			mut new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-			user_markup_info: &mut UserMarkupInfo<BalanceOf<T>, BlockNumberFor<T>>,
+			user_markup_info: Option<&UserMarkupInfo>,
 		) -> DispatchResult {
 			// let mut user_markup_info = UserMarkupInfos::<T>::get(addr);
-			user_markup_info.old_locked = old_locked.clone();
-			old_locked.amount = FixedU128::from_inner(old_locked.amount)
-				.checked_mul(&user_markup_info.old_markup_coefficient)
-				.and_then(|x| x.into_inner().checked_add(old_locked.amount))
-				.ok_or(ArithmeticError::Overflow)?;
-			new_locked.amount = FixedU128::from_inner(new_locked.amount)
-				.checked_mul(&user_markup_info.markup_coefficient)
-				.and_then(|x| x.into_inner().checked_add(new_locked.amount))
-				.ok_or(ArithmeticError::Overflow)?;
+			// user_markup_info.old_locked = old_locked.clone();
+			if let Some(info) = user_markup_info {
+				old_locked.amount = FixedU128::from_inner(old_locked.amount)
+					.checked_mul(&info.old_markup_coefficient)
+					.and_then(|x| x.into_inner().checked_add(old_locked.amount))
+					.ok_or(ArithmeticError::Overflow)?;
+				new_locked.amount = FixedU128::from_inner(new_locked.amount)
+					.checked_mul(&info.markup_coefficient)
+					.and_then(|x| x.into_inner().checked_add(new_locked.amount))
+					.ok_or(ArithmeticError::Overflow)?;
+			}
+			// old_locked.amount = FixedU128::from_inner(old_locked.amount)
+			// 	.checked_mul(&user_markup_info.old_markup_coefficient)
+			// 	.and_then(|x| x.into_inner().checked_add(old_locked.amount))
+			// 	.ok_or(ArithmeticError::Overflow)?;
+			// new_locked.amount = FixedU128::from_inner(new_locked.amount)
+			// 	.checked_mul(&user_markup_info.markup_coefficient)
+			// 	.and_then(|x| x.into_inner().checked_add(new_locked.amount))
+			// 	.ok_or(ArithmeticError::Overflow)?;
 
 			// Locked::<T>::insert(addr, new_locked.clone());
 
@@ -786,17 +798,32 @@ pub mod pallet {
 							l.markup_coefficient =
 								match markup_coefficient.1.cmp(&asset_id_markup_coefficient) {
 									Ordering::Less => {
-										user_markup_info.markup_coefficient = user_markup_info
-											.markup_coefficient
-											.saturating_sub(l.markup_coefficient)
-											.saturating_add(markup_coefficient.1);
+										// user_markup_info.markup_coefficient = user_markup_info
+										// 	.markup_coefficient
+										// 	.saturating_sub(l.markup_coefficient)
+										// 	.saturating_add(markup_coefficient.1);
+										Self::update_markup_info(
+											&addr,
+											user_markup_info
+												.markup_coefficient
+												.saturating_sub(l.markup_coefficient)
+												.saturating_add(markup_coefficient.1),
+											&mut user_markup_info,
+										);
 										markup_coefficient.1
 									},
 									Ordering::Equal | Ordering::Greater => {
 										// TODO: need logic of hardcap
-										user_markup_info.markup_coefficient = user_markup_info
-											.markup_coefficient
-											.saturating_add(nl.markup_coefficient);
+										// user_markup_info.markup_coefficient = user_markup_info
+										// 	.markup_coefficient
+										// 	.saturating_add(nl.markup_coefficient);
+										Self::update_markup_info(
+											&addr,
+											user_markup_info
+												.markup_coefficient
+												.saturating_add(nl.markup_coefficient),
+											&mut user_markup_info,
+										);
 										asset_id_markup_coefficient
 									},
 								};
@@ -811,15 +838,20 @@ pub mod pallet {
 				.collect::<Vec<_>>();
 			if let Some(lock) = new_locked_token {
 				// TODO: need logic of hardcap
-				user_markup_info.markup_coefficient =
-					user_markup_info.markup_coefficient.saturating_add(lock.markup_coefficient);
+				// user_markup_info.markup_coefficient =
+				// 	user_markup_info.markup_coefficient.saturating_add(lock.markup_coefficient);
+				Self::update_markup_info(
+					&addr,
+					user_markup_info.markup_coefficient.saturating_add(lock.markup_coefficient),
+					&mut user_markup_info,
+				);
 				locked_tokens.try_push(lock).map_err(|_| Error::<T>::ExceedsMaxLocks)?;
 			}
 			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, asset_id, &addr, amount)?;
 
-			Self::markup_calc(&addr, _locked.clone(), _locked, &mut user_markup_info)?;
+			Self::markup_calc(&addr, _locked.clone(), _locked, Some(&user_markup_info))?;
 			LockedTokens::<T>::insert(&addr, locked_tokens);
-			UserMarkupInfos::<T>::insert(&addr, user_markup_info);
+			// UserMarkupInfos::<T>::insert(&addr, user_markup_info);
 			// Self::deposit_event(Event::Minted {
 			// 	addr: addr.clone(),
 			// 	value,
@@ -845,34 +877,29 @@ pub mod pallet {
 			let mut locked_tokens = LockedTokens::<T>::get(&addr);
 			for lock in locked_tokens.iter() {
 				if lock.asset_id == asset_id {
-					user_markup_info.old_markup_coefficient = user_markup_info.markup_coefficient;
-					user_markup_info.markup_coefficient =
-						user_markup_info.markup_coefficient.saturating_sub(lock.markup_coefficient);
+					// user_markup_info.old_markup_coefficient =
+					// user_markup_info.markup_coefficient; user_markup_info.markup_coefficient =
+					// 	user_markup_info.markup_coefficient.saturating_sub(lock.markup_coefficient);
+					Self::update_markup_info(
+						&addr,
+						user_markup_info.markup_coefficient.saturating_sub(lock.markup_coefficient),
+						&mut user_markup_info,
+					);
+					TotalLock::<T>::try_mutate(asset_id, |total_lock| -> DispatchResult {
+						*total_lock =
+							total_lock.checked_sub(lock.amount).ok_or(ArithmeticError::Overflow)?;
+						Ok(())
+					})?;
 					T::MultiCurrency::remove_lock(MARKUP_LOCK_ID, asset_id, &addr)?;
 					break;
 				}
 			}
 
 			locked_tokens.retain(|l| l.asset_id != asset_id);
-			Self::markup_calc(&addr, _locked.clone(), _locked, &mut user_markup_info)?;
+			Self::markup_calc(&addr, _locked.clone(), _locked, Some(&user_markup_info))?;
 			LockedTokens::<T>::insert(&addr, locked_tokens);
-			UserMarkupInfos::<T>::insert(&addr, user_markup_info);
+			// UserMarkupInfos::<T>::insert(&addr, user_markup_info);
 			Ok(())
 		}
 	}
-}
-
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
-pub struct UserMarkupInfo<Balance, BlockNumber> {
-	pub old_time: BlockNumber,
-	pub old_locked: LockedBalance<Balance, BlockNumber>,
-	pub old_markup_coefficient: FixedU128,
-	pub markup_coefficient: FixedU128,
-}
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct LockedToken<CurrencyId, Balance> {
-	pub asset_id: CurrencyId,
-	pub amount: Balance,
-	pub markup_coefficient: FixedU128,
 }
