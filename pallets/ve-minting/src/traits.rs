@@ -370,10 +370,18 @@ pub struct UserMarkupInfo {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct LockedToken<CurrencyId, Balance> {
-	pub asset_id: CurrencyId,
+pub struct LockedToken<Balance, BlockNumber> {
+	// pub asset_id: CurrencyId,
 	pub amount: Balance,
 	pub markup_coefficient: FixedU128,
+	pub refresh_block: BlockNumber,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+pub struct MarkupCoefficientInfo<BlockNumber> {
+	pub markup_coefficient: FixedU128,
+	pub hardcap: FixedU128,
+	pub update_block: BlockNumber,
 }
 
 pub trait MarkupInfo<AccountId> {
