@@ -64,6 +64,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
+const VE_LOCK_ID: LockIdentifier = *b"vebnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"vebncmkp";
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
@@ -472,10 +473,11 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = Self::point_history(g_epoch);
 			} else {
-				last_point.amount = T::MultiCurrency::free_balance(
-					T::TokenType::get(),
-					&T::VeMintingPalletId::get().into_account_truncating(),
-				);
+				// last_point.amount = T::MultiCurrency::free_balance(
+				// 	T::TokenType::get(),
+				// 	&T::VeMintingPalletId::get().into_account_truncating(),
+				// );
+				last_point.amount = Self::supply();
 			}
 			let mut last_checkpoint = last_point.block;
 			let mut t_i: BlockNumberFor<T> = last_checkpoint
@@ -523,10 +525,11 @@ pub mod pallet {
 
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
-					last_point.amount = T::MultiCurrency::free_balance(
-						T::TokenType::get(),
-						&T::VeMintingPalletId::get().into_account_truncating(),
-					);
+					last_point.amount = Self::supply();
+					// last_point.amount = T::MultiCurrency::free_balance(
+					// 	T::TokenType::get(),
+					// 	&T::VeMintingPalletId::get().into_account_truncating(),
+					// );
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);
@@ -605,12 +608,13 @@ pub mod pallet {
 			Locked::<T>::insert(addr, _locked.clone());
 
 			if value != BalanceOf::<T>::zero() {
-				T::MultiCurrency::transfer(
-					T::TokenType::get(),
-					addr,
-					&T::VeMintingPalletId::get().into_account_truncating(),
-					value,
-				)?;
+				// T::MultiCurrency::transfer(
+				// 	T::TokenType::get(),
+				// 	addr,
+				// 	&T::VeMintingPalletId::get().into_account_truncating(),
+				// 	value,
+				// )?;
+				T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), &addr, _locked.amount)?;
 			}
 			Self::markup_calc(
 				&addr,

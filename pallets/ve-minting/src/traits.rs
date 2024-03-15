@@ -139,12 +139,13 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Supply::<T>::set(supply_before.saturating_sub(value));
 
 		// BNC should be transferred before checkpoint
-		T::MultiCurrency::transfer(
-			T::TokenType::get(),
-			&T::VeMintingPalletId::get().into_account_truncating(),
-			addr,
-			value,
-		)?;
+		// T::MultiCurrency::transfer(
+		// 	T::TokenType::get(),
+		// 	&T::VeMintingPalletId::get().into_account_truncating(),
+		// 	addr,
+		// 	value,
+		// )?;
+		T::MultiCurrency::remove_lock(VE_LOCK_ID, T::TokenType::get(), &addr)?;
 
 		Self::_checkpoint(addr, old_locked, _locked.clone())?;
 
