@@ -300,7 +300,7 @@ pub mod pallet {
 		_,
 		BoundedVec<
 			Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
-			ConstU32<100>,
+			ConstU32<1000>,
 		>,
 		ValueQuery,
 	>;
