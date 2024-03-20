@@ -308,7 +308,7 @@ grandpa-primitives     = { package = "sp-consensus-grandpa", version = "10.0.0" 
 pallet-bridge-messages = { version = "0.4.0" }
 pallet-asset-rate = { version = "4.0.0", default-features = false }
 asset-hub-kusama-runtime    = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
-asset-hub-polkadot-runtime  = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
+asset-hub-polkadot-runtime  = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.3" }
 bridge-hub-kusama-runtime   = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
 bridge-hub-polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
 kusama-runtime              = { package = "staging-kusama-runtime", git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
