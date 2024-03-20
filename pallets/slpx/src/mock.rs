@@ -33,7 +33,10 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
+use orml_traits::{
+	location::RelativeReserveProvider, parameter_type_with_key, xcm_transfer::Transferred,
+	MultiCurrency, XcmTransfer,
+};
 use sp_core::{blake2_256, ConstU128, H256};
 use sp_runtime::{
 	traits::{
@@ -514,7 +517,7 @@ impl pallet_xcm::Config for Test {
 	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = DoNothingExecuteXcm;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = ();
+	type XcmRouter = bifrost_primitives::DoNothingRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -575,6 +578,77 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
+pub struct XTokensMock;
+
+impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
+	fn transfer(
+		who: AccountId,
+		currency_id: CurrencyId,
+		amount: Balance,
+		dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		Currencies::withdraw(currency_id, &who, amount).ok();
+		Currencies::deposit(currency_id, &BOB, amount).ok();
+		Ok(Transferred {
+			sender: who,
+			assets: Default::default(),
+			fee: MultiAsset { id: [0u8; 32].into(), fun: Fungible(0u128) },
+			dest,
+		})
+	}
+
+	fn transfer_multiasset(
+		_who: AccountId,
+		_asset: MultiAsset,
+		_dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		todo!()
+	}
+
+	fn transfer_with_fee(
+		_who: AccountId,
+		_currency_id: CurrencyId,
+		_amount: Balance,
+		_fee: Balance,
+		_dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		todo!()
+	}
+
+	fn transfer_multiasset_with_fee(
+		_who: AccountId,
+		_asset: MultiAsset,
+		_fee: MultiAsset,
+		_dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		todo!()
+	}
+
+	fn transfer_multicurrencies(
+		_who: AccountId,
+		_currencies: Vec<(CurrencyId, Balance)>,
+		_fee_item: u32,
+		_dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		todo!()
+	}
+
+	fn transfer_multiassets(
+		_who: AccountId,
+		_assets: cumulus_primitives_core::MultiAssets,
+		_fee: MultiAsset,
+		_dest: MultiLocation,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		todo!()
+	}
+}
+
 impl slpx::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ControlOrigin = EnsureRoot<AccountId>;
@@ -582,7 +656,7 @@ impl slpx::Config for Test {
 	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
 	type StablePoolHandler = StablePool;
-	type XcmTransfer = XTokens;
+	type XcmTransfer = XTokensMock;
 	type XcmSender = ();
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
