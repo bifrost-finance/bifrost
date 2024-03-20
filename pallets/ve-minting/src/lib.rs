@@ -589,9 +589,7 @@ pub mod pallet {
 			let user_epoch = Self::user_point_epoch(addr)
 				.checked_add(U256::one())
 				.ok_or(ArithmeticError::Overflow)?;
-			log::debug!("1user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
 			UserPointEpoch::<T>::insert(addr, user_epoch);
-			log::debug!("1user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
 			u_new.block = current_block_number;
 			u_new.amount = Self::locked(addr).amount;
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
@@ -619,13 +617,17 @@ pub mod pallet {
 			Locked::<T>::insert(addr, _locked.clone());
 
 			if value != BalanceOf::<T>::zero() {
-				// T::MultiCurrency::transfer(
-				// 	T::TokenType::get(),
-				// 	addr,
-				// 	&T::VeMintingPalletId::get().into_account_truncating(),
-				// 	value,
-				// )?;
-				T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, _locked.amount)?;
+				// TODO: compare with free balance
+				let new_locked_balance = UserLocked::<T>::get(who)
+					.checked_add(value)
+					.ok_or(ArithmeticError::Underflow)?;
+				T::MultiCurrency::set_lock(
+					VE_LOCK_ID,
+					T::TokenType::get(),
+					who,
+					new_locked_balance,
+				)?;
+				UserLocked::<T>::set(who, new_locked_balance);
 			}
 			// TODO: one user can have multiple positions
 			Self::markup_calc(
@@ -656,8 +658,6 @@ pub mod pallet {
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let u_epoch = Self::user_point_epoch(addr);
-			log::debug!("user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
-			log::debug!("u_epoch: {:?}", u_epoch);
 			if u_epoch == U256::zero() {
 				return Ok(Zero::zero());
 			} else {
@@ -681,7 +681,6 @@ pub mod pallet {
 				if last_point.bias < 0_i128 {
 					last_point.bias = 0_i128
 				}
-				log::debug!("balance_of_position_current_block: {:?}", last_point);
 
 				Ok(last_point
 					.amount
@@ -803,14 +802,6 @@ pub mod pallet {
 					.and_then(|x| x.into_inner().checked_add(new_locked.amount))
 					.ok_or(ArithmeticError::Overflow)?;
 			}
-			// old_locked.amount = FixedU128::from_inner(old_locked.amount)
-			// 	.checked_mul(&user_markup_info.old_markup_coefficient)
-			// 	.and_then(|x| x.into_inner().checked_add(old_locked.amount))
-			// 	.ok_or(ArithmeticError::Overflow)?;
-			// new_locked.amount = FixedU128::from_inner(new_locked.amount)
-			// 	.checked_mul(&user_markup_info.markup_coefficient)
-			// 	.and_then(|x| x.into_inner().checked_add(new_locked.amount))
-			// 	.ok_or(ArithmeticError::Overflow)?;
 
 			// Locked::<T>::insert(addr, new_locked.clone());
 

@@ -77,12 +77,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
-		log::debug!(
-			"create_lock_inner: unlock_time: {:?}, current_block_number: {:?}{:?}",
-			unlock_time,
-			current_block_number,
-			_locked.amount
-		);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
 		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
@@ -162,13 +156,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Supply::<T>::set(supply_before.saturating_sub(value));
 
 		// BNC should be transferred before checkpoint
-		// T::MultiCurrency::transfer(
-		// 	T::TokenType::get(),
-		// 	&T::VeMintingPalletId::get().into_account_truncating(),
-		// 	addr,
-		// 	value,
-		// )?;
-		T::MultiCurrency::remove_lock(VE_LOCK_ID, T::TokenType::get(), who)?;
+		UserPositions::<T>::mutate(who, |positions| {
+			positions.retain(|&x| x != addr);
+		});
+		UserPointEpoch::<T>::remove(addr);
+		let new_locked_balance =
+			UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
+		T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
+		UserLocked::<T>::set(who, new_locked_balance);
 
 		Self::_checkpoint(who, addr, old_locked, _locked.clone())?;
 
