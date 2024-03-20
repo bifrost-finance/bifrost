@@ -145,13 +145,13 @@ pub mod pallet {
 		ConfigSet { config: VeConfig<BalanceOf<T>, BlockNumberFor<T>> },
 		Minted { addr: u128, value: BalanceOf<T>, end: BlockNumberFor<T>, now: BlockNumberFor<T> },
 		Supply { supply_before: BalanceOf<T>, supply: BalanceOf<T> },
-		LockCreated { addr: u128, value: BalanceOf<T>, unlock_time: BlockNumberFor<T> },
+		LockCreated { addr: AccountIdOf<T>, value: BalanceOf<T>, unlock_time: BlockNumberFor<T> },
 		UnlockTimeIncreased { addr: u128, unlock_time: BlockNumberFor<T> },
 		AmountIncreased { addr: u128, value: BalanceOf<T> },
 		Withdrawn { addr: u128, value: BalanceOf<T> },
 		IncentiveSet { rewards_duration: BlockNumberFor<T> },
 		RewardAdded { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
-		Rewarded { addr: u128, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
+		Rewarded { addr: AccountIdOf<T>, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
 	}
 
 	#[pallet::error]
@@ -238,13 +238,18 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_reward_per_token_paid)]
-	pub type UserRewardPerTokenPaid<T: Config> =
-		StorageMap<_, Blake2_128Concat, u128, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, ValueQuery>;
+	pub type UserRewardPerTokenPaid<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn rewards)]
 	pub type Rewards<T: Config> =
-		StorageMap<_, Blake2_128Concat, u128, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>>;
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_markup_infos)]
@@ -318,15 +323,7 @@ pub mod pallet {
 			unlock_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			// let sub_account_id: AccountId = exchanger.try_into_sub_account(index)?;
-			let new_position = Position::<T>::get();
-			let mut user_positions = UserPositions::<T>::get(&exchanger);
-			user_positions
-				.try_push(new_position)
-				.map_err(|_| Error::<T>::ExceedsMaxPositions)?;
-			// ensure!(user_positions.len() <= T::MaxPositions::get(),
-			// Error::<T>::ExceedsMaxPositions);
-			Self::create_lock_inner(&exchanger, new_position, value, unlock_time)
+			Self::create_lock_inner(&exchanger, value, unlock_time)
 		}
 
 		#[pallet::call_index(2)]
@@ -338,6 +335,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			// TODO: ensure postion is owned by exchanger
+			let user_positions = UserPositions::<T>::get(&exchanger);
+			ensure!(user_positions.contains(&position), Error::<T>::LockNotExist);
 			Self::increase_amount_inner(&exchanger, position, value)
 		}
 
@@ -350,14 +349,18 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			// TODO: ensure postion is owned by exchanger
+			let user_positions = UserPositions::<T>::get(&exchanger);
+			ensure!(user_positions.contains(&position), Error::<T>::LockNotExist);
 			Self::increase_unlock_time_inner(&exchanger, position, time)
 		}
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::withdraw())]
-		pub fn withdraw(origin: OriginFor<T>) -> DispatchResult {
+		pub fn withdraw(origin: OriginFor<T>, position: u128) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::withdraw_inner(&exchanger, 0)
+			let user_positions = UserPositions::<T>::get(&exchanger);
+			ensure!(user_positions.contains(&position), Error::<T>::LockNotExist);
+			Self::withdraw_inner(&exchanger, position)
 		}
 
 		#[pallet::call_index(5)]
@@ -377,12 +380,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			UserPositions::<T>::get(&exchanger)
-				.iter()
-				.try_for_each(|position| -> DispatchResult {
-					Self::get_rewards_inner(&exchanger, *position)
-				})
-			// Self::get_rewards_inner(&exchanger)
+			Self::get_rewards_inner(&exchanger)
 		}
 
 		#[pallet::call_index(7)]
@@ -390,7 +388,7 @@ pub mod pallet {
 		pub fn redeem_unlock(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			// TODO: redeem_unlock
-			Self::get_rewards_inner(&exchanger, 0)
+			Self::get_rewards_inner(&exchanger)
 		}
 
 		#[pallet::call_index(8)]
@@ -422,11 +420,12 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn _checkpoint(
+			who: &AccountIdOf<T>,
 			addr: u128,
 			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
-			Self::update_reward(Some(addr))?;
+			Self::update_reward(Some(who))?;
 
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
@@ -590,7 +589,9 @@ pub mod pallet {
 			let user_epoch = Self::user_point_epoch(addr)
 				.checked_add(U256::one())
 				.ok_or(ArithmeticError::Overflow)?;
+			log::debug!("1user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
 			UserPointEpoch::<T>::insert(addr, user_epoch);
+			log::debug!("1user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
 			u_new.block = current_block_number;
 			u_new.amount = Self::locked(addr).amount;
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
@@ -629,6 +630,7 @@ pub mod pallet {
 			// TODO: one user can have multiple positions
 			Self::markup_calc(
 				who,
+				addr,
 				old_locked,
 				_locked.clone(),
 				UserMarkupInfos::<T>::get(who).as_ref(),
@@ -649,9 +651,13 @@ pub mod pallet {
 		}
 
 		// Get the current voting power for `addr`
-		pub(crate) fn balance_of_current_block(addr: u128) -> Result<BalanceOf<T>, DispatchError> {
+		pub(crate) fn balance_of_position_current_block(
+			addr: u128,
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let u_epoch = Self::user_point_epoch(addr);
+			log::debug!("user_epoch: {:?}{:?}", Self::user_point_epoch(addr), addr);
+			log::debug!("u_epoch: {:?}", u_epoch);
 			if u_epoch == U256::zero() {
 				return Ok(Zero::zero());
 			} else {
@@ -675,6 +681,7 @@ pub mod pallet {
 				if last_point.bias < 0_i128 {
 					last_point.bias = 0_i128
 				}
+				log::debug!("balance_of_position_current_block: {:?}", last_point);
 
 				Ok(last_point
 					.amount
@@ -688,7 +695,7 @@ pub mod pallet {
 		}
 
 		// Measure voting power of `addr` at block height `block`
-		pub(crate) fn balance_of_at(
+		pub(crate) fn balance_of_position_at(
 			addr: u128,
 			block: BlockNumberFor<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
@@ -746,8 +753,40 @@ pub mod pallet {
 				.ok_or(ArithmeticError::Overflow)?)
 		}
 
+		pub(crate) fn balance_of_at(
+			addr: &AccountIdOf<T>,
+			block: BlockNumberFor<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let mut balance = BalanceOf::<T>::zero();
+			UserPositions::<T>::get(addr).into_iter().try_for_each(
+				|position| -> DispatchResult {
+					balance = balance
+						.checked_add(Self::balance_of_position_at(position, block)?)
+						.ok_or(ArithmeticError::Overflow)?;
+					Ok(())
+				},
+			)?;
+			Ok(balance)
+		}
+
+		pub(crate) fn balance_of_current_block(
+			addr: &AccountIdOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let mut balance = BalanceOf::<T>::zero();
+			UserPositions::<T>::get(addr).into_iter().try_for_each(
+				|position| -> DispatchResult {
+					balance = balance
+						.checked_add(Self::balance_of_position_current_block(position)?)
+						.ok_or(ArithmeticError::Overflow)?;
+					Ok(())
+				},
+			)?;
+			Ok(balance)
+		}
+
 		pub fn markup_calc(
 			addr: &AccountIdOf<T>,
+			position: u128,
 			mut old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			mut new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			user_markup_info: Option<&UserMarkupInfo>,
@@ -776,14 +815,12 @@ pub mod pallet {
 			// Locked::<T>::insert(addr, new_locked.clone());
 
 			// TODO: position
-			let position = Position::<T>::get(); // Temp
-			Self::_checkpoint(position, old_locked.clone(), new_locked.clone())?;
+			Self::_checkpoint(addr, position, old_locked.clone(), new_locked.clone())?;
 			Ok(())
 		}
 
 		fn deposit_markup(
 			origin: OriginFor<T>,
-			position: u128,
 			asset_id: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
@@ -799,11 +836,6 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// TODO: for positions in UserPositions::<T>::get(&addr) {
-			let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
-			ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
-			// Locked cannot be updated because it is markup, not a lock vBNC
-			// Locked::<T>::insert(addr, _locked.clone());
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
@@ -879,7 +911,36 @@ pub mod pallet {
 			// }
 			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, asset_id, &addr, locked_token.amount)?;
 			LockedTokens::<T>::insert(&asset_id, &addr, locked_token);
-			Self::markup_calc(&addr, _locked.clone(), _locked, Some(&user_markup_info))?;
+			// TODO: for positions in UserPositions::<T>::get(&addr) {
+			// for position in UserPositions::<T>::get(&addr) {
+			// 	let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
+			// 		Self::locked(position);
+			// 	ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
+			// 	Self::markup_calc(
+			// 		&addr,
+			// 		position,
+			// 		_locked.clone(),
+			// 		_locked,
+			// 		Some(&user_markup_info),
+			// 	)?;
+			// }
+			UserPositions::<T>::get(&addr).into_iter().try_for_each(
+				|position| -> DispatchResult {
+					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
+						Self::locked(position);
+					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
+					Self::markup_calc(
+						&addr,
+						position,
+						_locked.clone(),
+						_locked,
+						Some(&user_markup_info),
+					)
+				},
+			)?;
+
+			// Locked cannot be updated because it is markup, not a lock vBNC
+			// Locked::<T>::insert(addr, _locked.clone());
 			// UserMarkupInfos::<T>::insert(&addr, user_markup_info);
 			// Self::deposit_event(Event::Minted {
 			// 	addr: addr.clone(),
@@ -898,9 +959,6 @@ pub mod pallet {
 			let addr = ensure_signed(origin)?;
 			let markup_coefficient =
 				MarkupCoefficient::<T>::get(asset_id).ok_or(Error::<T>::ArgumentsError)?; // Ensure it is the correct token type.
-
-			let position = Position::<T>::get(); // Temp
-			let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
 
 			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
 
@@ -929,7 +987,20 @@ pub mod pallet {
 			// }
 
 			LockedTokens::<T>::remove(&asset_id, &addr);
-			Self::markup_calc(&addr, _locked.clone(), _locked, Some(&user_markup_info))?;
+			UserPositions::<T>::get(&addr).into_iter().try_for_each(
+				|position| -> DispatchResult {
+					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
+						Self::locked(position);
+					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
+					Self::markup_calc(
+						&addr,
+						position,
+						_locked.clone(),
+						_locked,
+						Some(&user_markup_info),
+					)
+				},
+			)?;
 			// UserMarkupInfos::<T>::insert(&addr, user_markup_info);
 			Ok(())
 		}
@@ -988,10 +1059,20 @@ pub mod pallet {
 						};
 
 					LockedTokens::<T>::insert(&asset_id, &addr, locked_token);
-					let position = Position::<T>::get(); // Temp
-					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
-						Self::locked(position);
-					Self::markup_calc(&addr, _locked.clone(), _locked, Some(&user_markup_info))?;
+					UserPositions::<T>::get(&addr).into_iter().try_for_each(
+						|position| -> DispatchResult {
+							let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
+								Self::locked(position);
+							ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
+							Self::markup_calc(
+								&addr,
+								position,
+								_locked.clone(),
+								_locked,
+								Some(&user_markup_info),
+							)
+						},
+					)?;
 
 					refresh_count += 1;
 				}

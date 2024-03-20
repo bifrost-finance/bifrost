@@ -75,7 +75,9 @@ impl<T: Config> Pallet<T> {
 		Ok(conf.reward_per_token_stored)
 	}
 
-	pub fn earned(addr: u128) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
+	pub fn earned(
+		addr: &AccountIdOf<T>,
+	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token()?;
 		let vetoken_balance = Self::balance_of_current_block(addr)?;
 		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
@@ -113,7 +115,7 @@ impl<T: Config> Pallet<T> {
 
 	// Used to update reward when notify_reward or user call
 	// create_lock/increase_amount/increase_unlock_time/withdraw/get_rewards
-	pub fn update_reward(addr: Option<u128>) -> DispatchResult {
+	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token()?;
 
 		IncentiveConfigs::<T>::mutate(|item| {
@@ -130,7 +132,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn get_rewards_inner(who: &AccountIdOf<T>, addr: u128) -> DispatchResult {
+	pub fn get_rewards_inner(addr: &AccountIdOf<T>) -> DispatchResult {
 		Self::update_reward(Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
@@ -138,7 +140,7 @@ impl<T: Config> Pallet<T> {
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
-					who,
+					addr,
 					reward,
 				)
 			})?;

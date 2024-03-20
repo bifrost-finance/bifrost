@@ -41,11 +41,8 @@ fn _checkpoint() {
 
 		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
 		System::set_block_number(System::block_number() + 20);
-		assert_ok!(VeMinting::_checkpoint(POSITIONID0, old_locked, new_locked));
-		assert_eq!(
-			VeMinting::balance_of(POSITIONID0, Some(System::block_number())),
-			Ok(7499936934420)
-		);
+		assert_ok!(VeMinting::_checkpoint(&BOB, POSITIONID0, old_locked, new_locked));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(7499936934420));
 	});
 }
 
@@ -59,19 +56,16 @@ fn update_reward() {
 		System::set_block_number(System::block_number() + 40);
 		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
-			0,
 			100_000_000_000,
 			System::block_number() + 365 * 86400 / 12,
 		));
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(174785436640));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(174785436640));
+		assert_eq!(VeMinting::balance_of_position_current_block(0), Ok(174785436640));
 		assert_ok!(VeMinting::deposit_for(&BOB, 0, 100_000_000_000));
-		assert_ok!(VeMinting::update_reward(Some(0))); // TODO
+		assert_ok!(VeMinting::update_reward(Some(&BOB))); // TODO
 
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(349578735500));
-		assert_eq!(
-			VeMinting::balance_of(POSITIONID0, Some(System::block_number())),
-			Ok(349578735500)
-		);
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(349578735500));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(349578735500));
 	});
 }
 
@@ -106,7 +100,6 @@ fn notify_reward_amount() {
 		);
 		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
-			0,
 			20_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
 		));
@@ -116,7 +109,7 @@ fn notify_reward_amount() {
 			Error::<Runtime>::NoRewards
 		);
 		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 0, 80_000_000_000));
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(399146883040));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(399146883040));
 
 		let rewards = vec![(KSM, 1_000_000_000)];
 		assert_ok!(VeMinting::notify_rewards(
@@ -131,7 +124,7 @@ fn notify_reward_amount() {
 		assert_ok!(VeMinting::get_rewards(RuntimeOrigin::signed(BOB)));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 396819);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(&BOB, 0));
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::root(),
@@ -141,19 +134,18 @@ fn notify_reward_amount() {
 		));
 		assert_ok!(VeMinting::create_lock_inner(
 			&CHARLIE,
-			POSITIONID0,
 			100_000_000_000,
 			System::block_number() + 4 * 365 * 86400 / 12
 		));
 		System::set_block_number(System::block_number() + 1 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(&BOB, POSITIONID0));
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1071285014);
-		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE, POSITIONID0));
+		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 71556583);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE, POSITIONID0));
+		assert_ok!(VeMinting::get_rewards_inner(&CHARLIE));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 500898890);
-		assert_ok!(VeMinting::get_rewards_inner(&BOB, POSITIONID0));
+		assert_ok!(VeMinting::get_rewards_inner(&BOB));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1499073906);
 	});
 }
@@ -225,14 +217,12 @@ fn create_lock_to_withdraw() {
 		);
 		assert_ok!(VeMinting::create_lock_inner(
 			&BOB,
-			POSITIONID0,
 			50_000_000_000_000,
 			System::block_number() + 365 * 86400 / 12
 		));
 		assert_noop!(
 			VeMinting::create_lock_inner(
 				&BOB,
-				POSITIONID0,
 				50_000_000_000_000,
 				System::block_number() + 365 * 86400 / 12
 			),
@@ -246,13 +236,10 @@ fn create_lock_to_withdraw() {
 			),
 			Error::<Runtime>::Expired
 		);
-		assert_eq!(
-			VeMinting::balance_of_at(POSITIONID0, System::block_number()),
-			Ok(87397254003200)
-		);
-		assert_eq!(VeMinting::balance_of_at(POSITIONID0, System::block_number() - 10), Ok(0));
-		assert_eq!(VeMinting::balance_of_at(POSITIONID0, 0), Ok(0));
-		assert_eq!(VeMinting::balance_of(POSITIONID0, Some(System::block_number() - 10)), Ok(0));
+		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number()), Ok(87397254003200));
+		assert_eq!(VeMinting::balance_of_at(&BOB, System::block_number() - 10), Ok(0));
+		assert_eq!(VeMinting::balance_of_at(&BOB, 0), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number() - 10)), Ok(0));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(87397254003200));
 		assert_noop!(
 			VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 0, 50_000),
@@ -264,23 +251,26 @@ fn create_lock_to_withdraw() {
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(174794515868800));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(174794515868800));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(174794515868800));
 
-		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE)));
-		assert_noop!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)), Error::<Runtime>::Expired);
+		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(ALICE), POSITIONID0));
+		assert_noop!(
+			VeMinting::withdraw(RuntimeOrigin::signed(BOB), POSITIONID0),
+			Error::<Runtime>::Expired
+		);
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(174794515868800));
 		System::set_block_number(System::block_number() + 2 * 365 * 86400 / 12);
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(100_000_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(100_000_000_000_000));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(100_000_000_000_000));
-		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(BOB)));
+		assert_ok!(VeMinting::withdraw(RuntimeOrigin::signed(BOB), POSITIONID0));
 		assert_ok!(VeMinting::withdraw_inner(&BOB, 0));
 		log::debug!(
 			"5System::block_number():{:?} total_supply:{:?}",
 			System::block_number(),
 			VeMinting::total_supply(System::block_number())
 		);
-		assert_eq!(VeMinting::balance_of(POSITIONID0, None), Ok(0));
+		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(0));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(0));
 	});
 }
@@ -289,9 +279,9 @@ fn create_lock_to_withdraw() {
 fn overflow() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
-		assert_ok!(VeMinting::create_lock_inner(&BOB, 0, 100_000_000_000_000, 77000));
+		assert_ok!(VeMinting::create_lock_inner(&BOB, 100_000_000_000_000, 77000));
 		System::set_block_number(77001);
-		assert_eq!(VeMinting::balance_of(POSITIONID0, Some(77001)), Ok(100_000_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(77001)), Ok(100_000_000_000_000));
 		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(100_000_000_000_000));
 	});
 }

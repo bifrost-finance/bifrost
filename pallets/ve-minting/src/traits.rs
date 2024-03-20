@@ -22,7 +22,7 @@ use crate::*;
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(_who: &AccountId, addr: u128, value: Balance) -> DispatchResult;
 	fn withdraw_inner(who: &AccountId, addr: u128) -> DispatchResult;
-	fn balance_of(addr: u128, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
+	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
 	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
 	fn supply_at(
 		point: Point<Balance, BlockNumber>,
@@ -31,7 +31,6 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn find_block_epoch(_block: BlockNumber, max_epoch: U256) -> U256;
 	fn create_lock_inner(
 		who: &AccountId,
-		addr: u128,
 		_value: Balance,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
@@ -48,14 +47,21 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 {
 	fn create_lock_inner(
 		who: &AccountIdOf<T>,
-		addr: u128,
 		_value: BalanceOf<T>,
 		_unlock_time: BlockNumberFor<T>,
 	) -> DispatchResult {
+		let new_position = Position::<T>::get();
+		let mut user_positions = UserPositions::<T>::get(who);
+		user_positions
+			.try_push(new_position)
+			.map_err(|_| Error::<T>::ExceedsMaxPositions)?;
+		UserPositions::<T>::insert(who, user_positions);
+		Position::<T>::set(new_position + 1);
+
 		let ve_config = Self::ve_configs();
 		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(addr);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(new_position);
 		let unlock_time: BlockNumberFor<T> = _unlock_time
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
@@ -71,11 +77,17 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
 			Error::<T>::Expired
 		);
+		log::debug!(
+			"create_lock_inner: unlock_time: {:?}, current_block_number: {:?}{:?}",
+			unlock_time,
+			current_block_number,
+			_locked.amount
+		);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
-		Self::_deposit_for(who, addr, _value, unlock_time, _locked)?;
+		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
 		Self::deposit_event(Event::LockCreated {
-			addr: addr.to_owned(),
+			addr: who.to_owned(),
 			value: _value,
 			unlock_time: _unlock_time,
 		});
@@ -158,7 +170,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		// )?;
 		T::MultiCurrency::remove_lock(VE_LOCK_ID, T::TokenType::get(), who)?;
 
-		Self::_checkpoint(addr, old_locked, _locked.clone())?;
+		Self::_checkpoint(who, addr, old_locked, _locked.clone())?;
 
 		Self::deposit_event(Event::Withdrawn { addr: addr.to_owned(), value });
 		Self::deposit_event(Event::Supply {
@@ -169,7 +181,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	}
 
 	fn balance_of(
-		addr: u128,
+		addr: &AccountIdOf<T>,
 		time: Option<BlockNumberFor<T>>,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		match time {
@@ -332,7 +344,6 @@ where
 {
 	fn create_lock_inner(
 		_who: &AccountId,
-		_addr: u128,
 		_value: Balance,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult {
@@ -359,7 +370,7 @@ where
 		Ok(())
 	}
 
-	fn balance_of(_addr: u128, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
 	}
 
