@@ -20,8 +20,8 @@
 use crate::*;
 
 pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
-	fn deposit_for(_who: &AccountId, addr: u128, value: Balance) -> DispatchResult;
-	fn withdraw_inner(who: &AccountId, addr: u128) -> DispatchResult;
+	fn deposit_for(_who: &AccountId, position: u128, value: Balance) -> DispatchResult;
+	fn withdraw_inner(who: &AccountId, position: u128) -> DispatchResult;
 	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
 	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
 	fn supply_at(
@@ -34,10 +34,10 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		_value: Balance,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
-	fn increase_amount_inner(who: &AccountId, addr: u128, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	fn increase_amount_inner(who: &AccountId, position: u128, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
 	fn increase_unlock_time_inner(
 		who: &AccountId,
-		addr: u128,
+		position: u128,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
 }
@@ -90,11 +90,11 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn increase_unlock_time_inner(
 		who: &AccountIdOf<T>,
-		addr: u128,
+		position: u128,
 		_unlock_time: BlockNumberFor<T>,
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(addr);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
 		let unlock_time: BlockNumberFor<T> = _unlock_time
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
@@ -113,9 +113,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
-		Self::_deposit_for(who, addr, BalanceOf::<T>::zero(), unlock_time, _locked)?;
+		Self::_deposit_for(who, position, BalanceOf::<T>::zero(), unlock_time, _locked)?;
 		Self::deposit_event(Event::UnlockTimeIncreased {
-			addr: addr.to_owned(),
+			addr: position.to_owned(),
 			unlock_time: _unlock_time,
 		});
 		Ok(())
@@ -123,51 +123,51 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 	fn increase_amount_inner(
 		who: &AccountIdOf<T>,
-		addr: u128,
+		position: u128,
 		value: BalanceOf<T>,
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(addr);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
-		Self::_deposit_for(who, addr, value, Zero::zero(), _locked)?;
-		Self::deposit_event(Event::AmountIncreased { addr: addr.to_owned(), value });
+		Self::_deposit_for(who, position, value, Zero::zero(), _locked)?;
+		Self::deposit_event(Event::AmountIncreased { who: who.to_owned(), position, value });
 		Ok(())
 	}
 
-	fn deposit_for(who: &AccountIdOf<T>, addr: u128, value: BalanceOf<T>) -> DispatchResult {
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(addr);
-		Self::_deposit_for(who, addr, value, Zero::zero(), _locked)
+	fn deposit_for(who: &AccountIdOf<T>, position: u128, value: BalanceOf<T>) -> DispatchResult {
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		Self::_deposit_for(who, position, value, Zero::zero(), _locked)
 	}
 
-	fn withdraw_inner(who: &AccountIdOf<T>, addr: u128) -> DispatchResult {
-		let mut _locked = Self::locked(addr);
+	fn withdraw_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
+		let mut _locked = Self::locked(position);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
 		let value = _locked.amount;
 		let old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = _locked.clone();
 		_locked.end = Zero::zero();
 		_locked.amount = Zero::zero();
-		Locked::<T>::insert(addr, _locked.clone());
+		Locked::<T>::insert(position, _locked.clone());
 
 		let supply_before = Self::supply();
 		Supply::<T>::set(supply_before.saturating_sub(value));
 
 		// BNC should be transferred before checkpoint
 		UserPositions::<T>::mutate(who, |positions| {
-			positions.retain(|&x| x != addr);
+			positions.retain(|&x| x != position);
 		});
-		UserPointEpoch::<T>::remove(addr);
+		UserPointEpoch::<T>::remove(position);
 		let new_locked_balance =
 			UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
 		T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
 		UserLocked::<T>::set(who, new_locked_balance);
 
-		Self::_checkpoint(who, addr, old_locked, _locked.clone())?;
+		Self::_checkpoint(who, position, old_locked, _locked.clone())?;
 
-		Self::deposit_event(Event::Withdrawn { addr: addr.to_owned(), value });
+		Self::deposit_event(Event::Withdrawn { addr: position, value });
 		Self::deposit_event(Event::Supply {
 			supply_before,
 			supply: supply_before.saturating_sub(value),
@@ -347,21 +347,21 @@ where
 
 	fn increase_unlock_time_inner(
 		_who: &AccountId,
-		_addr: u128,
+		_position: u128,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult {
 		Ok(())
 	}
 
-	fn increase_amount_inner(_who: &AccountId, _addr: u128, _value: Balance) -> DispatchResult {
+	fn increase_amount_inner(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
 		Ok(())
 	}
 
-	fn deposit_for(_who: &AccountId, _addr: u128, _value: Balance) -> DispatchResult {
+	fn deposit_for(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
 		Ok(())
 	}
 
-	fn withdraw_inner(_who: &AccountId, _addr: u128) -> DispatchResult {
+	fn withdraw_inner(_who: &AccountId, _position: u128) -> DispatchResult {
 		Ok(())
 	}
 

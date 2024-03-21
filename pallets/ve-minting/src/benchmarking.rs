@@ -76,7 +76,7 @@ benchmarks! {
 			(365 * 86400 / 12u32).into()
 		));
 
-	}: _(RawOrigin::Signed(test_account),BalanceOf::<T>::unique_saturated_from(50000000000u128))
+	}: _(RawOrigin::Signed(test_account),0,BalanceOf::<T>::unique_saturated_from(50000000000u128))
 
 	increase_unlock_time {
 		let test_account: T::AccountId = account("seed",1,1);
@@ -100,7 +100,7 @@ benchmarks! {
 			(365 * 86400 / 12u32).into()
 		));
 
-	}: _(RawOrigin::Signed(test_account),(7 * 86400 / 12u32 + 365 * 86400 / 12u32).into())
+	}: _(RawOrigin::Signed(test_account),0,(7 * 86400 / 12u32 + 365 * 86400 / 12u32).into())
 
 	withdraw {
 		let test_account: T::AccountId = account("seed",1,1);
@@ -126,7 +126,7 @@ benchmarks! {
 
 		<frame_system::Pallet<T>>::set_block_number((2 * 365 * 86400 / 12u32).into());
 
-	}: _(RawOrigin::Signed(test_account))
+	}: _(RawOrigin::Signed(test_account),0)
 
 	get_rewards {
 		let test_account: T::AccountId = account("seed",1,1);

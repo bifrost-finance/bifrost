@@ -147,7 +147,7 @@ pub mod pallet {
 		Supply { supply_before: BalanceOf<T>, supply: BalanceOf<T> },
 		LockCreated { addr: AccountIdOf<T>, value: BalanceOf<T>, unlock_time: BlockNumberFor<T> },
 		UnlockTimeIncreased { addr: u128, unlock_time: BlockNumberFor<T> },
-		AmountIncreased { addr: u128, value: BalanceOf<T> },
+		AmountIncreased { who: AccountIdOf<T>, position: u128, value: BalanceOf<T> },
 		Withdrawn { addr: u128, value: BalanceOf<T> },
 		IncentiveSet { rewards_duration: BlockNumberFor<T> },
 		RewardAdded { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
@@ -282,7 +282,6 @@ pub mod pallet {
 	pub type Position<T: Config> = StorageValue<_, u128, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_positions)]
 	pub type UserPositions<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -616,7 +615,8 @@ pub mod pallet {
 			}
 			Locked::<T>::insert(addr, _locked.clone());
 
-			if value != BalanceOf::<T>::zero() {
+			let free_balance = T::MultiCurrency::free_balance(T::TokenType::get(), &who);
+			if value != BalanceOf::<T>::zero() && value <= free_balance {
 				// TODO: compare with free balance
 				let new_locked_balance = UserLocked::<T>::get(who)
 					.checked_add(value)
@@ -848,10 +848,6 @@ pub mod pallet {
 			locked_token.markup_coefficient =
 				match markup_coefficient.hardcap.cmp(&asset_id_markup_coefficient) {
 					Ordering::Less => {
-						// user_markup_info.markup_coefficient = user_markup_info
-						// 	.markup_coefficient
-						// 	.saturating_sub(l.markup_coefficient)
-						// 	.saturating_add(markup_coefficient.1);
 						Self::update_markup_info(
 							&addr,
 							user_markup_info
@@ -864,9 +860,6 @@ pub mod pallet {
 					},
 					Ordering::Equal | Ordering::Greater => {
 						// TODO: need logic of hardcap
-						// user_markup_info.markup_coefficient = user_markup_info
-						// 	.markup_coefficient
-						// 	.saturating_add(nl.markup_coefficient);
 						Self::update_markup_info(
 							&addr,
 							user_markup_info.markup_coefficient.saturating_add(delta_coefficient),
@@ -877,44 +870,9 @@ pub mod pallet {
 				};
 			locked_token.amount = locked_token.amount.saturating_add(value);
 			locked_token.refresh_block = current_block_number;
-			// Some(l)
-			// };
-			// 	None => {
-			// 		Self::update_markup_info(
-			// 			&addr,
-			// 			user_markup_info.markup_coefficient.saturating_add(delta_coefficient),
-			// 			&mut user_markup_info,
-			// 		);
-			// 		Some(LockedToken { amount: value, markup_coefficient: delta_coefficient })
-			// 		// Some(LockedToken { asset_id, amount, markup_coefficient: delta_value })
-			// 	},
-			// };
-			// if let Some(lock) = new_locked_token {
-			// 	// TODO: need logic of hardcap
-			// 	// user_markup_info.markup_coefficient =
-			// 	// 	user_markup_info.markup_coefficient.saturating_add(lock.markup_coefficient);
-			// 	Self::update_markup_info(
-			// 		&addr,
-			// 		user_markup_info.markup_coefficient.saturating_add(lock.markup_coefficient),
-			// 		&mut user_markup_info,
-			// 	);
-			// 	locked_tokens.try_push(lock).map_err(|_| Error::<T>::ExceedsMaxPositions)?;
-			// }
+
 			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, asset_id, &addr, locked_token.amount)?;
 			LockedTokens::<T>::insert(&asset_id, &addr, locked_token);
-			// TODO: for positions in UserPositions::<T>::get(&addr) {
-			// for position in UserPositions::<T>::get(&addr) {
-			// 	let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
-			// 		Self::locked(position);
-			// 	ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
-			// 	Self::markup_calc(
-			// 		&addr,
-			// 		position,
-			// 		_locked.clone(),
-			// 		_locked,
-			// 		Some(&user_markup_info),
-			// 	)?;
-			// }
 			UserPositions::<T>::get(&addr).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
@@ -955,11 +913,6 @@ pub mod pallet {
 
 			let mut locked_token =
 				LockedTokens::<T>::get(&asset_id, &addr).ok_or(Error::<T>::LockNotExist)?;
-			// for lock in locked_tokens.iter() {
-			// 	if lock.asset_id == asset_id {
-			// user_markup_info.old_markup_coefficient =
-			// user_markup_info.markup_coefficient; user_markup_info.markup_coefficient =
-			// 	user_markup_info.markup_coefficient.saturating_sub(lock.markup_coefficient);
 			Self::update_markup_info(
 				&addr,
 				user_markup_info
@@ -973,9 +926,6 @@ pub mod pallet {
 				Ok(())
 			})?;
 			T::MultiCurrency::remove_lock(MARKUP_LOCK_ID, asset_id, &addr)?;
-			// break;
-			// }
-			// }
 
 			LockedTokens::<T>::remove(&asset_id, &addr);
 			UserPositions::<T>::get(&addr).into_iter().try_for_each(
