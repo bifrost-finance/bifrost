@@ -86,7 +86,7 @@ pub mod pallet {
 	use super::*;
 
 	/// The current storage version.
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -273,7 +273,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(PollIndex, BalanceOf<T>), T::MaxVotes>,
+		BoundedVec<(CurrencyIdOf<T>, BalanceOf<T>), T::MaxVotes>,
 		ValueQuery,
 	>;
 
@@ -543,7 +543,7 @@ pub mod pallet {
 			Self::ensure_no_pending_vote(vtoken, poll_index)?;
 
 			Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::OnlyExpired)?;
-			Self::update_lock(&who, vtoken, &poll_index)?;
+			Self::update_lock(&who, vtoken)?;
 
 			Self::deposit_event(Event::<T>::Unlocked { who, vtoken, poll_index });
 
@@ -713,7 +713,7 @@ pub mod pallet {
 					// rollback vote
 					let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
 					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
-					Self::update_lock(&who, vtoken, &poll_index)?;
+					Self::update_lock(&who, vtoken)?;
 					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
 						Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
 					}
@@ -880,7 +880,7 @@ pub mod pallet {
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
-					Self::extend_lock(&who, vtoken, &poll_index, vtoken_balance)?;
+					Self::set_lock(&who, vtoken, voting.locked_balance())?;
 					Ok((old_vote, total_vote))
 				})
 			})
@@ -947,36 +947,46 @@ pub mod pallet {
 
 		/// Rejig the lock on an account. It will never get more stringent (since that would
 		/// indicate a security hole) but may be reduced from what they are currently.
-		pub(crate) fn update_lock(
-			who: &AccountIdOf<T>,
-			vtoken: CurrencyIdOf<T>,
-			poll_index: &PollIndex,
-		) -> DispatchResult {
-			VotingFor::<T>::mutate(who, |voting| {
+		pub(crate) fn update_lock(who: &AccountIdOf<T>, vtoken: CurrencyIdOf<T>) -> DispatchResult {
+			let lock_needed = VotingFor::<T>::mutate(who, |voting| {
 				voting.rejig(T::RelaychainBlockNumberProvider::current_block_number());
+				voting.locked_balance()
 			});
-			let lock_needed = ClassLocksFor::<T>::mutate(who, |locks| {
-				locks.retain(|x| &x.0 != poll_index);
-				locks.iter().map(|x| x.1).max().unwrap_or(Zero::zero())
-			});
+
 			if lock_needed.is_zero() {
+				ClassLocksFor::<T>::mutate(who, |locks| {
+					locks.retain(|x| x.0 != vtoken);
+				});
 				T::MultiCurrency::remove_lock(CONVICTION_VOTING_ID, vtoken, who)
 			} else {
+				ClassLocksFor::<T>::mutate(who, |locks| {
+					match locks.iter().position(|x| x.0 == vtoken) {
+						Some(i) => locks[i].1 = lock_needed,
+						None => {
+							let ok = locks.try_push((vtoken, lock_needed)).is_ok();
+							debug_assert!(
+								ok,
+								"Vec bounded by number of classes; \
+						all items in Vec associated with a unique class; \
+						qed"
+							);
+						},
+					}
+				});
 				T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, lock_needed)
 			}
 		}
 
-		fn extend_lock(
+		fn set_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: &PollIndex,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			ClassLocksFor::<T>::mutate(who, |locks| {
-				match locks.iter().position(|x| &x.0 == poll_index) {
-					Some(i) => locks[i].1 = locks[i].1.max(amount),
+				match locks.iter().position(|x| x.0 == vtoken) {
+					Some(i) => locks[i].1 = amount,
 					None => {
-						let ok = locks.try_push((*poll_index, amount)).is_ok();
+						let ok = locks.try_push((vtoken, amount)).is_ok();
 						debug_assert!(
 							ok,
 							"Vec bounded by number of classes; \
@@ -986,7 +996,7 @@ pub mod pallet {
 					},
 				}
 			});
-			T::MultiCurrency::extend_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
+			T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
 		}
 
 		fn send_xcm_with_notify(
