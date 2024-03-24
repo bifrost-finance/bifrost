@@ -84,7 +84,7 @@ fn basic_voting_works() {
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &poll_index));
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
 }
@@ -108,7 +108,7 @@ fn voting_balance_gets_locked() {
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
 		assert_eq!(tally(vtoken, poll_index), Tally::from_parts(0, 0, 0));
 
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &poll_index));
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
 }
@@ -172,7 +172,7 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 		));
 		RelaychainDataProvider::set_block_number(13);
 		assert_ok!(VtokenVoting::try_remove_vote(&ALICE, vtoken, poll_index, UnvoteScope::Any));
-		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken, &poll_index));
+		assert_ok!(VtokenVoting::update_lock(&ALICE, vtoken));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 	});
 }
@@ -208,7 +208,7 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 			assert_ok!(VtokenVoting::try_remove_vote(&i, vtoken, poll_index, UnvoteScope::Any));
 		}
 		for i in 1..=5 {
-			assert_ok!(VtokenVoting::update_lock(&i, vtoken, &poll_index));
+			assert_ok!(VtokenVoting::update_lock(&i, vtoken));
 			assert_eq!(usable_balance(vtoken, &i), 10 * i as u128);
 		}
 	});
@@ -221,13 +221,33 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 		let response = response_success();
 
 		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
-		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(5, 2)));
-		assert_eq!(usable_balance(vtoken, &ALICE), 0);
-
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response.clone()));
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 5),]).unwrap()
+		);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response.clone()));
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
+		);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(5, 1)));
 		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response.clone()));
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 5),]).unwrap()
+		);
+		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 2, aye(10, 2)));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 3, response.clone()));
+		assert_eq!(
+			ClassLocksFor::<Runtime>::get(&ALICE),
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
+		);
 
 		assert_ok!(VtokenVoting::set_referendum_status(
 			RuntimeOrigin::root(),
@@ -254,11 +274,11 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 			vtoken,
 			locking_period,
 		));
+		assert_eq!(VoteLockingPeriod::<Runtime>::get(vtoken), Some(10));
 
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 5), (1, 10), (2, 5)])
-				.unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
 		);
 
 		RelaychainDataProvider::set_block_number(10);
@@ -266,21 +286,24 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 			VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0),
 			Error::<Runtime>::NoPermissionYet
 		);
+		assert_eq!(VotingFor::<Runtime>::get(&ALICE).locked_balance(), 10);
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 
 		RelaychainDataProvider::set_block_number(11);
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
+		assert_eq!(VotingFor::<Runtime>::get(&ALICE).locked_balance(), 10);
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5)]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
 		);
 
 		RelaychainDataProvider::set_block_number(11);
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
-		assert_eq!(usable_balance(vtoken, &ALICE), 5);
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5)]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10)]).unwrap()
 		);
 
 		RelaychainDataProvider::set_block_number(21);
@@ -288,7 +311,7 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![]).unwrap()
 		);
 	});
 }
@@ -333,29 +356,28 @@ fn removed_votes_when_referendum_killed() {
 
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(0, 5), (1, 10), (2, 5)])
-				.unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
 		);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 0));
 		assert_eq!(usable_balance(vtoken, &ALICE), 0);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(1, 10), (2, 5)]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 10),]).unwrap()
 		);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 1));
 		assert_eq!(usable_balance(vtoken, &ALICE), 5);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![(2, 5)]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![(vtoken, 5)]).unwrap()
 		);
 
 		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, 2));
 		assert_eq!(usable_balance(vtoken, &ALICE), 10);
 		assert_eq!(
 			ClassLocksFor::<Runtime>::get(&ALICE),
-			BoundedVec::<(u32, u128), ConstU32<256>>::try_from(vec![]).unwrap()
+			BoundedVec::<(CurrencyId, u128), ConstU32<256>>::try_from(vec![]).unwrap()
 		);
 	});
 }
