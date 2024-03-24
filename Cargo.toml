@@ -123,6 +123,7 @@ cumulus-pallet-dmp-queue                   = { version = "0.4.0", default-featur
 cumulus-pallet-parachain-system            = { version = "0.4.0", default-features = false, features = ["parameterized-consensus-hook"] }
 cumulus-pallet-xcm                         = { version = "0.4.0", default-features = false }
 cumulus-pallet-xcmp-queue                  = { version = "0.4.0", default-features = false }
+cumulus-primitives-aura                    = { version = "0.4.0", default-features = false }
 cumulus-primitives-core                    = { version = "0.4.0", default-features = false }
 cumulus-primitives-parachain-inherent      = { version = "0.4.0", default-features = false }
 cumulus-primitives-timestamp               = { version = "0.4.0", default-features = false }
@@ -136,7 +137,7 @@ frame-system-benchmarking                  = { version = "25.0.0", default-featu
 frame-system-rpc-runtime-api               = { version = "23.0.0", default-features = false }
 frame-try-runtime                          = { version = "0.31.0", default-features = false }
 pallet-assets                              = { version = "26.0.0", default-features = false }
-pallet-aura                                = { version = "24.0.0", default-features = false }
+pallet-aura                                = { version = "24.0.0", default-features = false, features = ["experimental"] }
 pallet-authority-discovery                 = { version = "25.0.0", default-features = false }
 pallet-authorship                          = { version = "25.0.0", default-features = false }
 pallet-babe                                = { version = "25.0.0", default-features = false }
@@ -307,10 +308,6 @@ bridge-runtime-common  = { version = "0.4.0" }
 grandpa-primitives     = { package = "sp-consensus-grandpa", version = "10.0.0" }
 pallet-bridge-messages = { version = "0.4.0" }
 pallet-asset-rate = { version = "4.0.0", default-features = false }
-asset-hub-kusama-runtime    = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
-asset-hub-polkadot-runtime  = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
-bridge-hub-kusama-runtime   = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
-bridge-hub-polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
 kusama-runtime              = { package = "staging-kusama-runtime", git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
 kusama-runtime-constants    = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }
 polkadot-runtime            = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.1.2" }

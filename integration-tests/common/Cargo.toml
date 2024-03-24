@@ -43,10 +43,6 @@ cumulus-pallet-parachain-system = { workspace = true }
 
 bifrost-polkadot-runtime = { workspace = true }
 bifrost-kusama-runtime = { workspace = true }
-asset-hub-polkadot-runtime = { workspace = true }
-asset-hub-kusama-runtime = { workspace = true }
-bridge-hub-polkadot-runtime = { workspace = true }
-bridge-hub-kusama-runtime = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 bifrost-primitives = { workspace = true }
 beefy-primitives = { workspace = true }
