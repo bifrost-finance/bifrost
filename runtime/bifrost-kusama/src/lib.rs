@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 994,
+	spec_version: 996,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -2071,15 +2071,8 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		crate::migration::v1::RestoreReferendaV1<crate::migration::ReferendaData, Runtime>,
-		crate::migration::v1::RestoreReferendaV1<
-			crate::migration::FellowshipReferendaData,
-			Runtime,
-			governance::fellowship::FellowshipReferendaInstance,
-		>,
-		bifrost_slpx::migration::BifrostKusamaAddCurrencyToSupportXcmFee<Runtime>,
-	);
+	pub type Unreleased =
+		(bifrost_vtoken_voting::migration::v3::MigrateToV3<Runtime, RelayCurrencyId>,);
 }
 
 /// Executive: handles dispatch to the various modules.

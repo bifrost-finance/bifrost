@@ -359,6 +359,17 @@ fn test_add_order() {
 			TargetChain::Astar(source_chain_caller)
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
+		assert_ok!(Slpx::force_add_order(
+			RuntimeOrigin::root(),
+			ALICE,
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default(),
+			OrderType::Mint
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 3usize);
+
 		println!("{:?}", OrderQueue::<Test>::get());
 	})
 }

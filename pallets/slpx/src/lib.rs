@@ -78,6 +78,7 @@ pub mod pallet {
 		pallet_prelude::{ValueQuery, *},
 		weights::WeightMeter,
 	};
+	use frame_system::ensure_root;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
 	#[pallet::pallet]
@@ -694,6 +695,37 @@ pub mod pallet {
 			DelayBlock::<T>::put(delay_block);
 			Self::deposit_event(Event::SetDelayBlock { delay_block });
 			Ok(().into())
+		}
+
+		#[pallet::call_index(12)]
+		#[pallet::weight(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1))]
+		pub fn force_add_order(
+			origin: OriginFor<T>,
+			slpx_contract_derivative_account: AccountIdOf<T>,
+			evm_caller: H160,
+			currency_id: CurrencyIdOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+			remark: BoundedVec<u8, ConstU32<32>>,
+			order_type: OrderType,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			let order = Order {
+				create_block_number: <frame_system::Pallet<T>>::block_number(),
+				currency_amount: Default::default(),
+				source_chain_caller: OrderCaller::Evm(evm_caller),
+				bifrost_chain_caller: slpx_contract_derivative_account,
+				derivative_account: Self::h160_to_account_id(evm_caller),
+				order_type,
+				currency_id,
+				remark,
+				target_chain,
+			};
+
+			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+				Self::deposit_event(Event::<T>::CreateOrder { order });
+				Ok(().into())
+			})
 		}
 	}
 }

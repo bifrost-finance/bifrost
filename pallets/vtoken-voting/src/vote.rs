@@ -420,6 +420,14 @@ where
 		}
 	}
 
+	pub fn locked_vtoken_balance(&self) -> Balance {
+		match self {
+			Voting::Casting(Casting { votes, .. }) =>
+				votes.iter().map(|i| i.3).fold(Zero::zero(), |a, i| a.max(i)),
+			Voting::Delegating(Delegating { .. }) => Zero::zero(),
+		}
+	}
+
 	pub fn set_common(
 		&mut self,
 		delegations: Delegations<Balance>,

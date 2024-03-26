@@ -1,6 +1,6 @@
 [package]
 name = "bifrost-cli"
-version = "0.9.94"
+version = "0.9.96"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -17,7 +17,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # third-party dependencies
-clap = {  workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
 parity-scale-codec = { workspace = true }
 log = { workspace = true }
 
@@ -27,8 +27,8 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 
 # client dependencies
-sc-executor  = { workspace = true }
-sc-service  = { workspace = true, optional = true }
+sc-executor = { workspace = true }
+sc-service = { workspace = true, optional = true }
 sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-tracing = { workspace = true }
@@ -61,17 +61,17 @@ substrate-build-script-utils = { workspace = true, optional = true }
 [features]
 default = ["cli"]
 cli = [
-	"node-inspect",
-	"sc-cli",
-	"frame-benchmarking-cli",
-	'try-runtime-cli',
-	"sc-service",
-	"substrate-build-script-utils",
+    "node-inspect",
+    "sc-cli",
+    "frame-benchmarking-cli",
+    'try-runtime-cli',
+    "sc-service",
+    "substrate-build-script-utils",
 ]
 runtime-benchmarks = ["bifrost-service/runtime-benchmarks"]
 with-bifrost-runtime = [
-	"bifrost-service/with-bifrost-kusama-runtime",
-	"bifrost-service/with-bifrost-polkadot-runtime",
+    "bifrost-service/with-bifrost-kusama-runtime",
+    "bifrost-service/with-bifrost-polkadot-runtime",
 ]
 with-bifrost-kusama-runtime = ["bifrost-service/with-bifrost-kusama-runtime"]
 with-bifrost-polkadot-runtime = ["bifrost-service/with-bifrost-polkadot-runtime"]
