@@ -1258,3 +1258,19 @@ fn tally_convert_works() {
 		aye(0, 1)
 	);
 }
+
+#[test]
+fn set_lock_works() {
+	new_test_ext().execute_with(|| {
+		let vtoken = VKSM;
+
+		assert_ok!(VtokenVoting::set_lock(&ALICE, vtoken, 10));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+
+		assert_ok!(VtokenVoting::set_lock(&ALICE, vtoken, 1));
+		assert_eq!(usable_balance(vtoken, &ALICE), 9);
+
+		assert_ok!(VtokenVoting::set_lock(&ALICE, vtoken, 0));
+		assert_eq!(usable_balance(vtoken, &ALICE), 10);
+	});
+}

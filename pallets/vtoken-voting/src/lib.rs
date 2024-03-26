@@ -880,7 +880,7 @@ pub mod pallet {
 					}
 					// Extend the lock to `balance` (rather than setting it) since we don't know
 					// what other votes are in place.
-					Self::set_lock(&who, vtoken, voting.locked_balance())?;
+					Self::set_lock(&who, vtoken, voting.locked_vtoken_balance())?;
 					Ok((old_vote, total_vote))
 				})
 			})
@@ -977,7 +977,7 @@ pub mod pallet {
 			}
 		}
 
-		fn set_lock(
+		pub(crate) fn set_lock(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -996,7 +996,11 @@ pub mod pallet {
 					},
 				}
 			});
-			T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
+			if amount.is_zero() {
+				T::MultiCurrency::remove_lock(CONVICTION_VOTING_ID, vtoken, who)
+			} else {
+				T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
+			}
 		}
 
 		fn send_xcm_with_notify(
