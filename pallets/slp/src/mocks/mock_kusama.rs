@@ -492,6 +492,10 @@ impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for Substrat
 	}
 }
 
+parameter_types! {
+	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
+}
+
 impl Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -512,6 +516,8 @@ impl Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type TreasuryAccount = BifrostTreasuryAccount;
 }
 
 pub struct XcmDestWeightAndFee;

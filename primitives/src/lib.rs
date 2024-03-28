@@ -336,6 +336,7 @@ pub enum XcmOperationType {
 	Vote,
 	RemoveVote,
 	Any,
+	SupplementaryFee,
 }
 
 pub struct ExtraFeeInfo {

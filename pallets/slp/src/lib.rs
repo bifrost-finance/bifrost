@@ -36,8 +36,10 @@ use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
 	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpHostingFeeProvider,
-	SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+	SlpOperator, TimeUnit, TokenInfo, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL,
+	GLMR,
 };
+use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
@@ -164,6 +166,15 @@ pub mod pallet {
 			BalanceOf<Self>,
 			AccountIdOf<Self>,
 		>;
+
+		type StablePoolHandler: StablePoolHandler<
+			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
+			CurrencyId = CurrencyId,
+		>;
+
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -246,6 +257,9 @@ pub mod pallet {
 		ExceedMaxLengthLimit,
 		/// Transfer to failed
 		TransferToError,
+		StablePoolNotFound,
+		StablePoolTokenIndexNotFound,
+		ExceedLimit,
 	}
 
 	#[pallet::event]
@@ -2357,6 +2371,42 @@ pub mod pallet {
 			});
 
 			Ok(())
+		}
+
+		#[pallet::call_index(47)]
+		#[pallet::weight(<T as Config>::WeightInfo::convert_treasury_vtoken())]
+		pub fn convert_treasury_vtoken(
+			origin: OriginFor<T>,
+			vtoken: CurrencyId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+			let token = vtoken.to_token().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
+			let (pool_id, _, _) = T::StablePoolHandler::get_pool_id(&vtoken, &token)
+				.ok_or(Error::<T>::StablePoolNotFound)?;
+
+			let vtoken_index = T::StablePoolHandler::get_pool_token_index(pool_id, vtoken)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+			let token_index = T::StablePoolHandler::get_pool_token_index(pool_id, token)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+
+			// ensure swap balance not exceed a 10 unit
+			let decimals = token.decimals().unwrap_or_default();
+			let max_amount = decimals.checked_mul(10).ok_or(Error::<T>::OverFlow)?;
+			ensure!(amount <= BalanceOf::<T>::from(max_amount), Error::<T>::ExceedLimit);
+
+			// swap vtoken from treasury account for token
+			let treasury = T::TreasuryAccount::get();
+			T::StablePoolHandler::swap(
+				&treasury,
+				pool_id,
+				vtoken_index,
+				token_index,
+				amount,
+				Zero::zero(),
+			)
 		}
 	}
 
