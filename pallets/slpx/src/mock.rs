@@ -501,6 +501,8 @@ impl bifrost_slp::Config for Test {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type TreasuryAccount = BifrostFeeAccount;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

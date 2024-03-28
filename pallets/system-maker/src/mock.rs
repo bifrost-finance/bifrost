@@ -57,7 +57,7 @@ use crate as bifrost_system_maker;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u64;
+pub type Balance = u128;
 
 pub type AccountId = AccountId32;
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
@@ -308,6 +308,8 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type TreasuryAccount = TreasuryAccount;
 }
 
 parameter_type_with_key! {
