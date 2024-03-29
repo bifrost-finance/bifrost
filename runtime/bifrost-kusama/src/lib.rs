@@ -1423,6 +1423,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmWeightAndFeeHandler = XcmInterface;
 	type ChannelCommission = ChannelCommission;
 	type StablePoolHandler = StablePool;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 }
 

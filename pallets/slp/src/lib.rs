@@ -31,13 +31,14 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpHostingFeeProvider,
-	SlpOperator, TimeUnit, TokenInfo, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL,
-	GLMR,
+	CurrencyId, CurrencyIdExt, CurrencyIdMapping, DerivativeAccountHandler, DerivativeIndex,
+	SlpHostingFeeProvider, SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR,
+	DOT, FIL, GLMR,
 };
 use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
@@ -171,6 +172,13 @@ pub mod pallet {
 			Balance = BalanceOf<Self>,
 			AccountId = AccountIdOf<Self>,
 			CurrencyId = CurrencyId,
+		>;
+
+		// asset registry to get asset metadata
+		type AssetIdMaps: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
 		>;
 
 		#[pallet::constant]
@@ -2393,8 +2401,13 @@ pub mod pallet {
 				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
 
 			// ensure swap balance not exceed a 10 unit
-			let decimals = token.decimals().unwrap_or_default();
-			let max_amount = decimals.checked_mul(10).ok_or(Error::<T>::OverFlow)?;
+			let metadata = T::AssetIdMaps::get_currency_metadata(vtoken)
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+			let decimals = metadata.decimals;
+
+			// 10 * 10^decimals
+			let max_amount =
+				10u32.pow(decimals.into()).checked_mul(10).ok_or(Error::<T>::OverFlow)?;
 			ensure!(amount <= BalanceOf::<T>::from(max_amount), Error::<T>::ExceedLimit);
 
 			// swap vtoken from treasury account for token

@@ -469,6 +469,7 @@ impl Config for Runtime {
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
 	type ChannelCommission = ();
 	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 }
 

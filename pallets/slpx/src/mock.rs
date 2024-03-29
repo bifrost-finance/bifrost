@@ -502,6 +502,7 @@ impl bifrost_slp::Config for Test {
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
 	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Test>;
 	type TreasuryAccount = BifrostFeeAccount;
 }
 
