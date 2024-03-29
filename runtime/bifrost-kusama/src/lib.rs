@@ -1422,6 +1422,9 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
 	type ChannelCommission = ChannelCommission;
+	type StablePoolHandler = StablePool;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

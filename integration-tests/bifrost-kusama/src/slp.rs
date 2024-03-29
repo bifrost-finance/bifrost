@@ -379,7 +379,7 @@ fn transfer_to() {
 	Kusama::execute_with(|| {
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&AccountId::from(KSM_DELEGATOR_0_ACCOUNT)),
-			10049999921672574
+			10050009921672574
 		);
 	});
 }
