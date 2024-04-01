@@ -163,6 +163,7 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
+			unlock_id: UnlockId,
 		},
 		RedeemSuccess {
 			unlock_id: UnlockId,
@@ -183,6 +184,7 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
+			unlock_id: UnlockId,
 		},
 		UnlockDurationSet {
 			token_id: CurrencyIdOf<T>,
@@ -639,6 +641,7 @@ pub mod pallet {
 				token_amount: unlock_amount,
 				vtoken_amount,
 				fee,
+				unlock_id,
 			});
 			Ok(())
 		}
@@ -1344,6 +1347,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::CalculationOverflow)?
 				.unique_saturated_into();
 
+			let next_id = Self::token_unlock_next_id(token_id);
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
 					// Calculate the time to be locked
@@ -1366,7 +1370,6 @@ pub mod pallet {
 							.ok_or(Error::<T>::CalculationOverflow)?;
 						Ok(())
 					})?;
-					let next_id = Self::token_unlock_next_id(token_id);
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
@@ -1459,6 +1462,7 @@ pub mod pallet {
 				vtoken_amount,
 				token_amount,
 				fee: redeem_fee,
+				unlock_id: next_id,
 			});
 			Ok(Some(T::WeightInfo::redeem() + extra_weight).into())
 		}
