@@ -2413,7 +2413,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
 
 			// ensure swap balance not exceed a 10 unit
-			let metadata = T::AssetIdMaps::get_currency_metadata(vtoken)
+			let metadata = T::AssetIdMaps::get_currency_metadata(token)
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 			let decimals = metadata.decimals;
 
