@@ -53,7 +53,7 @@ pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_core::{bounded::BoundedVec, H160};
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput, UniqueSaturatedFrom};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
@@ -2413,14 +2413,17 @@ pub mod pallet {
 				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
 
 			// ensure swap balance not exceed a 10 unit
-			let metadata = T::AssetIdMaps::get_currency_metadata(vtoken)
+			let metadata = T::AssetIdMaps::get_currency_metadata(token)
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 			let decimals = metadata.decimals;
 
 			// 10 * 10^decimals
-			let max_amount =
-				10u32.pow(decimals.into()).checked_mul(10).ok_or(Error::<T>::OverFlow)?;
-			ensure!(amount <= BalanceOf::<T>::from(max_amount), Error::<T>::ExceedLimit);
+			let max_amount: u128 =
+				10u128.pow(decimals.into()).checked_mul(10).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				amount <= BalanceOf::<T>::unique_saturated_from(max_amount),
+				Error::<T>::ExceedLimit
+			);
 
 			// swap vtoken from treasury account for token
 			let treasury = T::TreasuryAccount::get();
