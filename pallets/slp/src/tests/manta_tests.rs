@@ -1918,3 +1918,104 @@ fn remove_from_validator_boost_list_should_work() {
 		assert_eq!(Slp::get_validator_boost_list(MANTA), None);
 	});
 }
+
+#[test]
+fn clean_outdated_validator_boost_list_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		manta_setup();
+
+		// no validator boost list exists for this currency
+		assert_noop!(
+			Slp::clean_outdated_validator_boost_list(RuntimeOrigin::signed(ALICE), MANTA, 1),
+			Error::<Runtime>::NoMoreValidatorBoostListForCurrency
+		);
+
+		let validator_list_output_1 =
+			BoundedVec::try_from(vec![(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300)]).unwrap();
+		let validator_list_output_2 = BoundedVec::try_from(vec![(
+			VALIDATOR_0_LOCATION,
+			SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64,
+		)])
+		.unwrap();
+		let validator_list_output_3 = BoundedVec::try_from(vec![
+			(VALIDATOR_0_LOCATION, SIX_MONTHS as u64 + 300 + SIX_MONTHS as u64),
+			(VALIDATOR_1_LOCATION, SIX_MONTHS as u64 + 400),
+		])
+		.unwrap();
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			Box::new(VALIDATOR_0_LOCATION)
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_1));
+
+		let bounded_validator_0 = BoundedVec::try_from(vec![VALIDATOR_0_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MANTA), Some(bounded_validator_0.clone()));
+
+		System::set_block_number(400);
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			Box::new(VALIDATOR_0_LOCATION)
+		));
+
+		assert_eq!(Slp::get_validators(MANTA), Some(bounded_validator_0));
+
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_2.clone()));
+
+		assert_ok!(Slp::add_to_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			Box::new(VALIDATOR_1_LOCATION)
+		));
+
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_3.clone()));
+		let bounded_validator_0_1 =
+			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
+		assert_eq!(Slp::get_validators(MANTA), Some(bounded_validator_0_1),);
+
+		// no validator due yet. Everything should be kept after calling
+		// clean_outdated_validator_boost_list
+		System::set_block_number(399 + SIX_MONTHS as u64);
+
+		assert_ok!(Slp::clean_outdated_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			1
+		));
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_3));
+
+		// move to block SIX_MONTHS + 400, validator 1 should be removable
+		System::set_block_number(400 + SIX_MONTHS as u64);
+
+		// page at least 1
+		assert_noop!(
+			Slp::clean_outdated_validator_boost_list(RuntimeOrigin::signed(ALICE), MANTA, 0),
+			Error::<Runtime>::InvalidPageNumber
+		);
+
+		// successfully clean outdated validator boost list
+		assert_ok!(Slp::clean_outdated_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			1
+		));
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_2.clone()));
+
+		// do it again
+		assert_ok!(Slp::clean_outdated_validator_boost_list(
+			RuntimeOrigin::signed(ALICE),
+			MANTA,
+			1
+		));
+		assert_eq!(Slp::get_validator_boost_list(MANTA), Some(validator_list_output_2));
+
+		assert_noop!(
+			Slp::clean_outdated_validator_boost_list(RuntimeOrigin::signed(ALICE), MANTA, 2),
+			Error::<Runtime>::NoMoreValidatorBoostListForCurrency
+		);
+	});
+}

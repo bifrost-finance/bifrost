@@ -1083,6 +1083,28 @@ mod benchmarks {
 		Ok(())
 	}
 
+	#[benchmark]
+	fn clean_outdated_validator_boost_list() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		frame_system::Pallet::<T>::set_block_number(1u32.into());
+
+		assert_ok!(Pallet::<T>::add_to_validator_boost_list(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1)
+		));
+
+		frame_system::Pallet::<T>::set_block_number((1 + SIX_MONTHS).into());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u8);
+
+		Ok(())
+	}
+
 	//   `cargo test -p bifrost-slp --all-features`
 	impl_benchmark_test_suite!(
 		Pallet,

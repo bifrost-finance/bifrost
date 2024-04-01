@@ -44,6 +44,7 @@ use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
+	ensure_signed,
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
@@ -90,6 +91,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
+const ITERATE_LENGTH: usize = 100;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -268,6 +270,8 @@ pub mod pallet {
 		StablePoolNotFound,
 		StablePoolTokenIndexNotFound,
 		ExceedLimit,
+		InvalidPageNumber,
+		NoMoreValidatorBoostListForCurrency,
 	}
 
 	#[pallet::event]
@@ -521,6 +525,14 @@ pub mod pallet {
 		RemovedFromBoostList {
 			currency_id: CurrencyId,
 			who: MultiLocation,
+		},
+		OutdatedValidatorBoostListCleaned {
+			currency_id: CurrencyId,
+			page: u8,
+			// already removed num
+			remove_num: u32,
+			// still to iterate num
+			num_left: u32,
 		},
 	}
 
@@ -2420,6 +2432,71 @@ pub mod pallet {
 				amount,
 				Zero::zero(),
 			)
+		}
+
+		#[pallet::call_index(48)]
+		#[pallet::weight(<T as Config>::WeightInfo::clean_outdated_validator_boost_list())]
+		pub fn clean_outdated_validator_boost_list(
+			origin: OriginFor<T>,
+			token: CurrencyId,
+			// start from 1
+			page: u8,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let page = page as usize;
+			ensure!(page > 0, Error::<T>::InvalidPageNumber);
+
+			let validator_boost_list_len = ValidatorBoostList::<T>::decode_len(token)
+				.ok_or(Error::<T>::NoMoreValidatorBoostListForCurrency)?;
+
+			let previous_count = (page - 1) * ITERATE_LENGTH;
+			ensure!(
+				validator_boost_list_len > previous_count,
+				Error::<T>::NoMoreValidatorBoostListForCurrency
+			);
+
+			// calculate next page number left
+			let num_left = if validator_boost_list_len > (previous_count + ITERATE_LENGTH) {
+				validator_boost_list_len - previous_count - ITERATE_LENGTH
+			} else {
+				0
+			};
+
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			let mut remove_num = 0;
+			// for each validator in the validator boost list, if the due block number is less than
+			// or equal to the current block number, remove it
+			ValidatorBoostList::<T>::mutate(token, |validator_boost_list_op| {
+				if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+					let mut remove_index = vec![];
+					for (index, (_validator, due_block_number)) in validator_boost_list
+						.iter()
+						.skip(previous_count)
+						.take(ITERATE_LENGTH)
+						.enumerate()
+					{
+						if *due_block_number <= current_block_number {
+							remove_index.push(index + previous_count);
+						}
+					}
+
+					// remove from the end to the start
+					for index in remove_index.iter().rev() {
+						validator_boost_list.remove(*index);
+						remove_num += 1;
+					}
+				}
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::OutdatedValidatorBoostListCleaned {
+				currency_id: token,
+				page: page as u8,
+				remove_num,
+				num_left: num_left as u32,
+			});
+
+			Ok(())
 		}
 	}
 
