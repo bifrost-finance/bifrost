@@ -793,4 +793,9 @@ impl<T: frame_system::Config> bifrost_slp::WeightInfo for BifrostWeight<T> {
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
+	fn clean_outdated_validator_boost_list() -> Weight {
+		Weight::from_parts(42_190_000, 3911)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
 }
