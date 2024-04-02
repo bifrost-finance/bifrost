@@ -1808,6 +1808,7 @@ dependencies = [
  "bifrost-currencies",
  "bifrost-parachain-staking",
  "bifrost-primitives",
+ "bifrost-stable-asset",
  "bifrost-stable-pool",
  "bifrost-vtoken-minting",
  "bifrost-xcm-interface",
