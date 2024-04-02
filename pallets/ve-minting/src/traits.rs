@@ -146,33 +146,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let mut _locked = Self::locked(position);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
-		let value = _locked.amount;
-		let old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = _locked.clone();
-		_locked.end = Zero::zero();
-		_locked.amount = Zero::zero();
-		Locked::<T>::insert(position, _locked.clone());
-
-		let supply_before = Self::supply();
-		Supply::<T>::set(supply_before.saturating_sub(value));
-
-		// BNC should be transferred before checkpoint
-		UserPositions::<T>::mutate(who, |positions| {
-			positions.retain(|&x| x != position);
-		});
-		UserPointEpoch::<T>::remove(position);
-		let new_locked_balance =
-			UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
-		T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
-		UserLocked::<T>::set(who, new_locked_balance);
-
-		Self::_checkpoint(who, position, old_locked, _locked.clone())?;
-
-		Self::deposit_event(Event::Withdrawn { addr: position, value });
-		Self::deposit_event(Event::Supply {
-			supply_before,
-			supply: supply_before.saturating_sub(value),
-		});
-		Ok(())
+		Self::withdraw_no_ensure(who, position, _locked, None)
 	}
 
 	fn balance_of(

@@ -41,7 +41,7 @@ use frame_support::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Convert,
 			Saturating, UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, DispatchError, FixedU128, SaturatedConversion,
+		ArithmeticError, DispatchError, FixedU128, Perbill, SaturatedConversion,
 	},
 	PalletId,
 };
@@ -1019,6 +1019,78 @@ pub mod pallet {
 				}
 			}
 			Ok(())
+		}
+
+		/// Withdraw vBNC by position
+		///
+		/// # Arguments
+		///
+		/// * `who` - the user of the position
+		/// * `position` - the ID of the position
+		/// * `_locked` - user locked variable representation
+		/// * `if_fast` - distinguish whether it is a fast withdraw
+
+		pub fn withdraw_no_ensure(
+			who: &AccountIdOf<T>,
+			position: u128,
+			mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
+			if_fast: Option<Perbill>,
+		) -> DispatchResult {
+			let value = _locked.amount;
+			let old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = _locked.clone();
+			_locked.end = Zero::zero();
+			_locked.amount = Zero::zero();
+			Locked::<T>::insert(position, _locked.clone());
+
+			let supply_before = Self::supply();
+			Supply::<T>::set(supply_before.saturating_sub(value));
+
+			// BNC should be transferred before checkpoint
+			UserPositions::<T>::mutate(who, |positions| {
+				positions.retain(|&x| x != position);
+			});
+			UserPointEpoch::<T>::remove(position);
+			let new_locked_balance =
+				UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
+			T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
+			UserLocked::<T>::set(who, new_locked_balance);
+			if let Some(fast) = if_fast {
+				if fast != Perbill::zero() {
+					T::MultiCurrency::transfer(
+						T::TokenType::get(),
+						who,
+						&T::VeMintingPalletId::get().into_account_truncating(),
+						fast * value,
+					)?;
+				}
+			}
+
+			Self::_checkpoint(who, position, old_locked, _locked.clone())?;
+
+			Self::deposit_event(Event::Withdrawn { addr: position, value });
+			Self::deposit_event(Event::Supply {
+				supply_before,
+				supply: supply_before.saturating_sub(value),
+			});
+			Ok(())
+		}
+
+		fn redeem_commission(remaining_blocks: u64) -> Result<Perbill, DispatchError> {
+			let commission = ((remaining_blocks + 2_628_000) as f64 / 10_512_000.0).powi(2);
+			Ok(Perbill::from_rational_approximation(commission as u32, 1_000_000))
+		}
+
+		fn fast_withdraw_inner(
+			who: &AccountIdOf<T>,
+			position: u128,
+			mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
+		) -> DispatchResult {
+			let mut _locked = Self::locked(position);
+			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+			let fast = Self::redeem_commission(
+				(_locked.end - current_block_number).saturated_into::<u64>(),
+			)?;
+			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
 		}
 	}
 }
