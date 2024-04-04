@@ -97,6 +97,8 @@ pub trait WeightInfo {
 	fn set_validator_boost_list() -> Weight;
 	fn add_to_validator_boost_list() -> Weight;
 	fn remove_from_validator_boot_list() -> Weight;
+	fn convert_treasury_vtoken() -> Weight;
+	fn clean_outdated_validator_boost_list() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -832,6 +834,16 @@ impl WeightInfo for () {
 		//  Estimated: `3626`
 		// Minimum execution time: 30_639_000 picoseconds.
 		Weight::from_parts(37_323_000, 3626)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	fn convert_treasury_vtoken() -> Weight {
+		Weight::from_parts(42_190_000, 3911)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	fn clean_outdated_validator_boost_list() -> Weight {
+		Weight::from_parts(42_190_000, 3911)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
