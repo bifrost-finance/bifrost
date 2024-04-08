@@ -54,7 +54,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::{Account32Hash, FrameTransactionalProcessor, TrailingSetTopicAsId};
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
@@ -676,7 +676,6 @@ impl xcm_executor::Config for XcmConfig {
 	type FeeManager = ();
 	type MessageExporter = ();
 	type Aliasers = Nothing;
-	type TransactionalProcessor = FrameTransactionalProcessor;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.

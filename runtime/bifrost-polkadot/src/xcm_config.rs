@@ -50,7 +50,7 @@ pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key
 use pallet_xcm::XcmPassthrough;
 use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use sp_core::bounded::BoundedVec;
-use xcm_builder::{Account32Hash, FrameTransactionalProcessor, TrailingSetTopicAsId};
+use xcm_builder::{Account32Hash, TrailingSetTopicAsId};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -524,7 +524,6 @@ impl xcm_executor::Config for XcmConfig {
 	type FeeManager = ();
 	type MessageExporter = ();
 	type Aliasers = Nothing;
-	type TransactionalProcessor = FrameTransactionalProcessor;
 }
 
 /// Local origins on this chain are allowed to dispatch XCM sends/executions.
