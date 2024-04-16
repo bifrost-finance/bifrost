@@ -1028,6 +1028,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-clouds-convert"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "bifrost-ve-minting",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-cross-in-out"
 version = "0.8.0"
 dependencies = [
@@ -1431,6 +1453,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-call-switchgear",
  "bifrost-channel-commission",
+ "bifrost-clouds-convert",
  "bifrost-cross-in-out",
  "bifrost-currencies",
  "bifrost-farming",
