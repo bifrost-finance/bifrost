@@ -124,6 +124,9 @@ pub mod pallet {
 		type FeeAccount: Get<Self::AccountId>;
 
 		#[pallet::constant]
+		type RedeemFeeAccount: Get<Self::AccountId>;
+
+		#[pallet::constant]
 		type IncentivePoolAccount: Get<PalletId>;
 
 		#[pallet::constant]
@@ -1607,7 +1610,12 @@ pub mod pallet {
 			let vtoken_amount =
 				vtoken_amount.checked_sub(&redeem_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			// Charging fees
-			T::MultiCurrency::transfer(vtoken_id, &exchanger, &T::FeeAccount::get(), redeem_fee)?;
+			T::MultiCurrency::transfer(
+				vtoken_id,
+				&exchanger,
+				&T::RedeemFeeAccount::get(),
+				redeem_fee,
+			)?;
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
@@ -1796,8 +1804,6 @@ pub mod pallet {
 			// first, lock the vtoken
 			// second, record the lock in ledger
 
-			let free_balance = T::MultiCurrency::free_balance(vtoken_id, &minter);
-
 			// check whether the minter has enough vtoken
 			T::MultiCurrency::ensure_can_withdraw(vtoken_id, &minter, vtoken_amount)
 				.map_err(|_| Error::<T>::NotEnoughBalance)?;
@@ -1844,7 +1850,7 @@ pub mod pallet {
 
 			// extend the locked amount to be new_lock_total
 			T::MultiCurrency::set_lock(INCENTIVE_LOCK_ID, vtoken_id, &minter, new_lock_total)
-				.map_err(|e| Error::<T>::NotEnoughBalance)?;
+				.map_err(|_| Error::<T>::NotEnoughBalance)?;
 
 			Ok(())
 		}

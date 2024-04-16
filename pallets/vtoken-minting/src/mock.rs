@@ -238,6 +238,7 @@ impl vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;

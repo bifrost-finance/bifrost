@@ -299,4 +299,28 @@ impl<T: frame_system::Config> bifrost_vtoken_minting::WeightInfo for BifrostWeig
 		Weight::from_parts(16_763_000, 3492)
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
+
+	fn mint_with_lock() -> Weight {
+		Weight::from_parts(325_143_000, 8769)
+			.saturating_add(RocksDbWeight::get().reads(9_u64))
+			.saturating_add(RocksDbWeight::get().writes(6_u64))
+	}
+
+	fn unlock_incentive_minted_vtoken() -> Weight {
+		Weight::from_parts(227_544_000, 8769)
+			.saturating_add(RocksDbWeight::get().reads(12_u64))
+			.saturating_add(RocksDbWeight::get().writes(10_u64))
+	}
+
+	fn set_incentive_coef() -> Weight {
+		Weight::from_parts(44_736_000, 1493)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn set_vtoken_incentive_lock_blocks() -> Weight {
+		Weight::from_parts(44_736_000, 1493)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
 }
