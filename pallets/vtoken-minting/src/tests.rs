@@ -20,9 +20,10 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, *};
+use crate::{mock::*, DispatchError::Module, *};
 use bifrost_primitives::currency::{BNC, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR};
 use frame_support::{assert_noop, assert_ok, sp_runtime::Permill, BoundedVec};
+use sp_runtime::ModuleError;
 
 #[test]
 fn mint_bnc() {
@@ -506,5 +507,224 @@ fn recreate_currency_ongoing_time_unit_should_work() {
 			TimeUnit::Round(2)
 		));
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Round(2)));
+	})
+}
+
+#[test]
+fn mint_with_lock_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
+
+		// mint exceeds bob's KSM balance
+		assert_noop!(
+			VtokenMinting::mint_with_lock(
+				Some(BOB).into(),
+				KSM,
+				10000000000000,
+				BoundedVec::default(),
+				None
+			),
+			Error::<Runtime>::NotEnoughBalance
+		);
+
+		// Minimum Mint not set
+		assert_noop!(
+			VtokenMinting::mint_with_lock(Some(BOB).into(), KSM, 100, BoundedVec::default(), None),
+			Error::<Runtime>::NotSupportTokenType
+		);
+
+		// Set minimum mint
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 100));
+
+		// vtoken coefficient not set
+		assert_noop!(
+			VtokenMinting::mint_with_lock(Some(BOB).into(), KSM, 100, BoundedVec::default(), None),
+			Error::<Runtime>::IncentiveCoefNotFound
+		);
+
+		// set vtoken coefficient
+		assert_ok!(VtokenMinting::set_incentive_coef(RuntimeOrigin::signed(ALICE), VKSM, Some(1)));
+
+		// pool not enough vKSM balance
+		assert_noop!(
+			VtokenMinting::mint_with_lock(Some(BOB).into(), KSM, 100, BoundedVec::default(), None),
+			Error::<Runtime>::NotEnoughBalance
+		);
+
+		// set incentive pool balance
+		assert_ok!(Tokens::deposit(
+			VKSM,
+			&VtokenMinting::incentive_pool_account(),
+			100000000000000000000
+		));
+
+		// incentive lock blocks not set
+		assert_noop!(
+			VtokenMinting::mint_with_lock(Some(BOB).into(), KSM, 100, BoundedVec::default(), None),
+			Error::<Runtime>::IncentiveLockBlocksNotSet
+		);
+
+		// set incentive lock blocks
+		assert_ok!(VtokenMinting::set_vtoken_incentive_lock_blocks(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			Some(100)
+		));
+
+		let bob_old_balance = Tokens::free_balance(VKSM, &BOB);
+		// mint with lock
+		assert_ok!(VtokenMinting::mint_with_lock(
+			Some(BOB).into(),
+			KSM,
+			100000000000,
+			BoundedVec::default(),
+			None
+		));
+
+		// check the vksm balance of bob. Should be minted_amount + incentive amount + original
+		// balance
+		assert_eq!(Tokens::free_balance(VKSM, &BOB), 95000000000 + 9499999990 + bob_old_balance);
+
+		// check the pool balance, should have been transferred 9499999990 to Bob account
+		assert_eq!(
+			Tokens::free_balance(VKSM, &VtokenMinting::incentive_pool_account()),
+			100000000000000000000 - 9499999990
+		);
+
+		// check ledger
+		let lock_ledger = VtokenMinting::get_vtoken_lock_ledger(BOB, VKSM).unwrap();
+		let list = BoundedVec::try_from(vec![(95000000000u128, 100u64)]).unwrap();
+		let should_be_ledger = (95000000000u128, list);
+		assert_eq!(lock_ledger, should_be_ledger);
+	})
+}
+
+#[test]
+fn unlock_incentive_minted_vtoken_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
+		// Set minimum mint
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 100));
+		// set vtoken coefficient
+		assert_ok!(VtokenMinting::set_incentive_coef(RuntimeOrigin::signed(ALICE), VKSM, Some(1)));
+		// set incentive pool balance
+		assert_ok!(Tokens::deposit(
+			VKSM,
+			&VtokenMinting::incentive_pool_account(),
+			100000000000000000000
+		));
+		// set incentive lock blocks
+		assert_ok!(VtokenMinting::set_vtoken_incentive_lock_blocks(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			Some(100)
+		));
+		// mint with lock
+		assert_ok!(VtokenMinting::mint_with_lock(
+			Some(BOB).into(),
+			KSM,
+			100000000000,
+			BoundedVec::default(),
+			None
+		));
+
+		run_to_block(101);
+
+		// check ledger
+		let lock_ledger = VtokenMinting::get_vtoken_lock_ledger(BOB, VKSM).unwrap();
+		let list = BoundedVec::try_from(vec![(95000000000u128, 100u64)]).unwrap();
+		let should_be_ledger = (95000000000u128, list);
+		assert_eq!(lock_ledger, should_be_ledger);
+
+		let bob_vksm_balance = Tokens::free_balance(VKSM, &BOB);
+		// Bob's account cannot withdraw the locked vksm
+		assert_eq!(
+			<Runtime as crate::Config>::MultiCurrency::ensure_can_withdraw(
+				VKSM,
+				&BOB,
+				bob_vksm_balance
+			),
+			Err(Module(ModuleError {
+				index: 1,
+				error: [2, 0, 0, 0,],
+				message: Some("LiquidityRestrictions",),
+			},),)
+		);
+
+		// unlock incentive minted vtoken
+		assert_ok!(VtokenMinting::unlock_incentive_minted_vtoken(RuntimeOrigin::signed(BOB), VKSM));
+
+		// Bob's amount can withdraw the locked vksm now
+		assert_ok!(<Runtime as crate::Config>::MultiCurrency::ensure_can_withdraw(
+			VKSM,
+			&BOB,
+			bob_vksm_balance
+		));
+
+		// total amount should be remain the same
+		let new_bob_vksm_balance = Tokens::free_balance(VKSM, &BOB);
+		assert_eq!(new_bob_vksm_balance, bob_vksm_balance);
+
+		// check ledger
+		let lock_ledger = VtokenMinting::get_vtoken_lock_ledger(BOB, VKSM);
+		assert_eq!(lock_ledger, None);
+	})
+}
+
+#[test]
+fn set_incentive_coef_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
+		// get vksm coefficient should return None
+		assert_eq!(VtokenMinting::get_vtoken_incentive_coef(VKSM), None);
+
+		// set vksm coefficient
+		assert_ok!(VtokenMinting::set_incentive_coef(RuntimeOrigin::signed(ALICE), VKSM, Some(1)));
+
+		// get vksm coefficient should return Some(1)
+		assert_eq!(VtokenMinting::get_vtoken_incentive_coef(VKSM), Some(1));
+
+		// set vksm coefficient to None
+		assert_ok!(VtokenMinting::set_incentive_coef(RuntimeOrigin::signed(ALICE), VKSM, None));
+
+		// get vksm coefficient should return None
+		assert_eq!(VtokenMinting::get_vtoken_incentive_coef(VKSM), None);
+	})
+}
+
+#[test]
+fn set_vtoken_incentive_lock_blocks_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
+		// get vksm lock blocks should return None
+		assert_eq!(VtokenMinting::get_mint_with_lock_blocks(VKSM), None);
+
+		// set vksm lock blocks
+		assert_ok!(VtokenMinting::set_vtoken_incentive_lock_blocks(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			Some(100)
+		));
+
+		// get vksm lock blocks should return Some(100)
+		assert_eq!(VtokenMinting::get_mint_with_lock_blocks(VKSM), Some(100));
+
+		// set vksm lock blocks to None
+		assert_ok!(VtokenMinting::set_vtoken_incentive_lock_blocks(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			None
+		));
+
+		// get vksm lock blocks should return None
+		assert_eq!(VtokenMinting::get_mint_with_lock_blocks(VKSM), None);
 	})
 }
