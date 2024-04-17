@@ -44,7 +44,6 @@ pub type AccountId = AccountId32;
 
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime {
@@ -264,7 +263,7 @@ impl ExtBuilder {
 }
 
 /// Run until a particular block.
-pub fn run_to_block(n: BlockNumber) {
+pub fn _run_to_block(n: BlockNumber) {
 	use frame_support::traits::Hooks;
 	while System::block_number() <= n {
 		CloudsConvert::on_finalize(System::block_number());
