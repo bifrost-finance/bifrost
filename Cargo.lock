@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.9.96"
+version = "0.9.98"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
