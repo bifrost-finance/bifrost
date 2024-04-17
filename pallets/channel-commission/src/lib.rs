@@ -897,16 +897,18 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 
 		// get the commission token of the staking token
 		let vtoken = staking_token.to_vtoken().map_err(|_| Error::<T>::ConversionError)?;
-		let commission_token = CommissionTokens::<T>::get(vtoken)
-			.ok_or(Error::<T>::VtokenNotConfiguredForCommission)?;
 
-		// add to PeriodTotalCommissions
-		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
+		// if the vtoken is not configured for commission, just don't record the hosting fee
+		if let Some(commission_token) = CommissionTokens::<T>::get(vtoken) {
+			// add to PeriodTotalCommissions
+			let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
 
-		let sum_up_amount = total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+			let sum_up_amount =
+				total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
-		total_commission.1 = sum_up_amount;
-		PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+			total_commission.1 = sum_up_amount;
+			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+		}
 
 		Ok(())
 	}
