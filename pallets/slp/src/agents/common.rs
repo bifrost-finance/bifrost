@@ -288,13 +288,12 @@ impl<T: Config> Pallet<T> {
 		ensure!(fee <= reserved_fee, Error::<T>::FeeTooHigh);
 
 		let source_account = Self::native_multilocation_to_account(&source_location)?;
-		// ensure the fee source account has the balance of currency_id
-		T::MultiCurrency::ensure_can_withdraw(currency_id, &source_account, fee)
-			.map_err(|_| Error::<T>::NotEnoughBalance)?;
 
-		// withdraw
-		T::MultiCurrency::withdraw(currency_id, &source_account, fee)
-			.map_err(|_| Error::<T>::NotEnoughBalance)?;
+		// withdraw. If withdraw fails, issue an event and continue.
+		if let Err(_) = T::MultiCurrency::withdraw(currency_id, &source_account, fee) {
+			// Deposit event
+			Self::deposit_event(Event::BurnFeeFailed { currency_id, amount: fee });
+		}
 
 		Ok(())
 	}

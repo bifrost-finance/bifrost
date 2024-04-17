@@ -534,6 +534,10 @@ pub mod pallet {
 			// still to iterate num
 			num_left: u32,
 		},
+		BurnFeeFailed {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		},
 	}
 
 	/// The current storage version, we set to 3 our new version(after migrate stroage from vec t
@@ -2412,14 +2416,14 @@ pub mod pallet {
 			let token_index = T::StablePoolHandler::get_pool_token_index(pool_id, token)
 				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
 
-			// ensure swap balance not exceed a 10 unit
-			let metadata = T::AssetIdMaps::get_currency_metadata(token)
-				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
-			let decimals = metadata.decimals;
+			// get the vtoken balance of the treasury account
+			let source_vtoken_balance =
+				T::MultiCurrency::free_balance(vtoken, &T::TreasuryAccount::get());
 
-			// 10 * 10^decimals
-			let max_amount: u128 =
-				10u128.pow(decimals.into()).checked_mul(10).ok_or(Error::<T>::OverFlow)?;
+			// max_amount is 1% of the vtoken balance of the treasury account
+			let percentage = Permill::from_percent(1);
+			let max_amount = percentage.mul_floor(source_vtoken_balance);
+
 			ensure!(
 				amount <= BalanceOf::<T>::unique_saturated_from(max_amount),
 				Error::<T>::ExceedLimit
