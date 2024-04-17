@@ -532,11 +532,11 @@ pub fn run_to_block(n: BlockNumber) {
 // Mock VeMinting Struct
 pub struct VeMinting;
 impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
-	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
 		Ok(100)
 	}
 
-	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError> {
+	fn total_supply(_t: BlockNumber) -> Result<Balance, DispatchError> {
 		Ok(10000)
 	}
 
