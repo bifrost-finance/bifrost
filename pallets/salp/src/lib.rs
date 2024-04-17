@@ -1287,7 +1287,7 @@ pub mod pallet {
 			currency_id_in: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+			let _who = ensure_signed(origin)?;
 
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)
