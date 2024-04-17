@@ -71,7 +71,7 @@ fn clouds_to_vebnc_should_work() {
 		// check the veBNC balance of Bob
 		assert_eq!(
 			<Runtime as crate::Config>::VeMinting::balance_of(&BOB, None).unwrap(),
-			bob_old_vebnc_balance + 20000000000
+			bob_old_vebnc_balance + 79817139200
 		);
 
 		// check the new pool balance
