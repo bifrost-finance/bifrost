@@ -164,6 +164,7 @@ pub mod pallet {
 		NoRewards,
 		ArgumentsError,
 		ExceedsMaxPositions,
+		NoController,
 	}
 
 	#[pallet::storage]
@@ -232,7 +233,7 @@ pub mod pallet {
 	#[pallet::getter(fn incentive_configs)]
 	pub type IncentiveConfigs<T: Config> = StorageValue<
 		_,
-		IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+		IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
 
@@ -289,6 +290,18 @@ pub mod pallet {
 		BoundedVec<u128, T::MaxPositions>,
 		ValueQuery,
 	>;
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let conf = Self::incentive_configs();
+			if n == conf.last_update_time + conf.rewards_duration {
+				Self::notify_reward_amount(&conf.incentive_controller, conf.last_reward.clone())
+					.unwrap_or_default();
+			}
+			T::DbWeight::get().writes(1_u64)
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -358,6 +371,7 @@ pub mod pallet {
 		pub fn withdraw(origin: OriginFor<T>, position: u128) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 			let user_positions = UserPositions::<T>::get(&exchanger);
+			log::debug!("user_positions: {:?}", user_positions);
 			ensure!(user_positions.contains(&position), Error::<T>::LockNotExist);
 			Self::withdraw_inner(&exchanger, position)
 		}
@@ -372,7 +386,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::set_incentive(rewards_duration);
-			Self::notify_reward_amount(&incentive_from, rewards)
+			Self::notify_reward_amount(&Some(incentive_from), rewards)
 		}
 
 		#[pallet::call_index(6)]
@@ -383,15 +397,14 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::get_rewards())]
-		pub fn redeem_unlock(origin: OriginFor<T>) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::redeem_unlock())]
+		pub fn redeem_unlock(origin: OriginFor<T>, position: u128) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			// TODO: redeem_unlock
-			Self::get_rewards_inner(&exchanger)
+			Self::redeem_unlock_inner(&exchanger, position)
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::get_rewards())]
+		#[pallet::weight(T::WeightInfo::set_markup_coefficient())]
 		pub fn set_markup_coefficient(
 			origin: OriginFor<T>,
 			asset_id: CurrencyId, // token类型
@@ -415,6 +428,22 @@ pub mod pallet {
 			);
 			Ok(())
 		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::deposit_markup())]
+		pub fn deposit_markup(
+			origin: OriginFor<T>,
+			asset_id: CurrencyIdOf<T>,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			Self::deposit_markup_inner(origin, asset_id, value)
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(T::WeightInfo::withdraw_markup())]
+		pub fn withdraw_markup(origin: OriginFor<T>, asset_id: CurrencyIdOf<T>) -> DispatchResult {
+			Self::withdraw_markup_inner(origin, asset_id)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -424,6 +453,7 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
+			log::debug!("new_locked: {:?}", new_locked);
 			Self::update_reward(Some(who))?;
 
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
@@ -590,7 +620,8 @@ pub mod pallet {
 				.ok_or(ArithmeticError::Overflow)?;
 			UserPointEpoch::<T>::insert(addr, user_epoch);
 			u_new.block = current_block_number;
-			u_new.amount = Self::locked(addr).amount;
+			// u_new.amount = Self::locked(addr).amount;
+			u_new.amount = new_locked.amount;
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 
 			Ok(())
@@ -810,7 +841,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn deposit_markup(
+		pub fn deposit_markup_inner(
 			origin: OriginFor<T>,
 			asset_id: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
@@ -904,7 +935,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn withdraw_markup(origin: OriginFor<T>, asset_id: CurrencyIdOf<T>) -> DispatchResult {
+		pub fn withdraw_markup_inner(
+			origin: OriginFor<T>,
+			asset_id: CurrencyIdOf<T>,
+		) -> DispatchResult {
 			let addr = ensure_signed(origin)?;
 			let markup_coefficient =
 				MarkupCoefficient::<T>::get(asset_id).ok_or(Error::<T>::ArgumentsError)?; // Ensure it is the correct token type.
@@ -1075,20 +1109,28 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn redeem_commission(remaining_blocks: u64) -> Result<Perbill, DispatchError> {
-			let commission = ((remaining_blocks + 2_628_000) as f64 / 10_512_000.0).powi(2);
-			Ok(Perbill::from_rational_approximation(commission as u32, 1_000_000))
+		fn redeem_commission(
+			remaining_blocks: BlockNumberFor<T>,
+		) -> Result<Perbill, DispatchError> {
+			let commission = FixedU128::from_inner(remaining_blocks.saturated_into::<u128>())
+				.checked_add(&FixedU128::from_inner(2_628_000))
+				.and_then(|x| x.checked_div(&FixedU128::from_inner(10_512_000)))
+				.and_then(|x| Some(x.saturating_pow(2)))
+				.ok_or(ArithmeticError::Overflow)?;
+			Ok(Perbill::from_rational(commission.into_inner(), 1_000_000))
 		}
 
-		fn fast_withdraw_inner(
+		fn redeem_unlock_inner(
 			who: &AccountIdOf<T>,
 			position: u128,
-			mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
+			// mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			let mut _locked = Self::locked(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let fast = Self::redeem_commission(
-				(_locked.end - current_block_number).saturated_into::<u64>(),
+				_locked.end - current_block_number, /* (_locked.end -
+				                                     * current_block_number).
+				                                     * saturated_into::<u64>(), */
 			)?;
 			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
 		}

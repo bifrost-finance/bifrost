@@ -55,6 +55,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		user_positions
 			.try_push(new_position)
 			.map_err(|_| Error::<T>::ExceedsMaxPositions)?;
+		log::debug!("create_lock_inner: {:?}", user_positions);
 		UserPositions::<T>::insert(who, user_positions);
 		Position::<T>::set(new_position + 1);
 
@@ -243,7 +244,7 @@ pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn set_incentive(rewards_duration: Option<BlockNumber>);
 	fn add_reward(
 		addr: &AccountId,
-		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber>,
+		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
 		rewards: &Vec<(CurrencyId, Balance)>,
 		remaining: Balance,
 	) -> DispatchResult;
@@ -262,7 +263,12 @@ impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNu
 	}
 	fn add_reward(
 		addr: &AccountIdOf<T>,
-		conf: &mut IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+		conf: &mut IncentiveConfig<
+			CurrencyIdOf<T>,
+			BalanceOf<T>,
+			BlockNumberFor<T>,
+			AccountIdOf<T>,
+		>,
 		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		remaining: BalanceOf<T>,
 	) -> DispatchResult {
