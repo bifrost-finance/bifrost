@@ -1782,8 +1782,8 @@ impl lend_market::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletId = LendMarketPalletId;
 	type PriceFeeder = Prices;
-	type ReserveOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ReserveOrigin = TechAdminOrCouncil;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
 	type UnixTime = Timestamp;
 	type Assets = Currencies;
@@ -1796,15 +1796,15 @@ parameter_types! {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
+	type AddOrigin = CoreAdminOrCouncil;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxMembers = OracleMaxMembers;
 	type MembershipInitialized = ();
 	type MembershipChanged = ();
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
+	type PrimeOrigin = CoreAdminOrCouncil;
+	type RemoveOrigin = CoreAdminOrCouncil;
+	type ResetOrigin = CoreAdminOrCouncil;
+	type SwapOrigin = CoreAdminOrCouncil;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
