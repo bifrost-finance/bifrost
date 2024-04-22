@@ -1878,8 +1878,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased =
-		(bifrost_vtoken_voting::migration::v3::MigrateToV3<Runtime, RelayCurrencyId>,);
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.
