@@ -1626,7 +1626,7 @@ impl leverage_staking::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
+	pub const ClearingDuration: u32 = prod_or_fast!(1 * DAYS, 10 * MINUTES);
 	pub const NameLengthLimit: u32 = 20;
 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
