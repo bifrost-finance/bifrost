@@ -44,10 +44,10 @@ use frame_system::{
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use pallet::*;
 use parity_scale_codec::{Decode, Encode};
-use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::{Id, Sibling};
 use sp_core::{Hasher, H160, U256};
 use sp_runtime::{
-	traits::{AccountIdConversion, BlakeTwo256, CheckedSub},
+	traits::{AccountIdConversion, BlakeTwo256, CheckedSub, UniqueSaturatedFrom},
 	BoundedVec, DispatchError,
 };
 use sp_std::{vec, vec::Vec};
@@ -59,6 +59,8 @@ mod types;
 
 pub mod weights;
 pub use weights::WeightInfo;
+
+const BIFROST_KUSAMA_PARA_ID: u32 = 2001;
 
 #[cfg(test)]
 mod mock;
@@ -73,6 +75,7 @@ mod benchmarking;
 pub mod pallet {
 	use super::*;
 	use crate::types::{Order, OrderType};
+	use bifrost_primitives::{currency::MOVR, GLMR};
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::{
 		pallet_prelude::{ValueQuery, *},
@@ -362,9 +365,21 @@ pub mod pallet {
 								vtoken_amount,
 							});
 
+							let mut target_fee_currency_id = GLMR;
+							if T::ParachainId::get() == Id::from(BIFROST_KUSAMA_PARA_ID) {
+								target_fee_currency_id = MOVR;
+							}
+
+							// Will not check results and will be sent regardless of the success of
+							// the burning
+							let _ = T::MultiCurrency::withdraw(
+								target_fee_currency_id,
+								&T::TreasuryAccount::get(),
+								BalanceOf::<T>::unique_saturated_from(configuration.xcm_fee),
+							);
+
 							configuration.last_block = n;
 							XcmEthereumCallConfiguration::<T>::put(configuration);
-
 							currency_list.rotate_left(1);
 							CurrencyIdList::<T>::put(BoundedVec::try_from(currency_list).unwrap());
 
