@@ -18,6 +18,7 @@
 
 use std::path::PathBuf;
 
+use bifrost_service::eth::EthConfiguration;
 use clap::Parser;
 use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 
@@ -103,6 +104,9 @@ pub struct Cli {
 	/// Relay chain arguments
 	#[arg(raw = true)]
 	pub relay_chain_args: Vec<String>,
+
+	#[command(flatten)]
+	pub eth_config: EthConfiguration,
 }
 
 #[derive(Debug)]

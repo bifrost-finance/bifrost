@@ -8,18 +8,29 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
-bifrost-primitives = { workspace = true }
+jsonrpsee = { workspace = true, features = ["macros", "server"] }
 sc-client-api = { workspace = true }
+sc-consensus = { workspace = true }
+sc-consensus-aura = { workspace = true }
+sc-network = { workspace = true }
+sc-network-sync = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-rpc = { workspace = true }
+sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
-sp-api = { workspace = true }
+sp-api = { workspace = true, features = ["default"] }
 sp-block-builder = { workspace = true }
 sp-blockchain = { workspace = true }
+sp-core = { workspace = true, features = ["default"] }
+sp-consensus-aura = { workspace = true, features = ["default"] }
+sp-inherents = { workspace = true, features = ["default"] }
 sp-runtime = { workspace = true }
 pallet-transaction-payment-rpc = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
+
+# Bifrost
+bifrost-primitives = { workspace = true }
+bifrost-kusama-runtime = { workspace = true }
 bifrost-flexible-fee-rpc = { workspace = true }
 bifrost-flexible-fee-rpc-runtime-api = { workspace = true }
 bifrost-salp-rpc = { workspace = true }
@@ -37,4 +48,12 @@ zenlink-protocol-rpc = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-rpc = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
+
+# Frontier
+fc-api = { workspace = true }
+fc-rpc = { workspace = true }
+fc-mapping-sync = { workspace = true, features = ["sql"] }
+fc-rpc-core = { workspace = true }
+fc-storage = { workspace = true }
+fp-rpc = { workspace = true, features = ["default"] }
 

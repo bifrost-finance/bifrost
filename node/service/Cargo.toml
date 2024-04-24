@@ -28,7 +28,7 @@ sc-rpc = { workspace = true }
 sc-keystore = { workspace = true }
 
 # Benchmarking
-frame-benchmarking = { workspace = true, features = [ "std" ] }
+frame-benchmarking = { workspace = true, features = ["std"] }
 frame-benchmarking-cli = { workspace = true }
 
 # Substrate Primitives
@@ -81,6 +81,7 @@ xcm = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 
 # External Crates
+clap = { workspace = true, features = ["derive"] }
 hex-literal = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -95,12 +96,26 @@ bifrost-primitives = { workspace = true }
 bifrost-rpc = { workspace = true }
 
 # RPC related dependencies
-jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+jsonrpsee = { workspace = true, features = ["macros", "server"] }
 
 # zenlink rpc
 zenlink-protocol = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
+
+# Frontier
+#fc-api = { workspace = true }
+#fc-cli = { workspace = true }
+fc-consensus = { workspace = true }
+fc-db = { workspace = true, features = ["default", "sql"] }
+fc-mapping-sync = { workspace = true, features = ["sql"] }
+fc-rpc = { workspace = true }
+fc-rpc-core = { workspace = true }
+#fc-storage = { workspace = true }
+fp-account = { workspace = true }
+fp-dynamic-fee = { workspace = true, features = ["default"] }
+fp-evm = { workspace = true, features = ["default"] }
+fp-rpc = { workspace = true, features = ["default"] }
 
 # Bifrost rpc
 bifrost-flexible-fee-rpc-runtime-api = { workspace = true }
@@ -109,33 +124,33 @@ bifrost-farming-rpc-runtime-api = { workspace = true }
 bifrost-ve-minting-rpc-runtime-api = { workspace = true }
 
 [features]
-default = [ "std" ]
+default = ["std"]
 std = []
 runtime-benchmarks = [
-	"bifrost-kusama-runtime/runtime-benchmarks",
-	"bifrost-polkadot-runtime/runtime-benchmarks",
-	"polkadot-service/runtime-benchmarks",
-	"polkadot-cli/runtime-benchmarks",
+    "bifrost-kusama-runtime/runtime-benchmarks",
+    "bifrost-polkadot-runtime/runtime-benchmarks",
+    "polkadot-service/runtime-benchmarks",
+    "polkadot-cli/runtime-benchmarks",
 ]
 with-bifrost-runtime = [
-	"with-bifrost-kusama-runtime",
-	"with-bifrost-polkadot-runtime",
+    "with-bifrost-kusama-runtime",
+    "with-bifrost-polkadot-runtime",
 ]
 with-bifrost-kusama-runtime = [
-	"bifrost-kusama-runtime",
+    "bifrost-kusama-runtime",
 ]
 with-bifrost-polkadot-runtime = [
-	"bifrost-polkadot-runtime",
+    "bifrost-polkadot-runtime",
 ]
 with-all-runtime = [
-	"with-bifrost-runtime",
+    "with-bifrost-runtime",
 ]
 try-runtime = [
-	"bifrost-kusama-runtime/try-runtime",
-	"bifrost-polkadot-runtime/try-runtime",
+    "bifrost-kusama-runtime/try-runtime",
+    "bifrost-polkadot-runtime/try-runtime",
 ]
 fast-runtime = [
-	"bifrost-kusama-runtime/fast-runtime",
-	"bifrost-polkadot-runtime/fast-runtime",
+    "bifrost-kusama-runtime/fast-runtime",
+    "bifrost-polkadot-runtime/fast-runtime",
 ]
 

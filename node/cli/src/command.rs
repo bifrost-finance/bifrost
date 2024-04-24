@@ -462,7 +462,7 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node(config, polkadot_config, collator_options, id, hwbench)
+						start_node(config, polkadot_config, cli.eth_config, collator_options, id, hwbench)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)

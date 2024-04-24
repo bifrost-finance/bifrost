@@ -17,11 +17,15 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Service implementation. Specialized wrapper over substrate service.
-use std::{sync::Arc, time::Duration};
+use std::{
+	collections::BTreeMap,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_kusama_runtime;
-use bifrost_kusama_runtime::RuntimeApi;
+use bifrost_kusama_runtime::{RuntimeApi, TransactionConverter};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::basic::{
@@ -47,8 +51,12 @@ use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
+use sp_core::U256;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
+
+use crate::eth::EthConfiguration;
+use fc_db::kv::Backend as FrontierBackend;
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -87,7 +95,12 @@ pub fn new_partial(
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
-		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(
+			ParachainBlockImport,
+			Option<Telemetry>,
+			Option<TelemetryWorkerHandle>,
+			Arc<FrontierBackend<Block>>,
+		),
 	>,
 	sc_service::Error,
 > {
@@ -141,6 +154,22 @@ pub fn new_partial(
 
 	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
 
+	let frontier_backend = Arc::new(FrontierBackend::open(
+		Arc::clone(&client),
+		&config.database,
+		// &evm::db_config_dir(config),
+		&config.base_path.config_dir(config.chain_spec.id()),
+	)?);
+
+	// let evm_since = chain_spec::Extensions::try_get(&config.chain_spec)
+	// 	.map(|e| e.evm_since)
+	// 	.unwrap_or(1);
+	// let block_import = evm::BlockImport::new(
+	// 	ParachainBlockImport::new(client.clone(), backend.clone()),
+	// 	client.clone(),
+	// 	frontier_backend.clone(),
+	// 	evm_since,
+	// );
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
 	let import_queue = if dev {
@@ -167,7 +196,7 @@ pub fn new_partial(
 		task_manager,
 		transaction_pool,
 		select_chain,
-		other: (block_import, telemetry, telemetry_worker_handle),
+		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
 	})
 }
 
@@ -281,6 +310,7 @@ fn start_consensus(
 async fn start_node_impl(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
@@ -289,7 +319,7 @@ async fn start_node_impl(
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, false)?;
-	let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
+	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -348,17 +378,106 @@ async fn start_node_impl(
 		);
 	}
 
+	let overrides = crate::rpc::overrides_handle(client.clone());
+	let _block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+		task_manager.spawn_handle(),
+		overrides.clone(),
+		eth_config.eth_log_block_cache,
+		eth_config.eth_statuses_cache,
+		prometheus_registry.clone(),
+	));
+
+	// Sinks for pubsub notifications.
+	// Everytime a new subscription is created, a new mpsc channel is added to the sink pool.
+	// The MappingSyncWorker sends through the channel on block import and the subscription emits a
+	// notification to the subscriber on receiving a message through this channel.
+	// This way we avoid race conditions when using native substrate block import notification
+	// stream.
+	let pubsub_notification_sinks: fc_mapping_sync::EthereumBlockNotificationSinks<
+		fc_mapping_sync::EthereumBlockNotification<Block>,
+	> = Default::default();
+	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
+
+	let filter_pool = Some(Arc::new(Mutex::new(BTreeMap::new())));
+	let fee_history_cache = Arc::new(Mutex::new(BTreeMap::new()));
+	// let fee_history_cache_limit = parachain_config.fee_history_limit;
+	let fee_history_cache_limit = 2048;
+
 	let rpc_builder = {
 		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
+		let pool = transaction_pool.clone();
+		let network = network.clone();
+		let sync_service = sync_service.clone();
 
-		Box::new(move |deny_unsafe, _| {
+		let is_authority = parachain_config.role.is_authority();
+		let enable_dev_signer = eth_config.enable_dev_signer;
+		let max_past_logs = eth_config.max_past_logs;
+		let execute_gas_limit_multiplier = eth_config.execute_gas_limit_multiplier;
+		let filter_pool = filter_pool.clone();
+		let frontier_backend = frontier_backend.clone();
+		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
+		let overrides = overrides.clone();
+		let fee_history_cache = fee_history_cache.clone();
+		let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+			task_manager.spawn_handle(),
+			overrides.clone(),
+			eth_config.eth_log_block_cache,
+			eth_config.eth_statuses_cache,
+			prometheus_registry.clone(),
+		));
+
+		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+		let target_gas_price = eth_config.target_gas_price;
+		let pending_create_inherent_data_providers = move |_, ()| async move {
+			let current = sp_timestamp::InherentDataProvider::from_system_time();
+			let next_slot = current.timestamp().as_millis() + slot_duration.as_millis();
+			let timestamp = sp_timestamp::InherentDataProvider::new(next_slot.into());
+			let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+				*timestamp,
+				slot_duration,
+			);
+			let dynamic_fee = fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
+			Ok((slot, timestamp, dynamic_fee))
+		};
+
+		Box::new(move |deny_unsafe, subscription_task_executor| {
+			let eth_deps = crate::rpc::EthDeps {
+				client: client.clone(),
+				pool: pool.clone(),
+				graph: pool.pool().clone(),
+				converter: Some(TransactionConverter),
+				is_authority,
+				enable_dev_signer,
+				network: network.clone(),
+				sync: sync_service.clone(),
+				frontier_backend: frontier_backend.clone(),
+				// frontier_backend: match frontier_backend.clone() {
+				// 	fc_db::Backend::KeyValue(b) => Arc::new(b),
+				// 	fc_db::Backend::Sql(b) => Arc::new(b),
+				// },
+				overrides: overrides.clone(),
+				block_data_cache: block_data_cache.clone(),
+				filter_pool: filter_pool.clone(),
+				max_past_logs,
+				fee_history_cache: fee_history_cache.clone(),
+				fee_history_cache_limit,
+				execute_gas_limit_multiplier,
+				forced_parent_hashes: None,
+				pending_create_inherent_data_providers,
+			};
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
-				pool: transaction_pool.clone(),
+				pool: pool.clone(),
 				deny_unsafe,
+				// command_sink: if sealing.is_some() { Some(command_sink.clone()) } else { None },
+				eth: eth_deps,
 			};
-			crate::rpc::create_full(deps).map_err(Into::into)
+			crate::rpc::create_full(
+				deps,
+				subscription_task_executor,
+				pubsub_notification_sinks.clone(),
+			)
+			.map_err(Into::into)
 		})
 	};
 
@@ -446,6 +565,7 @@ async fn start_node_impl(
 pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
@@ -453,6 +573,7 @@ pub async fn start_node(
 	start_node_impl(
 		parachain_config,
 		polkadot_config,
+		eth_config,
 		collator_options,
 		CollatorSybilResistance::Resistant,
 		para_id,

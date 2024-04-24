@@ -50,6 +50,8 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
+use crate::eth::EthConfiguration;
+
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
 
@@ -281,6 +283,7 @@ fn start_consensus(
 async fn start_node_impl(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	_eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
@@ -353,7 +356,7 @@ async fn start_node_impl(
 		let transaction_pool = transaction_pool.clone();
 
 		Box::new(move |deny_unsafe, _| {
-			let deps = crate::rpc::FullDeps {
+			let deps = crate::rpc::FullDepsPolkadot {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
 				deny_unsafe,
@@ -446,6 +449,7 @@ async fn start_node_impl(
 pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
@@ -453,6 +457,7 @@ pub async fn start_node(
 	start_node_impl(
 		parachain_config,
 		polkadot_config,
+		eth_config,
 		collator_options,
 		CollatorSybilResistance::Resistant,
 		para_id,
