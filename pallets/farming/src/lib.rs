@@ -62,6 +62,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
+use bifrost_ve_minting::VeMintingInterface;
 use parity_scale_codec::FullCodec;
 use sp_std::fmt::Debug;
 
@@ -357,22 +358,26 @@ pub mod pallet {
 			GaugePoolInfos::<T>::iter().for_each(
 				|(gid, mut gauge_pool_info)| match gauge_pool_info.gauge_state {
 					GaugeState::Bonded => {
-						gauge_pool_info.gauge_basic_rewards.clone().iter().for_each(
-							|(reward_currency_id, reward_amount)| {
-								gauge_pool_info
-									.rewards
-									.entry(*reward_currency_id)
-									.and_modify(|(total_reward, _, _)| {
-										*total_reward = total_reward.saturating_add(*reward_amount);
-									})
-									.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
-							},
-						);
-						GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
+						let rewards = gauge_pool_info.gauge_basic_rewards.into_iter().collect();
+						T::VeMinting::auto_notify_reward(gid, n, rewards).unwrap_or_default();
+
+						// gauge_pool_info.gauge_basic_rewards.clone().iter().for_each(
+						// 	|(reward_currency_id, reward_amount)| {
+						// 		gauge_pool_info
+						// 			.rewards
+						// 			.entry(*reward_currency_id)
+						// 			.and_modify(|(total_reward, _, _)| {
+						// 				*total_reward = total_reward.saturating_add(*reward_amount);
+						// 			})
+						// 			.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
+						// 	},
+						// );
+						// GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 					},
 					_ => (),
 				},
 			);
+
 			if n == Self::boost_pool_infos().end_round {
 				Self::end_boost_round_inner();
 				Self::auto_start_boost_round();

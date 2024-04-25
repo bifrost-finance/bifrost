@@ -33,7 +33,7 @@ pub mod traits;
 pub mod weights;
 
 use crate::traits::Incentive;
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_primitives::{Balance, CurrencyId, PoolId};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -231,8 +231,10 @@ pub mod pallet {
 	// Incentive
 	#[pallet::storage]
 	#[pallet::getter(fn incentive_configs)]
-	pub type IncentiveConfigs<T: Config> = StorageValue<
+	pub type IncentiveConfigs<T: Config> = StorageMap<
 		_,
+		Blake2_128Concat,
+		PoolId,
 		IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 		ValueQuery,
 	>;
@@ -291,17 +293,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			let conf = Self::incentive_configs();
-			if n == conf.last_update_time + conf.rewards_duration {
-				Self::notify_reward_amount(&conf.incentive_controller, conf.last_reward.clone())
-					.unwrap_or_default();
-			}
-			T::DbWeight::get().writes(1_u64)
-		}
-	}
+	// #[pallet::hooks]
+	// impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+	// 	fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+	// 		let conf = Self::incentive_configs();
+	// 		if n == conf.last_update_time + conf.rewards_duration {
+	// 			Self::notify_reward_amount(&conf.incentive_controller, conf.last_reward.clone())
+	// 				.unwrap_or_default();
+	// 		}
+	// 		T::DbWeight::get().writes(1_u64)
+	// 	}
+	// }
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -385,15 +387,15 @@ pub mod pallet {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			Self::set_incentive(rewards_duration);
-			Self::notify_reward_amount(&Some(incentive_from), rewards)
+			Self::set_incentive(0, rewards_duration); // for pool0
+			Self::notify_reward_amount(0, &Some(incentive_from), rewards) // for pool0
 		}
 
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::get_rewards_inner(&exchanger)
+			Self::get_rewards_inner(0, &exchanger) // for pool0
 		}
 
 		#[pallet::call_index(7)]
@@ -454,7 +456,7 @@ pub mod pallet {
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			log::debug!("new_locked: {:?}", new_locked);
-			Self::update_reward(Some(who))?;
+			Self::update_reward_all(Some(who))?;
 
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();

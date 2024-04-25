@@ -20,6 +20,7 @@ use crate::{
 	traits::{Incentive, VeMintingInterface},
 	*,
 };
+use bifrost_primitives::PoolId;
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap;
 
@@ -55,17 +56,19 @@ where
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn last_time_reward_applicable() -> BlockNumberFor<T> {
+	pub fn last_time_reward_applicable(pool_id: PoolId) -> BlockNumberFor<T> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		if current_block_number < Self::incentive_configs().period_finish {
+		if current_block_number < Self::incentive_configs(pool_id).period_finish {
 			current_block_number
 		} else {
-			Self::incentive_configs().period_finish
+			Self::incentive_configs(pool_id).period_finish
 		}
 	}
 
-	pub fn reward_per_token() -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let mut conf = Self::incentive_configs();
+	pub fn reward_per_token(
+		pool_id: PoolId,
+	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
+		let mut conf = Self::incentive_configs(pool_id);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let total_supply = Self::total_supply(current_block_number)?;
 		if total_supply == BalanceOf::<T>::zero() {
@@ -73,7 +76,7 @@ impl<T: Config> Pallet<T> {
 		}
 		conf.reward_rate.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 			let increment: BalanceOf<T> = U512::from(
-				Self::last_time_reward_applicable()
+				Self::last_time_reward_applicable(pool_id)
 					.saturating_sub(conf.last_update_time)
 					.saturated_into::<u128>(),
 			)
@@ -93,14 +96,15 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		IncentiveConfigs::<T>::set(conf.clone());
+		IncentiveConfigs::<T>::set(pool_id, conf.clone());
 		Ok(conf.reward_per_token_stored)
 	}
 
 	pub fn earned(
+		pool_id: PoolId,
 		addr: &AccountIdOf<T>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let reward_per_token = Self::reward_per_token()?;
+		let reward_per_token = Self::reward_per_token(pool_id)?;
 		let vetoken_balance = Self::balance_of_current_block(addr)?;
 		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
 			rewards
@@ -137,15 +141,15 @@ impl<T: Config> Pallet<T> {
 
 	// Used to update reward when notify_reward or user call
 	// create_lock/increase_amount/increase_unlock_time/withdraw/get_rewards
-	pub fn update_reward(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
-		let reward_per_token_stored = Self::reward_per_token()?;
+	pub fn update_reward(pool_id: PoolId, addr: Option<&AccountIdOf<T>>) -> DispatchResult {
+		let reward_per_token_stored = Self::reward_per_token(pool_id)?;
 
-		IncentiveConfigs::<T>::mutate(|item| {
+		IncentiveConfigs::<T>::mutate(pool_id, |item| {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
-			item.last_update_time = Self::last_time_reward_applicable();
+			item.last_update_time = Self::last_time_reward_applicable(pool_id);
 		});
 		if let Some(address) = addr {
-			let earned = Self::earned(address)?;
+			let earned = Self::earned(pool_id, address)?;
 			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
 				Rewards::<T>::insert(address, earned);
 			}
@@ -154,8 +158,14 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn get_rewards_inner(addr: &AccountIdOf<T>) -> DispatchResult {
-		Self::update_reward(Some(addr))?;
+	pub fn update_reward_all(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
+		// TODO: pool_id
+		Self::update_reward(0, addr)?;
+		Ok(())
+	}
+
+	pub fn get_rewards_inner(pool_id: PoolId, addr: &AccountIdOf<T>) -> DispatchResult {
+		Self::update_reward(pool_id, Some(addr))?;
 
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
@@ -179,6 +189,7 @@ impl<T: Config> Pallet<T> {
 
 	// Motion
 	pub fn notify_reward_amount(
+		pool_id: PoolId,
 		addr: &Option<AccountIdOf<T>>,
 		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
@@ -186,8 +197,8 @@ impl<T: Config> Pallet<T> {
 			Some(addr) => addr,
 			None => return Err(Error::<T>::NoController.into()),
 		};
-		Self::update_reward(None)?;
-		let mut conf = Self::incentive_configs();
+		Self::update_reward(pool_id, None)?;
+		let mut conf = Self::incentive_configs(pool_id);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 		if current_block_number >= conf.period_finish {
@@ -203,7 +214,7 @@ impl<T: Config> Pallet<T> {
 		conf.period_finish = current_block_number.saturating_add(conf.rewards_duration);
 		conf.incentive_controller = Some(who.clone());
 		conf.last_reward = rewards.clone();
-		IncentiveConfigs::<T>::set(conf);
+		IncentiveConfigs::<T>::set(pool_id, conf);
 
 		Self::deposit_event(Event::RewardAdded { rewards });
 		Ok(())

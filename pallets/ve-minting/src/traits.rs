@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_primitives::PoolId;
+use orml_traits::rewards;
+
 // Ensure we're `no_std` when compiling for Wasm.
 use crate::*;
 
@@ -40,6 +43,11 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		position: u128,
 		_unlock_time: BlockNumber,
 	) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
+	fn auto_notify_reward(
+		pool_id: PoolId,
+		n: BlockNumber,
+		rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult;
 }
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
@@ -238,10 +246,22 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			)
 			.ok_or(ArithmeticError::Overflow)?)
 	}
+
+	fn auto_notify_reward(
+		pool_id: PoolId,
+		n: BlockNumberFor<T>,
+		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		let conf = Self::incentive_configs(pool_id);
+		if n == conf.last_update_time + conf.rewards_duration {
+			Self::notify_reward_amount(pool_id, &conf.incentive_controller, rewards)?;
+		}
+		Ok(())
+	}
 }
 
 pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
-	fn set_incentive(rewards_duration: Option<BlockNumber>);
+	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumber>);
 	fn add_reward(
 		addr: &AccountId,
 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
@@ -253,11 +273,11 @@ pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
 impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
 	for Pallet<T>
 {
-	fn set_incentive(rewards_duration: Option<BlockNumberFor<T>>) {
+	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumberFor<T>>) {
 		if let Some(rewards_duration) = rewards_duration {
-			let mut incentive_config = Self::incentive_configs();
+			let mut incentive_config = Self::incentive_configs(pool_id);
 			incentive_config.rewards_duration = rewards_duration;
-			IncentiveConfigs::<T>::set(incentive_config);
+			IncentiveConfigs::<T>::set(pool_id, incentive_config);
 			Self::deposit_event(Event::IncentiveSet { rewards_duration });
 		};
 	}
@@ -362,6 +382,14 @@ where
 		_t: BlockNumber,
 	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
+	}
+
+	fn auto_notify_reward(
+		_pool_id: PoolId,
+		_n: BlockNumber,
+		_rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult {
+		Ok(())
 	}
 }
 
