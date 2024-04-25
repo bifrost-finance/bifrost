@@ -235,6 +235,7 @@ pub mod pallet {
 		OrderFailed {
 			order: Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 		},
+		InsufficientAssets,
 	}
 
 	#[pallet::error]
@@ -372,11 +373,14 @@ pub mod pallet {
 
 							// Will not check results and will be sent regardless of the success of
 							// the burning
-							let _ = T::MultiCurrency::withdraw(
+							let result = T::MultiCurrency::withdraw(
 								target_fee_currency_id,
 								&T::TreasuryAccount::get(),
 								BalanceOf::<T>::unique_saturated_from(configuration.xcm_fee),
 							);
+							if result.is_err() {
+								Self::deposit_event(Event::InsufficientAssets);
+							}
 
 							configuration.last_block = n;
 							XcmEthereumCallConfiguration::<T>::put(configuration);
