@@ -355,28 +355,15 @@ pub mod pallet {
 				_ => (),
 			});
 
-			GaugePoolInfos::<T>::iter().for_each(
-				|(gid, mut gauge_pool_info)| match gauge_pool_info.gauge_state {
+			GaugePoolInfos::<T>::iter().for_each(|(gid, gauge_pool_info)| {
+				match gauge_pool_info.gauge_state {
 					GaugeState::Bonded => {
 						let rewards = gauge_pool_info.gauge_basic_rewards.into_iter().collect();
 						T::VeMinting::auto_notify_reward(gid, n, rewards).unwrap_or_default();
-
-						// gauge_pool_info.gauge_basic_rewards.clone().iter().for_each(
-						// 	|(reward_currency_id, reward_amount)| {
-						// 		gauge_pool_info
-						// 			.rewards
-						// 			.entry(*reward_currency_id)
-						// 			.and_modify(|(total_reward, _, _)| {
-						// 				*total_reward = total_reward.saturating_add(*reward_amount);
-						// 			})
-						// 			.or_insert((*reward_amount, Zero::zero(), Zero::zero()));
-						// 	},
-						// );
-						// GaugePoolInfos::<T>::insert(gid, &gauge_pool_info);
 					},
 					_ => (),
-				},
-			);
+				}
+			});
 
 			if n == Self::boost_pool_infos().end_round {
 				Self::end_boost_round_inner();
@@ -527,18 +514,7 @@ pub mod pallet {
 				},
 			)?;
 			Self::add_share(&exchanger, pid, &mut pool_info, add_value);
-
-			match gauge_info {
-				Some((gauge_value, gauge_block)) => {
-					Self::gauge_add(
-						&exchanger,
-						pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
-						gauge_value,
-						gauge_block,
-					)?;
-				},
-				None => (),
-			};
+			Self::update_reward(&exchanger, pid)?;
 
 			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_info });
 			Ok(())
@@ -569,6 +545,7 @@ pub mod pallet {
 			);
 
 			Self::remove_share(&exchanger, pid, remove_value, pool_info.withdraw_limit_time)?;
+			Self::update_reward(&exchanger, pid)?;
 
 			Self::deposit_event(Event::Withdrawn { who: exchanger, pid, remove_value });
 			Ok(())
@@ -596,9 +573,6 @@ pub mod pallet {
 			);
 
 			Self::claim_rewards(&exchanger, pid)?;
-			if let Some(ref gid) = pool_info.gauge {
-				Self::gauge_claim_inner(&exchanger, *gid)?;
-			}
 			Self::process_withdraw_list(&exchanger, pid, &pool_info, true)?;
 
 			Self::deposit_event(Event::Claimed { who: exchanger, pid });
@@ -636,10 +610,6 @@ pub mod pallet {
 				}
 				let who = share_info.who;
 				Self::remove_share(&who, pid, None, withdraw_limit_time)?;
-				Self::claim_rewards(&who, pid)?;
-				if let Some(ref gid) = pool_info.gauge {
-					Self::gauge_claim_inner(&who, *gid)?;
-				}
 				Self::process_withdraw_list(&who, pid, &pool_info, true)?;
 			}
 
@@ -828,37 +798,10 @@ pub mod pallet {
 			// Check origin
 			let who = ensure_signed(origin)?;
 
-			let mut gauge_pool_info =
-				GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
-			match gauge_pool_info.gauge_state {
-				GaugeState::Bonded => {
-					Self::gauge_claim_inner(&who, gid)?;
-				},
-				GaugeState::Unbond => {
-					let current_block_number: BlockNumberFor<T> =
-						frame_system::Pallet::<T>::block_number();
-					GaugeInfos::<T>::mutate(gid, &who, |maybe_gauge_info| -> DispatchResult {
-						if let Some(gauge_info) = maybe_gauge_info.take() {
-							if gauge_info.gauge_stop_block <= current_block_number {
-								T::MultiCurrency::transfer(
-									gauge_pool_info.token,
-									&gauge_pool_info.keeper,
-									&who,
-									gauge_info.gauge_amount,
-								)?;
-								gauge_pool_info.total_time_factor = gauge_pool_info
-									.total_time_factor
-									.checked_sub(gauge_info.total_time_factor)
-									.ok_or(ArithmeticError::Overflow)?;
-								GaugePoolInfos::<T>::insert(gid, gauge_pool_info);
-							} else {
-								*maybe_gauge_info = Some(gauge_info);
-							};
-						}
-						Ok(())
-					})?;
-				},
-			}
+			let pool_info = PoolInfos::<T>::get(gid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let share_info = SharesAndWithdrawnRewards::<T>::get(gid, &who)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
+			T::VeMinting::get_rewards(gid, &who, Some((share_info.share, pool_info.total_shares)))?;
 
 			Self::deposit_event(Event::GaugeWithdrawn { who, gid });
 			Ok(())
@@ -878,7 +821,14 @@ pub mod pallet {
 					all_retired = false;
 					break;
 				}
-				Self::gauge_claim_inner(&gauge_info.who, gid)?;
+				let pool_info = PoolInfos::<T>::get(gid).ok_or(Error::<T>::PoolDoesNotExist)?;
+				let share_info = SharesAndWithdrawnRewards::<T>::get(gid, &gauge_info.who)
+					.ok_or(Error::<T>::ShareInfoNotExists)?;
+				T::VeMinting::get_rewards(
+					gid,
+					&gauge_info.who,
+					Some((share_info.share, pool_info.total_shares)),
+				)?;
 			}
 
 			if all_retired {

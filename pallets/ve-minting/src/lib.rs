@@ -32,7 +32,6 @@ pub mod incentive;
 pub mod traits;
 pub mod weights;
 
-use crate::traits::Incentive;
 use bifrost_primitives::{Balance, CurrencyId, PoolId};
 use frame_support::{
 	pallet_prelude::*,
@@ -395,7 +394,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::get_rewards_inner(0, &exchanger) // for pool0
+			Self::get_rewards_inner(0, &exchanger, None) // for pool0
 		}
 
 		#[pallet::call_index(7)]

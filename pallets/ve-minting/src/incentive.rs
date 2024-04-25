@@ -16,10 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-	traits::{Incentive, VeMintingInterface},
-	*,
-};
+use crate::{traits::VeMintingInterface, *};
 use bifrost_primitives::PoolId;
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap;
@@ -103,6 +100,7 @@ impl<T: Config> Pallet<T> {
 	pub fn earned(
 		pool_id: PoolId,
 		addr: &AccountIdOf<T>,
+		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token(pool_id)?;
 		let vetoken_balance = Self::balance_of_current_block(addr)?;
@@ -112,7 +110,7 @@ impl<T: Config> Pallet<T> {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-			let increment: BalanceOf<T> = U256::from(vetoken_balance.saturated_into::<u128>())
+			let increment = U256::from(vetoken_balance.saturated_into::<u128>())
 				.checked_mul(U256::from(
 					reward
 						.saturating_sub(
@@ -124,16 +122,41 @@ impl<T: Config> Pallet<T> {
 				))
 				.ok_or(ArithmeticError::Overflow)?
 				.checked_div(U256::from(T::Multiplier::get().saturated_into::<u128>()))
-				.map(|x| u128::try_from(x))
-				.ok_or(ArithmeticError::Overflow)?
-				.map_err(|_| ArithmeticError::Overflow)?
-				.unique_saturated_into();
-			rewards
-				.entry(*currency)
-				.and_modify(|total_reward| {
-					*total_reward = total_reward.saturating_add(increment);
-				})
-				.or_insert(increment);
+				.ok_or(ArithmeticError::Overflow)?;
+			// .map(|x| u128::try_from(x))
+			// .ok_or(ArithmeticError::Overflow)?
+			// .map_err(|_| ArithmeticError::Overflow)?
+			// .unique_saturated_into();
+
+			match share_info {
+				Some((share, total_share)) => {
+					let reward = increment
+						.checked_mul(U256::from(share.saturated_into::<u128>()))
+						.ok_or(ArithmeticError::Overflow)?
+						.checked_div(U256::from(total_share.saturated_into::<u128>()))
+						.map(|x| u128::try_from(x))
+						.ok_or(ArithmeticError::Overflow)?
+						.map_err(|_| ArithmeticError::Overflow)?
+						.unique_saturated_into();
+					rewards
+						.entry(*currency)
+						.and_modify(|total_reward| {
+							*total_reward = total_reward.saturating_add(reward);
+						})
+						.or_insert(reward);
+				},
+				None => {
+					let reward = u128::try_from(increment)
+						.map_err(|_| ArithmeticError::Overflow)?
+						.unique_saturated_into();
+					rewards
+						.entry(*currency)
+						.and_modify(|total_reward| {
+							*total_reward = total_reward.saturating_add(reward);
+						})
+						.or_insert(reward);
+				},
+			}
 			Ok(())
 		})?;
 		Ok(rewards)
@@ -141,7 +164,11 @@ impl<T: Config> Pallet<T> {
 
 	// Used to update reward when notify_reward or user call
 	// create_lock/increase_amount/increase_unlock_time/withdraw/get_rewards
-	pub fn update_reward(pool_id: PoolId, addr: Option<&AccountIdOf<T>>) -> DispatchResult {
+	pub fn update_reward(
+		pool_id: PoolId,
+		addr: Option<&AccountIdOf<T>>,
+		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token(pool_id)?;
 
 		IncentiveConfigs::<T>::mutate(pool_id, |item| {
@@ -149,7 +176,7 @@ impl<T: Config> Pallet<T> {
 			item.last_update_time = Self::last_time_reward_applicable(pool_id);
 		});
 		if let Some(address) = addr {
-			let earned = Self::earned(pool_id, address)?;
+			let earned = Self::earned(pool_id, address, share_info)?;
 			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
 				Rewards::<T>::insert(address, earned);
 			}
@@ -160,13 +187,19 @@ impl<T: Config> Pallet<T> {
 
 	pub fn update_reward_all(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		// TODO: pool_id
-		Self::update_reward(0, addr)?;
+		Self::update_reward(0, addr, None)?;
 		Ok(())
 	}
 
-	pub fn get_rewards_inner(pool_id: PoolId, addr: &AccountIdOf<T>) -> DispatchResult {
-		Self::update_reward(pool_id, Some(addr))?;
-
+	pub fn get_rewards_inner(
+		pool_id: PoolId,
+		addr: &AccountIdOf<T>,
+		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		Self::update_reward(pool_id, Some(addr), share_info)?;
+		if Self::balance_of_current_block(addr)? == BalanceOf::<T>::zero() {
+			return Ok(());
+		}
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
@@ -197,7 +230,7 @@ impl<T: Config> Pallet<T> {
 			Some(addr) => addr,
 			None => return Err(Error::<T>::NoController.into()),
 		};
-		Self::update_reward(pool_id, None)?;
+		Self::update_reward(pool_id, None, None)?;
 		let mut conf = Self::incentive_configs(pool_id);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
