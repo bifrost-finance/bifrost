@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.9.96"
+version = "0.9.98"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -1808,6 +1808,7 @@ dependencies = [
  "bifrost-currencies",
  "bifrost-parachain-staking",
  "bifrost-primitives",
+ "bifrost-stable-asset",
  "bifrost-stable-pool",
  "bifrost-vtoken-minting",
  "bifrost-xcm-interface",

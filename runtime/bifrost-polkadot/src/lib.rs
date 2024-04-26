@@ -140,7 +140,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 996,
+	spec_version: 998,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1589,8 +1589,8 @@ impl lend_market::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletId = LendMarketPalletId;
 	type PriceFeeder = Prices;
-	type ReserveOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ReserveOrigin = TechAdminOrCouncil;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
 	type UnixTime = Timestamp;
 	type Assets = Currencies;
@@ -1603,15 +1603,15 @@ parameter_types! {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
+	type AddOrigin = CoreAdminOrCouncil;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxMembers = OracleMaxMembers;
 	type MembershipInitialized = ();
 	type MembershipChanged = ();
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
+	type PrimeOrigin = CoreAdminOrCouncil;
+	type RemoveOrigin = CoreAdminOrCouncil;
+	type ResetOrigin = CoreAdminOrCouncil;
+	type SwapOrigin = CoreAdminOrCouncil;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1626,7 +1626,7 @@ impl leverage_staking::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
+	pub const ClearingDuration: u32 = prod_or_fast!(1 * DAYS, 10 * MINUTES);
 	pub const NameLengthLimit: u32 = 20;
 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
@@ -1878,8 +1878,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased =
-		(bifrost_vtoken_voting::migration::v3::MigrateToV3<Runtime, RelayCurrencyId>,);
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.

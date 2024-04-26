@@ -453,31 +453,65 @@ pub mod pallet {
 		pub fn set_commission_tokens(
 			origin: OriginFor<T>,
 			vtoken: CurrencyId,
-			commission_token: CurrencyId,
+			commission_token_op: Option<CurrencyId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-
 			ensure!(vtoken.is_vtoken(), Error::<T>::InvalidVtoken);
 
-			// if old commission token is the same as the new one, do nothing
-			if let Some(old_commission_token) = CommissionTokens::<T>::get(vtoken) {
-				if old_commission_token == commission_token {
-					return Ok(());
+			if let Some(commission_token) = commission_token_op {
+				// if old commission token is the same as the new one, do nothing
+				if let Some(old_commission_token) = CommissionTokens::<T>::get(vtoken) {
+					if old_commission_token == commission_token {
+						return Ok(());
+					}
 				}
+
+				// set the commission token
+				CommissionTokens::<T>::insert(vtoken, commission_token);
+
+				// set VtokenIssuanceSnapshots for the vtoken
+				let issuance = T::MultiCurrency::total_issuance(vtoken);
+				let zero_balance: BalanceOf<T> = Zero::zero();
+				VtokenIssuanceSnapshots::<T>::insert(vtoken, (zero_balance, issuance));
+
+				Self::deposit_event(Event::CommissionTokenSet {
+					vtoken,
+					commission_token: Some(commission_token),
+				});
+			} else {
+				// remove the commission token
+				let _ = CommissionTokens::<T>::remove(vtoken);
+
+				// remove the vtoken from VtokenIssuanceSnapshots
+				let _ = VtokenIssuanceSnapshots::<T>::remove(vtoken);
+
+				// remove the vtoken from PeriodVtokenTotalMint storage
+				let _ = PeriodVtokenTotalMint::<T>::remove(vtoken);
+
+				// remove the vtoken from PeriodVtokenTotalRedeem storage
+				let _ = PeriodVtokenTotalRedeem::<T>::remove(vtoken);
+
+				// for all channel_ids
+				Channels::<T>::iter_keys().for_each(|channel_id| {
+					// remove the vtoken from ChannelCommissionTokenRates storage
+					let _ = ChannelCommissionTokenRates::<T>::remove(channel_id, vtoken);
+					// remove the vtoken from ChannelVtokenShares storage
+					let _ = ChannelVtokenShares::<T>::remove(channel_id, vtoken);
+					// remove the vtoken from PeriodChannelVtokenMint storage
+					let _ = PeriodChannelVtokenMint::<T>::remove(channel_id, vtoken);
+				});
+
+				// remove the vtoken from PeriodTotalCommissions storage
+				let _ = PeriodTotalCommissions::<T>::remove(vtoken);
+
+				// remove the vtoken from PeriodClearedCommissions storage
+				let _ = PeriodClearedCommissions::<T>::remove(vtoken);
+
+				// only ChannelClaimableCommissions not removed. Channel can still claim the
+				// previous commission
+
+				Self::deposit_event(Event::CommissionTokenSet { vtoken, commission_token: None });
 			}
-
-			// set the commission token
-			CommissionTokens::<T>::insert(vtoken, commission_token);
-
-			// set VtokenIssuanceSnapshots for the vtoken
-			let issuance = T::MultiCurrency::total_issuance(vtoken);
-			let zero_balance: BalanceOf<T> = Zero::zero();
-			VtokenIssuanceSnapshots::<T>::insert(vtoken, (zero_balance, issuance));
-
-			Self::deposit_event(Event::CommissionTokenSet {
-				vtoken,
-				commission_token: Some(commission_token),
-			});
 
 			Ok(())
 		}
@@ -897,16 +931,18 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 
 		// get the commission token of the staking token
 		let vtoken = staking_token.to_vtoken().map_err(|_| Error::<T>::ConversionError)?;
-		let commission_token = CommissionTokens::<T>::get(vtoken)
-			.ok_or(Error::<T>::VtokenNotConfiguredForCommission)?;
 
-		// add to PeriodTotalCommissions
-		let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
+		// if the vtoken is not configured for commission, just don't record the hosting fee
+		if let Some(commission_token) = CommissionTokens::<T>::get(vtoken) {
+			// add to PeriodTotalCommissions
+			let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
 
-		let sum_up_amount = total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+			let sum_up_amount =
+				total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
-		total_commission.1 = sum_up_amount;
-		PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+			total_commission.1 = sum_up_amount;
+			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+		}
 
 		Ok(())
 	}

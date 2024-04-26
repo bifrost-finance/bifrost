@@ -32,10 +32,18 @@ const CHANNEL_A_BACKUP_RECEIVER: AccountId = AccountId32::new([5u8; 32]);
 
 fn setup() {
 	// set commission tokens: VKSM -> KSM
-	assert_ok!(ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), VKSM, KSM,));
+	assert_ok!(ChannelCommission::set_commission_tokens(
+		RuntimeOrigin::signed(ALICE),
+		VKSM,
+		Some(KSM),
+	));
 
 	// set commission tokens: VBNC -> BNC
-	assert_ok!(ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), VBNC, BNC,));
+	assert_ok!(ChannelCommission::set_commission_tokens(
+		RuntimeOrigin::signed(ALICE),
+		VBNC,
+		Some(BNC),
+	));
 
 	// register channel A
 	assert_ok!(ChannelCommission::register_channel(
@@ -58,11 +66,20 @@ fn set_commission_tokens_should_work() {
 		assert_ok!(ChannelCommission::set_commission_tokens(
 			RuntimeOrigin::signed(ALICE),
 			VKSM,
-			KSM,
+			Some(KSM),
 		));
 
 		// Channel A is registered
 		assert_eq!(CommissionTokens::<Runtime>::get(VKSM), Some(KSM));
+
+		assert_ok!(ChannelCommission::set_commission_tokens(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			None,
+		));
+
+		assert_eq!(CommissionTokens::<Runtime>::get(VKSM), None);
+		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VKSM), Default::default());
 	});
 }
 
@@ -73,14 +90,14 @@ fn register_channel_should_work() {
 		assert_ok!(ChannelCommission::set_commission_tokens(
 			RuntimeOrigin::signed(ALICE),
 			VKSM,
-			KSM,
+			Some(KSM),
 		));
 
 		// set commission tokens: VBNC -> BNC
 		assert_ok!(ChannelCommission::set_commission_tokens(
 			RuntimeOrigin::signed(ALICE),
 			VBNC,
-			BNC,
+			Some(BNC),
 		));
 
 		assert_ok!(ChannelCommission::register_channel(

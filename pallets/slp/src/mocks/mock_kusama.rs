@@ -33,14 +33,14 @@ use frame_support::{
 	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{Everything, Nothing, ProcessMessageError},
+	traits::{ConstU128, ConstU32, Everything, Nothing, ProcessMessageError},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use parity_scale_codec::{Decode, Encode};
-use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, TrailingZeroInput},
@@ -74,8 +74,47 @@ construct_runtime!(
 		ParachainStaking: bifrost_parachain_staking,
 		Utility: pallet_utility,
 		PolkadotXcm: pallet_xcm,
+		StableAsset: bifrost_stable_asset,
+		StablePool: bifrost_stable_pool,
 	}
 );
+
+impl bifrost_stable_pool::Config for Runtime {
+	type WeightInfo = ();
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type StableAsset = StableAsset;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+}
+
+pub struct EnsurePoolAssetId;
+impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAssetId {
+	fn validate(_: CurrencyId) -> bool {
+		true
+	}
+}
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
+
+impl bifrost_stable_asset::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AssetId = CurrencyId;
+	type Balance = Balance;
+	type Assets = Currencies;
+	type PalletId = StableAssetPalletId;
+	type AtLeast64BitUnsigned = u128;
+	type FeePrecision = ConstU128<10_000_000_000>;
+	type APrecision = ConstU128<100>;
+	type PoolAssetLimit = ConstU32<5>;
+	type SwapExactOverAmount = ConstU128<100>;
+	type WeightInfo = ();
+	type ListingOrigin = EnsureSignedBy<One, AccountId>;
+	type EnsurePoolAssetId = EnsurePoolAssetId;
+}
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = BNC;
@@ -516,7 +555,7 @@ impl Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
 	type ChannelCommission = ();
-	type StablePoolHandler = ();
+	type StablePoolHandler = StablePool;
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 }
