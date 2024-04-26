@@ -1129,3 +1129,265 @@ fn redeem_multi_for_bugs() {
 		);
 	});
 }
+
+#[test]
+fn redeem_multi_with_swap_for_bugs() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let coin0 = DOT;
+		let coin1 = VDOT;
+		let pool_asset = CurrencyId::BLP(0);
+
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin0.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin1.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_eq!(Tokens::free_balance(coin0, &6), 1_000_000_000_000u128);
+
+		let amounts = vec![1_000_001u128, 1_000_001u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::root(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			5,
+			5,
+			1_000_000_000_000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(DOT, (1, 1)), (VDOT, (10, 11))]
+		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2099560,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1000001, 1100001],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999998999999);
+		assert_eq!(Tokens::free_balance(coin1, &6), 999998999999);
+		assert_ok!(StablePool::on_swap(&6u128, 0, 0, 1, 500_000u128, 0));
+		assert_eq!(Tokens::free_balance(coin0, &6), 999998499999); // 999998999999 - 500_000u128
+		assert_eq!(Tokens::free_balance(coin1, &6), 999999421448);
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2099561,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1500001, 636407],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+		assert_noop!(
+			StablePool::redeem_multi(
+				RuntimeOrigin::signed(6).into(),
+				0,
+				vec![1_000_002u128, 1_000_002u128],
+				2099558u128,
+			),
+			bifrost_stable_asset::Error::<Test>::Math
+		);
+		assert_ok!(StablePool::redeem_multi(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			vec![1_500_000u128, 500_000u128],
+			2099558u128,
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 999999921448);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999999999999);
+		assert_eq!(Tokens::free_balance(pool_asset, &6), 6264);
+		assert_eq!(<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset), 6265);
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 6265,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1, 86407],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+	});
+}
+
+#[test]
+fn redeem_multi_with_swap_for_bugs2() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let coin0 = DOT;
+		let coin1 = VDOT;
+		let pool_asset = CurrencyId::BLP(0);
+
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin0.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin1.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_eq!(Tokens::free_balance(coin0, &6), 1_000_000_000_000u128);
+
+		let amounts = vec![1_000_001u128, 1_000_001u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::root(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			5,
+			5,
+			1_000_000_000_000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(DOT, (1, 1)), (VDOT, (1, 1))]
+		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2000002,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1000001, 1000001],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999998999999);
+		assert_eq!(Tokens::free_balance(coin1, &6), 999998999999);
+		assert_ok!(StablePool::on_swap(&6u128, 0, 0, 1, 500_000u128, 0));
+		assert_eq!(Tokens::free_balance(coin0, &6), 999998499999); // 999998999999 - 500_000u128
+		assert_eq!(Tokens::free_balance(coin1, &6), 999999451190);
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2000003,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1500001, 548810],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+		assert_noop!(
+			StablePool::redeem_multi(
+				RuntimeOrigin::signed(6).into(),
+				0,
+				vec![1_000_002u128, 1_000_002u128],
+				2099558u128,
+			),
+			bifrost_stable_asset::Error::<Test>::Math
+		);
+		assert_ok!(StablePool::redeem_multi(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			vec![1_500_000u128, 548_809u128],
+			2099558u128,
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 999999999999);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999999999999);
+		assert_eq!(Tokens::free_balance(pool_asset, &6), 1);
+		assert_eq!(<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset), 2);
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1, 1],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+	});
+}
