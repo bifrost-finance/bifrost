@@ -1099,11 +1099,12 @@ fn redeem_multi_for_bugs() {
 			RuntimeOrigin::signed(6).into(),
 			0,
 			vec![1_000_000u128, 1_000_000u128],
-			250_000_000_000u128,
+			2099558u128,
 		));
 		assert_eq!(Tokens::free_balance(coin1, &6), 999999999999);
 		assert_eq!(Tokens::free_balance(coin0, &6), 999999999999);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 2);
+		assert_eq!(<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset), 2);
 		assert_eq!(
 			StableAsset::pools(0),
 			Some(StableAssetPoolInfo {
