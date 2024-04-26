@@ -1032,3 +1032,99 @@ fn remove_vtoken_auto_refresh_should_work() {
 		);
 	});
 }
+
+#[test]
+fn redeem_multi_for_bugs() {
+	ExtBuilder::default().new_test_ext().build().execute_with(|| {
+		let coin0 = DOT;
+		let coin1 = VDOT;
+		let pool_asset = CurrencyId::BLP(0);
+
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin0.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
+			coin1.into(),
+			&6,
+			1_000_000_000_000u128
+		));
+		assert_eq!(Tokens::free_balance(coin0, &6), 1_000_000_000_000u128);
+
+		let amounts = vec![1_000_001u128, 1_000_001u128];
+		assert_ok!(StablePool::create_pool(
+			RuntimeOrigin::root(),
+			vec![coin0.into(), coin1.into()],
+			vec![1u128.into(), 1u128.into()],
+			0u128.into(),
+			0u128.into(),
+			0u128.into(),
+			220u128.into(),
+			5,
+			5,
+			1_000_000_000_000u128.into()
+		));
+		assert_ok!(StablePool::edit_token_rate(
+			RuntimeOrigin::root(),
+			0,
+			vec![(DOT, (1, 1)), (VDOT, (10, 11))]
+		));
+		assert_ok!(StablePool::add_liquidity(RuntimeOrigin::signed(6).into(), 0, amounts, 0));
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2099560,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1000001, 1100001],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999998999999);
+		assert_eq!(Tokens::free_balance(coin1, &6), 999998999999);
+		assert_ok!(StablePool::redeem_multi(
+			RuntimeOrigin::signed(6).into(),
+			0,
+			vec![1_000_000u128, 1_000_000u128],
+			250_000_000_000u128,
+		));
+		assert_eq!(Tokens::free_balance(coin1, &6), 999999999999);
+		assert_eq!(Tokens::free_balance(coin0, &6), 999999999999);
+		assert_eq!(Tokens::free_balance(pool_asset, &6), 2);
+		assert_eq!(
+			StableAsset::pools(0),
+			Some(StableAssetPoolInfo {
+				pool_id: 0,
+				pool_asset,
+				assets: vec![coin0, coin1],
+				precisions: vec![1, 1],
+				mint_fee: 0,
+				swap_fee: 0,
+				redeem_fee: 0,
+				total_supply: 2,
+				a: 220,
+				a_block: 0,
+				future_a: 220,
+				future_a_block: 0,
+				balances: vec![1, 1],
+				fee_recipient: 5,
+				account_id: 30160825295207673652903702381,
+				yield_recipient: 5,
+				precision: 1000000000000
+			})
+		);
+	});
+}
