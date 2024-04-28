@@ -35,8 +35,6 @@ std = [
 	"parity-scale-codec/std",
 	"frame-support/std",
 	"frame-system/std",
-	"pallet-balances/std",
-	"orml-tokens/std",
 	"orml-traits/std",
 	"orml-utilities/std",
 	"scale-info/std",

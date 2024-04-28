@@ -22,9 +22,9 @@ use crate::{
 	types::{EthereumXcmCall, EthereumXcmTransaction, EthereumXcmTransactionV2, MoonbeamCall},
 	*,
 };
-use bifrost_primitives::TokenSymbol;
+use bifrost_primitives::{TokenSymbol, TryConvertFrom, DOT, VDOT};
 use ethereum::TransactionAction;
-use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, traits::Hooks};
 use hex_literal::hex;
 use sp_core::{bounded::BoundedVec, ConstU32, U256};
 use sp_io;
@@ -74,7 +74,7 @@ fn test_whitelist_work() {
 		// Astar && Moonbeam
 		let evm_caller = H160::from_slice(&EVM_ADDR);
 		let target_chain = TargetChain::Astar(evm_caller);
-		let (evm_contract_account_id, evm_caller_account_id) =
+		let (order_caller, derivative_account, _) =
 			Slpx::ensure_singer_on_whitelist(RuntimeOrigin::signed(BOB), evm_caller, &target_chain)
 				.unwrap();
 		assert_noop!(
@@ -85,19 +85,19 @@ fn test_whitelist_work() {
 			),
 			Error::<Test>::AccountIdNotInWhitelist
 		);
-		assert_eq!(evm_contract_account_id, BOB);
-		assert_eq!(evm_caller_account_id, Slpx::h160_to_account_id(evm_caller));
+		assert_eq!(order_caller, OrderCaller::Evm(evm_caller));
+		assert_eq!(derivative_account, Slpx::h160_to_account_id(evm_caller));
 
 		// Hydradx No whitelist checking
 		let target_chain = TargetChain::Hydradx(ALICE);
-		let (evm_contract_account_id, evm_caller_account_id) = Slpx::ensure_singer_on_whitelist(
+		let (order_caller, derivative_account, _) = Slpx::ensure_singer_on_whitelist(
 			RuntimeOrigin::signed(ALICE),
 			evm_caller,
 			&target_chain,
 		)
 		.unwrap();
-		assert_eq!(evm_contract_account_id, ALICE);
-		assert_eq!(evm_caller_account_id, ALICE);
+		assert_eq!(order_caller, OrderCaller::Substrate(ALICE));
+		assert_eq!(derivative_account, ALICE);
 	});
 }
 
@@ -336,5 +336,71 @@ fn test_set_currency_to_support_xcm_fee() {
 
 		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, false));
 		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![KSM]);
+	})
+}
+
+#[test]
+fn test_add_order() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+		let source_chain_caller = H160::default();
+		assert_ok!(Slpx::mint(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			DOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default()
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
+		assert_ok!(Slpx::redeem(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller)
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
+		assert_ok!(Slpx::force_add_order(
+			RuntimeOrigin::root(),
+			ALICE,
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default(),
+			OrderType::Mint
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 3usize);
+
+		println!("{:?}", OrderQueue::<Test>::get());
+	})
+}
+
+#[test]
+fn test_hook() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+		let source_chain_caller = H160::default();
+		assert_ok!(Slpx::mint(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			DOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default()
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
+		<frame_system::Pallet<Test>>::set_block_number(2u32.into());
+
+		assert_ok!(Tokens::set_balance(
+			RuntimeOrigin::root(),
+			OrderQueue::<Test>::get()[0].derivative_account.clone(),
+			DOT,
+			10_000_000_000_000_000_000,
+			0
+		));
+
+		let current_block = <frame_system::Pallet<Test>>::block_number();
+		Slpx::on_idle(current_block, Weight::default());
+		assert_eq!(OrderQueue::<Test>::get().len(), 0usize);
+
+		println!("{}", Currencies::free_balance(VDOT, &BOB));
 	})
 }

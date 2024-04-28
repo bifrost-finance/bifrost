@@ -45,8 +45,6 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"bifrost-primitives/std",
-	"bifrost-salp/std",
-	"bifrost-vtoken-voting/std",
 	"sp-runtime/std",
 	"sp-std/std",
 	"pallet-transaction-payment/std",

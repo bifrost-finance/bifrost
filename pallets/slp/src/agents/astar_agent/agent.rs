@@ -128,7 +128,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				call.encode(),
@@ -136,6 +136,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -170,13 +174,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
 			call,
 			who,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(Zero::zero())
 	}
@@ -219,7 +227,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
 				call.encode(),
@@ -227,6 +235,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -322,13 +334,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
 			call,
 			who,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(Zero::zero())
 	}
@@ -354,7 +370,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Liquidize,
 				call.encode(),
@@ -362,6 +378,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -449,13 +469,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
 			call.encode(),
 			from,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(())
 	}
@@ -479,6 +503,14 @@ impl<T: Config>
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+
+		// transfer supplementary fee from treasury to the "from" account. Return the added up
+		// amount
+		let amount = Pallet::<T>::get_transfer_to_added_amount_and_supplement(
+			from_account_id,
+			amount,
+			currency_id,
+		)?;
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 

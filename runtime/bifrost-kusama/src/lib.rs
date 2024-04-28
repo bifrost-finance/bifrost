@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 994,
+	spec_version: 998,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1431,6 +1431,9 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
 	type ChannelCommission = ChannelCommission;
+	type StablePoolHandler = StablePool;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {
@@ -1788,8 +1791,8 @@ impl lend_market::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletId = LendMarketPalletId;
 	type PriceFeeder = Prices;
-	type ReserveOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ReserveOrigin = TechAdminOrCouncil;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
 	type UnixTime = Timestamp;
 	type Assets = Currencies;
@@ -1802,15 +1805,15 @@ parameter_types! {
 }
 
 impl pallet_membership::Config<pallet_membership::Instance3> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
+	type AddOrigin = CoreAdminOrCouncil;
 	type RuntimeEvent = RuntimeEvent;
 	type MaxMembers = OracleMaxMembers;
 	type MembershipInitialized = ();
 	type MembershipChanged = ();
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
+	type PrimeOrigin = CoreAdminOrCouncil;
+	type RemoveOrigin = CoreAdminOrCouncil;
+	type ResetOrigin = CoreAdminOrCouncil;
+	type SwapOrigin = CoreAdminOrCouncil;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1825,7 +1828,7 @@ impl leverage_staking::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ClearingDuration: u32 = prod_or_fast!(7 * DAYS, 10 * MINUTES);
+	pub const ClearingDuration: u32 = prod_or_fast!(1 * DAYS, 10 * MINUTES);
 	pub const NameLengthLimit: u32 = 20;
 	pub BifrostCommissionReceiver: AccountId = TreasuryPalletId::get().into_account_truncating();
 }

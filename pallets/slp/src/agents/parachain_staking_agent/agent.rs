@@ -1447,6 +1447,14 @@ impl<T: Config>
 			T::MultiCurrency::transfer(currency_id, &from_account_id, &to_account, amount)
 				.map_err(|_| Error::<T>::Unexpected)?;
 		} else {
+			// transfer supplementary fee from treasury to the "from" account. Return the added up
+			// amount
+			let amount = Pallet::<T>::get_transfer_to_added_amount_and_supplement(
+				from_account_id,
+				amount,
+				currency_id,
+			)?;
+
 			Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 		}
 

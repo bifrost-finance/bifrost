@@ -133,6 +133,7 @@ frame-system-benchmarking                  = { version = "28.0.0", default-featu
 frame-system-rpc-runtime-api               = { version = "26.0.0", default-features = false }
 frame-try-runtime                          = { version = "0.34.0", default-features = false }
 pallet-assets                              = { version = "29.0.0", default-features = false }
+pallet-asset-rate 						   = { version = "7.0.0", default-features = false }
 pallet-aura                                = { version = "27.0.0", default-features = false }
 pallet-authority-discovery                 = { version = "28.0.0", default-features = false }
 pallet-authorship                          = { version = "28.0.0", default-features = false }
@@ -281,7 +282,7 @@ num-bigint            = { version = "0.4.3", default-features = false }
 num-traits            = { version = "0.2.18", default-features = false }
 parity-scale-codec    = { version = "3.6.5", default-features = false }
 paste                 = { version = "1.0.14" }
-scale-info            = { version = "2.10.0", default-features = false }
+scale-info            = { version = "2.11.0", default-features = false }
 serde                 = { version = "1.0.193", default-features = false }
 serde_json            = { version = "1.0.109", default-features = false }
 similar-asserts       = { version = "1.1.0" }
@@ -290,23 +291,6 @@ static_assertions     = { version = "1.1.0" }
 strum                 = { version = "0.25.0", default-features = false, features = ["derive"] }
 strum_macros          = { version = "0.25.3" }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
-
-# Integration-tests
-beefy-primitives       = { package = "sp-consensus-beefy", version = "13.0.0" }
-bp-messages            = { version = "0.7.0" }
-bridge-runtime-common  = { version = "0.7.0" }
-grandpa-primitives     = { package = "sp-consensus-grandpa", version = "13.0.0" }
-pallet-bridge-messages = { version = "0.7.0" }
-pallet-asset-rate = { version = "7.0.0" }
-asset-hub-kusama-runtime    = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-asset-hub-polkadot-runtime  = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-bridge-hub-kusama-runtime   = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-bridge-hub-polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-kusama-runtime              = { package = "staging-kusama-runtime", git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-kusama-runtime-constants    = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-polkadot-runtime            = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-polkadot-runtime-constants  = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
-system-parachains-constants  = { git = "https://github.com/polkadot-fellows/runtimes", rev = "55e97c5679f3c1a58aba5ca79e6fcc53bab7d3d6" }
 
 [profile.dev]
 split-debuginfo = "unpacked"

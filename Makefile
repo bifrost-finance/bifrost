@@ -32,26 +32,13 @@ check-all: format
 .PHONY: test-all # cargo test all
 test-all: test-runtimes test-benchmarks
 
-
 .PHONY: test-runtimes
 test-runtimes:
-	cargo test --features "with-all-runtime" --lib
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-service" --exclude "*-runtime"
-
-.PHONY: integration-test # integration test
-integration-test:
-	cargo test  -p *-integration-tests
-
-.PHONY: kusama-integration-test # integration test
-kusama-integration-test:
-	cargo test -p bifrost-kusama-integration-tests
-
-.PHONY: polkadot-integration-test # integration test
-polkadot-integration-test:
-	cargo test -p bifrost-polkadot-integration-tests
+	SKIP_WASM_BUILD= cargo test benchmarking  --features="runtime-benchmarks, polkadot"
 
 .PHONY: clean # cargo clean
 clean:

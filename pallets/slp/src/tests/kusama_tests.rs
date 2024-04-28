@@ -539,6 +539,19 @@ fn bond_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		register_subaccount_index_0();
 
+		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
+		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
+
+		// set fee source to Bob
+		assert_ok!(Slp::set_fee_source(
+			RuntimeOrigin::signed(ALICE),
+			DOT,
+			Some((bob_location, 1_000_000_000_000))
+		));
+
+		// deposit some DOT to Bob, for transfer fee burning
+		assert_ok!(Currencies::deposit(DOT, &BOB, 2_000_000_000_000));
+
 		// Bond 1 ksm for sub-account index 0
 		assert_ok!(Slp::bond(
 			RuntimeOrigin::signed(ALICE),

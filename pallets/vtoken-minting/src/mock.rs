@@ -320,6 +320,11 @@ impl SlpxOperator<Balance> for SlpxInterface {
 	}
 }
 
+pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
+parameter_types! {
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+}
+
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -340,6 +345,9 @@ impl bifrost_slp::Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
+	type TreasuryAccount = TreasuryAccount;
 }
 
 parameter_types! {
