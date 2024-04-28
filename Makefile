@@ -39,7 +39,7 @@ test-runtimes:
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
+	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-service" --exclude "*-runtime"
 
 .PHONY: integration-test # integration test
 integration-test:

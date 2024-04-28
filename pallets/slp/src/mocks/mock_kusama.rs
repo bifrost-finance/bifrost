@@ -30,7 +30,7 @@ use bifrost_primitives::{
 };
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	construct_runtime, ord_parameter_types,
+	construct_runtime, derive_impl, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing, ProcessMessageError},
@@ -40,8 +40,8 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use parity_scale_codec::{Decode, Encode};
-use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32, H256};
-pub use sp_runtime::{testing::Header, Perbill};
+use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32};
+pub use sp_runtime::Perbill;
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, TrailingZeroInput},
 	AccountId32, BuildStorage, Percent,
@@ -93,30 +93,12 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
-	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u32;
 	type Block = Block;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = Indices;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BaseCallFilter = frame_support::traits::Everything;
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -607,8 +589,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();

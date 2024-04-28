@@ -34,7 +34,6 @@ use bifrost_primitives::{
 	DOT,
 };
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{

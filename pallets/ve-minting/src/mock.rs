@@ -30,7 +30,7 @@ use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ord_parameter_types,
+	derive_impl, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing},
@@ -40,11 +40,9 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use parity_scale_codec::{Decode, Encode};
-use sp_core::{blake2_256, ConstU32, H256};
+use sp_core::{blake2_256, ConstU32};
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, BlakeTwo256, Convert, ConvertInto, IdentityLookup, TrailingZeroInput,
-	},
+	traits::{AccountIdConversion, Convert, ConvertInto, IdentityLookup, TrailingZeroInput},
 	AccountId32, BuildStorage,
 };
 use xcm::{prelude::*, v3::Weight};
@@ -82,30 +80,13 @@ parameter_types! {
 	// pub BlockWeights: frame_system::limits::BlockWeights =
 	// 	frame_system::limits::BlockWeights::simple_max(1024);
 }
+
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type AccountId = AccountId;
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockHashCount = BlockHashCount;
-	type BlockLength = ();
-	type BlockWeights = ();
-	type RuntimeCall = RuntimeCall;
-	type DbWeight = ();
-	type RuntimeEvent = RuntimeEvent;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type Nonce = u32;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type OnKilledAccount = ();
-	type OnNewAccount = ();
-	type OnSetCode = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type PalletInfo = PalletInfo;
-	type SS58Prefix = ();
-	type SystemWeightInfo = ();
-	type Version = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -443,8 +424,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();

@@ -29,8 +29,6 @@
 //! are part of it. Therefore all node-runtime-specific RPCs can
 //! be placed here or imported from corresponding FRAME RPC definitions.
 
-#![warn(missing_docs)]
-
 use std::sync::Arc;
 
 use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};

@@ -38,3 +38,15 @@ zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-rpc = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
 
+[features]
+default = ["std"]
+std = [
+    "lend-market-rpc-runtime-api/std",
+    "zenlink-stable-amm-runtime-api/std",
+    "zenlink-protocol-runtime-api/std",
+    "bifrost-ve-minting-rpc-runtime-api/std",
+    "bifrost-salp-rpc-runtime-api/std",
+    "bifrost-stable-pool-rpc-runtime-api/std",
+    "bifrost-farming-rpc-runtime-api/std",
+]
+

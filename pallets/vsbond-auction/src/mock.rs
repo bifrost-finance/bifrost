@@ -20,7 +20,8 @@ use bifrost_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
-	construct_runtime, ord_parameter_types, parameter_types, traits::Contains, PalletId,
+	construct_runtime, derive_impl, ord_parameter_types, parameter_types, traits::Contains,
+	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
@@ -47,6 +48,7 @@ parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
 	type AccountData = ();
 	type AccountId = AccountId;

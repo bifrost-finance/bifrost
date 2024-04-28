@@ -29,6 +29,7 @@ use sp_runtime::{
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v3::prelude::*;
+use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
 pub mod currency;
 mod salp;
@@ -306,6 +307,19 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 
 	fn charge_fees(_location: impl Into<MultiLocation>, _fees: MultiAssets) -> XcmResult {
 		Ok(())
+	}
+}
+
+impl XcmAssetTransfers for DoNothingExecuteXcm {
+	type IsReserve = ();
+	type IsTeleporter = ();
+	type AssetTransactor = ();
+
+	fn determine_for(
+		_asset: &MultiAsset,
+		_dest: &MultiLocation,
+	) -> Result<TransferType, AssetTransferError> {
+		Ok(TransferType::DestinationReserve)
 	}
 }
 

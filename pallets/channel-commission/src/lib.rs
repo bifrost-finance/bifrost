@@ -290,7 +290,7 @@ pub mod pallet {
 			if (n % T::ClearingDuration::get()).is_zero() {
 				Self::set_clearing_environment();
 			} else if (n % T::ClearingDuration::get()) < (channel_count + 1).into() {
-				let channel_index = n % T::ClearingDuration::get().into() - 1u32.into();
+				let channel_index = n % T::ClearingDuration::get() - 1u32.into();
 				let channel_id: ChannelId =
 					BlockNumberFor::<T>::unique_saturated_into(channel_index);
 				Self::clear_channel_commissions(channel_id);

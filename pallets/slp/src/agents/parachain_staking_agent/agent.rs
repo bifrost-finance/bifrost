@@ -38,7 +38,6 @@ use bifrost_primitives::{
 	CurrencyId, VtokenMintingOperator, XcmOperationType,
 };
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use orml_traits::MultiCurrency;
 use parity_scale_codec::alloc::collections::BTreeMap;

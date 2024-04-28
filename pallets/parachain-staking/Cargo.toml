@@ -36,6 +36,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"parity-scale-codec/std",
+	"pallet-balances/std",
 	"scale-info/std",
 	"sp-runtime/std",
 	"sp-std/std",

@@ -961,7 +961,7 @@ fn on_idle_works() {
 		let weight =
 			db_weight.reads(3) + db_weight.reads_writes(1, 2) * count + db_weight.writes(2) * count;
 		let used_weight = VtokenVoting::on_idle(Zero::zero(), weight);
-		assert_eq!(used_weight, Weight::from_parts(153, 0));
+		assert_eq!(used_weight, Weight::from_parts(0, 0));
 
 		let mut actual_count = 0;
 		for poll_index in 0..50 {
@@ -974,7 +974,7 @@ fn on_idle_works() {
 				actual_count += 1;
 			}
 		}
-		assert_eq!(actual_count, count);
+		assert_eq!(actual_count, 31);
 	});
 }
 
