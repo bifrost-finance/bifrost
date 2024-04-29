@@ -385,6 +385,7 @@ parameter_types! {
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;
@@ -439,6 +440,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = CouncilAccount;
+	type RedeemFeeAccount = CouncilAccount;
 	type BifrostSlp = Slp;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
@@ -453,6 +455,9 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
 }
 
 parameter_types! {

@@ -20,7 +20,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as VtokenMinting, *};
-use bifrost_primitives::{CurrencyId, TokenSymbol};
+use bifrost_primitives::{CurrencyId, TokenSymbol, VKSM};
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
@@ -144,6 +144,83 @@ benchmarks! {
 	on_initialize {
 		let block_num =BlockNumberFor::<T>::from(10u32);
 	}:{VtokenMinting::<T>::on_initialize(block_num);}
+
+	mint_with_lock {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		let caller: T::AccountId = whitelisted_caller();
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_amount = BalanceOf::<T>::unique_saturated_from(10000000000u128);
+		T::MultiCurrency::deposit(KSM, &caller, token_amount)?;
+
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::<T>::set_fees(RawOrigin::Root.into(), FEE, FEE));
+		// Set minimum mint
+		assert_ok!(VtokenMinting::<T>::set_minimum_mint(origin.clone(), KSM,  BalanceOf::<T>::unique_saturated_from(100u128)));
+		// set vtoken coefficient
+		assert_ok!(VtokenMinting::<T>::set_incentive_coef(origin.clone(), VKSM, Some(1)));
+		// set incentive pool balance
+		assert_ok!(T::MultiCurrency::deposit(
+			VKSM,
+			&VtokenMinting::<T>::incentive_pool_account(),
+			BalanceOf::<T>::unique_saturated_from(100000000000000000000u128)
+		));
+		// set incentive lock blocks
+		assert_ok!(VtokenMinting::<T>::set_vtoken_incentive_lock_blocks(
+			origin.clone(),
+			VKSM,
+			Some(BlockNumberFor::<T>::from(100u32))
+		));
+	}: _(RawOrigin::Signed(caller), KSM, token_amount,BoundedVec::default(), None)
+
+	unlock_incentive_minted_vtoken {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		let caller: T::AccountId = whitelisted_caller();
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_amount = BalanceOf::<T>::unique_saturated_from(10000000000u128);
+		T::MultiCurrency::deposit(KSM, &caller, token_amount)?;
+
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::<T>::set_fees(RawOrigin::Root.into(), FEE, FEE));
+		// Set minimum mint
+		assert_ok!(VtokenMinting::<T>::set_minimum_mint(origin.clone(), KSM, BalanceOf::<T>::unique_saturated_from(100u128)));
+		// set vtoken coefficient
+		assert_ok!(VtokenMinting::<T>::set_incentive_coef(origin.clone(), VKSM, Some(1)));
+		// set incentive pool balance
+		assert_ok!(T::MultiCurrency::deposit(
+			VKSM,
+			&VtokenMinting::<T>::incentive_pool_account(),
+			BalanceOf::<T>::unique_saturated_from(100000000000000000000u128)
+		));
+		// set incentive lock blocks
+		assert_ok!(VtokenMinting::<T>::set_vtoken_incentive_lock_blocks(
+			origin.clone(),
+			VKSM,
+			Some(BlockNumberFor::<T>::from(100u32))
+		));
+		// mint with lock
+		assert_ok!(VtokenMinting::<T>::mint_with_lock(
+			RawOrigin::Signed(caller.clone()).into(),
+			KSM,
+			BalanceOf::<T>::unique_saturated_from(10000000000u128),
+			BoundedVec::default(),
+			None
+		));
+
+		frame_system::Pallet::<T>::set_block_number(BlockNumberFor::<T>::from(101u32));
+
+	}: _(RawOrigin::Signed(caller), VKSM)
+
+	set_incentive_coef {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let coef = 1u128;
+	}: _<T::RuntimeOrigin>(origin, VKSM, Some(coef))
+
+	set_vtoken_incentive_lock_blocks {
+		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let blocks = Some(BlockNumberFor::<T>::from(1000u32));
+	}: _<T::RuntimeOrigin>(origin, VKSM, blocks)
 
 	impl_benchmark_test_suite!(
 	VtokenMinting,

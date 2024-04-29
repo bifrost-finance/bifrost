@@ -348,6 +348,7 @@ parameter_types! {
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -359,6 +360,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type RelayChainToken = RelayCurrencyId;
@@ -373,6 +375,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
 }
 
 parameter_types! {
