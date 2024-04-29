@@ -907,6 +907,7 @@ pub mod pallet {
 			LockedTokens::<T>::insert(&asset_id, &addr, locked_token);
 			UserPositions::<T>::get(&addr).into_iter().try_for_each(
 				|position| -> DispatchResult {
+					log::debug!("position: {:?}", position);
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
 						Self::locked(position);
 					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
@@ -1121,18 +1122,11 @@ pub mod pallet {
 			Ok(Perbill::from_rational(commission.into_inner(), 1_000_000))
 		}
 
-		fn redeem_unlock_inner(
-			who: &AccountIdOf<T>,
-			position: u128,
-			// mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-		) -> DispatchResult {
+		fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
 			let mut _locked = Self::locked(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let fast = Self::redeem_commission(
-				_locked.end - current_block_number, /* (_locked.end -
-				                                     * current_block_number).
-				                                     * saturated_into::<u64>(), */
-			)?;
+			ensure!(_locked.end > current_block_number, Error::<T>::Expired);
+			let fast = Self::redeem_commission(_locked.end - current_block_number)?;
 			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
 		}
 	}

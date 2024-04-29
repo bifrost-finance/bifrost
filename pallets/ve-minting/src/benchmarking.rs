@@ -264,7 +264,7 @@ benchmarks! {
 			10_000_000_000_000.into()
 		));
 		assert_ok!(VeMinting::<T>::deposit_markup(RawOrigin::Signed(test_account.clone()).into(), CurrencyId::VToken(TokenSymbol::BNC), BalanceOf::<T>::unique_saturated_from(10_000_000_000_000u128)));
-		<frame_system::Pallet<T>>::set_block_number((2 * 365 * 86400 / 12u32).into());
+		<frame_system::Pallet<T>>::set_block_number((2 * 86400 / 12u32).into());
 
 	}: _(RawOrigin::Signed(test_account), 0)
 
