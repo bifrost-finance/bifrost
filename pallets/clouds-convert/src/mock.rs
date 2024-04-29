@@ -182,6 +182,8 @@ parameter_types! {
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
 	pub const VoteWeightMultiplier: Balance = 3;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
@@ -197,6 +199,8 @@ impl bifrost_ve_minting::Config for Runtime {
 	type MaxBlock = MaxBlock;
 	type Multiplier = Multiplier;
 	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
 }
 
 pub struct ExtBuilder {
