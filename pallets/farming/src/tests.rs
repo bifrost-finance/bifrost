@@ -21,9 +21,6 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use bifrost_asset_registry::AssetMetadata;
-use bifrost_primitives::TokenInfo;
-use bifrost_runtime_common::milli;
 use bifrost_ve_minting::VeMintingInterface;
 use frame_support::{assert_err, assert_noop, assert_ok};
 

@@ -46,7 +46,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, BlakeTwo256, ConstU32, Convert, IdentityLookup, TrailingZeroInput,
 	},
-	AccountId32, BuildStorage, DispatchError,
+	AccountId32, BuildStorage, DispatchError, DispatchResult,
 };
 use xcm::{prelude::*, v3::Weight};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
@@ -529,6 +529,8 @@ pub fn run_to_block(n: BlockNumber) {
 	}
 }
 
+use bifrost_primitives::PoolId;
+use bifrost_ve_minting::IncentiveConfig;
 // Mock VeMinting Struct
 pub struct VeMinting;
 impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
@@ -540,12 +542,16 @@ impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinti
 		Ok(10000)
 	}
 
-	fn deposit_for(_: &sp_runtime::AccountId32, _: u128) -> Result<(), sp_runtime::DispatchError> {
-		todo!()
+	fn increase_amount_inner(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
 	}
 
-	fn withdraw_inner(_: &sp_runtime::AccountId32) -> Result<(), sp_runtime::DispatchError> {
-		todo!()
+	fn deposit_for(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn withdraw_inner(_who: &AccountId, _position: u128) -> DispatchResult {
+		Ok(())
 	}
 
 	fn supply_at(_: Point<u128, u64>, _: u64) -> Result<u128, sp_runtime::DispatchError> {
@@ -564,17 +570,45 @@ impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinti
 		todo!()
 	}
 
-	fn increase_amount_inner(
+	fn increase_unlock_time_inner(
 		_: &sp_runtime::AccountId32,
 		_: u128,
+		_: u64,
 	) -> Result<(), sp_runtime::DispatchError> {
 		todo!()
 	}
 
-	fn increase_unlock_time_inner(
-		_: &sp_runtime::AccountId32,
+	fn auto_notify_reward(
+		_: u32,
 		_: u64,
+		_: Vec<(CurrencyId, Balance)>,
 	) -> Result<(), sp_runtime::DispatchError> {
 		todo!()
+	}
+
+	fn update_reward(
+		_pool_id: PoolId,
+		_addr: Option<&AccountId>,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_rewards(
+		_pool_id: PoolId,
+		_addr: &AccountId,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumber>) {}
+	fn add_reward(
+		addr: &AccountId,
+		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
+		rewards: &Vec<(CurrencyId, Balance)>,
+		remaining: Balance,
+	) -> DispatchResult {
+		Ok(())
 	}
 }
